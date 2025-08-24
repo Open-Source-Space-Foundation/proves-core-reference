@@ -24,42 +24,38 @@ class Led : public LedComponentBase {
     //! Destroy Led object
     ~Led();
 
-    private :
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for user-defined typed input ports
+    // ----------------------------------------------------------------------
 
-        // ----------------------------------------------------------------------
-        // Handler implementations for user-defined typed input ports
-        // ----------------------------------------------------------------------
+    //! Handler implementation for run
+    //!
+    //! Port receiving calls from the rate group
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
 
-        //! Handler implementation for run
-        //!
-        //! Port receiving calls from the rate group
-        void
-        run_handler(FwIndexType portNum,  //!< The port number
-                    U32 context  //!< The call order
-                    ) override;
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
 
-    private :
-        // ----------------------------------------------------------------------
-        // Handler implementations for commands
-        // ----------------------------------------------------------------------
+    //! Handler implementation for command BLINKING_ON_OFF
+    //!
+    //! Command to turn on or off the blinking LED
+    void BLINKING_ON_OFF_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq,           //!< The command sequence number
+                                    Fw::On onOff          //!< Indicates whether the blinking should be on or off
+                                    ) override;
 
-        //! Handler implementation for command BLINKING_ON_OFF
-        //!
-        //! Command to turn on or off the blinking LED
-        void
-        BLINKING_ON_OFF_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                   U32 cmdSeq,           //!< The command sequence number
-                                   Fw::On onOff          //!< Indicates whether the blinking should be on or off
-                                   ) override;
-         
-        //! Handler implementation for command SET_BLINK_INTERVAL
-        //!
-        //! Command to set the LED blink interval
-        void
-        SET_BLINK_INTERVAL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                      U32 cmdSeq,           //!< The command sequence number
-                                      U32 interval          //!< Blink interval in rate group ticks
-                                      ) override;
+    //! Handler implementation for command SET_BLINK_INTERVAL
+    //!
+    //! Command to set the LED blink interval
+    void SET_BLINK_INTERVAL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                       U32 cmdSeq,           //!< The command sequence number
+                                       U32 interval          //!< Blink interval in rate group ticks
+                                       ) override;
 
     Fw::On m_state = Fw::On::OFF;  //! Keeps track if LED is on or off
     U64 m_transitions = 0;         //! The number of on/off transitions that have occurred

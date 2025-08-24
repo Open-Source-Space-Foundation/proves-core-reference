@@ -24,9 +24,8 @@ static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
     999;  // !< The modulo value of the hashing function.
           // Should be set to a little below the ID gaps to spread the entries around
 
-static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS =
-    40;  // !< Buckets assignable to a hash slot.
-           // Buckets must be >= number of telemetry channels in system
+static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS = 40;  // !< Buckets assignable to a hash slot.
+                                                            // Buckets must be >= number of telemetry channels in system
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks
 

@@ -11,18 +11,16 @@
 #ifndef FPCONFIG_H_
 #define FPCONFIG_H_
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
-#include <Platform/PlatformTypes.h>
 #include <Fw/Types/BasicTypes.h>
-
+#include <Platform/PlatformTypes.h>
 
 // ----------------------------------------------------------------------
 // Type aliases
 // ----------------------------------------------------------------------
 #define FW_CONTEXT_DONT_CARE 0xFF  //!< Don't care value for time contexts in sequences
-
 
 // ----------------------------------------------------------------------
 // Configuration switches
@@ -331,7 +329,7 @@ extern "C" {
 
 // *** NOTE configuration checks are in Fw/Cfg/ConfigCheck.cpp in order to have
 // the type definitions in Fw/Types/BasicTypes available.
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 

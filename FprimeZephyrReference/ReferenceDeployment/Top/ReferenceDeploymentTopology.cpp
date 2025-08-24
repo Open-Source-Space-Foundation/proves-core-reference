@@ -6,7 +6,7 @@
 // Provides access to autocoded functions
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyAc.hpp>
 // Note: Uncomment when using Svc:TlmPacketizer
-//#include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
+// #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
@@ -21,7 +21,7 @@ using namespace ReferenceDeployment;
 // Instantiate a malloc allocator for cmdSeq buffer allocation
 Fw::MallocAllocator mallocator;
 
-constexpr FwSizeType BASE_RATEGROUP_PERIOD_MS = 1; // 1Khz 
+constexpr FwSizeType BASE_RATEGROUP_PERIOD_MS = 1;  // 1Khz
 
 // Helper function to calculate the period for a given rate group frequency
 constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
@@ -29,12 +29,11 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 }
 
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
-Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{
-    { // Array of divider objects
-        {getRateGroupPeriod(10), 0}, // 10Hz
-        {getRateGroupPeriod(1), 0},  // 1Hz
-    }
-};
+Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
+    // Array of divider objects
+    {getRateGroupPeriod(10), 0},  // 10Hz
+    {getRateGroupPeriod(1), 0},   // 1Hz
+}};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
@@ -77,7 +76,7 @@ void setupTopology(const TopologyState& state) {
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
-    
+
     // Uplink is configured for receive so a socket task is started
     comDriver.configure(state.uartDevice, state.baudRate);
 }

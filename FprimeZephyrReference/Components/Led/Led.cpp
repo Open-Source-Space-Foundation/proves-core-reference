@@ -22,8 +22,7 @@ Led ::~Led() {}
 // ----------------------------------------------------------------------
 
 void Led ::run_handler(FwIndexType portNum, U32 context) {
-
-    U32 interval = this->m_blinkInterval; // Get the blink interval from the member variable
+    U32 interval = this->m_blinkInterval;  // Get the blink interval from the member variable
 
     // Only perform actions when set to blinking
     if (this->m_blinking && (interval != 0)) {
@@ -77,10 +76,10 @@ void Led ::BLINKING_ON_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::On on
 void Led ::SET_BLINK_INTERVAL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 interval) {
     // Update the member variable
     this->m_blinkInterval = interval;
-    
+
     // Log the event
     this->log_ACTIVITY_HI_BlinkIntervalSet(interval);
-    
+
     // Provide command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

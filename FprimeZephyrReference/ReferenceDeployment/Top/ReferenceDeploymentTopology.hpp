@@ -5,8 +5,8 @@
 // ======================================================================
 #ifndef REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGY_HPP
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGY_HPP
-// Included for access to ReferenceDeployment::TopologyState and ReferenceDeployment::ConfigObjects::pingEntries. These definitions are required by the
-// autocoder, but are also used in this hand-coded topology.
+// Included for access to ReferenceDeployment::TopologyState and ReferenceDeployment::ConfigObjects::pingEntries. These
+// definitions are required by the autocoder, but are also used in this hand-coded topology.
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyDefs.hpp>
 
 // Remove unnecessary ReferenceDeployment:: qualifications
@@ -68,11 +68,11 @@ void teardownTopology(const TopologyState& state);
 void startRateGroups();
 
 /**
- * \brief stop the rate groups 
+ * \brief stop the rate groups
  *
  * This stops the cycle started by startRateGroups.
  */
 void stopRateGroups();
 
-} // namespace ReferenceDeployment
+}  // namespace ReferenceDeployment
 #endif

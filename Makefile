@@ -33,6 +33,15 @@ zephyr-setup: uv ## Set up Zephyr environment
 
 ##@ Development
 
+.PHONY: pre-commit-install
+pre-commit-install: uv
+	@echo "Installing pre-commit hooks..."
+	@$(UVX) pre-commit install > /dev/null
+
+.PHONY: fmt
+fmt: pre-commit-install ## Lint and format files
+	$(UVX) pre-commit run --all-files
+
 .PHONY: generate
 generate: fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
 	@echo "Generating FPrime-Zephyr Proves Core Reference..."
