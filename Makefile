@@ -53,7 +53,7 @@ generate-if-needed:
 	@test -s $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: fprime-venv zephyr-setup $(UF2) ## Build FPrime-Zephyr Proves Core Reference
+build: fprime-venv zephyr-setup generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@echo "Building FPrime code..."
 	@$(UV) run fprime-util build
 
@@ -80,7 +80,7 @@ clean: ## Remove all gitignored files
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(UV) run fprime-gds -n --dictionary ./build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+	@$(UV) run fprime-gds -n --dictionary $(BUILD_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 
 ##@ Build Tools
 BIN_DIR ?= $(shell pwd)/bin
