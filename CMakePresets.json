@@ -1,22 +1,22 @@
 {
-    "version": 4,
     "configurePresets": [
         {
-            "name": "fprime-zephyr-teensy41",
-            "displayName": "F´ Zephyr (teensy41)",
-            "description": "F´ release build using local fprime-venv",
             "binaryDir": "${sourceDir}/build-fprime-automatic-zephyr",
-            "environment": {
-                "VIRTUAL_ENV": "${fileDir}/fprime-venv",
-                "PATH": "$env{VIRTUAL_ENV}/bin:$penv{PATH}"
-            },
             "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "BOARD": "teensy41",
                 "CMAKE_BUILD_TYPE": "Release",
-                "BOARD": "teensy41"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             },
-            "toolchainFile": "${fileDir}/lib/fprime-zephyr/cmake/toolchain/zephyr.cmake",
-            "generator": "Ninja"
+            "description": "F\u00b4 release build using local fprime-venv",
+            "displayName": "F\u00b4 Zephyr (teensy41)",
+            "environment": {
+                "PATH": "$env{VIRTUAL_ENV}/bin:$penv{PATH}",
+                "VIRTUAL_ENV": "${fileDir}/fprime-venv"
+            },
+            "generator": "Ninja",
+            "name": "fprime-zephyr-teensy41",
+            "toolchainFile": "${fileDir}/lib/fprime-zephyr/cmake/toolchain/zephyr.cmake"
         }
-    ]
+    ],
+    "version": 4
 }

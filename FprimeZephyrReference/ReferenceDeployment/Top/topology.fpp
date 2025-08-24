@@ -16,7 +16,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     import CdhCore.Subtopology
     import ComCcsds.Subtopology
-    
+
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
@@ -58,18 +58,18 @@ module ReferenceDeployment {
       # Router to Command Dispatcher
       ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
-      
+
     }
 
     connections Communications {
       # ComDriver buffer allocations
       comDriver.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
       comDriver.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
-      
+
       # ComDriver <-> ComStub (Uplink)
       comDriver.$recv                     -> ComCcsds.comStub.drvReceiveIn
       ComCcsds.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
-      
+
       # ComStub <-> ComDriver (Downlink)
       ComCcsds.comStub.drvSendOut      -> comDriver.$send
       comDriver.ready         -> ComCcsds.comStub.drvConnected
@@ -92,7 +92,7 @@ module ReferenceDeployment {
     }
 
     connections LedBlinker {
-      # Rate Group 1 (1Hz cycle) ouput is connected to led's run input
+      # Rate Group 1 (1Hz cycle) output is connected to led's run input
       rateGroup1Hz.RateGroupMemberOut[4] -> led.run
       # led's gpioSet output is connected to gpioDriver's gpioWrite input
       led.gpioSet -> gpioDriver.gpioWrite

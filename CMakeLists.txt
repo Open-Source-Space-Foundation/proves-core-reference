@@ -11,8 +11,8 @@ endif()
 find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
 project(fprime-zephyr-reference C CXX)
 
-# Put in an option to force the device back into programable state for automated testing
-option(FPRIME_CI_FAILSAFE_ENABLED "Cycle count before a forced reset to programable state" OFF)
+# Put in an option to force the device back into programmable state for automated testing
+option(FPRIME_CI_FAILSAFE_ENABLED "Cycle count before a forced reset to programmable state" OFF)
 if (FPRIME_CI_FAILSAFE_ENABLED)
     set(FPRIME_CI_FAILSAFE_CYCLE_COUNT 6000 CACHE STRING "Cycles before a forced reset")
     add_compile_definitions(FPRIME_CI_FAILSAFE_CYCLE_COUNT=${FPRIME_CI_FAILSAFE_CYCLE_COUNT})

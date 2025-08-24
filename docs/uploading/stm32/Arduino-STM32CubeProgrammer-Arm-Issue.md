@@ -1,6 +1,6 @@
 # Using the ARM Installation of STM32CubeProgrammer
 
-This guide fixes an issue with the ARM installation of the [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html). This installation uses a slightly different path for its bin folder and results in the `stm32CubeProg.sh` script, provided by Arduino Tools, outputing the following error:
+This guide fixes an issue with the ARM installation of the [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html). This installation uses a slightly different path for its bin folder and results in the `stm32CubeProg.sh` script, provided by Arduino Tools, outputting the following error:
 
 ```shell
 STM32CubeProgrammer not found (STM32_Programmer_CLI).

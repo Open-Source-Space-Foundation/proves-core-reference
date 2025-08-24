@@ -7,13 +7,20 @@ on:
       - main
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint
+        run: |
+          make fmt
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build
         run: |
-          make
+          make build
       - name: Archive
         uses: actions/upload-artifact@v4
         with:
@@ -21,4 +28,3 @@ jobs:
           path: |
             build-artifacts/zephyr.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
-

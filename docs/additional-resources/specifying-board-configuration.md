@@ -1,5 +1,5 @@
 # Specifying Zephyr Board Configuration
-This reference deployent can be used for any board running zephyr so long as the correct zephyr board configuration is provided. 
+This reference deployent can be used for any board running zephyr so long as the correct zephyr board configuration is provided.
 
 ## Update the Zephyr West Configuration File
 
@@ -25,7 +25,7 @@ More information on West Configuration files can be found [here](https://docs.ze
 ## Using Custom Board Configurations
 
 <!-- Commented out for now. Not sure if this will confuse users -->
-<!-- Using a custom board configuration may require updating the CMakeLists.txt file depending on where the board folder is loacted. This example appends the board root of a board that in another directory/repository.
+<!-- Using a custom board configuration may require updating the CMakeLists.txt file depending on where the board folder is located. This example appends the board root of a board that in another directory/repository.
 
 ```cmake
 list(APPEND BOARD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/fprime-stm32h7-zephyr")
@@ -47,7 +47,7 @@ BOARD=teensy41 # Example for the Teensy 4.1 (existing zephyr support)
 A list of supported boards can be found [here](https://docs.zephyrproject.org/latest/boards/index.html#).
 
 ## Update prf.conf
-Different boards may have different USB PID and VID configurations. Update the following atrributes to your board's PID and VID configurations.
+Different boards may have different USB PID and VID configurations. Update the following attributes to your board's PID and VID configurations.
 
 ```ini
 # In fprime-zephyr-reference/prj.conf

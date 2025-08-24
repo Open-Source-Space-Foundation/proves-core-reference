@@ -1,8 +1,8 @@
 #####
 # 'ReferenceDeployment' Deployment:
 #
-# This registers the 'ReferenceDeployment' deployment to the build system. 
-# Custom components that have not been added at the project-level should be added to 
+# This registers the 'ReferenceDeployment' deployment to the build system.
+# Custom components that have not been added at the project-level should be added to
 # the list below.
 #
 #####

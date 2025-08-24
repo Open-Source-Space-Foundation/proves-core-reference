@@ -31,7 +31,7 @@ fprime-gds
 
 - **CdhCore**: Command & Data Handling
   - Command dispatching and event management
-  - Event logging and telemetry collection  
+  - Event logging and telemetry collection
   - Health monitoring system
   - Fatal error handling
 

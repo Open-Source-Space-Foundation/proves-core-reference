@@ -1,6 +1,6 @@
 # Proves Core Reference Project
 
-This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/). 
+This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/).
 
 ## System Requirements
 - F Prime System Requirements listed [here](https://fprime.jpl.nasa.gov/latest/docs/getting-started/installing-fprime/#system-requirements)
@@ -28,7 +28,7 @@ Run generate from the `proves-core-reference` directory. This generates the buil
 make generate
 ```
 
-Then, and everytime you change code, run
+Then, and every time you change code, run
 
 ```shell
 make build
@@ -63,7 +63,7 @@ Now you want to install the firmware to the board.
 make install BOARD_DIR=[path-to-your-board]
 ```
 
-Finally, run the fprime-gds.  
+Finally, run the fprime-gds.
 ```shell
 make gds
 ```

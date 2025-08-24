@@ -22,4 +22,3 @@ register_fprime_library(
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
-

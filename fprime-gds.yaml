@@ -2,4 +2,3 @@ command-line-options:
   communication-selection: uart
   uart-baud: 115200
   no-app:
-

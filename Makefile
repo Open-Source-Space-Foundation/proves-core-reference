@@ -11,7 +11,7 @@ help: ## Display this help.
 submodules: ## Initialize and update git submodules
 	@echo "Initializing and updating git submodules..."
 	git submodule update --init --recursive
-	
+
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@test -s $(VIRTUAL_ENV) || { \
