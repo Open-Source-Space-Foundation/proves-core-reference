@@ -43,7 +43,7 @@ fmt: pre-commit-install ## Lint and format files
 	$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
 	@echo "Generating FPrime-Zephyr Proves Core Reference..."
 	$(UV) run fprime-util generate --force
 
@@ -53,7 +53,7 @@ generate-if-needed:
 	@test -s $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: fprime-venv zephyr-setup generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@echo "Building FPrime code..."
 	@$(UV) run fprime-util build
 
