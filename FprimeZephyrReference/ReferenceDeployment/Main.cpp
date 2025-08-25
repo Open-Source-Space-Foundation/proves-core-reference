@@ -4,9 +4,12 @@
 //
 // ======================================================================
 // Used to access topology functions
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
+// clang-format off
+// Keep the includes in this order for Zephyr
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
+#include <zephyr/sys/printk.h>
+#include <zephyr/kernel.h>
+// clang-format on
 
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 
