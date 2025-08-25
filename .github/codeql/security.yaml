@@ -1,0 +1,15 @@
+name: "CodeQL security and quality"
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+  - include:
+      id: cpp/incorrect-not-operator-usage
+  - include:
+      tags contain: correctness
+  - include:
+      tags contain: reliability
+
+paths-ignore:
+  - docs/
