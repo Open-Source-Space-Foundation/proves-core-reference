@@ -17,3 +17,10 @@ repos:
   rev: v20.1.8
   hooks:
   - id: clang-format
+
+- repo: https://github.com/cpplint/cpplint
+  rev: 2.0.0
+  hooks:
+    - id: cpplint
+      args:
+        - --config=cpplint.cfg
