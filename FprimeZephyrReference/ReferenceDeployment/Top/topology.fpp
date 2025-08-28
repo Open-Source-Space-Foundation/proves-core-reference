@@ -29,6 +29,7 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
+    instance imu
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -92,11 +93,16 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> imu.run
     }
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
+
+    # connections Imu {
+
+    # }
 
     connections ReferenceDeployment {
 
