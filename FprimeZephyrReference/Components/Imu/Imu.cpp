@@ -20,8 +20,10 @@ Imu ::~Imu() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void Imu ::TODO_handler(FwIndexType portNum, U32 context) {
-    // TODO
+void Imu ::run_handler(FwIndexType portNum, U32 context) {
+    this->imuCallCount++;
+    this->tlmWrite_ImuCalls(this->imuCallCount);
+    this->log_ACTIVITY_HI_ImuTestEvent();
 }
 
 }  // namespace Components

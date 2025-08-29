@@ -41,6 +41,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 6
 
+  # instance imu: Components.Imu base id 0x10004000 \
+  #   queue size Default.QUEUE_SIZE \
+  #   stack size Default.STACK_SIZE \
+  #   priority 7
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -63,4 +68,6 @@ module ReferenceDeployment {
   instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10015000
 
   instance watchdog: Components.Watchdog base id 0x10016000
+
+  instance imu: Components.Imu base id 0x10017000
 }

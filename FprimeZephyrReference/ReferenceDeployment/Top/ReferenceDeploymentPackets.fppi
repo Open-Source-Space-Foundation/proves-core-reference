@@ -33,6 +33,10 @@ telemetry packets ReferenceDeploymentPackets {
   packet Led id 5 group 4 {
     ReferenceDeployment.watchdog.WatchdogTransitions
   }
+  
+  packet Imu id 6 group 4 {
+    ReferenceDeployment.imu.ImuCalls
+  }
 
 
 } omit {

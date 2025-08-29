@@ -32,9 +32,10 @@ class Imu final : public ImuComponentBase {
     //! Handler implementation for TODO
     //!
     //! TODO
-    void TODO_handler(FwIndexType portNum,  //!< The port number
-                      U32 context           //!< The call order
-                      ) override;
+    U64 imuCallCount;
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
 };
 
 }  // namespace Components

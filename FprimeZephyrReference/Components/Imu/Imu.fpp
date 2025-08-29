@@ -1,7 +1,13 @@
 module Components {
     @ Component for F Prime FSW framework.
-    active component Imu {
-        
+    passive component Imu {
+        sync input port run: Svc.Sched
+
+        telemetry ImuCalls: U64
+
+        event ImuTestEvent() \
+            severity activity high \
+            format "WOAH WHATS HAPPENING IS THIS WORKING HELLO"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
