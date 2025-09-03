@@ -41,11 +41,6 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 6
 
-  # instance imu: Components.Imu base id 0x10004000 \
-  #   queue size Default.QUEUE_SIZE \
-  #   stack size Default.STACK_SIZE \
-  #   priority 7
-
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
