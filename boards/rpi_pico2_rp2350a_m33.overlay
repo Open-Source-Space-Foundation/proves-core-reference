@@ -8,6 +8,11 @@
     chosen {
         zephyr,console = &cdc_acm_uart0;
     };
+
+    burnwire0: burnwire0 {
+        gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+        label = "Burnwire 0, 28";
+    };
 };
 
 /* Override the default LED definition to use GPIO 24 instead of GPIO 25 for PROVES FC board*/

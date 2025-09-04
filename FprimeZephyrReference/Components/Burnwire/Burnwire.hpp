@@ -23,6 +23,32 @@ class Burnwire final : public BurnwireComponentBase {
 
     //! Destroy Burnwire object
     ~Burnwire();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for stop
+    //!
+    //! Port to start and stop the burnwire
+    void stop_handler(FwIndexType portNum  //!< The port number
+                      ) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command START_BURNWIRE
+    void START_BURNWIRE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                   U32 cmdSeq,           //!< The command sequence number
+                                   Fw::On burnwire_state) override;
+
+    //! Handler implementation for command STOP_BURNWIRE
+    void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                  U32 cmdSeq,           //!< The command sequence number
+                                  Fw::On burnwire_state) override;
 };
 
 }  // namespace Components
