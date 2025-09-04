@@ -29,6 +29,7 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
+    instance burnwire
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers

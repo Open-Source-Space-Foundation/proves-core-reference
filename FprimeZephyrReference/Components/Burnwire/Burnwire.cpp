@@ -28,13 +28,18 @@ void Burnwire ::stop_handler(FwIndexType portNum) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::On burnwire_state) {
-    // TODO
+void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // update private member variable
+    this->m_state = Fw::On::ON;
+    // send event
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
+    // confirm response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::On burnwire_state) {
-    // TODO
+void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->m_state = Fw::On::OFF;
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

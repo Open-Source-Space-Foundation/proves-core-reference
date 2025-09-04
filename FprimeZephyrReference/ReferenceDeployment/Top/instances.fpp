@@ -1,5 +1,6 @@
 module ReferenceDeployment {
 
+
   # ----------------------------------------------------------------------
   # Base ID Convention
   # ----------------------------------------------------------------------
@@ -63,4 +64,7 @@ module ReferenceDeployment {
   instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10015000
 
   instance watchdog: Components.Watchdog base id 0x10016000
+
+  instance burnwire: Components.Burnwire base id 0x10017000
+
 }

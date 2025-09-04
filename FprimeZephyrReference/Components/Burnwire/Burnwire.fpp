@@ -8,10 +8,9 @@ module Components {
 
         # @ Examplesync command
         sync command START_BURNWIRE(
-            burnwire_state: Fw.On
         )
+
         sync command STOP_BURNWIRE(
-            burnwire_state: Fw.On
         )
 
         # @ Example telemetry counter
@@ -19,7 +18,7 @@ module Components {
 
         # @ Example event
         # event ExampleStateEvent(example_state: Fw.On) severity activity high id 0 format "State set to {}"
-        event SetBlinkingState(burnwire_state: Fw.On) \
+        event SetBurnwireState(burnwire_state: Fw.On) \
             severity activity high \
             format "Burnwire State: {}"
 

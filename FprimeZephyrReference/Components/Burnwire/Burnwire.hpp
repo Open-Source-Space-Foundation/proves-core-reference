@@ -41,14 +41,12 @@ class Burnwire final : public BurnwireComponentBase {
     // ----------------------------------------------------------------------
 
     //! Handler implementation for command START_BURNWIRE
-    void START_BURNWIRE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                   U32 cmdSeq,           //!< The command sequence number
-                                   Fw::On burnwire_state) override;
+    void START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
 
     //! Handler implementation for command STOP_BURNWIRE
-    void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                  U32 cmdSeq,           //!< The command sequence number
-                                  Fw::On burnwire_state) override;
+    void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+
+    Fw::On m_state = Fw::On::OFF;  // keeps track if burnwire is on or off
 };
 
 }  // namespace Components
