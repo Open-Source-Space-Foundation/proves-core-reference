@@ -10,8 +10,8 @@
     };
 };
 
-/* Override the default LED definition to use GPIO 24 instead of GPIO 25 for PROVES FC board*/
+/* Override the default LED definition to use GPIO 23 instead of GPIO 25 for PROVES FC board (it is 24 for v5c) */
 &led0 {
-    gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
-    label = "User LED GPIO24";
+    gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+    label = "User LED GPIO23";
 };
