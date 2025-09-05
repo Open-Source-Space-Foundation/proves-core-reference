@@ -7,6 +7,7 @@
 #ifndef Components_Burnwire_HPP
 #define Components_Burnwire_HPP
 
+#include <atomic>
 #include "FprimeZephyrReference/Components/Burnwire/BurnwireComponentAc.hpp"
 
 namespace Components {
@@ -48,11 +49,10 @@ class Burnwire final : public BurnwireComponentBase {
     //! Handler implementation for command STOP_BURNWIRE
     void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
 
-    Fw::On m_state = Fw::On::OFF;  // keeps track if burnwire is on or off
-    std::atomic<U32>
-        m_safetyCounter;  // makes this an atomic variable (so its set only in one comnmdn), so you won't have smth so
-                          // you read and write half the value bc a corrupted read could be dangerouts
-    U32 m_safetyMaxCount = 5;  // make this a aparamater
+    Fw::On m_state = Fw::On::OFF;      // keeps track if burnwire is on or off
+    std::atomic<U32> m_safetyCounter;  // makes this an atomic variable (so its set only in one command),
+                                       // you read and write half the value bc a corrupted read could be dangerouts
+    U32 m_safetyMaxCount = 5;          // make this a aparamater
 };
 
 }  // namespace Components

@@ -29,6 +29,12 @@ module Components {
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
 
+        @ Port getting start signal
+        sync input port burnStart: Fw.Signal
+
+        @ Port getting stop signal
+        sync input port burnStop: Fw.Signal
+
         @ Input Port to get the rate group
         sync input port schedIn: Svc.Sched
 

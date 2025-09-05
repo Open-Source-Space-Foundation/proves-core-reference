@@ -16,19 +16,12 @@ Add requirements in the chart below
 |BW-005|The burnwire component shall be controlled by a safety timeout attached to a 1Hz rate group that can be changed within the code |Integration Test|
 |BW-006|The burnwire safety time shall emit an event when it starts and stops |Integration Test|
 
-
-Use the Zephyr GPIO driver --> so that the GPIO driver can be changed instead of being hardcoded
-checking is it calling that set port, break the two layers out
-Write, read get interrupt from GPIO
-single port of type driver.gPIO write that is a port on your FPP
-
-
 ## Port Descriptions
 Name | Type | Description |
 |----|---|---|
-|----|`Fw::Signal`|Receive stop signal to stop the burnwire|
-|----|`Fw::Signal`|Receive start signal to start burnwire|
-|----|`Drv::GpioWrite`|Control GPIO state to driver|
+|burnStop|`Fw::Signal`|Receive stop signal to stop the burnwire|
+|burnStart|`Fw::Signal`|Receive start signal to start burnwire|
+|gpioSet|`Drv::GpioWrite`|Control GPIO state to driver|
 |schedIn|[`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group
 
 
@@ -62,4 +55,4 @@ Add unit test descriptions in the chart below
 
 ## Parameter
 | Name | Description |
-| ---- | ----------- |
+| m_safetyMaxCount | The maximum amount that the burnwire will burn before stopping itself for safety |

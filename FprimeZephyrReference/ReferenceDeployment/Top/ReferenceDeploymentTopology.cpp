@@ -14,7 +14,7 @@
 #include <zephyr/drivers/gpio.h>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-// static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
+// static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
 
 static const struct gpio_dt_spec burnwire0Gpio = {
     .port = DEVICE_DT_GET(DT_NODELABEL(gpio0)),
