@@ -9,6 +9,7 @@ Add requirements in the chart below
 |BW-002|The burnwire component shall turn off when commanded to |Hardware Test|
 |BW-003|The burnwire component shall provide an Event when it is turned on and off |Integration Test|
 |BW-004|The burnwire component shall activate by turning the GPIO pins on one at a time |Integration Test|
+|BW-005|The burnwire component shall be controlled by a safety timeout that can be changed within the code |Integration Test|
 
 
 ## Port Descriptions
@@ -33,8 +34,8 @@ Add requirements in the chart below
 ## Component States
 Add component states in the chart below
 | Name | Description |
-|---|---|
-|---|---|
+|----|---|
+|m_state|Keeps track if the burnwire is on or off|
 
 ## Sequence Diagrams
 Add sequence diagrams here
@@ -56,8 +57,9 @@ Add sequence diagrams here
 ## Unit Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
-|---|---|---|---|
-|---|---|---|---|
+|TestSafety|Tests Burnwire turns off after X seconds|---|---|
+|TestOn|Tests right GPIO pins turn on |---|---|
+|TestOn|Tests right GPIO pins turn off, same as on |---|---|
 
 ## Change Log
 | Date | Description |

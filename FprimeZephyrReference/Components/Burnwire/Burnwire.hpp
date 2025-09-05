@@ -32,8 +32,10 @@ class Burnwire final : public BurnwireComponentBase {
     //! Handler implementation for stop
     //!
     //! Port to start and stop the burnwire
-    void stop_handler(FwIndexType portNum  //!< The port number
-                      ) override;
+
+    void schedIn_handler(FwIndexType portNum,  //!< The port number
+                         U32 context           //!< The call order
+                         ) override;
 
   private:
     // ----------------------------------------------------------------------
@@ -47,6 +49,8 @@ class Burnwire final : public BurnwireComponentBase {
     void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
 
     Fw::On m_state = Fw::On::OFF;  // keeps track if burnwire is on or off
+    U32 m_safetyCounter = 0;       // keeps track of the safety number of seconds
+    U32 m_safetyMaxCount = 5;
 };
 
 }  // namespace Components

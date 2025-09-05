@@ -22,11 +22,15 @@ module Components {
             severity activity high \
             format "Burnwire State: {}"
 
+        event SafetyTimerStatus(burnwire_state: Fw.On) \
+            severity activity high\
+            format "Safety Timer State: {} "
+
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
 
-        @ Input Port to start and stop the burnwire
-        sync input port stop: Fw.Signal
+        @ Input Port to get the rate group
+        sync input port schedIn: Svc.Sched
 
         @ Port sending calls to the GPIO driver to stop and start the burnwire
         output port gpioSet: [2] Drv.GpioWrite

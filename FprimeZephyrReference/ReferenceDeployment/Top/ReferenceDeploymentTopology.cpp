@@ -16,12 +16,12 @@
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = {
     .port = DEVICE_DT_GET(DT_NODELABEL(gpio0)),
-    .pin = 28,
+    .pin = 28,  // 28
     .dt_flags = GPIO_ACTIVE_HIGH,
 };
 static const struct gpio_dt_spec burnwire1Gpio = {
     .port = DEVICE_DT_GET(DT_NODELABEL(gpio0)),
-    .pin = 29,
+    .pin = 29,  // 29
     .dt_flags = GPIO_ACTIVE_HIGH,
 };
 
