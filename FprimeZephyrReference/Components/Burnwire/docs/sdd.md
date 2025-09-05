@@ -1,22 +1,36 @@
 # Components::Burnwire
 
-Turns Burnwire on and off
+Driving the Burnwire on and off. The deployment will be handled by the Antenna Deployment component TODO ADD details
+
+## Sequence Diagrams
+Add sequence diagrams here
 
 ## Requirements
 Add requirements in the chart below
 | Name | Description | Validation |
-|BW-001|The burnwire component shall turn on when commanded to |Hardware Test|
-|BW-002|The burnwire component shall turn off when commanded to |Hardware Test|
+| ---- | -----------  | ------ |
+|BW-001|The burnwire shall turn on in response to a port call |Hardware Test|
+|BW-002|The burnwire shall turn off in response to a port call |Hardware Test|
 |BW-003|The burnwire component shall provide an Event when it is turned on and off |Integration Test|
 |BW-004|The burnwire component shall activate by turning the GPIO pins on one at a time |Integration Test|
-|BW-005|The burnwire component shall be controlled by a safety timeout that can be changed within the code |Integration Test|
+|BW-005|The burnwire component shall be controlled by a safety timeout attached to a 1Hz rate group that can be changed within the code |Integration Test|
+|BW-006|The burnwire safety time shall emit an event when it starts and stops |Integration Test|
+
+
+Use the Zephyr GPIO driver --> so that the GPIO driver can be changed instead of being hardcoded
+checking is it calling that set port, break the two layers out
+Write, read get interrupt from GPIO
+single port of type driver.gPIO write that is a port on your FPP
 
 
 ## Port Descriptions
-| Name | Description |
-|---|---|
-|Fw::Signal|Receive stop signal to stop and start burnwire|
-|Drv::GpioWrite|Control GPIO state to driver|
+Name | Type | Description |
+|----|---|---|
+|----|`Fw::Signal`|Receive stop signal to stop the burnwire|
+|----|`Fw::Signal`|Receive start signal to start burnwire|
+|----|`Drv::GpioWrite`|Control GPIO state to driver|
+|schedIn|[`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group
+
 
 ## Commands
 | Name | Description |
@@ -37,31 +51,15 @@ Add component states in the chart below
 |----|---|
 |m_state|Keeps track if the burnwire is on or off|
 
-## Sequence Diagrams
-Add sequence diagrams here
-
-## Parameters
-| Name | Description |
-|---|---|
-|---|---|
-
-
-
-
-
-## Telemetry
-| Name | Description |
-|---|---|
-|---|---|
 
 ## Unit Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
 |TestSafety|Tests Burnwire turns off after X seconds|---|---|
 |TestOn|Tests right GPIO pins turn on |---|---|
-|TestOn|Tests right GPIO pins turn off, same as on |---|---|
+|TestOn|Tests right GPIO pins turn off, same as |---|---|
 
-## Change Log
-| Date | Description |
-|---|---|
-|---| Initial Draft |
+
+## Parameter
+| Name | Description |
+| ---- | ----------- |

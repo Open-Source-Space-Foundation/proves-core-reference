@@ -28,6 +28,8 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;
         if (this->m_safetyCounter == 1) {
+            this->gpioSet_out(0, Fw::Logic::HIGH);
+            this->gpioSet_out(1, Fw::Logic::HIGH);
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::ON);
         }
 
@@ -48,18 +50,14 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // reset count to 0
+    this->m_safetyCounter = 0;
     // update private member variable
     this->m_state = Fw::On::ON;
     // send event
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
     // confirm response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-
-    // reset count to 0
-    this->m_safetyCounter = 0;
-
-    this->gpioSet_out(0, Fw::Logic::HIGH);
-    this->gpioSet_out(1, Fw::Logic::HIGH);
 }
 
 void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {

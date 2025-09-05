@@ -49,8 +49,10 @@ class Burnwire final : public BurnwireComponentBase {
     void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
 
     Fw::On m_state = Fw::On::OFF;  // keeps track if burnwire is on or off
-    U32 m_safetyCounter = 0;       // keeps track of the safety number of seconds
-    U32 m_safetyMaxCount = 5;
+    std::atomic<U32>
+        m_safetyCounter;  // makes this an atomic variable (so its set only in one comnmdn), so you won't have smth so
+                          // you read and write half the value bc a corrupted read could be dangerouts
+    U32 m_safetyMaxCount = 5;  // make this a aparamater
 };
 
 }  // namespace Components
