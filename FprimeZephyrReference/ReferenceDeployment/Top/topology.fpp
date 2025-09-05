@@ -27,6 +27,8 @@ module ReferenceDeployment {
     instance timer
     instance comDriver
     instance gpioDriver
+    instance gpioBurnwire0
+    instance gpioBurnwire1
     instance watchdog
     instance prmDb
     instance burnwire
@@ -95,9 +97,16 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
     }
 
+
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
+
+    connections BurnwireGpio {
+      burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
 
     connections ReferenceDeployment {
 

@@ -67,3 +67,54 @@ Finally, run the fprime-gds.
 ```shell
 make gds
 ```
+
+# How to add a component
+
+1. Overlay
+
+
+you also want to add aliases
+
+ aliases {
+        burnwire0 = &burnwire0;
+        burnwire1 = &burnwire1;
+    };
+
+
+2.
+
+In RefereneceDeploymentTopology.cpp
+static const struct gpio_dt_spec burnwireGpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
+
+    gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+
+
+and
+
+gpioDriver.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+
+in topology.fpp
+
+connections burnwire1 {
+      burnwire1.gpioSet -> gpioDriver.gpioWrite
+    }
+
+
+
+
+in instances.fpp
+instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
+
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
+
+
+in topology.fpp
+
+  instance gpioBurnwire0
+    instance gpioBurnwire1
+
+3. Make a new component in the components folder
+4. Add the component to the instances and topology folder
+
+in topology.fpp also     instance burnwire

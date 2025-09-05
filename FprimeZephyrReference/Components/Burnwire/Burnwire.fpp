@@ -25,11 +25,11 @@ module Components {
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
 
-        @ Port to start and stop the burnwire
+        @ Input Port to start and stop the burnwire
         sync input port stop: Fw.Signal
 
-        @ Port sending calls to the GPIO driver
-        output port gpioSet: Drv.GpioWrite
+        @ Port sending calls to the GPIO driver to stop and start the burnwire
+        output port gpioSet: [2] Drv.GpioWrite
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
