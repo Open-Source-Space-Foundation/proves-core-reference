@@ -13,7 +13,7 @@
 
 #include <zephyr/drivers/gpio.h>
 
-static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
