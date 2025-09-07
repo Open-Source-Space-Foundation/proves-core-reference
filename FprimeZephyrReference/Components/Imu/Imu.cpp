@@ -53,10 +53,10 @@ void Imu ::run_handler(FwIndexType portNum, U32 context) {
     sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_XYZ, accel_data);
     float accel_values[3] = {out_ev(&accel_data[0]), out_ev(&accel_data[1]), out_ev(&accel_data[2])};
 
-    // struct sensor_value gyro_data[3] = {};
-    // sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
-    // sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_XYZ, gyro_data);
-    // float gyro_values[3] = {out_ev(gyro_data[0]), out_ev(gyro_data[1]), out_ev(gyro_data[2])}
+    struct sensor_value gyro_data[3] = {};
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_GYRO_XYZ);
+    sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_XYZ, gyro_data);
+    float gyro_values[3] = {out_ev(gyro_data[0]), out_ev(gyro_data[1]), out_ev(gyro_data[2])};
 
 
     // Output the magnetic field values via telemetry
@@ -65,7 +65,11 @@ void Imu ::run_handler(FwIndexType portNum, U32 context) {
 
     // Output the acceleration values vie telemtry
     this->tlmWrite_Acceleration(Components::Imu_Acceleration(
-        static_cast<F64>(accel_val_x), static_cast<F64>(accel_val_y), static_cast<F64>(accel_val_z)));
+        static_cast<F64>(accel_values[0]), static_cast<F64>(accel_values[1]), static_cast<F64>(accel_values[2])));
+
+    this->tlmWrite_Gyroscope(Components::Imu_Gyroscope(
+        static_cast<F64>(gyro_values[0]), static_cast<F64>(gyro_values[1]), static_cast<F64>(gyro_values[2])));
+    
 }
 
 float Imu::out_ev(struct sensor_value *val) {
