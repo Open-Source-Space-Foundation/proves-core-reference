@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Andrew Featherstone
 # SPDX-License-Identifier: Apache-2.0
 
-if BOARD_PROVES_FLIGHT_CONTROL_BOARD_V5C
+if PROVES_FLIGHT_CONTROL_BOARD_V5C
 
 config USB_SELF_POWERED
 	default n
@@ -11,4 +11,4 @@ config USB_CDC_ACM_LOG_LEVEL
 
 config USB_DEVICE_LOG_LEVEL
 	default 1
-endif # BOARD_RPI_PICO2
+endif # PROVES_FLIGHT_CONTROL_BOARD_V5C

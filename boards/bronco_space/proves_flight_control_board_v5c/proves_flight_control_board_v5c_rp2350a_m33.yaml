@@ -1,5 +1,5 @@
-identifier: proves_flight_board_v5/rp2350a/m33
-name: Raspberry Pi Pico 2 (Cortex-M33)
+identifier: proves_flight_control_board_v5c/rp2350a/m33
+name: PROVES Flight Control Board v5c (RP2350, Cortex-M33)
 type: mcu
 arch: arm
 flash: 4096
