@@ -1,0 +1,6 @@
+board:
+  name: proves_flight_board_v5
+  full_name: Raspberry Pi Pico 2
+  vendor: bronco_space
+  socs:
+  - name: rp2350a
