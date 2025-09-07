@@ -17,6 +17,14 @@
 	aliases {
 		watchdog0 = &wdt0;
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led0 {
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+			label = "User LED GPIO24";
+		};
+	};
 };
 
 zephyr_udc0: &usbd {
