@@ -3,11 +3,12 @@ module Components {
     passive component Imu {
         sync input port run: Svc.Sched
 
-        telemetry ImuCalls: U64
-
-        event ImuTestEvent() \
-            severity activity high \
-            format "WOAH WHATS HAPPENING IS THIS WORKING HELLO"
+        struct MagneticField {
+            x: F64
+            y: F64
+            z: F64
+        }
+        telemetry MagneticField: MagneticField
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

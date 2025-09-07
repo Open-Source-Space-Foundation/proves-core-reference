@@ -40,11 +40,7 @@ class Imu final : public ImuComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    U64 imuCallCount;
     const struct device* lis2mdl;
-    struct sensor_value magnetic_field_x;
-    struct sensor_value magnetic_field_y;
-    struct sensor_value magnetic_field_z;
 };
 
 }  // namespace Components
