@@ -40,7 +40,10 @@ class Imu final : public ImuComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    static float out_ev(struct sensor_value* val);
     const struct device* lis2mdl;
+    const struct device* lsm6dso;
+    
 };
 
 }  // namespace Components

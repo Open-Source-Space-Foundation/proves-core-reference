@@ -36,6 +36,8 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet Imu id 6 group 4 {
     ReferenceDeployment.imu.MagneticField
+    ReferenceDeployment.imu.Acceleration
+    ReferenceDeployment.imu.Gyroscope
   }
 
 

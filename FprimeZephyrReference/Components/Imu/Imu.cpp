@@ -8,6 +8,7 @@
 
 #include <Fw/Types/Assert.hpp>
 
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -18,6 +19,10 @@ Imu ::Imu(const char* const compName) : ImuComponentBase(compName) {
     lis2mdl = device_get_binding("LIS2MDL");
     FW_ASSERT(lis2mdl != nullptr);
     FW_ASSERT(device_is_ready(lis2mdl));
+
+    lsm6dso = device_get_binding("LSM6DSO");
+    FW_ASSERT(lsm6dso != nullptr);
+    FW_ASSERT(device_is_ready(lsm6dso));
 }
 
 Imu ::~Imu() {}
@@ -39,13 +44,33 @@ void Imu ::run_handler(FwIndexType portNum, U32 context) {
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Z, &magnetic_data_z);
 
     // Convert to float values in gauss
-    float magnetic_field_x = magnetic_data_x.val1 + magnetic_data_x.val2 / 1000000.0f;
-    float magnetic_field_y = magnetic_data_y.val1 + magnetic_data_y.val2 / 1000000.0f;
-    float magnetic_field_z = magnetic_data_z.val1 + magnetic_data_z.val2 / 1000000.0f;
+    float magnetic_field_x = out_ev(&magnetic_data_x);
+    float magnetic_field_y = out_ev(&magnetic_data_y);
+    float magnetic_field_z = out_ev(&magnetic_data_z);
+
+    struct sensor_value accel_data[3] = {};
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
+    sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_XYZ, accel_data);
+    float accel_values[3] = {out_ev(&accel_data[0]), out_ev(&accel_data[1]), out_ev(&accel_data[2])};
+
+    // struct sensor_value gyro_data[3] = {};
+    // sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
+    // sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_XYZ, gyro_data);
+    // float gyro_values[3] = {out_ev(gyro_data[0]), out_ev(gyro_data[1]), out_ev(gyro_data[2])}
+
 
     // Output the magnetic field values via telemetry
     this->tlmWrite_MagneticField(Components::Imu_MagneticField(
         static_cast<F64>(magnetic_field_x), static_cast<F64>(magnetic_field_y), static_cast<F64>(magnetic_field_z)));
+
+    // Output the acceleration values vie telemtry
+    this->tlmWrite_Acceleration(Components::Imu_Acceleration(
+        static_cast<F64>(accel_val_x), static_cast<F64>(accel_val_y), static_cast<F64>(accel_val_z)));
 }
+
+float Imu::out_ev(struct sensor_value *val) {
+    return val->val1 + (float)val->val2 / 1000000.0f;
+}
+
 
 }  // namespace Components
