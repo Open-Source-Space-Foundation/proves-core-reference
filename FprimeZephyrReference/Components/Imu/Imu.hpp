@@ -9,6 +9,10 @@
 
 #include "FprimeZephyrReference/Components/Imu/ImuComponentAc.hpp"
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/kernel.h>
+
 namespace Components {
 
 class Imu final : public ImuComponentBase {
@@ -32,10 +36,15 @@ class Imu final : public ImuComponentBase {
     //! Handler implementation for TODO
     //!
     //! TODO
-    U64 imuCallCount;
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+
+    U64 imuCallCount;
+    const struct device* lis2mdl;
+    struct sensor_value magnetic_field_x;
+    struct sensor_value magnetic_field_y;
+    struct sensor_value magnetic_field_z;
 };
 
 }  // namespace Components
