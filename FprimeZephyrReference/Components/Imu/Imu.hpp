@@ -40,7 +40,14 @@ class Imu final : public ImuComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    F64 sensor_value_to_f64(const struct sensor_value& val);
+
+    Components::Imu_Acceleration get_acceleration();
+    Components::Imu_AngularVelocity get_angular_velocity();
+    Components::Imu_MagneticField get_magnetic_field();
+
     const struct device* lis2mdl;
+    const struct device* lsm6dso;
 };
 
 }  // namespace Components
