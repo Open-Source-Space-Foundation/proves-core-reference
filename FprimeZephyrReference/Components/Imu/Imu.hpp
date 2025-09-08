@@ -43,6 +43,7 @@ class Imu final : public ImuComponentBase {
     static float out_ev(struct sensor_value* val);
     const struct device* lis2mdl;
     const struct device* lsm6dso;
+    struct sensor_value odr;
     
 };
 

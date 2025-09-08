@@ -15,15 +15,15 @@ module Components {
             z: F64
         }
 
-        struct Gyroscope {
-            x: F64
-            y: F64
-            z: F64
-        }
+        # struct Gyroscope {
+        #     x: F64
+        #     y: F64
+        #     z: F64
+        # }
         
         telemetry MagneticField: MagneticField
         telemetry Acceleration: Acceleration
-        telemetry Gyroscope: Gyroscope
+        # telemetry Gyroscope: Gyroscope
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
