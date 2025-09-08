@@ -40,11 +40,13 @@ void Imu ::run_handler(FwIndexType portNum, U32 context) {
     sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
     sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_GYRO_XYZ);
     sensor_sample_fetch_chan(lis2mdl, SENSOR_CHAN_MAGN_XYZ);
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_DIE_TEMP);
 
     // Output the magnetic field values via telemetry
     this->tlmWrite_Acceleration(this->get_acceleration());
     this->tlmWrite_AngularVelocity(this->get_angular_velocity());
     this->tlmWrite_MagneticField(this->get_magnetic_field());
+    this->tlmWrite_Temperature(this->get_temperature());
 }
 
 F64 Imu ::sensor_value_to_f64(const struct sensor_value& val) {
@@ -87,4 +89,9 @@ Components::Imu_MagneticField Imu ::get_magnetic_field() {
                                          this->sensor_value_to_f64(z));
 }
 
+F64 Imu ::get_temperature() {
+    struct sensor_value temp;
+    sensor_channel_get(lsm6dso, SENSOR_CHAN_DIE_TEMP, &temp);
+    return this->sensor_value_to_f64(temp);
+}
 }  // namespace Components

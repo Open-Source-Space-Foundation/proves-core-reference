@@ -63,4 +63,6 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
+  # Reserving temp telemetry for future use
+  ReferenceDeployment.imu.Temperature
 }

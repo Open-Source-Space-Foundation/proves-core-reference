@@ -45,6 +45,7 @@ class Imu final : public ImuComponentBase {
     Components::Imu_Acceleration get_acceleration();
     Components::Imu_AngularVelocity get_angular_velocity();
     Components::Imu_MagneticField get_magnetic_field();
+    F64 get_temperature();
 
     const struct device* lis2mdl;
     const struct device* lsm6dso;

@@ -24,6 +24,8 @@ module Components {
         }
         telemetry AngularVelocity: AngularVelocity
 
+        telemetry Temperature: F64
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
