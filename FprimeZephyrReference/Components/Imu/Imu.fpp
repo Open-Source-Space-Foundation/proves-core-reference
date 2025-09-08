@@ -10,6 +10,20 @@ module Components {
         }
         telemetry MagneticField: MagneticField
 
+        struct Acceleration {
+            x: F64
+            y: F64
+            z: F64
+        }
+        telemetry Acceleration: Acceleration
+
+        struct AngularVelocity {
+            x: F64
+            y: F64
+            z: F64
+        }
+        telemetry AngularVelocity: AngularVelocity
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

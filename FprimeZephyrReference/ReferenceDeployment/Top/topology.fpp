@@ -100,10 +100,6 @@ module ReferenceDeployment {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
 
-    # connections Imu {
-
-    # }
-
     connections ReferenceDeployment {
 
     }
