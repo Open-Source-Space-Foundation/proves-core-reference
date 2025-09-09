@@ -95,4 +95,4 @@ Add requirements in the chart below
 ## Change Log
 | Date | Description |
 |---|---|
-| 2025-9-9 | Initial IMU component |
+| 2025-09-09 | Initial IMU component |
