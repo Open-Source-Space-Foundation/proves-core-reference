@@ -34,6 +34,18 @@ class Burnwire final : public BurnwireComponentBase {
     //!
     //! Port to start and stop the burnwire
 
+    //! Handler implementation for burnStart
+    //!
+    //! Port getting start signal
+    void burnStart_handler(FwIndexType portNum  //!< The port number
+                           ) override;
+
+    //! Handler implementation for burnStop
+    //!
+    //! Port getting stop signal
+    void burnStop_handler(FwIndexType portNum  //!< The port number
+                          ) override;
+
     void schedIn_handler(FwIndexType portNum,  //!< The port number
                          U32 context           //!< The call order
                          ) override;

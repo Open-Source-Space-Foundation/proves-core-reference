@@ -19,6 +19,13 @@ Burnwire ::~Burnwire() {}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
+void Burnwire ::burnStart_handler(FwIndexType portNum) {
+    // TODO
+}
+
+void Burnwire ::burnStop_handler(FwIndexType portNum) {
+    // TODO
+}
 
 // void Burnwire ::stop_handler(FwIndexType portNum) {
 //     //TODO

@@ -12,13 +12,14 @@ submodules: ## Initialize and update git submodules
 	@echo "Initializing and updating git submodules..."
 	git submodule update --init --recursive
 
+
+
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: uv ## Create a virtual environment
-	@test -s $(VIRTUAL_ENV) || { \
 		echo "Creating virtual environment..."; \
 		$(UV) venv fprime-venv; \
-		$(UV) pip install --requirement requirements.txt; \
-	}
+		$(UV) pip install --requirement requirements.txt;
+
 
 .PHONY: zephyr-setup
 zephyr-setup: uv ## Set up Zephyr environment
