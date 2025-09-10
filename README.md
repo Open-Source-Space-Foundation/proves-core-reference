@@ -183,7 +183,7 @@ connections comms {
 ```
 
 
-4. Add Component Instances
+### 4. Add Component Instances
 
 Assign Base IDs and create instances of each driver/component. Base IDs are used internally by F´ to route commands/events. Every component must have a unique Base ID.
 
@@ -193,11 +193,11 @@ in instances.fpp create an instance of your new pin. Get the base Id by looking 
 instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
 ```
 
-5. Make a new component in the components folder. Use the command
+### 5. Make a new component in the components folder. Use the command
 
 fprime-util new --component Components/New_Component
 
-6. Add the component (not the port) to the instances.fpp and topology.fpp folder
+### 6. Add the component (not the port) to the instances.fpp and topology.fpp folder
 
 In topology.fpp:
 
