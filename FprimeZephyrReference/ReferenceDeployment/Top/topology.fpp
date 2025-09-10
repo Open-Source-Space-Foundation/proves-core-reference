@@ -27,8 +27,11 @@ module ReferenceDeployment {
     instance timer
     instance comDriver
     instance gpioDriver
+    instance gpioBurnwire0
+    instance gpioBurnwire1
     instance watchdog
     instance prmDb
+    instance burnwire
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -92,11 +95,19 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> burnwire.schedIn
     }
+
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
+
+    connections BurnwireGpio {
+      burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
 
     connections ReferenceDeployment {
 
