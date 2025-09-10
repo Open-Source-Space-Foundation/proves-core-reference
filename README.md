@@ -70,51 +70,143 @@ make gds
 
 # How to add a component
 
-1. Overlay
+Note: This guide has not been confirmed for UART and I2C connections yet, please edit and add clarification as needed
+
+### 1. Update the Board Overlay (TODO Change this if we are using the dtsi instead)
 
 
-you also want to add aliases
+Declare your hardware devices in the Zephyr device tree overlay or .dts file
 
+
+GPIO examples:
+```
  aliases {
         burnwire0 = &burnwire0;
         burnwire1 = &burnwire1;
     };
 
+burnwire0: burnwire0 {
+        gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+        label = "Burnwire 0, 28";
+    };
 
-2.
+    ...
+```
 
-In RefereneceDeploymentTopology.cpp
-static const struct gpio_dt_spec burnwireGpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
+I2C Example
 
-    gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+```
+/ {
+    aliases {
+        myi2c = &i2c1;        // alias for the I²C bus
+        mysensor = &sensor0;  // alias for the device on the bus
+    };
+};
+
+&i2c1 {
+    status = "okay";
+    mysensor: sensor0@48 {
+        compatible = "myvendor,my-sensor";
+        reg = <0x48>;   // I²C address of the sensor
+    };
+};
+```
+For GPIOs, the alias points to a pin node.
+
+For I²C, you can alias either the bus or a device on the bus.
+
+For UART, the alias points to the UART hardware peripheral.
+
+### 2. Pull the device tree nodes into C++ structs that Zephyr can use. Zephyr drivers require a handle to the hardware node; this step binds your C++ driver to the actual hardware configuration from the overlay.
+
+TODO: Check if the open step needs to happen (can't find clear documentation on it!@@@@@@@@)
 
 
-and
+In RefereneceDeploymentTopology.cpp, you want to get it from the device tree.
 
-gpioDriver.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+Start by creating a node identifier https://docs.zephyrproject.org/latest/build/dts/api-usage.html#dt-node-identifiers. In this example we use DT_ALIAS because we assume you used ALIAS from step 1, but you can create the node identifier however you want.
 
-in topology.fpp
+#### For GPIO:
+https://docs.zephyrproject.org/apidoc/latest/structgpio__dt__spec.html
 
-connections burnwire1 {
-      burnwire1.gpioSet -> gpioDriver.gpioWrite
-    }
+```
+static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
+```
+- GPIO_DT_SPEC_GET → Reads pin number, port, and flags from device tree.
 
 
+#### For a I2C, you would use a i2c_dt_spec instead. https://docs.zephyrproject.org/apidoc/latest/structi2c__dt__spec.html
+```
+static const struct i2c_dt_spec sensor =
+    I2C_DT_SPEC_GET(DT_ALIAS(mysensor));
+```
+
+- I2C_DT_SPEC_GET → Gets I²C bus, address, and speed.
+
+#### For UART:
+https://docs.zephyrproject.org/latest/build/dts/howtos.html
+```
+const struct device *const uart_dev =
+    DEVICE_DT_GET(DT_ALIAS(myuart));
+```
+
+- DEVICE_DT_GET → Retrieves the UART peripheral.
+
+### 3. Declare each driver in the F´ topology and connect it to your component.
+
+The topology defines how components communicate (ports) and ensures F´ can route commands/events between drivers and components.
+
+#### In Topology.fpp
+
+```
+# GPIO drivers
+instance gpioBurnwire0
+instance gpioBurnwire1
 
 
-in instances.fpp
+# Connect burnwire to GPIOs
+connections burnwire {
+    burnwire0.gpioSet -> gpioBurnwire0.gpioWrite
+}
+
+# Connect sensor to I²C driver
+connections mysensor {
+    mySensor.i2cSend -> i2cDriver.i2cWrite
+    i2cDriver.i2cRead -> mySensor.i2cReceive
+}
+
+# Connect UART to communication component
+connections comms {
+    comms.tx -> uartDriver.write
+    uartDriver.read -> comms.rx
+}
+```
+
+
+4. Add Component Instances
+
+Assign Base IDs and create instances of each driver/component. Base IDs are used internally by F´ to route commands/events. Every component must have a unique Base ID.
+
+in instances.fpp create an instance of your new pin. Get the base Id by looking at the instructions for the number at the top of file under Base ID Convention of the instances.fpp
+
+```
 instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
+```
 
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
+5. Make a new component in the components folder. Use the command
 
+fprime-util new --component Components/New_Component
 
-in topology.fpp
+6. Add the component (not the port) to the instances.fpp and topology.fpp folder
 
-  instance gpioBurnwire0
-    instance gpioBurnwire1
+In topology.fpp:
 
-3. Make a new component in the components folder
-4. Add the component to the instances and topology folder
+```
+instance burnwire
+```
 
-in topology.fpp also     instance burnwire
+In instances.fpp:
+```
+instance burnwire: Components.Burnwire base id 0x10017000
+```
+  Get the base Id by looking at the insrtecutions for the number at the top of file under Base ID Convention of the instances.fpp
