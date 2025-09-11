@@ -29,6 +29,8 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
+    instance lis2mdlDriver
+    instance lsm6dsoDriver
     instance imu
 
   # ----------------------------------------------------------------------
@@ -98,6 +100,13 @@ module ReferenceDeployment {
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
+    }
+
+    connections Imu {
+      imu.accelerationRead -> lsm6dsoDriver.accelerationRead
+      imu.angularVelocityRead -> lsm6dsoDriver.angularVelocityRead
+      imu.temperatureRead -> lsm6dsoDriver.temperatureRead
+      imu.magneticFieldRead -> lis2mdlDriver.magneticFieldRead
     }
 
     connections ReferenceDeployment {

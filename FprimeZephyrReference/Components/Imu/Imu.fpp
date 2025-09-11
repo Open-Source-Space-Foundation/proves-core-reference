@@ -3,35 +3,22 @@ module Components {
     passive component Imu {
         sync input port run: Svc.Sched
 
-        @ Acceleration reading in m/s^2
-        struct Acceleration {
-            x: F64
-            y: F64
-            z: F64
-        }
+        @ Ports for sending calls to the LSM6DSO driver
+        output port accelerationRead: Drv.AccelerationRead
+        output port angularVelocityRead: Drv.AngularVelocityRead
+        output port temperatureRead: Drv.TemperatureRead
 
-        @ Telemetry channel for acceleration
-        telemetry Acceleration: Acceleration
+        @ Port for sending calls to the LIS2MDL driver
+        output port magneticFieldRead: Drv.MagneticFieldRead
 
-        @ Angular velocity reading in rad/s
-        struct AngularVelocity {
-            x: F64
-            y: F64
-            z: F64
-        }
+        @ Telemetry channel for acceleration in m/s^2
+        telemetry Acceleration: Drv.Acceleration
 
-        @ Telemetry channel for angular velocity
-        telemetry AngularVelocity: AngularVelocity
+        @ Telemetry channel for angular velocity in rad/s
+        telemetry AngularVelocity: Drv.AngularVelocity
 
-        @ Magnetic field reading in gauss
-        struct MagneticField {
-            x: F64
-            y: F64
-            z: F64
-        }
-
-        @ Telemetry channel for magnetic field
-        telemetry MagneticField: MagneticField
+        @ Telemetry channel for magnetic field in gauss
+        telemetry MagneticField: Drv.MagneticField
 
         @ Telemetry channel for temperature in degrees Celsius
         telemetry Temperature: F64
