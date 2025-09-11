@@ -5,6 +5,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
+    rateGroup12_5Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -21,6 +22,7 @@ module ReferenceDeployment {
   # Instances used in the topology
   # ----------------------------------------------------------------------
     instance chronoTime
+    instance rateGroup12_5Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -84,6 +86,10 @@ module ReferenceDeployment {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
+      # Higher rate (12.5Hz) rate group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup12_5Hz] -> rateGroup12_5Hz.CycleIn
+      rateGroup12_5Hz.RateGroupMemberOut[0] -> imu.run
+
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
@@ -95,7 +101,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imu.run
     }
 
     connections Watchdog {

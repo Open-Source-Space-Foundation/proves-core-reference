@@ -4,6 +4,7 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.cmdDisp.CommandsDispatched
     ComCcsds.comQueue.comQueueDepth
     ComCcsds.commsBufferManager.HiBuffs
+    ReferenceDeployment.rateGroup12_5Hz.RgMaxTime
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
   }
@@ -12,6 +13,7 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.$health.PingLateWarnings
     ComCcsds.commsBufferManager.NoBuffs
     ComCcsds.commsBufferManager.EmptyBuffs
+    ReferenceDeployment.rateGroup12_5Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }

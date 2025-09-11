@@ -47,6 +47,9 @@
  * ```
  */
 namespace PingEntries {
+namespace ReferenceDeployment_rateGroup12_5Hz {
+enum { WARN = 3, FATAL = 5 };
+}
 namespace ReferenceDeployment_rateGroup10Hz {
 enum { WARN = 3, FATAL = 5 };
 }
