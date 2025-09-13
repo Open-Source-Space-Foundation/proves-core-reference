@@ -1,31 +1,19 @@
 # Components::Lis2mdlDriver
 
-The LIS2MDL Driver component provides sensor data related to motion and orientation of the craft. It interfaces with two sensors: the LIS2MDL magnetometer and the LSM6DSO accelerometer/gyroscope to provide acceleration, angular velocity, magnetic field, and temperature measurements.
+The LIS2MDL Driver component interfaces with the LIS2MDL magnetometer to provide magnetic field measurements.
 
 ## Usage Examples
 
-The LIS2MDL Driver component is designed to be scheduled periodically to collect sensor data and output telemetry. It operates as a passive component that responds to scheduler calls.
-
-### Diagrams
-
-```mermaid
-sequenceDiagram
-    participant Scheduler
-    participant LIS2MDL Driver
-    participant Telemetry
-
-    Scheduler->>LIS2MDL Driver: run
-    LIS2MDL Driver->>Telemetry: Output sensor data
-```
+The LIS2MDL Driver component is designed to be called periodically to collect and return sensor data. It operates as a passive component that responds to manager calls.
 
 ### Typical Usage
 
 1. The component is instantiated and initialized during system startup
-2. The scheduler calls the `run` port at regular intervals (configured at 12.5 Hz)
-3. On each run call, the component:
-   - Fetches fresh sensor samples from both LIS2MDL Driver sensors
+2. A manager calls the `MagneticFieldRead` port
+3. On each call, the component:
+   - Fetches fresh sensor samples from the sensor
    - Converts sensor data to F Prime data structures
-   - Outputs telemetry for acceleration, angular velocity, magnetic field, and temperature
+   - Returns data in SI units
 
 ## Class Diagram
 
@@ -37,62 +25,43 @@ classDiagram
         }
         class Lis2mdlDriver {
             - lis2mdl: device*
-            - lsm6dso: device*
             + Lis2mdlDriver(char* compName)
             + ~Lis2mdlDriver()
-            - run_handler(FwIndexType portNum, U32 context)
-            - sensor_value_to_f64(sensor_value* val): F64
-            - get_acceleration(): Lis2mdlDriver_Acceleration
-            - get_angular_velocity(): Lis2mdlDriver_AngularVelocity
-            - get_magnetic_field(): Lis2mdlDriver_MagneticField
-            - get_temperature(): F64
+            - magneticFieldRead_handler(FwIndexType portNum): Drv::MagneticField
         }
     }
     Lis2mdlDriverComponentBase <|-- Lis2mdlDriver : inherits
 ```
 
-
 ## Port Descriptions
 | Name | Type | Description |
 |---|---|---|
-| run | sync input | Scheduler port that triggers sensor data collection and telemetry output |
-| timeCaller | time get | Port for requesting current system time |
-| tlmOut | telemetry | Port for sending telemetry data to downlink |
-
-## Component States
-| Name | Description |
-|---|---|
-| Initialized | Component has been constructed and both LIS2MDL Driver sensors are ready |
-| Running | Component is actively collecting sensor data when scheduled |
-| Error | One or both sensors failed initialization (assertion failure) |
+| MagneticFieldRead | sync input | Triggers magnetic field data collection and returns a MagneticField struct |
 
 ## Sequence Diagrams
-Add sequence diagrams here
 
-## Telemetry
-| Name | Description |
-|---|---|
-| Acceleration | Telemetry channel for acceleration in m/s^2 |
-| AngularVelocity | Telemetry channel for angular velocity in rad/s |
-| MagneticField | Telemetry channel for magnetic field in gauss |
-| Temperature | Telemetry channel for temperature in degrees Celsius |
+```mermaid
+sequenceDiagram
+    participant Manager
+    participant LIS2MDL Driver
+    participant Zephyr Sensor API
+    participant LIS2MDL Sensor
 
-## Unit Tests
-Add unit test descriptions in the chart below
-| Name | Description | Output | Coverage |
-|---|---|---|---|
-|---|---|---|---|
+    Manager-->>LIS2MDL Driver: Call MagneticFieldRead synchronous input port
+    LIS2MDL Driver->>Zephyr Sensor API: Fetch sensor data
+    Zephyr Sensor API->>LIS2MDL Sensor: Read sensor
+    LIS2MDL Sensor->>Zephyr Sensor API: Return sensor data
+    Zephyr Sensor API->>LIS2MDL Driver: Return x, y, z sensor_value structs
+    LIS2MDL Driver-->>Manager: Return MagneticField struct
+```
 
 ## Requirements
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-| AccelerationTelemetry | The component shall provide acceleration telemetry in m/s^2 | Verify telemetry output matches expected values from sensor datasheet |
-| AngularVelocityTelemetry | The component shall provide angular velocity telemetry in rad/s | Verify telemetry output matches expected values from sensor datasheet |
-| MagneticFieldTelemetry | The component shall provide magnetic field telemetry in gauss | Verify telemetry output matches expected values from sensor datasheet |
-| TemperatureTelemetry | The component shall provide temperature telemetry in degrees Celsius | Verify telemetry output matches expected values from sensor datasheet |
+| MagneticFieldRead Port | The component shall provide access magnetic field sensor data and return in common MagneticField struct, readings will be in gauss | Verify output matches expected values from sensor datasheet |
 
 ## Change Log
 | Date | Description |
 |---|---|
-| 2025-9-9 | Initial LIS2MDL Driver component |
+| 2025-9-10 | Initial LIS2MDL Driver component |
