@@ -1,0 +1,12 @@
+config SOC_RP2350A_M33
+    bool "Enable Arm cores"
+    default y
+
+config USB_SELF_POWERED
+	default n
+
+config USB_CDC_ACM_LOG_LEVEL
+	default 0
+
+config USB_DEVICE_LOG_LEVEL
+	default 1
