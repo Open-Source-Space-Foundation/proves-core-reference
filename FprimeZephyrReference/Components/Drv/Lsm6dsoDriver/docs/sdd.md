@@ -103,3 +103,4 @@ Add requirements in the chart below
 | Date | Description |
 |---|---|
 | 2025-9-10 | Initial LSM6DSO Driver component |
+| 2025-9-13 | Added error event for sensor not ready |

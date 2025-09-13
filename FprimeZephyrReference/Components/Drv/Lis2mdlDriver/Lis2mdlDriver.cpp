@@ -26,6 +26,11 @@ Lis2mdlDriver ::~Lis2mdlDriver() {}
 // ----------------------------------------------------------------------
 
 Drv::MagneticField Lis2mdlDriver ::magneticFieldRead_handler(FwIndexType portNum) {
+    if (!device_is_ready(lis2mdl)) {
+        this->log_WARNING_HI_Lis2mdlNotReady();
+        return Drv::MagneticField(0.0, 0.0, 0.0);
+    }
+
     struct sensor_value x;
     struct sensor_value y;
     struct sensor_value z;
