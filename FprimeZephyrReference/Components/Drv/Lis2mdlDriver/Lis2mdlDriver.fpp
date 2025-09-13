@@ -1,14 +1,3 @@
-
-# Type definition
-module Drv {
-    @ Magnetic field in gauss.
-    struct MagneticField {
-        x: F64 @< Magnetic field in gauss in the X direction.
-        y: F64 @< Magnetic field in gauss in the Y direction.
-        z: F64 @< Magnetic field in gauss in the Z direction.
-    }
-}
-
 # Port definition
 module Drv {
     port MagneticFieldRead -> MagneticField

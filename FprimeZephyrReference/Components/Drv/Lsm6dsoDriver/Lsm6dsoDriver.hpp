@@ -6,7 +6,11 @@
 #ifndef Components_Lsm6dsoDriver_HPP
 #define Components_Lsm6dsoDriver_HPP
 
+// clang-format off
+// Keep the includes in this order
 #include "FprimeZephyrReference/Components/Drv/Lsm6dsoDriver/Lsm6dsoDriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Common/Common.hpp"
+// clang-format on
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -42,13 +46,6 @@ class Lsm6dsoDriver final : public Lsm6dsoDriverComponentBase {
     //! Get the temperature reading from the LSM6DSO sensor
     F64 temperatureRead_handler(const FwIndexType portNum  //!< The port number
                                 ) override;
-
-    // ----------------------------------------------------------------------
-    // Helper methods
-    // ----------------------------------------------------------------------
-
-    //! Convert a Zephyr sensor_value to an Fprime F64
-    F64 sensor_value_to_f64(const struct sensor_value& val);
 
     // ----------------------------------------------------------------------
     // Member variables

@@ -6,7 +6,11 @@
 #ifndef Components_Lis2mdlDriver_HPP
 #define Components_Lis2mdlDriver_HPP
 
+// clang-format off
+// Keep the includes in this order
 #include "FprimeZephyrReference/Components/Drv/Lis2mdlDriver/Lis2mdlDriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Common/Common.hpp"
+// clang-format on
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -34,13 +38,6 @@ class Lis2mdlDriver final : public Lis2mdlDriverComponentBase {
     //! Get the magnetic field reading from the LIS2MDL sensor
     Drv::MagneticField magneticFieldRead_handler(const FwIndexType portNum  //!< The port number
                                                  ) override;
-
-    // ----------------------------------------------------------------------
-    // Helper methods
-    // ----------------------------------------------------------------------
-
-    //! Convert a Zephyr sensor_value to an Fprime F64
-    F64 sensor_value_to_f64(const struct sensor_value& val);
 
     // ----------------------------------------------------------------------
     // Member variables

@@ -36,15 +36,7 @@ Drv::MagneticField Lis2mdlDriver ::magneticFieldRead_handler(FwIndexType portNum
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Z, &z);
 
-    return Drv::MagneticField(this->sensor_value_to_f64(x), this->sensor_value_to_f64(y), this->sensor_value_to_f64(z));
-}
-
-// ----------------------------------------------------------------------
-// Helper methods
-// ----------------------------------------------------------------------
-
-F64 Lis2mdlDriver ::sensor_value_to_f64(const struct sensor_value& val) {
-    return val.val1 + val.val2 / 1000000.0f;
+    return Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
 }
 
 }  // namespace Drv
