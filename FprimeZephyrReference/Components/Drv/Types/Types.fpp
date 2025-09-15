@@ -1,4 +1,4 @@
-# Type definitions for common driver data structures
+# Type definitions for sensor readings data structures
 module Drv {
     @ Acceleration reading in m/s^2
     struct Acceleration {

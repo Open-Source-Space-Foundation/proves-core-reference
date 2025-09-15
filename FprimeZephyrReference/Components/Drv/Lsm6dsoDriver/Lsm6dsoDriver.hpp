@@ -9,7 +9,7 @@
 // clang-format off
 // Keep the includes in this order
 #include "FprimeZephyrReference/Components/Drv/Lsm6dsoDriver/Lsm6dsoDriverComponentAc.hpp"
-#include "FprimeZephyrReference/Components/Drv/Common/Common.hpp"
+#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
 // clang-format on
 
 #include <zephyr/device.h>

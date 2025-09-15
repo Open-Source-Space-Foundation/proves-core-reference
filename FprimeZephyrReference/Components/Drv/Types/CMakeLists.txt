@@ -18,7 +18,7 @@ register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/Types.fpp"
 #   SOURCES
-#       "${CMAKE_CURRENT_LIST_DIR}/Common.cpp"
+#       "${CMAKE_CURRENT_LIST_DIR}/Helpers.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Common.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Helpers.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/CommonTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/CommonTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/HelpersTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/HelpersTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

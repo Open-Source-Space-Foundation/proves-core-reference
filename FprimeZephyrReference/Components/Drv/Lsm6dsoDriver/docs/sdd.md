@@ -95,8 +95,8 @@ sequenceDiagram
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-| AccelerationRead Port | The component shall provide access to acceleration sensor data and return in common Acceleration struct, readings will be in m/s^2 | Verify output matches expected values from sensor datasheet |
-| AngularVelocityRead Port | The component shall provide access to angular velocity sensor data and return in common AngularVelocity struct, readings will be in rad/s | Verify output matches expected values from sensor datasheet |
+| AccelerationRead Port | The component shall provide access to acceleration sensor data and return in Acceleration struct, readings will be in m/s^2 | Verify output matches expected values from sensor datasheet |
+| AngularVelocityRead Port | The component shall provide access to angular velocity sensor data and return in AngularVelocity struct, readings will be in rad/s | Verify output matches expected values from sensor datasheet |
 | TemperatureRead Port | The component shall provide access to temperature sensor data and return in degrees Celsius | Verify output matches expected values from sensor datasheet |
 
 ## Change Log

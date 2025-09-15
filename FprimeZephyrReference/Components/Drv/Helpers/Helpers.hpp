@@ -1,10 +1,10 @@
 // ======================================================================
-// \title  Common.hpp
-// \brief  hpp file for Common component implementation class
+// \title  Helpers.hpp
+// \brief  hpp file for Helpers component implementation class
 // ======================================================================
 
-#ifndef Components_Common_HPP
-#define Components_Common_HPP
+#ifndef Components_Helpers_HPP
+#define Components_Helpers_HPP
 
 #include <Fw/Types/BasicTypes.h>
 #include <zephyr/drivers/sensor.h>

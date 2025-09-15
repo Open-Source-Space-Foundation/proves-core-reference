@@ -59,7 +59,7 @@ sequenceDiagram
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-| MagneticFieldRead Port | The component shall provide access magnetic field sensor data and return in common MagneticField struct, readings will be in gauss | Verify output matches expected values from sensor datasheet |
+| MagneticFieldRead Port | The component shall provide access magnetic field sensor data and return in MagneticField struct, readings will be in gauss | Verify output matches expected values from sensor datasheet |
 
 ## Change Log
 | Date | Description |

@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Common.cpp
-// \brief  cpp file for Common component implementation class
+// \title  Helpers.cpp
+// \brief  cpp file for Helpers component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Common/Common.hpp"
+#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
 
 #include <Fw/Types/Assert.hpp>
 
