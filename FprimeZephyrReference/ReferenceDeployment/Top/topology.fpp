@@ -30,6 +30,7 @@ module ReferenceDeployment {
     instance watchdog
     instance prmDb
     instance imu
+    instance lis2mdlDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -98,6 +99,10 @@ module ReferenceDeployment {
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
+    }
+
+    connections Imu {
+      imu.readMagneticField -> lis2mdlDriver.getMagneticField
     }
 
     connections ReferenceDeployment {
