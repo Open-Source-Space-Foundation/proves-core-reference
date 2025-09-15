@@ -32,7 +32,7 @@ Lsm6dsoDriver ::~Lsm6dsoDriver() {}
 
 Drv::Acceleration Lsm6dsoDriver ::accelerationRead_handler(FwIndexType portNum) {
     if (!device_is_ready(lsm6dso)) {
-        this->log_WARNING_HI_Lsm6dsoNotReady();
+        this->log_WARNING_HI_DeviceNotReady();
         return Drv::Acceleration(0.0, 0.0, 0.0);
     }
 
@@ -51,7 +51,7 @@ Drv::Acceleration Lsm6dsoDriver ::accelerationRead_handler(FwIndexType portNum) 
 
 Drv::AngularVelocity Lsm6dsoDriver ::angularVelocityRead_handler(FwIndexType portNum) {
     if (!device_is_ready(lsm6dso)) {
-        this->log_WARNING_HI_Lsm6dsoNotReady();
+        this->log_WARNING_HI_DeviceNotReady();
         return Drv::AngularVelocity(0.0, 0.0, 0.0);
     }
 
@@ -70,7 +70,7 @@ Drv::AngularVelocity Lsm6dsoDriver ::angularVelocityRead_handler(FwIndexType por
 
 F64 Lsm6dsoDriver ::temperatureRead_handler(FwIndexType portNum) {
     if (!device_is_ready(lsm6dso)) {
-        this->log_WARNING_HI_Lsm6dsoNotReady();
+        this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
 

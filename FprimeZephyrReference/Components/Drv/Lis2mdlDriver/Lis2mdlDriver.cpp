@@ -27,7 +27,7 @@ Lis2mdlDriver ::~Lis2mdlDriver() {}
 
 Drv::MagneticField Lis2mdlDriver ::magneticFieldRead_handler(FwIndexType portNum) {
     if (!device_is_ready(lis2mdl)) {
-        this->log_WARNING_HI_Lis2mdlNotReady();
+        this->log_WARNING_HI_DeviceNotReady();
         return Drv::MagneticField(0.0, 0.0, 0.0);
     }
 

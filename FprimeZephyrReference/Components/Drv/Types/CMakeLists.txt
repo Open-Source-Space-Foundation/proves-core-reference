@@ -16,20 +16,20 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlDriver.fpp"
-    SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlDriver.cpp"
-    DEPENDS
-        FprimeZephyrReference_Components_Drv_Common
+        "${CMAKE_CURRENT_LIST_DIR}/Types.fpp"
+#   SOURCES
+#       "${CMAKE_CURRENT_LIST_DIR}/Common.cpp"
+#   DEPENDS
+#       MyPackage_MyOtherModule
 )
 
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlDriver.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Common.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlDriverTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlDriverTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/CommonTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/CommonTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

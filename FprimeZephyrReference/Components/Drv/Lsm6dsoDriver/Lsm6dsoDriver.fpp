@@ -19,7 +19,7 @@ module Drv {
         sync input port temperatureRead: TemperatureRead
 
         @ Event for reporting LSM6DSO not ready error
-        event Lsm6dsoNotReady() severity warning high id 0 format "LSM6DSO not ready"
+        event DeviceNotReady() severity warning high format "LSM6DSO device not ready" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

@@ -19,8 +19,8 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+    DEPENDS
+        FprimeZephyrReference_Components_Drv_Common
 )
 
 ### Unit Tests ###

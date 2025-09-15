@@ -11,7 +11,7 @@ module Drv {
         sync input port magneticFieldRead: MagneticFieldRead
 
         @ Event for reporting LSM6DSO not ready error
-        event Lis2mdlNotReady() severity warning high id 0 format "LIS2MDL not ready"
+        event DeviceNotReady() severity warning high format "LIS2MDL device not ready" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
