@@ -7,7 +7,7 @@ module Components {
     }
 
     # Port definitions
-    port MagneticFieldRead -> MagneticField 
+    port MagneticFieldRead -> MagneticField
 
     @ Component for F Prime FSW framework.
     passive component Lis2mdlDriver {
