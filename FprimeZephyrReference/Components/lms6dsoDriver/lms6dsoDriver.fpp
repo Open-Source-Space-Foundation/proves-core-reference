@@ -1,5 +1,9 @@
 module Components {
-
+    # @ Extern type to define zepyhr sensor_value
+    # struct SensorValue {
+    #     val1: I32
+    #     val2: I32
+    # }
     @ Acceleration Reading in m/s^2
     struct Acceleration {
         x: F64
@@ -14,19 +18,18 @@ module Components {
         z: F64
     }
 
-    struct SensorReadings {
-        acceleration: Acceleration
-        gyro: AngularVelocity
-    }
-
-    port getData() -> SensorReadings
+    port AccelerationRead() -> Acceleration
+    port AngularVelocityRead() -> AngularVelocity
+    port TemperatureRead() -> F64
     
     @ Initialize and control operation of the lms6dso device
     passive component lms6dsoDriver {
 
         @ Port for synchronously retrieving data
-        sync input port GetSensorData: getData
-        
+        sync input port getAcceleration: AccelerationRead
+        sync input port getAngularVelocity: AngularVelocityRead
+        sync input port getTemperature: TemperatureRead
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

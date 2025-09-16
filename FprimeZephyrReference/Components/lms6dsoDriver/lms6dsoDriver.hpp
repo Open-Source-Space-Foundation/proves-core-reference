@@ -9,6 +9,11 @@
 
 #include "FprimeZephyrReference/Components/lms6dsoDriver/lms6dsoDriverComponentAc.hpp"
 
+
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/kernel.h>
+
 namespace Components {
 
 class lms6dsoDriver final : public lms6dsoDriverComponentBase {
@@ -23,6 +28,24 @@ class lms6dsoDriver final : public lms6dsoDriverComponentBase {
 
     //! Destroy lms6dsoDriver object
     ~lms6dsoDriver();
+
+  private:
+    
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
+    Acceleration getAcceleration_handler(FwIndexType portNum) override;
+
+    AngularVelocity getAngularVelocity_handler(FwIndexType portNum) override;
+
+    F64 getTemperature_handler(FwIndexType portNum) override;
+
+    F64 sensor_value_to_f64(const struct sensor_value &val);
+
+    //! Zephyr device stores the initialized LSM6DSO sensor
+    const struct device* lsm6dso;
+
+
 };
 
 }  // namespace Components
