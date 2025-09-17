@@ -29,6 +29,7 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
+    instance rtcManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
