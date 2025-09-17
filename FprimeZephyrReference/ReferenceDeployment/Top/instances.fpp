@@ -50,7 +50,7 @@ module ReferenceDeployment {
   # Passive component instances
   # ----------------------------------------------------------------------
 
-  instance chronoTime: Svc.ChronoTime base id 0x10010000
+  instance zephyrTime: Svc.zephyrTime base id 0x10010000
 
   instance rateGroupDriver: Svc.RateGroupDriver base id 0x10011000
 
