@@ -1,9 +1,5 @@
 module Components {
-    # @ Extern type to define zepyhr sensor_value
-    # struct SensorValue {
-    #     val1: I32
-    #     val2: I32
-    # }
+
     @ Acceleration Reading in m/s^2
     struct Acceleration {
         x: F64

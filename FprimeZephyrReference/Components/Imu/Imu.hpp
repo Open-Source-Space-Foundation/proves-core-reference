@@ -47,17 +47,10 @@ class Imu final : public ImuComponentBase {
     // IMU access methods
     // ----------------------------------------------------------------------
 
-    //! Get the acceleration reading from the IMU
-    Components::Imu_Acceleration get_acceleration();
-
-    //! Get the angular velocity reading from the IMU
-    Components::Imu_AngularVelocity get_angular_velocity();
-
+  
     //! Get the magnetic field reading from the IMU
     Components::Imu_MagneticField get_magnetic_field();
 
-    //! Get the temperature reading from the IMU
-    F64 get_temperature();
 
     // ----------------------------------------------------------------------
     // Member variables
@@ -66,8 +59,7 @@ class Imu final : public ImuComponentBase {
     //! Zephyr device stores the initialized LIS2MDL sensor
     const struct device* lis2mdl;
 
-    //! Zephyr device stores the initialized LSM6DSO sensor
-    const struct device* lsm6dso;
+
 };
 
 }  // namespace Components

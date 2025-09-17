@@ -30,7 +30,7 @@ module ReferenceDeployment {
     instance watchdog
     instance prmDb
     instance imu
-    # instance lms6dsoDriver
+    instance lms6dsoDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers

@@ -32,6 +32,7 @@ Components::Acceleration lms6dsoDriver::getAcceleration_handler(FwIndexType port
     struct sensor_value x;
     struct sensor_value y;
     struct sensor_value z;
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
 
     sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_X, &x);
     sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_Y, &y);
@@ -44,6 +45,7 @@ Components::AngularVelocity lms6dsoDriver::getAngularVelocity_handler(FwIndexTyp
     struct sensor_value x;
     struct sensor_value y;
     struct sensor_value z;
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_GYRO_XYZ);
 
     sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_X, &x);
     sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_Y, &y);
@@ -56,6 +58,7 @@ Components::AngularVelocity lms6dsoDriver::getAngularVelocity_handler(FwIndexTyp
 F64 lms6dsoDriver::getTemperature_handler(FwIndexType portNum) {
     struct sensor_value temp;
 
+    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_DIE_TEMP);
     sensor_channel_get(lsm6dso, SENSOR_CHAN_DIE_TEMP, &temp);
 
     return this->sensor_value_to_f64(temp);
