@@ -14,6 +14,7 @@ module Components {
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
+        import Fw.Channel
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
 

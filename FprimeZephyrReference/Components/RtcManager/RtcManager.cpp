@@ -75,11 +75,10 @@ void RtcManager ::GET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // need some kind of sync mechanism maybe 1Hz sync?
 
     // Try Fprime Time class
-    // this->set_timeCaller_OutputPort(0, 0);
-    // const Fw::Time fwtime = this->getTime();
-    // const U32 secs = fwtime.getSeconds();
+    const Fw::Time fwtime = this->getTime();
+    const U32 secs = fwtime.getSeconds();
 
-    // this->log_ACTIVITY_HI_RTC_GetTime(0, 0, 0, 0, 0, secs);
+    this->log_ACTIVITY_HI_RTC_GetTime(0, 0, 0, 0, 0, secs);
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

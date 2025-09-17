@@ -20,7 +20,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
-    instance zephyrTime
+    instance posixTime
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -39,7 +39,7 @@ module ReferenceDeployment {
     event connections instance CdhCore.events
     text event connections instance CdhCore.textLogger
     health connections instance CdhCore.$health
-    time connections instance zephyrTime
+    time connections instance posixTime
     telemetry connections instance CdhCore.tlmSend
     param connections instance prmDb
 
