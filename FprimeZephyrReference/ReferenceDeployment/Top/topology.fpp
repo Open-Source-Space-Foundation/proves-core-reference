@@ -30,6 +30,7 @@ module ReferenceDeployment {
     instance watchdog
     instance prmDb
     instance imu
+    # instance lms6dsoDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -100,8 +101,14 @@ module ReferenceDeployment {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
 
-    connections ReferenceDeployment {
+    connections Imu {
+      imu.readAcceleration -> lms6dsoDriver.getAcceleration
+      imu.readAngularVelocity -> lms6dsoDriver.getAngularVelocity
+      imu.readTemperature -> lms6dsoDriver.getTemperature
 
+    }
+    connections ReferenceDeployment {
+      
     }
 
   }

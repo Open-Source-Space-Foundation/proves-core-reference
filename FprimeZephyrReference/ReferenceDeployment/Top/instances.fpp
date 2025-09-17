@@ -65,4 +65,6 @@ module ReferenceDeployment {
   instance watchdog: Components.Watchdog base id 0x10016000
 
   instance imu: Components.Imu base id 0x10017000
+
+  instance lms6dsoDriver: Components.lms6dsoDriver base id 0x10018000
 }
