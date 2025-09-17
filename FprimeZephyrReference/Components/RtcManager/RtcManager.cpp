@@ -64,7 +64,18 @@ void RtcManager ::GET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->log_ACTIVITY_HI_RTC_GetTime(timeptr.tm_year + 1900, timeptr.tm_mon + 1, timeptr.tm_mday, timeptr.tm_hour,
                                       timeptr.tm_min, timeptr.tm_sec);
 
+    // 3 parts.
+    // 1. fprime-zephyr reference need ZephyrTime SVC + instance/topology
+    // 2. RV3028Driver talk to zephyr and set the time on the RTC
+    // 3. RtcManager component to take commands and relay them to RV3028Driver and get/set
+
+    // TODO - Need a way to sync Fprime time with RTC time, especially after
+    // satellite restarts. RTC has a battery backup and should keep time
+    // Fprime time will not know anything about the rtc
+    // need some kind of sync mechanism maybe 1Hz sync?
+
     // Try Fprime Time class
+    // this->set_timeCaller_OutputPort(0, 0);
     // const Fw::Time fwtime = this->getTime();
     // const U32 secs = fwtime.getSeconds();
 

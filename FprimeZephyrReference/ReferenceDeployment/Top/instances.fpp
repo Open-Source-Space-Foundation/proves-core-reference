@@ -65,4 +65,6 @@ module ReferenceDeployment {
   instance watchdog: Components.Watchdog base id 0x10016000
 
   instance rtcManager: Components.RtcManager base id 0x10017000
+
+  instance posixTime: Svc.PosixTime base id 0x10020000
 }

@@ -21,6 +21,8 @@ Add requirements in the chart below
 | RtcManager-001 | Caller can set time on the RTC | Manual |
 | RtcManager-002 | Caller can receive time from FPrime | Manual |
 | RtcManager-003 | Event when time is set, report success or failure | Manual |
+| RtcManager-003 | Able to sync RTC time with F Prime [TBR] | Manual |
+
 
 ## Port Descriptions
 | Name | Description |
