@@ -5,7 +5,7 @@ module Components {
 
         output port readAcceleration: AccelerationRead
 
-        output port readAngulatVelocity: AngularVelocityRead
+        output port readAngularVelocity: AngularVelocityRead
 
         output port readTemperature: TemperatureRead
 

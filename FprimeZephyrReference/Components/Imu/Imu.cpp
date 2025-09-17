@@ -28,46 +28,20 @@ Imu ::~Imu() {}
 
 void Imu ::run_handler(FwIndexType portNum, U32 context) {
     // Fetch new data samples from the sensors
-    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
-    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_GYRO_XYZ);
     sensor_sample_fetch_chan(lis2mdl, SENSOR_CHAN_MAGN_XYZ);
-    sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_DIE_TEMP);
+
 
     // Output sensor values via telemetry
-    this->tlmWrite_Acceleration(this->get_acceleration());
-    this->tlmWrite_AngularVelocity(this->get_angular_velocity());
+    this->tlmWrite_Acceleration(this->readAcceleration_out(0));
+    this->tlmWrite_AngularVelocity(this->readAngularVelocity_out(0));
+    this->tlmWrite_Temperature(this->readTemperature_out(0));
+
     this->tlmWrite_MagneticField(this->get_magnetic_field());
-    this->tlmWrite_Temperature(this->get_temperature());
+
 }
 
 F64 Imu ::sensor_value_to_f64(const struct sensor_value& val) {
     return val.val1 + val.val2 / 1000000.0f;
-}
-
-Components::Imu_Acceleration Imu ::get_acceleration() {
-    struct sensor_value x;
-    struct sensor_value y;
-    struct sensor_value z;
-
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_X, &x);
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_Y, &y);
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_Z, &z);
-
-    return Components::Imu_Acceleration(this->sensor_value_to_f64(x), this->sensor_value_to_f64(y),
-                                        this->sensor_value_to_f64(z));
-}
-
-Components::Imu_AngularVelocity Imu ::get_angular_velocity() {
-    struct sensor_value x;
-    struct sensor_value y;
-    struct sensor_value z;
-
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_X, &x);
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_Y, &y);
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_Z, &z);
-
-    return Components::Imu_AngularVelocity(this->sensor_value_to_f64(x), this->sensor_value_to_f64(y),
-                                           this->sensor_value_to_f64(z));
 }
 
 Components::Imu_MagneticField Imu ::get_magnetic_field() {
@@ -83,11 +57,5 @@ Components::Imu_MagneticField Imu ::get_magnetic_field() {
                                          this->sensor_value_to_f64(z));
 }
 
-F64 Imu ::get_temperature() {
-    struct sensor_value temp;
 
-    sensor_channel_get(lsm6dso, SENSOR_CHAN_DIE_TEMP, &temp);
-
-    return this->sensor_value_to_f64(temp);
-}
 }  // namespace Components
