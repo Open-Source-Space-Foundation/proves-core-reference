@@ -52,9 +52,16 @@ findmnt
 ```
 
 Now you want to install the firmware to the board.
+```shell
+make install BOARD_DIR=[path-to-your-board]
+```
+
+or
 ```
 cp build-artifacts/zephyr.uf2 [path-to-your-board]
 ```
+to copy the uf2 if the make install isn't working
+
 
 Finally, run the fprime-gds.
 ```shell
