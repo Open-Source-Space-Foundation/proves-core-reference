@@ -51,7 +51,7 @@ generate-if-needed:
 	@test -s $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@echo "Building..."
 	@$(UV) run fprime-util build
 
