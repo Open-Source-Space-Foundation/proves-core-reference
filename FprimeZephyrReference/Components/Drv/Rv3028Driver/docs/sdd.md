@@ -25,7 +25,6 @@ The RV3028 Driver component interfaces with the RV3028 Real Time Clock (RTC) to 
     - Emits a `DeviceNotReady` event if the device is not ready
 
 ## Requirements
-Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
 | Rv3028Driver-001 | Time can be set on the RV3028 through a port | Manual |
@@ -49,7 +48,6 @@ Add requirements in the chart below
 | TimeNotSet | Emits on unsuccessful time set |
 
 ## Class Diagram
-
 ```mermaid
 classDiagram
     namespace Drv {
@@ -70,9 +68,9 @@ classDiagram
 
 ## Sequence Diagrams
 
-### timeGetPort
+### `timeGetPort` port
 
-The `timeGetPort` is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock.
+The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock.
 
 #### Success
 ```mermaid
@@ -106,7 +104,9 @@ sequenceDiagram
     RV3028 Driver->>Deployment Time Connection: Return 0 time
 ```
 
-### timeRead
+### `timeRead` port
+
+The `timeRead` port is called from a manager component to get the current time from the RTC.
 
 #### Success
 ```mermaid
@@ -140,7 +140,9 @@ sequenceDiagram
     RV3028 Driver->>Event Log: Emit event DeviceNotReady
 ```
 
-### timeSet
+### `timeSet` port
+
+The `timeSet` port is called from a manager component to set the current time on the RTC.
 
 #### Success
 ```mermaid
