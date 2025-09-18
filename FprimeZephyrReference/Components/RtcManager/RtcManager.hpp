@@ -8,10 +8,6 @@
 
 #include "FprimeZephyrReference/Components/RtcManager/RtcManagerComponentAc.hpp"
 
-#include <zephyr/device.h>
-#include <zephyr/drivers/rtc.h>
-#include <zephyr/drivers/sensor.h>
-#include <zephyr/kernel.h>
 #include <zephyr/sys/timeutil.h>
 
 namespace Components {
@@ -38,9 +34,9 @@ class RtcManager final : public RtcManagerComponentBase {
     //!
     //! SET_TIME command to set the time on the RTC
     //! Requirement RtcManager-001
-    void SET_TIME_cmdHandler(FwOpcodeType opCode,                //!< The opcode
-                             U32 cmdSeq,                         //!< The command sequence number
-                             Components::RtcManager_TimeInput t  //!< Set the time
+    void SET_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq,           //!< The command sequence number
+                             Drv::TimeData t       //!< Set the time
                              ) override;
 
     //! Handler implementation for command GET_TIME
@@ -50,13 +46,6 @@ class RtcManager final : public RtcManagerComponentBase {
     void GET_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
-
-    void timeGetPort_handler(FwIndexType portNum, /*!< The port number*/
-                             Fw::Time& time       /*!< The U32 cmd argument*/
-    );
-
-    //! Zephyr device stores the initialized RV2038 sensor
-    const struct device* rv3028;
 };
 
 }  // namespace Components

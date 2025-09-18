@@ -49,19 +49,21 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Passive component instances
   # ----------------------------------------------------------------------
+  instance rateGroupDriver: Svc.RateGroupDriver base id 0x10010000
 
-  instance rateGroupDriver: Svc.RateGroupDriver base id 0x10011000
+  instance version: Svc.Version base id 0x10011000
 
-  instance version: Svc.Version base id 0x10012000
+  instance timer: Zephyr.ZephyrRateDriver base id 0x10012000
 
-  instance timer: Zephyr.ZephyrRateDriver base id 0x10013000
+  instance comDriver: Zephyr.ZephyrUartDriver base id 0x10013000
 
-  instance comDriver: Zephyr.ZephyrUartDriver base id 0x10014000
+  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
 
-  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10015000
+  instance watchdog: Components.Watchdog base id 0x10015000
 
-  instance watchdog: Components.Watchdog base id 0x10016000
+  instance rtcManager: Components.RtcManager base id 0x10016000
 
-  instance rtcManager: Components.RtcManager base id 0x10017000
+  instance rv3028Driver: Drv.Rv3028Driver base id 0x10017000
+
 
 }
