@@ -23,7 +23,7 @@ RtcManager ::~RtcManager() {}
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void RtcManager ::SET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void RtcManager ::SET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Components::RtcManager_TimeInput t) {
     if (!device_is_ready(this->rv3028)) {
         this->log_WARNING_HI_RTC_NotReady();
         return;
@@ -32,11 +32,11 @@ void RtcManager ::SET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // set the time
     const struct rtc_time timeptr = {
         .tm_sec = 0,
-        .tm_min = 0,
-        .tm_hour = 12,
-        .tm_mday = 25,
-        .tm_mon = 11,
-        .tm_year = 125,  // year since 1900
+        .tm_min = t.get_Minute(),
+        .tm_hour = t.get_Hour(),
+        .tm_mday = t.get_Day(),
+        .tm_mon = t.get_Month() - 1,     // month [0-11]
+        .tm_year = t.get_Year() - 1900,  // year since 1900
         .tm_wday = 0,
         .tm_yday = 0,
         .tm_isdst = 0,
@@ -61,7 +61,7 @@ void RtcManager ::GET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     struct rtc_time timeptr = {};
     rtc_get_time(this->rv3028, &timeptr);
 
-    this->log_ACTIVITY_HI_RTC_GetTime(timeptr.tm_year + 1900, timeptr.tm_mon + 1, timeptr.tm_mday, timeptr.tm_hour,
+    this->log_ACTIVITY_HI_RTC_GetTime(timeptr.tm_year + 1900, timeptr.tm_mon + 1, timeptr.tm_mday + 1, timeptr.tm_hour,
                                       timeptr.tm_min, timeptr.tm_sec);
 
     // 3 parts.
@@ -81,6 +81,32 @@ void RtcManager ::GET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->log_ACTIVITY_HI_RTC_GetTime(0, 0, 0, 0, 0, secs);
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void RtcManager ::timeGetPort_handler(FwIndexType portNum, /*!< The port number*/
+                                      Fw::Time& time       /*!< The U32 cmd argument*/
+) {
+    if (!device_is_ready(this->rv3028)) {
+        this->log_WARNING_HI_RTC_NotReady();
+        return;
+    }
+
+    struct rtc_time timeptr = {};
+    rtc_get_time(this->rv3028, &timeptr);
+
+    // convert to timespec
+    struct tm* tcopy = rtc_time_to_tm(&timeptr);
+    time_t tcopy2 = timeutil_timegm(tcopy);
+
+    // struct timespec stime = {0};
+    // stime.tv_sec = tcopy2;
+    // stime.tv_nsec = timeptr.tm_sec * 1000000000L;
+
+    // timespec stime;
+    // (void)clock_gettime(CLOCK_REALTIME, &stime);
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(tcopy2), 0);
+    // time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(stime.tv_sec), static_cast<U32>(stime.tv_nsec /
+    // 1000));
 }
 
 }  // namespace Components

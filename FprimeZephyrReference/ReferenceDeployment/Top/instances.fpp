@@ -50,8 +50,6 @@ module ReferenceDeployment {
   # Passive component instances
   # ----------------------------------------------------------------------
 
-  instance posixTime: Zephyr.PosixTime base id 0x10010000
-
   instance rateGroupDriver: Svc.RateGroupDriver base id 0x10011000
 
   instance version: Svc.Version base id 0x10012000

@@ -1,10 +1,23 @@
 module Components {
     @ Manages the real time clock
     passive component RtcManager {
+        import Svc.Time
 
+        # time struct
+        struct TimeInput {
+            Year: U32 @< Set the year
+            Month: U32 @< Set the month
+            Day: U32 @< Set the day
+            Hour: U32 @< Set the hour
+            Minute: U32 @< Set the minute
+        }
+
+        # Modify command
         @ SET_TIME command to set the time on the RTC
         @ Requirement RtcManager-001
-        sync command SET_TIME opcode 0
+        sync command SET_TIME(
+            t: TimeInput @< Set the time
+        ) opcode 0
 
         @ GET_TIME command to get the time from the RTC
         @ Requirement RtcManager-002

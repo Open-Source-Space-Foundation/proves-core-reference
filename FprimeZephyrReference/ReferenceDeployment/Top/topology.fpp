@@ -20,16 +20,15 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
-    instance posixTime
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
     instance comDriver
     instance gpioDriver
+    instance rtcManager
     instance watchdog
     instance prmDb
-    instance rtcManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -39,7 +38,7 @@ module ReferenceDeployment {
     event connections instance CdhCore.events
     text event connections instance CdhCore.textLogger
     health connections instance CdhCore.$health
-    time connections instance posixTime
+    time connections instance rtcManager
     telemetry connections instance CdhCore.tlmSend
     param connections instance prmDb
 
