@@ -16,20 +16,20 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/lms6dsoDriver.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/lms6dsoDriver.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+        "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.cpp"
+    DEPENDS
+        FprimeZephyrReference_Components_Drv_Helpers
 )
 
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/lms6dsoDriver.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/lms6dsoDriverTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/lms6dsoDriverTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lsm6dsoDriverTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lsm6dsoDriverTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

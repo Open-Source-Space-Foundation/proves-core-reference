@@ -19,8 +19,8 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlDriver.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlDriver.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+    DEPENDS
+        FprimeZephyrReference_Components_Drv_Helpers
 )
 
 ### Unit Tests ###

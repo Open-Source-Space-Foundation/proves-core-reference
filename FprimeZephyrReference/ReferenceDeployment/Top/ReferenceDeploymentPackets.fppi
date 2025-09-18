@@ -35,9 +35,9 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Imu id 6 group 4 {
-    ReferenceDeployment.imu.Acceleration
-    ReferenceDeployment.imu.AngularVelocity
-    ReferenceDeployment.imu.MagneticField
+    ReferenceDeployment.imuManager.Acceleration
+    ReferenceDeployment.imuManager.AngularVelocity
+    ReferenceDeployment.imuManager.MagneticField
   }
 
 } omit {
@@ -63,5 +63,5 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
   # Reserving temp telemetry for future use
-  ReferenceDeployment.imu.Temperature
+  ReferenceDeployment.imuManager.Temperature
 }

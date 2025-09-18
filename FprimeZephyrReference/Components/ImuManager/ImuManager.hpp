@@ -1,26 +1,26 @@
 // ======================================================================
-// \title  Imu.hpp
-// \brief  hpp file for Imu component implementation class
+// \title  ImuManager.hpp
+// \brief  hpp file for ImuManager component implementation class
 // ======================================================================
 
-#ifndef Components_Imu_HPP
-#define Components_Imu_HPP
+#ifndef Components_ImuManager_HPP
+#define Components_ImuManager_HPP
 
-#include "FprimeZephyrReference/Components/Imu/ImuComponentAc.hpp"
+#include "FprimeZephyrReference/Components/ImuManager/ImuManagerComponentAc.hpp"
 
 namespace Components {
 
-class Imu final : public ImuComponentBase {
+class ImuManager final : public ImuManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Imu object
-    Imu(const char* const compName);
+    //! Construct ImuManager object
+    ImuManager(const char* const compName);
 
-    //! Destroy Imu object
-    ~Imu();
+    //! Destroy ImuManager object
+    ~ImuManager();
 
   private:
     // ----------------------------------------------------------------------

@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Imu.cpp
-// \brief  cpp file for Imu component implementation class
+// \title  ImuManager.cpp
+// \brief  cpp file for ImuManager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Imu/Imu.hpp"
+#include "FprimeZephyrReference/Components/ImuManager/ImuManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
 
@@ -13,19 +13,18 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Imu ::Imu(const char* const compName) : ImuComponentBase(compName) {}
+ImuManager ::ImuManager(const char* const compName) : ImuManagerComponentBase(compName) {}
 
-Imu ::~Imu() {}
+ImuManager ::~ImuManager() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void Imu ::run_handler(FwIndexType portNum, U32 context) {
-    this->tlmWrite_Acceleration(this->readAcceleration_out(0));
-    this->tlmWrite_AngularVelocity(this->readAngularVelocity_out(0));
-    this->tlmWrite_MagneticField(this->readMagneticField_out(0));
-    this->tlmWrite_Temperature(this->readTemperature_out(0));
+void ImuManager ::run_handler(FwIndexType portNum, U32 context) {
+    this->tlmWrite_Acceleration(this->accelerationRead_out(0));
+    this->tlmWrite_AngularVelocity(this->angularVelocityRead_out(0));
+    this->tlmWrite_MagneticField(this->magneticFieldRead_out(0));
+    this->tlmWrite_Temperature(this->temperatureRead_out(0));
 }
-
 }  // namespace Components

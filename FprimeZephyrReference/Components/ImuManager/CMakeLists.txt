@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Imu.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/ImuManager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Imu.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/ImuManager.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Imu.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/ImuManager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/ImuTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/ImuTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/ImuManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/ImuManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

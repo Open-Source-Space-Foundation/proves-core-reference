@@ -1,19 +1,22 @@
 // ======================================================================
 // \title  Lis2mdlDriver.hpp
-// \author aychar
 // \brief  hpp file for Lis2mdlDriver component implementation class
 // ======================================================================
 
 #ifndef Components_Lis2mdlDriver_HPP
 #define Components_Lis2mdlDriver_HPP
 
-#include "FprimeZephyrReference/Components/Lis2mdlDriver/Lis2mdlDriverComponentAc.hpp"
+// clang-format off
+// Keep the includes in this order
+#include "FprimeZephyrReference/Components/Drv/Lis2mdlDriver/Lis2mdlDriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
+// clang-format on
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 
-namespace Components {
+namespace Drv {
 
 class Lis2mdlDriver final : public Lis2mdlDriverComponentBase {
   public:
@@ -22,22 +25,19 @@ class Lis2mdlDriver final : public Lis2mdlDriverComponentBase {
     // ----------------------------------------------------------------------
 
     //! Construct Lis2mdlDriver object
-    Lis2mdlDriver(const char* const compName  //!< The component name
-    );
+    Lis2mdlDriver(const char* const compName);
 
     //! Destroy Lis2mdlDriver object
     ~Lis2mdlDriver();
 
   private:
-    //! Handler implementation
-    MagneticField getMagneticField_handler(FwIndexType portNum) override;
-
     // ----------------------------------------------------------------------
-    // Helper methods
+    // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Convert a Zephyr sensor_value to an Fprime F64
-    F64 sensor_value_to_f64(const struct sensor_value& val);
+    //! Get the magnetic field reading from the LIS2MDL sensor
+    Drv::MagneticField magneticFieldRead_handler(const FwIndexType portNum  //!< The port number
+                                                 ) override;
 
     // ----------------------------------------------------------------------
     // Member variables
@@ -47,6 +47,6 @@ class Lis2mdlDriver final : public Lis2mdlDriverComponentBase {
     const struct device* lis2mdl;
 };
 
-}  // namespace Components
+}  // namespace Drv
 
 #endif

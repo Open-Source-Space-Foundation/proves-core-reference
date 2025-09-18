@@ -1,44 +1,47 @@
 // ======================================================================
 // \title  Lis2mdlDriver.cpp
-// \author aychar
 // \brief  cpp file for Lis2mdlDriver component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Lis2mdlDriver/Lis2mdlDriver.hpp"
+#include "FprimeZephyrReference/Components/Drv/Lis2mdlDriver/Lis2mdlDriver.hpp"
 
 #include <Fw/Types/Assert.hpp>
 
-namespace Components {
+namespace Drv {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
 Lis2mdlDriver ::Lis2mdlDriver(const char* const compName) : Lis2mdlDriverComponentBase(compName) {
+    // Initialize the lis2mdl sensor
     lis2mdl = device_get_binding("LIS2MDL");
     FW_ASSERT(device_is_ready(lis2mdl));
 }
 
 Lis2mdlDriver ::~Lis2mdlDriver() {}
 
-F64 Lis2mdlDriver ::sensor_value_to_f64(const struct sensor_value& val) {
-    return val.val1 + val.val2 / 1000000.0f;
-}
+// ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
 
-Components::MagneticField Lis2mdlDriver ::getMagneticField_handler(FwIndexType portNum) {
-    // Fetch new data sample from sensors
-    sensor_sample_fetch_chan(lis2mdl, SENSOR_CHAN_MAGN_XYZ);
+Drv::MagneticField Lis2mdlDriver ::magneticFieldRead_handler(FwIndexType portNum) {
+    if (!device_is_ready(lis2mdl)) {
+        this->log_WARNING_HI_DeviceNotReady();
+        return Drv::MagneticField(0.0, 0.0, 0.0);
+    }
 
     struct sensor_value x;
     struct sensor_value y;
     struct sensor_value z;
 
+    sensor_sample_fetch_chan(lis2mdl, SENSOR_CHAN_MAGN_XYZ);
+
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_X, &x);
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Z, &z);
 
-    return Components::MagneticField(this->sensor_value_to_f64(x), this->sensor_value_to_f64(y),
-                                     this->sensor_value_to_f64(z));
+    return Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
 }
 
-}  // namespace Components
+}  // namespace Drv

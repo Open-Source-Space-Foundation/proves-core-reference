@@ -29,9 +29,9 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
-    instance imu
+    instance imuManager
     instance lis2mdlDriver
-    instance lms6dsoDriver
+    instance lsm6dsoDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -95,18 +95,18 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imu.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
     }
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
 
-    connections Imu {
-      imu.readAcceleration -> lms6dsoDriver.getAcceleration
-      imu.readAngularVelocity -> lms6dsoDriver.getAngularVelocity
-      imu.readMagneticField -> lis2mdlDriver.getMagneticField
-      imu.readTemperature -> lms6dsoDriver.getTemperature
+    connections imuManager {
+      imuManager.accelerationRead -> lsm6dsoDriver.accelerationRead
+      imuManager.angularVelocityRead -> lsm6dsoDriver.angularVelocityRead
+      imuManager.magneticFieldRead -> lis2mdlDriver.magneticFieldRead
+      imuManager.temperatureRead -> lsm6dsoDriver.temperatureRead
     }
 
     connections ReferenceDeployment {
