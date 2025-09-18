@@ -3,6 +3,8 @@ module Components {
     passive component Imu {
         sync input port run: Svc.Sched
 
+        output port readMagneticField: MagneticFieldRead
+
         @ Acceleration reading in m/s^2
         struct Acceleration {
             x: F64
@@ -13,6 +15,9 @@ module Components {
         @ Telemetry channel for acceleration
         telemetry Acceleration: Acceleration
 
+        @ Telemetry channel for magnetic field
+        telemetry MagneticField: MagneticField
+
         @ Angular velocity reading in rad/s
         struct AngularVelocity {
             x: F64
@@ -22,16 +27,6 @@ module Components {
 
         @ Telemetry channel for angular velocity
         telemetry AngularVelocity: AngularVelocity
-
-        @ Magnetic field reading in gauss
-        struct MagneticField {
-            x: F64
-            y: F64
-            z: F64
-        }
-
-        @ Telemetry channel for magnetic field
-        telemetry MagneticField: MagneticField
 
         @ Telemetry channel for temperature in degrees Celsius
         telemetry Temperature: F64
