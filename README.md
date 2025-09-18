@@ -36,14 +36,7 @@ make build
 
 ### Find the path to your board
 
-Next, plug in your board! If you have previously installed a firmware on your board you may not see it show up as a drive. In that case you'll want to find it's `tty` port.
-
-To do this, run the following command
-```shell
-make list-tty
-```
-
-Otherwise, you want to find the location of the board on your computer. It should be called something like RP2350 but you want to find the path to it
+Next, plug in your board! If you have previously installed a firmware on your board you may not see it show up as a drive. In that case you'll want to put the board into boot loader mode. Then you'll be able to find the location of the board on your computer. It should be called something like RP2350 but you want to find the path to it
 
 For Mac:
 ```shell
@@ -62,6 +55,13 @@ Now you want to install the firmware to the board.
 ```shell
 make install BOARD_DIR=[path-to-your-board]
 ```
+
+or
+```
+cp build-fprime-automatic-zephyr/zephyr/zephyr.uf2 [path-to-your-board]
+```
+to copy the uf2 if the make install isn't working
+
 
 Finally, run the fprime-gds.
 ```shell
