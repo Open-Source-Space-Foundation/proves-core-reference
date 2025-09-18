@@ -6,5 +6,4 @@
 	url = https://github.com/zephyrproject-rtos/zephyr.git
 [submodule "lib/fprime-zephyr"]
 	path = lib/fprime-zephyr
-	url = https://github.com/nateinaction/fprime-zephyr.git
-	branch = zephyrtime
+	url = https://github.com/fprime-community/fprime-zephyr.git
