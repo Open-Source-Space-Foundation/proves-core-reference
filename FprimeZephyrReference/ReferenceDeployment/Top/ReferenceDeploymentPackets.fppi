@@ -40,7 +40,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imu.MagneticField
   }
 
-
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

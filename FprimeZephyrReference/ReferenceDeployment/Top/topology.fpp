@@ -30,6 +30,7 @@ module ReferenceDeployment {
     instance watchdog
     instance prmDb
     instance imu
+    instance lis2mdlDriver
     instance lms6dsoDriver
 
   # ----------------------------------------------------------------------
@@ -104,11 +105,12 @@ module ReferenceDeployment {
     connections Imu {
       imu.readAcceleration -> lms6dsoDriver.getAcceleration
       imu.readAngularVelocity -> lms6dsoDriver.getAngularVelocity
+      imu.readMagneticField -> lis2mdlDriver.getMagneticField
       imu.readTemperature -> lms6dsoDriver.getTemperature
-
     }
+
     connections ReferenceDeployment {
-      
+
     }
 
   }
