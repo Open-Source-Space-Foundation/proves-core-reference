@@ -32,8 +32,9 @@ void RtcManager ::GET_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     struct tm time_tm_buf;
     struct tm* time_tm = gmtime_r(&time_posix, &time_tm_buf);
 
-    this->log_ACTIVITY_HI_RTC_GetTime(time_tm->tm_year + 1900, time_tm->tm_mon + 1, time_tm->tm_mday + 1,
-                                      time_tm->tm_hour, time_tm->tm_min, time_tm->tm_sec);
+    // Report time retrieved
+    this->log_ACTIVITY_HI_GetTime(time_tm->tm_year + 1900, time_tm->tm_mon + 1, time_tm->tm_mday + 1, time_tm->tm_hour,
+                                  time_tm->tm_min, time_tm->tm_sec);
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

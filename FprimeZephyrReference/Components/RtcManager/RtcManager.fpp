@@ -2,23 +2,19 @@ module Components {
     @ Manages the real time clock
     passive component RtcManager {
         @ SET_TIME command to set the time on the RTC
-        @ Requirement RtcManager-001
         sync command SET_TIME(
             t: Drv.TimeData @< Set the time
         ) opcode 0
 
         @ GET_TIME command to get the time from the RTC
-        @ Requirement RtcManager-002
         sync command GET_TIME opcode 1
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
-        # import Fw.Channel
-
         @ Event to log the time retrieved from the Rv3028Driver
-        event RTC_GetTime(year: U32, month: U32, day: U32, hour:U32, minute:U32, second:U32) severity activity high id 1 format "Time: {}/{}/{} at {}:{}:{}"
+        event GetTime(year: U32, month: U32, day: U32, hour:U32, minute:U32, second:U32) severity activity high id 1 format "Time: {}/{}/{} at {}:{}:{}"
 
         @ Output port to set the time on the Rv3028Driver
         output port timeSet: Drv.TimeSet

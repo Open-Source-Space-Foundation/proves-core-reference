@@ -6,18 +6,17 @@ Drives the real time clock
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-| Rv3028Driver-001 | Time can be set on the RTC through a port  | Manual |
-| Rv3028Driver-002 | Time can be gotten through a port | Manual |
-| Rv3028Driver-003 | Not ready event and set event will be emitted from the driver | Manual |
-| Rv3028Driver-003 | The time from the Rv3028 Driver will set the time in F Prime | Manual |
+| Rv3028Driver-001 | Time can be set on the RV3028 through a port | Manual |
+| Rv3028Driver-002 | Time can be read from the RV3028 through a port | Manual |
+| Rv3028Driver-003 | A device not ready event is emitted if the RV3028 is not ready | Manual |
+| Rv3028Driver-004 | A time set event is emitted if the time is set successfully | Manual |
+| Rv3028Driver-005 | A time not set event is emitted if the time is not set successfully | Manual |
 
 ## Port Descriptions
 | Name | Description |
 |---|---|
-| SET_TIME (input) | Port that receives a command to set the time |
-| timeCaller (time) | Output port to send the time  |
-|GET_TIME| Port that sends the time|
-
+| timeSet | Input port sets the time on the RV3028 |
+| timeRead | Input port reads the time from the RV3028 |
 
 ## Sequence Diagrams
 Add sequence diagrams here
@@ -25,12 +24,6 @@ Add sequence diagrams here
 ## Events
 | Name | Description |
 |---|---|
-| RTC_Set | Transmits success or failure RTC time when it is reset |
 | DeviceNotReady | Emits on unsuccessful device connection |
-
-
-## Unit Tests
-Add unit test descriptions in the chart below
-| Name | Description | Output | Coverage |
-|---|---|---|---|
-|---|---|---|---|
+| TimeSet | Emits on successful time set |
+| TimeNotSet | Emits on unsuccessful time set |

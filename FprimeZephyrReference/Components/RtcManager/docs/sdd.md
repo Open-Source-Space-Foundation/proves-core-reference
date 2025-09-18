@@ -18,16 +18,15 @@ Add a class diagram here
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-| RtcManager-001 | The RTC manager shall have a command to set and get times from the RTC Driver | Manual |
-| RtcManager-002 | An Event is Emitted when time is gotten with the time | Manual |
+| RtcM-001 | The RTC manager shall have a command that calls a port that get time from the RTC Driver | Manual |
+| RtcM-002 | An Event is Emitted when time is gotten with the time | Manual |
+| RtcM-003 | The RTC manager shall have a command that calls a port that makes the RTC Driver set the time | Manual |
 
 ## Port Descriptions
 | Name | Description |
 |---|---|
-| SetTime (output) | Port to reach out to driver to set the time |
-| TimeSend (input) | Port to receive the time from driver |
+| timeSet (output) | Port to reach out to driver to set the time |
 | TimeRead (output) | Port to reach out to driver to ask for the time |
-| timeCaller (time) | Port to receive time |
 
 ## Commands
 | Name | Description |
@@ -39,7 +38,7 @@ Add requirements in the chart below
 ## Events
 | Name | Description |
 |---|---|
-| RTC_GetTime | Transmits time gotten from the driver |
+| GetTime | Event to log the time retrieved from the Rv3028Driver |
 
 
 ## Unit Tests
@@ -53,3 +52,4 @@ Add unit test descriptions in the chart below
 | Date | Description |
 |---|---|
 | 2025-09-17 | Initial Draft |
+| 2025-09-18 | Update that connects to driver/manager |
