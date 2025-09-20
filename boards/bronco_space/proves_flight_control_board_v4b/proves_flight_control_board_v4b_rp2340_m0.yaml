@@ -1,0 +1,22 @@
+identifier: proves_flight_control_board_v4b/rp2040/m0p
+name: PROVES Flight Control Board v4b (RP2040, Cortex-M0+)
+type: mcu
+arch: arm
+flash: 4096
+ram: 264
+toolchain:
+  - zephyr
+  - gnuarmemb
+supported:
+  - adc
+  - clock
+  - counter
+  - dma
+  - gpio
+  - hwinfo
+  - i2c
+  - pwm
+  - spi
+  - uart
+  - usbd
+  - watchdog

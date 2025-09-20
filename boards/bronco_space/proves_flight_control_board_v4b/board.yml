@@ -1,0 +1,6 @@
+board:
+  name: proves_flight_control_board_v4b
+  full_name: PROVES Flight Control Board v4b
+  vendor: Bronco Space
+  socs:
+  - name: rp2340
