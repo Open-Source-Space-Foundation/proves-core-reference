@@ -14,7 +14,6 @@ namespace Drv {
 Rv3028Manager ::Rv3028Manager(const char* const compName) : Rv3028ManagerComponentBase(compName) {
     // Initialize device
     this->rv3028 = device_get_binding("RV3028");
-    FW_ASSERT(device_is_ready(this->rv3028));
 }
 
 Rv3028Manager ::~Rv3028Manager() {}
