@@ -8,7 +8,7 @@ module Drv {
 # Component definition
 module Drv {
     @ LSM6DSO Driver Component for F Prime FSW framework.
-    passive component Lsm6dsoDriver {
+    passive component Lsm6dsoManager {
         @ Port to read the current acceleration in m/s^2.
         sync input port accelerationRead: AccelerationRead
 

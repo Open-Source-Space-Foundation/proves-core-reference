@@ -3,16 +3,16 @@ module Components {
     passive component ImuManager {
         sync input port run: Svc.Sched
 
-        @ Port for sending accelerationRead calls to the LSM6DSO driver
+        @ Port for sending accelerationRead calls to the LSM6DSO Driver
         output port accelerationRead: Drv.AccelerationRead
 
-        @ Port for sending angularVelocityRead calls to the LSM6DSO driver
+        @ Port for sending angularVelocityRead calls to the LSM6DSO Driver
         output port angularVelocityRead: Drv.AngularVelocityRead
 
-        @ Port for sending magneticFieldRead calls to the LIS2MDL driver
+        @ Port for sending magneticFieldRead calls to the LIS2MDL Manager
         output port magneticFieldRead: Drv.MagneticFieldRead
 
-        @ Port for sending temperatureRead calls to the LSM6DSO driver
+        @ Port for sending temperatureRead calls to the LSM6DSO Driver
         output port temperatureRead: Drv.TemperatureRead
 
         @ Telemetry channel for acceleration in m/s^2

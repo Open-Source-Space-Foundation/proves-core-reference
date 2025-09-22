@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Lis2mdlDriver.cpp
-// \brief  cpp file for Lis2mdlDriver component implementation class
+// \title  Lis2mdlManager.cpp
+// \brief  cpp file for Lis2mdlManager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Lis2mdlDriver/Lis2mdlDriver.hpp"
+#include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
 
@@ -13,19 +13,19 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Lis2mdlDriver ::Lis2mdlDriver(const char* const compName) : Lis2mdlDriverComponentBase(compName) {
+Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {
     // Initialize the lis2mdl sensor
     lis2mdl = device_get_binding("LIS2MDL");
     FW_ASSERT(device_is_ready(lis2mdl));
 }
 
-Lis2mdlDriver ::~Lis2mdlDriver() {}
+Lis2mdlManager ::~Lis2mdlManager() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Drv::MagneticField Lis2mdlDriver ::magneticFieldRead_handler(FwIndexType portNum) {
+Drv::MagneticField Lis2mdlManager ::magneticFieldRead_handler(FwIndexType portNum) {
     if (!device_is_ready(lis2mdl)) {
         this->log_WARNING_HI_DeviceNotReady();
         return Drv::MagneticField(0.0, 0.0, 0.0);

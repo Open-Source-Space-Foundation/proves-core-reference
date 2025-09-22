@@ -31,7 +31,7 @@ module ReferenceDeployment {
     instance prmDb
     instance imuManager
     instance lis2mdlDriver
-    instance lsm6dsoDriver
+    instance Lsm6dsoManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -103,10 +103,10 @@ module ReferenceDeployment {
     }
 
     connections imuManager {
-      imuManager.accelerationRead -> lsm6dsoDriver.accelerationRead
-      imuManager.angularVelocityRead -> lsm6dsoDriver.angularVelocityRead
+      imuManager.accelerationRead -> Lsm6dsoManager.accelerationRead
+      imuManager.angularVelocityRead -> Lsm6dsoManager.angularVelocityRead
       imuManager.magneticFieldRead -> lis2mdlDriver.magneticFieldRead
-      imuManager.temperatureRead -> lsm6dsoDriver.temperatureRead
+      imuManager.temperatureRead -> Lsm6dsoManager.temperatureRead
     }
 
     connections ReferenceDeployment {

@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.cpp"
     DEPENDS
         FprimeZephyrReference_Components_Drv_Helpers
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Lsm6dsoDriver.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lsm6dsoDriverTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lsm6dsoDriverTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

@@ -1,6 +1,6 @@
 # Components::ImuManager
 
-The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with two drivers: the LIS2MDL Driver and the LSM6DSO Driver which provide acceleration, angular velocity, magnetic field, and temperature measurements.
+The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with two drivers: the LIS2MDL Manager and the LSM6DSO Driver which provide acceleration, angular velocity, magnetic field, and temperature measurements.
 
 ## Usage Examples
 
@@ -11,7 +11,7 @@ The IMU Manager component is designed to be scheduled periodically to collect se
 1. The component is instantiated and initialized during system startup
 2. The scheduler calls the `run` port at regular intervals
 3. On each run call, the component:
-   - Fetches sensor data from both the LIS2MDL Driver and LSM6DSO Driver
+   - Fetches sensor data from both the LIS2MDL Manager and LSM6DSO Driver
    - Outputs telemetry for acceleration, angular velocity, magnetic field, and temperature
 
 ## Class Diagram
@@ -43,13 +43,13 @@ classDiagram
 sequenceDiagram
     participant Scheduler
     participant IMU Manager
-    participant LIS2MDL Driver
+    participant LIS2MDL Manager
     participant LSM6DSO Driver
     participant Telemetry
 
     Scheduler-->>IMU Manager: run
-    IMU Manager->>LIS2MDL Driver: MagneticFieldRead
-    LIS2MDL Driver->>IMU Manager: MagneticField struct
+    IMU Manager->>LIS2MDL Manager: MagneticFieldRead
+    LIS2MDL Manager->>IMU Manager: MagneticField struct
     IMU Manager->>LSM6DSO Driver: AccelerationRead
     LSM6DSO Driver->>IMU Manager: Acceleration struct
     IMU Manager->>LSM6DSO Driver: AngularVelocityRead
@@ -80,4 +80,4 @@ Add requirements in the chart below
 | Date | Description |
 |---|---|
 | 2025-9-9 | Initial IMU Manager component |
-| 2025-9-18 | Extracted Zephyr calls to discrete LIS2MDL Driver and LSM6DSO Driver |
+| 2025-9-18 | Extracted Zephyr calls to discrete LIS2MDL Manager and LSM6DSO Driver |

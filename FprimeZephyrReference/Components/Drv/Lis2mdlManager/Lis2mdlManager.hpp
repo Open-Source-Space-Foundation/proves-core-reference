@@ -1,14 +1,14 @@
 // ======================================================================
-// \title  Lis2mdlDriver.hpp
-// \brief  hpp file for Lis2mdlDriver component implementation class
+// \title  Lis2mdlManager.hpp
+// \brief  hpp file for Lis2mdlManager component implementation class
 // ======================================================================
 
-#ifndef Components_Lis2mdlDriver_HPP
-#define Components_Lis2mdlDriver_HPP
+#ifndef Components_Lis2mdlManager_HPP
+#define Components_Lis2mdlManager_HPP
 
 // clang-format off
 // Keep the includes in this order
-#include "FprimeZephyrReference/Components/Drv/Lis2mdlDriver/Lis2mdlDriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManagerComponentAc.hpp"
 #include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
 // clang-format on
 
@@ -18,17 +18,17 @@
 
 namespace Drv {
 
-class Lis2mdlDriver final : public Lis2mdlDriverComponentBase {
+class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Lis2mdlDriver object
-    Lis2mdlDriver(const char* const compName);
+    //! Construct Lis2mdlManager object
+    Lis2mdlManager(const char* const compName);
 
-    //! Destroy Lis2mdlDriver object
-    ~Lis2mdlDriver();
+    //! Destroy Lis2mdlManager object
+    ~Lis2mdlManager();
 
   private:
     // ----------------------------------------------------------------------
