@@ -17,15 +17,15 @@ module Drv {
 
 module Drv {
     @ Manages the real time clock
-    passive component Rv3028Driver {
+    passive component Rv3028Manager {
         import Svc.Time
 
         @ timeSet port to set the time on the RTC
-        @ Requirement Rv3028Driver-001
+        @ Requirement Rv3028Manager-001
         sync input port timeSet: TimeSet
 
         @ timeRead port to get the time from the RTC
-        @ Requirement Rv3028Driver-002
+        @ Requirement Rv3028Manager-002
         sync input port timeRead: TimeRead
 
         ##############################################################################

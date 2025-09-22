@@ -28,7 +28,7 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
-    instance rv3028Driver
+    instance rv3028Manager
     instance rtcManager
 
   # ----------------------------------------------------------------------
@@ -39,7 +39,7 @@ module ReferenceDeployment {
     event connections instance CdhCore.events
     text event connections instance CdhCore.textLogger
     health connections instance CdhCore.$health
-    time connections instance rv3028Driver
+    time connections instance rv3028Manager
     telemetry connections instance CdhCore.tlmSend
     param connections instance prmDb
 
@@ -100,8 +100,8 @@ module ReferenceDeployment {
     }
 
     connections RtcManager {
-      rtcManager.timeSet -> rv3028Driver.timeSet
-      rtcManager.timeRead -> rv3028Driver.timeRead
+      rtcManager.timeSet -> rv3028Manager.timeSet
+      rtcManager.timeRead -> rv3028Manager.timeRead
     }
 
     connections ReferenceDeployment {

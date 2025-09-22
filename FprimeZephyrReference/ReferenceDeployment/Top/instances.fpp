@@ -63,7 +63,7 @@ module ReferenceDeployment {
 
   instance rtcManager: Components.RtcManager base id 0x10016000
 
-  instance rv3028Driver: Drv.Rv3028Driver base id 0x10017000
+  instance rv3028Manager: Drv.Rv3028Manager base id 0x10017000
 
 
 }

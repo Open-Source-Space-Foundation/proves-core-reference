@@ -13,13 +13,13 @@ module Components {
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
-        @ Event to log the time retrieved from the Rv3028Driver
+        @ Event to log the time retrieved from the Rv3028Manager
         event GetTime(year: U32, month: U32, day: U32, hour:U32, minute:U32, second:U32) severity activity high id 1 format "Time: {}/{}/{} at {}:{}:{}"
 
-        @ Output port to set the time on the Rv3028Driver
+        @ Output port to set the time on the Rv3028Manager
         output port timeSet: Drv.TimeSet
 
-        @ Output port to get the time from the Rv3028Driver
+        @ Output port to get the time from the Rv3028Manager
         output port timeRead: Drv.TimeRead
 
         ###############################################################################

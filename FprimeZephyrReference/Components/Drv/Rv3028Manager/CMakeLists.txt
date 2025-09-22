@@ -28,8 +28,8 @@ register_fprime_library(
 #     AUTOCODER_INPUTS
 #         "${CMAKE_CURRENT_LIST_DIR}/Rv3028Manager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028DriverTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028DriverTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028ManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028ManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

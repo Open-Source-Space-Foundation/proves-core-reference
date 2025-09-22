@@ -3,8 +3,8 @@
 // \brief  hpp file for Rv3028Manager component implementation class
 // ======================================================================
 
-#ifndef Components_Rv3028Driver_HPP
-#define Components_Rv3028Driver_HPP
+#ifndef Components_Rv3028Manager_HPP
+#define Components_Rv3028Manager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
 
@@ -16,18 +16,18 @@
 
 namespace Drv {
 
-class Rv3028Driver final : public Rv3028DriverComponentBase {
+class Rv3028Manager final : public Rv3028ManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Rv3028Driver object
-    Rv3028Driver(const char* const compName  //!< The component name
+    //! Construct Rv3028Manager object
+    Rv3028Manager(const char* const compName  //!< The component name
     );
 
-    //! Destroy Rv3028Driver object
-    ~Rv3028Driver();
+    //! Destroy Rv3028Manager object
+    ~Rv3028Manager();
 
   private:
     // ----------------------------------------------------------------------
@@ -44,14 +44,14 @@ class Rv3028Driver final : public Rv3028DriverComponentBase {
     //! Handler implementation for timeRead
     //!
     //! timeRead port to get the time from the RTC
-    //! Requirement Rv3028Driver-002
+    //! Requirement Rv3028Manager-002
     U32 timeRead_handler(FwIndexType portNum  //!< The port number
                          ) override;
 
     //! Handler implementation for timeSet
     //!
     //! timeSet port to set the time on the RTC
-    //! Requirement Rv3028Driver-001
+    //! Requirement Rv3028Manager-001
     void timeSet_handler(FwIndexType portNum,  //!< The port number
                          const Drv::TimeData& time) override;
 

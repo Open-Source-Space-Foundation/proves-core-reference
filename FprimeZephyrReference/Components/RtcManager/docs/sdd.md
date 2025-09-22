@@ -1,6 +1,6 @@
 # Components::RtcManager
 
-The RtcManager component manages interactions with a Real Time Clock (RTC) device. It interfaces with the Rv3028Driver component to set and get the current time.
+The RtcManager component manages interactions with a Real Time Clock (RTC) device. It interfaces with the Rv3028Manager component to set and get the current time.
 
 ### Typical Usage
 
@@ -39,7 +39,7 @@ The RtcManager component manages interactions with a Real Time Clock (RTC) devic
 ## Events
 | Name | Description |
 |---|---|
-| GetTime | Event to log the time retrieved from the Rv3028Driver |
+| GetTime | Event to log the time retrieved from the Rv3028Manager |
 
 ## Class Diagram
 ```mermaid

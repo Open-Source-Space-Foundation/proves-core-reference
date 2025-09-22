@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  Rv3028Manager.cpp
-// \brief  cpp file for Rv3028Driver component implementation class
+// \brief  cpp file for Rv3028Manager component implementation class
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028Manager.hpp"
@@ -11,19 +11,19 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Rv3028Driver ::Rv3028Driver(const char* const compName) : Rv3028DriverComponentBase(compName) {
+Rv3028Manager ::Rv3028Manager(const char* const compName) : Rv3028ManagerComponentBase(compName) {
     // Initialize device
     this->rv3028 = device_get_binding("RV3028");
     FW_ASSERT(device_is_ready(this->rv3028));
 }
 
-Rv3028Driver ::~Rv3028Driver() {}
+Rv3028Manager ::~Rv3028Manager() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Rv3028Driver ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
+void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
         this->log_WARNING_HI_DeviceNotReady();
@@ -42,7 +42,7 @@ void Rv3028Driver ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(time_posix), 0);
 }
 
-U32 Rv3028Driver ::timeRead_handler(FwIndexType portNum) {
+U32 Rv3028Manager ::timeRead_handler(FwIndexType portNum) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
         this->log_WARNING_HI_DeviceNotReady();
@@ -60,7 +60,7 @@ U32 Rv3028Driver ::timeRead_handler(FwIndexType portNum) {
     return time_posix;
 }
 
-void Rv3028Driver ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t) {
+void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
         this->log_WARNING_HI_DeviceNotReady();
