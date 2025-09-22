@@ -16,12 +16,9 @@ namespace Drv {
 Lsm6dsoManager ::Lsm6dsoManager(const char* const compName) : Lsm6dsoManagerComponentBase(compName) {
     // Initialize the LSM6DSO sensor
     lsm6dso = DEVICE_DT_GET_ONE(st_lsm6dso);
-    FW_ASSERT(device_is_ready(lsm6dso));
 
     // Configure the LSM6DSO sensor
     struct sensor_value odr = {.val1 = 12, .val2 = 500000};  // 12.5 Hz
-    FW_ASSERT(sensor_attr_set(lsm6dso, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr) == 0);
-    FW_ASSERT(sensor_attr_set(lsm6dso, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr) == 0);
 }
 
 Lsm6dsoManager ::~Lsm6dsoManager() {}

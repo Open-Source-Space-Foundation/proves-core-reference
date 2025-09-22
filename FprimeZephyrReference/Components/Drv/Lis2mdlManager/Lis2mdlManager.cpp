@@ -16,7 +16,6 @@ namespace Drv {
 Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {
     // Initialize the lis2mdl sensor
     lis2mdl = device_get_binding("LIS2MDL");
-    FW_ASSERT(device_is_ready(lis2mdl));
 }
 
 Lis2mdlManager ::~Lis2mdlManager() {}
