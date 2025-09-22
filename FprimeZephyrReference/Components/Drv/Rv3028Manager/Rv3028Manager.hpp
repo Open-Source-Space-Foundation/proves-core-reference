@@ -1,12 +1,12 @@
 // ======================================================================
-// \title  Rv3028Driver.hpp
-// \brief  hpp file for Rv3028Driver component implementation class
+// \title  Rv3028Manager.hpp
+// \brief  hpp file for Rv3028Manager component implementation class
 // ======================================================================
 
 #ifndef Components_Rv3028Driver_HPP
 #define Components_Rv3028Driver_HPP
 
-#include "FprimeZephyrReference/Components/Drv/Rv3028Driver/Rv3028DriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>

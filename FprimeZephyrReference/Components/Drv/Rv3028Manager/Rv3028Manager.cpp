@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Rv3028Driver.cpp
+// \title  Rv3028Manager.cpp
 // \brief  cpp file for Rv3028Driver component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Rv3028Driver/Rv3028Driver.hpp"
+#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028Manager.hpp"
 
 namespace Drv {
 

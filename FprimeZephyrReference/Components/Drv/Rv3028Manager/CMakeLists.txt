@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Rv3028Driver.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Rv3028Manager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Rv3028Driver.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Rv3028Manager.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,7 +26,7 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Rv3028Driver.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Rv3028Manager.fpp"
 #     SOURCES
 #         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028DriverTestMain.cpp"
 #         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Rv3028DriverTester.cpp"

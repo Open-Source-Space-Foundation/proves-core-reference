@@ -1,6 +1,6 @@
-# Components::Rv3028Driver
+# Components::Rv3028Manager
 
-The RV3028 Driver component interfaces with the RV3028 Real Time Clock (RTC) to provide time measurements.
+The RV3028 Manager component interfaces with the RV3028 Real Time Clock (RTC) to provide time measurements.
 
 ### Typical Usage
 
