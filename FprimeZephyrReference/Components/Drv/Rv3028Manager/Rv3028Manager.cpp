@@ -25,7 +25,7 @@ Rv3028Manager ::~Rv3028Manager() {}
 void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
-        this->log_WARNING_HI_DeviceNotReady();
+        Fw::Logger::log("Rv2038 not ready");
         return;
     }
 
