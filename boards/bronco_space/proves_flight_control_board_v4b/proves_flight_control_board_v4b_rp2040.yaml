@@ -1,4 +1,4 @@
-identifier: proves_flight_control_board_v4b/rp2040/m0p
+identifier: proves_flight_control_board_v4b/rp2040
 name: PROVES Flight Control Board v4b (RP2040, Cortex-M0+)
 type: mcu
 arch: arm

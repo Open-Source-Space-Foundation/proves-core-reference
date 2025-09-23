@@ -69,7 +69,7 @@ zephyr_udc0: &usbd {
 	};
 };
 
-&timer0 {
+&timer {
 	status = "okay";
 };
 

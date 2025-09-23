@@ -13,7 +13,7 @@
  * 2. Core-specific configuration.
  * 3. Board-specific configuration.
  */
-#include <raspberrypi/rp2040.dtsi>
+#include <raspberrypi/rpi_pico/rp2040.dtsi>
 
 
 #include "../proves_flight_control_board_v4/proves_flight_control_board_v4.dtsi"
