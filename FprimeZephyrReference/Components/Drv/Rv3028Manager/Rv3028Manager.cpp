@@ -25,20 +25,20 @@ Rv3028Manager ::~Rv3028Manager() {}
 void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
-        Fw::Logger::log("Rv2038 not ready");
+        // Use logger instead of events since this fn is in a critical path for FPrime
+        // to get time. Events require time, if this method fails an event will fail.
+        Fw::Logger::log("RV2038 not ready");
         return;
     }
 
-    // Fetch time from RTC
-    struct rtc_time time_rtc = {};
-    rtc_get_time(this->rv3028, &time_rtc);
-
-    // Convert time to POSIX time_t format
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
-    time_t time_posix = timeutil_timegm(time_tm);
+    I32 posix_time = this->getPosixTime();
+    if (posix_time < 0) {
+        Fw::Logger::log("getPosixTime returned invalid time");
+        return;
+    }
 
     // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(time_posix), 0);
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(posix_time), 0);
 }
 
 U32 Rv3028Manager ::timeRead_handler(FwIndexType portNum) {
@@ -47,16 +47,16 @@ U32 Rv3028Manager ::timeRead_handler(FwIndexType portNum) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
+    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
-    // Fetch time from RTC
-    struct rtc_time time_rtc = {};
-    rtc_get_time(this->rv3028, &time_rtc);
+    I32 posix_time = this->getPosixTime();
+    if (posix_time < 0) {
+        this->log_WARNING_HI_InvalidTime();
+        return 0;
+    }
+    this->log_WARNING_HI_InvalidTime_ThrottleClear();
 
-    // Convert time to POSIX time_t format
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
-    time_t time_posix = timeutil_timegm(time_tm);
-
-    return time_posix;
+    return static_cast<U32>(posix_time);
 }
 
 void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t) {
@@ -65,19 +65,23 @@ void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t
         this->log_WARNING_HI_DeviceNotReady();
         return;
     }
+    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
         .tm_sec = 0,
-        .tm_min = t.get_Minute(),
-        .tm_hour = t.get_Hour(),
-        .tm_mday = t.get_Day(),
-        .tm_mon = t.get_Month() - 1,     // month [0-11]
-        .tm_year = t.get_Year() - 1900,  // year since 1900
+        .tm_min = static_cast<int>(t.get_Minute()),
+        .tm_hour = static_cast<int>(t.get_Hour()),
+        .tm_mday = static_cast<int>(t.get_Day()),
+        .tm_mon = static_cast<int>(t.get_Month() - 1),     // month [0-11]
+        .tm_year = static_cast<int>(t.get_Year() - 1900),  // year since 1900
         .tm_wday = 0,
         .tm_yday = 0,
         .tm_isdst = 0,
     };
+
+    // Event current time to correlate prior events when new time is set
+    this->log_ACTIVITY_HI_TimeGet(this->getPosixTime());
 
     // Set time on RTC
     const int status = rtc_set_time(this->rv3028, &time_rtc);
@@ -88,6 +92,26 @@ void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t
     } else {
         this->log_WARNING_HI_TimeNotSet();
     }
+}
+
+// ----------------------------------------------------------------------
+// Private helper methods
+// ----------------------------------------------------------------------
+I32 Rv3028Manager ::getPosixTime() {
+    struct rtc_time time_rtc = {};
+    rtc_get_time(this->rv3028, &time_rtc);
+
+    // Convert time to POSIX time_t format
+    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
+
+    errno = 0;
+    time_t posix_time = timeutil_timegm(time_tm);
+    if (errno == ERANGE) {
+        Fw::Logger::log("RV2038 returned invalid time");
+        return -1;
+    }
+
+    return posix_time;
 }
 
 }  // namespace Drv

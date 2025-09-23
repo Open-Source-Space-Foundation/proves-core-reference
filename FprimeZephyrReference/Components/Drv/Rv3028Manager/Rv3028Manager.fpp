@@ -33,13 +33,21 @@ module Drv {
         ##############################################################################
 
         @ DeviceNotReady event indicates that the RV3028 is not ready
-        event DeviceNotReady() severity warning high id 0 format "RV3028 not ready"
+        event DeviceNotReady() severity warning high id 0 format "RV3028 not ready" throttle 5
+
+        @ InvalidTime event indicates that the RV3028 returned an invalid time
+        event InvalidTime() severity warning high id 1 format "RV3028 returned invalid time" throttle 5
+
+        @ TimeGet event indicates that the time was read successfully
+        event TimeGet(
+            t: U32 @< POSIX time read from RTC
+        ) severity activity high id 2 format "RV3028 Time: {}"
 
         @ TimeSet event indicates that the time was set successfully
-        event TimeSet() severity activity high id 1 format "Time set on RV3028"
+        event TimeSet() severity activity high id 3 format "Time set on RV3028"
 
         @ TimeNotSet event indicates that the time was not set successfully
-        event TimeNotSet() severity warning high id 2 format "Time not set on RV3028"
+        event TimeNotSet() severity warning high id 4 format "Time not set on RV3028"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

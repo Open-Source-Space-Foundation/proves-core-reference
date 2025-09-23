@@ -66,9 +66,9 @@ classDiagram
 sequenceDiagram
     participant Ground Station
     participant RtcManager
-    participant RV3028 Driver
+    participant RV3028 Manager
     Ground Station-->>RtcManager: Send SET_TIME command with time data
-    RtcManager->>RV3028 Driver: Call timeSet port with time data
+    RtcManager->>RV3028 Manager: Call timeSet port with time data
 ```
 
 ### `GET_TIME` Command
@@ -78,10 +78,10 @@ sequenceDiagram
     participant Ground Station
     participant Event Log
     participant RtcManager
-    participant RV3028 Driver
+    participant RV3028 Manager
     Ground Station-->>RtcManager: Send GET_TIME command
-    RtcManager->>RV3028 Driver: Call timeRead port
-    RV3028 Driver->>RtcManager: Return time data
+    RtcManager->>RV3028 Manager: Call timeRead port
+    RV3028 Manager->>RtcManager: Return time data
     RtcManager->>Event Log: Emit GetTime event with retrieved time
 ```
 

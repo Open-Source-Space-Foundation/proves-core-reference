@@ -7,6 +7,9 @@
 #define Components_Rv3028Manager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
+
+#include <cerrno>
+
 #include <Fw/Logger/Logger.hpp>
 
 #include <zephyr/device.h>
@@ -55,6 +58,13 @@ class Rv3028Manager final : public Rv3028ManagerComponentBase {
     //! Requirement Rv3028Manager-001
     void timeSet_handler(FwIndexType portNum,  //!< The port number
                          const Drv::TimeData& time) override;
+
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Helper method to get POSIX time from RTC
+    I32 getPosixTime();
 
     //! Zephyr device stores the initialized RV2038 sensor
     const struct device* rv3028;
