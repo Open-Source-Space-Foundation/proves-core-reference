@@ -3,18 +3,18 @@
         {
             "binaryDir": "${sourceDir}/build-fprime-automatic-zephyr",
             "cacheVariables": {
-                "BOARD": "teensy41",
+                "BOARD": "proves_flight_control_board_v5c/rp2350a/m33",
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             },
             "description": "F\u00b4 release build using local fprime-venv",
-            "displayName": "F\u00b4 Zephyr (teensy41)",
+            "displayName": "F\u00b4 FPrime Zephyr PROVES",
             "environment": {
                 "PATH": "$env{VIRTUAL_ENV}/bin:$penv{PATH}",
                 "VIRTUAL_ENV": "${fileDir}/fprime-venv"
             },
             "generator": "Ninja",
-            "name": "fprime-zephyr-teensy41",
+            "name": "fprime-zephyr-proves",
             "toolchainFile": "${fileDir}/lib/fprime-zephyr/cmake/toolchain/zephyr.cmake"
         }
     ],
