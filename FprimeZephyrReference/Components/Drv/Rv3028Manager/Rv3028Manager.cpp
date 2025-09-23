@@ -36,9 +36,11 @@ void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Convert time to POSIX time_t format
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
     time_t time_posix = timeutil_timegm(time_tm);
+    uint64_t hardware_cycles = k_sec_to_cyc_floor64(time_posix);
+    uint32_t time_useconds = k_cyc_to_us_floor32(hardware_cycles);
 
     // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(time_posix), 0);
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, time_posix, time_useconds);
 }
 
 U32 Rv3028Manager ::timeRead_handler(FwIndexType portNum) {
