@@ -37,8 +37,10 @@ telemetry packets ReferenceDeploymentPackets {
   packet Imu id 6 group 4 {
     ReferenceDeployment.imuManager.Acceleration
     ReferenceDeployment.imuManager.AngularVelocity
-    ReferenceDeployment.imuManager.MagneticField
+    ReferenceDeployment.lsm6dsoManager.MagneticField
   }
+
+
 
 } omit {
   CdhCore.cmdDisp.CommandErrors

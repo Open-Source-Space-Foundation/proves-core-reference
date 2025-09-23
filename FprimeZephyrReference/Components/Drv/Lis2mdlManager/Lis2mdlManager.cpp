@@ -29,7 +29,7 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldRead_handler(FwIndexType portNu
         this->log_WARNING_HI_DeviceNotReady();
         return Drv::MagneticField(0.0, 0.0, 0.0);
     }
-    this->log_WARNING_HI_DeviceNotReady_ThrottleClear()
+    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
     struct sensor_value x;
     struct sensor_value y;
@@ -41,7 +41,11 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldRead_handler(FwIndexType portNu
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Z, &z);
 
-    return Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+    Drv::MagneticField magnetic_readings = Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+
+    this->tlmWrite_MagneticField(magnetic_readings);
+
+    return magnetic_readings;
 }
 
 }  // namespace Drv

@@ -13,6 +13,10 @@ module Drv {
         @ Event for reporting LSM6DSO not ready error
         event DeviceNotReady() severity warning high format "LIS2MDL device not ready" throttle 5
 
+        @ Telemetry channel for magnetic field in gauss
+        telemetry MagneticField: MagneticField
+
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
@@ -24,5 +28,8 @@ module Drv {
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
     }
 }
