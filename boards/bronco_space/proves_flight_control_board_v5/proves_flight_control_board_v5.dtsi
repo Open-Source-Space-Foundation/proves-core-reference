@@ -24,6 +24,15 @@
 			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
 			label = "User LED GPIO24";
 		};
+		burnwire0: burnwire0{
+			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+			label = "burnwire 0";
+		};
+		burnwire1: burnwire1{
+			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+			label = "burnwire 1";
+		};
+
 	};
 };
 
