@@ -52,6 +52,11 @@ class Burnwire final : public BurnwireComponentBase {
 
     void parameterUpdated(FwPrmIdType id) override;
 
+    // helper functions
+    void startBurn();
+
+    void stopBurn();
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands

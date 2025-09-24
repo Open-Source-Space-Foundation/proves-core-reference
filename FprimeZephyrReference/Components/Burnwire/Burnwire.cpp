@@ -27,21 +27,30 @@ Burnwire ::~Burnwire() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 void Burnwire ::burnStart_handler(FwIndexType portNum) {
-    this->m_safetyCounter = 0;
-    this->m_state = Fw::On::ON;
-    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
+    this->startBurn();
 }
 
 void Burnwire ::burnStop_handler(FwIndexType portNum) {
-    this->m_state = Fw::On::OFF;
-    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
-    this->gpioSet_out(0, Fw::Logic::LOW);
-    this->gpioSet_out(1, Fw::Logic::LOW);
+    this->stopBurn();
 }
 
 // void Burnwire ::stop_handler(FwIndexType portNum) {
 //     //TODO
 // }
+
+void Burnwire::startBurn() {
+    this->m_safetyCounter = 0;
+    this->m_state = Fw::On::ON;
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
+    this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
+}
+
+void Burnwire::stopBurn() {
+    this->m_state = Fw::On::OFF;
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
+    this->gpioSet_out(0, Fw::Logic::LOW);
+    this->gpioSet_out(1, Fw::Logic::LOW);
+}
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
     if (this->m_state == Fw::On::ON) {
@@ -69,20 +78,14 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 max_duration) {
-    this->m_safetyCounter = 0;
     this->m_safetyMaxCount = max_duration;
-    this->m_state = Fw::On::ON;
-    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
-    this->log_ACTIVITY_HI_SafetyTimerSet(max_duration);
+    this->startBurn();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->m_state = Fw::On::OFF;
-    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
+    this->stopBurn();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    this->gpioSet_out(0, Fw::Logic::LOW);
-    this->gpioSet_out(1, Fw::Logic::LOW);
 }
 
 void Burnwire ::parameterUpdated(FwPrmIdType id) {
