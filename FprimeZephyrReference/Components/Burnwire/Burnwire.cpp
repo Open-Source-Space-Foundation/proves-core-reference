@@ -15,10 +15,6 @@ namespace Components {
 Burnwire ::Burnwire(const char* const compName) : BurnwireComponentBase(compName) {
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::OFF;
-    Fw::ParamValid valid;
-    this->m_safetyMaxCount = this->paramGet_SAFETY_TIMER(valid);
-    this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
-    this->log_ACTIVITY_HI_SafetyTimerSet(m_safetyMaxCount);
 }
 
 Burnwire ::~Burnwire() {}
@@ -42,7 +38,10 @@ void Burnwire::startBurn() {
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::ON;
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
-    this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
+
+    Fw::ParamValid valid;
+    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
+    this->log_ACTIVITY_HI_SafetyTimerState(timeout);
 }
 
 void Burnwire::stopBurn() {
@@ -77,8 +76,7 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 max_duration) {
-    this->m_safetyMaxCount = max_duration;
+void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->startBurn();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -86,15 +84,6 @@ void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 m
 void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->stopBurn();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Burnwire ::parameterUpdated(FwPrmIdType id) {
-    if (id == this->PARAMID_SAFETY_TIMER) {
-        Fw::ParamValid valid;
-        this->m_safetyMaxCount = this->paramGet_SAFETY_TIMER(valid);
-        this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
-    }
-    this->log_ACTIVITY_HI_SafetyTimerSet(m_safetyMaxCount);
 }
 
 }  // namespace Components

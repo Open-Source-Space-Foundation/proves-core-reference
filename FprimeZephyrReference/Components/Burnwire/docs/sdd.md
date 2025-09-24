@@ -1,6 +1,8 @@
 # Components::Burnwire
 
-Driving the Burnwire on and off. The deployment will be handled by the Antenna Deployment component TODO ADD details
+Driving the Burnwire on and off. This component activates the two pins that are required to heat the burnwire resisitor. The burnwire deployment will be handled by the Antenna Deployment, that will call the ports in the burnwire deployment. For testing, the commands to directly call the burnwire have been left in.
+
+Burnwire is agnostic to the ideal safety count, it simply sets it to be whatever the port or command passes onto
 
 ## Sequence Diagrams
 Add sequence diagrams here
@@ -9,12 +11,13 @@ Add sequence diagrams here
 Add requirements in the chart below
 | Name | Description | Validation |
 | ---- | -----------  | ------ |
-|BW-001|The burnwire shall turn on in response to a port call |Hardware Test|
-|BW-002|The burnwire shall turn off in response to a port call |Hardware Test|
+|BW-001|The burnwire shall turn on and off in response to a port calls |Hardware Test|
+|BW-002|The burnwire shall turn on and off in response to commands (TBR for testing for now) |Hardware Test|
 |BW-003|The burnwire component shall provide an Event when it is turned on and off |Integration Test|
 |BW-004|The burnwire component shall activate by turning the GPIO pins on one at a time |Integration Test|
-|BW-005|The burnwire component shall be controlled by a safety timeout attached to a 1Hz rate group that can be changed within the code |Integration Test|
-|BW-006|The burnwire safety time shall emit an event when it starts and stops |Integration Test|
+|BW-005|The burnwire component shall be controlled by a safety timeout attached to a 1Hz rate group |Integration Test|
+|BW-006|The safety timeout shall emit an event when it is changes | Integration test|
+|BW-007|The burnwire safety time shall emit an event when it starts and stops |Integration Test|
 
 ## Port Descriptions
 Name | Type | Description |
@@ -28,14 +31,15 @@ Name | Type | Description |
 ## Commands
 | Name | Description |
 | ---- | -----------  |
-|START_BURNWIRE|Starts the Burn|
+|START_BURNWIRE|Starts the Burn. Takes a argument max_duration which sets the parameter safetyMaxCount to timeout the burnwire|
 |STOP_BURNWIRE|Stops the Burn|
 
 ## Events
 | Name | Description |
 |---|---|
-|Burnwire_Start|Emitted once the burnwire has started|
-|Burnwire_Stop|Emitted once the burnwire has ended|
+|SetBurnwireState|Emits whether the burnwire turns off or on when it changes state|
+|SafetyTimerStatus|Emits when the Safety Time has stopped or started|
+|SafetyTimerState|Emits  the safety timer argument when it starts|
 
 
 ## Component States
@@ -55,4 +59,4 @@ Add unit test descriptions in the chart below
 
 ## Parameter
 | Name | Description |
-| m_safetyMaxCount | The maximum amount that the burnwire will burn before stopping itself for safety |
+|   SAFETY_TIMER   | By Default set in fpp (currently 10) is the max time the burnwire should ever run|
