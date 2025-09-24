@@ -8,7 +8,10 @@ module Components {
 
         # @ Examplesync command
         sync command START_BURNWIRE(
+            max_duration: U32
         )
+
+
 
         sync command STOP_BURNWIRE(
         )
@@ -25,6 +28,10 @@ module Components {
         event SafetyTimerStatus(burnwire_state: Fw.On) \
             severity activity high\
             format "Safety Timer State: {} "
+
+        event SafetyTimerSet(max_duration: U32) \
+            severity activity high\
+            format "Safety Timer Set to: {} seconds"
 
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
@@ -43,6 +50,7 @@ module Components {
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
+        param SAFETY_TIMER: U32 default 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

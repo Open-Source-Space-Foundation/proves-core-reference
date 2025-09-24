@@ -12,7 +12,14 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Burnwire ::Burnwire(const char* const compName) : BurnwireComponentBase(compName) {}
+Burnwire ::Burnwire(const char* const compName) : BurnwireComponentBase(compName) {
+    this->m_safetyCounter = 0;
+    this->m_state = Fw::On::OFF;
+    Fw::ParamValid valid;
+    this->m_safetyMaxCount = this->paramGet_SAFETY_TIMER(valid);
+    this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
+    this->log_ACTIVITY_HI_SafetyTimerSet(m_safetyMaxCount);
+}
 
 Burnwire ::~Burnwire() {}
 
@@ -20,11 +27,16 @@ Burnwire ::~Burnwire() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 void Burnwire ::burnStart_handler(FwIndexType portNum) {
-    // TODO
+    this->m_safetyCounter = 0;
+    this->m_state = Fw::On::ON;
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
 }
 
 void Burnwire ::burnStop_handler(FwIndexType portNum) {
-    // TODO
+    this->m_state = Fw::On::OFF;
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
+    this->gpioSet_out(0, Fw::Logic::LOW);
+    this->gpioSet_out(1, Fw::Logic::LOW);
 }
 
 // void Burnwire ::stop_handler(FwIndexType portNum) {
@@ -40,7 +52,7 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::ON);
         }
 
-        if (this->m_safetyCounter >= m_safetyMaxCount) {
+        if (this->m_safetyCounter >= this->m_safetyMaxCount) {
             // 30 seconds reached → turn OFF
             this->gpioSet_out(0, Fw::Logic::LOW);
             this->gpioSet_out(1, Fw::Logic::LOW);
@@ -56,14 +68,12 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // reset count to 0
+void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 max_duration) {
     this->m_safetyCounter = 0;
-    // update private member variable
+    this->m_safetyMaxCount = max_duration;
     this->m_state = Fw::On::ON;
-    // send event
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
-    // confirm response
+    this->log_ACTIVITY_HI_SafetyTimerSet(max_duration);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -73,6 +83,15 @@ void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     this->gpioSet_out(0, Fw::Logic::LOW);
     this->gpioSet_out(1, Fw::Logic::LOW);
+}
+
+void Burnwire ::parameterUpdated(FwPrmIdType id) {
+    if (id == this->PARAMID_SAFETY_TIMER) {
+        Fw::ParamValid valid;
+        this->m_safetyMaxCount = this->paramGet_SAFETY_TIMER(valid);
+        this->log_ACTIVITY_HI_SafetyTimerSet(this->m_safetyMaxCount);
+    }
+    this->log_ACTIVITY_HI_SafetyTimerSet(m_safetyMaxCount);
 }
 
 }  // namespace Components
