@@ -1,1 +1,12 @@
-source "../../../boards/bronco_space/proves_flight_control_board_v4/Kconfig.defconfig"
+config SOC_RP2040
+    bool "Enable Cortex-M0+ core"
+    default y
+
+config USB_SELF_POWERED
+	default n
+
+config USB_CDC_ACM_LOG_LEVEL
+	default 0
+
+config USB_DEVICE_LOG_LEVEL
+	default 1
