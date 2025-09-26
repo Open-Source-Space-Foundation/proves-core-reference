@@ -19,6 +19,8 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+.west/
+zephyr/
 
 **/__pycache__/
 **/*.egg-info/
