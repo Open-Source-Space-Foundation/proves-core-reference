@@ -41,7 +41,8 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldRead_handler(FwIndexType portNu
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(lis2mdl, SENSOR_CHAN_MAGN_Z, &z);
 
-    Drv::MagneticField magnetic_readings = Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+    Drv::MagneticField magnetic_readings =
+        Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
 
     this->tlmWrite_MagneticField(magnetic_readings);
 
