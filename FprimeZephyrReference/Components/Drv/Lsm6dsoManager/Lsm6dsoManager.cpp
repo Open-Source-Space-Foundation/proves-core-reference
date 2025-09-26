@@ -43,7 +43,11 @@ Drv::Acceleration Lsm6dsoManager ::accelerationRead_handler(FwIndexType portNum)
     sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_Y, &y);
     sensor_channel_get(lsm6dso, SENSOR_CHAN_ACCEL_Z, &z);
 
-    return Drv::Acceleration(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+    Drv::Acceleration acceleration =
+        Drv::Acceleration(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+
+    this->tlmWrite_Acceleration(acceleration);
+    return acceleration;
 }
 
 Drv::AngularVelocity Lsm6dsoManager ::angularVelocityRead_handler(FwIndexType portNum) {
@@ -65,6 +69,7 @@ Drv::AngularVelocity Lsm6dsoManager ::angularVelocityRead_handler(FwIndexType po
     Drv::AngularVelocity angular_velocity =
         Drv::AngularVelocity(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
 
+    this->tlmWrite_AngularVelocity(angular_velocity);
     return angular_velocity;
 }
 
@@ -79,6 +84,8 @@ F64 Lsm6dsoManager ::temperatureRead_handler(FwIndexType portNum) {
     sensor_sample_fetch_chan(lsm6dso, SENSOR_CHAN_DIE_TEMP);
 
     sensor_channel_get(lsm6dso, SENSOR_CHAN_DIE_TEMP, &temp);
+
+    this->tlmWrite_Temperature(Drv::sensor_value_to_f64(temp));
 
     return Drv::sensor_value_to_f64(temp);
 }

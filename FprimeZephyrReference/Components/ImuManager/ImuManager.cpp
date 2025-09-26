@@ -22,11 +22,12 @@ ImuManager ::~ImuManager() {}
 // ----------------------------------------------------------------------
 
 void ImuManager ::run_handler(FwIndexType portNum, U32 context) {
-    this->tlmWrite_Acceleration(this->accelerationRead_out(0));
-    this->tlmWrite_AngularVelocity(this->angularVelocityRead_out(0));
-    // this->tlmWrite_MagneticField(this->magneticFieldRead_out(0));
-    this->tlmWrite_Temperature(this->temperatureRead_out(0));
+    // Read from Lsm6dsoManager
+    this->accelerationRead_out(0);
+    this->angularVelocityRead_out(0);
+    this->temperatureRead_out(0);
 
+    // Read from Lis2mdlManager
     this->magneticFieldRead_out(0);
 }
 }  // namespace Components
