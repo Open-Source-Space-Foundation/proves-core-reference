@@ -6,8 +6,8 @@
 #ifndef Components_Rv3028Manager_HPP
 #define Components_Rv3028Manager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
 #include <Fw/Logger/Logger.hpp>
+#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
