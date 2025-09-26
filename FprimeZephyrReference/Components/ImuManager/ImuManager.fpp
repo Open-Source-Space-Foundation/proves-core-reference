@@ -15,25 +15,11 @@ module Components {
         @ Port for sending temperatureRead calls to the LSM6DSO Driver
         output port temperatureRead: Drv.TemperatureRead
 
-        @ Telemetry channel for acceleration in m/s^2
-        telemetry Acceleration: Drv.Acceleration
-
-        @ Telemetry channel for angular velocity in rad/s
-        telemetry AngularVelocity: Drv.AngularVelocity
-
-        @ Telemetry channel for magnetic field in gauss
-        telemetry MagneticField: Drv.MagneticField
-
-        @ Telemetry channel for temperature in degrees Celsius
-        telemetry Temperature: F64
-
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
         time get port timeCaller
-
-        @ Port for sending telemetry channels to downlink
-        telemetry port tlmOut
+        
     }
 }

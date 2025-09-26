@@ -62,7 +62,10 @@ Drv::AngularVelocity Lsm6dsoManager ::angularVelocityRead_handler(FwIndexType po
     sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_Y, &y);
     sensor_channel_get(lsm6dso, SENSOR_CHAN_GYRO_Z, &z);
 
-    return Drv::AngularVelocity(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+    Drv::AngularVelocity angular_velocity =
+        Drv::AngularVelocity(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+
+    return angular_velocity;
 }
 
 F64 Lsm6dsoManager ::temperatureRead_handler(FwIndexType portNum) {
