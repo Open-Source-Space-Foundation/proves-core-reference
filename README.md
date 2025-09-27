@@ -70,5 +70,5 @@ make gds
 
 Then, in another terminal, run the following command to execute the integration tests:
 ```sh
-pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+make test-integration
 ```
