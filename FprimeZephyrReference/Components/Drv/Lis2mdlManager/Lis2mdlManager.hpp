@@ -36,15 +36,15 @@ class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Get the magnetic field reading from the LIS2MDL sensor
-    Drv::MagneticField magneticFieldRead_handler(const FwIndexType portNum  //!< The port number
-                                                 ) override;
+    Drv::MagneticField magneticFieldGet_handler(const FwIndexType portNum  //!< The port number
+                                                ) override;
 
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized LIS2MDL sensor
-    const struct device* lis2mdl;
+    const struct device* dev;
 };
 
 }  // namespace Drv

@@ -1,6 +1,6 @@
 # Port definition
 module Drv {
-    port MagneticFieldRead -> MagneticField
+    port MagneticFieldGet -> MagneticField
 }
 
 # Component definition
@@ -8,7 +8,7 @@ module Drv {
     @ LIS2MDL Manager Component for F Prime FSW framework.
     passive component Lis2mdlManager {
         @ Port to read the current magnetic field in gauss.
-        sync input port magneticFieldRead: MagneticFieldRead
+        sync input port magneticFieldGet: MagneticFieldGet
 
         @ Event for reporting LSM6DSO not ready error
         event DeviceNotReady() severity warning high format "LIS2MDL device not ready" throttle 5

@@ -103,10 +103,10 @@ module ReferenceDeployment {
     }
 
     connections imuManager {
-      imuManager.accelerationRead -> lsm6dsoManager.accelerationRead
-      imuManager.angularVelocityRead -> lsm6dsoManager.angularVelocityRead
-      imuManager.magneticFieldRead -> lis2mdlManager.magneticFieldRead
-      imuManager.temperatureRead -> lsm6dsoManager.temperatureRead
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
     connections ReferenceDeployment {
