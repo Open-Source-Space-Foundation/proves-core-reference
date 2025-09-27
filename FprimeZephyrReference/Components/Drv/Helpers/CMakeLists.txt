@@ -15,12 +15,10 @@
 # `Ref/SignalGen/CMakeLists.txt` will be named `Ref_SignalGen`.
 
 register_fprime_library(
-    AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Helpers.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/Helpers.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+    DEPENDS
+        Fw_Types
 )
 
 ### Unit Tests ###

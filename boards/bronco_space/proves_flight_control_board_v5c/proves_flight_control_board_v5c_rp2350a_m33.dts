@@ -17,3 +17,15 @@
 #include <raspberrypi/rpi_pico/m33.dtsi>
 
 #include "../proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi"
+
+// Configure the Watchdog LED
+&led0 {
+	gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+};
+
+// Configure the LoRa DIO pins
+&spi1 {
+	sx1276@0 {
+		dio-gpios =  <&gpio0 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>,<&gpio0 12 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+	};
+};

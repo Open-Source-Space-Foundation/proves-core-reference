@@ -66,7 +66,7 @@ module ReferenceDeployment {
 
   instance imuManager: Components.ImuManager base id 0x10017000
 
-  instance lis2mdlDriver: Drv.Lis2mdlDriver base id 0x10018000
+  instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 
-  instance lsm6dsoDriver: Drv.Lsm6dsoDriver base id 0x10019000
+  instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
 }

@@ -1,14 +1,14 @@
 // ======================================================================
-// \title  Lsm6dsoDriver.hpp
-// \brief  hpp file for Lsm6dsoDriver component implementation class
+// \title  Lsm6dsoManager.hpp
+// \brief  hpp file for Lsm6dsoManager component implementation class
 // ======================================================================
 
-#ifndef Components_Lsm6dsoDriver_HPP
-#define Components_Lsm6dsoDriver_HPP
+#ifndef Components_Lsm6dsoManager_HPP
+#define Components_Lsm6dsoManager_HPP
 
 // clang-format off
 // Keep the includes in this order
-#include "FprimeZephyrReference/Components/Drv/Lsm6dsoDriver/Lsm6dsoDriverComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Lsm6dsoManager/Lsm6dsoManagerComponentAc.hpp"
 #include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
 // clang-format on
 
@@ -18,17 +18,17 @@
 
 namespace Drv {
 
-class Lsm6dsoDriver final : public Lsm6dsoDriverComponentBase {
+class Lsm6dsoManager final : public Lsm6dsoManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Lsm6dsoDriver object
-    Lsm6dsoDriver(const char* const compName);
+    //! Construct Lsm6dsoManager object
+    Lsm6dsoManager(const char* const compName);
 
-    //! Destroy Lsm6dsoDriver object
-    ~Lsm6dsoDriver();
+    //! Destroy Lsm6dsoManager object
+    ~Lsm6dsoManager();
 
   private:
     // ----------------------------------------------------------------------

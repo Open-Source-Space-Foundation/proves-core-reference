@@ -35,10 +35,13 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Imu id 6 group 4 {
-    ReferenceDeployment.imuManager.Acceleration
-    ReferenceDeployment.imuManager.AngularVelocity
-    ReferenceDeployment.imuManager.MagneticField
+    ReferenceDeployment.lsm6dsoManager.Acceleration
+    ReferenceDeployment.lsm6dsoManager.AngularVelocity
+    ReferenceDeployment.lsm6dsoManager.Temperature
+    ReferenceDeployment.lis2mdlManager.MagneticField
   }
+
+
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
@@ -62,6 +65,4 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
-  # Reserving temp telemetry for future use
-  ReferenceDeployment.imuManager.Temperature
 }

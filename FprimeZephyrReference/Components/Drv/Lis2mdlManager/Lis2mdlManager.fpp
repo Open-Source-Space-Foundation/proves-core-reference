@@ -5,13 +5,17 @@ module Drv {
 
 # Component definition
 module Drv {
-    @ LIS2MDL Driver Component for F Prime FSW framework.
-    passive component Lis2mdlDriver {
+    @ LIS2MDL Manager Component for F Prime FSW framework.
+    passive component Lis2mdlManager {
         @ Port to read the current magnetic field in gauss.
         sync input port magneticFieldRead: MagneticFieldRead
 
         @ Event for reporting LSM6DSO not ready error
         event DeviceNotReady() severity warning high format "LIS2MDL device not ready" throttle 5
+
+        @ Telemetry channel for magnetic field in gauss
+        telemetry MagneticField: MagneticField
+
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
@@ -24,5 +28,8 @@ module Drv {
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
     }
 }
