@@ -1,5 +1,5 @@
 """
-integration_test.py:
+watchdog_test.py:
 
 Simple integration tests for the Watchdog component.
 Tests are ordered so that stop tests run last.
@@ -9,7 +9,7 @@ import time
 import pytest
 
 @pytest.fixture(autouse=True)
-def teardown_start_watchdog(fprime_test_api):
+def ensure_watchdog_running(fprime_test_api):
     """Fixture to ensure watchdog is started before and after each test"""
     start_watchdog(fprime_test_api)
     yield
