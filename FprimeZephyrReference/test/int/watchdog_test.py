@@ -5,6 +5,27 @@ Simple integration tests for the Watchdog component.
 Tests are ordered so that stop tests run last.
 """
 
+import time
+import pytest
+
+@pytest.fixture(autouse=True)
+def teardown_start_watchdog(fprime_test_api):
+    """Fixture to ensure watchdog is started before and after each test"""
+    start_watchdog(fprime_test_api)
+    yield
+    start_watchdog(fprime_test_api)
+
+def start_watchdog(fprime_test_api):
+    """Helper function to start the watchdog"""
+    fprime_test_api.send_and_assert_command(
+        "ReferenceDeployment.watchdog.START_WATCHDOG",
+        max_delay=2
+    )
+    fprime_test_api.assert_event(
+        "ReferenceDeployment.watchdog.WatchdogStart",
+        timeout=2
+    )
+
 def get_watchdog_transitions(fprime_test_api):
     """Helper function to request packet and get fresh WatchdogTransitions telemetry"""
     fprime_test_api.clear_histories()
@@ -24,7 +45,6 @@ def test_01_watchdog_telemetry_basic(fprime_test_api):
 
 def test_02_watchdog_increments(fprime_test_api):
     """Test that WatchdogTransitions increments over time"""
-    import time
 
     initial_value = get_watchdog_transitions(fprime_test_api)
     time.sleep(2.0)  # Wait for watchdog to run more cycles
@@ -35,28 +55,28 @@ def test_02_watchdog_increments(fprime_test_api):
 
 
 def test_03_stop_watchdog_command(fprime_test_api):
-    """Test TEST_STOP_WATCHDOG command sends and emits WatchdogStop event"""
+    """
+    Test STOP_WATCHDOG command sends and emits WatchdogStop
+    event and WatchdogTransitions stops incrementing
+    """
     fprime_test_api.clear_histories()
 
+    # Send stop command
     fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.watchdog.TEST_STOP_WATCHDOG",
+        "ReferenceDeployment.watchdog.STOP_WATCHDOG",
         max_delay=2
     )
 
+    # Check for watchdog stop event
     fprime_test_api.assert_event(
         "ReferenceDeployment.watchdog.WatchdogStop",
         timeout=2
     )
 
-
-def test_04_watchdog_stops_incrementing(fprime_test_api):
-    """Test that WatchdogTransitions stops incrementing after TEST_STOP_WATCHDOG"""
-    import time
-
-    # Get initial value (should be from stopped watchdog from previous test)
+    # Get watchdog transition count
     initial_value = get_watchdog_transitions(fprime_test_api)
 
-    # Wait and check that it's not incrementing (watchdog should already be stopped)
+    # Wait and check that it's no longer incrementing
     time.sleep(2.0)
     final_value = get_watchdog_transitions(fprime_test_api)
 

@@ -60,3 +60,15 @@ Finally, run the fprime-gds.
 ```shell
 make gds
 ```
+
+## Running Integration Tests
+
+First, start GDS with:
+```sh
+make gds
+```
+
+Then, in another terminal, run the following command to execute the integration tests:
+```sh
+pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+```
