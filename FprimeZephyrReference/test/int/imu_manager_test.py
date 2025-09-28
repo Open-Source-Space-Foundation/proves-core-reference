@@ -1,8 +1,7 @@
 """
 imu_manager_test.py:
 
-Simple integration tests for the IMU Manager component.
-Tests are ordered so that stop tests run last.
+Integration tests for the IMU Manager component.
 """
 
 import pytest
