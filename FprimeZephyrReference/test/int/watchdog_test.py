@@ -1,8 +1,7 @@
 """
 watchdog_test.py:
 
-Simple integration tests for the Watchdog component.
-Tests are ordered so that stop tests run last.
+Integration tests for the Watchdog component.
 """
 
 import time
