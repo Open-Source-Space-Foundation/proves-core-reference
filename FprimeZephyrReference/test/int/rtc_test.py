@@ -1,8 +1,7 @@
 """
 rtc_test.py:
 
-Simple integration tests for the RTC Manager component.
-Tests are ordered so that stop tests run last.
+Integration tests for the RTC Manager component.
 """
 
 import json
