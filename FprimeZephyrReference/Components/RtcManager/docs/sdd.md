@@ -14,7 +14,7 @@ The RtcManager component manages interactions with a Real Time Clock (RTC) devic
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `GET_TIME` command
 3. On each command, the component:
-    - Calls the `timeRead` port to get the current time from the RTC device
+    - Calls the `timeGet` port to get the current time from the RTC device
     - Emits a `GetTime` event with the retrieved time
 
 ## Requirements
@@ -28,7 +28,7 @@ The RtcManager component manages interactions with a Real Time Clock (RTC) devic
 | Name | Description |
 |---|---|
 | timeSet | Output port to reach out to driver to set the time |
-| TimeRead | Output port to reach out to driver to read the time |
+| TimeGet | Output port to reach out to driver to read the time |
 
 ## Commands
 | Name | Description |
@@ -80,7 +80,7 @@ sequenceDiagram
     participant RtcManager
     participant RV3028 Manager
     Ground Station-->>RtcManager: Send GET_TIME command
-    RtcManager->>RV3028 Manager: Call timeRead port
+    RtcManager->>RV3028 Manager: Call timeGet port
     RV3028 Manager->>RtcManager: Return time data
     RtcManager->>Event Log: Emit GetTime event with retrieved time
 ```

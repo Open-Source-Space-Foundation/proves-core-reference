@@ -6,13 +6,14 @@ module Drv {
         Day: U32 @< Day value.
         Hour: U32 @< Hour value.
         Minute: U32 @< Minute value.
+        Second: U32 @< Second value.
     }
 }
 
 # Port definition
 module Drv {
     port TimeSet(t: TimeData)
-    port TimeRead -> U32
+    port TimeGet -> U32
 }
 
 module Drv {
@@ -24,9 +25,9 @@ module Drv {
         @ Requirement Rv3028Manager-001
         sync input port timeSet: TimeSet
 
-        @ timeRead port to get the time from the RTC
+        @ timeGet port to get the time from the RTC
         @ Requirement Rv3028Manager-002
-        sync input port timeRead: TimeRead
+        sync input port timeGet: TimeGet
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
@@ -41,7 +42,7 @@ module Drv {
         @ TimeGet event indicates that the time was read successfully
         event TimeGet(
             t: U32 @< POSIX time read from RTC
-        ) severity activity high id 2 format "RV3028 Time: {}"
+        ) severity activity high id 2 format "{}"
 
         @ TimeSet event indicates that the time was set successfully
         event TimeSet() severity activity high id 3 format "Time set on RV3028"

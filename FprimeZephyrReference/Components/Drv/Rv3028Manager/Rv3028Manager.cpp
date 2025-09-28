@@ -41,7 +41,7 @@ void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(posix_time), 0);
 }
 
-U32 Rv3028Manager ::timeRead_handler(FwIndexType portNum) {
+U32 Rv3028Manager ::timeGet_handler(FwIndexType portNum) {
     // Check device readiness
     if (!device_is_ready(this->rv3028)) {
         this->log_WARNING_HI_DeviceNotReady();
@@ -69,7 +69,7 @@ void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t
 
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
-        .tm_sec = 0,
+        .tm_sec = static_cast<int>(t.get_Second()),
         .tm_min = static_cast<int>(t.get_Minute()),
         .tm_hour = static_cast<int>(t.get_Hour()),
         .tm_mday = static_cast<int>(t.get_Day()),

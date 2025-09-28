@@ -101,7 +101,7 @@ module ReferenceDeployment {
 
     connections RtcManager {
       rtcManager.timeSet -> rv3028Manager.timeSet
-      rtcManager.timeRead -> rv3028Manager.timeRead
+      rtcManager.timeGet -> rv3028Manager.timeGet
     }
 
     connections ReferenceDeployment {

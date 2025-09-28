@@ -8,9 +8,9 @@ The RV3028 Manager component interfaces with the RV3028 Real Time Clock (RTC) to
 1. The component is instantiated and initialized during system startup
 2. In a deployment topology, a `time connection` is made to the component's `timeGetPort` port
 
-#### `timeRead` Port Usage
+#### `timeGet` Port Usage
 1. The component is instantiated and initialized during system startup
-2. A manager calls the `timeRead` ports
+2. A manager calls the `timeGet` ports
 3. On each call, the component:
     - Fetches and returns the time from the RV3028 RTC
     - Emits a `DeviceNotReady` event if the device is not ready
@@ -38,7 +38,7 @@ The RV3028 Manager component interfaces with the RV3028 Real Time Clock (RTC) to
 |---|---|
 | timeGetPort | Time port for FPrime topology connection to get the time from the RV3028 |
 | timeSet | Input port sets the time on the RV3028 |
-| timeRead | Input port reads the time from the RV3028 |
+| timeGet | Input port reads the time from the RV3028 |
 
 ## Events
 | Name | Description |
@@ -59,7 +59,7 @@ classDiagram
             + Rv3028Manager(char* compName)
             + ~Rv3028Manager()
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - U32 timeRead_handler(FwIndexType portNum)
+            - U32 timeGet_handler(FwIndexType portNum)
             - void timeSet_handler(FwIndexType portNum, const Drv::TimeData& time)
         }
     }
@@ -104,9 +104,9 @@ sequenceDiagram
     RV3028 Manager->>Deployment Time Connection: Return 0 time
 ```
 
-### `timeRead` port
+### `timeGet` port
 
-The `timeRead` port is called from a manager component to get the current time from the RTC.
+The `timeGet` port is called from a manager component to get the current time from the RTC.
 
 #### Success
 ```mermaid
@@ -116,7 +116,7 @@ sequenceDiagram
     participant RV3028 Manager
     participant Zephyr Time API
     participant RV3028 RTC
-    Manager-->>RV3028 Manager: Call timeRead synchronous input port
+    Manager-->>RV3028 Manager: Call timeGet synchronous input port
     RV3028 Manager->>Zephyr Time API: Read time
     Zephyr Time API->>RV3028 RTC: Read time
     RV3028 RTC->>Zephyr Time API: Return time
@@ -132,7 +132,7 @@ sequenceDiagram
     participant RV3028 Manager
     participant Zephyr Time API
     participant RV3028 RTC
-    Manager-->>RV3028 Manager: Call timeRead synchronous input port
+    Manager-->>RV3028 Manager: Call timeGet synchronous input port
     RV3028 Manager->>Zephyr Time API: Read time
     Zephyr Time API->>RV3028 RTC: Read time
     RV3028 RTC->>Zephyr Time API: Return device not ready

@@ -45,12 +45,12 @@ class Rv3028Manager final : public Rv3028ManagerComponentBase {
                              Fw::Time& time        //!< Reference to Time object
                              ) override;
 
-    //! Handler implementation for timeRead
+    //! Handler implementation for timeGet
     //!
-    //! timeRead port to get the time from the RTC
+    //! timeGet port to get the time from the RTC
     //! Requirement Rv3028Manager-002
-    U32 timeRead_handler(FwIndexType portNum  //!< The port number
-                         ) override;
+    U32 timeGet_handler(FwIndexType portNum  //!< The port number
+                        ) override;
 
     //! Handler implementation for timeSet
     //!
