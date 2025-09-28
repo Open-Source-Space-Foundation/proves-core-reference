@@ -12,7 +12,7 @@ Requirement | Description | Verification Method | Verified?
 ----------- | ----------- | ------------------- | ---------
 WD-001 | The `Components::Watchdog` component shall activate upon startup. | Inspection | Yes
 WD-002 | The `Components::Watchdog` component shall oscillate the watchdog GPIO pin (24) on/off on each rategroup tick. | Inspection | Yes
-WD-003 | The `Components::Watchdog` component shall provide telemetry for watchdog transition count. | Integration Test | In Progress
+WD-003 | The `Components::Watchdog` component shall provide telemetry for watchdog transition count. | Integration Test | Yes
 WD-004 | The `Components::Watchdog` component shall respond to stop signals to halt the watchdog. | Integration Test | Yes
 WD-005 | The `Components::Watchdog` component shall provide a test command to stop the watchdog. | Integration Test | Yes
 WD-006 | The `Components::Watchdog` component shall emit an event when the watchdog stops. | Integration Test | Yes
