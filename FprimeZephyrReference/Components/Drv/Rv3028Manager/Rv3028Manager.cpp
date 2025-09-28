@@ -80,15 +80,12 @@ void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t
         .tm_isdst = 0,
     };
 
-    // Event current time to correlate prior events when new time is set
-    this->log_ACTIVITY_HI_TimeGet(this->getPosixTime());
-
     // Set time on RTC
     const int status = rtc_set_time(this->rv3028, &time_rtc);
 
     // Report whether setting the time was successful
     if (status == 0) {
-        this->log_ACTIVITY_HI_TimeSet();
+        this->log_ACTIVITY_HI_TimeSet(this->getPosixTime());
     } else {
         this->log_WARNING_HI_TimeNotSet();
     }

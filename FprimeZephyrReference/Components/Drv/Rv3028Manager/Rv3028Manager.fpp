@@ -22,11 +22,9 @@ module Drv {
         import Svc.Time
 
         @ timeSet port to set the time on the RTC
-        @ Requirement Rv3028Manager-001
         sync input port timeSet: TimeSet
 
         @ timeGet port to get the time from the RTC
-        @ Requirement Rv3028Manager-002
         sync input port timeGet: TimeGet
 
         ##############################################################################
@@ -39,13 +37,10 @@ module Drv {
         @ InvalidTime event indicates that the RV3028 returned an invalid time
         event InvalidTime() severity warning high id 1 format "RV3028 returned invalid time" throttle 5
 
-        @ TimeGet event indicates that the time was read successfully
-        event TimeGet(
-            t: U32 @< POSIX time read from RTC
-        ) severity activity high id 2 format "{}"
-
         @ TimeSet event indicates that the time was set successfully
-        event TimeSet() severity activity high id 3 format "Time set on RV3028"
+        event TimeSet(
+            t: U32 @< POSIX time read from RTC
+        ) severity activity high id 3 format "Time set on RV3028, previous time: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet() severity warning high id 4 format "Time not set on RV3028"
