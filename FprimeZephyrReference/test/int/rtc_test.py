@@ -7,7 +7,6 @@ Integration tests for the RTC Manager component.
 import json
 import time
 from datetime import datetime, timezone
-from typing import Any
 
 import pytest
 from fprime.common.models.serialize.numerical_types import U32Type
@@ -51,7 +50,7 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
     fprime_test_api.assert_event("ReferenceDeployment.rv3028Manager.TimeSet", timeout=2)
 
 
-def get_time(fprime_test_api: IntegrationTestAPI) -> dict[str, Any]:
+def get_time(fprime_test_api: IntegrationTestAPI) -> datetime:
     """Helper function to request packet and get fresh WatchdogTransitions telemetry"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(
@@ -60,19 +59,17 @@ def get_time(fprime_test_api: IntegrationTestAPI) -> dict[str, Any]:
     result: EventData = fprime_test_api.assert_event(
         "ReferenceDeployment.rtcManager.GetTime", timeout=2
     )
-
-    return result.get_dict()
+    return datetime.fromisoformat(result.display_text)
 
 
 def test_01_current_time_set(fprime_test_api: IntegrationTestAPI):
     """Test that we can set current time"""
 
     # Fetch time from fixture setting current time
-    event_data = get_time(fprime_test_api)
-    event_display_text_time = datetime.fromisoformat(event_data["display_text"])
+    event_time = get_time(fprime_test_api)
 
     # Assert time is within 30 seconds of now
-    pytest.approx(event_display_text_time, abs=30) == datetime.now(timezone.utc)
+    pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
 def test_02_set_time_in_past(fprime_test_api: IntegrationTestAPI):
@@ -86,8 +83,6 @@ def test_02_set_time_in_past(fprime_test_api: IntegrationTestAPI):
     result: EventData = fprime_test_api.assert_event(
         "ReferenceDeployment.rv3028Manager.TimeSet", timeout=2
     )
-    event_data: dict[str, Any] = result.get_dict()
-    # args = event_data.args
 
     # Fetch previously set time from event args
     event_previous_time_arg: U32Type = result.args[0]
@@ -99,30 +94,27 @@ def test_02_set_time_in_past(fprime_test_api: IntegrationTestAPI):
     pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
 
     # Fetch newly set time from event
-    event_data = get_time(fprime_test_api)
-    event_display_text_time = datetime.fromisoformat(event_data["display_text"])
+    event_time = get_time(fprime_test_api)
 
     # Assert time is within 30 seconds of curiosity landing
-    pytest.approx(event_display_text_time, abs=30) == curiosity_landing
+    pytest.approx(event_time, abs=30) == curiosity_landing
 
 
 def test_03_time_incrementing(fprime_test_api: IntegrationTestAPI):
     """Test that time increments over time"""
 
     # Fetch initial time
-    initial_event_data = get_time(fprime_test_api)
-    initial_time = datetime.fromisoformat(initial_event_data["display_text"])
+    initial_event_time = get_time(fprime_test_api)
 
     # Wait for time to increment
     time.sleep(2.0)
 
     # Fetch updated time
-    updated_event_data = get_time(fprime_test_api)
-    updated_time = datetime.fromisoformat(updated_event_data["display_text"])
+    updated_event_time = get_time(fprime_test_api)
 
     # Assert time has increased
-    assert updated_time > initial_time, (
-        f"Time should increase. Initial: {initial_time}, Updated: {updated_time}"
+    assert updated_event_time > initial_event_time, (
+        f"Time should increase. Initial: {initial_event_time}, Updated: {updated_event_time}"
     )
 
 
