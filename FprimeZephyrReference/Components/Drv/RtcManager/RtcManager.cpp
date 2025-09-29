@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Rv3028Manager.cpp
-// \brief  cpp file for Rv3028Manager component implementation class
+// \title  RtcManager.cpp
+// \brief  cpp file for RtcManager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028Manager.hpp"
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManager.hpp"
 
 namespace Drv {
 
@@ -11,20 +11,20 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Rv3028Manager ::Rv3028Manager(const char* const compName) : Rv3028ManagerComponentBase(compName) {
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {
     // Initialize device
-    this->rv3028 = device_get_binding("RV3028");
+    this->dev = device_get_binding("RV3028");
 }
 
-Rv3028Manager ::~Rv3028Manager() {}
+RtcManager ::~RtcManager() {}
 
 // ----------------------------------------------------------------------
-// Handler implementations for commands
+// Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
+void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
-    if (!device_is_ready(this->rv3028)) {
+    if (!device_is_ready(this->dev)) {
         // Use logger instead of events since this fn is in a critical path for FPrime
         // to get time. Events require time, if this method fails an event will fail.
         Fw::Logger::log("RV2038 not ready");
@@ -40,25 +40,13 @@ void Rv3028Manager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, posix_time, u_secs);
 }
 
-U32 Rv3028Manager ::timeGet_handler(FwIndexType portNum) {
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // Check device readiness
-    if (!device_is_ready(this->rv3028)) {
-        this->log_WARNING_HI_DeviceNotReady();
-        return 0;
-    }
-    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
-
-    // Get time from RTC
-    U32 posix_time;
-    U32 u_secs;
-    this->getTime(posix_time, u_secs);
-
-    return posix_time;
-}
-
-void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t) {
-    // Check device readiness
-    if (!device_is_ready(this->rv3028)) {
+    if (!device_is_ready(this->dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return;
     }
@@ -77,27 +65,38 @@ void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t
         .tm_isdst = 0,
     };
 
-    // Set time on RTC
-    const int status = rtc_set_time(this->rv3028, &time_rtc);
+    // Store current time for logging
+    U32 posix_time;
+    U32 u_secs;
+    this->getTime(posix_time, u_secs);
 
-    // Report whether setting the time was successful
-    if (status == 0) {
-        U32 posix_time;
-        U32 u_secs;
-        this->getTime(posix_time, u_secs);
-        this->log_ACTIVITY_HI_TimeSet(posix_time);
-    } else {
+    // Set time on RTC
+    const int status = rtc_set_time(this->dev, &time_rtc);
+
+    if (status != 0) {
+        // Emit time not set event
         this->log_WARNING_HI_TimeNotSet();
+
+        // Send command response
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
     }
+
+    // Emit time set event, include previous time for reference
+    this->log_ACTIVITY_HI_TimeSet(posix_time, u_secs);
+
+    // Send command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------
-void Rv3028Manager ::getTime(U32& posix_time, U32& u_secs) {
+
+void RtcManager ::getTime(U32& posix_time, U32& u_secs) {
     // Read time from RTC
     struct rtc_time time_rtc = {};
-    rtc_get_time(this->rv3028, &time_rtc);
+    rtc_get_time(this->dev, &time_rtc);
 
     // Convert time to POSIX time_t format
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
@@ -109,7 +108,7 @@ void Rv3028Manager ::getTime(U32& posix_time, U32& u_secs) {
         return;
     }
 
-    // Get microsecond part from system clock cycles
+    // Get microseconds from system clock cycles
     // Note: RV3028 does not provide sub-second precision, so this is
     // just an approximation based on system cycles.
     // FPrime expects microseconds in the range [0, 999999]

@@ -18,35 +18,44 @@ module Drv {
 
 module Drv {
     @ Manages the real time clock
-    passive component Rv3028Manager {
+    passive component RtcManager {
         import Svc.Time
 
-        @ timeSet port to set the time on the RTC
-        sync input port timeSet: TimeSet
-
-        @ timeGet port to get the time from the RTC
-        sync input port timeGet: TimeGet
+        @ TIME_SET command to set the time on the RTC
+        sync command TIME_SET(
+            t: Drv.TimeData @< Set the time
+        ) opcode 0
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
-        @ DeviceNotReady event indicates that the RV3028 is not ready
-        event DeviceNotReady() severity warning high id 0 format "RV3028 not ready" throttle 5
+        @ DeviceNotReady event indicates that the RTC is not ready
+        event DeviceNotReady() severity warning high id 0 format "RTC not ready" throttle 5
 
         @ TimeSet event indicates that the time was set successfully
         event TimeSet(
-            t: U32 @< POSIX time read from RTC
-        ) severity activity high id 3 format "Time set on RV3028, previous time: {}"
+            pt: U32 @< POSIX time in seconds
+            u: U32 @< Microseconds
+        ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
         @ TimeNotSet event indicates that the time was not set successfully
-        event TimeNotSet() severity warning high id 4 format "Time not set on RV3028"
+        event TimeNotSet() severity warning high id 4 format "Time not set on RTC"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending command registrations
+        command reg port cmdRegOut
+
+        @ Port for receiving commands
+        command recv port cmdIn
+
+        @ Port for sending command responses
+        command resp port cmdResponseOut
 
         @ Port for sending textual representation of events
         text event port logTextOut

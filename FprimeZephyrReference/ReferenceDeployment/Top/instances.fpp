@@ -61,9 +61,6 @@ module ReferenceDeployment {
 
   instance watchdog: Components.Watchdog base id 0x10015000
 
-  instance rtcManager: Components.RtcManager base id 0x10016000
-
-  instance rv3028Manager: Drv.Rv3028Manager base id 0x10017000
-
+  instance rtcManager: Drv.RtcManager base id 0x10016000
 
 }

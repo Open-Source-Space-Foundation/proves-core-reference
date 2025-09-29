@@ -1,12 +1,12 @@
 // ======================================================================
-// \title  Rv3028Manager.hpp
-// \brief  hpp file for Rv3028Manager component implementation class
+// \title  RtcManager.hpp
+// \brief  hpp file for RtcManager component implementation class
 // ======================================================================
 
-#ifndef Components_Rv3028Manager_HPP
-#define Components_Rv3028Manager_HPP
+#ifndef Components_RtcManager_HPP
+#define Components_RtcManager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/Rv3028Manager/Rv3028ManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 
 #include <cerrno>
 
@@ -20,22 +20,22 @@
 
 namespace Drv {
 
-class Rv3028Manager final : public Rv3028ManagerComponentBase {
+class RtcManager final : public RtcManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Rv3028Manager object
-    Rv3028Manager(const char* const compName  //!< The component name
+    //! Construct RtcManager object
+    RtcManager(const char* const compName  //!< The component name
     );
 
-    //! Destroy Rv3028Manager object
-    ~Rv3028Manager();
+    //! Destroy RtcManager object
+    ~RtcManager();
 
   private:
     // ----------------------------------------------------------------------
-    // Handler implementations for commands
+    // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
     //! Handler implementation for timeGetPort
@@ -45,19 +45,18 @@ class Rv3028Manager final : public Rv3028ManagerComponentBase {
                              Fw::Time& time        //!< Reference to Time object
                              ) override;
 
-    //! Handler implementation for timeGet
-    //!
-    //! timeGet port to get the time from the RTC
-    //! Requirement Rv3028Manager-002
-    U32 timeGet_handler(FwIndexType portNum  //!< The port number
-                        ) override;
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
 
-    //! Handler implementation for timeSet
+    //! Handler implementation for command TIME_SET
     //!
-    //! timeSet port to set the time on the RTC
-    //! Requirement Rv3028Manager-001
-    void timeSet_handler(FwIndexType portNum,  //!< The port number
-                         const Drv::TimeData& time) override;
+    //! TIME_SET command to set the time on the RTC
+    void TIME_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq,           //!< The command sequence number
+                             Drv::TimeData t       //!< Set the time
+                             ) override;
 
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -66,8 +65,8 @@ class Rv3028Manager final : public Rv3028ManagerComponentBase {
     //! Helper method to get time from RTC
     void getTime(U32& posix_time, U32& u_secs);
 
-    //! Zephyr device stores the initialized RV2038 sensor
-    const struct device* rv3028;
+    //! device stores the initialized Zephyr RTC device
+    const struct device* dev;
 };
 
 }  // namespace Drv
