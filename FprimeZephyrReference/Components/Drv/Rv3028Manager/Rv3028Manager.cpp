@@ -53,7 +53,7 @@ U32 Rv3028Manager ::timeGet_handler(FwIndexType portNum) {
     U32 u_secs;
     this->getTime(posix_time, u_secs);
 
-    return u_secs;
+    return posix_time;
 }
 
 void Rv3028Manager ::timeSet_handler(FwIndexType portNum, const Drv::TimeData& t) {
@@ -109,7 +109,11 @@ void Rv3028Manager ::getTime(U32& posix_time, U32& u_secs) {
         return;
     }
 
-    uint32_t time_usecs = k_cyc_to_us_near32(k_cycle_get_32());
+    // Get microsecond part from system clock cycles
+    // Note: RV3028 does not provide sub-second precision, so this is
+    // just an approximation based on system cycles.
+    // FPrime expects microseconds in the range [0, 999999]
+    uint32_t time_usecs = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
 
     // Set output parameters
     posix_time = static_cast<U32>(time_pt);

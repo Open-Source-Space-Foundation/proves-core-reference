@@ -72,7 +72,25 @@ def test_01_current_time_set(fprime_test_api: IntegrationTestAPI):
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
-def test_02_set_time_in_past(fprime_test_api: IntegrationTestAPI):
+def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI):
+    """Test that time increments over time"""
+
+    # Fetch initial time
+    initial_event_time = get_time(fprime_test_api)
+
+    # Wait for time to increment
+    time.sleep(2.0)
+
+    # Fetch updated time
+    updated_event_time = get_time(fprime_test_api)
+
+    # Assert time has increased
+    assert updated_event_time > initial_event_time, (
+        f"Time should increase. Initial: {initial_event_time}, Updated: {updated_event_time}"
+    )
+
+
+def test_03_set_time_in_past(fprime_test_api: IntegrationTestAPI):
     """Test that we can set the time to a past time"""
 
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
@@ -90,32 +108,15 @@ def test_02_set_time_in_past(fprime_test_api: IntegrationTestAPI):
         event_previous_time_arg.val, tz=timezone.utc
     )
 
+    # Fetch FPrime time from event
+    fp_time: TimeType = result.get_time()
+    event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
+
     # Assert previously set time is within 30 seconds of now
     pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
 
-    # Fetch newly set time from event
-    event_time = get_time(fprime_test_api)
-
-    # Assert time is within 30 seconds of curiosity landing
+    # Assert event time is within 30 seconds of curiosity landing
     pytest.approx(event_time, abs=30) == curiosity_landing
-
-
-def test_03_time_incrementing(fprime_test_api: IntegrationTestAPI):
-    """Test that time increments over time"""
-
-    # Fetch initial time
-    initial_event_time = get_time(fprime_test_api)
-
-    # Wait for time to increment
-    time.sleep(2.0)
-
-    # Fetch updated time
-    updated_event_time = get_time(fprime_test_api)
-
-    # Assert time has increased
-    assert updated_event_time > initial_event_time, (
-        f"Time should increase. Initial: {initial_event_time}, Updated: {updated_event_time}"
-    )
 
 
 def test_04_time_in_telemetry(fprime_test_api: IntegrationTestAPI):
