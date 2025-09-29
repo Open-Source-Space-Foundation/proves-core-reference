@@ -63,8 +63,8 @@ class Rv3028Manager final : public Rv3028ManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Helper method to get POSIX time from RTC
-    I32 getPosixTime();
+    //! Helper method to get time from RTC
+    void getTime(U32& posix_time, U32& u_secs);
 
     //! Zephyr device stores the initialized RV2038 sensor
     const struct device* rv3028;

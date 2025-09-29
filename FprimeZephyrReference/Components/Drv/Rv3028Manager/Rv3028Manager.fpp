@@ -34,9 +34,6 @@ module Drv {
         @ DeviceNotReady event indicates that the RV3028 is not ready
         event DeviceNotReady() severity warning high id 0 format "RV3028 not ready" throttle 5
 
-        @ InvalidTime event indicates that the RV3028 returned an invalid time
-        event InvalidTime() severity warning high id 1 format "RV3028 returned invalid time" throttle 5
-
         @ TimeSet event indicates that the time was set successfully
         event TimeSet(
             t: U32 @< POSIX time read from RTC
