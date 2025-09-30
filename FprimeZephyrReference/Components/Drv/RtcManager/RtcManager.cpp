@@ -64,6 +64,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Check device readiness
     if (!device_is_ready(this->dev)) {
         this->log_WARNING_HI_DeviceNotReady();
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
