@@ -58,13 +58,6 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
-    // ----------------------------------------------------------------------
-    // Private helper methods
-    // ----------------------------------------------------------------------
-
-    //! Helper method to get time from RTC
-    void timeGet(U32& posix_time, U32& u_secs);
-
     //! device stores the initialized Zephyr RTC device
     const struct device* dev;
 };

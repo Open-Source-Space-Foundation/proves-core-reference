@@ -32,12 +32,28 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     }
 
     // Get time from RTC
-    U32 posix_time;
-    U32 u_secs;
-    this->timeGet(posix_time, u_secs);
+    struct rtc_time time_rtc = {};
+    rtc_get_time(this->dev, &time_rtc);
+
+    // Convert to generic tm struct
+    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
+
+    // Convert to time_t (seconds since epoch)
+    errno = 0;
+    time_t seconds = timeutil_timegm(time_tm);
+    if (errno == ERANGE) {
+        Fw::Logger::log("RTC returned invalid time");
+        return;
+    }
+
+    // Get microseconds from system clock cycles
+    // Note: RV3028 does not provide sub-second precision, so this is
+    // just an approximation based on system cycles.
+    // FPrime expects microseconds in the range [0, 999999]
+    uint32_t useconds = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
 
     // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, posix_time, u_secs);
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
 }
 
 // ----------------------------------------------------------------------
@@ -66,9 +82,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     };
 
     // Store current time for logging
-    U32 posix_time;
-    U32 u_secs;
-    this->timeGet(posix_time, u_secs);
+    Fw::Time time_before_set = this->getTime();
 
     // Set time on RTC
     const int status = rtc_set_time(this->dev, &time_rtc);
@@ -83,40 +97,10 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     }
 
     // Emit time set event, include previous time for reference
-    this->log_ACTIVITY_HI_TimeSet(posix_time, u_secs);
+    this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-// ----------------------------------------------------------------------
-// Private helper methods
-// ----------------------------------------------------------------------
-
-void RtcManager ::timeGet(U32& posix_time, U32& u_secs) {
-    // Read time from RTC
-    struct rtc_time time_rtc = {};
-    rtc_get_time(this->dev, &time_rtc);
-
-    // Convert time to POSIX time_t format
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
-
-    errno = 0;
-    time_t time_pt = timeutil_timegm(time_tm);
-    if (errno == ERANGE) {
-        Fw::Logger::log("RV2038 returned invalid time");
-        return;
-    }
-
-    // Get microseconds from system clock cycles
-    // Note: RV3028 does not provide sub-second precision, so this is
-    // just an approximation based on system cycles.
-    // FPrime expects microseconds in the range [0, 999999]
-    uint32_t time_usecs = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
-
-    // Set output parameters
-    posix_time = static_cast<U32>(time_pt);
-    u_secs = static_cast<U32>(time_usecs);
 }
 
 }  // namespace Drv
