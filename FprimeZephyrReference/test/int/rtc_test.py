@@ -48,18 +48,6 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
     fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeSet", timeout=2)
 
 
-# def get_time(fprime_test_api: IntegrationTestAPI) -> datetime:
-#     """Helper function to request packet and get fresh WatchdogTransitions telemetry"""
-#     fprime_test_api.clear_histories()
-#     fprime_test_api.send_and_assert_command(
-#         "ReferenceDeployment.rtcManager.GET_TIME", max_delay=2
-#     )
-#     result: EventData = fprime_test_api.assert_event(
-#         "ReferenceDeployment.rtcManager.GetTime", timeout=2
-#     )
-#     return datetime.fromisoformat(result.display_text)
-
-
 def test_01_time_set(fprime_test_api: IntegrationTestAPI):
     """Test that we can set the time"""
 
