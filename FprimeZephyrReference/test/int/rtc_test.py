@@ -130,3 +130,38 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI):
     assert updated_time > initial_time, (
         f"Time should increase. Initial: {initial_time}, Updated: {updated_time}"
     )
+
+
+def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI):
+    """Test that a TimeNotSet event is emitted when setting time with invalid data"""
+
+    # Clear histories
+    fprime_test_api.clear_histories()
+
+    # Send command to set the time with invalid data
+    time_data = dict(
+        Year=0,
+        Month=12345,  # Invalid month
+        Day=12345,
+        Hour=12345,
+        Minute=12345,
+        Second=12345,
+    )
+    time_data_str = json.dumps(time_data)
+    fprime_test_api.send_command(
+        "ReferenceDeployment.rtcManager.TIME_SET",
+        [
+            time_data_str,
+        ],
+    )
+
+    # Assert time not set event is emitted
+    fprime_test_api.assert_event(
+        "ReferenceDeployment.rtcManager.TimeNotSet", timeout=2
+    )
+    fprime_test_api.assert_event(
+        "CdhCore.cmdDisp.OpCodeDispatched", timeout=2
+    )
+    fprime_test_api.assert_event(
+        "CdhCore.cmdDisp.OpCodeError", timeout=2
+    )

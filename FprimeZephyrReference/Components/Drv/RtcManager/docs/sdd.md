@@ -4,41 +4,47 @@ The RTC Manager component interfaces with the RTC Real Time Clock (RTC) to provi
 
 ### Typical Usage
 
+#### `TIME_SET` Command Usage
+1. The component is instantiated and initialized during system startup
+2. A ground station sends a `TIME_SET` command with the desired time
+3. On each command, the component:
+    - Sets the time on the RTC
+    - Emits a `TimeSet` event if the time is set successfully
+    - Emits a `TimeNotSet` event if the time is not set successfully
+    - Emits a `DeviceNotReady` event if the device is not ready
+
 #### `timeGetPort` Port Usage
 1. The component is instantiated and initialized during system startup
-2. In a deployment topology, a `time connection` is made to the component's `timeGetPort` port
+2. In a deployment topology, a `time connection` relation is made.
+3. On each call, the component:
+    - Fetches and returns the time from the RTC
+    - Emits a `DeviceNotReady` event if the device is not ready
 
 #### `timeGet` Port Usage
 1. The component is instantiated and initialized during system startup
 2. A manager calls the `timeGet` ports
 3. On each call, the component:
-    - Fetches and returns the time from the RTC RTC
-    - Emits a `DeviceNotReady` event if the device is not ready
-
-#### `timeSet` Port Usage
-1. The component is instantiated and initialized during system startup
-2. A manager calls the `timeSet` ports
-3. On each call, the component:
-    - Sets the time on the RTC RTC
-    - Emits a `TimeSet` event if the time is set successfully
-    - Emits a `TimeNotSet` event if the time is not set successfully
+    - Fetches and returns the time from the RTC
     - Emits a `DeviceNotReady` event if the device is not ready
 
 ## Requirements
 | Name | Description | Validation |
 |---|---|---|
-| RtcManager-001 | Time can be set on the RTC through a port | Manual |
-| RtcManager-002 | Time can be read from the RTC through a port | Manual |
+| RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
+| RtcManager-002 | The RTC Manager has a port which, when called, set the time in FPrime | Integration test |
 | RtcManager-003 | A device not ready event is emitted if the RTC is not ready | Manual |
-| RtcManager-004 | A time set event is emitted if the time is set successfully | Manual |
-| RtcManager-005 | A time not set event is emitted if the time is not set successfully | Manual |
+| RtcManager-004 | A time set event is emitted if the time is set successfully | Integration test |
+| RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 
 ## Port Descriptions
 | Name | Description |
 |---|---|
 | timeGetPort | Time port for FPrime topology connection to get the time from the RTC |
-| timeSet | Input port sets the time on the RTC |
-| timeGet | Input port reads the time from the RTC |
+
+## Commands
+| Name | Description |
+|---|---|
+| SET_TIME | Sets the time on the RTC |
 
 ## Events
 | Name | Description |
@@ -59,8 +65,8 @@ classDiagram
             + RtcManager(char* compName)
             + ~RtcManager()
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - U32 timeGet_handler(FwIndexType portNum)
-            - void timeSet_handler(FwIndexType portNum, const Drv::TimeData& time)
+            - Fw::CmdResponse timeSet_cmdHandler(const FwOpcodeType opCode, const U32 cmdSeq, const Drv::TimeData& time)
+            - Fw::Time timeGet(U32& posix_time, U32& u_secs)
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
@@ -78,11 +84,11 @@ sequenceDiagram
     participant Deployment Time Connection
     participant RTC Manager
     participant Zephyr Time API
-    participant RTC RTC
+    participant RTC
     Deployment Time Connection-->>RTC Manager: Call timeGetPort time port
     RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC RTC: Read time
-    RTC RTC->>Zephyr Time API: Return time
+    Zephyr Time API->>RTC: Read time
+    RTC->>Zephyr Time API: Return time
     Zephyr Time API->>RTC Manager: Return time
     RTC Manager-->>Deployment Time Connection: Return time
 ```
@@ -94,70 +100,32 @@ sequenceDiagram
     participant Deployment Time Connection
     participant RTC Manager
     participant Zephyr Time API
-    participant RTC RTC
+    participant RTC
     Deployment Time Connection->>RTC Manager: Call timeGetPort time port
     RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC RTC: Read time
-    RTC RTC->>Zephyr Time API: Return device not ready
+    Zephyr Time API->>RTC: Read time
+    RTC->>Zephyr Time API: Return device not ready
     Zephyr Time API->>RTC Manager: Return device not ready
     RTC Manager->>Event Log: Emit DeviceNotReady event
     RTC Manager->>Deployment Time Connection: Return 0 time
 ```
 
-### `timeGet` port
+### `TIME_SET` Command
 
-The `timeGet` port is called from a manager component to get the current time from the RTC.
-
-#### Success
-```mermaid
-sequenceDiagram
-    participant Event Log
-    participant Manager
-    participant RTC Manager
-    participant Zephyr Time API
-    participant RTC RTC
-    Manager-->>RTC Manager: Call timeGet synchronous input port
-    RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC RTC: Read time
-    RTC RTC->>Zephyr Time API: Return time
-    Zephyr Time API->>RTC Manager: Return time
-    RTC Manager->>Event Log: Emit event GetTime
-```
-
-#### Device Not Ready
-```mermaid
-sequenceDiagram
-    participant Event Log
-    participant Manager
-    participant RTC Manager
-    participant Zephyr Time API
-    participant RTC RTC
-    Manager-->>RTC Manager: Call timeGet synchronous input port
-    RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC RTC: Read time
-    RTC RTC->>Zephyr Time API: Return device not ready
-    Zephyr Time API->>RTC Manager: Return device not ready
-    RTC Manager->>Event Log: Emit event DeviceNotReady
-```
-
-### `timeSet` port
-
-The `timeSet` port is called from a manager component to set the current time on the RTC.
+The `TIME_SET` command is called to set the current time on the RTC.
 
 #### Success
 ```mermaid
 sequenceDiagram
     participant Ground Station
     participant Event Log
-    participant Manager
     participant RTC Manager
     participant Zephyr Time API
-    participant RTC RTC
-    Ground Station-->>Manager: Command to set time with Drv::TimeData struct
-    Manager->>RTC Manager: Call the timeSet synchronous input port with Drv::TimeData struct
+    participant RTC
+    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
     RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC RTC: Set time
-    RTC RTC->>Zephyr Time API: Return set success
+    Zephyr Time API->>RTC: Set time
+    RTC->>Zephyr Time API: Return set success
     Zephyr Time API->>RTC Manager: Return set success
     RTC Manager->>Event Log: Emit event TimeSet
 ```
@@ -167,15 +135,13 @@ sequenceDiagram
 sequenceDiagram
     participant Ground Station
     participant Event Log
-    participant Manager
     participant RTC Manager
     participant Zephyr Time API
-    participant RTC RTC
-    Ground Station-->>Manager: Command to set time with Drv::TimeData struct
-    Manager->>RTC Manager: Call the timeSet synchronous input port with Drv::TimeData struct
+    participant RTC
+    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
     RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC RTC: Set time
-    RTC RTC->>Zephyr Time API: Return device not ready
+    Zephyr Time API->>RTC: Set time
+    RTC->>Zephyr Time API: Return device not ready
     Zephyr Time API->>RTC Manager: Return device not ready
     RTC Manager->>Event Log: Emit event DeviceNotReady
 ```
@@ -185,15 +151,13 @@ sequenceDiagram
 sequenceDiagram
     participant Ground Station
     participant Event Log
-    participant Manager
     participant RTC Manager
     participant Zephyr Time API
-    participant RTC RTC
-    Ground Station-->>Manager: Command to set time with Drv::TimeData struct
-    Manager->>RTC Manager: Call the timeSet synchronous input port with Drv::TimeData struct
+    participant RTC
+    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
     RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC RTC: Set time
-    RTC RTC->>Zephyr Time API: Return set failure
+    Zephyr Time API->>RTC: Set time
+    RTC->>Zephyr Time API: Return set failure
     Zephyr Time API->>RTC Manager: Return set failure
     RTC Manager->>Event Log: Emit event TimeNotSet
 ```
