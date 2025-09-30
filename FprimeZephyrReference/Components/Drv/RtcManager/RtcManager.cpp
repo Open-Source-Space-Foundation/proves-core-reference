@@ -27,14 +27,14 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     if (!device_is_ready(this->dev)) {
         // Use logger instead of events since this fn is in a critical path for FPrime
         // to get time. Events require time, if this method fails an event will fail.
-        Fw::Logger::log("RV2038 not ready");
+        Fw::Logger::log("RTC not ready");
         return;
     }
 
     // Get time from RTC
     U32 posix_time;
     U32 u_secs;
-    this->getTime(posix_time, u_secs);
+    this->timeGet(posix_time, u_secs);
 
     // Set FPrime time object
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, posix_time, u_secs);
@@ -68,7 +68,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Store current time for logging
     U32 posix_time;
     U32 u_secs;
-    this->getTime(posix_time, u_secs);
+    this->timeGet(posix_time, u_secs);
 
     // Set time on RTC
     const int status = rtc_set_time(this->dev, &time_rtc);
@@ -93,7 +93,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 // Private helper methods
 // ----------------------------------------------------------------------
 
-void RtcManager ::getTime(U32& posix_time, U32& u_secs) {
+void RtcManager ::timeGet(U32& posix_time, U32& u_secs) {
     // Read time from RTC
     struct rtc_time time_rtc = {};
     rtc_get_time(this->dev, &time_rtc);

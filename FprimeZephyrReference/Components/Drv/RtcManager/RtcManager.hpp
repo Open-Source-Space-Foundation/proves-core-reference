@@ -63,7 +63,7 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Helper method to get time from RTC
-    void getTime(U32& posix_time, U32& u_secs);
+    void timeGet(U32& posix_time, U32& u_secs);
 
     //! device stores the initialized Zephyr RTC device
     const struct device* dev;

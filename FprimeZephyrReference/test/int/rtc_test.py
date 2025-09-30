@@ -129,7 +129,7 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI):
     # Send command to set the time with invalid data
     time_data = dict(
         Year=0,
-        Month=12345,  # Invalid month
+        Month=12345,
         Day=12345,
         Hour=12345,
         Minute=12345,
