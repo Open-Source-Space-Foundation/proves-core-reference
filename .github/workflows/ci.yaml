@@ -71,6 +71,8 @@ jobs:
 
     - name: Verify Zephyr setup (from cache or fresh)
       run: |
+        # Activate venv and check west
+        source fprime-venv/bin/activate
         west --version
         echo "Workspace modules:"
         west list | wc -l
@@ -83,6 +85,7 @@ jobs:
         echo "Cache hit: ${{ steps.cache-zephyr.outputs.cache-hit }}"
         echo "Workspace size: $(du -sh lib/zephyr-workspace 2>/dev/null | cut -f1 || echo 'N/A')"
         echo "SDK size: $(du -sh ~/zephyr-sdk-0.17.2 2>/dev/null | cut -f1 || echo 'N/A')"
+        echo "Modules count: $(find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l)"
 
     - name: Build for PROVES Flight Control Board v5c
       run: |

@@ -24,7 +24,7 @@ fprime-venv: ## Create a virtual environment
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment (minimal RP2040/RP2350 only)
-	@test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
 		echo "Setting up minimal Zephyr environment (RP2040/RP2350 only)..."; \
 		echo "  - Using minimal module set (~80% disk space reduction)"; \
 		echo "  - Installing ARM toolchain only (~92% SDK reduction)"; \
