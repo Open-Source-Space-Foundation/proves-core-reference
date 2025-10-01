@@ -14,17 +14,83 @@ jobs:
       - name: Lint
         run: |
           make fmt
+
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: |
-          make build
-      - name: Archive
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts
-          path: |
-            build-artifacts/zephyr.uf2
-            build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          git cmake ninja-build gperf ccache dfu-util \
+          device-tree-compiler wget xz-utils file make gcc \
+          gcc-multilib g++-multilib libsdl2-dev libmagic1
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Cache Zephyr workspace
+      id: cache-zephyr
+      uses: actions/cache@v4
+      with:
+        path: |
+          lib/zephyr-workspace
+          ~/zephyr-sdk-0.17.2
+        key: zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}
+        restore-keys: |
+          zephyr-minimal-${{ hashFiles('west.yml') }}-
+          zephyr-minimal-
+
+    - name: Setup minimal Zephyr environment
+      run: |
+        make zephyr-setup
+      env:
+        # Speed up pip installs
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
+        PIP_NO_COMPILE: 1
+
+    - name: Display setup statistics
+      run: |
+        echo "=== Zephyr Setup Statistics ==="
+        echo "Workspace size: $(du -sh lib/zephyr-workspace 2>/dev/null || echo 'N/A')"
+        echo "SDK size: $(du -sh ~/zephyr-sdk-0.17.2 2>/dev/null || echo 'N/A')"
+        echo "Modules installed:"
+        west list 2>/dev/null || echo "West not initialized"
+
+    - name: Build for PROVES Flight Control Board v5c
+      run: |
+        make build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-v5c
+        path: |
+          build-artifacts/zephyr.uf2
+          build-artifacts/zephyr.elf
+          build-artifacts/zephyr.hex
+          build-artifacts/zephyr.bin
+        retention-days: 30
+
+    - name: Display build statistics
+      if: success()
+      run: |
+        echo "=== Build Statistics ==="
+        if [ -f build-artifacts/zephyr.uf2 ]; then
+          echo "Firmware size: $(ls -lh build-artifacts/zephyr.uf2 | awk '{print $5}')"
+        fi
+        if [ -f build-fprime-automatic-zephyr/zephyr/zephyr.stat ]; then
+          echo ""
+          echo "Memory usage:"
+          cat build-fprime-automatic-zephyr/zephyr/zephyr.stat || true
+        fi

@@ -27,6 +27,10 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment (minimal RP2040/RP2350 on
 		echo "Setting up minimal Zephyr environment (RP2040/RP2350 only)..."; \
 		echo "  - Using minimal module set (~80% disk space reduction)"; \
 		echo "  - Installing ARM toolchain only (~92% SDK reduction)"; \
+		if [ ! -f .west/config ] && [ ! -f ../.west/config ]; then \
+			echo "  - Initializing West workspace..."; \
+			$(UVX) west init -l .; \
+		fi && \
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \

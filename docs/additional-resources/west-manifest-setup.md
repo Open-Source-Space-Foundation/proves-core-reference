@@ -28,10 +28,12 @@ Use the convenience script that handles everything:
 ```
 
 This script will:
-1. Initialize the West workspace
+1. Initialize the West workspace (if not already initialized)
 2. Download only the minimal modules
 3. Export the Zephyr CMake package
 4. Install only the ARM toolchain (~95 MB instead of ~1.2 GB)
+
+**Note**: The script automatically detects if you're in a fresh clone (like in CI/CD) and initializes West workspace accordingly.
 
 ### Option B: Manual Setup
 
@@ -180,7 +182,68 @@ west list
 west build -b proves_flight_control_board_v5c FprimeZephyrReference/ReferenceDeployment
 ```
 
+## CI/CD Setup
+
+The minimal setup works great in CI/CD environments like GitHub Actions. Here's an example workflow:
+
+```yaml
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Zephyr (Minimal)
+        run: |
+          make zephyr-setup
+
+      - name: Build
+        run: |
+          make build
+```
+
+### Benefits in CI/CD
+- **Faster builds**: 3-7 min setup vs 40-60 min
+- **Lower costs**: Less compute time
+- **Better caching**: Smaller artifacts to cache
+- **Reliable**: Deterministic module versions
+
+### Caching Strategy
+
+For even faster CI/CD, cache the Zephyr workspace:
+
+```yaml
+- name: Cache Zephyr Workspace
+  uses: actions/cache@v3
+  with:
+    path: |
+      lib/zephyr-workspace
+      ~/zephyr-sdk-0.17.2
+    key: zephyr-${{ hashFiles('west.yml') }}
+
+- name: Setup Zephyr (if cache miss)
+  run: |
+    if [ ! -d "lib/zephyr-workspace/modules" ]; then
+      make zephyr-setup
+    fi
+```
+
 ## Troubleshooting
+
+### "no west workspace found" error in CI/CD
+
+If you see this error:
+```
+FATAL ERROR: no west workspace found
+```
+
+**Solution**: The Makefile now automatically runs `west init -l .` when needed. Make sure you're using the updated `Makefile` from this project.
 
 ### "Module not found" errors during build
 
