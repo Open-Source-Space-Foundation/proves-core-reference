@@ -24,3 +24,12 @@ repos:
     - id: cpplint
       args:
         - --config=cpplint.cfg
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.13.2
+  hooks:
+    - id: ruff-check
+      args: [--fix]
+    - id: ruff-check
+      args: [--fix, --select, I] # import sorting
+    - id: ruff-format

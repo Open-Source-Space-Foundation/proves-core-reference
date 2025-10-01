@@ -89,6 +89,10 @@ build-lite: fprime-venv generate-lite ## Build FPrime-Zephyr Proves Core Referen
 	@echo "Building..."
 	@$(UV) run fprime-util build
 
+.PHONY: test-integration
+test-integration:
+	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX

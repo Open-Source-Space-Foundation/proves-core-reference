@@ -22,8 +22,8 @@ Watchdog ::~Watchdog() {}
 // ----------------------------------------------------------------------
 
 void Watchdog ::run_handler(FwIndexType portNum, U32 context) {
-    // Only perform actions when stop not requested
-    if (!this->m_stopRequested) {
+    // Only perform actions when run is enabled
+    if (this->m_run) {
         // Toggle state every rate group call
         this->m_state = (this->m_state == Fw::On::ON) ? Fw::On::OFF : Fw::On::ON;
         this->m_transitions++;
@@ -33,9 +33,19 @@ void Watchdog ::run_handler(FwIndexType portNum, U32 context) {
     }
 }
 
+void Watchdog ::start_handler(FwIndexType portNum) {
+    // Start the watchdog
+    this->m_run = true;
+
+    // Report watchdog started
+    this->log_ACTIVITY_HI_WatchdogStart();
+}
+
 void Watchdog ::stop_handler(FwIndexType portNum) {
-    // Set the stop flag to stop watchdog petting
-    this->m_stopRequested = true;
+    // Stop the watchdog
+    this->m_run = false;
+
+    // Report watchdog stopped
     this->log_ACTIVITY_HI_WatchdogStop();
 }
 
@@ -43,7 +53,15 @@ void Watchdog ::stop_handler(FwIndexType portNum) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Watchdog ::TEST_STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void Watchdog ::START_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // call start handler
+    this->start_handler(0);
+
+    // Provide command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Watchdog ::STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // call stop handler
     this->stop_handler(0);
 
