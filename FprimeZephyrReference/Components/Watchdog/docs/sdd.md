@@ -12,10 +12,12 @@ Requirement | Description | Verification Method | Verified?
 ----------- | ----------- | ------------------- | ---------
 WD-001 | The `Components::Watchdog` component shall activate upon startup. | Inspection | Yes
 WD-002 | The `Components::Watchdog` component shall oscillate the watchdog GPIO pin (24) on/off on each rategroup tick. | Inspection | Yes
-WD-003 | The `Components::Watchdog` component shall provide telemetry for watchdog transition count. | Integration Test | In Progress
-WD-004 | The `Components::Watchdog` component shall respond to stop signals to halt the watchdog petting. | Integration Test | Yes
-WD-005 | The `Components::Watchdog` component shall provide a test command to stop the watchdog petting. | Integration Test | Yes
-WD-006 | The `Components::Watchdog` component shall emit an event when the watchdog petting stops. | Integration Test | Yes
+WD-003 | The `Components::Watchdog` component shall provide telemetry for watchdog transition count. | Integration Test | Yes
+WD-004 | The `Components::Watchdog` component shall respond to stop signals to halt the watchdog. | Integration Test | Yes
+WD-005 | The `Components::Watchdog` component shall provide a test command to stop the watchdog. | Integration Test | Yes
+WD-006 | The `Components::Watchdog` component shall emit an event when the watchdog stops. | Integration Test | Yes
+WD-007 | The `Components::Watchdog` component shall provide a test command to start the watchdog. | Integration Test | Yes
+WD-008 | The `Components::Watchdog` component shall emit an event when the watchdog starts. | Integration Test | Yes
 
 ## 3. Design
 
@@ -32,20 +34,23 @@ The `Components::Watchdog` component has the following component diagram:
 Port Data Type | Name | Direction | Kind | Usage
 -------------- | ---- | --------- | ---- | -----
 [`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group
-[`Fw::Signal`]| stop | Input | Synchronous | Receive stop signal to stop watchdog petter
+[`Fw::Signal`]| start | Input | Synchronous | Receive start signal to start watchdog
+[`Fw::Signal`]| stop | Input | Synchronous | Receive stop signal to stop watchdog
 [`Drv::GpioWrite`]| gpioSet | Output | n/a | Control GPIO state through driver
 
 #### 3.1.3 Commands
 
 Name | Kind | Description
 ---- | ---- | -----
-TEST_STOP_WATCHDOG | Synchronous | calls the port `stop_runhandler` to stop the watchdog petter.
+START_WATCHDOG | Synchronous | calls the port `start_runhandler` to start the watchdog.
+STOP_WATCHDOG | Synchronous | calls the port `stop_runhandler` to stop the watchdog.
 
 #### 3.1.4 Events
 
 Name | Description
 ---- | -----
-WatchdogStop | Emits once the watchdog petting has stopped. .
+WatchdogStart | Emits once the watchdog has started.
+WatchdogStop | Emits once the watchdog has stopped.
 
 #### 3.1.5 Telemetry
 

@@ -39,22 +39,40 @@ class Watchdog : public WatchdogComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    //! Handler implementation for start
+    //!
+    //! Port to start the watchdog
+    void start_handler(FwIndexType portNum  //!< The port number
+                       ) override;
+
     //! Handler implementation for stop
     //!
-    //! Port to stop the watchdog petting
-    void stop_handler(FwIndexType portNum) override;
+    //! Port to stop the watchdog
+    void stop_handler(FwIndexType portNum  //!< The port number
+                      ) override;
 
-  private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
-    void TEST_STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+    //! Handler implementation for command START_WATCHDOG
+    //!
+    //! Command to start the watchdog
+    void START_WATCHDOG_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                   U32 cmdSeq            //!< The command sequence number
+                                   ) override;
 
-    std::atomic_bool m_stopRequested{false};  //! Flag to stop the watchdog petting
-    Fw::On m_state = Fw::On::OFF;             //! Keeps track of GPIO state
-    U32 m_transitions = 0;                    //! The number of on/off transitions that have occurred
-                                              //! from FSW boot up
+    //! Handler implementation for command STOP_WATCHDOG
+    //!
+    //! Command to stop the watchdog
+    void STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                  U32 cmdSeq            //!< The command sequence number
+                                  ) override;
+
+    std::atomic_bool m_run{true};  //! Flag to start or stop the watchdog
+    Fw::On m_state = Fw::On::OFF;  //! Keeps track of GPIO state
+    U32 m_transitions = 0;         //! The number of on/off transitions that have occurred
+                                   //! from FSW boot up
 };
 
 }  // namespace Components
