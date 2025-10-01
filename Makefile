@@ -6,6 +6,8 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Dependencies
+# Note: Zephyr setup uses minimal modules and ARM-only toolchain for RP2040/RP2350
+# This saves ~3-4 GB compared to full installation. See docs/additional-resources/west-manifest-setup.md
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
@@ -20,15 +22,32 @@ fprime-venv: ## Create a virtual environment
 		@$(UV) pip install --requirement requirements.txt
 
 .PHONY: zephyr-setup
-zephyr-setup: fprime-venv ## Set up Zephyr environment
-	@test -s lib/zephyr-workspace/tools/edtt/.gitignore || { \
-		echo "Setting up Zephyr environment..."; \
-		cd lib/zephyr-workspace && \
-			$(UVX) west update && \
-			$(UVX) west zephyr-export && \
-			$(UV) run west packages pip --install && \
-			$(UV) run west sdk install; \
+zephyr-setup: fprime-venv ## Set up Zephyr environment (minimal RP2040/RP2350 only)
+	@test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
+		echo "Setting up minimal Zephyr environment (RP2040/RP2350 only)..."; \
+		echo "  - Using minimal module set (~80% disk space reduction)"; \
+		echo "  - Installing ARM toolchain only (~92% SDK reduction)"; \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
 	}
+
+.PHONY: zephyr-setup-full
+zephyr-setup-full: fprime-venv ## Set up Zephyr with ALL modules and toolchains (not recommended)
+	@echo "Setting up FULL Zephyr environment (all modules and toolchains)..."
+	@echo "Warning: This will download 4-6 GB of data"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(UVX) west config manifest.path lib/zephyr-workspace/zephyr && \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install; \
+	else \
+		echo "Cancelled. Use 'make zephyr-setup' for minimal installation."; \
+	fi
 
 ##@ Development
 
@@ -62,6 +81,12 @@ clean: ## Remove all gitignored files
 .PHONY: clean-zephyr
 clean-zephyr: ## Remove all Zephyr build files
 	rm -rf lib/zephyr-workspace/bootloader lib/zephyr-workspace/modules lib/zephyr-workspace/tools
+
+.PHONY: clean-zephyr-sdk
+clean-zephyr-sdk: ## Remove Zephyr SDK (reinstall with 'make zephyr-setup')
+	@echo "Removing Zephyr SDK..."
+	rm -rf ~/zephyr-sdk-*
+	@echo "Run 'make zephyr-setup' to reinstall with minimal ARM-only toolchain"
 
 ##@ Operations
 

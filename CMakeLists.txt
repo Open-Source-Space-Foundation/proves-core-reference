@@ -4,6 +4,11 @@
 ####
 
 cmake_minimum_required(VERSION 3.24.2)
+
+# Set BOARD_ROOT to find custom boards
+# The structure is BOARD_ROOT/boards/vendor/board
+list(APPEND BOARD_ROOT "${CMAKE_CURRENT_LIST_DIR}")
+
 # Patch in std-atomic implementations
 if (BOARD STREQUAL "rpi_pico" OR FPRIME_ZEPHYR_USE_STD_ATOMIC_FIX)
     include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/lib/fprime-zephyr/fprime-zephyr/Os/StdAtomic")
