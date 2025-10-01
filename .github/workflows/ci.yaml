@@ -93,7 +93,7 @@ jobs:
 
     - name: Build for PROVES Flight Control Board v5c
       run: |
-        make build
+        make build-lite
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

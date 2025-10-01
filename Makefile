@@ -79,6 +79,11 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@echo "Building..."
 	@$(UV) run fprime-util build
 
+.PHONY: build-lite
+build-lite: fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference (lite)
+	@echo "Building..."
+	@$(UV) run fprime-util build
+
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
