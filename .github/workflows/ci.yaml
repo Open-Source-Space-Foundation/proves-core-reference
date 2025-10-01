@@ -71,13 +71,17 @@ jobs:
 
     - name: Verify Zephyr setup (from cache or fresh)
       run: |
-        # Activate venv and check west
-        source fprime-venv/bin/activate
-        west --version
-        echo "Workspace modules:"
-        west list | wc -l
+        echo "=== Verification ==="
+        echo "Workspace modules installed:"
+        find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l || echo "0"
+        echo ""
         echo "SDK toolchain:"
-        ls -la ~/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc || echo "Not found"
+        if [ -f ~/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc ]; then
+          echo "✓ ARM toolchain installed"
+          ls -lh ~/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc | awk '{print "Size:", $5}'
+        else
+          echo "✗ ARM toolchain not found"
+        fi
 
     - name: Display setup statistics
       run: |
