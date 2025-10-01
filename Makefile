@@ -8,6 +8,7 @@ help: ## Display this help.
 ##@ Dependencies
 # Note: Zephyr setup uses minimal modules and ARM-only toolchain for RP2040/RP2350
 # This saves ~3-4 GB compared to full installation. See docs/additional-resources/west-manifest-setup.md
+# Hello World!
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
