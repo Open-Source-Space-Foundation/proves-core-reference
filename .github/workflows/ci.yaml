@@ -56,14 +56,20 @@ jobs:
     # Initialize git submodules with cache restoration
     - name: Initialize Git Submodules
       run: |
+        echo "Setting up git submodules..."
+
+        # First, ensure git knows about the submodules
+        git submodule init
+
         if [ "${{ steps.cache-submodules.outputs.cache-hit }}" == "true" ]; then
-          echo "✓ Submodules restored from cache, reinitializing git references..."
-          # The cached directories exist but .git files have wrong paths
-          # Force reinitialize to fix the .git file references
-          git submodule update --init --recursive --force
+          echo "✓ Submodules restored from cache, syncing URLs and updating..."
+          # Sync URLs in case they changed
+          git submodule sync --recursive
+          # Update with existing cached content
+          git submodule update --recursive
         else
           echo "Cache miss - downloading submodules..."
-          git submodule update --init --recursive
+          git submodule update --recursive
         fi
 
         # Verify submodules are working
