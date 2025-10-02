@@ -1,5 +1,6 @@
 module ReferenceDeployment {
 
+
   # ----------------------------------------------------------------------
   # Base ID Convention
   # ----------------------------------------------------------------------
@@ -59,15 +60,24 @@ module ReferenceDeployment {
 
   instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
 
-  instance watchdog: Components.Watchdog base id 0x10015000
+  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
 
-  instance rtcManager: Drv.RtcManager base id 0x10016000
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
 
-  instance imuManager: Components.ImuManager base id 0x10017000
+  instance watchdog: Components.Watchdog base id 0x10016000
 
-  instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
+  instance burnwire: Components.Burnwire base id 0x10017000
 
-  instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
+  instance rtcManager: Drv.RtcManager base id 0x10018000
 
-  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10020000
+  instance imuManager: Components.ImuManager base id 0x10019000
+
+  instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10020000
+
+  instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10021000
+
+  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10022000
+
+
+
 }

@@ -3,8 +3,8 @@
 // \author aychar
 // \brief  cpp file for BootloaderTrigger component implementation class
 // ======================================================================
-
 #include "FprimeZephyrReference/Components/BootloaderTrigger/BootloaderTrigger.hpp"
+#include <zephyr/sys/printk.h>
 
 #include <pico/bootrom.h>
 
@@ -14,7 +14,9 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-BootloaderTrigger ::BootloaderTrigger(const char* const compName) : BootloaderTriggerComponentBase(compName) {}
+BootloaderTrigger ::BootloaderTrigger(const char* const compName) : BootloaderTriggerComponentBase(compName) {
+    printk("Bootloader Trigger component constructed\n");
+}
 
 BootloaderTrigger ::~BootloaderTrigger() {}
 

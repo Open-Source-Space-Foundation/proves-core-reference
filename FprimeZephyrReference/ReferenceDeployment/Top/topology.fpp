@@ -26,13 +26,18 @@ module ReferenceDeployment {
     instance timer
     instance comDriver
     instance gpioDriver
+    instance gpioBurnwire0
+    instance gpioBurnwire1
     instance watchdog
-    instance prmDb
+    instance burnwire
     instance rtcManager
     instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
     instance bootloaderTrigger
+    instance prmDb
+
+
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
@@ -96,7 +101,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+
     }
+
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite

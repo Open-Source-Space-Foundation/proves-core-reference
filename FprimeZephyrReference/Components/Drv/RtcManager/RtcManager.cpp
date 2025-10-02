@@ -4,6 +4,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManager.hpp"
+#include <zephyr/sys/printk.h>
 
 namespace Drv {
 
@@ -14,6 +15,7 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {
     // Initialize device
     this->dev = device_get_binding("RV3028");
+    printk("RTC Manager component constructed\n");
 }
 
 RtcManager ::~RtcManager() {}

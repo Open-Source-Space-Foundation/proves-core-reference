@@ -2,8 +2,8 @@
 // \title  ImuManager.cpp
 // \brief  cpp file for ImuManager component implementation class
 // ======================================================================
-
 #include "FprimeZephyrReference/Components/ImuManager/ImuManager.hpp"
+#include <zephyr/sys/printk.h>
 
 #include <Fw/Types/Assert.hpp>
 
@@ -13,7 +13,9 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-ImuManager ::ImuManager(const char* const compName) : ImuManagerComponentBase(compName) {}
+ImuManager ::ImuManager(const char* const compName) : ImuManagerComponentBase(compName) {
+    printk("IMU mabger \n");
+}
 
 ImuManager ::~ImuManager() {}
 
