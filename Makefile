@@ -74,18 +74,8 @@ BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
 	@test -s $(BUILD_DIR) || $(MAKE) generate
 
-.PHONY: generate-lite
-generate-lite: submodules fprime-venv ## Generate FPrime-Zephyr Proves Core Reference (lite)
-	@echo "Generating..."
-	@$(UV) run fprime-util generate --force
-
 .PHONY: build
 build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
-	@echo "Building..."
-	@$(UV) run fprime-util build
-
-.PHONY: build-lite
-build-lite: fprime-venv generate-lite ## Build FPrime-Zephyr Proves Core Reference (lite)
 	@echo "Building..."
 	@$(UV) run fprime-util build
 

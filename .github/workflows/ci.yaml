@@ -25,29 +25,6 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    # Install only packages NOT pre-installed on ubuntu-latest
-    # Pre-installed: git, cmake, make, gcc, g++, wget, file, python3
-    # See: https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2204-Readme.md
-    - name: Install minimal Zephyr dependencies
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends \
-          ninja-build \
-          gperf \
-          ccache \
-          device-tree-compiler \
-          xz-utils \
-          libmagic1
-      env:
-        DEBIAN_FRONTEND: noninteractive
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-        cache-dependency-path: 'requirements.txt'
-
     # Cache both workspace AND SDK together
     - name: Cache Zephyr workspace and SDK
       id: cache-zephyr
@@ -93,7 +70,7 @@ jobs:
 
     - name: Build for PROVES Flight Control Board v5c
       run: |
-        make build-lite
+        make build -o zephyr-setup
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
