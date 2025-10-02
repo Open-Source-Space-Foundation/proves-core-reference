@@ -32,7 +32,7 @@ module ReferenceDeployment {
     instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
-
+    instance bootloaderTrigger
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
