@@ -29,13 +29,14 @@ module ReferenceDeployment {
     instance gpioBurnwire0
     instance gpioBurnwire1
     instance watchdog
-    instance prmDb
+    instance burnwire
     instance rtcManager
     instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
     instance bootloaderTrigger
-    instance burnwire
+    instance prmDb
+
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -108,12 +109,6 @@ module ReferenceDeployment {
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
-
-    connections BurnwireGpio {
-      burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
-      burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
-    }
-
 
     connections imuManager {
       imuManager.accelerationGet -> lsm6dsoManager.accelerationGet

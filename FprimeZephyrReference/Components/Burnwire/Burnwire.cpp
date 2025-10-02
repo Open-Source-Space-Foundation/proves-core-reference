@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Burnwire/Burnwire.hpp"
+#include <zephyr/sys/printk.h>
 
 namespace Components {
 
@@ -13,8 +14,7 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 Burnwire ::Burnwire(const char* const compName) : BurnwireComponentBase(compName) {
-    this->m_safetyCounter = 0;
-    this->m_state = Fw::On::OFF;
+    printk("Burnwire component constructed\n");
 }
 
 Burnwire ::~Burnwire() {}
