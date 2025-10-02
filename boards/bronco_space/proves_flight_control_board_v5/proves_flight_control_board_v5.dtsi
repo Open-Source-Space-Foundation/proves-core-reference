@@ -119,7 +119,7 @@ zephyr_udc0: &usbd {
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
-		backup-switch-mode = "level";
+		backup-switch-mode = "direct";
 		label = "RV3028";
 	};
 	ina219: ina219@40 {

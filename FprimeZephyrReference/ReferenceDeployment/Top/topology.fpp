@@ -20,7 +20,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
-    instance chronoTime
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -29,6 +28,10 @@ module ReferenceDeployment {
     instance gpioDriver
     instance watchdog
     instance prmDb
+    instance rtcManager
+    instance imuManager
+    instance lis2mdlManager
+    instance lsm6dsoManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -38,7 +41,7 @@ module ReferenceDeployment {
     event connections instance CdhCore.events
     text event connections instance CdhCore.textLogger
     health connections instance CdhCore.$health
-    time connections instance chronoTime
+    time connections instance rtcManager
     telemetry connections instance CdhCore.tlmSend
     param connections instance prmDb
 
@@ -92,14 +95,18 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
     }
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
 
-    connections ReferenceDeployment {
-
+    connections imuManager {
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
   }

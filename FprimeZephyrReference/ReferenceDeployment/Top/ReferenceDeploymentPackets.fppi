@@ -34,6 +34,14 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.watchdog.WatchdogTransitions
   }
 
+  packet Imu id 6 group 4 {
+    ReferenceDeployment.lsm6dsoManager.Acceleration
+    ReferenceDeployment.lsm6dsoManager.AngularVelocity
+    ReferenceDeployment.lsm6dsoManager.Temperature
+    ReferenceDeployment.lis2mdlManager.MagneticField
+  }
+
+
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
