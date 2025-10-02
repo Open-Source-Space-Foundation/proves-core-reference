@@ -9,6 +9,8 @@
 #include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 
 #include <cerrno>
+#include <string>
+#include <vector>
 
 #include <Fw/Logger/Logger.hpp>
 
@@ -57,6 +59,14 @@ class RtcManager final : public RtcManagerComponentBase {
                              U32 cmdSeq,           //!< The command sequence number
                              Drv::TimeData t       //!< Set the time
                              ) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Validate time data
+    bool timeDataIsValid(Drv::TimeData t);
 
     //! device stores the initialized Zephyr RTC device
     const struct device* dev;

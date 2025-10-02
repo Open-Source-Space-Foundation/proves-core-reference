@@ -68,7 +68,9 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI):
 
     # Ensure microseconds are included in event
     microseconds_arg: U32Type = result.args[1]
-    assert 0 <= microseconds_arg.val < 100_000_000, "Microseconds arg should be >= 0 and < 1 million"
+    assert 0 <= microseconds_arg.val < 100_000_000, (
+        "Microseconds arg should be >= 0 and < 1 million"
+    )
 
     # Fetch FPrime time from event
     fp_time: TimeType = result.get_time()
@@ -145,11 +147,31 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI):
 
     # Assert time not set event is emitted
     fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.TimeNotSet", timeout=2
+        "ReferenceDeployment.rtcManager.YearValidationFailed", timeout=2
     )
+
     fprime_test_api.assert_event(
-        "CdhCore.cmdDisp.OpCodeDispatched", timeout=2
+        "ReferenceDeployment.rtcManager.MonthValidationFailed", timeout=2
     )
+
     fprime_test_api.assert_event(
-        "CdhCore.cmdDisp.OpCodeError", timeout=2
+        "ReferenceDeployment.rtcManager.DayValidationFailed", timeout=2
     )
+
+    fprime_test_api.assert_event(
+        "ReferenceDeployment.rtcManager.HourValidationFailed", timeout=2
+    )
+
+    fprime_test_api.assert_event(
+        "ReferenceDeployment.rtcManager.MinuteValidationFailed", timeout=2
+    )
+
+    fprime_test_api.assert_event(
+        "ReferenceDeployment.rtcManager.SecondValidationFailed", timeout=2
+    )
+
+    fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeNotSet", timeout=2)
+
+    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeDispatched", timeout=2)
+
+    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeError", timeout=2)

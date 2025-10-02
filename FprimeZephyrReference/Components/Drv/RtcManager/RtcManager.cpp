@@ -63,11 +63,27 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // Check device readiness
     if (!device_is_ready(this->dev)) {
+        // Emit device not ready event
         this->log_WARNING_HI_DeviceNotReady();
+
+        // Send command response
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
+
+    // Validate time data
+    if (!this->timeDataIsValid(t)) {
+        // Emit time not set event
+        this->log_WARNING_HI_TimeNotSet();
+
+        // Send command response
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Store current time for logging
+    Fw::Time time_before_set = this->getTime();
 
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
@@ -81,9 +97,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
         .tm_yday = 0,
         .tm_isdst = 0,
     };
-
-    // Store current time for logging
-    Fw::Time time_before_set = this->getTime();
 
     // Set time on RTC
     const int status = rtc_set_time(this->dev, &time_rtc);
@@ -102,6 +115,42 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+bool RtcManager ::timeDataIsValid(Drv::TimeData t) {
+    bool valid = true;
+
+    if (t.get_Year() < 1900) {
+        this->log_WARNING_HI_YearValidationFailed(t.get_Year());
+        valid = false;
+    }
+
+    if (t.get_Month() < 1 || t.get_Month() > 12) {
+        this->log_WARNING_HI_MonthValidationFailed(t.get_Month());
+        valid = false;
+    }
+
+    if (t.get_Day() < 1 || t.get_Day() > 31) {
+        this->log_WARNING_HI_DayValidationFailed(t.get_Day());
+        valid = false;
+    }
+
+    if (t.get_Hour() > 23) {
+        this->log_WARNING_HI_HourValidationFailed(t.get_Hour());
+        valid = false;
+    }
+
+    if (t.get_Minute() > 59) {
+        this->log_WARNING_HI_MinuteValidationFailed(t.get_Minute());
+        valid = false;
+    }
+
+    if (t.get_Second() > 59) {
+        this->log_WARNING_HI_SecondValidationFailed(t.get_Second());
+        valid = false;
+    }
+
+    return valid;
 }
 
 }  // namespace Drv
