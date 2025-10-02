@@ -61,6 +61,7 @@ Finally, run the fprime-gds.
 make gds
 ```
 
+<<<<<<< HEAD
 # How to add a component
 
 Note: This guide has not been confirmed for UART and I2C connections yet, please edit and add clarification as needed
@@ -203,3 +204,16 @@ In instances.fpp:
 instance burnwire: Components.Burnwire base id 0x10017000
 ```
   Get the base Id by looking at the insrtecutions for the number at the top of file under Base ID Convention of the instances.fpp
+=======
+## Running Integration Tests
+
+First, start GDS with:
+```sh
+make gds
+```
+
+Then, in another terminal, run the following command to execute the integration tests:
+```sh
+make test-integration
+```
+>>>>>>> d1b150236e9177fe0d566422a6960f79b8dd721a
