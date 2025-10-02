@@ -25,8 +25,8 @@ jobs:
         submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
-    # Cache git submodules content
-    - name: Cache Git Submodules
+    # Cache project dependencies (fprime, fprime-zephyr, zephyr)
+    - name: Cache Project Dependencies
       id: cache-submodules
       uses: actions/cache@v4
       with:
@@ -34,10 +34,10 @@ jobs:
           lib/fprime
           lib/fprime-zephyr
           lib/zephyr-workspace/zephyr
-        key: git-submodules-${{ hashFiles('.gitmodules') }}-v2
+        key: project-deps-${{ hashFiles('.gitmodules') }}-v3
         restore-keys: |
-          git-submodules-${{ hashFiles('.gitmodules') }}-
-          git-submodules-
+          project-deps-${{ hashFiles('.gitmodules') }}-
+          project-deps-
 
     # Cache Zephyr west modules and SDK (the slow parts)
     - name: Cache Zephyr workspace and SDK
@@ -53,14 +53,14 @@ jobs:
           zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
           zephyr-minimal-
 
-    # Initialize git submodules with robust cache handling
-    - name: Initialize Git Submodules
+    # Initialize dependencies with robust cache handling
+    - name: Setup Dependencies (fprime, fprime-zephyr, zephyr)
       run: |
-        echo "Setting up git submodules..."
+        echo "Setting up project dependencies..."
 
         # Check if we have cached content
         if [ "${{ steps.cache-submodules.outputs.cache-hit }}" == "true" ]; then
-          echo "✓ Submodules restored from cache"
+          echo "✓ Dependencies restored from cache"
 
           # Verify cached content is valid by checking for key files
           valid_cache=true
@@ -81,23 +81,35 @@ jobs:
           fi
 
           if [ "$valid_cache" = "true" ]; then
-            echo "✓ All cached submodules are valid"
-            # Initialize git tracking for the cached content
-            git submodule init || true
-            git submodule sync || true
-          else
-            echo "Cached content invalid, clearing and re-downloading..."
-            rm -rf lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr
-            git submodule update --init --recursive
+            echo "✓ All cached dependencies are valid, skipping download"
+            exit 0
           fi
-        else
-          echo "Cache miss - downloading submodules..."
-          git submodule update --init --recursive
         fi
 
-        # Verify submodules are working
-        echo "Verifying submodules:"
-        git submodule status || echo "Submodule status check failed, but content should be available"
+        echo "Downloading dependencies manually..."
+
+        # Remove any existing directories
+        rm -rf lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr
+
+        # Create directories
+        mkdir -p lib/zephyr-workspace
+
+        # Clone fprime
+        echo "Cloning fprime..."
+        git clone --depth 1 --branch v4.0.0 https://github.com/nasa/fprime.git lib/fprime
+
+        # Clone fprime-zephyr
+        echo "Cloning fprime-zephyr..."
+        git clone --depth 1 https://github.com/fprime-community/fprime-zephyr.git lib/fprime-zephyr
+        cd lib/fprime-zephyr
+        git checkout 931354e26e39cb711f846e1ca8bb1337ede83b7c
+        cd ../..
+
+        # Clone zephyr
+        echo "Cloning zephyr..."
+        git clone --depth 1 --branch v4.2.0 https://github.com/zephyrproject-rtos/zephyr.git lib/zephyr-workspace/zephyr
+
+        echo "✓ All dependencies downloaded successfully"
 
     - name: Setup minimal Zephyr environment
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
