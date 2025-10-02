@@ -1,23 +1,34 @@
 module Components {
-    @ Component to blink an LED as a watchdog petter, driven by a rate group
+    @ Component to pet the watchdog, driven by a rate group
     passive component Watchdog {
-
-        @ Command to stop the watchdog petter
-        sync command TEST_STOP_WATCHDOG(
+        @ Command to start the watchdog
+        sync command START_WATCHDOG(
         )
 
-        @ Telemetry channel counting watchdog petter transitions
+        @ Command to stop the watchdog
+        sync command STOP_WATCHDOG(
+        )
+
+        @ Telemetry channel counting watchdog pet transitions
         telemetry WatchdogTransitions: U32
 
-        @ Event logged when the watchdog petter LED turns on or off
+        @ Event logged when the watchdog is started
+        event WatchdogStart() \
+            severity activity high \
+            format "Watchdog started"
+
+        @ Event logged when the watchdog is stopped
         event WatchdogStop() \
             severity activity high \
-            format "Watchdog no longer being pet!"
+            format "Watchdog stopped"
 
         @ Port receiving calls from the rate group
         sync input port run: Svc.Sched
 
-        @ Port to stop the watchdog petting
+        @ Port to start the watchdog
+        sync input port start: Fw.Signal
+
+        @ Port to stop the watchdog
         sync input port stop: Fw.Signal
 
         @ Port sending calls to the GPIO driver
