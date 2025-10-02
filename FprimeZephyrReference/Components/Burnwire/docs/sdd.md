@@ -11,10 +11,10 @@ Add sequence diagrams here
 Add requirements in the chart below
 | Name | Description | Validation |
 | ---- | -----------  | ------ |
-|BW-001|The burnwire shall turn on and off in response to a port calls |Hardware Test|
+|BW-001|The burnwire shall turn on and off in response to a port calls (TBR for antenna deployer component) |Hardware Test|
 |BW-002|The burnwire shall turn on and off in response to commands (TBR for testing for now) |Hardware Test|
-|BW-003|The burnwire component shall provide an Event when it is turned on and off |Integration Test|
-|BW-004|The burnwire component shall activate by turning the GPIO pins on one at a time |Integration Test|
+|BW-003|The burnwire component shall provide an event when it is turned on and off |Integration Test|
+|BW-004|The burnwire component shall activate by turning both the GPIO pins that activate the burnwire | Hardware Test|
 |BW-005|The burnwire component shall be controlled by a safety timeout attached to a 1Hz rate group |Integration Test|
 |BW-006|The safety timeout shall emit an event when it is changes | Integration test|
 |BW-007|The burnwire safety time shall emit an event when it starts and stops |Integration Test|
@@ -37,9 +37,9 @@ Name | Type | Description |
 ## Events
 | Name | Description |
 |---|---|
-|SetBurnwireState|Emits whether the burnwire turns off or on when it changes state|
-|SafetyTimerStatus|Emits when the Safety Time has stopped or started|
-|SafetyTimerState|Emits  the safety timer argument when it starts|
+|SetBurnwireState| Emits burnwire state when the burnwire turns on or off|
+|SafetyTimerStatus| Emits safety timer state when the Safety Time has stopped or started|
+|SafetyTimerState| Emits the amount of time the safety time will run for when it starts|
 
 
 ## Component States
@@ -47,7 +47,6 @@ Add component states in the chart below
 | Name | Description |
 |----|---|
 |m_state|Keeps track if the burnwire is on or off|
-
 
 ## Unit Tests
 Add unit test descriptions in the chart below
