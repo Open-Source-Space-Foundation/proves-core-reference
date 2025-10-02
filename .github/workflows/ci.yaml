@@ -22,21 +22,43 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: false  # We'll handle submodules with caching
         fetch-depth: 0
 
-    # Cache both workspace AND SDK together
+    # Cache git submodules (fprime, fprime-zephyr, zephyr base)
+    - name: Cache Git Submodules
+      id: cache-submodules
+      uses: actions/cache@v4
+      with:
+        path: |
+          lib/fprime
+          lib/fprime-zephyr
+          lib/zephyr-workspace/zephyr
+        key: git-submodules-${{ hashFiles('.gitmodules') }}-${{ runner.os }}-v1
+        restore-keys: |
+          git-submodules-${{ hashFiles('.gitmodules') }}-${{ runner.os }}-
+          git-submodules-
+
+    # Cache Zephyr west modules and SDK
     - name: Cache Zephyr workspace and SDK
       id: cache-zephyr
       uses: actions/cache@v4
       with:
         path: |
-          lib/zephyr-workspace
+          lib/zephyr-workspace/modules
+          lib/zephyr-workspace/bootloader
           ~/zephyr-sdk-0.17.2
-        key: zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-v2
+        key: zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
         restore-keys: |
           zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
           zephyr-minimal-
+
+    # Initialize git submodules if not cached
+    - name: Initialize Git Submodules
+      if: steps.cache-submodules.outputs.cache-hit != 'true'
+      run: |
+        echo "Initializing git submodules (not found in cache)..."
+        git submodule update --init --recursive
 
     - name: Setup minimal Zephyr environment
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
@@ -49,7 +71,10 @@ jobs:
     - name: Verify Zephyr setup (from cache or fresh)
       run: |
         echo "=== Verification ==="
-        echo "Workspace modules installed:"
+        echo "Git submodules status:"
+        git submodule status
+        echo ""
+        echo "Zephyr workspace modules installed:"
         find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l || echo "0"
         echo ""
         echo "SDK toolchain:"
@@ -63,14 +88,17 @@ jobs:
     - name: Display setup statistics
       run: |
         echo "=== Zephyr Setup Statistics ==="
-        echo "Cache hit: ${{ steps.cache-zephyr.outputs.cache-hit }}"
-        echo "Workspace size: $(du -sh lib/zephyr-workspace 2>/dev/null | cut -f1 || echo 'N/A')"
+        echo "Git submodules cache hit: ${{ steps.cache-submodules.outputs.cache-hit }}"
+        echo "Zephyr modules cache hit: ${{ steps.cache-zephyr.outputs.cache-hit }}"
+        echo "Git submodules size: $(du -sh lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr 2>/dev/null | awk '{total+=$1} END {print total}' || echo 'N/A')"
+        echo "Zephyr modules size: $(du -sh lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader 2>/dev/null | awk '{total+=$1} END {print total}' || echo 'N/A')"
         echo "SDK size: $(du -sh ~/zephyr-sdk-0.17.2 2>/dev/null | cut -f1 || echo 'N/A')"
-        echo "Modules count: $(find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l)"
+        echo "Total modules count: $(find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l)"
 
     - name: Build for PROVES Flight Control Board v5c
       run: |
-        make build -o zephyr-setup
+        # Skip submodule init since we cached it separately
+        make build -o zephyr-setup -o submodules
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
