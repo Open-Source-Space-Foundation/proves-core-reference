@@ -22,10 +22,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: false  # We'll handle submodules with caching
+        submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
-    # Cache git submodules (fprime, fprime-zephyr, zephyr base)
+    # Cache git submodules content
     - name: Cache Git Submodules
       id: cache-submodules
       uses: actions/cache@v4
@@ -34,12 +34,12 @@ jobs:
           lib/fprime
           lib/fprime-zephyr
           lib/zephyr-workspace/zephyr
-        key: git-submodules-${{ hashFiles('.gitmodules') }}-${{ runner.os }}-v1
+        key: git-submodules-${{ hashFiles('.gitmodules') }}-v2
         restore-keys: |
-          git-submodules-${{ hashFiles('.gitmodules') }}-${{ runner.os }}-
+          git-submodules-${{ hashFiles('.gitmodules') }}-
           git-submodules-
 
-    # Cache Zephyr west modules and SDK
+    # Cache Zephyr west modules and SDK (the slow parts)
     - name: Cache Zephyr workspace and SDK
       id: cache-zephyr
       uses: actions/cache@v4
@@ -53,12 +53,22 @@ jobs:
           zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
           zephyr-minimal-
 
-    # Initialize git submodules if not cached
+    # Initialize git submodules with cache restoration
     - name: Initialize Git Submodules
-      if: steps.cache-submodules.outputs.cache-hit != 'true'
       run: |
-        echo "Initializing git submodules (not found in cache)..."
-        git submodule update --init --recursive
+        if [ "${{ steps.cache-submodules.outputs.cache-hit }}" == "true" ]; then
+          echo "✓ Submodules restored from cache, reinitializing git references..."
+          # The cached directories exist but .git files have wrong paths
+          # Force reinitialize to fix the .git file references
+          git submodule update --init --recursive --force
+        else
+          echo "Cache miss - downloading submodules..."
+          git submodule update --init --recursive
+        fi
+
+        # Verify submodules are working
+        echo "Verifying submodules:"
+        git submodule status
 
     - name: Setup minimal Zephyr environment
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
@@ -87,17 +97,20 @@ jobs:
 
     - name: Display setup statistics
       run: |
-        echo "=== Zephyr Setup Statistics ==="
+        echo "=== Setup Statistics ==="
         echo "Git submodules cache hit: ${{ steps.cache-submodules.outputs.cache-hit }}"
         echo "Zephyr modules cache hit: ${{ steps.cache-zephyr.outputs.cache-hit }}"
-        echo "Git submodules size: $(du -sh lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr 2>/dev/null | awk '{total+=$1} END {print total}' || echo 'N/A')"
-        echo "Zephyr modules size: $(du -sh lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader 2>/dev/null | awk '{total+=$1} END {print total}' || echo 'N/A')"
+        echo ""
+        echo "Submodule sizes:"
+        du -sh lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr 2>/dev/null || echo "Some submodules not found"
+        echo ""
+        echo "Zephyr modules size: $(du -sh lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader 2>/dev/null | awk '{sum+=$1} END {print sum"M"}' || echo 'N/A')"
         echo "SDK size: $(du -sh ~/zephyr-sdk-0.17.2 2>/dev/null | cut -f1 || echo 'N/A')"
         echo "Total modules count: $(find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l)"
 
     - name: Build for PROVES Flight Control Board v5c
       run: |
-        # Skip submodule init since we cached it separately
+        # Skip both zephyr-setup and submodules since we cached them separately
         make build -o zephyr-setup -o submodules
 
     - name: Upload build artifacts
