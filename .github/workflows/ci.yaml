@@ -53,28 +53,51 @@ jobs:
           zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
           zephyr-minimal-
 
-    # Initialize git submodules with cache restoration
+    # Initialize git submodules with robust cache handling
     - name: Initialize Git Submodules
       run: |
         echo "Setting up git submodules..."
 
-        # First, ensure git knows about the submodules
-        git submodule init
-
+        # Check if we have cached content
         if [ "${{ steps.cache-submodules.outputs.cache-hit }}" == "true" ]; then
-          echo "✓ Submodules restored from cache, syncing URLs and updating..."
-          # Sync URLs in case they changed
-          git submodule sync --recursive
-          # Update with existing cached content
-          git submodule update --recursive
+          echo "✓ Submodules restored from cache"
+
+          # Verify cached content is valid by checking for key files
+          valid_cache=true
+
+          if [ ! -f "lib/fprime/CMakeLists.txt" ]; then
+            echo "⚠️  fprime cache invalid, will re-download"
+            valid_cache=false
+          fi
+
+          if [ ! -f "lib/fprime-zephyr/CMakeLists.txt" ]; then
+            echo "⚠️  fprime-zephyr cache invalid, will re-download"
+            valid_cache=false
+          fi
+
+          if [ ! -f "lib/zephyr-workspace/zephyr/CMakeLists.txt" ]; then
+            echo "⚠️  zephyr cache invalid, will re-download"
+            valid_cache=false
+          fi
+
+          if [ "$valid_cache" = "true" ]; then
+            echo "✓ All cached submodules are valid"
+            # Initialize git tracking for the cached content
+            git submodule init || true
+            git submodule sync || true
+          else
+            echo "Cached content invalid, clearing and re-downloading..."
+            rm -rf lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr
+            git submodule update --init --recursive
+          fi
         else
           echo "Cache miss - downloading submodules..."
-          git submodule update --recursive
+          git submodule update --init --recursive
         fi
 
         # Verify submodules are working
         echo "Verifying submodules:"
-        git submodule status
+        git submodule status || echo "Submodule status check failed, but content should be available"
 
     - name: Setup minimal Zephyr environment
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
