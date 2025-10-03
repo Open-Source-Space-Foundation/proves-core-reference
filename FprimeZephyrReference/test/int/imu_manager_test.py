@@ -4,9 +4,34 @@ imu_manager_test.py:
 Integration tests for the IMU Manager component.
 """
 
+import os
+import subprocess
+import time
+from typing import List
+
 import pytest
 from fprime_gds.common.data_types.ch_data import ChData
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+
+@pytest.fixture(scope="session", autouse=True)
+def start_gds(fprime_test_api_session: IntegrationTestAPI):
+    process = subprocess.Popen(["make", "gds-integration"], cwd=os.getcwd())
+
+    gds_working = False
+    timeout_time = time.time() + 15
+    while time.time() < timeout_time:
+        data: List[EventData] = fprime_test_api_session.send_and_assert_command(
+            command="CdhCore.cmdDisp.CMD_NO_OP"
+        )
+        if data != []:
+            gds_working = True
+            break
+    assert gds_working
+
+    yield
+    process.kill()
 
 
 @pytest.fixture(autouse=True)

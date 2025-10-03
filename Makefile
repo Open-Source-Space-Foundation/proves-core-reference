@@ -73,11 +73,17 @@ clean-zephyr: ## Remove all Zephyr build files
 
 ##@ Operations
 
-.PHONY: gds
+GDS_COMMAND ?= $(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+
+.PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+	@$(GDS_COMMAND)
+
+.PHONY: gds-integration
+gds-integration:
+	@$(GDS_COMMAND) --gui=none
 
 ##@ Build Tools
 BIN_DIR ?= $(shell pwd)/bin
