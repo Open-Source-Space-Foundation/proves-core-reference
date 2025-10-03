@@ -166,7 +166,7 @@ extern "C" {
 
 // Specifies the size of the buffer that contains a communications packet.
 #ifndef FW_COM_BUFFER_MAX_SIZE
-#define FW_COM_BUFFER_MAX_SIZE 512
+#define FW_COM_BUFFER_MAX_SIZE 235
 #endif
 
 // Specifies the size of the buffer attached to state machine signals.
@@ -326,6 +326,11 @@ extern "C" {
 #ifndef FW_FILE_CHUNK_SIZE
 #define FW_FILE_CHUNK_SIZE 512  //!< Chunk size for working with files in the OSAL layer
 #endif
+
+#ifndef FW_ASSERT_COUNT_MAX
+#define FW_ASSERT_COUNT_MAX 4
+#endif
+
 
 // *** NOTE configuration checks are in Fw/Cfg/ConfigCheck.cpp in order to have
 // the type definitions in Fw/Types/BasicTypes available.

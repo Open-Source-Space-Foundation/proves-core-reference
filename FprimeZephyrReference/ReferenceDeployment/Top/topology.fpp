@@ -15,7 +15,7 @@ module ReferenceDeployment {
   # Subtopology imports
   # ----------------------------------------------------------------------
     import CdhCore.Subtopology
-    import ComCcsds.Subtopology
+    import ComCcsds.FramingSubtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -24,7 +24,7 @@ module ReferenceDeployment {
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
-    instance comDriver
+    instance lora
     instance gpioDriver
     instance watchdog
     instance prmDb
@@ -67,17 +67,19 @@ module ReferenceDeployment {
     }
 
     connections Communications {
-      # ComDriver buffer allocations
-      comDriver.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
-      comDriver.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
-
+      lora.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
+      lora.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
+ 
       # ComDriver <-> ComStub (Uplink)
-      comDriver.$recv                     -> ComCcsds.comStub.drvReceiveIn
-      ComCcsds.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+      lora.dataOut -> ComCcsds.frameAccumulator.dataIn
+      ComCcsds.frameAccumulator.dataReturnOut -> lora.dataReturnIn
 
       # ComStub <-> ComDriver (Downlink)
-      ComCcsds.comStub.drvSendOut      -> comDriver.$send
-      comDriver.ready         -> ComCcsds.comStub.drvConnected
+      ComCcsds.framer.dataOut -> lora.dataIn
+      lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
+      lora.comStatusOut -> ComCcsds.framer.comStatusIn
+
+
     }
 
     connections RateGroups {
@@ -86,7 +88,6 @@ module ReferenceDeployment {
 
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
-      rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -108,6 +109,8 @@ module ReferenceDeployment {
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
+
+  
 
   }
 
