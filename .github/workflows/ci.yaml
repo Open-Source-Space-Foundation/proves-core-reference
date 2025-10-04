@@ -41,6 +41,7 @@ jobs:
           run-id: 18236298785
       - name: Trigger Bootloader
         run: |
+          make fprime-venv
           make bootloader
           sleep 5
       - name: Copy Firmware
