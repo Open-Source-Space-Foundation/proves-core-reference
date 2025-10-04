@@ -91,23 +91,8 @@ jobs:
         # Remove any existing directories
         rm -rf lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr
 
-        # Create directories
-        mkdir -p lib/zephyr-workspace
-
-        # Clone fprime
-        echo "Cloning fprime..."
-        git clone --depth 1 --branch v4.0.0 https://github.com/nasa/fprime.git lib/fprime
-
-        # Clone fprime-zephyr
-        echo "Cloning fprime-zephyr..."
-        git clone --depth 1 https://github.com/fprime-community/fprime-zephyr.git lib/fprime-zephyr
-        cd lib/fprime-zephyr
-        git checkout 931354e26e39cb711f846e1ca8bb1337ede83b7c
-        cd ../..
-
-        # Clone zephyr
-        echo "Cloning zephyr..."
-        git clone --depth 1 --branch v4.2.0 https://github.com/zephyrproject-rtos/zephyr.git lib/zephyr-workspace/zephyr
+        # Clone submodules
+        make submodules
 
         echo "✓ All dependencies downloaded successfully"
 
