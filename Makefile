@@ -61,7 +61,7 @@ build-test-integration-env:
 
 .PHONY: run-test-integration-env
 run-test-integration-env:
-	docker run --rm -it -v $(pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(pwd)/build-artifacts:/workspace/build-artifacts/ proves-core-reference-test-env make test-integration
+	docker run --rm -it -v $(shell pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(shell pwd)/build-artifacts:/workspace/build-artifacts/ proves-core-reference-test-env make test-integration
 
 .PHONY: test-integration
 test-integration: uv
