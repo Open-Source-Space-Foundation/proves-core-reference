@@ -56,11 +56,11 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
-test-integration:
+test-integration: uv
 	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: bootloader
-bootloader:
+bootloader: uv
 	@$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
