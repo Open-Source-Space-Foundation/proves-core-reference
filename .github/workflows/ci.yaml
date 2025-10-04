@@ -28,3 +28,25 @@ jobs:
           path: |
             build-artifacts/zephyr.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+  integration:
+    runs-on: [self-hosted, integration]
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v5
+        # with:
+        #   github-token: ${{ secrets.GITHUB_TOKEN }}
+        #   run-id: 18236298785
+      - name: Set up dependencies
+        run: |
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
+            make submodules
+            make fprime-venv
+      - name: Trigger Bootloader
+        run: |
+          make bootloader
+          sleep 10
+      - name: Copy Firmware
+        run: |
+          picotool load ./zephyr.uf2
+          picotool reboot

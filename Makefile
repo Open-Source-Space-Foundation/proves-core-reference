@@ -55,9 +55,21 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@echo "Building..."
 	@$(UV) run fprime-util build
 
+.PHONY: build-test-integration-env
+build-test-integration-env:
+	docker build -t proves-core-reference-test-env -f Dockerfile.test-env .
+
+.PHONY: run-test-integration-env
+run-test-integration-env:
+	docker run --rm -it -v $(shell pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(shell pwd)/build-artifacts:/workspace/build-artifacts/ proves-core-reference-test-env make test-integration
+
 .PHONY: test-integration
-test-integration:
+test-integration: uv
 	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
+.PHONY: bootloader
+bootloader: uv
+	@$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -69,11 +81,17 @@ clean-zephyr: ## Remove all Zephyr build files
 
 ##@ Operations
 
-.PHONY: gds
+GDS_COMMAND ?= $(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+
+.PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+	@$(GDS_COMMAND)
+
+.PHONY: gds-integration
+gds-integration:
+	@$(GDS_COMMAND) --gui=none
 
 ##@ Build Tools
 BIN_DIR ?= $(shell pwd)/bin

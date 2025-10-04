@@ -2,7 +2,7 @@ module Components {
     @ Used to trigger bootloader mode to install board firmware for integration testing. (DO NOT USE IN SPACE VERY BAD!!!!)
     passive component BootloaderTrigger {
 
-        @ Restarts board and puts it in bootloader mode. (Only should be used for integration testing)
+        @ Restarts board and puts it in bootloader mode. (Only should be used for integration tests)
         sync command TRIGGER_BOOTLOADER(
         )
 

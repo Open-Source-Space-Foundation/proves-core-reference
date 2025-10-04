@@ -5,6 +5,8 @@ Integration tests for the RTC Manager component.
 """
 
 import json
+import os
+import subprocess
 import time
 from datetime import datetime, timezone
 
@@ -14,6 +16,27 @@ from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+
+@pytest.fixture(scope="session", autouse=True)
+def start_gds(fprime_test_api_session: IntegrationTestAPI):
+    process = subprocess.Popen(["make", "gds-integration"], cwd=os.getcwd())
+
+    gds_working = False
+    timeout_time = time.time() + 30
+    while time.time() < timeout_time:
+        try:
+            fprime_test_api_session.send_and_assert_command(
+                command="CdhCore.cmdDisp.CMD_NO_OP"
+            )
+            gds_working = True
+            break
+        except Exception:
+            time.sleep(1)
+    assert gds_working
+
+    yield
+    process.kill()
 
 
 @pytest.fixture(autouse=True)
