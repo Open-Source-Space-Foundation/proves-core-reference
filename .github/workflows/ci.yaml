@@ -31,14 +31,16 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
   integration:
     runs-on: [self-hosted, integration]
-    needs: build
+    # needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v5
         with:
           name: artifacts
+          run-id: 18236298785
       - name: Decompress
         run: |
+          ls
           unzip ./artifacts.zip
       - name: Trigger Bootloader
         run: |
