@@ -33,6 +33,7 @@ module ReferenceDeployment {
     instance lis2mdlManager
     instance lsm6dsoManager
     instance bootloaderTrigger
+    instance comDelay
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
@@ -77,9 +78,8 @@ module ReferenceDeployment {
       # ComStub <-> ComDriver (Downlink)
       ComCcsds.framer.dataOut -> lora.dataIn
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
-      lora.comStatusOut -> ComCcsds.framer.comStatusIn
-
-
+      lora.comStatusOut -> comDelay.comStatusIn
+      comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
     }
 
     connections RateGroups {
@@ -97,6 +97,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
     }
 
     connections Watchdog {

@@ -69,4 +69,6 @@ module ReferenceDeployment {
   instance lora: Zephyr.LoRa base id 0x10021000
 
   instance prmDb: Components.NullPrmDb base id 0x10022000
+
+  instance comDelay: Components.ComDelay base id 0x10023000
 }
