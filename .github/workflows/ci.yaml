@@ -25,21 +25,6 @@ jobs:
         submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
-    - name: Cache python environment
-      id: cache-python
-      uses: actions/cache@v4
-      with:
-        path: fprime-venv
-        key: python-packages-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
-        restore-keys: |
-          python-packages-${{ runner.os }}-
-          python-packages-
-
-    - name: Setup python environment
-      if: steps.cache-python.outputs.cache-hit != 'true'
-      run: |
-        make fprime-venv
-
     - name: Cache submodules
       id: cache-submodules
       uses: actions/cache@v4
@@ -57,6 +42,21 @@ jobs:
       if: steps.cache-submodules.outputs.cache-hit != 'true'
       run: |
         make submodules
+
+    - name: Cache python environment
+      id: cache-python
+      uses: actions/cache@v4
+      with:
+        path: fprime-venv
+        key: python-packages-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
+        restore-keys: |
+          python-packages-${{ runner.os }}-
+          python-packages-
+
+    - name: Setup python environment
+      if: steps.cache-python.outputs.cache-hit != 'true'
+      run: |
+        make fprime-venv
 
     - name: Cache Zephyr workspace and SDK
       id: cache-zephyr
