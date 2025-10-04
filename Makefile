@@ -55,6 +55,14 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@echo "Building..."
 	@$(UV) run fprime-util build
 
+.PHONY: build-test-integration-env
+build-test-integration-env:
+	docker build -t proves-core-reference-test-env -f Dockerfile.test-env .
+
+.PHONY: run-test-integration-env
+run-test-integration-env:
+	docker run --rm -it -v $(pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(pwd)/build-artifacts:/workspace/build-artifacts/ proves-core-reference-test-env make test-integration
+
 .PHONY: test-integration
 test-integration: uv
 	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
