@@ -1,0 +1,73 @@
+# Version control
+.git/
+.gitmodules
+.github/
+
+# IDEs and editors
+.idea/
+.vscode/
+.devcontainer/
+
+# Build artifacts and outputs
+build/
+build-*/
+build-fprime-*
+build-artifacts/
+cmake-build-*
+*.bin
+*.elf
+*.hex
+*.map
+*.uf2
+*.stat
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+.pytest_cache/
+fprime-venv/
+venv/
+
+# Zephyr workspace (can be large)
+lib/zephyr-workspace/
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Documentation (unless needed for runtime)
+docs/
+README.md
+LICENSE
+
+# Testing and CI/CD
+.pre-commit-config.yaml
+.python-version
+
+# Configuration files that shouldn't be in containers
+settings.ini
+*.local
+*.user
+
+# Coverage reports
+*.gcov
+htmlcov/
+.coverage
+
+# Binaries and executables (unless specifically needed)
+bin/
+
+# Large files that aren't needed for the container
+*.tar.gz
+*.zip
+*.deb
+*.rpm
