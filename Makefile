@@ -60,8 +60,8 @@ build-test-integration-env:
 	docker build -t proves-core-reference-test-env -f Dockerfile.test-env .
 
 .PHONY: run-test-integration-env
-run-test-integration-env:
-	docker run --rm -it -v $(shell pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(shell pwd)/build-artifacts:/workspace/build-artifacts/ proves-core-reference-test-env make test-integration
+run-test-integration-env: build-test-integration-env
+	docker run --rm -it -v $(shell pwd)/FprimeZephyrReference/test/int/:/workspace/FprimeZephyrReference/test/int/ -v $(shell pwd)/build-artifacts:/workspace/build-artifacts/ --device /dev/tty.usbmodem101:/dev/tty.usbmodem101 -p 5001:5000 proves-core-reference-test-env bash
 
 .PHONY: test-integration
 test-integration: uv
@@ -91,7 +91,7 @@ gds: ## Run FPrime GDS
 
 .PHONY: gds-integration
 gds-integration:
-	@$(GDS_COMMAND) --gui=none
+	@$(GDS_COMMAND)
 
 ##@ Build Tools
 BIN_DIR ?= $(shell pwd)/bin
