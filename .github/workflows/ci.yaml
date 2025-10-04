@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+
 
 jobs:
   lint:
@@ -29,7 +29,7 @@ jobs:
             build-artifacts/zephyr.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
   integration:
-    runs-on: self-hosted
+    runs-on: [self-hosted, integration]
     needs: build
     steps:
       - uses: actions/checkout@v4
