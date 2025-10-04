@@ -39,10 +39,6 @@ jobs:
           # name: artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 18236298785
-      - name: Decompress
-        run: |
-          ls
-          unzip ./artifacts.zip
       - name: Trigger Bootloader
         run: |
           make bootloader
