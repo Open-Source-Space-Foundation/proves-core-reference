@@ -68,4 +68,6 @@ module ReferenceDeployment {
   instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 
   instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
+
+  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10020000
 }
