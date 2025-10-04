@@ -37,11 +37,11 @@ jobs:
         # with:
         #   github-token: ${{ secrets.GITHUB_TOKEN }}
         #   run-id: 18236298785
-      # - name: Set up stuff
-      #   run: |
-      #     mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
-      #       make submodules
-      #       make fprime-venv
+      - name: Set up dependencies
+        run: |
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
+            make submodules
+            make fprime-venv
       - name: Trigger Bootloader
         run: |
           make bootloader
