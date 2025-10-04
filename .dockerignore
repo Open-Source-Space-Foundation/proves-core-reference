@@ -35,7 +35,9 @@ venv/
 
 # Zephyr workspace (can be large)
 lib/zephyr-workspace/
-!lib/zephyr-workspace/zephyr/scripts/requirements.txt
+!lib/zephyr-workspace/zephyr/scripts/requirements-base.txt
+!lib/zephyr-workspace/zephyr/scripts/requirements-build-test.txt
+!lib/zephyr-workspace/zephyr/scripts/requirements-run-test.txt
 
 # Logs and temporary files
 logs/

@@ -5,7 +5,9 @@ WORKDIR /workspace
 COPY requirements.txt requirements.txt
 COPY Makefile Makefile
 COPY lib/fprime lib/fprime
-COPY lib/zephyr-workspace/zephyr/scripts/requirements.txt lib/zephyr-workspace/zephyr/scripts/requirements.txt
+COPY lib/zephyr-workspace/zephyr/scripts/requirements-base.txt lib/zephyr-workspace/zephyr/scripts/requirements-base.txt
+COPY lib/zephyr-workspace/zephyr/scripts/requirements-build-test.txt lib/zephyr-workspace/zephyr/scripts/requirements-build-test.txt
+COPY lib/zephyr-workspace/zephyr/scripts/requirements-run-test.txt lib/zephyr-workspace/zephyr/scripts/requirements-run-test.txt
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
