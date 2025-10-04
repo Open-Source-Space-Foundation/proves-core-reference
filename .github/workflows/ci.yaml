@@ -37,6 +37,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           # name: artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 18236298785
       - name: Decompress
         run: |
