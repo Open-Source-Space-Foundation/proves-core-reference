@@ -34,9 +34,6 @@ jobs:
     # needs: build
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
       - uses: actions/download-artifact@v5
         with:
           # a
@@ -45,6 +42,7 @@ jobs:
           run-id: 18236298785
       - name: Trigger Bootloader
         run: |
+          make submodules
           make fprime-venv
           make bootloader
           sleep 5
