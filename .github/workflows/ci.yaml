@@ -36,12 +36,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v5
         with:
-          # ab
-          # name: artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 18236298785
       - name: Trigger Bootloader
         run: |
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
           make submodules
           make fprime-venv
           make bootloader
