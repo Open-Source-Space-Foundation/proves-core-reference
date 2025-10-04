@@ -21,9 +21,10 @@ fprime-venv: ## Create a virtual environment
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment
-	@test -d lib/zephyr-workspace/modules/hal/rpi_pico { \
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
 		echo "Setting up Zephyr environment..."; \
-		$(UVX) west init -l . && \
+		rm -rf ../.west/ && \
+		$(UVX) west init --local . && \
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \

@@ -25,8 +25,22 @@ jobs:
         submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
-    # Cache project dependencies (fprime, fprime-zephyr, zephyr)
-    - name: Cache Project Dependencies
+    - name: Cache python environment
+      id: cache-python
+      uses: actions/cache@v4
+      with:
+        path: fprime-venv
+        key: python-packages-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
+        restore-keys: |
+          python-packages-${{ runner.os }}-
+          python-packages-
+
+    - name: Setup python environment
+      if: steps.cache-python.outputs.cache-hit != 'true'
+      run: |
+        make fprime-venv
+
+    - name: Cache submodules
       id: cache-submodules
       uses: actions/cache@v4
       with:
@@ -39,7 +53,11 @@ jobs:
           project-deps-${{ hashFiles('.gitmodules') }}-
           project-deps-
 
-    # Cache Zephyr west modules and SDK (the slow parts)
+    - name: Setup submodules
+      if: steps.cache-submodules.outputs.cache-hit != 'true'
+      run: |
+        make submodules
+
     - name: Cache Zephyr workspace and SDK
       id: cache-zephyr
       uses: actions/cache@v4
@@ -53,50 +71,7 @@ jobs:
           zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
           zephyr-minimal-
 
-    # Initialize dependencies with robust cache handling
-    - name: Setup Dependencies (fprime, fprime-zephyr, zephyr)
-      run: |
-        echo "Setting up project dependencies..."
-
-        # Check if we have cached content
-        if [ "${{ steps.cache-submodules.outputs.cache-hit }}" == "true" ]; then
-          echo "✓ Dependencies restored from cache"
-
-          # Verify cached content is valid by checking for key files
-          valid_cache=true
-
-          if [ ! -f "lib/fprime/CMakeLists.txt" ]; then
-            echo "⚠️  fprime cache invalid, will re-download"
-            valid_cache=false
-          fi
-
-          if [ ! -f "lib/fprime-zephyr/CMakeLists.txt" ]; then
-            echo "⚠️  fprime-zephyr cache invalid, will re-download"
-            valid_cache=false
-          fi
-
-          if [ ! -f "lib/zephyr-workspace/zephyr/CMakeLists.txt" ]; then
-            echo "⚠️  zephyr cache invalid, will re-download"
-            valid_cache=false
-          fi
-
-          if [ "$valid_cache" = "true" ]; then
-            echo "✓ All cached dependencies are valid, skipping download"
-            exit 0
-          fi
-        fi
-
-        echo "Downloading dependencies manually..."
-
-        # Remove any existing directories
-        rm -rf lib/fprime lib/fprime-zephyr lib/zephyr-workspace/zephyr
-
-        # Clone submodules
-        make submodules
-
-        echo "✓ All dependencies downloaded successfully"
-
-    - name: Setup minimal Zephyr environment
+    - name: Setup Zephyr
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
       run: |
         make zephyr-setup
@@ -104,24 +79,7 @@ jobs:
         PIP_DISABLE_PIP_VERSION_CHECK: 1
         PIP_NO_COMPILE: 1
 
-    - name: Verify Zephyr setup (from cache or fresh)
-      run: |
-        echo "=== Verification ==="
-        echo "Git submodules status:"
-        git submodule status
-        echo ""
-        echo "Zephyr workspace modules installed:"
-        find lib/zephyr-workspace/modules lib/zephyr-workspace/bootloader -name '.git' -type d 2>/dev/null | wc -l || echo "0"
-        echo ""
-        echo "SDK toolchain:"
-        if [ -f ~/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc ]; then
-          echo "✓ ARM toolchain installed"
-          ls -lh ~/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc | awk '{print "Size:", $5}'
-        else
-          echo "✗ ARM toolchain not found"
-        fi
-
-    - name: Build for PROVES Flight Control Board v5c
+    - name: Build
       run: |
         # Skip both zephyr-setup and submodules since we cached them separately
         make build -o zephyr-setup -o submodules
