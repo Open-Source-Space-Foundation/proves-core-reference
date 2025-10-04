@@ -49,4 +49,4 @@ jobs:
       - name: Copy Firmware
         run: |
           picotool load ./zephyr.uf2
-          sleep 5
+          picotool reboot
