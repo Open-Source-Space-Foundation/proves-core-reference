@@ -39,6 +39,9 @@ jobs:
           # name: artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 18236298785
+      - name: Initialize make
+        run: |
+          make
       - name: Trigger Bootloader
         run: |
           make bootloader
