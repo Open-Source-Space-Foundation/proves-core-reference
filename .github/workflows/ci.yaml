@@ -44,7 +44,7 @@ jobs:
 
     - name: Submodule Cache Key
       run: |
-        echo "submodule_cache_key=$(git submodule)" >> $GITHUB_OUTPUT
+        echo "submodule_cache_key=$(git submodule | sha256)" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: Cache submodules
