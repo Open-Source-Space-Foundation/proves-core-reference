@@ -35,7 +35,6 @@ jobs:
         key: bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
         restore-keys: |
           bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
-          bin-${{ runner.os }}
 
     - name: Download bin tools
       if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -58,7 +57,6 @@ jobs:
         key: submodules-${{ steps.get-date.outputs.submodule_cache_key }}
         restore-keys: |
           submodules-${{ steps.get-date.outputs.submodule_cache_key }}
-          submodules
 
     - name: Setup submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
@@ -72,24 +70,22 @@ jobs:
           key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
           restore-keys: |
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            uv-${{ runner.os }}
 
     - name: Setup python venv
       run: |
         make fprime-venv
 
-    - name: Cache Zephyr workspace and SDK
-      id: cache-zephyr
-      uses: actions/cache@v4
-      with:
-        path: |
-          lib/zephyr-workspace/modules
-          lib/zephyr-workspace/bootloader
-          ~/zephyr-sdk-0.17.2
-        key: zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
-        restore-keys: |
-          zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
-          zephyr-${{ runner.os }}
+    # - name: Cache Zephyr workspace and SDK
+    #   id: cache-zephyr
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       lib/zephyr-workspace/modules
+    #       lib/zephyr-workspace/bootloader
+    #       ~/zephyr-sdk-0.17.2
+    #     key: zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
+    #     restore-keys: |
+    #       zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
 
     - name: Setup Zephyr
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
