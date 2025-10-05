@@ -108,4 +108,4 @@ jobs:
         retention-days: 30
 
     - name: Minimize uv cache
-      run: uv cache prune --ci
+      run: make minimize-uv-cache

@@ -46,10 +46,6 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 	@echo "Generating FPrime-Zephyr Proves Core Reference..."
 	@$(UV) run fprime-util generate --force
 
-.PHONY: generate-ci
-generate-ci:
-	@$(UV) run fprime-util generate --force
-
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
@@ -58,10 +54,6 @@ generate-if-needed:
 .PHONY: build
 build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@echo "Building..."
-	@$(UV) run fprime-util build
-
-.PHONY: build-ci
-build-ci:
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
@@ -109,3 +101,5 @@ UVX ?= $(UV_DIR)/uvx
 uv: $(UV) ## Download uv
 $(UV): $(BIN_DIR)
 	@test -s $(UV) || { mkdir -p $(UV_DIR); curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | UV_INSTALL_DIR=$(UV_DIR) sh > /dev/null; }
+
+include lib/makelib/ci.mk
