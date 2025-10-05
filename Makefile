@@ -21,13 +21,14 @@ fprime-venv: ## Create a virtual environment
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment
-	@test -s lib/zephyr-workspace/tools/edtt/.gitignore || { \
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
 		echo "Setting up Zephyr environment..."; \
-		cd lib/zephyr-workspace && \
-			$(UVX) west update && \
-			$(UVX) west zephyr-export && \
-			$(UV) run west packages pip --install && \
-			$(UV) run west sdk install; \
+		rm -rf ../.west/ && \
+		$(UVX) west init --local . && \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
 	}
 
 ##@ Development
@@ -78,6 +79,12 @@ clean: ## Remove all gitignored files
 .PHONY: clean-zephyr
 clean-zephyr: ## Remove all Zephyr build files
 	rm -rf lib/zephyr-workspace/bootloader lib/zephyr-workspace/modules lib/zephyr-workspace/tools
+
+.PHONY: clean-zephyr-sdk
+clean-zephyr-sdk: ## Remove Zephyr SDK (reinstall with 'make zephyr-setup')
+	@echo "Removing Zephyr SDK..."
+	rm -rf ~/zephyr-sdk-*
+	@echo "Run 'make zephyr-setup' to reinstall with minimal ARM-only toolchain"
 
 ##@ Operations
 

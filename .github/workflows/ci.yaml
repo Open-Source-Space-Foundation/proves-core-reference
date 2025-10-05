@@ -17,26 +17,85 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false # We'll handle submodules with smart caching
+          fetch-depth: 0
+
+      - name: Cache submodules
+        id: cache-submodules
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/fprime
+            lib/fprime-zephyr
+            lib/zephyr-workspace/zephyr
+          key: project-deps-${{ hashFiles('.gitmodules') }}-v3
+          restore-keys: |
+            project-deps-${{ hashFiles('.gitmodules') }}-
+            project-deps-
+
+      - name: Setup submodules
+        if: steps.cache-submodules.outputs.cache-hit != 'true'
+        run: |
+          make submodules
+
+      - name: Cache python environment
+        id: cache-python
+        uses: actions/cache@v4
+        with:
+          path: fprime-venv
+          key: python-packages-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
+          restore-keys: |
+            python-packages-${{ runner.os }}-
+            python-packages-
+
+      - name: Setup python environment
+        if: steps.cache-python.outputs.cache-hit != 'true'
+        run: |
+          make fprime-venv
+
+      - name: Cache Zephyr workspace and SDK
+        id: cache-zephyr
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/zephyr-workspace/modules
+            lib/zephyr-workspace/bootloader
+            ~/zephyr-sdk-0.17.2
+          key: zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
+          restore-keys: |
+            zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
+            zephyr-minimal-
+
+      - name: Setup Zephyr
+        if: steps.cache-zephyr.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-setup
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+          PIP_NO_COMPILE: 1
+
       - name: Build
         run: |
-          make build
-      - name: Archive
+          # Skip both zephyr-setup and submodules since we cached them separately
+          make build -o zephyr-setup -o submodules
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
           path: |
             build-artifacts/zephyr.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+          retention-days: 30
   integration:
     runs-on: [self-hosted, integration]
     needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v5
-        # with:
-        #   github-token: ${{ secrets.GITHUB_TOKEN }}
-        #   run-id: 18236298785
       - name: Set up dependencies
         run: |
           mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
