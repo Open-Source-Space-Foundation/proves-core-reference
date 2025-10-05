@@ -91,7 +91,7 @@ gds: ## Run FPrime GDS
 
 .PHONY: gds-integration
 gds-integration:
-	@$(GDS_COMMAND)
+	@$(GDS_COMMAND) --gui=none
 
 ##@ Build Tools
 BIN_DIR ?= $(shell pwd)/bin
