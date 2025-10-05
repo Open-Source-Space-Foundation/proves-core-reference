@@ -1,0 +1,22 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/cpp:debian-12",
+    "privileged": true,
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "jet-propulsion-laboratory.fpp",
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.makefile-tools",
+                "plorefice.devicetree",
+                "nordic-semiconductor.nrf-kconfig",
+                "ms-python.python"
+            ]
+        }
+    },
+    "postCreateCommand": "make"
+}

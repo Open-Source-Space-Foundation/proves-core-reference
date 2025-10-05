@@ -97,7 +97,7 @@ jobs:
 
     - name: Build
       run: |
-        make build -W submodules -W zephyr-setup -W fprime-venv
+        make build-ci
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
