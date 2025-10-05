@@ -25,34 +25,34 @@ jobs:
         submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
-    - name: Cache bin
-      id: cache-bin
-      uses: actions/cache@v4
-      with:
-        path: |
-          bin
-        key: bin-${{ hashFiles('Makefile') }}-v3
-        restore-keys: |
-          bin-${{ hashFiles('Makefile') }}-
-          bin-
+    # - name: Cache bin
+    #   id: cache-bin
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       bin
+    #     key: bin-${{ hashFiles('Makefile') }}-v3
+    #     restore-keys: |
+    #       bin-${{ hashFiles('Makefile') }}-
+    #       bin-
 
     - name: Download bin tools
       if: steps.cache-bin.outputs.cache-hit != 'true'
       run: |
         make download-bin
 
-    - name: Cache submodules
-      id: cache-submodules
-      uses: actions/cache@v4
-      with:
-        path: |
-          lib/fprime
-          lib/fprime-zephyr
-          lib/zephyr-workspace/zephyr
-        key: submodules-${{ hashFiles('.gitmodules') }}-v3
-        restore-keys: |
-          submodules-${{ hashFiles('.gitmodules') }}-
-          submodules-
+    # - name: Cache submodules
+    #   id: cache-submodules
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       lib/fprime
+    #       lib/fprime-zephyr
+    #       lib/zephyr-workspace/zephyr
+    #     key: submodules-${{ hashFiles('.gitmodules') }}-v3
+    #     restore-keys: |
+    #       submodules-${{ hashFiles('.gitmodules') }}-
+    #       submodules-
 
     - name: Setup submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
@@ -74,18 +74,18 @@ jobs:
       run: |
         make fprime-venv
 
-    - name: Cache Zephyr workspace and SDK
-      id: cache-zephyr
-      uses: actions/cache@v4
-      with:
-        path: |
-          lib/zephyr-workspace/modules
-          lib/zephyr-workspace/bootloader
-          ~/zephyr-sdk-0.17.2
-        key: zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
-        restore-keys: |
-          zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-
-          zephyr-
+    # - name: Cache Zephyr workspace and SDK
+    #   id: cache-zephyr
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       lib/zephyr-workspace/modules
+    #       lib/zephyr-workspace/bootloader
+    #       ~/zephyr-sdk-0.17.2
+    #     key: zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
+    #     restore-keys: |
+    #       zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-
+    #       zephyr-
 
     - name: Setup Zephyr
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
