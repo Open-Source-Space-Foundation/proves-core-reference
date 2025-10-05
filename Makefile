@@ -17,7 +17,7 @@ fprime-venv: ## Create a virtual environment
 		@$(MAKE) uv
 		@echo "Creating virtual environment..."
 		@$(UV) venv fprime-venv
-		@$(UV) pip install --requirement requirements.txt
+		@$(UV) pip install --requirement pyproject.toml
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment

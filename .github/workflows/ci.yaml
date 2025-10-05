@@ -59,15 +59,15 @@ jobs:
       run: |
         make submodules
 
-    # - name: Cache python venv
-    #   id: cache-python
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: fprime-venv
-    #     key: python-venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
-    #     restore-keys: |
-    #       python-venv-${{ runner.os }}-
-    #       python-venv-
+    - name: Cache python venv
+      id: cache-python
+      uses: actions/cache@v4
+      with:
+        path: fprime-venv
+        key: python-venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}-v3
+        restore-keys: |
+          python-venv-${{ runner.os }}-
+          python-venv-
 
     - name: Setup python venv
       if: steps.cache-python.outputs.cache-hit != 'true'
