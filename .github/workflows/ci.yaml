@@ -97,8 +97,7 @@ jobs:
 
     - name: Build
       run: |
-        # Skip both zephyr-setup and submodules since we cached them separately
-        make -o zephyr-setup -o submodules build
+        make build -W submodules -W zephyr-setup -W fprime-venv
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
