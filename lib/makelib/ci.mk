@@ -1,6 +1,6 @@
 .PHONY: minimize-uv-cache
 minimize-uv-cache:
-	@(UV) cache prune --ci
+	@$(UV) cache prune --ci
 
 .PHONY: generate-ci
 generate-ci:
