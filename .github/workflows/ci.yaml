@@ -32,28 +32,33 @@ jobs:
       with:
         path: |
           bin
-        key: bin-${{ hashFiles('Makefile') }}-v3
+        key: bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
         restore-keys: |
-          bin-${{ hashFiles('Makefile') }}-
-          bin-
+          bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
+          bin-${{ runner.os }}
 
     - name: Download bin tools
       if: steps.cache-bin.outputs.cache-hit != 'true'
       run: |
         make download-bin
 
-    # - name: Cache submodules
-    #   id: cache-submodules
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: |
-    #       lib/fprime
-    #       lib/fprime-zephyr
-    #       lib/zephyr-workspace/zephyr
-    #     key: submodules-${{ hashFiles('.gitmodules') }}-v3
-    #     restore-keys: |
-    #       submodules-${{ hashFiles('.gitmodules') }}-
-    #       submodules-
+    - name: Submodule Cache Key
+      run: |
+        echo "submodule_cache_key=$(git submodule)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Cache submodules
+      id: cache-submodules
+      uses: actions/cache@v4
+      with:
+        path: |
+          lib/fprime
+          lib/fprime-zephyr
+          lib/zephyr-workspace/zephyr
+        key: submodules-${{ runner.os }}-${{ steps.get-date.outputs.submodule_cache_key }}
+        restore-keys: |
+          submodules-${{ runner.os }}-${{ steps.get-date.outputs.submodule_cache_key }}
+          submodules-${{ runner.os }}
 
     - name: Setup submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
