@@ -25,6 +25,22 @@ jobs:
         submodules: false  # We'll handle submodules with smart caching
         fetch-depth: 0
 
+    - name: Cache bin
+      id: cache-bin
+      uses: actions/cache@v4
+      with:
+        path: |
+          bin
+        key: bin-${{ hashFiles('Makefile') }}-v3
+        restore-keys: |
+          bin-${{ hashFiles('.Makefile') }}-
+          bin-
+
+    - name: Download bin tools
+      if: steps.cache-submodules.outputs.cache-hit != 'true'
+      run: |
+        make download-bin
+
     - name: Cache submodules
       id: cache-submodules
       uses: actions/cache@v4
@@ -33,27 +49,27 @@ jobs:
           lib/fprime
           lib/fprime-zephyr
           lib/zephyr-workspace/zephyr
-        key: project-deps-${{ hashFiles('.gitmodules') }}-v3
+        key: submodules-${{ hashFiles('.gitmodules') }}-v3
         restore-keys: |
-          project-deps-${{ hashFiles('.gitmodules') }}-
-          project-deps-
+          submodules-${{ hashFiles('.gitmodules') }}-
+          submodules-
 
     - name: Setup submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
       run: |
         make submodules
 
-    - name: Cache python environment
+    - name: Cache python venv
       id: cache-python
       uses: actions/cache@v4
       with:
         path: fprime-venv
-        key: python-packages-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
+        key: python-venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
         restore-keys: |
-          python-packages-${{ runner.os }}-
-          python-packages-
+          python-venv-${{ runner.os }}-
+          python-venv-
 
-    - name: Setup python environment
+    - name: Setup python venv
       if: steps.cache-python.outputs.cache-hit != 'true'
       run: |
         make fprime-venv
@@ -66,10 +82,10 @@ jobs:
           lib/zephyr-workspace/modules
           lib/zephyr-workspace/bootloader
           ~/zephyr-sdk-0.17.2
-        key: zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
+        key: zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
         restore-keys: |
-          zephyr-minimal-${{ hashFiles('west.yml') }}-${{ runner.os }}-
-          zephyr-minimal-
+          zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-
+          zephyr-
 
     - name: Setup Zephyr
       if: steps.cache-zephyr.outputs.cache-hit != 'true'

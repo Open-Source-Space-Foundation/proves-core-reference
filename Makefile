@@ -83,6 +83,10 @@ gds: ## Run FPrime GDS
 	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 
 ##@ Build Tools
+
+.PHONY: download-bin
+download-bin: uv
+
 BIN_DIR ?= $(shell pwd)/bin
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
