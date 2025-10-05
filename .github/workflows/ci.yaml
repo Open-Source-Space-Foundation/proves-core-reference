@@ -97,7 +97,7 @@ jobs:
 
     - name: Build
       run: |
-        make build-ci
+        make generate-ci build-ci
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

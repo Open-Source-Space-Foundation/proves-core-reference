@@ -46,6 +46,10 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 	@echo "Generating FPrime-Zephyr Proves Core Reference..."
 	@$(UV) run fprime-util generate --force
 
+.PHONY: generate-ci
+generate-ci:
+	@$(UV) run fprime-util generate --force
+
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
@@ -57,7 +61,7 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@$(UV) run fprime-util build
 
 .PHONY: build-ci
-build-ci: generate-if-needed
+build-ci:
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
