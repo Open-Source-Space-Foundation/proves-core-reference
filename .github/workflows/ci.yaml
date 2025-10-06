@@ -42,10 +42,8 @@ jobs:
         make download-bin
 
     - name: Submodule Cache Key
+      id: submodule-cache-key
       run: |
-        git submodule
-        git submodule | sha256sum | cut -f1 -d' '
-        echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')"
         echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
       shell: bash
 
@@ -57,9 +55,9 @@ jobs:
           lib/fprime
           lib/fprime-zephyr
           lib/zephyr-workspace/zephyr
-        key: submodules-${{ steps.get-date.outputs.submodule_cache_key }}
+        key: submodules-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
         restore-keys: |
-          submodules-${{ steps.get-date.outputs.submodule_cache_key }}
+          submodules-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
 
     - name: Setup submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
