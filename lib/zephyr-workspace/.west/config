@@ -1,5 +1,0 @@
-[zephyr]
-base = zephyr
-
-[manifest]
-path = zephyr
