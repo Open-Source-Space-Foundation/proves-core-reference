@@ -90,7 +90,7 @@ jobs:
     - name: Setup Zephyr
       if: steps.cache-zephyr.outputs.cache-hit != 'true'
       run: |
-        make zephyr-setup
+        make zephyr-setup-ci
       env:
         PIP_DISABLE_PIP_VERSION_CHECK: 1
         PIP_NO_COMPILE: 1

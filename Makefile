@@ -1,6 +1,9 @@
 .PHONY: all
 all: submodules fprime-venv zephyr-setup generate-if-needed build
 
+.PHONY: all-ci
+all-ci: build-ci ## Complete CI build with optimized ARM-only toolchain
+
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -34,6 +37,18 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UV) run west sdk install; \
 	}
 
+.PHONY: zephyr-setup-ci
+zephyr-setup-ci: fprime-venv ## Set up Zephyr environment for CI (ARM only)
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
+		echo "Setting up Zephyr environment for CI (ARM only)..."; \
+		rm -rf ../.west/ && \
+		$(UVX) west init --local . && \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
+	}
+
 ##@ Development
 
 .PHONY: pre-commit-install
@@ -50,7 +65,7 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 	@$(UV) run fprime-util generate --force
 
 .PHONY: generate-ci
-generate-ci:
+generate-ci: submodules zephyr-setup-ci fprime-venv ## Generate for CI with minimal toolchain
 	@$(UV) run fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -64,7 +79,7 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 	@$(UV) run fprime-util build
 
 .PHONY: build-ci
-build-ci:
+build-ci: generate-ci ## Build for CI
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
