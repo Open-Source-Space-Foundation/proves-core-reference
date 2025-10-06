@@ -31,7 +31,7 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \
-		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
+		$(UV) run west sdk install; \
 	}
 
 ##@ Development
