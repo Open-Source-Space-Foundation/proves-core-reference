@@ -80,6 +80,8 @@ module ReferenceDeployment {
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
       lora.comStatusOut -> comDelay.comStatusIn
       comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+
+      comDelay.timeout -> ComCcsds.aggregator.timeout
     }
 
     connections RateGroups {
