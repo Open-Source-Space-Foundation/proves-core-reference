@@ -44,9 +44,9 @@ jobs:
     - name: Submodule Cache Key
       run: |
         git submodule
-        git submodule | sha256sum
-        echo "submodule_cache_key=$(git submodule | sha256sum)"
-        echo "submodule_cache_key=$(git submodule | sha256sum)" >> $GITHUB_OUTPUT
+        git submodule | sha256sum | cut -f1 -d' '
+        echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')"
+        echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: Cache submodules
