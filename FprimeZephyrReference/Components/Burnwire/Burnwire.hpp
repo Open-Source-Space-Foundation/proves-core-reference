@@ -69,7 +69,6 @@ class Burnwire final : public BurnwireComponentBase {
     Fw::On m_state = Fw::On::OFF;      // keeps track if burnwire is on or off
     std::atomic<U32> m_safetyCounter;  // makes this an atomic variable (so its set only in one command),
                                        // you read and write half the value bc a corrupted read could be dangerouts
-    U32 m_safetyMaxCount = 3;  // max count for safety timer - 3 seconds for now, change to be very large before flight
 };
 
 }  // namespace Components

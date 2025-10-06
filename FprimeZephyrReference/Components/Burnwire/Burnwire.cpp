@@ -52,6 +52,9 @@ void Burnwire::stopBurn() {
 }
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
+    Fw::ParamValid valid;
+    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
+
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;
         if (this->m_safetyCounter == 1) {
@@ -60,7 +63,7 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::ON);
         }
 
-        if (this->m_safetyCounter >= this->m_safetyMaxCount) {
+        if (this->m_safetyCounter >= valid) {
             // 30 seconds reached → turn OFF
             this->gpioSet_out(0, Fw::Logic::LOW);
             this->gpioSet_out(1, Fw::Logic::LOW);

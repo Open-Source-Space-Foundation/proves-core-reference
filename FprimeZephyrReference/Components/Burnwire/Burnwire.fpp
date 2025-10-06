@@ -52,7 +52,7 @@ module Components {
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
-        param SAFETY_TIMER: U32 default 10
+        param SAFETY_TIMER: U32 default 3
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
