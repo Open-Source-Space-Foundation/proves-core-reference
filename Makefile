@@ -46,7 +46,8 @@ zephyr-setup-ci: fprime-venv ## Set up Zephyr environment for CI (ARM only)
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \
-		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi && \
+		echo "Zephyr SDK setup complete"; \
 	}
 
 ##@ Development
@@ -66,7 +67,8 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 
 .PHONY: generate-ci
 generate-ci: submodules zephyr-setup-ci fprime-venv ## Generate for CI with minimal toolchain
-	@$(UV) run fprime-util generate --force
+	@echo "Sourcing Zephyr environment and generating..."
+	@source lib/zephyr-workspace/zephyr/zephyr-env.sh && $(UV) run fprime-util generate --force
 
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
@@ -80,7 +82,8 @@ build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Ze
 
 .PHONY: build-ci
 build-ci: generate-ci ## Build for CI
-	@$(UV) run fprime-util build
+	@echo "Building with Zephyr environment..."
+	@source lib/zephyr-workspace/zephyr/zephyr-env.sh && $(UV) run fprime-util build
 
 .PHONY: test-integration
 test-integration:
