@@ -122,8 +122,8 @@ sudo usermod -a -G dialout $USER
 Add udev rules to allow picotool to access USB without root
 
 ```sh
-curl https://raw.githubusercontent.com/raspberrypi/picotool/refs/heads/master/udev/60-picotool.rules -o /etc/udev/rules.d/60-picotool.rules
-udevadm control --reload
+sudo curl https://raw.githubusercontent.com/raspberrypi/picotool/refs/heads/master/udev/60-picotool.rules -o /etc/udev/rules.d/60-picotool.rules
+sudo udevadm control --reload
 ```
 
 3. **Reboot the machine**: This ensures that all changes take effect, especially group membership changes.
