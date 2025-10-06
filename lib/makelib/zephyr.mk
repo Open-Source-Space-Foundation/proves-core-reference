@@ -28,11 +28,15 @@ clean-zephyr-workspace: ## Remove Zephyr bootloader, modules, and tools director
 CMAKE_PACKAGES ?= ~/.cmake/packages
 .PHONY: zephyr-export
 zephyr-export: fprime-venv ## Export Zephyr environment variables
-	@test -d $(CMAKE_PACKAGES)/Zephyr/ || { $(WESTX) zephyr-export; }
+	@test -d $(CMAKE_PACKAGES)/Zephyr/ || \
+	test -d $(CMAKE_PACKAGES)/ZephyrUnittest/ || \
+	{ \
+		$(WESTX) zephyr-export; \
+	}
 
 .PHONY: clean-zephyr-export
 clean-zephyr-export: ## Remove Zephyr exported files
-	rm -rf $(CMAKE_PACKAGES)/Zephyr
+	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
 SDK_VERSION ?= $(shell cat $(ZEPHYR_WORKSPACE)/zephyr/SDK_VERSION)
 ZEPHYR_SDK_PATH ?= ~/zephyr-sdk-$(SDK_VERSION)

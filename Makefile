@@ -9,7 +9,9 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
-	git submodule update --init --recursive
+	@if git submodule | grep -e "^-"; then \
+		git submodule update --init --recursive; \
+	fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: ## Create a virtual environment
