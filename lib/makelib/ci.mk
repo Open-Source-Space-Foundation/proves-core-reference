@@ -4,8 +4,8 @@ minimize-uv-cache:
 
 .PHONY: generate-ci
 generate-ci:
-	@$(UV) run fprime-util generate
+	@$(UV_RUN) fprime-util generate -f
 
 .PHONY: build-ci
 build-ci:
-	@$(UV) run fprime-util build
+	@$(UV_RUN) fprime-util build

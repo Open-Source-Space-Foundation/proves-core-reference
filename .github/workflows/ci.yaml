@@ -29,9 +29,9 @@ jobs:
       with:
         path: |
           bin
-        key: bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
+        key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
         restore-keys: |
-          bin-${{ runner.os }}-${{ hashFiles('Makefile') }}
+          bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
 
     - name: Download bin tools
       if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -69,30 +69,57 @@ jobs:
           restore-keys: |
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
-    - name: Setup python venv
+    - name: Create python venv
       run: |
         make fprime-venv
 
-    - name: Cache Zephyr workspace and SDK
-      id: cache-zephyr
+    - name: Cache Zephyr workspace
+      id: cache-zephyr-workspace
       uses: actions/cache@v4
       with:
         path: |
-          ../.west
-          ../lib
-          ~/zephyr-sdk-0.17.2
-        key: zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
+          lib/zephyr-workspace/bootloader/
+          lib/zephyr-workspace/modules/
+          lib/zephyr-workspace/tools/
+        key: zephyr-workspace-${{ runner.os }}-${{ hashFiles('west.yml') }}
         restore-keys: |
-          zephyr-${{ runner.os }}-${{ hashFiles('west.yml') }}
+          zephyr-workspace-${{ runner.os }}-${{ hashFiles('west.yml') }}
 
     - name: Setup Zephyr
-      if: steps.cache-zephyr.outputs.cache-hit != 'true'
+      if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
       run: |
-        make zephyr-setup
+        make zephyr-workspace
+
+    - name: Cache Zephyr SDK
+      id: cache-zephyr-sdk
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/zephyr-sdk-*
+        key: zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
+        restore-keys: |
+          zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
+
+    - name: Setup Zephyr SDK
+      if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+      run: |
+        make zephyr-sdk
+
+    - name: Setup Zephyr Export
+      run: |
+        make zephyr-export
+
+    - name: Install Zephyr Python Dependencies
+      run: |
+        make zephyr-python-deps
+
+    - name: Generate
+      run: |
+        make generate-ci
 
     - name: Build
       run: |
-        make generate-ci build-ci
+        make build-ci
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
