@@ -79,7 +79,7 @@ void setupTopology(const TopologyState& state) {
 
     // Uplink is configured for receive so a socket task is started
     // We dont need UART, as we are sending coms directly to lora
-    //comDriver.configure(state.uartDevice, state.baudRate);
+    // comDriver.configure(state.uartDevice, state.baudRate);
     lora.start(state.loraDevice);
 }
 

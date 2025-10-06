@@ -4,10 +4,12 @@ CircuitPython Feather RP2350 LoRa Radio forwarder
 This code will forward any received LoRa packets to the serial console (sys.stdout). It cycles through neo pixel colors
 to indicate packet reception.
 """
+
 import time
+
+import adafruit_rfm9x
 import board
 import digitalio
-import adafruit_rfm9x
 import usb_cdc
 
 # Radio constants
