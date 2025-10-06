@@ -28,12 +28,14 @@ This ensures that every change is automatically verified before it gets merged i
 GitHub Actions is a CI/CD platform that allows us to automate our software development workflows directly in our GitHub repository. It provides a way to define custom workflows using YAML files, which can include various actions such as building code, running tests, and deploying applications.
 
 **Key concepts:**
+
 - **Workflow**: A automated process defined in a YAML file (like `.github/workflows/ci.yaml`)
 - **Job**: A set of steps that run on the same machine (like `build`, `lint`, `integration`)
 - **Step**: An individual task within a job (like "checkout code" or "run tests")
 - **Runner**: The machine that executes the workflow (GitHub-hosted or self-hosted)
 
 **When workflows run:**
+
 - On every pull request (to test changes before merging)
 - When code is pushed to the main branch
 - On scheduled intervals (for nightly builds)
@@ -52,6 +54,7 @@ When you create a pull request, you'll see status checks at the bottom that show
 ![Example of GitHub status checks](https://docs.github.com/assets/cb-17910/mw-1440/images/help/pull_requests/pr-checks-success.webp)
 
 **Status meanings:**
+
 - **🟡 In Progress**: Tests are currently running
 - **✅ Passed**: All tests completed successfully
 - **❌ Failed**: One or more tests failed (click "Details" to see why)
@@ -61,11 +64,11 @@ When you create a pull request, you'll see status checks at the bottom that show
 For all failures, click "Details" next to the failed check to see logs and error messages. It's important to read these messages carefully to understand what went wrong.
 
 - **Lint fails**: Code formatting and linting issues
-    - Most likely running `make fmt` locally and committing the result will resolve
+  - Most likely running `make fmt` locally and committing the result will resolve
 - **Build fails**: Compilation errors
-    - Run `make build` to troubleshoot
+  - Run `make build` to troubleshoot
 - **Integration fails**: Hardware tests failed
-    - Run `make test-integration` locally with the hardware connected to troubleshoot
+  - Run `make test-integration` locally with the hardware connected to troubleshoot
 
 ### Development Workflow
 
@@ -100,6 +103,7 @@ sudo apt install make cmake wget curl build-essential
 ```
 
 Install picotool (needed for flashing firmware to PROVES hardware):
+
 ```bash
 curl https://github.com/raspberrypi/pico-sdk-tools/releases/download/v2.2.0-2/picotool-2.2.0-a4-x86_64-lin.tar.gz -o picotool-2.2.0-a4-x86_64-lin.tar.gz
 tar -xzf picotool-2.2.0-a4-x86_64-lin.tar.gz
@@ -109,12 +113,14 @@ mv picotool-2.2.0-a4-x86_64-lin/picotool/* /usr/local/bin
 2. **Set permissions for USB access**: To allow the runner to access PROVES hardware connected via USB, we need to set appropriate permissions.
 
 Add user to plugdev and dialout to give spacelab user usb perms
+
 ```sh
 sudo usermod -a -G plugdev $USER
 sudo usermod -a -G dialout $USER
 ```
 
 Add udev rules to allow picotool to access USB without root
+
 ```sh
 curl https://raw.githubusercontent.com/raspberrypi/picotool/refs/heads/master/udev/60-picotool.rules -o /etc/udev/rules.d/60-picotool.rules
 udevadm control --reload
@@ -127,6 +133,8 @@ reboot
 ```
 
 4. **Download and configure the self-hosted runner**: Follow [GitHub's official documentation](https://github.com/organizations/Open-Source-Space-Foundation/settings/actions/runners/new?arch=x64&os=linux) to download and configure the self-hosted runner for our repository.
+
+   - When configuring the runner in `config.sh`, ensure that when prompted, you enter `proves` as the runner group, and that you add `integration` as a label, otherwise the runner won't fit the criteria to be used for the workflow.
 
 5. **Connect the PROVES hardware**: Ensure that the PROVES hardware is connected to the machine via USB.
 
