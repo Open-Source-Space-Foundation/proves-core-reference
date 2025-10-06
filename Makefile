@@ -38,15 +38,15 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 	}
 
 .PHONY: zephyr-setup-ci
-zephyr-setup-ci: fprime-venv ## Set up Zephyr environment for CI (ARM only)
+zephyr-setup-ci: fprime-venv ## Set up Zephyr environment for CI (full SDK for LoRa support)
 	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
-		echo "Setting up Zephyr environment for CI (ARM only)..."; \
+		echo "Setting up Zephyr environment for CI (full SDK for LoRa support)..."; \
 		rm -rf ../.west/ && \
 		$(UVX) west init --local . && \
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \
-		$(UV) run west sdk install --toolchains arm-zephyr-eabi && \
+		$(UV) run west sdk install && \
 		echo "Zephyr SDK setup complete"; \
 	}
 
@@ -66,7 +66,7 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 	@$(UV) run fprime-util generate --force
 
 .PHONY: generate-ci
-generate-ci: submodules zephyr-setup-ci fprime-venv ## Generate for CI with minimal toolchain
+generate-ci: submodules zephyr-setup-ci fprime-venv ## Generate for CI with full SDK
 	@echo "Sourcing Zephyr environment and generating..."
 	@bash -c '. lib/zephyr-workspace/zephyr/zephyr-env.sh && $(UV) run fprime-util generate --force'
 
