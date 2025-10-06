@@ -331,7 +331,6 @@ extern "C" {
 #define FW_ASSERT_COUNT_MAX 4
 #endif
 
-
 // *** NOTE configuration checks are in Fw/Cfg/ConfigCheck.cpp in order to have
 // the type definitions in Fw/Types/BasicTypes available.
 #ifdef __cplusplus
