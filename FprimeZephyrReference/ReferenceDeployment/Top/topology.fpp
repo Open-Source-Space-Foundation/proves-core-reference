@@ -70,7 +70,7 @@ module ReferenceDeployment {
     connections Communications {
       lora.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
       lora.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
- 
+
       # ComDriver <-> ComStub (Uplink)
       lora.dataOut -> ComCcsds.frameAccumulator.dataIn
       ComCcsds.frameAccumulator.dataReturnOut -> lora.dataReturnIn
@@ -113,7 +113,7 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-  
+
 
   }
 
