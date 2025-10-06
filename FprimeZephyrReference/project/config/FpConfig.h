@@ -166,7 +166,7 @@ extern "C" {
 
 // Specifies the size of the buffer that contains a communications packet.
 #ifndef FW_COM_BUFFER_MAX_SIZE
-#define FW_COM_BUFFER_MAX_SIZE 235
+#define FW_COM_BUFFER_MAX_SIZE 233
 #endif
 
 // Specifies the size of the buffer attached to state machine signals.
