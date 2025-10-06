@@ -48,14 +48,13 @@ Add component states in the chart below
 |----|---|
 |m_state|Keeps track if the burnwire is on or off|
 
-## Unit Tests
+##  Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
-|TestSafety|Tests Burnwire turns off after X seconds|---|---|
-|TestOn|Tests right GPIO pins turn on |---|---|
-|TestOn|Tests right GPIO pins turn off, same as |---|---|
+|TestSafety|Tests Burnwire turns off after SAFETY_TIMER seconds|Integration|---|
+|TestSafety|Tests Burnwire emits correct events after start and stop|Integration|---|
 
 
 ## Parameter
 | Name | Description |
-|   SAFETY_TIMER   | By Default set in fpp (currently 10) is the max time the burnwire should ever run|
+|   SAFETY_TIMER   | By Default set in fpp (currently 3) is the max time the burnwire should ever run|
