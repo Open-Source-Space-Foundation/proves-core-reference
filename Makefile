@@ -70,7 +70,12 @@ test-integration: uv
 
 .PHONY: bootloader
 bootloader: uv
-	@$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@if [ -d "/Volumes/RP2350" ] || [ -d "/Volumes/RPI-RP2" ] || ls /media/*/RP2350 2>/dev/null || ls /media/*/RPI-RP2 2>/dev/null; then \
+		echo "RP2350 already in bootloader mode - skipping trigger"; \
+	else \
+		echo "RP2350 not in bootloader mode - triggering bootloader"; \
+		$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	fi
 
 .PHONY: clean
 clean: ## Remove all gitignored files
