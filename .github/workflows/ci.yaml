@@ -106,7 +106,7 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
   integration:
-    runs-on: [deathstar, integration]
+    runs-on: [integration]
     needs: build
     steps:
       - uses: actions/checkout@v4
