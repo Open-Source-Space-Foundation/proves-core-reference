@@ -24,13 +24,14 @@ patch-gps-package:
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment
-	@test -s lib/zephyr-workspace/tools/edtt/.gitignore || { \
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
 		echo "Setting up Zephyr environment..."; \
-		cd lib/zephyr-workspace && \
-			$(UVX) west update && \
-			$(UVX) west zephyr-export && \
-			$(UV) run west packages pip --install && \
-			$(UV) run west sdk install; \
+		rm -rf ../.west/ && \
+		$(UVX) west init --local . && \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
 	}
 
 ##@ Development
@@ -48,6 +49,10 @@ generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves C
 	@echo "Generating FPrime-Zephyr Proves Core Reference..."
 	@$(UV) run fprime-util generate --force
 
+.PHONY: generate-ci
+generate-ci:
+	@$(UV) run fprime-util generate --force
+
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
@@ -56,6 +61,10 @@ generate-if-needed:
 .PHONY: build
 build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@echo "Building..."
+	@$(UV) run fprime-util build
+
+.PHONY: build-ci
+build-ci:
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
@@ -70,6 +79,12 @@ clean: ## Remove all gitignored files
 clean-zephyr: ## Remove all Zephyr build files
 	rm -rf lib/zephyr-workspace/bootloader lib/zephyr-workspace/modules lib/zephyr-workspace/tools
 
+.PHONY: clean-zephyr-sdk
+clean-zephyr-sdk: ## Remove Zephyr SDK (reinstall with 'make zephyr-setup')
+	@echo "Removing Zephyr SDK..."
+	rm -rf ~/zephyr-sdk-*
+	@echo "Run 'make zephyr-setup' to reinstall with minimal ARM-only toolchain"
+
 ##@ Operations
 
 .PHONY: gds
@@ -79,6 +94,10 @@ gds: ## Run FPrime GDS
 	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 
 ##@ Build Tools
+
+.PHONY: download-bin
+download-bin: uv
+
 BIN_DIR ?= $(shell pwd)/bin
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
