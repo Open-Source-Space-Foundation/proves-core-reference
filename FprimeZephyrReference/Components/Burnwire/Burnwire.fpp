@@ -38,8 +38,8 @@ module Components {
         @ Port sending calls to the GPIO driver to stop and start the burnwire
         output port gpioSet: [2] Drv.GpioWrite
 
-        @ SAFETY_TIMER parameter is the maximum time that the burn component will run
-        param SAFETY_TIMER: U32 default 10
+        # @ SAFETY_TIMER parameter is the maximum time that the burn component will run
+        # param SAFETY_TIMER: U32 default 10
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
