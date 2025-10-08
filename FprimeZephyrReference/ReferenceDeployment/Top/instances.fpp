@@ -60,10 +60,6 @@ module ReferenceDeployment {
 
   instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
 
-  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
-
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
-
   instance watchdog: Components.Watchdog base id 0x10015000
 
   instance rtcManager: Drv.RtcManager base id 0x10016000
@@ -77,6 +73,10 @@ module ReferenceDeployment {
   instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10020000
 
   instance burnwire: Components.Burnwire base id 0x10021000
+
+   instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10022000
+
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
 
 
 }

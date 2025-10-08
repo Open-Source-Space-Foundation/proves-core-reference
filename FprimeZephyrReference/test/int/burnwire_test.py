@@ -35,6 +35,9 @@ def stop_burnwire(fprime_test_api: IntegrationTestAPI):
         "ReferenceDeployment.burnwire.BurnwireEndCount", timeout=10
     )
 
+    received_events = fprime_test_api.get_event_history()
+    print(f"Received events: {received_events}")
+
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
     """Test that burnwire starts and stops as expected"""
