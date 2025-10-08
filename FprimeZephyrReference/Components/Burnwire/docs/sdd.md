@@ -40,7 +40,7 @@ Name | Type | Description |
 |SetBurnwireState| Emits burnwire state when the burnwire turns on or off|
 |SafetyTimerStatus| Emits safety timer state when the Safety Time has stopped or started|
 |SafetyTimerState| Emits the amount of time the safety time will run for when it starts|
-
+| BurnwireEndCount| How long the burnwire actually burned for |
 
 ## Component States
 Add component states in the chart below

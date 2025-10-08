@@ -11,7 +11,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.fixture(autouse=True)
-def reset_burnwire(fprime_test_api: IntegrationTestAPI):
+def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
     fprime_test_api.clear_histories()
@@ -22,7 +22,7 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     stop_burnwire(fprime_test_api)
 
 
-def stop_burnwire(fprime_test_api: IntegrationTestAPI):
+def stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_and_assert_command(
         "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
@@ -39,7 +39,7 @@ def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     print(f"Received events: {received_events}")
 
 
-def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
+def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that burnwire starts and stops as expected"""
 
     # Start burnwire
