@@ -54,19 +54,21 @@ void Watchdog ::stop_handler(FwIndexType portNum) {
 // ----------------------------------------------------------------------
 
 void Watchdog ::START_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+
     // call start handler
     this->start_handler(0);
 
     // Provide command response
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void Watchdog ::STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+
     // call stop handler
     this->stop_handler(0);
 
     // Provide command response
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Components
