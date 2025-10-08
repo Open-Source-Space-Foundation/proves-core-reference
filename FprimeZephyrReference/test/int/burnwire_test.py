@@ -3,25 +3,26 @@
 
 # Integration tests for the Burnwire component.
 # """
+from time import sleep
 
-
-from fprime_gds.common.data_types.event_data import EventData
+import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # Constants
 COMPONENT = "ReferenceDeployment.burnwire"
 
 
-# @pytest.fixture(autouse=True)
-# def reset_burnwire(fprime_test_api: IntegrationTestAPI):
-#     """Fixture to stop burnwire and clear histories before/after each test"""
-#     # Stop burnwire and clear before test
-#     #stop_burnwire(fprime_test_api)
-#     #fprime_test_api.clear_histories()
-#     yield
-# Clear again after test to prevent residue
-# stop_burnwire(fprime_test_api)
-# fprime_test_api.clear_histories()
+@pytest.fixture(autouse=True)
+def reset_burnwire(fprime_test_api: IntegrationTestAPI):
+    """Fixture to stop burnwire and clear histories before/after each test"""
+    # Stop burnwire and clear before test
+    stop_burnwire(fprime_test_api)
+    fprime_test_api.clear_histories()
+    yield
+    # Clear again after test to prevent residue
+    stop_burnwire(fprime_test_api)
+    fprime_test_api.clear_histories()
+    sleep(1)
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
@@ -54,10 +55,7 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
     )
 
     # Confirm Burnwire turned ON
-    result: EventData = fprime_test_api.assert_event(
-        f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2, start=0
-    )
-    assert result is not None, "Burnwire ON event not received"
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
 
     # # Stop burnwire before safety timer triggers
     fprime_test_api.send_and_assert_command(
@@ -65,7 +63,4 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
     )
 
     # Confirm Burnwire turned OFF
-    result: EventData = fprime_test_api.assert_event(
-        f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2, start=0
-    )
-    assert result is not None, "Burnwire OFF event not received"
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2)
