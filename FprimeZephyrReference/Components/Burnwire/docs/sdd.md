@@ -25,13 +25,13 @@ Name | Type | Description |
 |burnStop|`Fw::Signal`|Receive stop signal to stop the burnwire|
 |burnStart|`Fw::Signal`|Receive start signal to start burnwire|
 |gpioSet|`Drv::GpioWrite`|Control GPIO state to driver|
-|schedIn|[`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group
+|schedIn|[`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group|
 
 
 ## Commands
 | Name | Description |
 | ---- | -----------  |
-|START_BURNWIRE|Starts the Burn. Takes a argument max_duration which sets the parameter safetyMaxCount to timeout the burnwire|
+|START_BURNWIRE|Starts the Burn|
 |STOP_BURNWIRE|Stops the Burn|
 
 ## Events
@@ -51,10 +51,12 @@ Add component states in the chart below
 ##  Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
+|------|-------------|--------|----------|
 |TestSafety|Tests Burnwire turns off after SAFETY_TIMER seconds|Integration|---|
 |TestSafety|Tests Burnwire emits correct events after start and stop|Integration|---|
 
 
 ## Parameter
 | Name | Description |
+| -----|-------------|
 |   SAFETY_TIMER   | By Default set in fpp (currently 3) is the max time the burnwire should ever run|

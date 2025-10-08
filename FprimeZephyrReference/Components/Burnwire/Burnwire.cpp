@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Burnwire.cpp
-// \author aldjia
 // \brief  cpp file for Burnwire component implementation class
 // ======================================================================
 
@@ -63,13 +62,9 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::ON);
         }
 
-        if (this->m_safetyCounter >= valid) {
+        if (this->m_safetyCounter >= timeout) {
             // 30 seconds reached → turn OFF
-            this->gpioSet_out(0, Fw::Logic::LOW);
-            this->gpioSet_out(1, Fw::Logic::LOW);
-
-            this->m_state = Fw::On::OFF;
-            this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
+            stopBurn();
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::OFF);
         }
     }

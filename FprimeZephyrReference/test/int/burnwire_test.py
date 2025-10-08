@@ -26,6 +26,9 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     yield
     # Clear again after test to prevent residue
     fprime_test_api.clear_histories()
+    fprime_test_api.send_and_assert_command(
+        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+    )
 
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):

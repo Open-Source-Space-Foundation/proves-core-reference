@@ -66,7 +66,7 @@ module ReferenceDeployment {
 
   instance watchdog: Components.Watchdog base id 0x10015000
 
-    instance rtcManager: Drv.RtcManager base id 0x10016000
+  instance rtcManager: Drv.RtcManager base id 0x10016000
 
   instance imuManager: Components.ImuManager base id 0x10017000
 

@@ -13,7 +13,6 @@ submodules: ## Initialize and update git submodules
 	git submodule update --init --recursive
 
 
-
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: ## Create a virtual environment
 		@$(MAKE) uv

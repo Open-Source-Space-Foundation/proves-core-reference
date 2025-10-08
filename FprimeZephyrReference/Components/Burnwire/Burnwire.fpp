@@ -2,25 +2,14 @@ module Components {
     @ Turns Burnwire on and off
     passive component Burnwire {
 
-        ##############################################################################
-        #### Uncomment the following examples to start customizing your component ####
-        ##############################################################################
-
-        # @ Examplesync command
+        @ START_BURNWIRE turns on the burnwire
         sync command START_BURNWIRE(
         )
 
-
-
+        @ STOP_BURNWIRE turns on the burnwire
         sync command STOP_BURNWIRE(
         )
 
-
-        # @ Example telemetry counter
-        # telemetry ExampleCounter: U64
-
-        # @ Example event
-        # event ExampleStateEvent(example_state: Fw.On) severity activity high id 0 format "State set to {}"
         event SetBurnwireState(burnwire_state: Fw.On) \
             severity activity high \
             format "Burnwire State: {}"
@@ -29,14 +18,9 @@ module Components {
             severity activity high\
             format "Safety Timer State: {} "
 
-
         event SafetyTimerState(burnwire_status: U32) \
             severity activity high\
             format "Safety Timer State: {} "
-
-
-        # @ Example port: receiving calls from the rate group
-        # sync input port run: Svc.Sched
 
         @ Port getting start signal
         sync input port burnStart: Fw.Signal
@@ -50,8 +34,7 @@ module Components {
         @ Port sending calls to the GPIO driver to stop and start the burnwire
         output port gpioSet: [2] Drv.GpioWrite
 
-        # @ Example parameter
-        # param PARAMETER_NAME: U32
+        @ SAFETY_TIMER parameter is the maximum time that the burn component will run
         param SAFETY_TIMER: U32 default 3
 
         ###############################################################################
