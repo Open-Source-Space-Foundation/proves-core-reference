@@ -15,12 +15,10 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
     fprime_test_api.clear_histories()
-
     stop_burnwire(fprime_test_api)
     yield
     # Clear again after test to prevent residue
     fprime_test_api.clear_histories()
-
     stop_burnwire(fprime_test_api)
 
 

@@ -38,8 +38,8 @@ void Burnwire::startBurn() {
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::ON;
 
-    // Fw::ParamValid valid;
-    U32 timeout = 10;  // this->paramGet_SAFETY_TIMER(valid);
+    Fw::ParamValid valid;
+    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
     this->log_ACTIVITY_HI_SafetyTimerState(timeout);
 }
 
@@ -53,8 +53,8 @@ void Burnwire::stopBurn() {
 }
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
-    // Fw::ParamValid valid;
-    U32 timeout = 10;  // this->paramGet_SAFETY_TIMER(valid);
+    Fw::ParamValid valid;
+    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
 
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;
