@@ -32,7 +32,7 @@ def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     )
 
     fprime_test_api.assert_event(
-        "ReferenceDeployment.burnwire.BurnwireEndCount", timeout=10
+        "ReferenceDeployment.burnwire.BurnwireEndCount", timeout=2
     )
 
     received_events = fprime_test_api.get_event_subhistory()
