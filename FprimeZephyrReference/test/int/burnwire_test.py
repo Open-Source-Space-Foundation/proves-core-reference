@@ -22,7 +22,6 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     # fprime_test_api.send_and_assert_command(
     #     f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
     # )
-    fprime_test_api.clear_histories()
     yield
     # Clear again after test to prevent residue
     fprime_test_api.clear_histories()
