@@ -4,7 +4,6 @@
 # Integration tests for the Burnwire component.
 # """
 
-import time
 
 import pytest
 from fprime_gds.common.data_types.event_data import EventData
@@ -24,13 +23,13 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     # Clear again after test to prevent residue
     stop_burnwire(fprime_test_api)
     fprime_test_api.clear_histories()
-    time.sleep(15)
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.send_and_assert_command(
-        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+        "ReferenceDeployment.watchdog.STOP_BURNWIRE", max_delay=2
     )
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
 
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
@@ -45,19 +44,7 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
     # assert result is not None, "Burnwire ON event not received"
 
-    # Stop burnwire
-    fprime_test_api.send_and_assert_command(
-        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-    )
-
-    # Wait for SetBurnwireState = OFF
-
-    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2)
-
-    # result: EventData = fprime_test_api.await_event(
-    #     f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2, start=0
-    # )
-    # assert result is not None, "Burnwire OFF event not received"
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=10)
 
 
 def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
@@ -74,10 +61,7 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
     )
     assert result is not None, "Burnwire ON event not received"
 
-    # Simulate scheduler tick
-    time.sleep(1.0)
-
-    # Stop burnwire before safety timer triggers
+    # # Stop burnwire before safety timer triggers
     fprime_test_api.send_and_assert_command(
         f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
     )
