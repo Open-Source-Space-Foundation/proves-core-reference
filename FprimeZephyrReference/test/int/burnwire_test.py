@@ -27,7 +27,7 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.watchdog.STOP_BURNWIRE", max_delay=2
+        "ReferenceDeployment.burnwire.STOP_BURNWIRE", max_delay=2
     )
     fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
 
