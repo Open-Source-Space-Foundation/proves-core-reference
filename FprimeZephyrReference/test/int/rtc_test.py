@@ -48,7 +48,7 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
     fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeSet", timeout=2)
 
 
-def test_01_time_set(fprime_test_api: IntegrationTestAPI):
+def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
 
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
@@ -91,7 +91,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI):
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
-def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI):
+def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
     # Fetch initial time
@@ -122,7 +122,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI):
     )
 
 
-def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI):
+def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 
     # Clear histories
