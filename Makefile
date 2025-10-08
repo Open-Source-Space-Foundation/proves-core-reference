@@ -68,8 +68,17 @@ build-ci:
 	@$(UV) run fprime-util build
 
 .PHONY: test-integration
-test-integration:
+test-integration: uv
 	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
+.PHONY: bootloader
+bootloader: uv
+	@if [ -d "/Volumes/RP2350" ] || [ -d "/Volumes/RPI-RP2" ] || ls /media/*/RP2350 2>/dev/null || ls /media/*/RPI-RP2 2>/dev/null; then \
+		echo "RP2350 already in bootloader mode - skipping trigger"; \
+	else \
+		echo "RP2350 not in bootloader mode - triggering bootloader"; \
+		$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	fi
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -87,11 +96,17 @@ clean-zephyr-sdk: ## Remove Zephyr SDK (reinstall with 'make zephyr-setup')
 
 ##@ Operations
 
-.PHONY: gds
+GDS_COMMAND ?= $(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+
+.PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+	@$(GDS_COMMAND)
+
+.PHONY: gds-integration
+gds-integration:
+	@$(GDS_COMMAND) --gui=none
 
 ##@ Build Tools
 

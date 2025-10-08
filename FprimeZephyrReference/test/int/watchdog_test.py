@@ -41,13 +41,13 @@ def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:
     return result.get_val()
 
 
-def test_01_watchdog_telemetry_basic(fprime_test_api: IntegrationTestAPI):
+def test_01_watchdog_telemetry_basic(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can read WatchdogTransitions telemetry"""
     value = get_watchdog_transitions(fprime_test_api)
     assert value >= 0, f"WatchdogTransitions should be >= 0, got {value}"
 
 
-def test_02_watchdog_increments(fprime_test_api: IntegrationTestAPI):
+def test_02_watchdog_increments(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that WatchdogTransitions increments over time"""
 
     initial_value = get_watchdog_transitions(fprime_test_api)
@@ -59,7 +59,7 @@ def test_02_watchdog_increments(fprime_test_api: IntegrationTestAPI):
     )
 
 
-def test_03_stop_watchdog_command(fprime_test_api: IntegrationTestAPI):
+def test_03_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Test STOP_WATCHDOG command sends and emits WatchdogStop
     event and WatchdogTransitions stops incrementing
