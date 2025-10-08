@@ -20,7 +20,7 @@ module Components {
 
         event SafetyTimerState(burnwire_status: U32) \
             severity activity high\
-            format "Safety Timer State: {} "
+            format "Safety Timer Will Burn For: {} Seconds"
 
         @ Port getting start signal
         sync input port burnStart: Fw.Signal

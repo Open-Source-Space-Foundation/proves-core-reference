@@ -63,7 +63,6 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
         }
 
         if (this->m_safetyCounter >= timeout) {
-            // 30 seconds reached → turn OFF
             stopBurn();
             this->log_ACTIVITY_HI_SafetyTimerStatus(Fw::On::OFF);
         }

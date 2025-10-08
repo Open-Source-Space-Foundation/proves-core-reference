@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Burnwire.hpp
-// \author aldjia
 // \brief  hpp file for Burnwire component implementation class
 // ======================================================================
 
@@ -30,10 +29,6 @@ class Burnwire final : public BurnwireComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for stop
-    //!
-    //! Port to start and stop the burnwire
-
     //! Handler implementation for burnStart
     //!
     //! Port getting start signal
@@ -50,7 +45,6 @@ class Burnwire final : public BurnwireComponentBase {
                          U32 context           //!< The call order
                          ) override;
 
-    // helper functions
     void startBurn();
 
     void stopBurn();
