@@ -4,7 +4,7 @@ module ComCcsdsConfig {
 
     module QueueSizes {
         constant comQueue    = 10
-        constant aggregator = 2
+        constant aggregator = 5
     }
 
     module StackSizes {
