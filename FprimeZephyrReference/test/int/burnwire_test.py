@@ -19,10 +19,10 @@ SAFETY_TIMER_PARAM = f"{COMPONENT}.SAFETY_TIMER"
 def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
-    # fprime_test_api.send_and_assert_command(
-    #     f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-    # )
-    # yield
+    fprime_test_api.send_and_assert_command(
+        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+    )
+    yield
     # Clear again after test to prevent residue
     fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(
@@ -30,30 +30,31 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     )
 
 
-# def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
-#     """Test that burnwire starts and stops as expected"""
+def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
+    """Test that burnwire starts and stops as expected"""
 
-#     # Start burnwire
-#     fprime_test_api.send_and_assert_command(
-#         f"{COMPONENT}.START_BURNWIRE", [], max_delay=2
-#     )
+    # Start burnwire
+    fprime_test_api.send_and_assert_command(
+        f"{COMPONENT}.START_BURNWIRE", [], max_delay=2
+    )
 
-#     # Wait for SetBurnwireState = ON
-#     result: EventData = fprime_test_api.await_event(
-#         f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2, start=0
-#     )
-#     assert result is not None, "Burnwire ON event not received"
+    # Wait for SetBurnwireState = ON
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
+    # assert result is not None, "Burnwire ON event not received"
 
-#     # Stop burnwire
-#     fprime_test_api.send_and_assert_command(
-#         f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-#     )
+    # Stop burnwire
+    fprime_test_api.send_and_assert_command(
+        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+    )
 
-#     # Wait for SetBurnwireState = OFF
-#     result: EventData = fprime_test_api.await_event(
-#         f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2, start=0
-#     )
-#     assert result is not None, "Burnwire OFF event not received"
+    # Wait for SetBurnwireState = OFF
+
+    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2)
+
+    # result: EventData = fprime_test_api.await_event(
+    #     f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2, start=0
+    # )
+    # assert result is not None, "Burnwire OFF event not received"
 
 
 def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
@@ -65,7 +66,7 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
     )
 
     # Confirm Burnwire turned ON
-    result: EventData = fprime_test_api.await_event(
+    result: EventData = fprime_test_api.assert_event(
         f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2, start=0
     )
     assert result is not None, "Burnwire ON event not received"
@@ -79,7 +80,7 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
     )
 
     # Confirm Burnwire turned OFF
-    result: EventData = fprime_test_api.await_event(
+    result: EventData = fprime_test_api.assert_event(
         f"{COMPONENT}.SetBurnwireState", ["OFF"], timeout=2, start=0
     )
     assert result is not None, "Burnwire OFF event not received"

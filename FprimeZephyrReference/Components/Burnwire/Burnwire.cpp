@@ -48,6 +48,7 @@ void Burnwire::stopBurn() {
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
     this->gpioSet_out(0, Fw::Logic::LOW);
     this->gpioSet_out(1, Fw::Logic::LOW);
+    this->log_ACTIVITY_LO_BurnwireEndCount(m_safetyCounter);
 }
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {

@@ -22,6 +22,10 @@ module Components {
             severity activity high\
             format "Safety Timer Will Burn For: {} Seconds"
 
+        event BurnwireEndCount(end_count: U32) \
+            severity activity low \
+            format "Burnwire Burned for {} Seconds"
+
         @ Port getting start signal
         sync input port burnStart: Fw.Signal
 
@@ -35,7 +39,7 @@ module Components {
         output port gpioSet: [2] Drv.GpioWrite
 
         @ SAFETY_TIMER parameter is the maximum time that the burn component will run
-        param SAFETY_TIMER: U32 default 3
+        param SAFETY_TIMER: U32 default 10
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
