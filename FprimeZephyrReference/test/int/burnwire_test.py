@@ -65,7 +65,7 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     )
 
 
-def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
+def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that burnwire stops manually before the safety timer expires"""
 
     # Start burnwire
