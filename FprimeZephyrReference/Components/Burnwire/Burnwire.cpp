@@ -34,26 +34,27 @@ void Burnwire ::burnStop_handler(FwIndexType portNum) {
 // }
 
 void Burnwire::startBurn() {
+    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::ON;
-    this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
 
-    Fw::ParamValid valid;
-    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
+    // Fw::ParamValid valid;
+    U32 timeout = 10;  // this->paramGet_SAFETY_TIMER(valid);
     this->log_ACTIVITY_HI_SafetyTimerState(timeout);
 }
 
 void Burnwire::stopBurn() {
-    this->m_state = Fw::On::OFF;
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::OFF);
     this->gpioSet_out(0, Fw::Logic::LOW);
     this->gpioSet_out(1, Fw::Logic::LOW);
+
+    this->m_state = Fw::On::OFF;
     this->log_ACTIVITY_LO_BurnwireEndCount(m_safetyCounter);
 }
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
-    Fw::ParamValid valid;
-    U32 timeout = this->paramGet_SAFETY_TIMER(valid);
+    // Fw::ParamValid valid;
+    U32 timeout = 10;  // this->paramGet_SAFETY_TIMER(valid);
 
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;
