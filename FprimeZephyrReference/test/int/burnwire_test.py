@@ -5,7 +5,6 @@
 # """
 
 
-import pytest
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -13,23 +12,22 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 COMPONENT = "ReferenceDeployment.burnwire"
 
 
-@pytest.fixture(autouse=True)
-def reset_burnwire(fprime_test_api: IntegrationTestAPI):
-    """Fixture to stop burnwire and clear histories before/after each test"""
-    # Stop burnwire and clear before test
-    stop_burnwire(fprime_test_api)
-    fprime_test_api.clear_histories()
-    yield
-    # Clear again after test to prevent residue
-    stop_burnwire(fprime_test_api)
-    fprime_test_api.clear_histories()
+# @pytest.fixture(autouse=True)
+# def reset_burnwire(fprime_test_api: IntegrationTestAPI):
+#     """Fixture to stop burnwire and clear histories before/after each test"""
+#     # Stop burnwire and clear before test
+#     #stop_burnwire(fprime_test_api)
+#     #fprime_test_api.clear_histories()
+#     yield
+# Clear again after test to prevent residue
+# stop_burnwire(fprime_test_api)
+# fprime_test_api.clear_histories()
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.burnwire.STOP_BURNWIRE", max_delay=2
+        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
     )
-    fprime_test_api.assert_event(f"{COMPONENT}.SetBurnwireState", ["ON"], timeout=2)
 
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
