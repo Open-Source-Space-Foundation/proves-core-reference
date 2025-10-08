@@ -38,12 +38,12 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
 
     # Wait for SetBurnwireState = ON
     fprime_test_api.assert_event(
-        "ReferenceDeployment.burnwire.SetBurnwireState", ["ON"], timeout=2
+        "ReferenceDeployment.burnwire.SetBurnwireState", "ON", timeout=2
     )
     # assert result is not None, "Burnwire ON event not received"
 
     fprime_test_api.assert_event(
-        "ReferenceDeployment.burnwire.SetBurnwireState", ["OFF"], timeout=10
+        "ReferenceDeployment.burnwire.SetBurnwireState", "OFF", timeout=10
     )
 
 
@@ -57,7 +57,7 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
 
     # Confirm Burnwire turned ON
     fprime_test_api.assert_event(
-        "ReferenceDeployment.burnwire.SetBurnwireState", ["ON"], timeout=2
+        "ReferenceDeployment.burnwire.SetBurnwireState", "ON", timeout=2
     )
 
     # # Stop burnwire before safety timer triggers
@@ -67,5 +67,5 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI):
 
     # Confirm Burnwire turned OFF
     fprime_test_api.assert_event(
-        "ReferenceDeployment.burnwire.SetBurnwireState", ["OFF"], timeout=2
+        "ReferenceDeployment.burnwire.SetBurnwireState", "OFF", timeout=2
     )
