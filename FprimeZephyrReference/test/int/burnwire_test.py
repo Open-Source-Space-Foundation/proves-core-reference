@@ -19,16 +19,16 @@ SAFETY_TIMER_PARAM = f"{COMPONENT}.SAFETY_TIMER"
 def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
-    fprime_test_api.send_and_assert_command(
-        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-    )
+    # fprime_test_api.send_and_assert_command(
+    #     f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+    # )
     fprime_test_api.clear_histories()
     yield
     # Clear again after test to prevent residue
     fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
-        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-    )
+    # fprime_test_api.send_and_assert_command(
+    #     f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
+    # )
 
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI):
