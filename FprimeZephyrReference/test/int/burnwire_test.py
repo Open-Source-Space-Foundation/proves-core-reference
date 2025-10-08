@@ -3,7 +3,6 @@
 
 # Integration tests for the Burnwire component.
 # """
-from time import sleep
 
 import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
@@ -16,13 +15,12 @@ COMPONENT = "ReferenceDeployment.burnwire"
 def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
-    stop_burnwire(fprime_test_api)
+    # stop_burnwire(fprime_test_api)
     fprime_test_api.clear_histories()
     yield
     # Clear again after test to prevent residue
-    stop_burnwire(fprime_test_api)
+    # stop_burnwire(fprime_test_api)
     fprime_test_api.clear_histories()
-    sleep(1)
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
