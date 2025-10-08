@@ -12,19 +12,21 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # Constants
 COMPONENT = "ReferenceDeployment.burnwire"
-SAFETY_TIMER_PARAM = f"{COMPONENT}.SAFETY_TIMER"
 
 
 @pytest.fixture(autouse=True)
 def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
-    fprime_test_api.send_and_assert_command(
-        f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
-    )
+    stop_burnwire(fprime_test_api)
+    fprime_test_api.clear_histories()
     yield
     # Clear again after test to prevent residue
+    stop_burnwire(fprime_test_api)
     fprime_test_api.clear_histories()
+
+
+def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.send_and_assert_command(
         f"{COMPONENT}.STOP_BURNWIRE", [], max_delay=2
     )
