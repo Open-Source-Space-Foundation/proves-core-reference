@@ -22,7 +22,7 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI):
     stop_burnwire(fprime_test_api)
 
 
-def stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
+def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.send_and_assert_command(
         "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
