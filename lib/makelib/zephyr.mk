@@ -54,5 +54,5 @@ clean-zephyr-sdk: ## Remove Zephyr SDK
 zephyr-python-deps: fprime-venv ## Install Zephyr Python dependencies
 	@test -s $(VIRTUAL_ENV)/zephyr-deps.txt || { \
 		$(WEST) packages pip > $(VIRTUAL_ENV)/zephyr-deps.txt; \
-		$(UV) pip install --requirement $(VIRTUAL_ENV)/zephyr-deps.txt; \
+		$(UV) pip install --prerelease=allow --requirement $(VIRTUAL_ENV)/zephyr-deps.txt; \
 	}
