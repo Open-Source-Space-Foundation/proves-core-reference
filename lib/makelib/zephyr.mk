@@ -52,7 +52,11 @@ clean-zephyr-sdk: ## Remove Zephyr SDK
 
 .PHONY: zephyr-python-deps
 zephyr-python-deps: fprime-venv ## Install Zephyr Python dependencies
-	@test -s $(VIRTUAL_ENV)/zephyr-deps.txt || { \
+	test -s $(VIRTUAL_ENV)/zephyr-deps.txt || { \
 		$(WEST) packages pip > $(VIRTUAL_ENV)/zephyr-deps.txt; \
 		$(UV) pip install --prerelease=allow --requirement $(VIRTUAL_ENV)/zephyr-deps.txt; \
 	}
+
+.PHONY: ngay-test
+ngay-test:
+	$(WEST) packages pip
