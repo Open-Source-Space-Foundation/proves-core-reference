@@ -10,9 +10,11 @@ import textwrap
 from itertools import chain
 from pathlib import Path
 
-
 from west.commands import WestCommand
-sys.path.append(os.fspath(Path(__file__).parent.parent / "zephyr" / "scripts" / "west_commands"))
+
+sys.path.append(
+    os.fspath(Path(__file__).parent.parent / "zephyr" / "scripts" / "west_commands")
+)
 from zephyr_ext_common import ZEPHYR_BASE
 
 sys.path.append(os.fspath(ZEPHYR_BASE / "scripts"))
@@ -152,7 +154,9 @@ class Uv(WestCommand):
                 continue
 
             # Add requirements files
-            requirements += [Path(module.project) / r for r in pip.get("requirement-files", [])]
+            requirements += [
+                Path(module.project) / r for r in pip.get("requirement-files", [])
+            ]
 
         if args.install:
             if not in_venv() and not args.ignore_venv_check:
@@ -169,6 +173,8 @@ class Uv(WestCommand):
             return
 
         if len(manager_args) > 0:
-            self.die(f'west uv pip does not support unknown arguments: "{manager_args}"')
+            self.die(
+                f'west uv pip does not support unknown arguments: "{manager_args}"'
+            )
 
         self.inf("\n".join([f"-r {r}" for r in requirements]))
