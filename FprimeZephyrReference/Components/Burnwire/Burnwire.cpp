@@ -29,10 +29,6 @@ void Burnwire ::burnStop_handler(FwIndexType portNum) {
     this->stopBurn();
 }
 
-// void Burnwire ::stop_handler(FwIndexType portNum) {
-//     //TODO
-// }
-
 void Burnwire::startBurn() {
     this->log_ACTIVITY_HI_SetBurnwireState(Fw::On::ON);
     this->m_safetyCounter = 0;

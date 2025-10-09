@@ -32,7 +32,6 @@
 			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
 			label = "burnwire 1";
 		};
-
 	};
 };
 

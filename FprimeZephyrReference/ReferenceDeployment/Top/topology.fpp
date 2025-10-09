@@ -104,7 +104,6 @@ module ReferenceDeployment {
 
     }
 
-
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
     }
@@ -114,14 +113,11 @@ module ReferenceDeployment {
       burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
     }
 
-
     connections imuManager {
       imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
       imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
-
   }
-
 }

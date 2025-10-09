@@ -59,4 +59,4 @@ Add unit test descriptions in the chart below
 ## Parameter
 | Name | Description |
 | -----|-------------|
-|   SAFETY_TIMER   | By Default set in fpp (currently 3) is the max time the burnwire should ever run|
+|   SAFETY_TIMER   | By Default set in fpp (currently 10) is the max time the burnwire should ever run|
