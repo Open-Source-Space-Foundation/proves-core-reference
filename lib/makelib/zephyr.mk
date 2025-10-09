@@ -1,8 +1,5 @@
 ##@ Zephyr
 
-ZEPHYR_WORKSPACE ?= lib/zephyr-workspace
-ZEPHYR_PATH ?= $(ZEPHYR_WORKSPACE)/zephyr
-
 # UV runs west with the active virtual environment
 WEST ?= $(UV_RUN) west
 
@@ -47,7 +44,8 @@ zephyr-export: fprime-venv ## Export Zephyr environment variables
 clean-zephyr-export: ## Remove Zephyr exported files
 	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
-SDK_VERSION ?= $(shell cat $(ZEPHYR_WORKSPACE)/zephyr/SDK_VERSION)
+ZEPHYR_PATH ?= lib/zephyr-workspace/zephyr
+SDK_VERSION ?= $(shell cat $(ZEPHYR_PATH)/SDK_VERSION)
 ZEPHYR_SDK_PATH ?= ~/zephyr-sdk-$(SDK_VERSION)
 .PHONY: zephyr-sdk
 zephyr-sdk: fprime-venv ## Install Zephyr SDK

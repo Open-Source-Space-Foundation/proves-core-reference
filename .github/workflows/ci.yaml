@@ -45,10 +45,24 @@ jobs:
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
-            path: /tmp/.uv-cache
-            key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            restore-keys: |
-              uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          path: /tmp/.uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+
+      - name: Submodule Cache Key
+        id: submodule-cache-key
+        run: |
+          echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
+
+      - name: Restore fprime-venv cache
+        id: cache-fprime-venv
+        uses: actions/cache@v4
+        with:
+          path: fprime-venv
+          key: fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
+          restore-keys: |
+            fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
 
       - name: Create python venv
         run: |
@@ -58,16 +72,6 @@ jobs:
         if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
         run: |
           make zephyr-workspace
-
-      - name: Cache Zephyr SDK
-        id: cache-zephyr-sdk
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/zephyr-sdk-*
-          key: zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
-          restore-keys: |
-            zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
 
       - name: Setup Zephyr SDK
         if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
