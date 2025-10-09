@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr-setup generate-if-needed build
+all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -28,7 +28,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -37,7 +37,7 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration

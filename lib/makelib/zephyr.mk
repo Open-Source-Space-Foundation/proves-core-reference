@@ -6,8 +6,11 @@ WEST ?= $(UV_RUN) west
 # UVX runs west without the active virtual environment
 WESTX ?= $(UVX) west
 
-zephyr-setup: zephyr-config zephyr-workspace zephyr-export zephyr-sdk zephyr-python-deps
-zephyr-clean: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
+.PHONY: zephyr
+zephyr: zephyr-config zephyr-workspace zephyr-export zephyr-sdk zephyr-python-deps
+
+.PHONY: clean-zephyr
+clean-zephyr: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
 
 .PHONY: zephyr-config
 zephyr-config: fprime-venv ## Configure west
