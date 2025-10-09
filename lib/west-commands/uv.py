@@ -13,7 +13,13 @@ from pathlib import Path
 from west.commands import WestCommand
 
 sys.path.append(
-    os.fspath(Path(__file__).parent.parent / "zephyr" / "scripts" / "west_commands")
+    os.fspath(
+        Path(__file__).parent.parent
+        / "zephyr-workspace"
+        / "zephyr"
+        / "scripts"
+        / "west_commands"
+    )
 )
 from zephyr_ext_common import ZEPHYR_BASE
 
