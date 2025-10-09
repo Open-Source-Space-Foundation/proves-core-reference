@@ -1,1 +1,6 @@
 west
+
+lib/fprime/requirements.txt
+lib/zephyr-workspace/zephyr/scripts/requirements-base.txt
+lib/zephyr-workspace/zephyr/scripts/requirements-build-test.txt
+lib/zephyr-workspace/zephyr/scripts/requirements-run-test.txt
