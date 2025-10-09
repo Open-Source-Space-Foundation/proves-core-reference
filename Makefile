@@ -17,7 +17,7 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
 		@$(UV) venv fprime-venv --allow-existing
-		@$(UV) pip install --prerelease=allow --requirement pyproject.toml
+		@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
 ##@ Development
 
