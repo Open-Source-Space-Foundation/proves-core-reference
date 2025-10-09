@@ -4,26 +4,35 @@ ZEPHYR_WORKSPACE ?= lib/zephyr-workspace
 ZEPHYR_PATH ?= $(ZEPHYR_WORKSPACE)/zephyr
 
 # UV runs west with the active virtual environment
-WEST ?= cd $(ZEPHYR_WORKSPACE) && $(UV_RUN) west
+WEST ?= $(UV_RUN) west
 
 # UVX runs west without the active virtual environment
-WESTX ?= cd $(ZEPHYR_WORKSPACE) && $(UVX) west
+WESTX ?= $(UVX) west
 
-zephyr-setup: zephyr-workspace zephyr-export zephyr-sdk zephyr-python-deps
+zephyr-setup: zephyr-config zephyr-workspace zephyr-export zephyr-sdk zephyr-python-deps
+zephyr-clean: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
+
+.PHONY: zephyr-config
+zephyr-config: fprime-venv ## Configure west
+	@test -f ../.west/config || { \
+		$(WEST) init --local .; \
+	}
+
+.PHONY: clean-zephyr-config
+clean-zephyr-config: ## Remove west configuration
+	rm -rf ../.west
 
 .PHONY: zephyr-workspace
 zephyr-workspace: fprime-venv ## Setup Zephyr bootloader, modules, and tools directories
-	@test -d $(ZEPHYR_WORKSPACE)/bootloader || \
-	test -d $(ZEPHYR_WORKSPACE)/modules || \
-	test -d $(ZEPHYR_WORKSPACE)/tools || { \
+	@test -d ../lib/zephyr-workspace/bootloader || \
+	test -d ../lib/zephyr-workspace/modules || \
+	test -d ../lib/zephyr-workspace/tools || { \
 		$(WESTX) update; \
 	}
 
 .PHONY: clean-zephyr-workspace
 clean-zephyr-workspace: ## Remove Zephyr bootloader, modules, and tools directories
-	rm -rf $(ZEPHYR_WORKSPACE)/bootloader \
-		$(ZEPHYR_WORKSPACE)/modules \
-		$(ZEPHYR_WORKSPACE)/tools
+	rm -rf ../lib
 
 CMAKE_PACKAGES ?= ~/.cmake/packages
 .PHONY: zephyr-export
@@ -52,12 +61,4 @@ clean-zephyr-sdk: ## Remove Zephyr SDK
 
 .PHONY: zephyr-python-deps
 zephyr-python-deps: fprime-venv ## Install Zephyr Python dependencies
-	$(WEST) uv pip --install -- --prerelease=allow
-
-# .PHONY: ngay-test
-# ngay-test:
-# 	$(WEST) packages pip --install -- --pre
-
-# .PHONY: uv-test
-# uv-test:
-# 	$(WEST) uv pip --install -- --prerelease=allow
+	@$(WEST) uv pip --install -- --prerelease=allow --quiet
