@@ -23,14 +23,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache bin
-        uses: actions/cache@v4
-        with:
-          path: |
-            bin
-          key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
-          restore-keys: |
-            bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
+      # - name: Cache bin
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       bin
+      #     key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
+      #     restore-keys: |
+      #       bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -42,27 +42,27 @@ jobs:
         run: |
           make submodules
 
-      - name: Restore uv cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      # - name: Restore uv cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: /tmp/.uv-cache
+      #     key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      #     restore-keys: |
+      #       uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
-      - name: Submodule Cache Key
-        id: submodule-cache-key
-        run: |
-          echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
+      # - name: Submodule Cache Key
+      #   id: submodule-cache-key
+      #   run: |
+      #     echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
 
-      - name: Restore fprime-venv cache
-        id: cache-fprime-venv
-        uses: actions/cache@v4
-        with:
-          path: fprime-venv
-          key: fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
-          restore-keys: |
-            fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
+      # - name: Restore fprime-venv cache
+      #   id: cache-fprime-venv
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: fprime-venv
+      #     key: fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
+      #     restore-keys: |
+      #       fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
 
       - name: Create python venv
         run: |
