@@ -80,7 +80,6 @@ jobs:
 
     - name: Install Zephyr Python Dependencies
       run: |
-        make ngay-test
         make zephyr-python-deps
 
     - name: Generate

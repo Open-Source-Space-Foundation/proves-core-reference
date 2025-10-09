@@ -11,6 +11,8 @@ build-fprime-*
 lib/zephyr-workspace/*
 !lib/zephyr-workspace/.west/
 !lib/zephyr-workspace/west.yml
+!lib/zephyr-workspace/west-commands.yml
+!lib/zephyr-workspace/west_commands/
 
 # Misc
 /venv/
