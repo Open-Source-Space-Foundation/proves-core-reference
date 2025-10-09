@@ -11,26 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Lint
         run: |
           make fmt
+
   build:
     runs-on: deathstar
     env:
       UV_CACHE_DIR: /tmp/.uv-cache
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # - name: Cache bin
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       bin
-      #     key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
-      #     restore-keys: |
-      #       bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
+      - uses: actions/checkout@v4
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -41,28 +33,6 @@ jobs:
         if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
-
-      # - name: Restore uv cache
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: /tmp/.uv-cache
-      #     key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-      #     restore-keys: |
-      #       uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-
-      # - name: Submodule Cache Key
-      #   id: submodule-cache-key
-      #   run: |
-      #     echo "submodule_cache_key=$(git submodule | sha256sum | cut -f1 -d' ')" >> $GITHUB_OUTPUT
-
-      # - name: Restore fprime-venv cache
-      #   id: cache-fprime-venv
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: fprime-venv
-      #     key: fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
-      #     restore-keys: |
-      #       fprime-venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ steps.submodule-cache-key.outputs.submodule_cache_key }}
 
       - name: Create python venv
         run: |
@@ -88,11 +58,11 @@ jobs:
 
       - name: Generate
         run: |
-          make generate-ci
+          make generate
 
       - name: Build
         run: |
-          make build-ci
+          make build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -105,25 +75,32 @@ jobs:
 
       - name: Minimize uv cache
         run: make minimize-uv-cache
+
   integration:
-    runs-on: [integration]
+    runs-on:
+      - integration
     needs: build
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v5
+
       - name: Set up dependencies
         run: |
-          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
-            make submodules
-            make fprime-venv
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
+            && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
+          make submodules fprime-venv
+
       - name: Trigger Bootloader
         run: |
           make bootloader
           sleep 10
+
       - name: Copy Firmware
         run: |
           picotool load ./zephyr.uf2
           picotool reboot
+
       - name: Run Integration Tests
         run: |
           make test-integration
