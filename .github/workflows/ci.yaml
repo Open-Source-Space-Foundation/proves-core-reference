@@ -20,87 +20,87 @@ jobs:
       UV_CACHE_DIR: /tmp/.uv-cache
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Cache bin
-      uses: actions/cache@v4
-      with:
-        path: |
-          bin
-        key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
-        restore-keys: |
-          bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
-
-    - name: Download bin tools
-      if: steps.cache-bin.outputs.cache-hit != 'true'
-      run: |
-        make download-bin
-
-    - name: Setup submodules
-      if: steps.cache-submodules.outputs.cache-hit != 'true'
-      run: |
-        make submodules
-
-    - name: Restore uv cache
-      uses: actions/cache@v4
-      with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Cache bin
+        uses: actions/cache@v4
+        with:
+          path: |
+            bin
+          key: bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
           restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+            bin-${{ runner.os }}-${{ hashFiles('lib/makelib/build-tools.mk') }}
 
-    - name: Create python venv
-      run: |
-        make fprime-venv
+      - name: Download bin tools
+        if: steps.cache-bin.outputs.cache-hit != 'true'
+        run: |
+          make download-bin
 
-    - name: Setup Zephyr
-      if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
-      run: |
-        make zephyr-workspace
+      - name: Setup submodules
+        if: steps.cache-submodules.outputs.cache-hit != 'true'
+        run: |
+          make submodules
 
-    - name: Cache Zephyr SDK
-      id: cache-zephyr-sdk
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/zephyr-sdk-*
-        key: zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
-        restore-keys: |
-          zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
+      - name: Restore uv cache
+        uses: actions/cache@v4
+        with:
+            path: /tmp/.uv-cache
+            key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+            restore-keys: |
+              uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
-    - name: Setup Zephyr SDK
-      if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
-      run: |
-        make zephyr-sdk
+      - name: Create python venv
+        run: |
+          make fprime-venv
 
-    - name: Setup Zephyr Export
-      run: |
-        make zephyr-export
+      - name: Setup Zephyr
+        if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-workspace
 
-    - name: Install Zephyr Python Dependencies
-      run: |
-        make zephyr-python-deps
+      - name: Cache Zephyr SDK
+        id: cache-zephyr-sdk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/zephyr-sdk-*
+          key: zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
+          restore-keys: |
+            zephyr-sdk-${{ runner.os }}-${{ hashFiles('lib/zephyr-workspace/zephyr/SDK_VERSION') }}
 
-    - name: Generate
-      run: |
-        make generate-ci
+      - name: Setup Zephyr SDK
+        if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-sdk
 
-    - name: Build
-      run: |
-        make build-ci
+      - name: Setup Zephyr Export
+        run: |
+          make zephyr-export
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts
-        path: |
-          build-artifacts/zephyr.uf2
-          build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
-        retention-days: 30
+      - name: Install Zephyr Python Dependencies
+        run: |
+          make zephyr-python-deps
 
-    - name: Minimize uv cache
-      run: make minimize-uv-cache
+      - name: Generate
+        run: |
+          make generate-ci
+
+      - name: Build
+        run: |
+          make build-ci
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: |
+            build-artifacts/zephyr.uf2
+            build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+          retention-days: 30
+
+      - name: Minimize uv cache
+        run: make minimize-uv-cache
   integration:
     runs-on: [integration]
     needs: build
