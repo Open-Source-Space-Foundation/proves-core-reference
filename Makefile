@@ -14,9 +14,9 @@ submodules: ## Initialize and update git submodules
 	fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
-fprime-venv: ## Create a virtual environment
-		@$(MAKE) uv
-		@$(UV) venv fprime-venv
+.PHONY: fprime-venv
+fprime-venv: uv ## Create a virtual environment
+		@$(UV) venv fprime-venv --allow-existing
 		@$(UV) pip install --prerelease=allow --requirement pyproject.toml
 
 ##@ Development
