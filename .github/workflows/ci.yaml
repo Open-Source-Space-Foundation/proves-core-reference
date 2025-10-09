@@ -73,9 +73,6 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
-      - name: Minimize uv cache
-        run: make minimize-uv-cache
-
   integration:
     runs-on:
       - integration
