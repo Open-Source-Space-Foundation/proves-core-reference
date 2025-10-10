@@ -36,11 +36,6 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 4
 
-  instance prmDb: Svc.PrmDb base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 6
-
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -76,4 +71,6 @@ module ReferenceDeployment {
   instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10022000
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
+
+  instance prmDb: Components.NullPrmDb base id 0x10024000
 }
