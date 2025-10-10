@@ -1,5 +1,4 @@
 import os
-import signal
 import subprocess
 import time
 
@@ -7,14 +6,9 @@ import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def start_gds(fprime_test_api_session: IntegrationTestAPI):
-    pro = subprocess.Popen(
-        ["make", "gds-integration"],
-        cwd=os.getcwd(),
-        stdout=subprocess.PIPE,
-        preexec_fn=os.setsid,
-    )
+    process = subprocess.Popen(["make", "gds-integration"], cwd=os.getcwd())
 
     gds_working = False
     timeout_time = time.time() + 30
@@ -30,7 +24,7 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     assert gds_working
 
     yield
-    os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
+    process.kill()
 
 
 def test_bootloader(fprime_test_api: IntegrationTestAPI):
