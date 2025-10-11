@@ -104,7 +104,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
 
     }
 
