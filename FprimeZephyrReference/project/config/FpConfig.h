@@ -166,7 +166,7 @@ extern "C" {
 
 // Specifies the size of the buffer that contains a communications packet.
 #ifndef FW_COM_BUFFER_MAX_SIZE
-#define FW_COM_BUFFER_MAX_SIZE 512
+#define FW_COM_BUFFER_MAX_SIZE 233
 #endif
 
 // Specifies the size of the buffer attached to state machine signals.
@@ -325,6 +325,10 @@ extern "C" {
 // Note: One buffer of this size will be stack-allocated during certain OSAL operations e.g. when copying a file
 #ifndef FW_FILE_CHUNK_SIZE
 #define FW_FILE_CHUNK_SIZE 512  //!< Chunk size for working with files in the OSAL layer
+#endif
+
+#ifndef FW_ASSERT_COUNT_MAX
+#define FW_ASSERT_COUNT_MAX 4
 #endif
 
 // *** NOTE configuration checks are in Fw/Cfg/ConfigCheck.cpp in order to have
