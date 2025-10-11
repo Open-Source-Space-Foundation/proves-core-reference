@@ -12,7 +12,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.fixture(autouse=True)
-def ensure_watchdog_running(fprime_test_api: IntegrationTestAPI):
+def ensure_watchdog_running(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to ensure watchdog is started before and after each test"""
     start_watchdog(fprime_test_api)
     yield

@@ -17,7 +17,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.fixture(autouse=True)
-def set_now_time(fprime_test_api: IntegrationTestAPI):
+def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
     set_time(fprime_test_api)

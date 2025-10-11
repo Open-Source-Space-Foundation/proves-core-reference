@@ -10,7 +10,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.fixture(autouse=True)
-def send_packet(fprime_test_api: IntegrationTestAPI):
+def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to clear histories and send the IMU packet before each test"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(

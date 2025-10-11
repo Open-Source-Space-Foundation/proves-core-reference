@@ -11,7 +11,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.fixture(autouse=True)
-def reset_burnwire(fprime_test_api: IntegrationTestAPI):
+def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
     fprime_test_api.clear_histories()
