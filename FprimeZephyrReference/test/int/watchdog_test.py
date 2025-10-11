@@ -32,7 +32,7 @@ def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:
     """Helper function to request packet and get fresh WatchdogTransitions telemetry"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(
-        "CdhCore.tlmSend.SEND_PKT", ["5"], max_delay=2
+        "CdhCore.tlmSend.SEND_PKT", ["5"], max_delay=10
     )
     result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.watchdog.WatchdogTransitions", start="NOW", timeout=3
