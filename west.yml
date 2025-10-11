@@ -86,3 +86,4 @@ manifest:
 
   self:
     path: .
+    west-commands: west-commands.yml
