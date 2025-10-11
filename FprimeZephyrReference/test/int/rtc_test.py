@@ -46,7 +46,6 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
             time_data_str,
         ],
     )
-    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeCompleted", timeout=10)
 
 
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):

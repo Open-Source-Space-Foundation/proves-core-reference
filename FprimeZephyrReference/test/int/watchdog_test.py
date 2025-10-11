@@ -26,7 +26,6 @@ def start_watchdog(fprime_test_api: IntegrationTestAPI):
         fprime_test_api,
         "ReferenceDeployment.watchdog.START_WATCHDOG",
     )
-    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeCompleted", timeout=10)
 
 
 def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:

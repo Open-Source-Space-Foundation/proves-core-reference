@@ -12,7 +12,6 @@ import time
 
 import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from int.common import proves_send_and_assert_command
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -42,6 +41,9 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
 
 def test_bootloader(fprime_test_api: IntegrationTestAPI):
     """Trigger bootloader mode on PROVES hardware"""
-    proves_send_and_assert_command(
-        fprime_test_api, "ReferenceDeployment.bootloaderTrigger.TRIGGER_BOOTLOADER"
+    # Don't use proves_send_and_assert_command here because we don't expect
+    # a response from the bootloader trigger command. The device will reboot
+    # into bootloader mode and may not send a command completion event.
+    fprime_test_api.send_and_assert_command(
+        "ReferenceDeployment.bootloaderTrigger.TRIGGER_BOOTLOADER"
     )
