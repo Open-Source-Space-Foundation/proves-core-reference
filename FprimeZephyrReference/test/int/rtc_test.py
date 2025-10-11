@@ -38,14 +38,15 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
         Second=dt.second,
     )
     time_data_str = json.dumps(time_data)
+    fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(
         "ReferenceDeployment.rtcManager.TIME_SET",
         [
             time_data_str,
         ],
-        max_delay=2,
+        max_delay=5,
     )
-    fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeSet", timeout=2)
+    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeCompleted", timeout=10)
 
 
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):

@@ -14,15 +14,14 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to stop burnwire and clear histories before/after each test"""
     # Stop burnwire and clear before test
-    fprime_test_api.clear_histories()
     stop_burnwire(fprime_test_api)
     yield
     # Clear again after test to prevent residue
-    fprime_test_api.clear_histories()
     stop_burnwire(fprime_test_api)
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
+    fprime_test_api.clear_histories()
     fprime_test_api.send_and_assert_command(
         "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
