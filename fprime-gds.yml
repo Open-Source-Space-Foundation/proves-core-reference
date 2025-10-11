@@ -1,0 +1,6 @@
+command-line-options:
+  communication-selection: uart
+  uart-baud: 115200
+  no-app:
+  dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+  output-unframed-data: "-"
