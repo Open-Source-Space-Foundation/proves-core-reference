@@ -68,7 +68,8 @@ def test_03_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Send stop command
     proves_send_and_assert_command(
-        fprime_test_api, "ReferenceDeployment.watchdog.STOP_WATCHDOG", max_delay=2
+        fprime_test_api,
+        "ReferenceDeployment.watchdog.STOP_WATCHDOG",
     )
 
     # Check for watchdog stop event
