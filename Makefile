@@ -17,6 +17,9 @@ fprime-venv: uv ## Create a virtual environment
 		@$(UV) venv fprime-venv --allow-existing
 		@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
+patch-gps-package:
+	cp custom_space_data_link.py fprime-venv/lib/python3.13/site-packages/fprime_gds/common/communication/ccsds/space_data_link.py
+
 ##@ Development
 
 .PHONY: pre-commit-install

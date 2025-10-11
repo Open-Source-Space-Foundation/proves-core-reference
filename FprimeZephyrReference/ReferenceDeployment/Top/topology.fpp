@@ -26,6 +26,8 @@ module ReferenceDeployment {
     instance timer
     instance comDriver
     instance gpioDriver
+    instance gpioBurnwire0
+    instance gpioBurnwire1
     instance watchdog
     instance prmDb
     instance rtcManager
@@ -33,6 +35,9 @@ module ReferenceDeployment {
     instance lis2mdlManager
     instance lsm6dsoManager
     instance bootloaderTrigger
+    instance comDelay
+    instance burnwire
+
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
@@ -96,10 +101,18 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+
     }
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
+    }
+
+    connections BurnwireGpio {
+      burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
     }
 
     connections imuManager {
@@ -108,7 +121,5 @@ module ReferenceDeployment {
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
-
   }
-
 }
