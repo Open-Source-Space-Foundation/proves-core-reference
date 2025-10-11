@@ -14,8 +14,8 @@ submodules: ## Initialize and update git submodules
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
-		@$(UV) venv fprime-venv --allow-existing
-		@$(UV) pip install --prerelease=allow --requirement requirements.txt
+	@$(UV) venv fprime-venv --allow-existing
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
 patch-gps-package:
 	cp custom_space_data_link.py fprime-venv/lib/python3.13/site-packages/fprime_gds/common/communication/ccsds/space_data_link.py
@@ -53,7 +53,7 @@ bootloader: uv
 		echo "RP2350 already in bootloader mode - skipping trigger"; \
 	else \
 		echo "RP2350 not in bootloader mode - triggering bootloader"; \
-		$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
 
 .PHONY: clean
@@ -62,7 +62,7 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
 .PHONY: gds
