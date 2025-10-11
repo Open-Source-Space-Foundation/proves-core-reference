@@ -12,7 +12,7 @@ import time
 
 import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from int.wdk import cmdDispatch
+from int.common import cmdDispatch
 
 
 @pytest.fixture(scope="session", autouse=True)
