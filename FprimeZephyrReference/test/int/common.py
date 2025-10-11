@@ -1,15 +1,21 @@
 """
 common.py:
 
-This module provides a helper functions for sending commands and asserting their completion
-in integration tests for PROVES microcontroller hardware, accommodating slower response times.
+This module provides a functions and constants shared by
+integration tests for PROVES microcontroller hardware.
 """
 
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+from fprime_gds.common.testing_fw.predicates import event_predicate
+
+cmdDispatch = "CdhCore.cmdDisp"
 
 
 def proves_send_and_assert_command(
-    fprime_test_api: IntegrationTestAPI, command: str, args: list[str] = []
+    fprime_test_api: IntegrationTestAPI,
+    command: str,
+    args: list[str] = [],
+    events: list[event_predicate] = [],
 ):
     """Send command and assert completion
 
@@ -26,7 +32,9 @@ def proves_send_and_assert_command(
             fprime_test_api.send_and_assert_command(
                 command,
                 args,
-                max_delay=10,
+                timeout=5,
+                max_delay=5,
+                events=events,
             )
             break
         except AssertionError:

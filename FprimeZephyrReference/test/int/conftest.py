@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import pytest
+from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
@@ -31,7 +32,7 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     while time.time() < timeout_time:
         try:
             fprime_test_api_session.send_and_assert_command(
-                command="CdhCore.cmdDisp.CMD_NO_OP"
+                command=f"{cmdDispatch}.CMD_NO_OP"
             )
             gds_working = True
             break
