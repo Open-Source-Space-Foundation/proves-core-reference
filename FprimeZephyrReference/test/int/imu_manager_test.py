@@ -5,6 +5,7 @@ Integration tests for the IMU Manager component.
 """
 
 import pytest
+from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -12,9 +13,10 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 @pytest.fixture(autouse=True)
 def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to clear histories and send the IMU packet before each test"""
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
-        "CdhCore.tlmSend.SEND_PKT", ["6"], max_delay=2
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "CdhCore.tlmSend.SEND_PKT",
+        ["6"],
     )
 
 

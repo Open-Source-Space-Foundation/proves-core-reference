@@ -5,6 +5,7 @@
 # """
 
 import pytest
+from common import proves_send_and_assert_command
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # Constants
@@ -21,9 +22,8 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.burnwire.STOP_BURNWIRE"
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
 
     fprime_test_api.assert_event(
@@ -42,8 +42,8 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     """Test that burnwire starts and stops as expected"""
 
     # Start burnwire
-    fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.burnwire.START_BURNWIRE"
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.burnwire.START_BURNWIRE"
     )
 
     # Wait for SetBurnwireState = ON
@@ -68,8 +68,8 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, star
     """Test that burnwire stops manually before the safety timer expires"""
 
     # Start burnwire
-    fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.burnwire.START_BURNWIRE"
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.burnwire.START_BURNWIRE"
     )
 
     # Confirm Burnwire turned ON
@@ -78,8 +78,8 @@ def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, star
     )
 
     # # Stop burnwire before safety timer triggers
-    fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.burnwire.STOP_BURNWIRE"
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
 
     # Confirm Burnwire turned OFF

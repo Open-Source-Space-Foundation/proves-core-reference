@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timezone
 
 import pytest
+from common import proves_send_and_assert_command
 from fprime.common.models.serialize.numerical_types import U32Type
 from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
@@ -38,13 +39,12 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
         Second=dt.second,
     )
     time_data_str = json.dumps(time_data)
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
+    proves_send_and_assert_command(
+        fprime_test_api,
         "ReferenceDeployment.rtcManager.TIME_SET",
         [
             time_data_str,
         ],
-        max_delay=5,
     )
     fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeCompleted", timeout=10)
 
