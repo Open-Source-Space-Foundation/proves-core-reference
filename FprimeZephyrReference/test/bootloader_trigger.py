@@ -45,6 +45,6 @@ def test_bootloader(fprime_test_api: IntegrationTestAPI):
     # Don't use proves_send_and_assert_command here because we don't expect
     # a response from the bootloader trigger command. The device will reboot
     # into bootloader mode and may not send a command completion event.
-    fprime_test_api.send_and_assert_command(
+    fprime_test_api.send_command(
         "ReferenceDeployment.bootloaderTrigger.TRIGGER_BOOTLOADER"
     )
