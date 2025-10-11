@@ -41,6 +41,10 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lis2mdlManager.MagneticField
   }
 
+  packet LoRa id 7 group 4 {
+    lora.LastRssi
+    lora.LastSnr
+  }
 
 
 } omit {
