@@ -1,14 +1,12 @@
-# """
-# burnwire_test.py:
+"""
+burnwire_test.py:
 
-# Integration tests for the Burnwire component.
-# """
+Integration tests for the Burnwire component.
+"""
 
 import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-
-# Constants
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +20,7 @@ def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 def stop_burnwire(fprime_test_api: IntegrationTestAPI):
+    """Stop the burnwire and clear histories"""
     proves_send_and_assert_command(
         fprime_test_api, "ReferenceDeployment.burnwire.STOP_BURNWIRE"
     )
@@ -33,9 +32,6 @@ def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.assert_event(
         "ReferenceDeployment.burnwire.BurnwireEndCount", timeout=2
     )
-
-    received_events = fprime_test_api.get_event_subhistory()
-    print(f"Received events: {received_events}")
 
 
 def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):

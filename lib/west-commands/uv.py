@@ -1,6 +1,11 @@
 # Copyright (c) 2024 Basalte bv
 #
 # SPDX-License-Identifier: Apache-2.0
+"""
+uv.py
+
+West command to manage packages for Zephyr and its modules using UV.
+"""
 
 import argparse
 import os
@@ -28,10 +33,13 @@ import zephyr_module
 
 
 def in_venv() -> bool:
+    """Check if we are running inside a virtual environment."""
     return sys.prefix != sys.base_prefix
 
 
 class Uv(WestCommand):
+    """Provide interface to use UV through Zephyr's west build tool."""
+
     def __init__(self):
         super().__init__(
             "uv",
@@ -41,6 +49,7 @@ class Uv(WestCommand):
         )
 
     def do_add_parser(self, parser_adder):
+        """Add argument parser for this command."""
         parser = parser_adder.add_parser(
             self.name,
             help=self.help,
@@ -116,6 +125,7 @@ class Uv(WestCommand):
         return parser
 
     def do_run(self, args, unknown):
+        """Execute the command."""
         if len(unknown) > 0 and unknown[0] != "--":
             self.die(
                 f'Unknown argument "{unknown[0]}"; '
@@ -140,6 +150,7 @@ class Uv(WestCommand):
         self.die(f'Unsupported package manager: "{args.manager}"')
 
     def do_run_pip(self, args, manager_args):
+        """Execute the uv pip install subcommand."""
         requirements = []
 
         if not args.modules or "zephyr" in args.modules:

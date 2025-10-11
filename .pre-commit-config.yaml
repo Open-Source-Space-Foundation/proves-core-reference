@@ -33,3 +33,14 @@ repos:
     - id: ruff-check
       args: [--fix, --select, I] # import sorting
     - id: ruff-format
+
+- repo: https://github.com/econchick/interrogate/
+  rev: 1.7.0
+  hooks:
+    - id: interrogate
+      args:
+        - --ignore-init-method
+        - --omit-covered-files
+        - --fail-under=100
+        - -vv
+        - --color

@@ -1,3 +1,9 @@
+"""
+conftest.py:
+
+Pytest configuration for integration tests.
+"""
+
 import os
 import signal
 import subprocess
@@ -9,6 +15,10 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 @pytest.fixture(scope="session")
 def start_gds(fprime_test_api_session: IntegrationTestAPI):
+    """Fixture to start GDS before tests and stop after tests
+
+    GDS is used to send commands and receive telemetry/events.
+    """
     pro = subprocess.Popen(
         ["make", "gds-integration"],
         cwd=os.getcwd(),
