@@ -24,6 +24,14 @@
 			gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
 			label = "Watchdog LED";
 		};
+		burnwire0: burnwire0{
+			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+			label = "burnwire 0";
+		};
+		burnwire1: burnwire1{
+			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+			label = "burnwire 1";
+		};
 	};
 };
 

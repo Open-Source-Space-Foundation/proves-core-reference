@@ -1,0 +1,88 @@
+# West manifest for PROVES Core - Optimized for RP2040/RP2350 only
+# This minimal manifest significantly reduces the download and setup time
+# by only including modules required for Raspberry Pi RP2040/RP2350 builds
+
+manifest:
+  defaults:
+    remote: upstream
+
+  remotes:
+    - name: upstream
+      url-base: https://github.com/zephyrproject-rtos
+
+  # Import filter to exclude optional groups
+  group-filter: [-babblesim, -optional]
+
+  projects:
+    # Zephyr RTOS core
+    - name: zephyr
+      repo-path: zephyr
+      revision: v4.2.0
+      path: lib/zephyr-workspace/zephyr
+      west-commands: scripts/west-commands.yml
+      import:
+        # Import specific submanifests only (instead of all submanifests)
+        name-allowlist:
+          - cmsis      # ARM CMSIS support (required for Cortex-M)
+          - hal_rpi_pico  # Raspberry Pi Pico HAL (REQUIRED for RP2040/RP2350)
+          - picolibc   # C library
+          - mbedtls    # Crypto library
+          - tinycrypt  # Lightweight crypto library
+          - mcuboot    # Bootloader support
+
+    # Core modules required for RP2040/RP2350
+    - name: cmsis
+      revision: 512cc7e895e8491696b61f7ba8066b4a182569b8
+      path: lib/zephyr-workspace/modules/hal/cmsis
+      groups:
+        - hal
+
+    - name: cmsis_6
+      repo-path: CMSIS_6
+      revision: 06d952b6713a2ca41c9224a62075e4059402a151
+      path: lib/zephyr-workspace/modules/hal/cmsis_6
+      groups:
+        - hal
+
+    - name: hal_rpi_pico
+      path: lib/zephyr-workspace/modules/hal/rpi_pico
+      revision: 7b57b24588797e6e7bf18b6bda168e6b96374264
+      groups:
+        - hal
+
+    - name: hal_st
+      revision: 9f81b4427e955885398805b7bca0da3a8cd9109c
+      path: lib/zephyr-workspace/modules/hal/st
+      groups:
+        - hal
+
+    - name: picolibc
+      path: lib/zephyr-workspace/modules/lib/picolibc
+      revision: 560946f26db075c296beea5b39d99e6de43c9010
+
+    - name: loramac-node
+      revision: fb00b383072518c918e2258b0916c996f2d4eebe
+      path: lib/zephyr-workspace/modules/lib/loramac-node
+
+    # Crypto libraries (commonly used)
+    - name: mbedtls
+      revision: 85440ef5fffa95d0e9971e9163719189cf34d979
+      path: lib/zephyr-workspace/modules/crypto/mbedtls
+      groups:
+        - crypto
+
+    - name: tinycrypt
+      revision: 1012a3ebee18c15ede5efc8332ee2fc37817670f
+      path: lib/zephyr-workspace/modules/crypto/tinycrypt
+      groups:
+        - crypto
+
+    # Bootloader support (optional - remove if not needed)
+    - name: mcuboot
+      revision: 4eba8087fa606db801455f14d185255bc8c49467
+      path: lib/zephyr-workspace/bootloader/mcuboot
+      groups:
+        - bootloader
+
+  self:
+    path: .

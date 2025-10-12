@@ -18,7 +18,7 @@ def send_packet(fprime_test_api: IntegrationTestAPI):
     )
 
 
-def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI):
+def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Acceleration telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.lsm6dsoManager.Acceleration", start="NOW", timeout=3
@@ -30,7 +30,7 @@ def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI):
     )
 
 
-def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI):
+def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get AngularVelocity telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.lsm6dsoManager.AngularVelocity", start="NOW", timeout=3
@@ -42,7 +42,7 @@ def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI):
     )
 
 
-def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI):
+def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Temperature telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.lsm6dsoManager.Temperature", start="NOW", timeout=3
@@ -52,7 +52,7 @@ def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI):
     assert reading != 0, "Temperature reading should be non-zero"
 
 
-def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI):
+def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get MagneticField telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.lis2mdlManager.MagneticField", start="NOW", timeout=3
