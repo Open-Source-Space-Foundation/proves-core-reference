@@ -85,6 +85,7 @@ void setupTopology(const TopologyState& state) {
     // We dont need UART, as we are sending coms directly to lora
     // comDriver.configure(state.uartDevice, state.baudRate);
     lora.start(state.loraDevice);
+    comDriver.configure(state.uartDevice, state.baudRate);
 }
 
 void startRateGroups() {

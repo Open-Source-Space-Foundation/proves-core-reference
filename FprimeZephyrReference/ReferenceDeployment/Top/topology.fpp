@@ -16,6 +16,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     import CdhCore.Subtopology
     import ComCcsds.FramingSubtopology
+    import ComCcsdsUart.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -37,6 +38,10 @@ module ReferenceDeployment {
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
+    instance comSplitterEvents
+    instance comSplitterTelemetry
+    # For UART sideband communication
+    instance comDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -62,16 +67,23 @@ module ReferenceDeployment {
 
     connections ComCcsds_CdhCore {
       # Core events and telemetry to communication queue
-      CdhCore.events.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
-      CdhCore.tlmSend.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      CdhCore.events.PktSend -> comSplitterEvents.comIn
+      comSplitterEvents.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      comSplitterEvents.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+
+      CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
+      comSplitterTelemetry.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
       ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
 
+      ComCcsdsUart.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.fprimeRouter.cmdResponseIn
     }
 
-    connections Communications {
+    connections CommunicationsRadio {
       lora.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
       lora.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
 
@@ -88,12 +100,28 @@ module ReferenceDeployment {
       comDelay.timeout -> ComCcsds.aggregator.timeout
     }
 
+    connections CommunicationsUart {
+      # ComDriver buffer allocations
+      comDriver.allocate      -> ComCcsdsUart.commsBufferManager.bufferGetCallee
+      comDriver.deallocate    -> ComCcsdsUart.commsBufferManager.bufferSendIn
+
+      # ComDriver <-> ComStub (Uplink)
+      comDriver.$recv                     -> ComCcsdsUart.comStub.drvReceiveIn
+      ComCcsdsUart.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+
+      # ComStub <-> ComDriver (Downlink)
+      ComCcsdsUart.comStub.drvSendOut      -> comDriver.$send
+      comDriver.ready         -> ComCcsdsUart.comStub.drvConnected
+    }
+
     connections RateGroups {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
+      rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn

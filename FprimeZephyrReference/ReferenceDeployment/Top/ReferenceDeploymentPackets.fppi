@@ -5,6 +5,8 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.cmdDisp.CommandsDropped
     ComCcsds.comQueue.comQueueDepth
     ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsUart.comQueue.comQueueDepth
+    ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
   }
@@ -13,6 +15,8 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.$health.PingLateWarnings
     ComCcsds.commsBufferManager.NoBuffs
     ComCcsds.commsBufferManager.EmptyBuffs
+    ComCcsdsUart.commsBufferManager.NoBuffs
+    ComCcsdsUart.commsBufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }
@@ -22,6 +26,9 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsds.commsBufferManager.TotalBuffs
     ComCcsds.commsBufferManager.CurrBuffs
     ComCcsds.comQueue.buffQueueDepth
+    ComCcsdsUart.commsBufferManager.TotalBuffs
+    ComCcsdsUart.commsBufferManager.CurrBuffs
+    ComCcsdsUart.comQueue.buffQueueDepth
     CdhCore.tlmSend.SendLevel
   }
 
