@@ -3,7 +3,7 @@ module ComCcsdsUart {
     # ComPacket Queue enum for queue types
     enum Ports_ComPacketQueue {
         EVENTS,
-        TELEMETRY 
+        TELEMETRY
     }
 
     enum Ports_ComBufferQueue {
@@ -49,7 +49,7 @@ module ComCcsdsUart {
     # ----------------------------------------------------------------------
     # Passive Components
     # ----------------------------------------------------------------------
-    instance frameAccumulator: Svc.FrameAccumulator base id ComCcsdsConfig.BASE_ID_UART + 0x01000 \ 
+    instance frameAccumulator: Svc.FrameAccumulator base id ComCcsdsConfig.BASE_ID_UART + 0x01000 \
     {
 
         phase Fpp.ToCpp.Phases.configObjects """
