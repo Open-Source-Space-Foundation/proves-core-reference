@@ -7,7 +7,7 @@ WEST ?= $(UV_RUN) west
 WESTX ?= $(UVX) west
 
 .PHONY: zephyr
-zephyr: zephyr-config zephyr-workspace zephyr-export zephyr-python-deps zephyr-sdk 
+zephyr: zephyr-config zephyr-workspace zephyr-export zephyr-python-deps zephyr-sdk
 
 .PHONY: clean-zephyr
 clean-zephyr: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
