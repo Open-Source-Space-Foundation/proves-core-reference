@@ -59,8 +59,8 @@ Add requirements in the chart below
 |AUTH006|The component shall compute the expected HMAC over the remaining payload and compare computed and received HMACs|---|
 |AUTH006|If the HMAC is valid, the component shall emit an event and adjust the pointer in the buffer and pass the payload to dataout|---|
 |AUTH007|If the HMAC is invalid, the component shall emit an event and send the invalid command back out the dataReturnOut port|---|
-|AUTH008| The HMAC autenticifation will be computed with a secret key shared with the ground station and the message with getApidSeqCount as counter |---|
-|AUTH009| The authenticate component will be able to call getApidSeqCount to know how to send over command |---|
+|AUTH008| The HMAC autenticifation will be computed with a secret key shared with the ground station and the message with the counter that is also attached to the message |---|
+|AUTH009| The authenticate component will be able to send its current counter value to the ground station |---|
 
 
 
