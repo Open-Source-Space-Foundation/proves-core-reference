@@ -51,7 +51,6 @@ void ComDelay ::run_handler(FwIndexType portNum, U32 context) {
         bool valid = this->m_last_status_valid.compare_exchange_strong(expected, false);
         if (valid) {
             this->comStatusOut_out(0, this->m_last_status);
-            this->timeout_out(0, 0);
         }
     }
 
