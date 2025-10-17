@@ -120,7 +120,7 @@ module ReferenceDeployment {
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsds.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
