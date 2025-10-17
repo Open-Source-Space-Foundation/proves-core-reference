@@ -7,9 +7,9 @@ to indicate packet reception.
 
 import time
 
+import adafruit_rfm9x
 import board
 import digitalio
-import adafruit_rfm9x
 import usb_cdc
 
 # Radio constants
