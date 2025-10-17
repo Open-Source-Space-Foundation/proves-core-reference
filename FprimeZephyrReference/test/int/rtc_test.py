@@ -9,15 +9,19 @@ import time
 from datetime import datetime, timezone
 
 import pytest
+from common import cmdDispatch, proves_send_and_assert_command
 from fprime.common.models.serialize.numerical_types import U32Type
 from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+from fprime_gds.common.testing_fw.predicates import event_predicate
+
+rtcManager = "ReferenceDeployment.rtcManager"
 
 
 @pytest.fixture(autouse=True)
-def set_now_time(fprime_test_api: IntegrationTestAPI):
+def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
     set_time(fprime_test_api)
@@ -38,14 +42,13 @@ def set_time(fprime_test_api: IntegrationTestAPI, dt: datetime = None):
         Second=dt.second,
     )
     time_data_str = json.dumps(time_data)
-    fprime_test_api.send_and_assert_command(
-        "ReferenceDeployment.rtcManager.TIME_SET",
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{rtcManager}.TIME_SET",
         [
             time_data_str,
         ],
-        max_delay=2,
     )
-    fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeSet", timeout=2)
 
 
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -56,9 +59,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     set_time(fprime_test_api, curiosity_landing)
 
     # Fetch event data
-    result: EventData = fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.TimeSet", timeout=2
-    )
+    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
 
     # Fetch previously set time from event args
     event_previous_time_arg: U32Type = result.args[0]
@@ -83,9 +84,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     pytest.approx(event_time, abs=30) == curiosity_landing
 
     # Fetch event data
-    result: EventData = fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.TimeSet", timeout=2
-    )
+    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
 
     # Assert time is within 30 seconds of now
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
@@ -96,7 +95,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch initial time
     result: ChData = fprime_test_api.assert_telemetry(
-        "CdhCore.cmdDisp.CommandsDispatched", timeout=3
+        f"{cmdDispatch}.CommandsDispatched", timeout=3
     )
 
     # Convert FPrime time to datetime
@@ -109,7 +108,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch updated time
     result: ChData = fprime_test_api.assert_telemetry(
-        "CdhCore.cmdDisp.CommandsDispatched", timeout=3
+        f"{cmdDispatch}.CommandsDispatched", timeout=3
     )
 
     # Convert FPrime time to datetime
@@ -125,6 +124,19 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 
+    # List of events we expect to see
+    events: list[event_predicate] = [
+        fprime_test_api.get_event_pred(f"{rtcManager}.YearValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.MonthValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.DayValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.HourValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.MinuteValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.SecondValidationFailed"),
+        fprime_test_api.get_event_pred(f"{rtcManager}.TimeNotSet"),
+        fprime_test_api.get_event_pred(f"{cmdDispatch}.OpCodeDispatched"),
+        fprime_test_api.get_event_pred(f"{cmdDispatch}.OpCodeError"),
+    ]
+
     # Clear histories
     fprime_test_api.clear_histories()
 
@@ -138,40 +150,6 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
         Second=12345,
     )
     time_data_str = json.dumps(time_data)
-    fprime_test_api.send_command(
-        "ReferenceDeployment.rtcManager.TIME_SET",
-        [
-            time_data_str,
-        ],
+    fprime_test_api.send_and_assert_event(
+        f"{rtcManager}.TIME_SET", [time_data_str], events, timeout=10
     )
-
-    # Assert time not set event is emitted
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.YearValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.MonthValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.DayValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.HourValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.MinuteValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.rtcManager.SecondValidationFailed", timeout=2
-    )
-
-    fprime_test_api.assert_event("ReferenceDeployment.rtcManager.TimeNotSet", timeout=2)
-
-    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeDispatched", timeout=2)
-
-    fprime_test_api.assert_event("CdhCore.cmdDisp.OpCodeError", timeout=2)

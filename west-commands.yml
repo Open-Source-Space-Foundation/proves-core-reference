@@ -1,0 +1,7 @@
+# Keep the help strings in sync with the values in the .py files!
+west-commands:
+  - file: lib/west-commands/uv.py
+    commands:
+      - name: uv
+        class: Uv
+        help: manage packages for Zephyr with uv

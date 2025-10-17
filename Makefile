@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr-setup generate-if-needed build
+all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -9,15 +9,13 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
-	@echo "Initializing and updating git submodules..."
-	git submodule update --init --recursive
+	@git submodule update --init --recursive
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
-fprime-venv: ## Create a virtual environment
-		@$(MAKE) uv
-		@echo "Creating virtual environment..."
-		@$(UV) venv fprime-venv
-		@$(UV) pip install --prerelease=allow --requirement requirements.txt
+.PHONY: fprime-venv
+fprime-venv: uv ## Create a virtual environment
+	@$(UV) venv fprime-venv --allow-existing
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment
@@ -42,31 +40,21 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
-	@echo "Generating FPrime-Zephyr Proves Core Reference..."
-	@$(UV) run fprime-util generate --force
-
-.PHONY: generate-ci
-generate-ci:
-	@$(UV) run fprime-util generate --force
+generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
-	@test -s $(BUILD_DIR) || $(MAKE) generate
+	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: submodules zephyr-setup fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
-	@echo "Building..."
-	@$(UV) run fprime-util build
-
-.PHONY: build-ci
-build-ci:
-	@$(UV) run fprime-util build
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
 test-integration: uv
-	@$(UV) run pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: bootloader
 bootloader: uv
@@ -74,26 +62,16 @@ bootloader: uv
 		echo "RP2350 already in bootloader mode - skipping trigger"; \
 	else \
 		echo "RP2350 not in bootloader mode - triggering bootloader"; \
-		$(UV) run pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
 
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
 
-.PHONY: clean-zephyr
-clean-zephyr: ## Remove all Zephyr build files
-	rm -rf lib/zephyr-workspace/bootloader lib/zephyr-workspace/modules lib/zephyr-workspace/tools
-
-.PHONY: clean-zephyr-sdk
-clean-zephyr-sdk: ## Remove Zephyr SDK (reinstall with 'make zephyr-setup')
-	@echo "Removing Zephyr SDK..."
-	rm -rf ~/zephyr-sdk-*
-	@echo "Run 'make zephyr-setup' to reinstall with minimal ARM-only toolchain"
-
 ##@ Operations
 
-GDS_COMMAND ?= $(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
 .PHONY: gds
@@ -105,22 +83,6 @@ gds: ## Run FPrime GDS
 gds-integration:
 	@$(GDS_COMMAND) --gui=none
 
-##@ Build Tools
-
-.PHONY: download-bin
-download-bin: uv
-
-BIN_DIR ?= $(shell pwd)/bin
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-### Tool Versions
-UV_VERSION ?= 0.8.13
-
-UV_DIR ?= $(BIN_DIR)/uv-$(UV_VERSION)
-UV ?= $(UV_DIR)/uv
-UVX ?= $(UV_DIR)/uvx
-.PHONY: uv
-uv: $(UV) ## Download uv
-$(UV): $(BIN_DIR)
-	@test -s $(UV) || { mkdir -p $(UV_DIR); curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | UV_INSTALL_DIR=$(UV_DIR) sh > /dev/null; }
+include lib/makelib/build-tools.mk
+include lib/makelib/ci.mk
+include lib/makelib/zephyr.mk
