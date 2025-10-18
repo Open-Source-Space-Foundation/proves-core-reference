@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LightSensorManager.hpp
-// \author shirleydeng
+// \author adriano
 // \brief  hpp file for LightSensorManager component implementation class
 // ======================================================================
 
@@ -23,6 +23,19 @@ class LightSensorManager final : public LightSensorManagerComponentBase {
 
     //! Destroy LightSensorManager object
     ~LightSensorManager();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command RESET
+    void RESET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                          U32 cmdSeq            //!< The command sequence number
+                          ) override;
+
+
+    Fw::On m_state = Fw::On::OFF; //! Keeps track if sensor is on or off
 };
 
 }  // namespace Components

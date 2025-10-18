@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LightSensorManager.cpp
-// \author shirleydeng
+// \author adriano
 // \brief  cpp file for LightSensorManager component implementation class
 // ======================================================================
 
@@ -15,5 +15,14 @@ namespace Components {
 LightSensorManager ::LightSensorManager(const char* const compName) : LightSensorManagerComponentBase(compName) {}
 
 LightSensorManager ::~LightSensorManager() {}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void LightSensorManager ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // TODO
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
 
 }  // namespace Components
