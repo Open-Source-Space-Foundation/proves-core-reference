@@ -1,5 +1,13 @@
 # Proves Core Reference Project
 
+This is for running fprime on the arduino nicla vision camera.
+
+
+
+
+
+
+
 This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/).
 
 ## System Requirements
