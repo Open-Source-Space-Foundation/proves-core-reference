@@ -8,15 +8,6 @@ module LightSensor {
         @ Telemetry channel to report light sensor reading
         telemetry Reading: LightSensorData
 
-        @ Struct representing VEML6031 sensor data
-        struct LightSensorData {
-            @ ALS values in lux (lx)
-            als: F32
-
-            @ IR values in lux (lx)
-            ir: F32
-        }
-
         @ Telemetry channel to report whether reading is valid
         telemetry Valid: bool
 
