@@ -72,7 +72,7 @@ module ReferenceDeployment {
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
 
-  instance prmDb: Components.NullPrmDb base id 0x10024000
+  instance prmDb: Components.ZephyrPrmDb base id 0x10024000
 
   instance comDelay: Components.ComDelay base id 0x10025000
 }

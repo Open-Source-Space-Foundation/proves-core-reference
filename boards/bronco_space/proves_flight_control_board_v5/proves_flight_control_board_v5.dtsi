@@ -74,6 +74,12 @@ zephyr_udc0: &usbd {
 			reg = <0x100 (DT_SIZE_M(4) - 0x100)>;
 			read-only;
 		};
+
+		/* Storage partition for settings and file system */
+		storage_partition: partition@e2000 {
+			label = "storage";
+			reg = <0x000e2000 DT_SIZE_K(120)>;
+		};
 	};
 };
 
