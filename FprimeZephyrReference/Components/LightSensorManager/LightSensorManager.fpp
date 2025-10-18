@@ -52,9 +52,10 @@ module LightSensor {
         param READ_INTERVAL: U32 default 1
 
         @ Port for receiving call from load switch
-        async input port loadSwitch: Drv.GpioRead
+        sync input port loadSwitch: Drv.GpioRead
 
         @ Port receiving calls from the rate group
+        @ (makes sense to me to be sync but not for some other examples)
         sync input port run: Svc.Sched
 
         ###############################################################################
