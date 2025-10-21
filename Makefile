@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr-setup generate-if-needed build
+all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -9,98 +9,71 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
-	@echo "Initializing and updating git submodules..."
-	git submodule update --init --recursive
+	@git submodule update --init --recursive
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
+.PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
-	@test -s $(VIRTUAL_ENV) || { \
-		echo "Creating virtual environment..."; \
-		$(UV) venv fprime-venv; \
-		$(UV) pip install --requirement requirements.txt; \
-	}
+	@$(UV) venv fprime-venv --allow-existing
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
-.PHONY: zephyr-setup
-zephyr-setup: uv ## Set up Zephyr environment
-	@test -s lib/zephyr-workspace/tools/edtt/.gitignore || { \
-		echo "Setting up Zephyr environment..."; \
-		cd lib/zephyr-workspace && \
-			$(UVX) west update && \
-			$(UVX) west zephyr-export && \
-			$(UV) run west packages pip --install && \
-			$(UV) run west sdk install; \
-	}
+patch-gps-package:
+	cp custom_space_data_link.py fprime-venv/lib/python3.13/site-packages/fprime_gds/common/communication/ccsds/space_data_link.py
 
 ##@ Development
 
 .PHONY: pre-commit-install
-pre-commit-install: uv
-	@echo "Installing pre-commit hooks..."
+pre-commit-install: uv ## Install pre-commit hooks
 	@$(UVX) pre-commit install > /dev/null
 
 .PHONY: fmt
 fmt: pre-commit-install ## Lint and format files
-	$(UVX) pre-commit run --all-files
+	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr-setup ## Generate FPrime-Zephyr Proves Core Reference
-	@echo "Generating FPrime-Zephyr Proves Core Reference..."
-	$(UV) run fprime-util generate --force
+generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
-	@test -s $(BUILD_DIR) || $(MAKE) generate
+	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
-	@echo "Building FPrime code..."
-	@$(UV) run fprime-util build
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+	@$(UV_RUN) fprime-util build
 
-.PHONY: list-tty
-list-tty: arduino-cli ## List available TTY ports
-	@echo "TTY ports:"
-	@$(ARDUINO_CLI) board list | grep "USB" | awk '{print $$1}'
+.PHONY: test-integration
+test-integration: uv
+	@$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
-.PHONY: install
-UF2 ?= $(BUILD_DIR)/zephyr/zephyr.uf2
-install: arduino-cli build ## Install the zephyr firmware onto a connected PROVES Kit, requires BOARD_DIR=[path-to-your-board]
-	@$(ARDUINO_CLI) config init || true
-	@$(ARDUINO_CLI) config add board_manager.additional_urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
-	@$(ARDUINO_CLI) core install rp2040:rp2040@4.1.1
-	@$(ARDUINO_CLI) upload -v -b 115200 --fqbn rp2040:rp2040:rpipico -p $(BOARD_DIR) -i $(UF2)
+.PHONY: bootloader
+bootloader: uv
+	@if [ -d "/Volumes/RP2350" ] || [ -d "/Volumes/RPI-RP2" ] || ls /media/*/RP2350 2>/dev/null || ls /media/*/RPI-RP2 2>/dev/null; then \
+		echo "RP2350 already in bootloader mode - skipping trigger"; \
+	else \
+		echo "RP2350 not in bootloader mode - triggering bootloader"; \
+		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	fi
 
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
-	rm -rf lib/zephyr-workspace/bootloader lib/zephyr-workspace/modules lib/zephyr-workspace/tools
 
 ##@ Operations
 
-.PHONY: gds
+GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+
+.PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(UV) run fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+	@$(GDS_COMMAND)
 
-##@ Build Tools
-BIN_DIR ?= $(shell pwd)/bin
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
+.PHONY: gds-integration
+gds-integration:
+	@$(GDS_COMMAND) --gui=none
 
-### Tool Versions
-UV_VERSION ?= 0.8.13
-
-UV_DIR ?= $(BIN_DIR)/uv-$(UV_VERSION)
-UV ?= $(UV_DIR)/uv
-UVX ?= $(UV_DIR)/uvx
-.PHONY: uv
-uv: $(UV) ## Download uv
-$(UV): $(BIN_DIR)
-	@test -s $(UV) || { mkdir -p $(UV_DIR); curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | UV_INSTALL_DIR=$(UV_DIR) sh > /dev/null; }
-
-ARDUINO_CLI ?= $(BIN_DIR)/arduino-cli
-.PHONY: arduino-cli
-arduino-cli: $(ARDUINO_CLI) ## Download arduino-cli
-$(ARDUINO_CLI): $(BIN_DIR)
-	@test -s $(ARDUINO_CLI) || curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR=$(BIN_DIR) sh > /dev/null
+include lib/makelib/build-tools.mk
+include lib/makelib/ci.mk
+include lib/makelib/zephyr.mk

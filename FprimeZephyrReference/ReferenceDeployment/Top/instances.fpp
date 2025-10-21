@@ -37,11 +37,6 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 4
 
-  instance prmDb: Svc.PrmDb base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 6
-
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -50,25 +45,35 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Passive component instances
   # ----------------------------------------------------------------------
+  instance rateGroupDriver: Svc.RateGroupDriver base id 0x10010000
 
-  instance chronoTime: Svc.ChronoTime base id 0x10010000
+  instance version: Svc.Version base id 0x10011000
 
-  instance rateGroupDriver: Svc.RateGroupDriver base id 0x10011000
+  instance timer: Zephyr.ZephyrRateDriver base id 0x10012000
 
-  instance version: Svc.Version base id 0x10012000
+  instance comDriver: Zephyr.ZephyrUartDriver base id 0x10013000
 
-  instance timer: Zephyr.ZephyrRateDriver base id 0x10013000
+  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
 
-  instance comDriver: Zephyr.ZephyrUartDriver base id 0x10014000
+  instance watchdog: Components.Watchdog base id 0x10015000
 
-  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10015000
+  instance rtcManager: Drv.RtcManager base id 0x10016000
 
-  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
+  instance imuManager: Components.ImuManager base id 0x10017000
 
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
+  instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 
-  instance watchdog: Components.Watchdog base id 0x10016000
+  instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
 
-  instance burnwire: Components.Burnwire base id 0x10017000
+  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10020000
 
+  instance burnwire: Components.Burnwire base id 0x10021000
+
+  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10022000
+
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
+
+  instance prmDb: Components.NullPrmDb base id 0x10024000
+
+  instance comDelay: Components.ComDelay base id 0x10025000
 }

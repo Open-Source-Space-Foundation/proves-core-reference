@@ -1,0 +1,6 @@
+board:
+  name: proves_flight_control_board_v5d
+  full_name: PROVES Flight Control Board v5d
+  vendor: Bronco Space
+  socs:
+  - name: rp2350a

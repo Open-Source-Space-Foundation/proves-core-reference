@@ -24,3 +24,23 @@ repos:
     - id: cpplint
       args:
         - --config=cpplint.cfg
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.13.2
+  hooks:
+    - id: ruff-check
+      args: [--fix]
+    - id: ruff-check
+      args: [--fix, --select, I] # import sorting
+    - id: ruff-format
+
+- repo: https://github.com/econchick/interrogate/
+  rev: 1.7.0
+  hooks:
+    - id: interrogate
+      args:
+        - --ignore-init-method
+        - --omit-covered-files
+        - --fail-under=100
+        - -vv
+        - --color

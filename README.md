@@ -36,14 +36,7 @@ make build
 
 ### Find the path to your board
 
-Next, plug in your board! If you have previously installed a firmware on your board you may not see it show up as a drive. In that case you'll want to find it's `tty` port.
-
-To do this, run the following command
-```shell
-make list-tty
-```
-
-Otherwise, you want to find the location of the board on your computer. It should be called something like RP2350 but you want to find the path to it
+Next, plug in your board! If you have previously installed a firmware on your board you may not see it show up as a drive. In that case you'll want to put the board into boot loader mode. Then you'll be able to find the location of the board on your computer. It should be called something like RP2350 but you want to find the path to it
 
 For Mac:
 ```shell
@@ -60,7 +53,7 @@ findmnt
 
 Now you want to install the firmware to the board.
 ```shell
-make install BOARD_DIR=[path-to-your-board]
+cp build-artifacts/zephyr.uf2 [path-to-your-board]
 ```
 
 Finally, run the fprime-gds.
@@ -68,53 +61,14 @@ Finally, run the fprime-gds.
 make gds
 ```
 
-# How to add a component
+## Running Integration Tests
 
-1. Overlay
+First, start GDS with:
+```sh
+make gds
+```
 
-
-you also want to add aliases
-
- aliases {
-        burnwire0 = &burnwire0;
-        burnwire1 = &burnwire1;
-    };
-
-
-2.
-
-In RefereneceDeploymentTopology.cpp
-static const struct gpio_dt_spec burnwireGpio = GPIO_DT_SPEC_GET(DT_ALIAS(burnwire0), gpios);
-
-    gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-
-
-and
-
-gpioDriver.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-
-in topology.fpp
-
-connections burnwire1 {
-      burnwire1.gpioSet -> gpioDriver.gpioWrite
-    }
-
-
-
-
-in instances.fpp
-instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10015100
-
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10015200
-
-
-in topology.fpp
-
-  instance gpioBurnwire0
-    instance gpioBurnwire1
-
-3. Make a new component in the components folder
-4. Add the component to the instances and topology folder
-
-in topology.fpp also     instance burnwire
+Then, in another terminal, run the following command to execute the integration tests:
+```sh
+make test-integration
+```
