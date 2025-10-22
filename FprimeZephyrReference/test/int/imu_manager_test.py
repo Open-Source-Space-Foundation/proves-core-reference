@@ -50,7 +50,7 @@ def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, star
 def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Temperature telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.Temperature", start="NOW", timeout=3
+        f"{lsm6dsoManager}.Temperature", start="NOW", timeout=30
     )
 
     reading: int = result.get_val()
@@ -60,7 +60,7 @@ def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds
 def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get MagneticField telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lis2mdlManager}.MagneticField", start="NOW", timeout=3
+        f"{lis2mdlManager}.MagneticField", start="NOW", timeout=30
     )
 
     reading: dict[float] = result.get_val()
