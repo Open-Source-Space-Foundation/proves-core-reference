@@ -30,7 +30,7 @@ register_fprime_library(
 #     SOURCES
 #         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AntennaDeployerTestMain.cpp"
 #         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AntennaDeployerTester.cpp"
-#     DEPENDS
-#         STest # For rules-based testing
-#     UT_AUTO_HELPERS
+#     UT_HEADER_FILES
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AntennaDeployerTester.hpp"
+#     UT_AUTO_HELPERS ON
 # )

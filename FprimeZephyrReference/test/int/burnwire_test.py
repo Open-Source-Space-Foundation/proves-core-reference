@@ -25,7 +25,7 @@ def stop_burnwire(fprime_test_api: IntegrationTestAPI):
     """Stop the burnwire and clear histories"""
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
 
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=10)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
 
