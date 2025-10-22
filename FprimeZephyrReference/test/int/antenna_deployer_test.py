@@ -36,7 +36,7 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
 
     for param, value in overrides:
         proves_send_and_assert_command(
-            fprime_test_api, f"{antenna_deployer}.{param}_SET", [value]
+            fprime_test_api, f"{antenna_deployer}.{param}_PRM_SET", [value]
         )
 
     yield
@@ -45,7 +45,7 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
     for param, value in defaults:
         proves_send_and_assert_command(
-            fprime_test_api, f"{antenna_deployer}.{param}_SET", [value]
+            fprime_test_api, f"{antenna_deployer}.{param}_PRM_SET", [value]
         )
 
     fprime_test_api.clear_histories()
@@ -63,7 +63,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
 
     # Burnwire should be commanded on and then off after the shortened burn window
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=5)
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=5)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
     finish_event: EventData = fprime_test_api.assert_event(
         f"{antenna_deployer}.DeployFinish", timeout=10

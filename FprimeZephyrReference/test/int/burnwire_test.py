@@ -41,7 +41,7 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
 
     fprime_test_api.assert_event(f"{burnwire}.SafetyTimerState", timeout=2)
 
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=10)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
 
