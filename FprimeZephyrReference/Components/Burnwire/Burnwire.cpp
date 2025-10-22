@@ -5,6 +5,9 @@
 
 #include "FprimeZephyrReference/Components/Burnwire/Burnwire.hpp"
 
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -51,6 +54,11 @@ void Burnwire::stopBurn() {
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid valid;
     U32 timeout = this->paramGet_SAFETY_TIMER(valid);
+    printk("Burnwire SchedIn Handler: timeout=%u\n", timeout);
+
+    // timeout += 1;
+    // this->paramSet_SAFETY_TIMER(timeout);
+    this->paramSave_SAFETY_TIMER();
 
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;

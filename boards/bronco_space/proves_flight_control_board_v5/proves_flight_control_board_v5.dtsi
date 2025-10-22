@@ -12,6 +12,7 @@
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
 		zephyr,code-partition = &code_partition;
+        zephyr,settings-partition = &storage_partition;
 	};
 
 	aliases {
