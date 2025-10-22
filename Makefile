@@ -79,6 +79,11 @@ gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
 	@$(GDS_COMMAND)
 
+.PHONY: gds-passthrough
+gds-passthrough: ## Run FPrime GDS Passthrough
+	@echo "Running FPrime GDS Passthrough..."
+	@$(GDS_COMMAND) --uart-device /dev/cu.usbmodem103
+
 .PHONY: gds-integration
 gds-integration:
 	@$(GDS_COMMAND) --gui=none
