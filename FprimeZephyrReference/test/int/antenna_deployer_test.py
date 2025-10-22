@@ -69,5 +69,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     # Result should be FAILED (enum value 2) after a single attempt
-    assert finish_event.args[0].val == 2, "Deployment should fail without distance sensor feedback"
+    assert (
+        finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+    ), "Deployment should fail without distance sensor feedback"
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
