@@ -236,7 +236,9 @@ class RFM9x:
 
     auto_agc = _RegisterBits(_RH_RF95_REG_26_MODEM_CONFIG3, offset=2, bits=1)
 
-    low_datarate_optimize = _RegisterBits(_RH_RF95_REG_26_MODEM_CONFIG3, offset=3, bits=1)
+    low_datarate_optimize = _RegisterBits(
+        _RH_RF95_REG_26_MODEM_CONFIG3, offset=3, bits=1
+    )
 
     lna_boost_hf = _RegisterBits(_RH_RF95_REG_0C_LNA, offset=0, bits=2)
 
@@ -273,7 +275,9 @@ class RFM9x:
         # throw a nicer message to indicate possible wiring problems.
         version = self._read_u8(_RH_RF95_REG_42_VERSION)
         if version != 18:
-            raise RuntimeError("Failed to find rfm9x with expected version -- check wiring")
+            raise RuntimeError(
+                "Failed to find rfm9x with expected version -- check wiring"
+            )
 
         # Set sleep mode, wait 10s and confirm in sleep mode (basic device check).
         # Also set long range mode (LoRa mode) as it can only be done in sleep.
@@ -365,7 +369,9 @@ class RFM9x:
         self.crc_error_count = 0
 
     # Method references members that may not be defined when typing not available
-    def _read_into(self, address: int, buf: WriteableBuffer, length: Optional[int] = None) -> None:
+    def _read_into(
+        self, address: int, buf: WriteableBuffer, length: Optional[int] = None
+    ) -> None:
         # Read a number of bytes from the specified address into the provided
         # buffer.  If length is not specified (the default) the entire buffer
         # will be filled.
@@ -382,7 +388,9 @@ class RFM9x:
         self._read_into(address, self._BUFFER, length=1)
         return self._BUFFER[0]
 
-    def _write_from(self, address: int, buf: ReadableBuffer, length: Optional[int] = None) -> None:
+    def _write_from(
+        self, address: int, buf: ReadableBuffer, length: Optional[int] = None
+    ) -> None:
         # Write a number of bytes to the provided address and taken from the
         # provided buffer.  If no length is specified (the default) the entire
         # buffer is written.
@@ -398,7 +406,9 @@ class RFM9x:
         # Write a byte register to the chip.  Specify the 7-bit address and the
         # 8-bit value to write to that address.
         with self._device as device:
-            self._BUFFER[0] = (address | 0x80) & 0xFF  # Set top bit to 1 to indicate a write.
+            self._BUFFER[0] = (
+                address | 0x80
+            ) & 0xFF  # Set top bit to 1 to indicate a write.
             self._BUFFER[1] = val & 0xFF
             device.write(self._BUFFER, end=2)
 
@@ -623,7 +633,10 @@ class RFM9x:
         self._write_u8(_RH_RF95_DETECTION_THRESHOLD, 0x0C if val == 6 else 0x0A)
         self._write_u8(
             _RH_RF95_REG_1E_MODEM_CONFIG2,
-            ((self._read_u8(_RH_RF95_REG_1E_MODEM_CONFIG2) & 0x0F) | ((val << 4) & 0xF0)),
+            (
+                (self._read_u8(_RH_RF95_REG_1E_MODEM_CONFIG2) & 0x0F)
+                | ((val << 4) & 0xF0)
+            ),
         )
 
     @property
@@ -875,7 +888,9 @@ class RFM9x:
                             packet = None
                         else:  # save the packet identifier for this source
                             self.seen_ids[packet[1]] = packet[2]
-                    if not with_header and packet is not None:  # skip the header if not wanted
+                    if (
+                        not with_header and packet is not None
+                    ):  # skip the header if not wanted
                         packet = packet[4:]
         # Listen again if necessary and return the result packet.
         if keep_listening:

@@ -179,14 +179,18 @@ class RFM69(RFMSPI):
     packet_format = RFMSPI.RegisterBits(_RF69_REG_37_PACKET_CONFIG1, offset=7, bits=1)
     dc_free = RFMSPI.RegisterBits(_RF69_REG_37_PACKET_CONFIG1, offset=5, bits=2)
     crc_on = RFMSPI.RegisterBits(_RF69_REG_37_PACKET_CONFIG1, offset=4, bits=1)
-    crc_auto_clear_off = RFMSPI.RegisterBits(_RF69_REG_37_PACKET_CONFIG1, offset=3, bits=1)
+    crc_auto_clear_off = RFMSPI.RegisterBits(
+        _RF69_REG_37_PACKET_CONFIG1, offset=3, bits=1
+    )
     address_filter = RFMSPI.RegisterBits(_RF69_REG_37_PACKET_CONFIG1, offset=1, bits=2)
     mode_ready = RFMSPI.RegisterBits(_RF69_REG_27_IRQ_FLAGS1, offset=7)
     dio_0_mapping = RFMSPI.RegisterBits(_RF69_REG_25_DIO_MAPPING1, offset=6, bits=2)
     ook_thresh_type = RFMSPI.RegisterBits(_RF69_REG_1B_OOK_PEAK, offset=6, bits=2)
     ook_thresh_step = RFMSPI.RegisterBits(_RF69_REG_1B_OOK_PEAK, offset=5, bits=3)
     ook_peak_thresh_dec = RFMSPI.RegisterBits(_RF69_REG_1B_OOK_PEAK, offset=0, bits=3)
-    ook_average_thresh_filt = RFMSPI.RegisterBits(_RF69_REG_1C_OOK_AVG, offset=6, bits=2)
+    ook_average_thresh_filt = RFMSPI.RegisterBits(
+        _RF69_REG_1C_OOK_AVG, offset=6, bits=2
+    )
 
     # pylint: disable=too-many-statements
     # pylint: disable=too-many-arguments
@@ -218,7 +222,9 @@ class RFM69(RFMSPI):
         # Check the version of the chip.
         version = self.read_u8(_RF69_REG_10_VERSION)
         if version not in (0x23, 0x24):
-            raise RuntimeError("Invalid RFM69 version, check wiring! ID found:", hex(version))
+            raise RuntimeError(
+                "Invalid RFM69 version, check wiring! ID found:", hex(version)
+            )
         self.idle()  # Enter idle state.
         # Setup the chip in a similar way to the RadioHead RFM69 library.
         # Set FIFO TX condition to not empty and the default FIFO threshold to 15.
