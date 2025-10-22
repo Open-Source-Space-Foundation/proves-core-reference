@@ -41,6 +41,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lis2mdlManager.MagneticField
   }
 
+  packet Antenna id 7 group 4 {
+    ReferenceDeployment.antennaDeployer.DeployCount
+    ReferenceDeployment.antennaDeployer.LastDistance
+  }
+
 
 
 } omit {
