@@ -59,7 +59,9 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     attempt_event: EventData = fprime_test_api.assert_event(
         f"{antenna_deployer}.DeployAttempt", timeout=5
     )
-    assert attempt_event.args[0].val == 1, "First deployment attempt should be attempt #1"
+    assert attempt_event.args[0].val == 1, (
+        "First deployment attempt should be attempt #1"
+    )
 
     # Burnwire should be commanded on and then off after the shortened burn window
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=5)
@@ -69,7 +71,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     # Result should be FAILED (enum value 2) after a single attempt
-    assert (
-        finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
-    ), "Deployment should fail without distance sensor feedback"
+    assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED", (
+        "Deployment should fail without distance sensor feedback"
+    )
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
