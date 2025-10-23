@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LoadSwitch.hpp
-// \author kyang25
+// \author sarah
 // \brief  hpp file for LoadSwitch component implementation class
 // ======================================================================
 
@@ -29,12 +29,15 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for command TODO
-    //!
-    //! TODO
-    void TODO_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                         U32 cmdSeq            //!< The command sequence number
-                         ) override;
+    //! Handler implementation for command TURN_ON
+    void TURN_ON_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                            U32 cmdSeq            //!< The command sequence number
+                            ) override;
+
+    //! Handler implementation for command TURN_OFF
+    void TURN_OFF_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq            //!< The command sequence number
+                             ) override;
 };
 
 }  // namespace Components

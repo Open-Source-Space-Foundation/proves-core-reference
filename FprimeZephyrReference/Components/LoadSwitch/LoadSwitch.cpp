@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LoadSwitch.cpp
-// \author kyang25
+// \author sarah
 // \brief  cpp file for LoadSwitch component implementation class
 // ======================================================================
 
@@ -20,7 +20,12 @@ LoadSwitch ::~LoadSwitch() {}
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void LoadSwitch ::TODO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void LoadSwitch ::TURN_ON_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // TODO
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // TODO
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
