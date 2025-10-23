@@ -4,8 +4,6 @@ module Components {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
-        @ TODO
-        async command TODO opcode 0
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
@@ -26,7 +24,7 @@ module Components {
 
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
-        output port Status: Fw.On
+        output port Status: Drv.GpioRead
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
