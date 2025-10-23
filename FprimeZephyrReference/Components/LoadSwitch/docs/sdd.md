@@ -9,7 +9,7 @@ Add usage examples here
 Add diagrams here
 
 ### Typical Usage
-And the typical usage of the component here
+The load switch would be used whenever a sensor is to be turned on or off.
 
 ## Class Diagram
 Add a class diagram here
@@ -17,7 +17,7 @@ Add a class diagram here
 ## Port Descriptions
 | Name | Description |
 |---|---|
-|---|---|
+| Status | Boolean value displaying whether the load switch is on or not. |
 
 ## Component States
 | Name  | Description                          |
@@ -37,17 +37,18 @@ Add sequence diagrams here
 ## Commands
 | Name | Description |
 |---|---|
-|---|---|
+| On | Turn on power to the component |
+| Off | Turn off power to the component |
 
 ## Events
 | Name | Description |
 |---|---|
-|---|---|
+| StatusChanged | Emits event whenever the status of the load switch changes |
 
 ## Telemetry
 | Name | Description |
 |---|---|
-|---|---|
+| IsOn | Returns whether the load switch is supplying power to the component or not |
 
 ## Unit Tests
 | Name | Description | Output | Coverage |
@@ -62,4 +63,4 @@ Add sequence diagrams here
 ## Change Log
 | Date | Description |
 |---|---|
-|---| Initial Draft |
+| 10-22-2025 | Sarah, Kevin, and MoMata's first commit |

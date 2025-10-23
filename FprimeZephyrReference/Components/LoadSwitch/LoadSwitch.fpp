@@ -13,15 +13,20 @@ module Components {
 
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
+        async command TURN_ON()
+        async command TURN_OFF()
 
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64
+        telemetry IsOn: Fw.On
 
         # @ Example event
         # event ExampleStateEvent(example_state: Fw.On) severity activity high id 0 format "State set to {}"
+        event StatusChanged($state: Fw.On) severity activity high id 1 format "Load switch state changed to {}"
 
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
+        output port Status: Fw.On
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
