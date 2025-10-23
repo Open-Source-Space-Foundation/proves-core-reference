@@ -8,6 +8,7 @@
 
 namespace Components {
 
+const struct device* LoadSwitch::m_device = nullptr;
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
