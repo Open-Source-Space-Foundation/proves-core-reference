@@ -8,6 +8,7 @@
 #define Components_LoadSwitch_HPP
 
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
+#include <zephyr/drivers/gpio.h>
 
 namespace Components {
 
@@ -24,6 +25,12 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Destroy LoadSwitch object
     ~LoadSwitch();
 
+    // ----------------------------------------------------------------------
+    // Configuration Meant to be used in ***Topology.cpp
+    // ----------------------------------------------------------------------
+
+    void pin_configuration(const struct device* device, uint8_t pinNum);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -38,6 +45,10 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     void TURN_OFF_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
+
+    uint8_t m_pinNum;
+    static const struct device* m_device;
+
 };
 
 }  // namespace Components

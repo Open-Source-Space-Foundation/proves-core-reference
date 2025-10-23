@@ -35,6 +35,11 @@ module ReferenceDeployment {
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 4
+  
+  instance loadSwitch1: Components.LoadSwitch base id 0x10003000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
 
   # ----------------------------------------------------------------------
   # Queued component instances

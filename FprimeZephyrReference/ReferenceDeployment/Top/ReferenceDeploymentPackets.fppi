@@ -55,7 +55,11 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
 
+
 } omit {
+  # Needs to be added appropriately later
+  loadSwitch1.IsOn
+
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
