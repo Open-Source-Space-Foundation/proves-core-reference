@@ -72,6 +72,7 @@ Add requirements in the chart below
 | VEML6031-003 | The LightSensorManager shall validate lux readings | Unit-Test |
 | VEML6031-004 | The LightSensorManager shall report if light is detected above a provided threshold | Unit-Test |
 | VEML6031-005 | The LightSensorManager shall reset | Unit-Test |
+| VEML6031-006 | The LightSensormanager shall test if READ_INTERVAL is less than INTEGRATION_TIME | Unit-Test |
 
 ## Change Log
 | Date | Description |
