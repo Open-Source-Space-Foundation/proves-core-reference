@@ -15,7 +15,8 @@ module ReferenceDeployment {
   # Subtopology imports
   # ----------------------------------------------------------------------
     import CdhCore.Subtopology
-    import ComCcsds.Subtopology
+    import ComCcsds.FramingSubtopology
+    import ComCcsdsUart.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -24,7 +25,7 @@ module ReferenceDeployment {
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
-    instance comDriver
+    instance lora
     instance gpioDriver
     instance gpioBurnwire0
     instance gpioBurnwire1
@@ -38,6 +39,10 @@ module ReferenceDeployment {
     instance comDelay
     instance burnwire
     instance antennaDeployer
+    instance comSplitterEvents
+    instance comSplitterTelemetry
+    # For UART sideband communication
+    instance comDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -63,27 +68,49 @@ module ReferenceDeployment {
 
     connections ComCcsds_CdhCore {
       # Core events and telemetry to communication queue
-      CdhCore.events.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
-      CdhCore.tlmSend.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      CdhCore.events.PktSend -> comSplitterEvents.comIn
+      comSplitterEvents.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      comSplitterEvents.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+
+      CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
+      comSplitterTelemetry.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
       ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
 
+      ComCcsdsUart.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.fprimeRouter.cmdResponseIn
     }
 
-    connections Communications {
-      # ComDriver buffer allocations
-      comDriver.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
-      comDriver.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
+    connections CommunicationsRadio {
+      lora.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
+      lora.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
 
       # ComDriver <-> ComStub (Uplink)
-      comDriver.$recv                     -> ComCcsds.comStub.drvReceiveIn
-      ComCcsds.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+      lora.dataOut -> ComCcsds.frameAccumulator.dataIn
+      ComCcsds.frameAccumulator.dataReturnOut -> lora.dataReturnIn
 
       # ComStub <-> ComDriver (Downlink)
-      ComCcsds.comStub.drvSendOut      -> comDriver.$send
-      comDriver.ready         -> ComCcsds.comStub.drvConnected
+      ComCcsds.framer.dataOut -> lora.dataIn
+      lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
+      lora.comStatusOut -> comDelay.comStatusIn
+      comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+    }
+
+    connections CommunicationsUart {
+      # ComDriver buffer allocations
+      comDriver.allocate      -> ComCcsdsUart.commsBufferManager.bufferGetCallee
+      comDriver.deallocate    -> ComCcsdsUart.commsBufferManager.bufferSendIn
+
+      # ComDriver <-> ComStub (Uplink)
+      comDriver.$recv                     -> ComCcsdsUart.comStub.drvReceiveIn
+      ComCcsdsUart.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+
+      # ComStub <-> ComDriver (Downlink)
+      ComCcsdsUart.comStub.drvSendOut      -> comDriver.$send
+      comDriver.ready         -> ComCcsdsUart.comStub.drvConnected
     }
 
     connections RateGroups {
@@ -93,6 +120,8 @@ module ReferenceDeployment {
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn

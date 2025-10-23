@@ -11,6 +11,7 @@
 #include <zephyr/sys/printk.h>
 
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
+const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -22,6 +23,7 @@ int main(int argc, char* argv[]) {
     Os::init();
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
+    inputs.loraDevice = lora;
     inputs.uartDevice = serial;
     inputs.baudRate = 115200;
 

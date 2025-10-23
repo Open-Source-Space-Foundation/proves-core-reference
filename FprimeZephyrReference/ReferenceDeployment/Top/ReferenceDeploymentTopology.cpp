@@ -81,7 +81,9 @@ void setupTopology(const TopologyState& state) {
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 
-    // Uplink is configured for receive so a socket task is started
+    // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
+    // for over-the-air communications.
+    lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
 }
 

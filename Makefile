@@ -17,8 +17,17 @@ fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
-patch-gps-package:
-	cp custom_space_data_link.py fprime-venv/lib/python3.13/site-packages/fprime_gds/common/communication/ccsds/space_data_link.py
+.PHONY: zephyr-setup
+zephyr-setup: fprime-venv ## Set up Zephyr environment
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
+		echo "Setting up Zephyr environment..."; \
+		rm -rf ../.west/ && \
+		$(UVX) west init --local . && \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
+	}
 
 ##@ Development
 
