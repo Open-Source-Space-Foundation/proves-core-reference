@@ -50,13 +50,11 @@ Add sequence diagrams here
 |---|---|
 
 ## Unit Tests
-Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
 |---|---|---|---|
 |---|---|---|---|
 
 ## Requirements
-Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
 |---|---|---|
