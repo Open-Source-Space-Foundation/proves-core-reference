@@ -122,6 +122,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 
     # Set parameters for multiple attempts with short delays
+    # Override the fixture's MAX_DEPLOY_ATTEMPTS=1 with our test value of 3
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.MAX_DEPLOY_ATTEMPTS_PRM_SET", [3]
     )
@@ -142,7 +143,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
-    # Verify second attempt
+    # Wait for retry delay and verify second attempt
     attempt_event = fprime_test_api.assert_event(
         f"{antenna_deployer}.DeployAttempt", timeout=10
     )
@@ -152,7 +153,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
-    # Verify third attempt
+    # Wait for retry delay and verify third attempt
     attempt_event = fprime_test_api.assert_event(
         f"{antenna_deployer}.DeployAttempt", timeout=10
     )
@@ -201,14 +202,14 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     )
     stop_time = burn_stop_event.time
 
-    # Calculate actual burn duration (convert from seconds to milliseconds for comparison)
-    actual_duration_ms = (
-        stop_time - start_time
-    ) / 1000.0  # Convert microseconds to seconds
+    # Calculate actual burn duration (convert from microseconds to seconds)
+    actual_duration_seconds = (
+        float(stop_time - start_time) / 1000000.0
+    )  # Convert microseconds to seconds
 
     # Verify the burn duration is approximately 3 seconds (allow some tolerance for timing)
-    assert 2.5 <= actual_duration_ms <= 3.5, (
-        f"Burn duration should be ~3 seconds, got {actual_duration_ms:.2f}s"
+    assert 2.5 <= actual_duration_seconds <= 3.5, (
+        f"Burn duration should be ~3 seconds, got {actual_duration_seconds:.2f}s"
     )
 
     # Verify deployment finishes with failure (no distance sensor)

@@ -101,13 +101,15 @@ void AntennaDeployer ::enterQuietWait() {
 
 void AntennaDeployer ::startNextAttempt() {
     this->m_currentAttempt++;
-    this->m_ticksInState = 0;
-    this->m_successDetected = false;
 
     // Emit quiet time expired event if we're transitioning from QUIET_WAIT state
+    // Do this before resetting m_ticksInState so we capture the actual elapsed time
     if (this->m_state == DeploymentState::QUIET_WAIT) {
         this->log_ACTIVITY_HI_QuietTimeExpired(this->m_ticksInState);
     }
+
+    this->m_ticksInState = 0;
+    this->m_successDetected = false;
 
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
@@ -160,7 +162,7 @@ void AntennaDeployer ::handleBurningTick() {
 
         Fw::ParamValid attemptsValid;
         const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
-        if (this->m_currentAttempt >= maxAttempts) {
+        if (this->m_currentAttempt > maxAttempts) {
             this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_FAILED);
             return;
         }
@@ -188,7 +190,7 @@ void AntennaDeployer ::handleRetryWaitTick() {
     if (retryDelay == 0U || this->m_ticksInState >= retryDelay) {
         Fw::ParamValid attemptsValid;
         const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
-        if (this->m_currentAttempt >= maxAttempts) {
+        if (this->m_currentAttempt > maxAttempts) {
             this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_FAILED);
             return;
         }
