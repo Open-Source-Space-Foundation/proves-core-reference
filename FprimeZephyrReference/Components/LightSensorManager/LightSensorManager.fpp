@@ -5,6 +5,13 @@ module LightSensor {
         @ Command to turn the light sensor off and on
         sync command RESET
 
+        @ Command to turn light sensor on        
+        async command LightSensorOn
+
+        @ Command to turn light sensor off
+        async command LightSensorOff
+
+    
         @ Telemetry channel to report light sensor reading
         telemetry Reading: LightSensorData
 

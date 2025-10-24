@@ -16,15 +16,7 @@ class LightSensorManager final : public LightSensorManagerComponentBase {
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
-    enum LightSensorState {
-    OFF      //!< Light sensor is turned off
-    ON       //!< Light sensor is powered on and running
-    RESET    //!< Light sensor encountered an error and is resetting
-    };
-
-     //!< Current state of the light sensor
-     LightSensorState sensor_state = OFF;
-    }
+    
     //! Construct LightSensorManager object
     LightSensorManager(const char* const compName  //!< The component name
     );
