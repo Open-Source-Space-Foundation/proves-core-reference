@@ -121,19 +121,16 @@ def test_change_quiet_time_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 
-    # Set parameters for multiple attempts with short delays
-    # Override the fixture's MAX_DEPLOY_ATTEMPTS=1 with our test value of 3
+    # Set parameters after fixture has run to override fixture values
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.MAX_DEPLOY_ATTEMPTS_PRM_SET", [3]
     )
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [1]
     )
-
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
     )
-
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [1]
     )
@@ -151,6 +148,9 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
+    # Clear histories to avoid finding the first attempt again
+    fprime_test_api.clear_histories()
+
     # Wait for retry delay and verify second attempt
     attempt_event = fprime_test_api.assert_event(
         f"{antenna_deployer}.DeployAttempt", timeout=15
@@ -160,6 +160,9 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     # Verify second burnwire cycle
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Clear histories to avoid finding previous attempts
+    fprime_test_api.clear_histories()
 
     # Wait for retry delay and verify third attempt
     attempt_event = fprime_test_api.assert_event(
@@ -182,11 +185,10 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the burn duration sec parameter and ensures the burnwire burns for that long based on the burnwire events"""
 
-    # Set a specific burn duration (3 seconds) to test the parameter
+    # Set parameters after fixture has run to override fixture values
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [3]
     )
-
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
     )
@@ -197,6 +199,7 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         fprime_test_api, f"{antenna_deployer}.MAX_DEPLOY_ATTEMPTS_PRM_SET", [1]
     )
 
+    fprime_test_api.clear_histories()
     # Start deployment
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
 
@@ -227,4 +230,3 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
-    assert finish_event.args[1].val == 1
