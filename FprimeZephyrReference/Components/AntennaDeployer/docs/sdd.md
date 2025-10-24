@@ -57,9 +57,12 @@ Add sequence diagrams here
 
 ## Events
 | Name | Description |
-|Deploy_Attempt|Emitted when deploy attempt starts|
-|Deploy_Success|Emitted once the antenna has been detected as successfully deployed|
-|Deploy_Finish|Emitted once deploy attempts are finished|
+|------|------------|
+|DeployAttempt|Emitted at the start of each deployment attempt|
+|DeploySuccess|Emitted when the antenna deployment is considered successful|
+|DeployFinish|Emitted when the deployment procedure finishes|
+|InvalidDistanceMeasurement|Emitted when a distance reading is ignored because it is invalid|
+|QuietTimeExpired|Emitted when the quiet wait period expires and deployment attempt begins|
 
 
 ## Telemetry
