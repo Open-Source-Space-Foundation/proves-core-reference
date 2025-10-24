@@ -55,7 +55,7 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Antenna id 8 group 4 {
-    ReferenceDeployment.antennaDeployer.DeployCount
+    ReferenceDeployment.antennaDeployer.DeployAttemptCount
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 

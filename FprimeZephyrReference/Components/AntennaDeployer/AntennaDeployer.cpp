@@ -114,7 +114,7 @@ void AntennaDeployer ::startNextAttempt() {
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
     this->m_totalAttempts++;
-    this->tlmWrite_DeployCount(this->m_totalAttempts);
+    this->tlmWrite_DeployAttemptCount(this->m_totalAttempts);
 
     if (this->isConnected_burnStart_OutputPort(0)) {
         this->burnStart_out(0);
