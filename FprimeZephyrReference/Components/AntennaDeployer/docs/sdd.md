@@ -7,7 +7,7 @@ Component that deploys the antenna, activates the burnwire, checks the distance 
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-|AD0001|The Antenna Deployer shall have a wait period attached to the rate group to deloy antenna after quiet time following satellite deployment | Unit Testing|
+|AD0001|The Antenna Deployer shall have a wait period attached to the rate group to deploy antenna after quiet time following satellite deployment | Unit Testing|
 |AD0002|The Antenna Deployer shall attempt to redeploy the burnwire if the distance sensor senses the antenna is not deployed from a port| Unit Testing|
 |AD0003|The Antenna Deployer shall attempt to deploy if the distance sensor provides nonsensical data |Unit Testing|
 |AD0004|The Antenna Deployer shall broadcast an event every time it tries to deploy | Unit Testing|
@@ -37,7 +37,6 @@ Add a class diagram here
 Add component states in the chart below
 | Name | Description |
 |deploy_count|Keeps track of how many deploys happened |
-|---|---|
 
 ## Sequence Diagrams
 Add sequence diagrams here
@@ -45,8 +44,8 @@ Add sequence diagrams here
 ## Parameters
 | Name | Description |
 |deployed_threshold|---|
-|invalid_theshold_top|---|
-|invalid_theshold_bottom|---|
+|invalid_threshold_top|---|
+|invalid_threshold_bottom|---|
 
 
 ## Commands
@@ -59,19 +58,17 @@ Add sequence diagrams here
 ## Events
 | Name | Description |
 |Deploy_Attempt|Emitted when deploy attempt starts|
-|Deploy_Sucess|Emitted once the antenna has been detected as successfully deployed|
+|Deploy_Success|Emitted once the antenna has been detected as successfully deployed|
 |Deploy_Finish|Emitted once deploy attempts are finished|
 
 
 ## Telemetry
 | Name | Description |
 |DeployCount|Reports the amount of time the antenna has tried to deploy|
-|---|---|
 
 ## Unit Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
-|---|---|---|---|
 |---|---|---|---|
 
 
