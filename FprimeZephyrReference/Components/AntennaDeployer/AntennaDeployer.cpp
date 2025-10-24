@@ -190,7 +190,7 @@ void AntennaDeployer ::handleRetryWaitTick() {
     if (retryDelay == 0U || this->m_ticksInState >= retryDelay) {
         Fw::ParamValid attemptsValid;
         const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
-        if (this->m_currentAttempt > maxAttempts) {
+        if (this->m_currentAttempt >= maxAttempts) {
             this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_FAILED);
             return;
         }
