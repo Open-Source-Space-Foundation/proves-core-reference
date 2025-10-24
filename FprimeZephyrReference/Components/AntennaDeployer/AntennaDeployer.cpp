@@ -104,6 +104,11 @@ void AntennaDeployer ::startNextAttempt() {
     this->m_ticksInState = 0;
     this->m_successDetected = false;
 
+    // Emit quiet time expired event if we're transitioning from QUIET_WAIT state
+    if (this->m_state == DeploymentState::QUIET_WAIT) {
+        this->log_ACTIVITY_HI_QuietTimeExpired(this->m_ticksInState);
+    }
+
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
     this->m_totalAttempts++;

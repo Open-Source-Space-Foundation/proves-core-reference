@@ -62,6 +62,12 @@ module Components {
         ) severity warning low \
           format "Ignoring invalid antenna distance measurement: {.2f} cm"
 
+        @ Emitted when the quiet wait period expires and deployment attempt begins
+        event QuietTimeExpired(
+            elapsedTime: U32 @< Time elapsed in seconds during quiet wait
+        ) severity activity high \
+          format "Quiet time expired after {} seconds, starting deployment attempt"
+
         ######################################################################
         # Ports
         ######################################################################

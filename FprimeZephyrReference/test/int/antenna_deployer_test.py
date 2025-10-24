@@ -75,3 +75,145 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
         "Deployment should fail without distance sensor feedback"
     )
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
+
+
+def test_change_quiet_time_sec(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Changes the quiet_time_sec parameter and makes sure the antenna will wait for it to run"""
+
+    # Set a specific quiet time (5 seconds) to test the parameter
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [5]
+    )
+
+    # Start deployment
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+
+    # Wait for quiet time to expire and verify the elapsed time
+    quiet_time_expired_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.QuietTimeExpired", timeout=10
+    )
+    assert quiet_time_expired_event.args[0].val == 5, (
+        "Quiet time should have elapsed for exactly 5 seconds"
+    )
+
+    # Verify deployment attempt starts after quiet time expires
+    attempt_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployAttempt", timeout=2
+    )
+    assert attempt_event.args[0].val == 1, (
+        "First deployment attempt should be attempt #1"
+    )
+
+    # Verify burnwire starts after quiet time
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+
+    # Verify burnwire stops after burn duration
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Verify deployment finishes with failure (no distance sensor)
+    finish_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployFinish", timeout=10
+    )
+    assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+    assert finish_event.args[1].val == 1
+
+
+def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
+
+    # Set parameters for multiple attempts with short delays
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.MAX_DEPLOY_ATTEMPTS_PRM_SET", [3]
+    )
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [1]
+    )
+
+    # Start deployment
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+
+    # Verify first attempt
+    attempt_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployAttempt", timeout=5
+    )
+    assert attempt_event.args[0].val == 1, "First attempt should be #1"
+
+    # Verify first burnwire cycle
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Verify second attempt
+    attempt_event = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployAttempt", timeout=10
+    )
+    assert attempt_event.args[0].val == 2, "Second attempt should be #2"
+
+    # Verify second burnwire cycle
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Verify third attempt
+    attempt_event = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployAttempt", timeout=10
+    )
+    assert attempt_event.args[0].val == 3, "Third attempt should be #3"
+
+    # Verify third burnwire cycle
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Verify final failure after exhausting all attempts
+    finish_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployFinish", timeout=10
+    )
+    assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+    assert finish_event.args[1].val == 3, "Should have completed 3 attempts"
+
+
+def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Changes the burn duration sec parameter and ensures the burnwire burns for that long based on the burnwire events"""
+
+    # Set a specific burn duration (3 seconds) to test the parameter
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [3]
+    )
+
+    # Start deployment
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+
+    # Wait for deployment attempt to start
+    attempt_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployAttempt", timeout=5
+    )
+    assert attempt_event.args[0].val == 1, (
+        "First deployment attempt should be attempt #1"
+    )
+
+    # Record the time when burnwire starts
+    burn_start_event = fprime_test_api.assert_event(
+        f"{burnwire}.SetBurnwireState", "ON", timeout=2
+    )
+    start_time = burn_start_event.time
+
+    # Wait for burnwire to stop and record the time
+    burn_stop_event = fprime_test_api.assert_event(
+        f"{burnwire}.SetBurnwireState", "OFF", timeout=15
+    )
+    stop_time = burn_stop_event.time
+
+    # Calculate actual burn duration (convert from seconds to milliseconds for comparison)
+    actual_duration_ms = (
+        stop_time - start_time
+    ) / 1000.0  # Convert microseconds to seconds
+
+    # Verify the burn duration is approximately 3 seconds (allow some tolerance for timing)
+    assert 2.5 <= actual_duration_ms <= 3.5, (
+        f"Burn duration should be ~3 seconds, got {actual_duration_ms:.2f}s"
+    )
+
+    # Verify deployment finishes with failure (no distance sensor)
+    finish_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployFinish", timeout=10
+    )
+    assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+    assert finish_event.args[1].val == 1
