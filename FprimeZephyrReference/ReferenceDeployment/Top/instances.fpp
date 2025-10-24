@@ -41,6 +41,10 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 6
 
+  instance nicolaVisionHandler: Components.NicolaVisionHandler base id 0x10020000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -59,6 +63,8 @@ module ReferenceDeployment {
   instance timer: Zephyr.ZephyrRateDriver base id 0x10013000
 
   instance comDriver: Zephyr.ZephyrUartDriver base id 0x10014000
+  
+  instance uartCameraDriver: Zephyr.ZephyrUartDriver base id 0x10021000
 
   instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10015000
 
@@ -69,4 +75,5 @@ module ReferenceDeployment {
   instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 
   instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
+
 }

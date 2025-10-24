@@ -79,6 +79,7 @@ void setupTopology(const TopologyState& state) {
 
     // Uplink is configured for receive so a socket task is started
     comDriver.configure(state.uartDevice, state.baudRate);
+    uartCameraDriver.configure(state.uartCameraDevice, state.baudRate);
 }
 
 void startRateGroups() {
