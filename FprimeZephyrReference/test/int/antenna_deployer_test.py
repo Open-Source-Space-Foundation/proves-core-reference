@@ -130,6 +130,14 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
         fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [1]
     )
 
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
+    )
+
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [1]
+    )
+
     # Start deployment
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
 
@@ -177,6 +185,16 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     # Set a specific burn duration (3 seconds) to test the parameter
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [3]
+    )
+
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
+    )
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [0]
+    )
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.MAX_DEPLOY_ATTEMPTS_PRM_SET", [1]
     )
 
     # Start deployment
