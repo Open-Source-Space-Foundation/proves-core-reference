@@ -203,8 +203,10 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     stop_time = burn_stop_event.time
 
     # Calculate actual burn duration (convert from microseconds to seconds)
+    # TimeType objects need to be converted to numeric values first
+    time_diff = stop_time - start_time
     actual_duration_seconds = (
-        float(stop_time - start_time) / 1000000.0
+        float(time_diff) / 1000000.0
     )  # Convert microseconds to seconds
 
     # Verify the burn duration is approximately 3 seconds (allow some tolerance for timing)
