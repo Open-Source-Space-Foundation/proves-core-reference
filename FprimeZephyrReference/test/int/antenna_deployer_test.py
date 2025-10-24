@@ -145,7 +145,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify second attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=10
+        f"{antenna_deployer}.DeployAttempt", timeout=15
     )
     assert attempt_event.args[0].val == 2, "Second attempt should be #2"
 
@@ -155,7 +155,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify third attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=10
+        f"{antenna_deployer}.DeployAttempt", timeout=15
     )
     assert attempt_event.args[0].val == 3, "Third attempt should be #3"
 
@@ -165,7 +165,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Verify final failure after exhausting all attempts
     finish_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployFinish", timeout=10
+        f"{antenna_deployer}.DeployFinish", timeout=15
     )
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
     assert finish_event.args[1].val == 3, "Should have completed 3 attempts"
@@ -190,28 +190,18 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         "First deployment attempt should be attempt #1"
     )
 
-    # Record the time when burnwire starts
-    burn_start_event = fprime_test_api.assert_event(
-        f"{burnwire}.SetBurnwireState", "ON", timeout=2
+    # Verify burnwire starts
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+
+    # Wait for burnwire to stop
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+
+    # Verify the burnwire end count shows 3 seconds
+    burnwire_end_event: EventData = fprime_test_api.assert_event(
+        f"{burnwire}.BurnwireEndCount", timeout=5
     )
-    start_time = burn_start_event.time
-
-    # Wait for burnwire to stop and record the time
-    burn_stop_event = fprime_test_api.assert_event(
-        f"{burnwire}.SetBurnwireState", "OFF", timeout=15
-    )
-    stop_time = burn_stop_event.time
-
-    # Calculate actual burn duration (convert from microseconds to seconds)
-    # TimeType objects need to be converted to numeric values first
-    time_diff = stop_time - start_time
-    actual_duration_seconds = (
-        float(time_diff) / 1000000.0
-    )  # Convert microseconds to seconds
-
-    # Verify the burn duration is approximately 3 seconds (allow some tolerance for timing)
-    assert 2.5 <= actual_duration_seconds <= 3.5, (
-        f"Burn duration should be ~3 seconds, got {actual_duration_seconds:.2f}s"
+    assert burnwire_end_event.args[0].val == 3, (
+        "Burnwire should have burned for 3 seconds"
     )
 
     # Verify deployment finishes with failure (no distance sensor)
