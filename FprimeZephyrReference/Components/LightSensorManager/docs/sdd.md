@@ -23,6 +23,7 @@ Add a class diagram here
 ## Component States
 | Name | Description       |
 |------|-------------------|
+| RESET | State where sensor encounters an error and resets (turns off and back on to running) |
 | OFF  | The sensor is off |
 | ON   | The sensor is on  |
 
@@ -60,8 +61,13 @@ Add sequence diagrams here
 ## Unit Tests
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
-|---|---|---|---|
-|---|---|---|---|
+| TestInitialState | Verify component starts in OFF state | Component initializes properly | LightSensor initialization(?) |
+| TestSensorReading | Verify ALS and IR readings | accurate sensor values | (?) |
+| TestZephyrCommunication | Verify Zephyr operations(?) | Successful sensor application | Zephyr driver |
+| TestReadIntervalValidation | Verify read interval is less than integration time | Correct read interval and integration time | Sensor parameters
+| TestThreshold |
+| TestStateTransitions | Verify proper state machine transitions | Correct state progression | State machine logic |
+
 
 ## Requirements
 Add requirements in the chart below
@@ -72,7 +78,7 @@ Add requirements in the chart below
 | VEML6031-003 | The LightSensorManager shall validate lux readings | Unit-Test |
 | VEML6031-004 | The LightSensorManager shall report if light is detected above a provided threshold | Unit-Test |
 | VEML6031-005 | The LightSensorManager shall reset | Unit-Test |
-| VEML6031-006 | The LightSensormanager shall test if READ_INTERVAL is less than INTEGRATION_TIME | Unit-Test |
+| VEML6031-006 | The LightSensormanager shall check if READ_INTERVAL is less than INTEGRATION_TIME | Unit-Test |
 
 ## Change Log
 | Date | Description |
