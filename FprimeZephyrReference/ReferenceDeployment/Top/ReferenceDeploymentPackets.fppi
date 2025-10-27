@@ -54,6 +54,10 @@ telemetry packets ReferenceDeploymentPackets {
     lora.LastSnr
   }
 
+  packet Antenna id 8 group 4 {
+    ReferenceDeployment.antennaDeployer.DeployAttemptCount
+    ReferenceDeployment.antennaDeployer.LastDistance
+  }
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
