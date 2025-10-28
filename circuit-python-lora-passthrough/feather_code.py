@@ -5,7 +5,7 @@ This code will forward any received LoRa packets to the serial console (sys.stdo
 to indicate packet reception.
 """
 
-import time
+# import time
 
 import adafruit_rfm9x
 import board

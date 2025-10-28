@@ -85,7 +85,7 @@ Once you have CircuitPython running, upload the files from the ```circuit-python
 
 > [!NOTE]
 > If you're targeting a Feather rather than a flight controller board, then
-> copy `feather\_code.py`
+> copy `feather_code.py`
 
 ```boot.py``` enables both virtual serial ports that the device presents over USB. This allows you to use one for the console and one for data. ```code.py``` acts as a LoRa radio forwarder over USB serial: The console port is used for logging and debugging, and is the first serial port that appears when the board is connected. The data port is used for actual data transfer, and is the second serial port.
 
