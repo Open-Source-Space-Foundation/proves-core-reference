@@ -137,4 +137,20 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <100>;
 		label = "INA219";
 	};
+    mcp23017: mcp23017@20 {
+        compatible = "microchip,mcp23017";
+        reg = <0x20>;
+        gpio-controller;
+        #gpio-cells = <2>;
+
+        // GPIO line names for traceability
+        gpio-line-names = "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+                          "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE",
+                          "ENABLE_Heater", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+                          "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3";
+
+        reset-gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
+
+        ngpios = <16>;
+    };
 };
