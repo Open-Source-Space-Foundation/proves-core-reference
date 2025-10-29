@@ -15,7 +15,7 @@ module ComCfg {
     # - spacecraftId
     # - TmFrameFixedSize
     # - potentially APID enum ?
-    constant SpacecraftId = 0x0044    # Spacecraft ID (10 bits)
+    constant SpacecraftId = @FPRIME_SPACECRAFT_ID@    # Spacecraft ID (10 bits)
     constant TmFrameFixedSize = 248   # Needs to be at least COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize) + 1
     constant AggregationSize = TmFrameFixedSize - 6 - 6 - 1 - 2  # 2 header (6) + 1 idle byte + 2 trailer bytes
 
