@@ -5,7 +5,7 @@
 ####
 
 # Configure spacecraft ID (can be overridden via CMake option)
-set(FPRIME_SPACECRAFT_ID "0x0044" CACHE STRING "Spacecraft ID (10 bits) - default 0x0044 for development, use 0x00C1 for CI")
+set(FPRIME_SPACECRAFT_ID "0x0044" CACHE STRING "Spacecraft ID (10 bits, range 0x0000-0x03FF) - default 0x0044 for development, use 0x00C1 for CI")
 
 # Generate ComCfg.fpp from template with configured spacecraft ID
 configure_file(
