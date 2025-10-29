@@ -43,6 +43,7 @@ module ReferenceDeployment {
     instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
+    instance spiDriver
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
