@@ -4,8 +4,8 @@ module ComCcsdsConfig {
     constant BASE_ID_UART = 0x21000000
 
     module QueueSizes {
-        constant comQueue   = 30
-        constant aggregator = 30
+        constant comQueue   = 5
+        constant aggregator = 15
     }
 
     module StackSizes {
@@ -21,14 +21,14 @@ module ComCcsdsConfig {
     # Queue configuration constants
     module QueueDepths {
         constant events      = 10
-        constant tlm         = 5
+        constant tlm         = 30
         constant file        = 1
     }
 
     module QueuePriorities {
         constant events      = 0
-        constant tlm         = 2
-        constant file        = 1
+        constant tlm         = 1
+        constant file        = 2
     }
 
     # Buffer management constants
