@@ -151,5 +151,5 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
     time_data_str = json.dumps(time_data)
     fprime_test_api.send_and_assert_event(
-        f"{rtcManager}.TIME_SET", [time_data_str], events, timeout=30
+        f"{rtcManager}.TIME_SET", [time_data_str], events, timeout=10
     )

@@ -32,8 +32,8 @@ def proves_send_and_assert_command(
             fprime_test_api.send_and_assert_command(
                 command,
                 args,
-                timeout=30,
-                max_delay=30,
+                timeout=10,
+                max_delay=10,
                 events=events,
             )
             break

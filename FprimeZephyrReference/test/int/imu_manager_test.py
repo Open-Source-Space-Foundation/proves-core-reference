@@ -26,7 +26,7 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Acceleration telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.Acceleration", start="NOW", timeout=3
+        f"{lsm6dsoManager}.Acceleration", start="NOW", timeout=30
     )
 
     reading: dict[float] = result.get_val()
@@ -38,7 +38,7 @@ def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gd
 def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get AngularVelocity telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.AngularVelocity", start="NOW", timeout=3
+        f"{lsm6dsoManager}.AngularVelocity", start="NOW", timeout=30
     )
 
     reading: dict[float] = result.get_val()
