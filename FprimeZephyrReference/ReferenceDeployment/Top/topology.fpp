@@ -7,6 +7,7 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1_60Hz
   }
 
   topology ReferenceDeployment {
@@ -23,6 +24,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    instance rateGroup1_60Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -128,13 +130,14 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
 
+      # Once per minute (1/60Hz) rate group
+      rateGroup1_60Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
     }
 
 

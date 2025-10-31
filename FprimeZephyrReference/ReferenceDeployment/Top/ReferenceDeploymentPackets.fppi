@@ -9,6 +9,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1_60Hz.RgMaxTime
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -19,6 +20,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1_60Hz.RgCycleSlips
   }
 
 
