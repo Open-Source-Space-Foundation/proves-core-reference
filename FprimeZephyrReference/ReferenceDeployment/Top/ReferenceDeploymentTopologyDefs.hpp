@@ -53,6 +53,9 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
+namespace ReferenceDeployment_rateGroup1_60Hz {
+enum { WARN = 3, FATAL = 5 };
+}
 namespace ReferenceDeployment_prmDb {
 enum { WARN = 3, FATAL = 5 };
 }

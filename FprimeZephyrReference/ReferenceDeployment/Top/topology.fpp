@@ -137,6 +137,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
 
       # Once per minute (1/60Hz) rate group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_60Hz] -> rateGroup1_60Hz.CycleIn
       rateGroup1_60Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
     }
 
