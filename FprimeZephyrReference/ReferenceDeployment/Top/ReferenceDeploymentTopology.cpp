@@ -50,6 +50,7 @@ U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGr
  * desired, but is extracted here for clarity.
  */
 void configureTopology() {
+    prmDb.configure("/prmDb.dat");
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
@@ -77,6 +78,7 @@ void setupTopology(const TopologyState& state) {
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
     // Autocoded parameter loading. Function provided by autocoder.
+    prmDb.readParamFile();
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);

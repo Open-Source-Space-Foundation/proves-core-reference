@@ -37,6 +37,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 4
 
+  instance prmDb: Svc.PrmDb base id 0x10003000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -73,8 +78,6 @@ module ReferenceDeployment {
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
 
-  instance prmDb: Components.NullPrmDb base id 0x10024000
-
   instance comDelay: Components.ComDelay base id 0x10025000
 
   instance lora: Zephyr.LoRa base id 0x10026000
@@ -84,4 +87,6 @@ module ReferenceDeployment {
   instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
+
+  instance fsSpace: Components.FsSpace base id 0x10030000
 }

@@ -14,6 +14,17 @@
 		zephyr,code-partition = &code_partition;
 	};
 
+	fstab {
+                compatible = "zephyr,fstab";
+                ffs1: ffs1 {
+                        compatible = "zephyr,fstab,fatfs";
+                        automount;
+                        disk-access;
+                        mount-point = "/";
+                };
+        };
+
+
 	aliases {
 		watchdog0 = &wdt0;
 	};
@@ -87,6 +98,24 @@ zephyr_udc0: &usbd {
 
 &gpio0 {
 	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-names = "default";
+	sdhc0: sdhc@0 {
+                compatible = "zephyr,sdhc-spi-slot";
+                reg = <0>;
+                status = "okay";
+                mmc {
+                    compatible = "zephyr,sdmmc-disk";
+                    disk-name = "SD";
+                    status = "okay";
+                };
+                spi-max-frequency = <24000000>;
+        };
 };
 
 &spi1 {
