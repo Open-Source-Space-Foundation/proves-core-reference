@@ -7,6 +7,9 @@ build-fprime-*
 *.template.cpp
 *.template.hpp
 
+# Generated FPP configuration files
+FprimeZephyrReference/project/config/ComCfg.fpp
+
 # Zephyr workspace
 lib/zephyr-workspace/*
 

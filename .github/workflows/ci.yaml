@@ -55,11 +55,11 @@ jobs:
 
       - name: Generate
         run: |
-          make generate
+          make generate FPRIME_CMAKE_OPTIONS="-DFPRIME_SPACECRAFT_ID=0x00C1"
 
       - name: Build
         run: |
-          make build
+          make build FPRIME_CMAKE_OPTIONS="-DFPRIME_SPACECRAFT_ID=0x00C1"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
