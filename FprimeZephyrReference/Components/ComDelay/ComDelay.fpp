@@ -5,9 +5,6 @@ module Components {
         @ Rate schedule port used to trigger radio transmission
         sync input port run: Svc.Sched
 
-        @ Rate schedule port used to trigger aggregation timeout
-        output port timeout: Svc.Sched
-
         @ Input comStatus from radio component
         sync input port comStatusIn: Fw.SuccessCondition
 

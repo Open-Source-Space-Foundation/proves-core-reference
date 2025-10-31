@@ -11,91 +11,55 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Lint
         run: |
           make fmt
+
   build:
     runs-on: deathstar
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: false # We'll handle submodules with smart caching
-          fetch-depth: 0
-
-      # - name: Cache bin
-      #   id: cache-bin
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       bin
-      #     key: bin-${{ hashFiles('Makefile') }}-v3
-      #     restore-keys: |
-      #       bin-${{ hashFiles('Makefile') }}-
-      #       bin-
+      - uses: actions/checkout@v4
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
           make download-bin
 
-      # - name: Cache submodules
-      #   id: cache-submodules
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       lib/fprime
-      #       lib/fprime-zephyr
-      #       lib/zephyr-workspace/zephyr
-      #     key: submodules-${{ hashFiles('.gitmodules') }}-v3
-      #     restore-keys: |
-      #       submodules-${{ hashFiles('.gitmodules') }}-
-      #       submodules-
-
       - name: Setup submodules
         if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
 
-      # - name: Cache python venv
-      #   id: cache-python
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: fprime-venv
-      #     key: python-venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}-v3
-      #     restore-keys: |
-      #       python-venv-${{ runner.os }}-
-      #       python-venv-
-
-      - name: Setup python venv
-        if: steps.cache-python.outputs.cache-hit != 'true'
+      - name: Create python venv
         run: |
           make fprime-venv
 
-      # - name: Cache Zephyr workspace and SDK
-      #   id: cache-zephyr
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       lib/zephyr-workspace/modules
-      #       lib/zephyr-workspace/bootloader
-      #       ~/zephyr-sdk-0.17.2
-      #     key: zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-v3
-      #     restore-keys: |
-      #       zephyr-${{ hashFiles('west.yml') }}-${{ runner.os }}-
-      #       zephyr-
-
       - name: Setup Zephyr
-        if: steps.cache-zephyr.outputs.cache-hit != 'true'
+        if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
         run: |
-          make zephyr-setup
-        env:
-          PIP_DISABLE_PIP_VERSION_CHECK: 1
-          PIP_NO_COMPILE: 1
+          make zephyr-workspace
+
+      - name: Setup Zephyr SDK
+        if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-sdk
+
+      - name: Setup Zephyr Export
+        run: |
+          make zephyr-export
+
+      - name: Install Zephyr Python Dependencies
+        run: |
+          make zephyr-python-deps
+
+      - name: Generate
+        run: |
+          make generate
 
       - name: Build
         run: |
-          make generate-ci build-ci
+          make build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -105,25 +69,32 @@ jobs:
             build-artifacts/zephyr.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
+
   integration:
-    runs-on: [integration]
+    runs-on:
+      - integration
     needs: build
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v5
+
       - name: Set up dependencies
         run: |
-          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
-            make submodules
-            make fprime-venv
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
+            && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
+          make submodules fprime-venv
+
       - name: Trigger Bootloader
         run: |
           make bootloader
           sleep 10
+
       - name: Copy Firmware
         run: |
           picotool load ./zephyr.uf2
           picotool reboot
+
       - name: Run Integration Tests
         run: |
           make test-integration

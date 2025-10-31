@@ -72,13 +72,13 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void Burnwire ::START_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     this->startBurn();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     this->stopBurn();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Components

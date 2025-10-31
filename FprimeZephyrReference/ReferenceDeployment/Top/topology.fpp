@@ -38,6 +38,7 @@ module ReferenceDeployment {
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
+    instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
     # For UART sideband communication
@@ -96,8 +97,6 @@ module ReferenceDeployment {
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
       lora.comStatusOut -> comDelay.comStatusIn
       comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
-
-      comDelay.timeout -> ComCcsds.aggregator.timeout
     }
 
     connections CommunicationsUart {
@@ -122,6 +121,7 @@ module ReferenceDeployment {
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -133,8 +133,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
 
     }
+
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
@@ -143,6 +145,11 @@ module ReferenceDeployment {
     connections BurnwireGpio {
       burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
       burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
+    connections AntennaDeployment {
+      antennaDeployer.burnStart -> burnwire.burnStart
+      antennaDeployer.burnStop -> burnwire.burnStop
     }
 
     connections imuManager {
