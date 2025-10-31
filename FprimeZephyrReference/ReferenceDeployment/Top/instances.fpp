@@ -87,4 +87,6 @@ module ReferenceDeployment {
   instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
+
+  instance fsSpace: Components.FsSpace base id 0x10030000
 }

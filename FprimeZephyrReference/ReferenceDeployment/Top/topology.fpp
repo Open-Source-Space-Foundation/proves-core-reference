@@ -43,6 +43,8 @@ module ReferenceDeployment {
     instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
+    instance fsSpace
+
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -134,6 +136,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
 
     }
 
