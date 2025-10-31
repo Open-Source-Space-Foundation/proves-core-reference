@@ -24,11 +24,7 @@ clean-zephyr-config: ## Remove west configuration
 
 .PHONY: zephyr-workspace
 zephyr-workspace: fprime-venv ## Setup Zephyr bootloader, modules, and tools directories
-	@test -d ../lib/zephyr-workspace/bootloader || \
-	test -d ../lib/zephyr-workspace/modules || \
-	test -d ../lib/zephyr-workspace/tools || { \
-		$(WESTX) update; \
-	}
+	$(WESTX) update
 
 .PHONY: clean-zephyr-workspace
 clean-zephyr-workspace: ## Remove Zephyr bootloader, modules, and tools directories

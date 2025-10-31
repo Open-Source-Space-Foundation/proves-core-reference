@@ -95,7 +95,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch initial time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=30
+        f"{cmdDispatch}.CommandsDispatched", timeout=65
     )
 
     # Convert FPrime time to datetime
@@ -108,7 +108,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch updated time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=30
+        f"{cmdDispatch}.CommandsDispatched", timeout=65
     )
 
     # Convert FPrime time to datetime

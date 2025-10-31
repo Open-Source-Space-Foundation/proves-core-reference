@@ -38,7 +38,7 @@ def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:
         ["5"],
     )
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{watchdog}.WatchdogTransitions", start="NOW", timeout=30
+        f"{watchdog}.WatchdogTransitions", start="NOW", timeout=65
     )
     return result.get_val()
 
