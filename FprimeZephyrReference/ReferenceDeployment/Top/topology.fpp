@@ -38,6 +38,7 @@ module ReferenceDeployment {
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
+    instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
     # For UART sideband communication
@@ -132,8 +133,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
 
     }
+
 
     connections Watchdog {
       watchdog.gpioSet -> gpioDriver.gpioWrite
@@ -142,6 +145,11 @@ module ReferenceDeployment {
     connections BurnwireGpio {
       burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
       burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
+    connections AntennaDeployment {
+      antennaDeployer.burnStart -> burnwire.burnStart
+      antennaDeployer.burnStop -> burnwire.burnStop
     }
 
     connections imuManager {
