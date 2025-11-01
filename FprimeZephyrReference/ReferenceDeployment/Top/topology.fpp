@@ -17,6 +17,7 @@ module ReferenceDeployment {
     import CdhCore.Subtopology
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
+    import FileHandling.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -56,7 +57,7 @@ module ReferenceDeployment {
     health connections instance CdhCore.$health
     time connections instance rtcManager
     telemetry connections instance CdhCore.tlmSend
-    param connections instance prmDb
+    param connections instance FileHandling.prmDb
 
   # ----------------------------------------------------------------------
   # Telemetry packets (only used when TlmPacketizer is used)
@@ -124,6 +125,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -137,6 +139,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
 
     }
 
@@ -161,5 +164,17 @@ module ReferenceDeployment {
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
+
+    connections ComCcsds_FileHandling {
+      # File Downlink <-> ComQueue
+      FileHandling.fileDownlink.bufferSendOut -> ComCcsds.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      ComCcsds.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+
+      # Router <-> FileUplink
+      ComCcsds.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
+      FileHandling.fileUplink.bufferSendOut -> ComCcsds.fprimeRouter.fileBufferReturnIn
+    }
+
+
   }
 }
