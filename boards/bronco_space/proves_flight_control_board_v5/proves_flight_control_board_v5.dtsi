@@ -9,13 +9,24 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,flash-controller = &qmi;
 		zephyr,console = &cdc_acm_uart0;
+		zephyr,cdc-acm-uart = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
-		zephyr,code-partition = &code_partition;
 	};
 
 	aliases {
 		watchdog0 = &wdt0;
+		mcuboot-button0 = &mcuboot_button;
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		mcuboot_button: button_0 {
+			label = "MCUBOOT Thing";
+			gpios = <&gpio0 27 GPIO_ACTIVE_LOW>;
+		};
 	};
 
 	leds {
@@ -58,22 +69,41 @@ zephyr_udc0: &usbd {
 		* smaller than 256 bytes, but in practice the linker places the vector
 		* table at a much larger alignment offset.
 		*/
-		image_def: partition@0 {
-			label = "image_def";
-			reg = <0x00000000 0x100>;
-			read-only;
-		};
+
+		/* image_def: partition@0 { */
+		/* 	label = "image_def"; */
+		/* 	reg = <0x00000000 0x100>; */
+		/* 	read-only; */
+		/* }; */
 
 		/*
 		* Usable flash. Starts at 0x100, after the image definition block.
 		* The partition size is 4MB minus the 0x100 bytes taken by the
 		* image definition.
 		*/
-		code_partition: partition@100 {
-			label = "code-partition";
-			reg = <0x100 (DT_SIZE_M(4) - 0x100)>;
-			read-only;
+
+		/* code_partition: partition@100 { */
+		/* 	label = "code-partition"; */
+		/* 	reg = <0x100 (DT_SIZE_M(4) - 0x100)>; */
+		/* 	read-only; */
+		/* }; */
+
+		boot_partition: partition@100 {
+				label = "mcuboot";
+				reg = <0x00000100 DT_SIZE_K(1024)>;
+				read-only;
 		};
+
+		slot0_partition: partition@100100 {
+				label = "image-0";
+				reg = <0x00100100 DT_SIZE_K(1024)>;
+		};
+
+		slot1_partition: partition@200100 {
+				label = "image-1";
+				reg = <0x00200100 DT_SIZE_K(1024)>;
+		};
+
 	};
 };
 
