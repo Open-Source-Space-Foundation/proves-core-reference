@@ -7,6 +7,7 @@ module Components {
         @ Port for sending sequence dispatches
         output port runSequence: Svc.CmdSeqIn
 
+        @ Port for receiving the status of the start-up sequence
         sync input port completeSequence: Fw.CmdResponse
 
         @ Command to wait for system quiescence before proceeding with start-up
@@ -14,6 +15,25 @@ module Components {
 
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType update on change
+
+        @ Telemetry for quiescence end time
+        telemetry QuiescenceEndTime: Fw.TimeValue update on change
+
+        @ Event emitted when failing to update the boot count file
+        event BootCountUpdateFailure() severity warning low \
+            format "Failed to update boot count file"
+
+        @ Event emitted when the quiescence file was not updated
+        event QuiescenceFileInitFailure() severity warning low \
+            format "Failed to initialize quiescence start time file"
+
+        @ Event emitted when the start-up sequence succeeds
+        event StartupSequenceFinished() severity activity low \
+            format "Start-up sequence finished successfully"
+
+        @ Event emitted when the start-up sequence fails
+        event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
+            ) severity warning low format "Start-up sequence failed with response code {}"
 
         @ Whether the start-up manager is armed to wait for quiescence
         param ARMED: bool default true
@@ -53,5 +73,12 @@ module Components {
 
         @ Port for sending telemetry channels to downlink
         telemetry port tlmOut
+
+        @ Port for sending textual representation of events
+        text event port logTextOut
+
+        @ Port for sending events to downlink
+        event port logOut
+
     }
 }

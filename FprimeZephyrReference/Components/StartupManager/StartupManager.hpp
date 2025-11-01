@@ -14,6 +14,10 @@ namespace Components {
 
 class StartupManager final : public StartupManagerComponentBase {
   public:
+    enum Status {
+        SUCCESS,
+        FAILURE,
+    };
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
@@ -25,11 +29,25 @@ class StartupManager final : public StartupManagerComponentBase {
     //! Destroy StartupManager object
     ~StartupManager();
 
-    // Update and return the boot count
+    //! \brief read and increment the boot count
+    //!
+    //! Reads the boot count from the boot count file, increments it, and writes it back to the file. If the read
+    //! fails, the boot count will be initialized to 1. If the write fails, a warning will be emitted.
+    //!
+    //! \warning this function will modify the boot count file on disk.
+    //!
+    //! \return The updated boot count
     FwSizeType update_boot_count();
 
-    // Get the quiescence start time
-    Fw::Time get_quiescence_start();
+    //! \brief get and possibly initialize the quiescence start time
+    //!
+    //! Reads the quiescence start time from the quiescence start time file. If the read fails, the current time is
+    //! written to the file and returned.
+    //!
+    //! \warning this function will modify the quiescence start time file on disk if it does not already exist.
+    //!
+    //! \return The quiescence start time
+    Fw::Time update_quiescence_start();
 
   private:
     // ----------------------------------------------------------------------

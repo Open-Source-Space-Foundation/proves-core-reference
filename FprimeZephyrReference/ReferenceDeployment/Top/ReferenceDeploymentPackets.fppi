@@ -10,6 +10,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
+    ReferenceDeployment.startupManager.QuiescenceEndTime
   }
 
   packet HealthWarnings id 2 group 1 {

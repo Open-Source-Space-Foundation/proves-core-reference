@@ -21,89 +21,120 @@ StartupManager ::~StartupManager() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
+//! \brief Template function to read a type T from a file at file_path
+//!
+//! This will read a type T with size 'size' from the file located at file_path. It will return SUCCESS if
+//! the read and deserialization were successful, and FAILURE otherwise.
+//!
+//! The file will be opened and closed within this function. value will not be modified by this function unless
+//! the read operation is successful.
+//!
+//! \warning this function is only safe to use for types T with size `size` that fit well in stack memory.
+//!
+//! \param file_path: path to the file to read from
+//! \param value: reference to the variable to read into
+//! \return Status of the read operation
+template <typename T, FwSizeType BUFFER_SIZE>
+StartupManager::Status read(const Fw::StringBase& file_path, T& value) {
+    // Create the necessary file and deserializer objects for reading a type from a file
+    StartupManager::Status return_status = StartupManager::FAILURE;
+    Os::File file;
+    U8 data_buffer[BUFFER_SIZE];
+    Fw::ExternalSerializeBuffer deserializer(data_buffer, sizeof(data_buffer));
+
+    // Open the file for reading, and continue only if successful
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
+    if (status == Os::File::OP_OK) {
+        FwSizeType size = sizeof(data_buffer);
+        status = file.read(data_buffer, size);
+        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
+            // When the read is successful, and the size is correct then the buffer must absolutely contain the
+            // serialized data and thus it is safe to assert on the deserialization status
+            deserializer.setBuffLen(size);
+            Fw::SerializeStatus serialize_status = deserializer.deserializeTo(value);
+            FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK,
+                      static_cast<FwAssertArgType>(serialize_status));
+            return_status = StartupManager::SUCCESS;
+        }
+    }
+    (void)file.close();
+    return return_status;
+}
+
+//! \brief Template function to write a type T to a file at file_path
+//!
+//! This will write a type T with size 'size' to the file located at file_path. It will return SUCCESS if
+//! the serialization and write were successful, and FAILURE otherwise.
+//!
+//! The file will be opened and closed within this function.
+//!
+//! \warning this function is only safe to use for types T with size `size` that fit well in stack memory.
+//!
+//! \param file_path: path to the file to write to
+//! \param value: reference to the variable to write
+//! \return Status of the write operation
+template <typename T, FwSizeType BUFFER_SIZE>
+StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
+    // Create the necessary file and deserializer objects for reading a type from a file
+    StartupManager::Status return_status = StartupManager::FAILURE;
+    Os::File file;
+    U8 data_buffer[BUFFER_SIZE];
+
+    // Serialize the value into the data buffer. Since the buffer is created here it is safe to assert on the
+    // serialization status.
+    Fw::ExternalSerializeBuffer serializer(data_buffer, sizeof(data_buffer));
+    Fw::SerializeStatus serialize_status = serializer.serializeFrom(value);
+    FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK, static_cast<FwAssertArgType>(serialize_status));
+
+    // Open the file for writing, and continue only if successful
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    if (status == Os::File::OP_OK) {
+        FwSizeType size = sizeof(data_buffer);
+        status = file.write(data_buffer, size);
+        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
+            return_status = StartupManager::SUCCESS;
+        }
+    }
+    (void)file.close();
+    return return_status;
+}
+
 FwSizeType StartupManager ::update_boot_count() {
     // Read the boot count file path from parameter and assert that it is either valid or the default value
+    FwSizeType boot_count = 0;
     Fw::ParamValid is_valid;
     auto boot_count_file = this->paramGet_BOOT_COUNT_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    // Open the boot count file and read the current boot count
-    FwSizeType boot_count = 0;
-    Os::File file;
-    Os::File::Status status = file.open(boot_count_file.toChar(), Os::File::OPEN_READ);
-    U8 buffer[sizeof(FwSizeType)];
-
-    // If the file read ok, then we read the boot count. Otherwise, we assume boot count is zero thus making
-    // this the first boot.
-    if (status == Os::File::OP_OK) {
-        FwSizeType size = sizeof(buffer);
-        status = file.read(buffer, size);
-        if (status == Os::File::OP_OK) {
-            Fw::ExternalSerializeBuffer buffer_obj(buffer, sizeof(buffer));
-            Fw::SerializeStatus serialization_status = buffer_obj.deserializeTo(boot_count);
-            if (serialization_status != Fw::SerializeStatus::FW_SERIALIZE_OK) {
-                boot_count = 0;  // Default to zero if deserialization fails
-            }
-        }
-        file.close();
-    }
-    // Boot count of zero is a flag value, so ensure a minimum boot count of 1
+    // Open the boot count file and add one to the current boot count ensuring a minimum of 1 in the case
+    // of read failure. Since read will retain the `0` initial value on read failure, we can ignore the error
+    // status returned by the read.
+    (void)read<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
     boot_count = FW_MAX(1, boot_count + 1);
-
-    // Open the file for writing the boot count
-    status = file.open(boot_count_file.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
-    if (status == Os::File::OP_OK) {
-        Fw::ExternalSerializeBuffer buffer_obj(buffer, sizeof(FwSizeType));
-        Fw::SerializeStatus serialize_status = buffer_obj.serializeFrom(boot_count);
-        // Write only when the serialization was successful
-        if (serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK) {
-            FwSizeType size = sizeof(buffer);
-            (void)file.write(buffer, size);
-        }
-        file.close();
+    // Rewrite the updated boot count back to the file, and on failure emit a warning about the inability to
+    // persist the boot count.
+    StartupManager::Status status = write<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
+    if (status != StartupManager::SUCCESS) {
+        this->log_WARNING_LO_BootCountUpdateFailure();
     }
     return boot_count;
 }
 
-Fw::Time StartupManager ::get_quiescence_start() {
-    // Read the quiescence start time file path from parameter and assert that it is either valid or the default value
+Fw::Time StartupManager ::update_quiescence_start() {
     Fw::ParamValid is_valid;
-
     auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    // Open the boot count file and read the current boot count
-    Fw::Time time;
-    Os::File file;
-    Os::File::Status status = file.open(time_file.toChar(), Os::File::OPEN_READ);
-    U8 buffer[Fw::Time::SERIALIZED_SIZE];
-
-    // If the file read ok, then we read the quiescence start time.
-    if (status == Os::File::OP_OK) {
-        FwSizeType size = sizeof(buffer);
-        status = file.read(buffer, size);
-        if (status == Os::File::OP_OK) {
-            Fw::ExternalSerializeBuffer buffer_obj(buffer, sizeof(buffer));
-            Fw::SerializeStatus serialization_status = buffer_obj.deserializeTo(time);
-            if (serialization_status != Fw::SerializeStatus::FW_SERIALIZE_OK) {
-                time = this->getTime();  // Default to current time if deserialization fails
-            }
+    Fw::Time time = this->getTime();
+    // Open the quiescence start time file and read the current time. On read failure, return the current time.
+    StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+    // On read failure, write the current time to the file for future reads. This only happens on read failure because
+    // there is a singular quiescence start time for the whole mission.
+    if (status != StartupManager::SUCCESS) {
+        status = write<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+        if (status != StartupManager::SUCCESS) {
+            this->log_WARNING_LO_QuiescenceFileInitFailure();
         }
-        (void)file.close();
-    }
-    // Write quiescence start time if read failed
-    if (status != Os::File::OP_OK) {
-        FwSizeType size = sizeof(buffer);
-        time = this->getTime();
-        status = file.open(time_file.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
-        if (status == Os::File::OP_OK) {
-            Fw::ExternalSerializeBuffer buffer_obj(buffer, sizeof(Fw::Time::SERIALIZED_SIZE));
-            Fw::SerializeStatus serialize_status = buffer_obj.serializeFrom(time);
-            if (serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK) {
-                (void)file.write(buffer, size);
-            }
-        }
-        (void)file.close();
     }
     return time;
 }
@@ -112,7 +143,12 @@ void StartupManager ::completeSequence_handler(FwIndexType portNum,
                                                FwOpcodeType opCode,
                                                U32 cmdSeq,
                                                const Fw::CmdResponse& response) {
-    // TODO
+    // Respond to the completion status of the start-up sequence
+    if (response == Fw::CmdResponse::OK) {
+        this->log_ACTIVITY_LO_StartupSequenceFinished();
+    } else {
+        this->log_WARNING_LO_StartupSequenceFailed(response);
+    }
 }
 
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
@@ -121,12 +157,18 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     // On the first call, update the boot count, set the quiescence start time, and dispatch the start-up sequence
     if (this->m_boot_count == 0) {
         this->m_boot_count = this->update_boot_count();
-        this->m_quiescence_start = this->get_quiescence_start();
+        this->m_quiescence_start = this->update_quiescence_start();
 
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
         this->runSequence_out(0, first_sequence);
     }
+
+    // Calculate the quiescence end time based on the quiescence period parameter
+    Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
+    Fw::Time quiescence_interval(quiescence_period.get_seconds(), quiescence_period.get_useconds());
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::Time end_time = Fw::Time::add(this->m_quiescence_start, quiescence_interval);
 
     // Are we waiting for quiescence?
     if (this->m_waiting) {
@@ -134,17 +176,14 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
         bool armed = this->paramGet_ARMED(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-        Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
-        Fw::Time quiescence_interval(quiescence_period.get_seconds(), quiescence_period.get_useconds());
-        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-        Fw::Time end_time = Fw::Time::add(this->m_quiescence_start, quiescence_interval);
-
         // If not armed or this is not the first boot, we skip waiting
         if (!armed || end_time <= this->getTime()) {
             this->m_waiting = false;
             this->cmdResponse_out(this->m_stored_opcode, this->m_stored_sequence, Fw::CmdResponse::OK);
         }
     }
+    this->tlmWrite_QuiescenceEndTime(
+        Fw::TimeValue(end_time.getTimeBase(), end_time.getContext(), end_time.getSeconds(), end_time.getUSeconds()));
     this->tlmWrite_BootCount(this->m_boot_count);
 }
 
