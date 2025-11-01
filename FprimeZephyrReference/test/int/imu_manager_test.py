@@ -23,47 +23,33 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
-def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get Acceleration telemetry"""
-    result: ChData = fprime_test_api.assert_telemetry(
+def test_01_imu_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that we can get IMU telemetry"""
+    result_acceleration: ChData = fprime_test_api.assert_telemetry(
         f"{lsm6dsoManager}.Acceleration", start="NOW", timeout=65
     )
-
-    reading: dict[float] = result.get_val()
-    assert all(reading[k] != 0 for k in ("x", "y", "z")), (
-        "Acceleration reading should be non-zero"
-    )
-
-
-def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get AngularVelocity telemetry"""
-    result: ChData = fprime_test_api.assert_telemetry(
+    result_angular_velocity: ChData = fprime_test_api.assert_telemetry(
         f"{lsm6dsoManager}.AngularVelocity", start="NOW", timeout=65
     )
-
-    reading: dict[float] = result.get_val()
-    assert all(reading[k] != 0 for k in ("x", "y", "z")), (
-        "AngularVelocity reading should be non-zero"
-    )
-
-
-def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get Temperature telemetry"""
-    result: ChData = fprime_test_api.assert_telemetry(
+    result_temperature: ChData = fprime_test_api.assert_telemetry(
         f"{lsm6dsoManager}.Temperature", start="NOW", timeout=65
     )
-
-    reading: int = result.get_val()
-    assert reading != 0, "Temperature reading should be non-zero"
-
-
-def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get MagneticField telemetry"""
-    result: ChData = fprime_test_api.assert_telemetry(
+    result_magnetic_field: ChData = fprime_test_api.assert_telemetry(
         f"{lis2mdlManager}.MagneticField", start="NOW", timeout=65
     )
 
-    reading: dict[float] = result.get_val()
-    assert all(reading[k] != 0 for k in ("x", "y", "z")), (
+    reading_acceleration: dict[float] = result_acceleration.get_val()
+    reading_angular_velocity: dict[float] = result_angular_velocity.get_val()
+    reading_temperature: int = result_temperature.get_val()
+    reading_magnetic_field: dict[float] = result_magnetic_field.get_val()
+
+    assert all(reading_acceleration[k] != 0 for k in ("x", "y", "z")), (
+        "Acceleration reading should be non-zero"
+    )
+    assert all(reading_angular_velocity[k] != 0 for k in ("x", "y", "z")), (
+        "AngularVelocity reading should be non-zero"
+    )
+    assert reading_temperature != 0, "Temperature reading should be non-zero"
+    assert all(reading_magnetic_field[k] != 0 for k in ("x", "y", "z")), (
         "MagneticField reading should be non-zero"
     )
