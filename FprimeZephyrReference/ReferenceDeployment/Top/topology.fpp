@@ -45,7 +45,7 @@ module ReferenceDeployment {
     instance comDriver
     instance fsSpace
     instance cmdSeq
-    #instance startupManager
+    instance startupManager
 
 
   # ----------------------------------------------------------------------
@@ -104,6 +104,9 @@ module ReferenceDeployment {
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
       lora.comStatusOut -> comDelay.comStatusIn
       comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+
+      startupManager.runSequence -> cmdSeq.seqRunIn
+      cmdSeq.seqDone -> startupManager.completeSequence
     }
 
     connections CommunicationsUart {
@@ -145,7 +148,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      #rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
 
     }
 

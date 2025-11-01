@@ -108,6 +108,13 @@ Fw::Time StartupManager ::get_quiescence_start() {
     return time;
 }
 
+void StartupManager ::completeSequence_handler(FwIndexType portNum,
+                                               FwOpcodeType opCode,
+                                               U32 cmdSeq,
+                                               const Fw::CmdResponse& response) {
+    // TODO
+}
+
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid is_valid;
 
