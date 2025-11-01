@@ -9,6 +9,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+#    ReferenceDeployment.startupManager.BootCount
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -83,6 +84,11 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
+  ReferenceDeployment.cmdSeq.CS_LoadCommands
+  ReferenceDeployment.cmdSeq.CS_CancelCommands
+  ReferenceDeployment.cmdSeq.CS_CommandsExecuted
+  ReferenceDeployment.cmdSeq.CS_SequencesCompleted
+  ReferenceDeployment.cmdSeq.CS_Errors
   FileHandling.fileUplink.FilesReceived
   FileHandling.fileUplink.PacketsReceived
   FileHandling.fileDownlink.FilesSent

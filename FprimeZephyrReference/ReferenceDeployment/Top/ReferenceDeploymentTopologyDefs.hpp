@@ -54,7 +54,7 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
-namespace ReferenceDeployment_prmDb {
+namespace ReferenceDeployment_cmdSeq {
 enum { WARN = 3, FATAL = 5 };
 }
 }  // namespace PingEntries

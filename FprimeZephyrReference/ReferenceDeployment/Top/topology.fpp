@@ -31,7 +31,6 @@ module ReferenceDeployment {
     instance gpioBurnwire0
     instance gpioBurnwire1
     instance watchdog
-    instance prmDb
     instance rtcManager
     instance imuManager
     instance lis2mdlManager
@@ -45,6 +44,8 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
+    instance cmdSeq
+    #instance startupManager
 
 
   # ----------------------------------------------------------------------
@@ -85,6 +86,9 @@ module ReferenceDeployment {
 
       ComCcsdsUart.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.fprimeRouter.cmdResponseIn
+
+      cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
     }
 
     connections CommunicationsRadio {
@@ -126,6 +130,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -140,7 +145,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
+      #rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
 
     }
 
@@ -168,12 +173,12 @@ module ReferenceDeployment {
 
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
-      FileHandling.fileDownlink.bufferSendOut -> ComCcsds.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
-      ComCcsds.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+      FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
 
       # Router <-> FileUplink
-      ComCcsds.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
-      FileHandling.fileUplink.bufferSendOut -> ComCcsds.fprimeRouter.fileBufferReturnIn
+      ComCcsdsUart.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
+      FileHandling.fileUplink.bufferSendOut -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
     }
 
 
