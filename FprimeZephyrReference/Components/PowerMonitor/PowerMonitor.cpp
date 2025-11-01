@@ -1,4 +1,19 @@
 // ======================================================================
 // \title  PowerMonitor.cpp
-// \brief  Manager for ina219 device for power monitoring placeholder. Use fprime-util impl
+// \author nate
+// \brief  cpp file for PowerMonitor component implementation class
 // ======================================================================
+
+#include "FprimeZephyrReference/Components/PowerMonitor/PowerMonitor.hpp"
+
+namespace Components {
+
+// ----------------------------------------------------------------------
+// Component construction and destruction
+// ----------------------------------------------------------------------
+
+PowerMonitor ::PowerMonitor(const char* const compName) : PowerMonitorComponentBase(compName) {}
+
+PowerMonitor ::~PowerMonitor() {}
+
+}  // namespace Components
