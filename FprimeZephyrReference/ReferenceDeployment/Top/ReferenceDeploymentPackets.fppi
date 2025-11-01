@@ -61,19 +61,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet FileStatus id 9 group 4{
-
-    FileHandling.fileUplink.FilesReceived
-    FileHandling.fileUplink.PacketsReceived
-    FileHandling.fileDownlink.FilesSent
-    FileHandling.fileDownlink.PacketsSent
-    FileHandling.fileManager.CommandsExecuted
-    FileHandling.fileManager.Errors
-    FileHandling.fileUplink.Warnings
-    FileHandling.fileDownlink.Warnings
-
-  }
-
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
@@ -96,4 +83,12 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
+  FileHandling.fileUplink.FilesReceived
+  FileHandling.fileUplink.PacketsReceived
+  FileHandling.fileDownlink.FilesSent
+  FileHandling.fileDownlink.PacketsSent
+  FileHandling.fileManager.CommandsExecuted
+  FileHandling.fileManager.Errors
+  FileHandling.fileUplink.Warnings
+  FileHandling.fileDownlink.Warnings
 }
