@@ -7,6 +7,7 @@
 #ifndef Components_StartupManager_HPP
 #define Components_StartupManager_HPP
 
+#include <atomic>
 #include "FprimeZephyrReference/Components/StartupManager/StartupManagerComponentAc.hpp"
 
 namespace Components {
@@ -26,6 +27,9 @@ class StartupManager final : public StartupManagerComponentBase {
 
     // Update and return the boot count
     FwSizeType update_boot_count();
+
+    // Get the quiescence start time
+    Fw::Time get_quiescence_start();
 
   private:
     // ----------------------------------------------------------------------
@@ -56,7 +60,7 @@ class StartupManager final : public StartupManagerComponentBase {
     FwOpcodeType m_stored_opcode;  //!< Stored opcode for delayed response
     FwSizeType m_boot_count;       //!< Current boot count
     U32 m_stored_sequence;         //!< Stored sequence number for delayed response
-    bool m_first;                  //!< Indicates if first run_handler call
+    std::atomic<bool> m_waiting;   //!< Indicates if waiting for quiescence
 };
 
 }  // namespace Components

@@ -5,10 +5,13 @@ module Components {
         sync input port run: Svc.Sched
 
         @ Port for sending sequence dispatches
-        output port seqRunIn: Svc.CmdSeqIn
+        output port runSequence: Svc.CmdSeqIn
 
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
+
+        @ Telemetry for boot count
+        telemetry BootCount: FwSizeType update on change
 
         @ Whether the start-up manager is armed to wait for quiescence
         param ARMED: bool default true
@@ -17,10 +20,10 @@ module Components {
         param QUIESCENCE_TIME: Fw.TimeIntervalValue default {seconds = 45 * 60, useconds = 0}
 
         @ File storing the quiescence start time
-        param QUIESCENCE_START_TIME: string default "/quiescence_start.bin"
+        param QUIESCENCE_START_FILE: string default "/quiescence_start.bin"
 
         @ Path to the start-up sequence file
-        param STARTUP_SEQUENCE: string default "/startup.bin"
+        param STARTUP_SEQUENCE_FILE: string default "/startup.bin"
 
         @ File to store the boot count
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
@@ -46,6 +49,7 @@ module Components {
         @ Port for sending command responses
         command resp port cmdResponseOut
 
-
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
     }
 }
