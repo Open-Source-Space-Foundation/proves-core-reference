@@ -50,7 +50,7 @@ U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGr
  * desired, but is extracted here for clarity.
  */
 void configureTopology() {
-    prmDb.configure("/prmDb.dat");
+    FileHandling::prmDb.configure("/prmDb.dat");
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
@@ -60,6 +60,8 @@ void configureTopology() {
     gpioDriver.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+
+    cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
@@ -78,7 +80,6 @@ void setupTopology(const TopologyState& state) {
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
     // Autocoded parameter loading. Function provided by autocoder.
-    prmDb.readParamFile();
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
@@ -106,5 +107,6 @@ void teardownTopology(const TopologyState& state) {
     stopTasks(state);
     freeThreads(state);
     tearDownComponents(state);
+    cmdSeq.deallocateBuffer(mallocator);
 }
 };  // namespace ReferenceDeployment
