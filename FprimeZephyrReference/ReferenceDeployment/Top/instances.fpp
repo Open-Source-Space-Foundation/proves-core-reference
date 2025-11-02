@@ -89,4 +89,10 @@ module ReferenceDeployment {
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
   instance fsSpace: Components.FsSpace base id 0x10030000
+
+  instance camera: Components.CameraManager base id 0x10031000
+
+  instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x10032000
+
+
 }

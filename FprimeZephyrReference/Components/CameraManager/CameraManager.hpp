@@ -9,7 +9,7 @@
 
 #include "FprimeZephyrReference/Components/CameraManager/CameraManagerComponentAc.hpp"
 
-namespace FprimeZephyrReference {
+namespace Components {
 
 class CameraManager final : public CameraManagerComponentBase {
   public:
@@ -24,7 +24,7 @@ class CameraManager final : public CameraManagerComponentBase {
     //! Destroy CameraManager object
     ~CameraManager();
 
-    const char snap_cmd[4] = {'s', 'n', 'a', 'p'};
+    U8 snapArray[5] = {'s', 'n', 'a', 'p', '\n'};
 
   private:
     // ----------------------------------------------------------------------

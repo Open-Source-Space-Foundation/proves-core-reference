@@ -12,6 +12,7 @@
 
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
+const struct device* peripheral_uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -25,6 +26,10 @@ int main(int argc, char* argv[]) {
     inputs.loraDevice = lora;
     inputs.uartDevice = serial;
     inputs.baudRate = 115200;
+
+    // For the uart peripheral config
+    inputs.peripheralBaudRate = 115200; // Minimum is 19200
+    inputs.peripheralUart = peripheral_uart;
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);

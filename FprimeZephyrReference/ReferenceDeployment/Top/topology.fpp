@@ -44,6 +44,8 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
+    instance camera
+    instance peripheralUartDriver
 
 
   # ----------------------------------------------------------------------
@@ -160,6 +162,10 @@ module ReferenceDeployment {
       imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
+
+    connections Camera {
+      camera.out_port -> peripheralUartDriver.$send
     }
   }
 }

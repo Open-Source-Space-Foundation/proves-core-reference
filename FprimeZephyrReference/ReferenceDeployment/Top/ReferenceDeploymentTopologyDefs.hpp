@@ -74,6 +74,8 @@ struct TopologyState {
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    const device* peripheralUart;
+    U32 peripheralBaudRate;
 };
 
 namespace PingEntries = ::PingEntries;

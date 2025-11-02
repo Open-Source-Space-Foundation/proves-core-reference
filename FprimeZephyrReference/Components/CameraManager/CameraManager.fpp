@@ -1,11 +1,11 @@
-module FprimeZephyrReference {
+module Components {
     @ Manager for Nicla Vision
-    active component CameraManager {
+    passive component CameraManager {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
         @ TODO
-        async command TAKE_IMAGE
+        sync command TAKE_IMAGE
 
         event TakeImageError() severity warning high format "Failed to take picture"
 
