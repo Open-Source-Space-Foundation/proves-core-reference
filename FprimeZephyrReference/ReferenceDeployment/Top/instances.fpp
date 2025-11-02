@@ -64,7 +64,7 @@ module ReferenceDeployment {
 
   instance rtcManager: Drv.RtcManager base id 0x10016000
 
-  instance imuManager: Components.ImuManager base id 0x10017000
+  instance DetumbleManager: Components.DetumbleManager base id 0x10017000
 
   instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 

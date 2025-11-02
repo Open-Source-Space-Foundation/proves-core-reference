@@ -1,6 +1,6 @@
 module Components {
     @ IMU Manager Component for F Prime FSW framework.
-    passive component ImuManager {
+    passive component DetumbleManager {
         sync input port run: Svc.Sched
 
         @ Port for sending accelerationGet calls to the LSM6DSO Driver

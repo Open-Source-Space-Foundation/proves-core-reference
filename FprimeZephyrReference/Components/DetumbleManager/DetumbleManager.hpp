@@ -1,26 +1,26 @@
 // ======================================================================
-// \title  ImuManager.hpp
-// \brief  hpp file for ImuManager component implementation class
+// \title  DetumbleManager.hpp
+// \brief  hpp file for DetumbleManager component implementation class
 // ======================================================================
 
-#ifndef Components_ImuManager_HPP
-#define Components_ImuManager_HPP
+#ifndef Components_DetumbleManager_HPP
+#define Components_DetumbleManager_HPP
 
-#include "FprimeZephyrReference/Components/ImuManager/ImuManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
 
 namespace Components {
 
-class ImuManager final : public ImuManagerComponentBase {
+class DetumbleManager final : public DetumbleManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct ImuManager object
-    ImuManager(const char* const compName);
+    //! Construct DetumbleManager object
+    DetumbleManager(const char* const compName);
 
-    //! Destroy ImuManager object
-    ~ImuManager();
+    //! Destroy DetumbleManager object
+    ~DetumbleManager();
 
   private:
     // ----------------------------------------------------------------------
