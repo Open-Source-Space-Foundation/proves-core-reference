@@ -7,8 +7,10 @@
 #ifndef Components_LoadSwitch_HPP
 #define Components_LoadSwitch_HPP
 
-#include <zephyr/drivers/gpio.h>
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
+
+// Forward declare Zephyr types to avoid header conflicts
+struct device;
 
 namespace Components {
 
