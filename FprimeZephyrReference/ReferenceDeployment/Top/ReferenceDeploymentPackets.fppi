@@ -36,6 +36,8 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.version.FrameworkVersion
     CdhCore.version.ProjectVersion
     CdhCore.version.LibraryVersion01
+    fsSpace.FreeSpace
+    fsSpace.TotalSpace
   }
 
   packet Led id 5 group 4 {
