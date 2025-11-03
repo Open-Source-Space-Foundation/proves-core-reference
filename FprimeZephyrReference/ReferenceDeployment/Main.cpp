@@ -10,8 +10,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219Sys));
-const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219Sol));
+const struct device* ina219Sys = device_get_binding("INA219 sys");
+const struct device* ina219Sol = device_get_binding("INA219 sol");
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 
