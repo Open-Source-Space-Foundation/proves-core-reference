@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Ina219Manager.cpp
-// \author nate
 // \brief  cpp file for Ina219Manager component implementation class
 // ======================================================================
 
@@ -16,6 +15,10 @@ namespace Drv {
 Ina219Manager ::Ina219Manager(const char* const compName) : Ina219ManagerComponentBase(compName) {}
 
 Ina219Manager ::~Ina219Manager() {}
+
+// ----------------------------------------------------------------------
+// Helper methods
+// ----------------------------------------------------------------------
 
 void Ina219Manager::configure(const struct device* dev) {
     this->m_dev = dev;

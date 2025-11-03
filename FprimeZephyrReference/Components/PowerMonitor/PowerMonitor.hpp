@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  PowerMonitor.hpp
-// \author nate
 // \brief  hpp file for PowerMonitor component implementation class
 // ======================================================================
 

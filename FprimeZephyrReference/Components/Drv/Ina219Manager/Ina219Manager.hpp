@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Ina219Manager.hpp
-// \author nate
 // \brief  hpp file for Ina219Manager component implementation class
 // ======================================================================
 
@@ -27,7 +26,13 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
     //! Destroy Ina219Manager object
     ~Ina219Manager();
 
-    void configure(const struct device* dev);  // helper function to configure device for the class
+  public:
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the INA219 device
+    void configure(const struct device* dev);
 
   private:
     // ----------------------------------------------------------------------

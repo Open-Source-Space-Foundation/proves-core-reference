@@ -4,11 +4,10 @@ module Drv {
     port PowerGet -> F64
 }
 
-    module Drv {
+module Drv {
     @ Manager for Ina219 device
     passive component Ina219Manager {
-
-        #Ports
+        # Ports
         @ Port to read the voltage in volts
         sync input port voltageGet: VoltageGet
 
@@ -31,7 +30,6 @@ module Drv {
 
         @ Event for reporting INA219 not ready error
         event DeviceNotReady() severity warning high format "INA219 device not ready" throttle 5
-
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
