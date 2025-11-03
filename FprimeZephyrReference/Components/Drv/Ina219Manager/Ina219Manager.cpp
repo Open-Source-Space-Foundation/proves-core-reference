@@ -56,7 +56,7 @@ F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_POWER, &power);
 
-    this->tlmWrite_Current(sensor_value_to_double(&power));
+    this->tlmWrite_Power(sensor_value_to_double(&power));
 
     return sensor_value_to_double(&power);
 }
@@ -74,7 +74,7 @@ F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_VOLTAGE, &voltage);
 
-    this->tlmWrite_Current(sensor_value_to_double(&voltage));
+    this->tlmWrite_Voltage(sensor_value_to_double(&voltage));
 
     return sensor_value_to_double(&voltage);
 }
