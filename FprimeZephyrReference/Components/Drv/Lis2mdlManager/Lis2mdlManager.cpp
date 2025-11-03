@@ -5,6 +5,7 @@
 
 #include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManager.hpp"
 
+#include <zephyr/kernel.h>
 #include <Fw/Types/Assert.hpp>
 
 namespace Drv {
@@ -40,8 +41,8 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum
     sensor_channel_get(dev, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(dev, SENSOR_CHAN_MAGN_Z, &z);
 
-    Drv::MagneticField magnetic_readings =
-        Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y), Drv::sensor_value_to_f64(z));
+    Drv::MagneticField magnetic_readings = Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y),
+                                                              Drv::sensor_value_to_f64(z), k_uptime_get());
 
     this->tlmWrite_MagneticField(magnetic_readings);
 

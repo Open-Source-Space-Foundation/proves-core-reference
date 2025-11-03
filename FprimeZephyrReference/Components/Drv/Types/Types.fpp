@@ -19,5 +19,12 @@ module Drv {
         x: F64 @< Magnetic field in gauss in the X direction.
         y: F64 @< Magnetic field in gauss in the Y direction.
         z: F64 @< Magnetic field in gauss in the Z direction.
+        timestamp: I64 @< Time the magnetic field struct was created. Used for dB_dt calculation.
+    }
+
+    struct DipoleMoment {
+        x: F64
+        y: F64
+        z: F64
     }
 }
