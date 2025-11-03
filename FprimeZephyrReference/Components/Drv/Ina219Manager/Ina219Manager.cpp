@@ -15,10 +15,14 @@ namespace Drv {
 // ----------------------------------------------------------------------
 
 Ina219Manager ::Ina219Manager(const char* const compName) : Ina219ManagerComponentBase(compName) {
-    dev = device_get_binding("INA219");
+    this->m_dev = device_get_binding("INA219");
 }
 
 Ina219Manager ::~Ina219Manager() {}
+
+void Ina219Manager::configure(const struct device *dev) {
+    this->m_dev = dev;
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports

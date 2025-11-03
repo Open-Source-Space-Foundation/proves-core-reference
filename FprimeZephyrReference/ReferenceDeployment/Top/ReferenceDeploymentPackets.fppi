@@ -61,10 +61,16 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet PowerMonitor id 9 group 4 {
-    ReferenceDeployment.ina219Manager.Voltage
-    ReferenceDeployment.ina219Manager.Current
-    ReferenceDeployment.ina219Manager.Power
+  packet sysPowerMonitor id 9 group 4 {
+    ReferenceDeployment.ina219SysManager.Voltage
+    ReferenceDeployment.ina219SysManager.Current
+    ReferenceDeployment.ina219SysManager.Power
+  }
+
+  packet solPowerMonitor id 10 group 4 {
+    ReferenceDeployment.ina219SolManager.Voltage
+    ReferenceDeployment.ina219SolManager.Current
+    ReferenceDeployment.ina219SolManager.Power
   }
 
 } omit {

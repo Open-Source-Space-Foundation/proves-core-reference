@@ -139,7 +139,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> sysPowerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> solPowerMonitor.run
 
     }
 
@@ -165,10 +166,16 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-    connections powerMonitor {
-      powerMonitor.voltageGet -> ina219Manager.voltageGet
-      powerMonitor.currentGet -> ina219Manager.currentGet
-      powerMonitor.powerGet -> ina219Manager.powerGet
+    connections sysPowerMonitor {
+      sysPowerMonitor.voltageGet -> ina219SysManager.voltageGet
+      sysPowerMonitor.currentGet -> ina219SysManager.currentGet
+      sysPowerMonitor.powerGet -> ina219SysManager.powerGet
+    }
+
+    connections solPowerMonitor {
+      solPowerMonitor.voltageGet -> ina219SolManager.voltageGet
+      solPowerMonitor.currentGet -> ina219SolManager.currentGet
+      solPowerMonitor.powerGet -> ina219SolManager.powerGet
     }
   }
 }

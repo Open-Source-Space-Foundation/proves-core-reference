@@ -69,6 +69,8 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
+    const device* ina219SysDevice;        //!< device path for battery board ina219 
+    const device* ina219SolDevice;        //!< device path for solar panel ina219 
     const device* uartDevice;             //!< UART device path for communication
     const device* loraDevice;             //!< LoRa device path for communication
     U32 baudRate;                         //!< Baud rate for UART communication

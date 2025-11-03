@@ -27,6 +27,8 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
     //! Destroy Ina219Manager object
     ~Ina219Manager();
 
+    void configure(const struct device *dev); // helper function to configure device for the class
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -49,12 +51,14 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
     //! Port to read the voltage in volts
     F64 voltageGet_handler(FwIndexType portNum  //!< The port number
                            ) override;
+
+    
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized LIS2MDL sensor
-    const struct device* dev;                    
+    const struct device* m_dev;                    
 };
 
 }  // namespace Drv
