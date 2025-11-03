@@ -24,6 +24,12 @@ class PowerMonitor final : public PowerMonitorComponentBase {
     //! Destroy PowerMonitor object
     ~PowerMonitor();
 
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for run
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;

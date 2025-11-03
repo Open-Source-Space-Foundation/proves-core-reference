@@ -16,6 +16,10 @@ PowerMonitor ::PowerMonitor(const char* const compName) : PowerMonitorComponentB
 
 PowerMonitor ::~PowerMonitor() {}
 
+// ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
+
 void PowerMonitor ::run_handler(FwIndexType portNum, U32 context) {
     this->voltageGet_out(0);
     this->currentGet_out(0);
