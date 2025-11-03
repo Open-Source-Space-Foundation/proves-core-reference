@@ -19,8 +19,8 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.cpp"
-    DEPENDS
-        FprimeZephyrReference_Components_Drv_Helpers
+    # DEPENDS
+    #     FprimeZephyrReference_Components_Drv_Helpers
 )
 
 ### Unit Tests ###

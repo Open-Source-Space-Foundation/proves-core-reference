@@ -6,11 +6,7 @@
 #ifndef Components_Lis2mdlManager_HPP
 #define Components_Lis2mdlManager_HPP
 
-// clang-format off
-// Keep the includes in this order
 #include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManagerComponentAc.hpp"
-#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
-// clang-format on
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -44,7 +40,7 @@ class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized LIS2MDL sensor
-    const struct device* dev;
+    const struct device* m_dev;
 };
 
 }  // namespace Drv

@@ -6,11 +6,7 @@
 #ifndef Components_Lsm6dsoManager_HPP
 #define Components_Lsm6dsoManager_HPP
 
-// clang-format off
-// Keep the includes in this order
 #include "FprimeZephyrReference/Components/Drv/Lsm6dsoManager/Lsm6dsoManagerComponentAc.hpp"
-#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
-// clang-format on
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -52,7 +48,7 @@ class Lsm6dsoManager final : public Lsm6dsoManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized LSM6DSO sensor
-    const struct device* dev;
+    const struct device* m_dev;
 };
 
 }  // namespace Drv
