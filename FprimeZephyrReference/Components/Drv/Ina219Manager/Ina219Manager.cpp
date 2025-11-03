@@ -5,6 +5,8 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219Manager.hpp"
+#include <Fw/Types/Assert.hpp>
+
 
 namespace Drv {
 
@@ -37,7 +39,7 @@ F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
 
     this->tlmWrite_Current(sensor_value_to_double(&current));
 
-    return current;
+    return sensor_value_to_double(&current);
 }
 
 F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
@@ -51,11 +53,11 @@ F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
 
     sensor_sample_fetch_chan(dev, SENSOR_CHAN_POWER);
 
-    sensor_channel_get(dev, SENSOR_CHAN_POWER, &Power);
+    sensor_channel_get(dev, SENSOR_CHAN_POWER, &power);
 
     this->tlmWrite_Current(sensor_value_to_double(&power));
     
-    return power;
+    return sensor_value_to_double(&power);
 }
 
 F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
@@ -73,7 +75,7 @@ F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
 
     this->tlmWrite_Current(sensor_value_to_double(&voltage));
     
-    return voltage;
+    return sensor_value_to_double(&voltage);
 }
 
 }  // namespace Drv

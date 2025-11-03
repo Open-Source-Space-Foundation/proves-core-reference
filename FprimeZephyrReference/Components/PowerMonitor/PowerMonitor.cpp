@@ -16,4 +16,10 @@ PowerMonitor ::PowerMonitor(const char* const compName) : PowerMonitorComponentB
 
 PowerMonitor ::~PowerMonitor() {}
 
+void PowerMonitor ::run_handler(FwIndexType portNum, U32 context) {
+    this->voltageGet_out(0);
+    this->currentGet_out(0);
+    this->powerGet_out(0);
+}
+
 }  // namespace Components

@@ -23,6 +23,10 @@ class PowerMonitor final : public PowerMonitorComponentBase {
 
     //! Destroy PowerMonitor object
     ~PowerMonitor();
+
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
 };
 
 }  // namespace Components

@@ -9,6 +9,9 @@
 
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219ManagerComponentAc.hpp"
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/kernel.h>
 namespace Drv {
 
 class Ina219Manager final : public Ina219ManagerComponentBase {
