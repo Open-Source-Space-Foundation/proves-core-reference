@@ -44,8 +44,10 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
-    instance powerMonitor
-    instance ina219Manager
+    instance sysPowerMonitor
+    instance ina219SysManager
+    instance solPowerMonitor
+    instance ina219SolManager
 
 
   # ----------------------------------------------------------------------
