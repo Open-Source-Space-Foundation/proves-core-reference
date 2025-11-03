@@ -89,4 +89,8 @@ module ReferenceDeployment {
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
   instance fsSpace: Components.FsSpace base id 0x10030000
+
+  instance powerMonitor: Components.PowerMonitor base id 0x10031000
+
+  instance ina219Manager: Drv.Ina219Manager base id 0x10032000
 }

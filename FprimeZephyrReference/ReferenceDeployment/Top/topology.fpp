@@ -44,6 +44,8 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
+    instance powerMonitor
+    instance ina219Manager
 
 
   # ----------------------------------------------------------------------
@@ -137,6 +139,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
 
     }
 
@@ -160,6 +163,12 @@ module ReferenceDeployment {
       imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
+
+    connections powerMonitor {
+      powerMonitor.voltageGet -> ina219Manager.voltageGet
+      powerMonitor.currentGet -> ina219Manager.currentGet
+      powerMonitor.powerGet -> ina219Manager.powerGet
     }
   }
 }
