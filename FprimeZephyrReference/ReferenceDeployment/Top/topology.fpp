@@ -44,9 +44,8 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
-    instance sysPowerMonitor
+    instance powerMonitor
     instance ina219SysManager
-    instance solPowerMonitor
     instance ina219SolManager
 
 
@@ -141,8 +140,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> sysPowerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[11] -> solPowerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
 
     }
 
@@ -169,15 +167,13 @@ module ReferenceDeployment {
     }
 
     connections sysPowerMonitor {
-      sysPowerMonitor.voltageGet -> ina219SysManager.voltageGet
-      sysPowerMonitor.currentGet -> ina219SysManager.currentGet
-      sysPowerMonitor.powerGet -> ina219SysManager.powerGet
+      powerMonitor.sysVoltageGet -> ina219SysManager.voltageGet
+      powerMonitor.sysCurrentGet -> ina219SysManager.currentGet
+      powerMonitor.sysPowerGet -> ina219SysManager.powerGet
+      powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
+      powerMonitor.solCurrentGet -> ina219SolManager.currentGet
+      powerMonitor.solPowerGet -> ina219SolManager.powerGet
     }
 
-    connections solPowerMonitor {
-      solPowerMonitor.voltageGet -> ina219SolManager.voltageGet
-      solPowerMonitor.currentGet -> ina219SolManager.currentGet
-      solPowerMonitor.powerGet -> ina219SolManager.powerGet
-    }
   }
 }

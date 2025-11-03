@@ -90,11 +90,9 @@ module ReferenceDeployment {
 
   instance fsSpace: Components.FsSpace base id 0x10030000
 
-  instance sysPowerMonitor: Components.PowerMonitor base id 0x10031000
+  instance powerMonitor: Components.PowerMonitor base id 0x10031000
 
-  instance solPowerMonitor: Components.PowerMonitor base id 0x10032000
+  instance ina219SysManager: Drv.Ina219Manager base id 0x10032000
 
-  instance ina219SysManager: Drv.Ina219Manager base id 0x10033000
-
-  instance ina219SolManager: Drv.Ina219Manager base id 0x10034000
+  instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
 }

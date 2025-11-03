@@ -20,9 +20,15 @@ PowerMonitor ::~PowerMonitor() {}
 // ----------------------------------------------------------------------
 
 void PowerMonitor ::run_handler(FwIndexType portNum, U32 context) {
-    this->voltageGet_out(0);
-    this->currentGet_out(0);
-    this->powerGet_out(0);
+    // System Power Monitor INA219 Requests
+    this->sysVoltageGet_out(0);
+    this->sysCurrentGet_out(0);
+    this->sysPowerGet_out(0);
+
+    // Solar Panel Power Monitor INA219 Requests
+    this->solVoltageGet_out(0);
+    this->solCurrentGet_out(0);
+    this->solPowerGet_out(0);
 }
 
 }  // namespace Components
