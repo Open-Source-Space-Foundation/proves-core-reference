@@ -33,8 +33,10 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
                      ) override;
 
     // Variables
-    Drv::MagneticField EMPTY_MG_FIELD = Drv::MagneticField{0.0, 0.0, 0.0};
-    Drv::MagneticField prevMgField = Drv::MagneticField{0.0, 0.0, 0.0};
+    Drv::MagneticField EMPTY_MG_FIELD = Drv::MagneticField(0.0, 0.0, 0.0, -1);
+    Drv::MagneticField prevMgField = Drv::MagneticField(0.0, 0.0, 0.0, -1);
+
+    Drv::DipoleMoment EMPTY_DP_MOMENT = Drv::DipoleMoment(0.0, 0.0, 0.0);
 
     // Functions
     bool executeControlStep();

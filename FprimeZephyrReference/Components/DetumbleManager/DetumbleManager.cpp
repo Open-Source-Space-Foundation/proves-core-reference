@@ -37,8 +37,12 @@ bool DetumbleManager::executeControlStep() {
         this->prevMgField = mgField;
     }
 
-    Drv::DipoleMoment dpMoment = this->dipoleMomentGet_handler(0, mgField, this->prevMgField);
-    // Then check if its null/empty whatever here, need to figure that out.
+    Drv::DipoleMoment dpMoment = this->dipoleMomentGet_out(0, mgField, this->prevMgField);
+    if (dpMoment == this->EMPTY_DP_MOMENT) {
+        // Log some kinda error
+        return false;
+    }
+
     this->prevMgField = mgField;
 
     // Then apply the dipole moment here, gonna have to figure that out.

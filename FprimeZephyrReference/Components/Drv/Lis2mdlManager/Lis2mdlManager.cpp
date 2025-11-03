@@ -27,7 +27,7 @@ Lis2mdlManager ::~Lis2mdlManager() {}
 Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum) {
     if (!device_is_ready(dev)) {
         this->log_WARNING_HI_DeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0, k_uptime_get());
+        return Drv::MagneticField(0.0, 0.0, 0.0, -1);
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
