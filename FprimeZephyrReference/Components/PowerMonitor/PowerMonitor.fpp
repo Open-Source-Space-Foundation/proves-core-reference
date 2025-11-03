@@ -1,24 +1,24 @@
 module Components {
-    @ Manager for ina219 device for power monitoring
+    @ Power Monitor Manager
     passive component PowerMonitor {
         sync input port run: Svc.Sched
 
-        @ Port for sending voltageGet calls to the System INA219 Driver
+        @ Port for sending voltageGet calls to the System Driver
         output port sysVoltageGet: Drv.VoltageGet
 
-        @ Port for sending currentGet calls to the System INA219 Driver
+        @ Port for sending currentGet calls to the System Driver
         output port sysCurrentGet: Drv.CurrentGet
 
-        @ Port for sending powerGet calls to the System INA219 Driver
+        @ Port for sending powerGet calls to the System Driver
         output port sysPowerGet: Drv.PowerGet
 
-        @ Port for sending voltageGet calls to the Solar Panel INA219 Driver
+        @ Port for sending voltageGet calls to the Solar Panel Driver
         output port solVoltageGet: Drv.VoltageGet
 
-        @ Port for sending currentGet calls to the Solar Panel INA219 Driver
+        @ Port for sending currentGet calls to the Solar Panel Driver
         output port solCurrentGet: Drv.CurrentGet
 
-        @ Port for sending powerGet calls to the Solar Panel INA219 Driver
+        @ Port for sending powerGet calls to the Solar Panel Driver
         output port solPowerGet: Drv.PowerGet
 
         ###############################################################################
