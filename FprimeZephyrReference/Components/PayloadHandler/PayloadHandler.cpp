@@ -23,6 +23,8 @@ PayloadHandler ::~PayloadHandler() {}
 
 void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
 
+    this->log_ACTIVITY_LO_UartReceived();
+
     const U8* data = buffer.getData();
     FwSizeType size = buffer.getSize();
 
@@ -38,7 +40,7 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
             if (m_lineIndex < sizeof(m_lineBuffer) - 1) {
                 m_lineBuffer[m_lineIndex++] = byte;
             }
-
+            this->log_ACTIVITY_LO_ByteReceived(byte);
             // Have we reached the end of the line? If so that means we have a header
             // Check to see what the header is. 
             if (byte == '\n' || byte == '\r') {
@@ -48,6 +50,7 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
                 // Check the header.
                 // Right now I'm just checking for an image start tag, but we can expand this to other types later
                 if (strstr((const char*)m_lineBuffer, "<IMG_START>")) {
+                    this->log_ACTIVITY_LO_ImageHeaderReceived();
                     m_receiving = true;
                     m_bytes_received = 0;
                     m_expected_size = 0;
@@ -88,6 +91,7 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
             // Write a byte to the file
             FwSizeType oneByte = 1;
             m_file.write(&byte, oneByte);
+            this->log_ACTIVITY_LO_ByteReceived(byte);
             m_bytes_received++;
 
             // Check to see if we are done receiving

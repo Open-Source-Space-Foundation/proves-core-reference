@@ -13,6 +13,12 @@ module Components {
 
         event DataReceived( data: U8, path: string) severity activity high format "Stored {} bytes of payload data to {}"
 
+        event ByteReceived( byte: U8) severity activity low format "Received byte: {}"
+
+        event ImageHeaderReceived() severity activity low format "Received image header"
+
+        event UartReceived() severity activity low format "Received UART data"
+
         output port out_port: Drv.ByteStreamSend
 
         sync input port in_port: Drv.ByteStreamData  
