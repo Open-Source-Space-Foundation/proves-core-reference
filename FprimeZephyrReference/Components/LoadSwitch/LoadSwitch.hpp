@@ -7,8 +7,8 @@
 #ifndef Components_LoadSwitch_HPP
 #define Components_LoadSwitch_HPP
 
-#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
 #include <zephyr/drivers/gpio.h>
+#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
 
 namespace Components {
 
@@ -48,7 +48,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
 
     uint8_t m_pinNum;
     static const struct device* m_device;
-
 };
 
 }  // namespace Components

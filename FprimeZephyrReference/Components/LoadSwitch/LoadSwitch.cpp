@@ -35,7 +35,6 @@ void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-
 // This is meant to be used in Topology.cpp to configure the pin and device
 void LoadSwitch ::pin_configuration(const struct device* device, uint8_t pinNum) {
     this->m_pinNum = pinNum;

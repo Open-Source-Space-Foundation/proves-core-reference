@@ -84,6 +84,13 @@ manifest:
       groups:
         - bootloader
 
+    # FAT Filesystem support
+    - name: fatfs
+      revision: 16245c7c41d2b79e74984f49b5202551786b8a9b
+      path: lib/zephyr-workspace/modules/fs/fatfs
+      groups:
+        - fs
+
   self:
     path: .
     west-commands: west-commands.yml

@@ -36,6 +36,8 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.version.FrameworkVersion
     CdhCore.version.ProjectVersion
     CdhCore.version.LibraryVersion01
+    fsSpace.FreeSpace
+    fsSpace.TotalSpace
   }
 
   packet Led id 5 group 4 {
@@ -54,6 +56,10 @@ telemetry packets ReferenceDeploymentPackets {
     lora.LastSnr
   }
 
+  packet Antenna id 8 group 4 {
+    ReferenceDeployment.antennaDeployer.DeployAttemptCount
+    ReferenceDeployment.antennaDeployer.LastDistance
+  }
 
 
 } omit {
