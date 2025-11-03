@@ -14,6 +14,9 @@ namespace Drv {
 //! Convert a Zephyr sensor_value to an Fprime F64
 F64 sensor_value_to_f64(const struct sensor_value& val);
 
+//! Square a float
+F64 f64_square(float num);
+
 }  // namespace Drv
 
 #endif

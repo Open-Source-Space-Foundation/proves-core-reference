@@ -13,4 +13,8 @@ F64 sensor_value_to_f64(const struct sensor_value& val) {
     return val.val1 + (val.val2 / 1000000.0f);
 }
 
+F64 f64_square(float num) {
+    return num * num;
+}
+
 }  // namespace Drv
