@@ -14,9 +14,7 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Ina219Manager ::Ina219Manager(const char* const compName) : Ina219ManagerComponentBase(compName) {
-    this->m_dev = device_get_binding("INA219");
-}
+Ina219Manager ::Ina219Manager(const char* const compName) : Ina219ManagerComponentBase(compName) {}
 
 Ina219Manager ::~Ina219Manager() {}
 
@@ -29,7 +27,7 @@ void Ina219Manager::configure(const struct device *dev) {
 // ----------------------------------------------------------------------
 
 F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(dev)) {
+    if(!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
@@ -37,9 +35,9 @@ F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
 
     struct sensor_value current; 
 
-    sensor_sample_fetch_chan(dev, SENSOR_CHAN_CURRENT);
+    sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_CURRENT);
 
-    sensor_channel_get(dev, SENSOR_CHAN_CURRENT, &current);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_CURRENT, &current);
 
     this->tlmWrite_Current(sensor_value_to_double(&current));
 
@@ -47,7 +45,7 @@ F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
 }
 
 F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(dev)) {
+    if(!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
@@ -55,9 +53,9 @@ F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
 
     struct sensor_value power; 
 
-    sensor_sample_fetch_chan(dev, SENSOR_CHAN_POWER);
+    sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_POWER);
 
-    sensor_channel_get(dev, SENSOR_CHAN_POWER, &power);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_POWER, &power);
 
     this->tlmWrite_Current(sensor_value_to_double(&power));
     
@@ -65,7 +63,7 @@ F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
 }
 
 F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(dev)) {
+    if(!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
@@ -73,9 +71,9 @@ F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
 
     struct sensor_value voltage; 
 
-    sensor_sample_fetch_chan(dev, SENSOR_CHAN_VOLTAGE);
+    sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_VOLTAGE);
 
-    sensor_channel_get(dev, SENSOR_CHAN_VOLTAGE, &voltage);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_VOLTAGE, &voltage);
 
     this->tlmWrite_Current(sensor_value_to_double(&voltage));
     
