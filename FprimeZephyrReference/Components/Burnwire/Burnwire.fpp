@@ -10,21 +10,20 @@ module Components {
         sync command STOP_BURNWIRE(
         )
 
-        event SetBurnwireState(burnwire_state: Fw.On) \
+        @ BurnwireState event logs the current state of the burnwire
+        event BurnwireState(burnwire_state: Fw.On) \
             severity activity high \
             format "Burnwire State: {}"
 
-        event SafetyTimerStatus(burnwire_state: Fw.On) \
-            severity activity high\
-            format "Safety Timer State: {} "
+        @ TimeoutParamInvalid event logs when the TIMEOUT parameter is invalid
+        event TimeoutParamInvalid() \
+            severity warning low \
+            format "TIMEOUT parameter invalid, cancelling burn"
 
-        event SafetyTimerState(burnwire_status: U32) \
-            severity activity high\
-            format "Safety Timer Will Burn For: {} Seconds"
-
-        event BurnwireEndCount(end_count: U32) \
-            severity activity low \
-            format "Burnwire Burned for {} Seconds"
+        @ BurnwireAlreadyOn event logs when a start command is received while the burnwire is already on
+        event BurnwireAlreadyOn() \
+            severity warning high \
+            format "Burnwire already ON, ignoring start command"
 
         @ Port getting start signal
         sync input port burnStart: Fw.Signal
@@ -38,8 +37,8 @@ module Components {
         @ Port sending calls to the GPIO driver to stop and start the burnwire
         output port gpioSet: [2] Drv.GpioWrite
 
-        # @ SAFETY_TIMER parameter is the maximum time that the burn component will run
-        param SAFETY_TIMER: U32 default 10
+        # @ TIMEOUT parameter is the maximum time that the burn component will run
+        param TIMEOUT: U32 default 10
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

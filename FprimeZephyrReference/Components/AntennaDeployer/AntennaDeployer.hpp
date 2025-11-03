@@ -42,7 +42,6 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     // ----------------------------------------------------------------------
     enum class DeploymentState : U8 { IDLE = 0, QUIET_WAIT, BURNING, RETRY_WAIT };
 
-    void enterQuietWait();
     void startNextAttempt();
     void handleQuietWaitTick();
     void handleBurningTick();
@@ -57,7 +56,6 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     U32 m_currentAttempt = 0;
     U32 m_ticksInState = 0;
     U32 m_totalAttempts = 0;
-    bool m_stopRequested = false;
     bool m_successDetected = false;
     bool m_lastDistanceValid = false;
     F32 m_lastDistance = 0.0F;

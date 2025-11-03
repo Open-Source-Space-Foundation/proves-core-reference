@@ -66,7 +66,7 @@ void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         return;
     }
 
-    this->enterQuietWait();
+    this->m_state = DeploymentState::QUIET_WAIT;
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -76,28 +76,16 @@ void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         return;
     }
 
-    this->m_stopRequested = true;
+    this->ensureBurnwireStopped();
+    this->resetDeploymentState();
+    this->log_ACTIVITY_HI_DeployFinish(Components::DeployResult::DEPLOY_RESULT_ABORT, this->m_currentAttempt);
+
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
 }
 
 // ----------------------------------------------------------------------
 // Internal helpers
 // ----------------------------------------------------------------------
-
-void AntennaDeployer ::enterQuietWait() {
-    this->resetDeploymentState();
-    this->m_state = DeploymentState::QUIET_WAIT;
-    this->m_ticksInState = 0;
-    this->m_successDetected = false;
-    this->m_stopRequested = false;
-
-    Fw::ParamValid valid;
-    const U32 quietTime = this->paramGet_QUIET_TIME_SEC(valid);
-    if (quietTime == 0U) {
-        this->startNextAttempt();
-    }
-}
 
 void AntennaDeployer ::startNextAttempt() {
     this->m_currentAttempt++;
@@ -126,11 +114,6 @@ void AntennaDeployer ::startNextAttempt() {
 void AntennaDeployer ::handleQuietWaitTick() {
     this->m_ticksInState++;
 
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
-
     Fw::ParamValid valid;
     const U32 quietTime = this->paramGet_QUIET_TIME_SEC(valid);
     if (this->m_ticksInState >= quietTime) {
@@ -140,11 +123,6 @@ void AntennaDeployer ::handleQuietWaitTick() {
 
 void AntennaDeployer ::handleBurningTick() {
     this->m_ticksInState++;
-
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
 
     if (this->m_state != DeploymentState::BURNING) {
         return;
@@ -174,11 +152,6 @@ void AntennaDeployer ::handleBurningTick() {
 
 void AntennaDeployer ::handleRetryWaitTick() {
     this->m_ticksInState++;
-
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
 
     if (this->m_successDetected) {
         this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
@@ -219,7 +192,6 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_state = DeploymentState::IDLE;
     this->m_currentAttempt = 0;
     this->m_ticksInState = 0;
-    this->m_stopRequested = false;
     this->m_successDetected = false;
     this->m_lastDistanceValid = false;
 }

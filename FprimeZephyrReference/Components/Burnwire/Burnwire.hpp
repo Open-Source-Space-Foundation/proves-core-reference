@@ -45,8 +45,14 @@ class Burnwire final : public BurnwireComponentBase {
                          U32 context           //!< The call order
                          ) override;
 
-    void startBurn();
+    // ----------------------------------------------------------------------
+    // Internal helpers
+    // ----------------------------------------------------------------------
 
+    //! Starts the burnwire
+    Fw::Success startBurn();
+
+    //! Stops the burnwire
     void stopBurn();
 
   private:
@@ -60,9 +66,15 @@ class Burnwire final : public BurnwireComponentBase {
     //! Handler implementation for command STOP_BURNWIRE
     void STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
 
-    Fw::On m_state = Fw::On::OFF;      // keeps track if burnwire is on or off
-    std::atomic<U32> m_safetyCounter;  // makes this an atomic variable (so its set only in one command),
-                                       // you read and write half the value bc a corrupted read could be dangerouts
+    // ----------------------------------------------------------------------
+    // Member variables
+    // ----------------------------------------------------------------------
+
+    //! Burnwire on/off state
+    Fw::On m_state = Fw::On::OFF;
+
+    //! Time when the burnwire should turn off
+    Fw::Time m_timeoutTime;
 };
 
 }  // namespace Components
