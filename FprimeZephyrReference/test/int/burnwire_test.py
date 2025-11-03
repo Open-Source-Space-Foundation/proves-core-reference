@@ -1,64 +1,73 @@
-# """
-# burnwire_test.py:
+"""
+burnwire_test.py:
 
-# Integration tests for the Burnwire component.
-# """
+Integration tests for the Burnwire component.
+"""
 
-# import pytest
-# from common import proves_send_and_assert_command
-# from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+import pytest
+from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+from fprime_gds.common.testing_fw.predicates import event_predicate
 
-# burnwire = "ReferenceDeployment.burnwire"
-
-
-# @pytest.fixture(autouse=True)
-# def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
-#     """Fixture to stop burnwire and clear histories before/after each test"""
-#     # Stop burnwire and clear before test
-#     stop_burnwire(fprime_test_api)
-#     yield
-#     # Clear again after test to prevent residue
-#     stop_burnwire(fprime_test_api)
+burnwire = "ReferenceDeployment.burnwire"
 
 
-# def stop_burnwire(fprime_test_api: IntegrationTestAPI):
-#     """Stop the burnwire and clear histories"""
-#     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
-
-#     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
-
-#     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
-
-
-# def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
-#     """Test that burnwire starts and stops as expected"""
-
-#     # Start burnwire
-#     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.START_BURNWIRE")
-
-#     # Wait for SetBurnwireState = ON
-#     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
-
-#     fprime_test_api.assert_event(f"{burnwire}.SafetyTimerState", timeout=2)
-
-#     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
-
-#     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
+@pytest.fixture(autouse=True)
+def reset_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Fixture to stop burnwire and clear histories before/after each test"""
+    # Stop burnwire and clear before test
+    stop_burnwire(fprime_test_api)
+    yield
+    # Clear again after test to prevent residue
+    stop_burnwire(fprime_test_api)
 
 
-# def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, start_gds):
-#     """Test that burnwire stops manually before the safety timer expires"""
+def stop_burnwire(fprime_test_api: IntegrationTestAPI):
+    """Stop the burnwire and clear histories"""
 
-#     # Start burnwire
-#     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.START_BURNWIRE")
+    # List of events we expect to see
+    events: list[event_predicate] = [
+        fprime_test_api.get_event_pred(f"{burnwire}.SetBurnwireState", "OFF"),
+        fprime_test_api.get_event_pred(f"{burnwire}.BurnwireEndCount"),
+    ]
+    fprime_test_api.send_and_assert_event(
+        f"{burnwire}.STOP_BURNWIRE", events=events, timeout=10
+    )
 
-#     # Confirm Burnwire turned ON
-#     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
 
-#     # # Stop burnwire before safety timer triggers
-#     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
+def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that burnwire starts and stops as expected"""
 
-#     # Confirm Burnwire turned OFF
-#     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=2)
+    events: list[event_predicate] = [
+        fprime_test_api.get_event_pred(f"{burnwire}.SetBurnwireState", "ON"),
+        fprime_test_api.get_event_pred(f"{burnwire}.SafetyTimerState"),
+        fprime_test_api.get_event_pred(f"{burnwire}.SetBurnwireState", "OFF"),
+        fprime_test_api.get_event_pred(f"{burnwire}.BurnwireEndCount"),
+    ]
 
-#     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
+    # Start burnwire
+    fprime_test_api.send_and_assert_event(
+        f"{burnwire}.START_BURNWIRE", events=events, timeout=20
+    )
+
+
+def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that burnwire stops manually before the safety timer expires"""
+
+    # Start burnwire
+    fprime_test_api.send_and_assert_event(
+        f"{burnwire}.START_BURNWIRE",
+        events=[
+            fprime_test_api.get_event_pred(f"{burnwire}.SetBurnwireState", "ON"),
+        ],
+        timeout=10,
+    )
+
+    # Stop burnwire before safety timer triggers
+    fprime_test_api.send_and_assert_event(
+        f"{burnwire}.STOP_BURNWIRE",
+        events=[
+            fprime_test_api.get_event_pred(f"{burnwire}.SetBurnwireState", "OFF"),
+            fprime_test_api.get_event_pred(f"{burnwire}.BurnwireEndCount"),
+        ],
+        timeout=10,
+    )
