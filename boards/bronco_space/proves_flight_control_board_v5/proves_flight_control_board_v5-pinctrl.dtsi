@@ -23,7 +23,7 @@
 	};
 	i2c0_default: i2c0_default {
 		group1 {
-			pinmux = <I2C0_SCL_P24>, <I2C0_SDA_P25>;
+			pinmux = <I2C0_SCL_P25>, <I2C0_SDA_P24>;
 			input-enable;
 		};
 	};
