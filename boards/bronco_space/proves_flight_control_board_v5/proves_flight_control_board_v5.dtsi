@@ -135,6 +135,29 @@ zephyr_udc0: &usbd {
 	};
 };
 
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-names = "default";
+	clock-frequency = <100000>;
+
+	ina219Sys: ina219Sys@40 {
+		compatible = "ti,ina219";
+		reg = <0x40>;
+		shunt-milliohm = <2>;
+		lsb-microamp = <100>;
+		label = "INA219 sys";
+	};
+	ina219Sol: ina219Sol@41 {
+		compatible = "ti,ina219";
+		reg = <0x41>;
+		shunt-milliohm = <2>;
+		lsb-microamp = <100>;
+		label = "INA219 sol";
+	};
+};
+
+
 &i2c1 {
 	status = "okay";
 	pinctrl-0 = <&i2c1_default>;
@@ -158,19 +181,5 @@ zephyr_udc0: &usbd {
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
 		backup-switch-mode = "direct";
 		label = "RV3028";
-	};
-	ina219Sys: ina219Sys@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219 sys";
-	};
-	ina219Sol: ina219Sol@41 {
-		compatible = "ti,ina219";
-		reg = <0x41>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219 sol";
 	};
 };

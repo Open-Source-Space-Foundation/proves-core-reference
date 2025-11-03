@@ -15,7 +15,6 @@ const struct device* ina219Sol = device_get_binding("INA219 sol");
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 
-
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
     //
@@ -30,8 +29,6 @@ int main(int argc, char* argv[]) {
     inputs.loraDevice = lora;
     inputs.uartDevice = serial;
     inputs.baudRate = 115200;
-    
-
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);

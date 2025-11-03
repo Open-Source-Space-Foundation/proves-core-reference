@@ -7,7 +7,6 @@
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219Manager.hpp"
 #include <Fw/Types/Assert.hpp>
 
-
 namespace Drv {
 
 // ----------------------------------------------------------------------
@@ -18,7 +17,7 @@ Ina219Manager ::Ina219Manager(const char* const compName) : Ina219ManagerCompone
 
 Ina219Manager ::~Ina219Manager() {}
 
-void Ina219Manager::configure(const struct device *dev) {
+void Ina219Manager::configure(const struct device* dev) {
     this->m_dev = dev;
 }
 
@@ -27,13 +26,13 @@ void Ina219Manager::configure(const struct device *dev) {
 // ----------------------------------------------------------------------
 
 F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(this->m_dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
-    struct sensor_value current; 
+    struct sensor_value current;
 
     sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_CURRENT);
 
@@ -45,38 +44,38 @@ F64 Ina219Manager ::currentGet_handler(FwIndexType portNum) {
 }
 
 F64 Ina219Manager ::powerGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(this->m_dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
-    struct sensor_value power; 
+    struct sensor_value power;
 
     sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_POWER);
 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_POWER, &power);
 
     this->tlmWrite_Current(sensor_value_to_double(&power));
-    
+
     return sensor_value_to_double(&power);
 }
 
 F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
-    if(!device_is_ready(this->m_dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
-    struct sensor_value voltage; 
+    struct sensor_value voltage;
 
     sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_VOLTAGE);
 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_VOLTAGE, &voltage);
 
     this->tlmWrite_Current(sensor_value_to_double(&voltage));
-    
+
     return sensor_value_to_double(&voltage);
 }
 

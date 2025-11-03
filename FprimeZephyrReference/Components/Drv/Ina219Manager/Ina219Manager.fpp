@@ -8,7 +8,7 @@ module Drv {
     @ Manager for Ina219 device
     passive component Ina219Manager {
 
-        #Ports 
+        #Ports
         @ Port to read the voltage in volts
         sync input port voltageGet: VoltageGet
 
@@ -18,20 +18,20 @@ module Drv {
         @ Port to read the power in watts
         sync input port powerGet: PowerGet
 
-        # Telemetry channels 
+        # Telemetry channels
 
-        @ Telemtry channel for voltage in volts
+        @ Telemetry channel for voltage in volts
         telemetry Voltage: F64
 
-        @ Telemtry channel for current in amps
+        @ Telemetry channel for current in amps
         telemetry Current: F64
 
-        @ Telemtry channel for power in watts
+        @ Telemetry channel for power in watts
         telemetry Power: F64
 
-        @ Event for reporting INA219 not ready error 
+        @ Event for reporting INA219 not ready error
         event DeviceNotReady() severity warning high format "INA219 device not ready" throttle 5
-        
+
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
