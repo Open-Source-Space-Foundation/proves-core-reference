@@ -44,7 +44,7 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance fsSpace
-    instance camera
+    instance payload
     instance peripheralUartDriver
 
 
@@ -164,8 +164,9 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-    connections Camera {
-      camera.out_port -> peripheralUartDriver.$send
+    connections PayloadHandler {
+      payload.out_port -> peripheralUartDriver.$send
+      peripheralUartDriver.$recv -> payload.in_port
     }
   }
 }

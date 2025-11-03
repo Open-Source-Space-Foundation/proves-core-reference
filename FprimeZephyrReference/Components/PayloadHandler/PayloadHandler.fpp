@@ -1,17 +1,21 @@
 module Components {
     @ Manager for Nicla Vision
-    passive component CameraManager {
+    passive component PayloadHandler {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
         @ TODO
-        sync command TAKE_IMAGE
+        sync command SEND_COMMAND(cmd: string)  # Command to send data over UART
 
-        event TakeImageError() severity warning high format "Failed to take picture"
+        event CommandError(cmd: string) severity warning high format "Failed to send {} command over UART"
 
-        event PictureTaken() severity activity high format "Picture Taken"
+        event CommandSuccess(cmd: string) severity activity high format "Command {} sent successfully"
+
+        event DataReceived( data: U8, path: string) severity activity high format "Stored {} bytes of payload data to {}"
 
         output port out_port: Drv.ByteStreamSend
+
+        sync input port in_port: Drv.ByteStreamData  
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####

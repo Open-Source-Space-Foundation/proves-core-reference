@@ -90,7 +90,7 @@ module ReferenceDeployment {
 
   instance fsSpace: Components.FsSpace base id 0x10030000
 
-  instance camera: Components.CameraManager base id 0x10031000
+  instance payload: Components.PayloadHandler base id 0x10031000
 
   instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x10032000
 

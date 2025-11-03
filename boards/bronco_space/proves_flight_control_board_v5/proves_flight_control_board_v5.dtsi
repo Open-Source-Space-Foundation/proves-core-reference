@@ -107,6 +107,13 @@ zephyr_udc0: &usbd {
     pinctrl-names = "default";
 };
 
+&uart1 {
+    status = "okay";
+    pinctrl-0 = <&uart1_default>;
+	current-speed = <115200>;
+    pinctrl-names = "default";
+};
+
 &spi0 {
 	status = "okay";
 	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
