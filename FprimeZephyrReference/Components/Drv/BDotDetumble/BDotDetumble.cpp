@@ -18,21 +18,21 @@ BDotDetumble ::BDotDetumble(const char* const compName) : BDotDetumbleComponentB
 
 BDotDetumble ::~BDotDetumble() {}
 
-Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
-                                          const Drv::MagneticField currMagField,
-                                          const Drv::MagneticField prevMagField) {
-    F32 magnitude = getMagnitude(currMagField);
+Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNum,
+                                                        const Drv::MagneticField& currMagField,
+                                                        const Drv::MagneticField& prevMagField) {
+    F64 magnitude = this->getMagnitude(currMagField);
     if (magnitude < 1e-6) {
-        return;  // Figure out how I should handle the return here.
+        return Drv::DipoleMoment();
     }
 
-    if (currMagField.timestamp <= prevMagField.timestamp) {
-        return;  // Also figure out the return here.
+    if (currMagField.get_timestamp() <= prevMagField.get_timestamp()) {
+        return Drv::DipoleMoment();
     }
 
-    F64* dB_dtArr = dB_dt(currMagField, prevMagField);
+    F64* dB_dtArr = this->dB_dt(currMagField, prevMagField);
     if (dB_dtArr == nullptr) {
-        return;  // Yeah just figure out how to properly raise error/return nothing.
+        return Drv::DipoleMoment();
     }
 
     F64 moment_x = this->gain * dB_dtArr[0] / magnitude;
@@ -44,19 +44,19 @@ Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
     return Drv::DipoleMoment(moment_x, moment_y, moment_z);
 }
 
-F32 getMagnitude(const Drv::MagneticField magField) {
-    return sqrt(f64_square(magField.x) + f64_square(magField.y) + f64_square(magField.z));
+F64 BDotDetumble::getMagnitude(const Drv::MagneticField magField) {
+    return sqrt(f64_square(magField.get_x()) + f64_square(magField.get_y()) + f64_square(magField.get_z()));
 }
 
-F64* dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField) {
-    I64 dt = currMagField.timestamp - prevMagField.timestamp;
+F64* BDotDetumble::dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField) {
+    I64 dt = currMagField.get_timestamp() - prevMagField.get_timestamp();
     if (dt < 1e-6) {
         return nullptr;
     }
 
-    F64 dBx_dt = (currMagField.x - prevMagField.x) / dt;
-    F64 dBy_dt = (currMagField.y - prevMagField.y) / dt;
-    F64 dBz_dt = (currMagField.z - prevMagField.z) / dt;
+    F64 dBx_dt = (currMagField.get_x() - prevMagField.get_x()) / dt;
+    F64 dBy_dt = (currMagField.get_y() - prevMagField.get_y()) / dt;
+    F64 dBz_dt = (currMagField.get_z() - prevMagField.get_z()) / dt;
 
     F64* arr = new F64[3];
     arr[0] = dBx_dt;

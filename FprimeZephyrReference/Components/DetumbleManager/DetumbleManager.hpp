@@ -31,6 +31,13 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+
+    // Variables
+    Drv::MagneticField EMPTY_MG_FIELD = Drv::MagneticField{0.0, 0.0, 0.0};
+    Drv::MagneticField prevMgField = Drv::MagneticField{0.0, 0.0, 0.0};
+
+    // Functions
+    bool executeControlStep();
 };
 
 }  // namespace Components

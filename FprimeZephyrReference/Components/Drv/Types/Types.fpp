@@ -22,6 +22,7 @@ module Drv {
         timestamp: I64 @< Time the magnetic field struct was created. Used for dB_dt calculation.
     }
 
+    @ Calculated dipole moment from the B-Dot algorithm.
     struct DipoleMoment {
         x: F64
         y: F64

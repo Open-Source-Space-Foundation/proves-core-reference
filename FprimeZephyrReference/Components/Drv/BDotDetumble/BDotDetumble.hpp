@@ -26,17 +26,18 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     ~BDotDetumble();
 
     // Get the current dipole moment
-    Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum) override;
+    Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
+                                              const Drv::MagneticField& currMagField,
+                                              const Drv::MagneticField& prevMagField) override;
 
   private:
     F64 gain = 1.0;
 
     // Get magnitude
-    F32 getMagnitude(const Drv::MagneticField magField);
+    F64 getMagnitude(Drv::MagneticField magField);
 
     // Get the time derivative of the magnetic field
-    F64* dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField);
-
+    F64* dB_dt(Drv::MagneticField currMagField, Drv::MagneticField prevMagField);
+};
 }  // namespace Drv
-
 #endif

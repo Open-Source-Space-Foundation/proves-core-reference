@@ -1,5 +1,8 @@
 module Drv {
-    port DipoleMomentGet -> DipoleMoment
+    port DipoleMomentGet(
+        currMagField: MagneticField
+        prevMagField: MagneticField
+    ) -> DipoleMoment
 }
 
 module Drv {
