@@ -7,6 +7,9 @@
 
 #include <Fw/Types/Assert.hpp>
 
+#include <algorithm>
+#include <cmath>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -48,4 +51,24 @@ bool DetumbleManager::executeControlStep() {
     // Then apply the dipole moment here, gonna have to figure that out.
     return true;
 }
+void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
+    // Convert dipole moment to (unlimited) current
+    F64 unlimited_x = dpMoment.get_x() / (this->COIL_NUM_TURNS_X_Y * this->COIL_AREA_X_Y);
+    F64 unlimited_y = dpMoment.get_y() / (this->COIL_NUM_TURNS_X_Y * this->COIL_AREA_X_Y);
+    F64 unlimited_z = dpMoment.get_z() / (this->COIL_NUM_TURNS_Z * this->COIL_AREA_Z);
+
+    // Limit current for each axis to max coil current
+    F64 limited_x = std::min(std::fabs(unlimited_x), this->COIL_MAX_CURRENT_X_Y) * (unlimited_x >= 0 ? 1.0f : -1.0f);
+    F64 limited_y = std::min(std::fabs(unlimited_y), this->COIL_MAX_CURRENT_X_Y) * (unlimited_y >= 0 ? 1.0f : -1.0f);
+    F64 limited_z = std::min(std::fabs(unlimited_z), this->COIL_MAX_CURRENT_Z) * (unlimited_z >= 0 ? 1.0f : -1.0f);
+
+    F64 x1 = limited_x;
+    F64 x2 = -limited_x;
+    F64 y1 = limited_y;
+    F64 y2 = -limited_y;
+    F64 z1 = limited_z;
+
+    // Apply values to magnetorquers here
+}
+
 }  // namespace Components
