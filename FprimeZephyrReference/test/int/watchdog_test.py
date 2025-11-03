@@ -5,9 +5,11 @@ Integration tests for the Watchdog component.
 """
 
 import time
+from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
+from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -32,14 +34,21 @@ def start_watchdog(fprime_test_api: IntegrationTestAPI):
 
 def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:
     """Helper function to request packet and get fresh WatchdogTransitions telemetry"""
-    proves_send_and_assert_command(
-        fprime_test_api,
-        "CdhCore.tlmSend.SEND_PKT",
-        ["5"],
-    )
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{watchdog}.WatchdogTransitions", start="NOW", timeout=65
-    )
+    start: TimeType = TimeType().set_datetime(datetime.now())
+    for attempt in range(3):
+        try:
+            proves_send_and_assert_command(
+                fprime_test_api,
+                "CdhCore.tlmSend.SEND_PKT",
+                ["5"],
+            )
+            result: ChData = fprime_test_api.assert_telemetry(
+                f"{watchdog}.WatchdogTransitions", start=start, timeout=65
+            )
+            break
+        except Exception:
+            if attempt == 2:
+                raise
     return result.get_val()
 
 
