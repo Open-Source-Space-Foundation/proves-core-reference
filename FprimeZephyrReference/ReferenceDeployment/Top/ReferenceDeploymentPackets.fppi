@@ -62,9 +62,9 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet PowerMonitor id 9 group 4 {
-    RefernenceDeployment.ina219Manager.Voltage
-    RefernenceDeployment.ina219Manager.Current
-    RefernenceDeployment.ina219Manager.Power
+    ReferenceDeployment.ina219Manager.Voltage
+    ReferenceDeployment.ina219Manager.Current
+    ReferenceDeployment.ina219Manager.Power
   }
 
 } omit {
