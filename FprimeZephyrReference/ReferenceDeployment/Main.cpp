@@ -10,6 +10,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
+const struct device* ina219Sys = device_get_binding("INA219 sys");
+const struct device* ina219Sol = device_get_binding("INA219 sol");
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 
@@ -22,6 +24,8 @@ int main(int argc, char* argv[]) {
     Os::init();
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
+    inputs.ina219SysDevice = ina219Sys;
+    inputs.ina219SolDevice = ina219Sol;
     inputs.loraDevice = lora;
     inputs.uartDevice = serial;
     inputs.baudRate = 115200;

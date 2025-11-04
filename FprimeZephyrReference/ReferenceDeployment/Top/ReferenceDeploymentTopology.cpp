@@ -87,6 +87,8 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
+    ina219SysManager.configure(state.ina219SysDevice);
+    ina219SolManager.configure(state.ina219SolDevice);
 }
 
 void startRateGroups() {
