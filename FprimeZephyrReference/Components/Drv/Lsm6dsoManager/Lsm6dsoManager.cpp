@@ -13,8 +13,16 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Lsm6dsoManager ::Lsm6dsoManager(const char* const compName) : Lsm6dsoManagerComponentBase(compName) {
-    this->m_dev = DEVICE_DT_GET_ONE(st_lsm6dso);
+Lsm6dsoManager ::Lsm6dsoManager(const char* const compName) : Lsm6dsoManagerComponentBase(compName) {}
+
+Lsm6dsoManager ::~Lsm6dsoManager() {}
+
+// ----------------------------------------------------------------------
+// Helper methods
+// ----------------------------------------------------------------------
+
+void Lsm6dsoManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
 
     // Configure the sensor
     struct sensor_value odr = {.val1 = 12, .val2 = 500000};  // 12.5 Hz
@@ -27,8 +35,6 @@ Lsm6dsoManager ::Lsm6dsoManager(const char* const compName) : Lsm6dsoManagerComp
         this->log_WARNING_HI_GyroscopeSamplingFrequencyNotConfigured();
     }
 }
-
-Lsm6dsoManager ::~Lsm6dsoManager() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -52,7 +58,7 @@ Drv::Acceleration Lsm6dsoManager ::accelerationGet_handler(FwIndexType portNum) 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_ACCEL_Z, &z);
 
     Drv::Acceleration acceleration =
-        Drv::Acceleration(sensor_value_to_double(x), sensor_value_to_double(y), sensor_value_to_double(z));
+        Drv::Acceleration(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_Acceleration(acceleration);
     return acceleration;
@@ -76,7 +82,7 @@ Drv::AngularVelocity Lsm6dsoManager ::angularVelocityGet_handler(FwIndexType por
     sensor_channel_get(this->m_dev, SENSOR_CHAN_GYRO_Z, &z);
 
     Drv::AngularVelocity angular_velocity =
-        Drv::AngularVelocity(sensor_value_to_double(x), sensor_value_to_double(y), sensor_value_to_double(z));
+        Drv::AngularVelocity(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_AngularVelocity(angular_velocity);
     return angular_velocity;
@@ -95,9 +101,9 @@ F64 Lsm6dsoManager ::temperatureGet_handler(FwIndexType portNum) {
 
     sensor_channel_get(this->m_dev, SENSOR_CHAN_DIE_TEMP, &temp);
 
-    this->tlmWrite_Temperature(sensor_value_to_double(temp));
+    this->tlmWrite_Temperature(sensor_value_to_double(&temp));
 
-    return sensor_value_to_double(temp);
+    return sensor_value_to_double(&temp);
 }
 
 }  // namespace Drv

@@ -26,6 +26,14 @@ class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
     //! Destroy Lis2mdlManager object
     ~Lis2mdlManager();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the INA219 device
+    void configure(const struct device* dev);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports

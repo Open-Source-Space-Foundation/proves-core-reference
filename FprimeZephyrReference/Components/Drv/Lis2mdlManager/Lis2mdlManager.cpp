@@ -13,11 +13,17 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {
-    this->m_dev = device_get_binding("LIS2MDL");
-}
+Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {}
 
 Lis2mdlManager ::~Lis2mdlManager() {}
+
+// ----------------------------------------------------------------------
+// Helper methods
+// ----------------------------------------------------------------------
+
+void Lis2mdlManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -41,7 +47,7 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Z, &z);
 
     Drv::MagneticField magnetic_readings =
-        Drv::MagneticField(sensor_value_to_double(x), sensor_value_to_double(y), sensor_value_to_double(z));
+        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_MagneticField(magnetic_readings);
 

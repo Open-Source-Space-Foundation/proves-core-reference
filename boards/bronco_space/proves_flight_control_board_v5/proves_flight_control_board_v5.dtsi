@@ -147,7 +147,7 @@ zephyr_udc0: &usbd {
 		label = "LSM6DSO";
 	};
 
-	lis2mdl: lis2mdl@1e {
+	lis2mdl0: lis2mdl0@1e {
 		compatible = "st,lis2mdl";
 		reg = <0x1e>;
 		label = "LIS2MDL";

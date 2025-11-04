@@ -26,6 +26,14 @@ class Lsm6dsoManager final : public Lsm6dsoManagerComponentBase {
     //! Destroy Lsm6dsoManager object
     ~Lsm6dsoManager();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the INA219 device
+    void configure(const struct device* dev);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
