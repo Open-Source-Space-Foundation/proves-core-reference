@@ -31,7 +31,7 @@ class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
     // Helper methods
     // ----------------------------------------------------------------------
 
-    //! Configure the INA219 device
+    //! Configure the LIS2MDL device
     void configure(const struct device* dev);
 
   private:

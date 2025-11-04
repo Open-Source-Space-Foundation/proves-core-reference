@@ -31,7 +31,7 @@ class Lsm6dsoManager final : public Lsm6dsoManagerComponentBase {
     // Helper methods
     // ----------------------------------------------------------------------
 
-    //! Configure the INA219 device
+    //! Configure the LSM6DSO device
     void configure(const struct device* dev);
 
   private:
