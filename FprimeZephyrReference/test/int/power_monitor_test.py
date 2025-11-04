@@ -8,6 +8,7 @@ from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
+from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -27,7 +28,7 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Acceleration telemetry"""
-    start = datetime.now()
+    start: TimeType = TimeType().set_datetime(datetime.now())
     sys_voltage: ChData = fprime_test_api.assert_telemetry(
         f"{ina219SysManager}.Voltage", start=start, timeout=65
     )
