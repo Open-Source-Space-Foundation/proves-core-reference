@@ -49,6 +49,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lsm6dsoManager.AngularVelocity
     ReferenceDeployment.lsm6dsoManager.Temperature
     ReferenceDeployment.lis2mdlManager.MagneticField
+    ReferenceDeployment.distanceSensorManager.Distance
   }
 
   packet LoRa id 7 group 4 {
