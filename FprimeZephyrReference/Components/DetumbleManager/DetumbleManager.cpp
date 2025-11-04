@@ -48,7 +48,8 @@ bool DetumbleManager::executeControlStep() {
 
     this->prevMgField = mgField;
 
-    // Then apply the dipole moment here, gonna have to figure that out.
+    this->setDipoleMoment(dpMoment);
+
     return true;
 }
 void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
