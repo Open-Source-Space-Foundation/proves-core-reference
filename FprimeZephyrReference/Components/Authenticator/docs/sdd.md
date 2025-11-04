@@ -1,15 +1,13 @@
 # Components::Authenticator
 
+TODO: Check if this fits well in LORA packets
+TODO does it make sense to have 2 seperate counters (uplink/downlink?)
+
 The Authenticator component adds HMAC (Hash-Based Message Authentication Code) authentication to CCSDS Space Packets on downlink in accordance with CCSDS Space Data Link Security Protocol, CCSDS 355.0-B-2 (July 2022). This component is the counterpart to the Authenticate component: while Authenticate verifies and removes security fields on uplink, Authenticator adds security fields to packets on downlink.
 
 ## Overview
 
-The Authenticator component sits in the downlink communications path between the `SpacePacketFramer` and the `ComAggregator` (or `TmFramer`) components. It adds security headers and HMAC authentication to Space Packets before they are transmitted to the ground station. The component implements security features including:
-
-- HMAC-based authentication per CCSDS 355.0-B-2
-- Security Association (SA) management with SPI-based key selection
-- Sequence number generation and management per Security Association
-- APID-based filtering to determine which packets require authentication
+The Authenticator component sits in the downlink communications path between the `SpacePacketFramer` and the `ComAggregator` (or `TmFramer`) components. It adds security headers and HMAC authentication to Space Packets before they are transmitted to the ground station. 
 
 The security fields added by Authenticator are the exact fields that Authenticate expects to verify on the ground.
 
@@ -26,27 +24,16 @@ Authenticator.dataReturnOut -> SpacePacketFramer.dataReturnIn
 ### HMAC Computation
 
 The HMAC is computed over the following fields in order (per CCSDS 355.0-B-2 section 2.3.2.3.1):
-1. **Frame Header**: The CCSDS Space Packet Primary Header (6 bytes) - Bytes 0-5 of the Space Packet
-2. **Security Header**: SPI (2 bytes) + Sequence Number (4 bytes) + Reserved (2 bytes) = 8 bytes (bytes 6-13 of new data field)
-3. **Frame Data Field**: The F Prime telemetry/event packet payload (original payload, bytes 22-N of new data field)
+1. Frame Header: The CCSDS Space Packet Primary Header (6 bytes) - Bytes 0-5 of the Space Packet
+2. Security Header: SPI (2 bytes) + Sequence Number (4 bytes) + Reserved (2 bytes) = 8 bytes (bytes 6-13 of new data field)
+3. Frame Data Field: The F Prime telemetry/event packet payload (original payload, bytes 22-N of new data field)
 
-**HMAC Algorithm**: HMAC-SHA256, truncated to 64 bits (8 bytes) for the security trailer.
-
-**Key Selection**: The secret key is selected based on the SPI value. Each SPI maps to a Security Association containing:
-- A secret key (shared with ground station)
-- Current sequence number
-- Sequence number window size
-- Associated APID(s)
-
-### APID Extraction and Filtering
-
-The component extracts the APID directly from the Space Packet Primary Header (bytes 0-1, bottom 11 bits of Packet Identification field). This APID is used to determine if the packet requires authentication (matches configured telemetry/event APID list)
 
 ## Requirements
 
 | Name | Description | Validation |
 |---|---|---|
-| AUTHENTICATOR001 | The component shall only apply HMAC authentication to packets where the APID (extracted from the Space Packet Primary Header) matches a configured list of telemetry/event APIDs requiring authentication. | Unit Test, Inspection |
+| AUTHENTICATOR001 | The component shall only apply HMAC authentication to packets where the APID (extracted from the Space Packet Primary Header) matches a configured list of telemetry/event APIDs requiring authentication. The component extracts the APID directly from the Space Packet Primary Header (bytes 0-1, bottom 11 bits of Packet Identification field). This APID is used to determine if the packet requires authentication (matches configured telemetry/event APID list)| Unit Test, Inspection |
 | AUTHENTICATOR002 | The component shall forward packets with APIDs not in the authentication list directly to `dataOut` without authentication. | Unit Test, Inspection |
 | AUTHENTICATOR005 | The component shall increment and use the current sequence number for the selected Security Association every time it encodes a message. | Unit Test |
 | AUTHENTICATOR006 | The component shall insert the Security Header (8 bytes: SPI + Sequence Number + Reserved) at the beginning of the Space Packet data field. | Unit Test |
