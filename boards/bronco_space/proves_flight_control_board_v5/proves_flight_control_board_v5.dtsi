@@ -145,16 +145,22 @@ zephyr_udc0: &usbd {
 		compatible = "ti,ina219";
 		reg = <0x40>;
 		brng = <0>;
+		pg = <0>;
+		badc = <12>;
+		sadc = <12>;
 		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
+		lsb-microamp = <61>;
 		label = "INA219 sys";
 	};
 	ina219Sol: ina219Sol@41 {
 		compatible = "ti,ina219";
 		reg = <0x41>;
 		brng = <0>;
+		pg = <0>;
+		badc = <12>;
+		sadc = <12>;
 		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
+		lsb-microamp = <61>;
 		label = "INA219 sol";
 	};
 };
