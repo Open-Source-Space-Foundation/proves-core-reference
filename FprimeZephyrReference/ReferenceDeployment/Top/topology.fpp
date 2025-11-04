@@ -35,6 +35,7 @@ module ReferenceDeployment {
     instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
+    instance distanceSensorManager
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
@@ -137,6 +138,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> distanceSensorManager.run
 
     }
 
