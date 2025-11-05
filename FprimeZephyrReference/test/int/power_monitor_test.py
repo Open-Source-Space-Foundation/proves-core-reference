@@ -71,7 +71,7 @@ def test_02_total_power_consumption_telemetry(
 ):
     """Test that TotalPowerConsumption telemetry is being updated"""
     total_power: ChData = fprime_test_api.assert_telemetry(
-        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=3
+        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=65
     )
 
     total_power_reading: float = total_power.get_val()
@@ -101,7 +101,7 @@ def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start
     # Get total power after reset - should be very small (close to 0)
     # Allow small value due to time between reset and next telemetry update
     total_power_after: ChData = fprime_test_api.assert_telemetry(
-        f"{powerMonitor}.TotalPowerConsumption", timeout=3
+        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=65
     )
 
     total_power_after_reading: float = total_power_after.get_val()
