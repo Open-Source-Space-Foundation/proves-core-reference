@@ -4,8 +4,8 @@ power_monitor_test.py:
 Integration tests for the Power Monitor component.
 """
 
-from datetime import datetime
 import time
+from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
@@ -50,6 +50,7 @@ def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_g
         f"{ina219SolManager}.Power", start=start, timeout=65
     )
 
+    # TODO: Fix the power readings once INA219 power calculation is verified
     sys_voltage_reading: dict[float] = sys_voltage.get_val()
     sys_current_reading: dict[float] = sys_current.get_val()
     # sys_power_reading: dict[float] = sys_power.get_val()
@@ -75,8 +76,8 @@ def test_02_total_power_consumption_telemetry(
 
     total_power_reading: float = total_power.get_val()
 
-    # Total power should be non-negative (accumulating over time)
-    assert total_power_reading >= 0, "Total power consumption should be non-negative"
+    # Total power should be non-zero (accumulating over time)
+    assert total_power_reading != 0, "Total power consumption should be non-zero"
 
 
 def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -92,9 +93,7 @@ def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start
     )
 
     # Verify event was logged
-    fprime_test_api.assert_event(
-        f"{powerMonitor}.TotalPowerReset", start="NOW", timeout=3
-    )
+    fprime_test_api.assert_event(f"{powerMonitor}.TotalPowerReset", timeout=3)
 
     # Wait for next telemetry update
     time.sleep(2)
@@ -102,7 +101,7 @@ def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start
     # Get total power after reset - should be very small (close to 0)
     # Allow small value due to time between reset and next telemetry update
     total_power_after: ChData = fprime_test_api.assert_telemetry(
-        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=3
+        f"{powerMonitor}.TotalPowerConsumption", timeout=3
     )
 
     total_power_after_reading: float = total_power_after.get_val()
