@@ -32,29 +32,29 @@ The component forwards only authenticated packets (or non-authenticated packets 
 
 The security protocol operates at the Space Packet level per CCSDS 355.0-B-2. The security headers and trailers are embedded within the Space Packet Data Field, which is itself encapsulated in a TC Transfer Frame. The complete protocol stack is:
 
-1. 
+1.
 
 First the TC Transfer Frame is removed by TcDeframer
-[TC Header 5B] [Data Field] [TC Trailer 2B]            
+[TC Header 5B] [Data Field] [TC Trailer 2B]
 
 
-2. 
+2.
 THIS IS WHAT GOES THROUGH AUTHENTICATE
 
-Now the Security Header and Security Trailer must be inside the data field, as specificed by CCSDS 355.0-B-2 
+Now the Security Header and Security Trailer must be inside the data field, as specified by CCSDS 355.0-B-2
 
 Space Packet (received by Authenticate)
-[Space Packet Primary Header 6B]                          
-[Space Packet Data Field]                                 
+[Space Packet Primary Header 6B]
+[Space Packet Data Field]
     [Security Header 8B]
-    [F Prime Command Packet] 
-    [Security Trailer 8B]                                   
+    [F Prime Command Packet]
+    [Security Trailer 8B]
 
 The output from Authenticate:
 
-Space Packet 
-   [Space Packet Primary Header 6B]                          
-   [F Prime Command Packet] (security fields removed)        
+Space Packet
+   [Space Packet Primary Header 6B]
+   [F Prime Command Packet] (security fields removed)
 
 **Total packet structure:**
 - Space Packet Primary Header: 6 bytes
@@ -103,7 +103,7 @@ The component extracts the APID directly from the Space Packet Primary Header (b
 | AUTH06 | The component shall compare the computed HMAC with the received HMAC. If they match, authentication succeeds. If they do not match, authentication fails. | Unit Test |
 | AUTH07| If authentication succeeds, the component shall update the stored sequence number for the Security Association to the received sequence number. | Unit Test |
 | AUTH08 | If authentication succeeds, the component shall emit a ValidHash event containing the opcode (if extractable) and hash value for telemetry/logging purposes. | Unit Test |
-| AUTH09 | If authentication succeeds, the component shall remove the Security Header  and Security Trailer from the Space Packe. The modified buffer then goes to the data out. | Inspection |
+| AUTH09 | If authentication succeeds, the component shall remove the Security Header  and Security Trailer from the Space Packet. The modified buffer then goes to the data out. | Inspection |
 | AUTH015 | If authentication fails (invalid HMAC, invalid SPI, sequence number out of window), the component shall emit an InvalidHash event containing the opcode (if extractable) and hash value, then return the buffer via dataReturnOut for deallocation. | Unit Test |
 | AUTH010 | The component shall handle sequence number rollover correctly (when sequence number transitions from 0xFFFFFFFF to 0x00000000). | Unit Test |
 | AUTH011 | The component shall support multiple Security Associations (in our case, potentially one HMAC or just several keys for once HMAC), each identified by a unique SPI value and containing its own secret key, sequence number, and associated APIDs. | Unit Test, Inspection |
@@ -141,8 +141,8 @@ TODO (remove if not needed)
 
 | Name | Parameters | Description |
 |---|---|---|
-| GET_SEQ_NUM | U16 | Command to retrieve the current sequence number |
-| SET_SEQ_NUM | U16 | Command to set the current sequence number |
+| GET_SEQ_NUM | | Command to retrieve the current sequence number |
+| SET_SEQ_NUM | U32 | Command to set the current sequence number |
 
 ## Configuration
 
