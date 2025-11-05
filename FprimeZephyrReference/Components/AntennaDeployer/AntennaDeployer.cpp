@@ -219,6 +219,7 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_state = DeploymentState::IDLE;
     this->m_currentAttempt = 0;
     this->m_ticksInState = 0;
+    this->m_totalAttempts = 0;
     this->m_stopRequested = false;
     this->m_successDetected = false;
     this->m_lastDistanceValid = false;
