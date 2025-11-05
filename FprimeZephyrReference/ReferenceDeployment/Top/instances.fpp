@@ -94,5 +94,4 @@ module ReferenceDeployment {
 
   instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x10032000
 
-
 }
