@@ -23,6 +23,40 @@ class Authenticate final : public AuthenticateComponentBase {
 
     //! Destroy Authenticate object
     ~Authenticate();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for dataIn
+    //!
+    //! Port receiving Space Packets from TcDeframer
+    void dataIn_handler(FwIndexType portNum,  //!< The port number
+                        Fw::Buffer& data,
+                        const ComCfg::FrameContext& context) override;
+
+    //! Handler implementation for dataReturnIn
+    //!
+    //! Port receiving back ownership of buffers sent to dataOut
+    void dataReturnIn_handler(FwIndexType portNum,  //!< The port number
+                              Fw::Buffer& data,
+                              const ComCfg::FrameContext& context) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command GET_SEQ_NUM
+    void GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                U32 cmdSeq            //!< The command sequence number
+                                ) override;
+
+    //! Handler implementation for command SET_SEQ_NUM
+    void SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                U32 cmdSeq,           //!< The command sequence number
+                                U32 seq_num) override;
 };
 
 }  // namespace Components

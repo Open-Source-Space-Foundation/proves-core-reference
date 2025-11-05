@@ -128,8 +128,6 @@ The component extracts the APID directly from the Space Packet Primary Header (b
 
 ## Events
 
-**Note:** FPP has limitations on event parameters - events can only have a maximum of 3 parameters, and string types are not displayable in events. Therefore, hash values, reason strings, and other detailed information are omitted from the event parameters but can be logged separately through other means.
-
 | Name | Severity | Parameters | Description |
 |---|---|---|---|
 | ValidHash | Activity High | apid: U32, spi: U32, seqNum: U32 | Emitted when a packet successfully passes HMAC authentication. Contains the APID, SPI, and sequence number of the authenticated packet. Format: "Authenticated packet: APID={}, SPI={}, SeqNum={}" |
