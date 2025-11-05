@@ -44,7 +44,7 @@ void PowerMonitor ::run_handler(FwIndexType portNum, U32 context) {
 void PowerMonitor ::RESET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->m_totalPower_mWh = 0.0f;
     this->m_lastUpdateTime_s = this->getCurrentTimeSeconds();
-    this->log_ACTIVITY_LOW_TotalPowerReset();
+    this->log_ACTIVITY_LO_TotalPowerReset();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
