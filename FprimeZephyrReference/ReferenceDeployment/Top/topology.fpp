@@ -47,6 +47,7 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance tmp112Manager
 
 
   # ----------------------------------------------------------------------

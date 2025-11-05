@@ -190,4 +190,9 @@ zephyr_udc0: &usbd {
 		backup-switch-mode = "direct";
 		label = "RV3028";
 	};
+	tmp112: tmp112@48 {
+		compatible = "ti,tmp112";
+		reg = <0x48>;
+		label = "TMP112";
+	};
 };

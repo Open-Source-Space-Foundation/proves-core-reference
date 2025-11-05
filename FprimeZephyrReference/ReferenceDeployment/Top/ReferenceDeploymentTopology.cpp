@@ -92,6 +92,7 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
+    tmp112Manager.configure(state.tmp112Device);
 }
 
 void startRateGroups() {
