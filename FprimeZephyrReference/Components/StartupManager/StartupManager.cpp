@@ -5,6 +5,8 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/StartupManager/StartupManager.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 #include "Os/File.hpp"
 
 namespace Components {
@@ -121,21 +123,32 @@ FwSizeType StartupManager ::update_boot_count() {
 }
 
 Fw::Time StartupManager ::update_quiescence_start() {
+    printk("StartupManager: Updating quiescence start time.\n");
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
+    printk("StartupManager: Quiescence start time file path: %s\n", time_file.toChar());
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    printk("StartupManager: Reading current time for quiescence start time.\n");
 
     Fw::Time time = this->getTime();
     // Open the quiescence start time file and read the current time. On read failure, return the current time.
+    printk("StartupManager: Reading quiescence start time from file: %s\n", time_file.toChar());
     StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+    printk("StartupManager: Quiescence start time read complete with status: %d\n", status);
     // On read failure, write the current time to the file for future reads. This only happens on read failure because
     // there is a singular quiescence start time for the whole mission.
     if (status != StartupManager::SUCCESS) {
+        printk("StartupManager: Writing current time to quiescence start time file: %s\n", time_file.toChar());
         status = write<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+        printk("StartupManager: Quiescence start time write complete with status: %d\n", status);
         if (status != StartupManager::SUCCESS) {
+            printk("StartupManager: WARNING - Quiescence start time UNSUCCESSFULLY written to file.\n");
             this->log_WARNING_LO_QuiescenceFileInitFailure();
         }
+    } else {
+        printk("StartupManager: Successfully read quiescence start time from file.\n");
     }
+    printk("StartupManager: Quiescence start time update complete.\n");
     return time;
 }
 
@@ -166,8 +179,9 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // Calculate the quiescence end time based on the quiescence period parameter
     Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
-    Fw::Time quiescence_interval(quiescence_period.get_seconds(), quiescence_period.get_useconds());
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::Time quiescence_interval(this->m_quiescence_start.getTimeBase(), quiescence_period.get_seconds(),
+                                 quiescence_period.get_useconds());
     Fw::Time end_time = Fw::Time::add(this->m_quiescence_start, quiescence_interval);
 
     // Are we waiting for quiescence?
