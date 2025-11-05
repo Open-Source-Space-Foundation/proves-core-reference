@@ -62,24 +62,24 @@ F64 PowerMonitor ::getCurrentTimeSeconds() {
 
 void PowerMonitor ::updatePower(F64 powerW) {
     F64 now_s = this->getCurrentTimeSeconds();
-    
+
     // Initialize time on first call
     if (this->m_lastUpdateTime_s == 0.0) {
         this->m_lastUpdateTime_s = now_s;
         return;
     }
-    
+
     F64 dt_s = now_s - this->m_lastUpdateTime_s;
-    
+
     // Only accumulate if time has passed and delta is reasonable (< 10 seconds to avoid time jumps)
     if (dt_s > 0.0 && dt_s < 10.0) {
         // Convert to mWh: Power (W) * time (hours) * 1000
         F32 energyAdded_mWh = static_cast<F32>(powerW * (dt_s / 3600.0) * 1000.0);
         this->m_totalPower_mWh += energyAdded_mWh;
     }
-    
+
     this->m_lastUpdateTime_s = now_s;
-    
+
     // Emit telemetry update
     this->tlmWrite_TotalPowerConsumption(this->m_totalPower_mWh);
 }
