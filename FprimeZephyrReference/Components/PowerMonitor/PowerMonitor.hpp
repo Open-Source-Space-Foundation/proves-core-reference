@@ -32,6 +32,35 @@ class PowerMonitor final : public PowerMonitorComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for RESET_TOTAL_POWER
+    void RESET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode,    //!< The opcode
+                                       U32 cmdSeq              //!< The command sequence number
+                                       ) override;
+
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Get current time in seconds
+    F64 getCurrentTimeSeconds();
+
+    //! Update power consumption with new power reading
+    void updatePower(F64 powerW);
+
+    // ----------------------------------------------------------------------
+    // Member variables
+    // ----------------------------------------------------------------------
+
+    //! Accumulated power consumption in mWh
+    F32 m_totalPower_mWh;
+
+    //! Last update time in seconds
+    F64 m_lastUpdateTime_s;
 };
 
 }  // namespace Components
