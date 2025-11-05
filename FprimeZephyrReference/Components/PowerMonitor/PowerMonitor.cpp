@@ -12,11 +12,8 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-PowerMonitor ::PowerMonitor(const char* const compName) :
-    PowerMonitorComponentBase(compName),
-    m_totalPower_mWh(0.0f),
-    m_lastUpdateTime_s(0.0)
-{}
+PowerMonitor ::PowerMonitor(const char* const compName)
+    : PowerMonitorComponentBase(compName), m_totalPower_mWh(0.0f), m_lastUpdateTime_s(0.0) {}
 
 PowerMonitor ::~PowerMonitor() {}
 

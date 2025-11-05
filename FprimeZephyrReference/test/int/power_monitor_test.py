@@ -79,9 +79,7 @@ def test_02_total_power_consumption_telemetry(
     assert total_power_reading >= 0, "Total power consumption should be non-negative"
 
 
-def test_03_reset_total_power_command(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
+def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that RESET_TOTAL_POWER command resets accumulated energy"""
     # Wait for some power to accumulate
     time.sleep(3)

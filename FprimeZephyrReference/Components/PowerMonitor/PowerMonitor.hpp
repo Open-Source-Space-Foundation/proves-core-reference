@@ -38,9 +38,9 @@ class PowerMonitor final : public PowerMonitorComponentBase {
     // ----------------------------------------------------------------------
 
     //! Handler implementation for RESET_TOTAL_POWER
-    void RESET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode,    //!< The opcode
-                                       U32 cmdSeq              //!< The command sequence number
-                                       ) override;
+    void RESET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                      U32 cmdSeq            //!< The command sequence number
+                                      ) override;
 
     // ----------------------------------------------------------------------
     // Helper methods
