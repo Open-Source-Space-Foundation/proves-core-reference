@@ -21,10 +21,9 @@ Add diagrams here
 
 ## How to Run
 
-1. Uplink a sequence start file. we have one in TODO location
-2. STARTUP_SEQUENCE_FILE_PRM_SET to the file you uplinked and STARTUP_SEQUENCE_FILE_PRM_SAVE
-3. FileHandling.prmDb.PRM_SAVE_FILE
-
+1. Choose the startup sequence from the sequences file. To update the .bin file run `make sequence SEQ=startup`
+2. Restart the cube, it should do the startup sequence right away
+3. To disable the startup sequence delete the sequence file. Use FileHandling.filemanager.RemoveFile to remove the startup.bin file
 
 The StartupManager maintains internal state tracking its lifecycle:
 
