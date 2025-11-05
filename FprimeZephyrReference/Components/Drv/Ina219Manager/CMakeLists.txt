@@ -15,19 +15,21 @@
 # `Ref/SignalGen/CMakeLists.txt` will be named `Ref_SignalGen`.
 
 register_fprime_library(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Helpers.cpp"
-    DEPENDS
-        Fw_Types
+        "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.cpp"
+#   DEPENDS
+#       MyPackage_MyOtherModule
 )
 
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Helpers.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/HelpersTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/HelpersTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Ina219ManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Ina219ManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS
