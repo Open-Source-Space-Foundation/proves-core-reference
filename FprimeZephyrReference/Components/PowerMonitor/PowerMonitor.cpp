@@ -44,7 +44,7 @@ void PowerMonitor ::run_handler(FwIndexType portNum, U32 context) {
 void PowerMonitor ::RESET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->m_totalPower_mWh = 0.0f;
     this->m_lastUpdateTime_s = this->getCurrentTimeSeconds();
-    this->log_ACTIVITY_LO_TotalPowerReset();
+    this->log_ACTIVITY_LOW_TotalPowerReset();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -58,11 +58,18 @@ F64 PowerMonitor ::getCurrentTimeSeconds() {
 }
 
 void PowerMonitor ::updatePower(F64 powerW) {
+    // Guard against invalid power values
+    if (powerW < 0.0 || powerW > 1000.0) {  // Sanity check: power should be 0-1000W
+        return;
+    }
+
     F64 now_s = this->getCurrentTimeSeconds();
 
     // Initialize time on first call
     if (this->m_lastUpdateTime_s == 0.0) {
         this->m_lastUpdateTime_s = now_s;
+        // Emit initial telemetry value
+        this->tlmWrite_TotalPowerConsumption(this->m_totalPower_mWh);
         return;
     }
 
