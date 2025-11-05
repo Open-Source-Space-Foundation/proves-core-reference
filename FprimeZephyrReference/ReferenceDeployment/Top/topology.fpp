@@ -46,6 +46,9 @@ module ReferenceDeployment {
     instance fsSpace
     instance cmdSeq
     instance startupManager
+    instance powerMonitor
+    instance ina219SysManager
+    instance ina219SolManager
 
 
   # ----------------------------------------------------------------------
@@ -149,6 +152,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
 
     }
 
@@ -184,6 +188,15 @@ module ReferenceDeployment {
       FileHandling.fileUplink.bufferSendOut -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
     }
 
+
+    connections sysPowerMonitor {
+      powerMonitor.sysVoltageGet -> ina219SysManager.voltageGet
+      powerMonitor.sysCurrentGet -> ina219SysManager.currentGet
+      powerMonitor.sysPowerGet -> ina219SysManager.powerGet
+      powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
+      powerMonitor.solCurrentGet -> ina219SolManager.currentGet
+      powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
 
   }
 }

@@ -63,6 +63,15 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
+  packet PowerMonitor id 9 group 4 {
+    ReferenceDeployment.ina219SysManager.Voltage
+    ReferenceDeployment.ina219SysManager.Current
+    ReferenceDeployment.ina219SysManager.Power
+    ReferenceDeployment.ina219SolManager.Voltage
+    ReferenceDeployment.ina219SolManager.Current
+    ReferenceDeployment.ina219SolManager.Power
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

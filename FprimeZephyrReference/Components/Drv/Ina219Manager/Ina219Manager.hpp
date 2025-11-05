@@ -1,37 +1,37 @@
 // ======================================================================
-// \title  Lis2mdlManager.hpp
-// \brief  hpp file for Lis2mdlManager component implementation class
+// \title  Ina219Manager.hpp
+// \brief  hpp file for Ina219Manager component implementation class
 // ======================================================================
 
-#ifndef Components_Lis2mdlManager_HPP
-#define Components_Lis2mdlManager_HPP
+#ifndef Drv_Ina219Manager_HPP
+#define Drv_Ina219Manager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219ManagerComponentAc.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
-
 namespace Drv {
 
-class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
+class Ina219Manager final : public Ina219ManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Lis2mdlManager object
-    Lis2mdlManager(const char* const compName);
+    //! Construct Ina219Manager object
+    Ina219Manager(const char* const compName  //!< The component name
+    );
 
-    //! Destroy Lis2mdlManager object
-    ~Lis2mdlManager();
+    //! Destroy Ina219Manager object
+    ~Ina219Manager();
 
   public:
     // ----------------------------------------------------------------------
     // Helper methods
     // ----------------------------------------------------------------------
 
-    //! Configure the LIS2MDL device
+    //! Configure the INA219 device
     void configure(const struct device* dev);
 
   private:
@@ -39,9 +39,23 @@ class Lis2mdlManager final : public Lis2mdlManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Get the magnetic field reading from the LIS2MDL sensor
-    Drv::MagneticField magneticFieldGet_handler(const FwIndexType portNum  //!< The port number
-                                                ) override;
+    //! Handler implementation for currentGet
+    //!
+    //! Port to read the current in amps
+    F64 currentGet_handler(FwIndexType portNum  //!< The port number
+                           ) override;
+
+    //! Handler implementation for powerGet
+    //!
+    //! Port to read the power in watts
+    F64 powerGet_handler(FwIndexType portNum  //!< The port number
+                         ) override;
+
+    //! Handler implementation for voltageGet
+    //!
+    //! Port to read the voltage in volts
+    F64 voltageGet_handler(FwIndexType portNum  //!< The port number
+                           ) override;
 
     // ----------------------------------------------------------------------
     // Member variables
