@@ -1,4 +1,13 @@
 module Components {
+    @ String type for hash values
+    type HashString = string size 128
+
+    @ String type for error reasons
+    type ReasonString = string size 256
+
+    @ String type for APID lists
+    type ApidString = string size 256
+
     @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
     passive component Authenticate {
 
@@ -9,9 +18,9 @@ module Components {
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
 
-        async command GET_SEQ_NUM()
+        sync command GET_SEQ_NUM()
 
-        async command SET_SEQ_NUM(seq_num: U32)
+        sync command SET_SEQ_NUM(seq_num: U32)
 
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64
@@ -24,15 +33,15 @@ module Components {
 
         # @ Events for packet authentication
 
-        event ValidHash(apid: U32, spi: U32, seqNum: U32, opcode: U32, hash: string size 128) severity activity high id 0 format "Authenticated packet: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}"
+        event ValidHash(apid: U32, spi: U32, seqNum: U32) severity activity high id 0 format "Authenticated packet: APID={}, SPI={}, SeqNum={}"
 
-        event InvalidHash(apid: U32, spi: U32, seqNum: U32, opcode: U32, hash: string size 128, reason: string size 256) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}, Reason={}"
+        event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}"
 
-        event SequenceNumberOutOfWindow(spi: U32, expected: U32, received: U32, window: U32) severity warning high id 2 format "Sequence number out of window: SPI={}, Expected={}, Received={}, Window={}"
+        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: SPI={}, Expected={}, Window={}"
 
         event InvalidSPI(spi: U32, apid: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, APID={}"
 
-        event APIDMismatch(spi: U32, packetApid: U32, saApids: string size 256) severity warning high id 4 format "APID mismatch: SPI={}, Packet APID={}, SA APIDs={}"
+        event APIDMismatch(spi: U32, packetApid: U32) severity warning high id 4 format "APID mismatch: SPI={}, Packet APID={}"
 
         # @ Ports for packet authentication
 

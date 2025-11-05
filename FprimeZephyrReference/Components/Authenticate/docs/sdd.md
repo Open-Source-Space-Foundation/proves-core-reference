@@ -11,6 +11,14 @@ The Authenticate component sits in the uplink communications path between the `T
 - Sequence number validation and anti-replay protection
 - APID-based filtering for command authentication requirements
 
+## Implementation Notes
+
+**FPP Limitations:** The FPP (F Prime Prime) modeling language has specific constraints that affect the event interface design:
+- Events are limited to a maximum of 3 parameters
+- String types (including `Fw.String`) are not displayable in events
+
+These limitations mean that detailed information like HMAC hash values, error reason strings, and APID lists cannot be included in event parameters. Such information can be logged through other mechanisms (e.g., dedicated log messages, extended telemetry) if needed for debugging or security auditing purposes.
+
 ## Topology Integration
 
 The component is integrated into the uplink path as follows:
@@ -120,17 +128,18 @@ The component extracts the APID directly from the Space Packet Primary Header (b
 
 ## Events
 
-| Name | Severity | Description |
-|---|---|---|
-| ValidHash | Activity High | Emitted when a packet successfully passes HMAC authentication. Contains the extracted opcode (if available) and the computed hash value for telemetry/logging. Format: "Authenticated packet: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}" |
-| InvalidHash | Warning High | Emitted when a packet fails HMAC authentication, has an invalid SPI, or has a sequence number outside the acceptable window. Contains the extracted opcode (if available) and the received hash value. Format: "Authentication failed: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}, Reason={}" |
-| SequenceNumberOutOfWindow | Warning High | Emitted when a packet is rejected due to sequence number being outside the configured window. Format: "Sequence number out of window: SPI={}, Expected={}, Received={}, Window={}" |
-| InvalidSPI | Warning High | Emitted when a packet contains an SPI value that does not correspond to any configured Security Association. Format: "Invalid SPI received: SPI={}, APID={}" |
-| APIDMismatch | Warning High | Emitted when the APID in FrameContext does not match the APIDs associated with the Security Association identified by the SPI. Format: "APID mismatch: SPI={}, Packet APID={}, SA APIDs={}" |
+**Note:** FPP has limitations on event parameters - events can only have a maximum of 3 parameters, and string types are not displayable in events. Therefore, hash values, reason strings, and other detailed information are omitted from the event parameters but can be logged separately through other means.
+
+| Name | Severity | Parameters | Description |
+|---|---|---|---|
+| ValidHash | Activity High | apid: U32, spi: U32, seqNum: U32 | Emitted when a packet successfully passes HMAC authentication. Contains the APID, SPI, and sequence number of the authenticated packet. Format: "Authenticated packet: APID={}, SPI={}, SeqNum={}" |
+| InvalidHash | Warning High | apid: U32, spi: U32, seqNum: U32 | Emitted when a packet fails HMAC authentication. Contains the APID, SPI, and sequence number of the failed packet. Format: "Authentication failed: APID={}, SPI={}, SeqNum={}" |
+| SequenceNumberOutOfWindow | Warning High | spi: U32, expected: U32, window: U32 | Emitted when a packet is rejected due to sequence number being outside the configured window. Contains the SPI, expected sequence number, and window size. Format: "Sequence number out of window: SPI={}, Expected={}, Window={}" |
+| InvalidSPI | Warning High | spi: U32, apid: U32 | Emitted when a packet contains an SPI value that does not correspond to any configured Security Association. Contains the invalid SPI and the APID. Format: "Invalid SPI received: SPI={}, APID={}" |
+| APIDMismatch | Warning High | spi: U32, packetApid: U32 | Emitted when the APID in FrameContext does not match the APIDs associated with the Security Association identified by the SPI. Contains the SPI and the mismatched packet APID. Format: "APID mismatch: SPI={}, Packet APID={}" |
 
 ## Telemetry Channels
 
-TODO (remove if not needed)
 | Name | Type | Description |
 |---|---|---|
 | AuthenticatedPacketsCount | U64 | Total count of successfully authenticated packets |
@@ -139,10 +148,10 @@ TODO (remove if not needed)
 
 ## Commands
 
-| Name | Parameters | Description |
-|---|---|---|
-| GET_SEQ_NUM | | Command to retrieve the current sequence number |
-| SET_SEQ_NUM | U32 | Command to set the current sequence number |
+| Name | Type | Parameters | Description |
+|---|---|---|---|
+| GET_SEQ_NUM | Sync | None | Command to retrieve the current sequence number for debugging/verification purposes |
+| SET_SEQ_NUM | Sync | seq_num: U32 | Command to manually set the current sequence number (should be used with caution as it affects authentication) |
 
 ## Configuration
 
