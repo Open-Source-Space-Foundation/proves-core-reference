@@ -1,5 +1,5 @@
 # ======================================================================
-# FPP file for configuration of the communications stack
+# FPP file for configuration of the communications stack (CI Build)
 #
 # The only reason to modify these definitions is if you are writing your own
 # Framer/Deframer implementations and need more contextual data than what is
@@ -15,7 +15,7 @@ module ComCfg {
     # - spacecraftId
     # - TmFrameFixedSize
     # - potentially APID enum ?
-    constant SpacecraftId = @FPRIME_SPACECRAFT_ID@    # Spacecraft ID (10 bits, range 0x0000-0x03FF)
+    constant SpacecraftId = 0x00C1    # Spacecraft ID (10 bits, range 0x0000-0x03FF) - CI build
     constant TmFrameFixedSize = 248   # Needs to be at least COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize) + 1
     constant AggregationSize = TmFrameFixedSize - 6 - 6 - 1 - 2  # 2 header (6) + 1 idle byte + 2 trailer bytes
 

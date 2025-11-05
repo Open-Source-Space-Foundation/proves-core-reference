@@ -25,16 +25,12 @@ make
 
 ### Spacecraft ID
 
-The spacecraft ID is used to identify different spacecraft/devices in the communication protocol. By default, the project uses spacecraft ID `0x0044` (68 in decimal) for development builds.
+The spacecraft ID is used to identify different spacecraft/devices in the communication protocol. The project uses different spacecraft IDs for different build environments:
 
-To build with a different spacecraft ID, use the `FPRIME_CMAKE_OPTIONS` variable:
+- **Development builds**: `0x0044` (68 in decimal) - Uses `ComCfg.fpp`
+- **CI builds**: `0x00C1` (193 in decimal) - Uses `ComCfg.CI.fpp`
 
-```shell
-make generate FPRIME_CMAKE_OPTIONS="-DFPRIME_SPACECRAFT_ID=0x00C1"
-make build FPRIME_CMAKE_OPTIONS="-DFPRIME_SPACECRAFT_ID=0x00C1"
-```
-
-**Note:** CI builds automatically use spacecraft ID `0x00C1` (193 in decimal) to prevent conflicts with development devices.
+The build system automatically selects the appropriate configuration file based on the `CI` environment variable. CI builds (when `CI` environment variable is set) automatically use the CI spacecraft ID to prevent conflicts with development devices in shared lab environments.
 
 ## Running the code
 

@@ -41,7 +41,7 @@ fmt: pre-commit-install ## Lint and format files
 
 .PHONY: generate
 generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
-	@$(UV_RUN) fprime-util generate --force $(FPRIME_CMAKE_OPTIONS)
+	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
 BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
@@ -50,7 +50,7 @@ generate-if-needed:
 
 .PHONY: build
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
-	@$(UV_RUN) fprime-util build $(FPRIME_CMAKE_OPTIONS)
+	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
 test-integration: uv
