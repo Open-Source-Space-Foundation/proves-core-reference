@@ -24,13 +24,24 @@ module Components {
         @ Command to reset the accumulated power consumption
         sync command RESET_TOTAL_POWER()
 
+        @ Command to reset the accumulated power generation
+        sync command RESET_TOTAL_GENERATION()
+
         @ Telemetry channel for accumulated power consumption in mWh
         telemetry TotalPowerConsumption: F32
+
+        @ Telemetry channel for accumulated solar power generation in mWh
+        telemetry TotalPowerGenerated: F32
 
         @ Event logged when total power consumption is reset
         event TotalPowerReset() \
             severity activity low \
             format "Total power consumption reset to 0 mWh"
+
+        @ Event logged when total power generation is reset
+        event TotalGenerationReset() \
+            severity activity low \
+            format "Total power generation reset to 0 mWh"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

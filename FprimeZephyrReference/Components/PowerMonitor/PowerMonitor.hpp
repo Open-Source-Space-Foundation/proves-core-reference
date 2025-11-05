@@ -42,6 +42,11 @@ class PowerMonitor final : public PowerMonitorComponentBase {
                                       U32 cmdSeq            //!< The command sequence number
                                       ) override;
 
+    //! Handler implementation for RESET_TOTAL_GENERATION
+    void RESET_TOTAL_GENERATION_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                           U32 cmdSeq            //!< The command sequence number
+                                           ) override;
+
     // ----------------------------------------------------------------------
     // Helper methods
     // ----------------------------------------------------------------------
@@ -52,12 +57,18 @@ class PowerMonitor final : public PowerMonitorComponentBase {
     //! Update power consumption with new power reading
     void updatePower(F64 powerW);
 
+    //! Update solar power generation with new power reading
+    void updateGeneration(F64 powerW);
+
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
     //! Accumulated power consumption in mWh
     F32 m_totalPower_mWh;
+
+    //! Accumulated solar power generation in mWh
+    F32 m_totalGeneration_mWh;
 
     //! Last update time in seconds
     F64 m_lastUpdateTime_s;
