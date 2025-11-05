@@ -70,6 +70,12 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
   }
 
+  packet LightSensor id 10 group 4 {
+    ReferenceDeployment.lightSensor.als
+    ReferenceDeployment.lightSensor.ir
+    ReferenceDeployment.lightSensor.light
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

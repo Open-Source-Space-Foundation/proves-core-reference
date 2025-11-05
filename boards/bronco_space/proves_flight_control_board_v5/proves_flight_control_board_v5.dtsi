@@ -178,6 +178,11 @@ zephyr_udc0: &usbd {
 		label = "LSM6DSO";
 	};
 
+	light: light@29 {
+		compatible = "vishay,veml6031";
+		reg = <0x29>;
+	};
+
 	lis2mdl0: lis2mdl0@1e {
 		compatible = "st,lis2mdl";
 		reg = <0x1e>;

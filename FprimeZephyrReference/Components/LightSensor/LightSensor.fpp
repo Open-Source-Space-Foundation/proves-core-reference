@@ -2,7 +2,7 @@ module Components {
     @ Component for reading and reporting light sensor data
     passive component LightSensor {
 
-        telemetry light: bool
+        telemetry light: F32
         telemetry als: F32
         telemetry ir: F32
 
@@ -17,8 +17,6 @@ module Components {
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
-
-
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
 
@@ -30,7 +28,6 @@ module Components {
 
         # @ Example port: receiving calls from the rate group
         
-
         # @ Example parameter
         # param PARAMETER_NAME: U32
 

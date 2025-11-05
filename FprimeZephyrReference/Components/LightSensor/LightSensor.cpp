@@ -30,7 +30,6 @@ void LightSensor ::configure(const struct device *dev ) {
 }
 
 void LightSensor ::read_sensor_data(){
-
     int ret;
 	struct sensor_value light;
 	struct sensor_value als_raw;
@@ -49,7 +48,7 @@ void LightSensor ::read_sensor_data(){
 	}
 
     sen.val1 = this->paramGet_DIV4(valid);
-    // Set detection threshold
+    // Set division threshold
 	ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &sen);
 	if (ret) {
 		printf("Failed to set div4 attribute ret: %d\n", ret);
