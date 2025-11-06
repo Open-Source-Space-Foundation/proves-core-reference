@@ -24,7 +24,11 @@ module Components {
 
         # @ Example port: receiving calls from the rate group
         # sync input port run: Svc.Sched
-        output port Status: Drv.GpioRead
+        #output port Status: Drv.GpioRead
+        #We will not be putting a Drv.GpioRead port here, we are using the Gpio Driver component which has this already!
+        
+        @ Port sending calls to the GPIO driver
+        output port gpioSet: Drv.GpioWrite
 
         
         # Input that will be used by other components if they want to force a reset 
