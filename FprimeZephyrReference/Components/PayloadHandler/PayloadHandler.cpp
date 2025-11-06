@@ -57,32 +57,42 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
 
     if (m_receiving && m_imageBuffer.isValid()) {
         // Currently receiving image data - accumulate into large buffer
-        // Check for end marker before accumulating
-        I32 endMarkerPos = findImageEndMarker(data, dataSize);
+        
+        // First accumulate the new data
+        if (!accumulateImageData(data, dataSize)) {
+            // Image buffer overflow
+            this->log_WARNING_HI_ImageDataOverflow();
+            deallocateImageBuffer();
+            m_receiving = false;
+            return;
+        }
+        
+        // Now check if end marker is in the accumulated buffer
+        // We search the last portion (where marker could be)
+        const U32 markerLen = 9;  // strlen("<IMG_END>")
+        U32 searchStart = 0;
+        if (m_imageBufferUsed > markerLen) {
+            // Start search from near the end to handle split markers
+            searchStart = m_imageBufferUsed - dataSize - markerLen;
+            if (searchStart > m_imageBufferUsed) {
+                searchStart = 0;  // Wraparound protection
+            }
+        }
+        
+        I32 endMarkerPos = findImageEndMarker(
+            &m_imageBuffer.getData()[searchStart], 
+            m_imageBufferUsed - searchStart
+        );
         
         if (endMarkerPos >= 0) {
-            // Found end marker - accumulate data up to marker
-            U32 finalDataSize = static_cast<U32>(endMarkerPos);
-            if (finalDataSize > 0) {
-                if (!accumulateImageData(data, finalDataSize)) {
-                    // Overflow
-                    this->log_WARNING_HI_ImageDataOverflow();
-                    deallocateImageBuffer();
-                    m_receiving = false;
-                    return;
-                }
-            }
+            // Found end marker - adjust position to absolute offset
+            U32 absolutePos = searchStart + static_cast<U32>(endMarkerPos);
+            
+            // Trim the image buffer to remove the end marker
+            m_imageBufferUsed = absolutePos;
             
             // Image is complete
             processCompleteImage();
-        } else {
-            // No end marker yet - accumulate all data
-            if (!accumulateImageData(data, dataSize)) {
-                // Image buffer overflow
-                this->log_WARNING_HI_ImageDataOverflow();
-                deallocateImageBuffer();
-                m_receiving = false;
-            }
         }
     } else {
         // Not receiving image - accumulate protocol data
