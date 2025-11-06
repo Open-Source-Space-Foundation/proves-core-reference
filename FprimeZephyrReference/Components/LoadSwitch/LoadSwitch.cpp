@@ -19,6 +19,16 @@ LoadSwitch ::LoadSwitch(const char* const compName) : LoadSwitchComponentBase(co
 LoadSwitch ::~LoadSwitch() {}
 
 // ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
+
+void LoadSwitch ::Reset_handler(FwIndexType portNum) {
+    gpio_pin_set(m_device, m_pinNum, 0);
+    k_sleep(K_MSEC(100));
+    gpio_pin_set(m_device, m_pinNum, 1);
+}
+
+// ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 

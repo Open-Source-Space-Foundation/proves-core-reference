@@ -8,6 +8,7 @@
 #define Components_LoadSwitch_HPP
 
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
+#include <zephyr/kernel.h>
 
 // Forward declare Zephyr types to avoid header conflicts
 struct device;
@@ -47,6 +48,18 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     void TURN_OFF_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
+
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for Reset
+    void Reset_handler(FwIndexType portNum  //!< The port number
+                       ) override;
+    
+    // ----------------------------------------------------------------------
+    // Member variables
+    // ----------------------------------------------------------------------
 
     uint8_t m_pinNum;
     static const struct device* m_device;

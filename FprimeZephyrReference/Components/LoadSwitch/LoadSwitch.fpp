@@ -26,6 +26,11 @@ module Components {
         # sync input port run: Svc.Sched
         output port Status: Drv.GpioRead
 
+        
+        # Input that will be used by other components if they want to force a reset 
+        # (off and on again) of the load switch
+        async input port Reset: Fw.Signal
+
         # @ Example parameter
         # param PARAMETER_NAME: U32
 
