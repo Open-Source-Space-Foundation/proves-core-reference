@@ -59,14 +59,14 @@ Add sequence diagrams here
 | Status  | Boolean whether data is valid or not                           |
 
 ## Unit Tests
-Add unit test descriptions in the chart below
-| Name | Description | Output | Coverage |
-| TestInitialState | Verify component starts in OFF state | Component initializes properly | LightSensor initialization(?) |
-| TestSensorReading | Verify ALS and IR readings | accurate sensor values | (?) |
-| TestZephyrCommunication | Verify Zephyr operations(?) | Successful sensor application | Zephyr driver |
-| TestReadIntervalValidation | Verify read interval is less than integration time | Correct read interval and integration time | Sensor parameters
-| TestThreshold |
-| TestStateTransitions | Verify proper state machine transitions | Correct state progression | State machine logic |
+| Name                       | Description                                        | Output                                     | Coverage                      |
+|----------------------------|----------------------------------------------------|--------------------------------------------|-------------------------------|
+| TestInitialState           | Verify component starts in OFF state               | Component initializes properly             | LightSensor initialization(?) |
+| TestSensorReading          | Verify ALS and IR readings                         | accurate sensor values                     | (?)                           |
+| TestZephyrCommunication    | Verify Zephyr operations(?)                        | Successful sensor application              | Zephyr driver                 |
+| TestReadIntervalValidation | Verify read interval is less than integration time | Correct read interval and integration time | Sensor parameters             |
+| TestThreshold              |                                                    |                                            |                               |
+| TestStateTransitions       | Verify proper state machine transitions            | Correct state progression                  | State machine logic           |
 
 
 ## Requirements
