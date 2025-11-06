@@ -19,9 +19,19 @@ module Components {
 
         event UartReceived() severity activity low format "Received UART data"
 
+        event BufferAllocationFailed(buffer_size: U32) severity warning high format "Failed to allocate buffer of size {}"
+
+        event ImageDataOverflow() severity warning high format "Image data overflow - buffer full"
+
         output port out_port: Drv.ByteStreamSend
 
-        sync input port in_port: Drv.ByteStreamData  
+        sync input port in_port: Drv.ByteStreamData
+
+        @ Port for allocating buffers for image data
+        output port allocate: Fw.BufferGet
+
+        @ Port for deallocating buffers
+        output port deallocate: Fw.BufferSend  
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####

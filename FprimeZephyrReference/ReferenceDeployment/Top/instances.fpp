@@ -94,4 +94,26 @@ module ReferenceDeployment {
 
   instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x10032000
 
+  instance payloadBufferManager: Svc.BufferManager base id 0x10033000 \
+  {
+    phase Fpp.ToCpp.Phases.configObjects """
+    Svc::BufferManager::BufferBins bins;
+    """
+    phase Fpp.ToCpp.Phases.configComponents """
+    memset(&ConfigObjects::ReferenceDeployment_payloadBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payloadBufferManager::bins));
+    // Configure for 256 KB image buffers, 2 buffers
+    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 256 * 1024;
+    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].numBuffers = 2;
+    ReferenceDeployment::payloadBufferManager.setup(
+        1,  // manager ID
+        0,  // store ID
+        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
+        ConfigObjects::ReferenceDeployment_payloadBufferManager::bins
+    );
+    """
+    phase Fpp.ToCpp.Phases.tearDownComponents """
+    ReferenceDeployment::payloadBufferManager.cleanup();
+    """
+  }
+
 }

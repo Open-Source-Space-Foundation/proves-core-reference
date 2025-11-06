@@ -46,6 +46,7 @@ module ReferenceDeployment {
     instance fsSpace
     instance payload
     instance peripheralUartDriver
+    instance payloadBufferManager
 
 
   # ----------------------------------------------------------------------
@@ -140,6 +141,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
 
     }
 
@@ -168,6 +170,10 @@ module ReferenceDeployment {
     connections PayloadHandler {
       payload.out_port -> peripheralUartDriver.$send
       peripheralUartDriver.$recv -> payload.in_port
+      
+      # Buffer management for image data
+      payload.allocate -> payloadBufferManager.bufferGetCallee
+      payload.deallocate -> payloadBufferManager.bufferSendIn
     }
   }
 }
