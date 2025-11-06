@@ -86,4 +86,6 @@ module ReferenceDeployment {
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
   instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10030000
+
+  instance mycomp: Components.MyComponent base id 0x10031000
 }
