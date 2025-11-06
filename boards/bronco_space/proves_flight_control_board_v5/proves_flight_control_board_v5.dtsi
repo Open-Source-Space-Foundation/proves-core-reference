@@ -163,6 +163,32 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sol";
 	};
+
+	tca9548a: tca9548a@70 {
+		compatible = "ti,tca9548a";
+		reg = <0x70>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		label = "TCA9548A";
+
+		tca_channel0: channel@0 {
+			compatible = "ti,tca9548a-channel";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+	};
 };
 
 

@@ -95,4 +95,6 @@ module ReferenceDeployment {
   instance ina219SysManager: Drv.Ina219Manager base id 0x10032000
 
   instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
+
+  instance magnetorquerManager: Drv.MagnetorquerManager base id 0x10034000
 }
