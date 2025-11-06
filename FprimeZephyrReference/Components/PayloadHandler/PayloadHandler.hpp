@@ -45,6 +45,22 @@ class PayloadHandler final : public PayloadHandlerComponentBase {
     Fw::Buffer m_imageBuffer;
     U32 m_imageBufferUsed = 0;  // Bytes used in image buffer
     static constexpr U32 IMAGE_BUFFER_SIZE = 256 * 1024;  // 256 KB for images
+    
+    // Protocol constants for image transfer
+    // Protocol: <IMG_START><SIZE>[4-byte uint32]</SIZE>[image data]<IMG_END>
+    static constexpr U32 IMG_START_LEN = 11;     // strlen("<IMG_START>")
+    static constexpr U32 SIZE_TAG_LEN = 6;       // strlen("<SIZE>")
+    static constexpr U32 SIZE_VALUE_LEN = 4;     // 4-byte little-endian uint32
+    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7; // strlen("</SIZE>")
+    static constexpr U32 IMG_END_LEN = 9;        // strlen("<IMG_END>")
+    
+    // Derived constants
+    static constexpr U32 HEADER_SIZE = IMG_START_LEN + SIZE_TAG_LEN + SIZE_VALUE_LEN + SIZE_CLOSE_TAG_LEN;  // 28 bytes
+    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                    // 11
+    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;   // 17
+    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;  // 21
+    
+    U32 m_expected_size = 0;  // Expected image size from header
 
   private:
     // ----------------------------------------------------------------------

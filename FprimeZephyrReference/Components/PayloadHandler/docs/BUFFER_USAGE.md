@@ -58,21 +58,22 @@ Incoming data → Protocol Buffer → Parse for commands
 
 ### 2. Image Header Detected
 ```
-Parse "<IMG_START>\n" → allocateImageBuffer()
-                      → m_receiving = true
-                      → Start accumulating
+Parse "<IMG_START><SIZE>...bytes...</SIZE>" → Extract image size (m_expected_size)
+                                             → allocateImageBuffer()
+                                             → m_receiving = true
+                                             → Start accumulating
 ```
 
 ### 3. Receiving Image
 ```
-Incoming data → Image Buffer (accumulate) → Check each chunk for "<IMG_END>"
+Incoming data → Image Buffer (accumulate) → Check if m_imageBufferUsed >= m_expected_size
 ```
 
 ### 4. Image Complete
 ```
-Detect "<IMG_END>\n" → processCompleteImage() → Write to file
-                     → deallocateImageBuffer()
-                     → m_receiving = false
+Received m_expected_size bytes → processCompleteImage() → Write to file
+                                → deallocateImageBuffer()
+                                → m_receiving = false
 ```
 
 ## Camera Protocol
@@ -80,17 +81,19 @@ Detect "<IMG_END>\n" → processCompleteImage() → Write to file
 The Nicla Vision camera sends images using this protocol:
 
 ```
-<IMG_START>\n
-[raw JPEG data in 512-byte chunks]
-\n<IMG_END>\n
+<IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[raw JPEG data in 512-byte chunks]<IMG_END>
 ```
 
 Example:
 ```
-<IMG_START>
-ÿØÿà...JFIF...image data...ÿÙ
-<IMG_END>
+<IMG_START><SIZE>\x00\xC8\x00\x00</SIZE>ÿØÿà...JFIF...image data...ÿÙ<IMG_END>
+                    ^^^^^^^^^^ = 51200 bytes (little-endian)
 ```
+
+**Key Features:**
+- **No newlines** - All data is sent continuously
+- **Binary size** - 4-byte little-endian uint32 embedded in header
+- **Deterministic** - Exact image size known before data arrives
 
 ## Key Functions
 
@@ -184,26 +187,33 @@ BufferManager will allocate the smallest buffer that fits the request.
 ### Protocol Parsing (Implemented)
 
 The `processProtocolBuffer()` function:
-1. Scans for newline-terminated lines
-2. Checks if line matches `<IMG_START>`
-3. If match, calls `allocateImageBuffer()` and sets `m_receiving = true`
-4. Generates filename: `/mnt/data/img_NNN.jpg`
+1. Waits for minimum 28 bytes (header size)
+2. Validates `<IMG_START>` tag (11 bytes)
+3. Validates `<SIZE>` tag (6 bytes)
+4. Extracts 4-byte little-endian size
+5. Validates `</SIZE>` tag (7 bytes)
+6. Calls `allocateImageBuffer()` and sets `m_receiving = true`, `m_expected_size = imageSize`
+7. Generates filename: `/mnt/data/img_NNN.jpg`
 
 ### Image Reception (Implemented)
 
 The `in_port_handler()` function:
 - When `m_receiving == true`, accumulates data into image buffer
-- Each chunk is checked for `<IMG_END>` marker using `findImageEndMarker()`
-- When marker found, extracts image data (before marker) and calls `processCompleteImage()`
+- After each chunk, checks if `m_imageBufferUsed >= m_expected_size`
+- When complete, trims to exact size and calls `processCompleteImage()`
 
-### End Marker Detection
+### Size-Based Completion
 
-The camera sends:
+The camera sends the exact image size in the header, so we know precisely when we've received all data:
+
+```cpp
+if (m_expected_size > 0 && m_imageBufferUsed >= m_expected_size) {
+    m_imageBufferUsed = m_expected_size;  // Trim any extra (e.g., <IMG_END>)
+    processCompleteImage();
+}
 ```
-[image data]\n<IMG_END>\n
-```
 
-The handler searches each incoming chunk for `<IMG_END>` and stops accumulation when found. Image data before the marker is written to file.
+No need to search for end markers in every chunk!
 
 ## Error Handling
 

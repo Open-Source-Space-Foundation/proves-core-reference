@@ -8,6 +8,7 @@
 #include "Fw/Types/BasicTypes.hpp"
 #include "FprimeZephyrReference/Components/PayloadHandler/PayloadHandler.hpp"
 #include <cstring>
+#include <cstdio>
 
 namespace Components {
 
@@ -67,29 +68,10 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
             return;
         }
         
-        // Now check if end marker is in the accumulated buffer
-        // We search the last portion (where marker could be)
-        const U32 markerLen = 9;  // strlen("<IMG_END>")
-        U32 searchStart = 0;
-        if (m_imageBufferUsed > markerLen) {
-            // Start search from near the end to handle split markers
-            searchStart = m_imageBufferUsed - dataSize - markerLen;
-            if (searchStart > m_imageBufferUsed) {
-                searchStart = 0;  // Wraparound protection
-            }
-        }
-        
-        I32 endMarkerPos = findImageEndMarker(
-            &m_imageBuffer.getData()[searchStart], 
-            m_imageBufferUsed - searchStart
-        );
-        
-        if (endMarkerPos >= 0) {
-            // Found end marker - adjust position to absolute offset
-            U32 absolutePos = searchStart + static_cast<U32>(endMarkerPos);
-            
-            // Trim the image buffer to remove the end marker
-            m_imageBufferUsed = absolutePos;
+        // Check if we've received all expected data
+        if (m_expected_size > 0 && m_imageBufferUsed >= m_expected_size) {
+            // We have all the data! Trim to exact size (in case we got <IMG_END> too)
+            m_imageBufferUsed = m_expected_size;
             
             // Image is complete
             processCompleteImage();
@@ -157,89 +139,85 @@ bool PayloadHandler ::accumulateProtocolData(const U8* data, U32 size) {
 }
 
 void PayloadHandler ::processProtocolBuffer() {
-    // Process newline-terminated commands/headers
-    // Looking for "<IMG_START>" to begin image reception
+    // Protocol: <IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[image data]<IMG_END>
     
-    while (m_protocolBufferSize > 0) {
-        // Look for newline character
-        bool foundNewline = false;
-        U32 lineEndIndex = 0;
-
-        for (U32 i = 0; i < m_protocolBufferSize; ++i) {
-            if (m_protocolBuffer[i] == '\n' || m_protocolBuffer[i] == '\r') {
-                foundNewline = true;
-                lineEndIndex = i;
+    if (m_protocolBufferSize >= HEADER_SIZE) {
+        // Check for <IMG_START> at the beginning
+        if (!isImageStartCommand(m_protocolBuffer, m_protocolBufferSize)) {
+            return;  // Not an image header
+        }
+        
+        // Check for <SIZE> tag after <IMG_START>
+        const char* sizeTag = "<SIZE>";
+        bool hasSizeTag = true;
+        
+        for (U32 i = 0; i < SIZE_TAG_LEN; ++i) {
+            if (m_protocolBuffer[SIZE_TAG_OFFSET + i] != static_cast<U8>(sizeTag[i])) {
+                hasSizeTag = false;
                 break;
             }
         }
-
-        if (foundNewline) {
-            U32 lineLength = lineEndIndex;
-            
-            // Skip carriage return if present (handle \r\n)
-            // needed?
-            if (lineEndIndex + 1 < m_protocolBufferSize && 
-                m_protocolBuffer[lineEndIndex] == '\r' && 
-                m_protocolBuffer[lineEndIndex + 1] == '\n') {
-                lineEndIndex++;
+        
+        if (!hasSizeTag) {
+            return;  // Invalid header
+        }
+        
+        // Extract 4-byte size (little-endian)
+        U32 imageSize = 0;
+        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 0]);
+        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 1]) << 8;
+        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 2]) << 16;
+        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 3]) << 24;
+        
+        // Verify </SIZE> tag
+        const char* closeSizeTag = "</SIZE>";
+        bool hasCloseSizeTag = true;
+        
+        for (U32 i = 0; i < SIZE_CLOSE_TAG_LEN; ++i) {
+            if (m_protocolBuffer[SIZE_CLOSE_TAG_OFFSET + i] != static_cast<U8>(closeSizeTag[i])) {
+                hasCloseSizeTag = false;
+                break;
             }
-
-            // Check if this is the image start command
-            if (isImageStartCommand(m_protocolBuffer, lineLength)) {
-                // Allocate buffer for image data
-                if (allocateImageBuffer()) {
-                    m_receiving = true;
-                    m_bytes_received = 0;
-                    
-                    // Generate filename
-                    char filename[64];
-                    snprintf(filename, sizeof(filename), "/mnt/data/img_%03d.jpg", m_data_file_count++);
-                    m_currentFilename = filename;
-                    
-                    this->log_ACTIVITY_LO_ImageHeaderReceived();
-                    
-                    // Remove the IMG_START line from buffer
-                    U32 remainingSize = m_protocolBufferSize - (lineEndIndex + 1);
-                    if (remainingSize > 0) {
-                        memmove(m_protocolBuffer, 
-                               &m_protocolBuffer[lineEndIndex + 1], 
-                               remainingSize);
-                    }
-                    m_protocolBufferSize = remainingSize;
-                    
-                    // Any remaining data in protocol buffer is image data, so we transfer it to the image buffer immediately
-                    if (m_protocolBufferSize > 0) {
-                        if (!accumulateImageData(m_protocolBuffer, m_protocolBufferSize)) {
-                            this->log_WARNING_HI_ImageDataOverflow();
-                            deallocateImageBuffer();
-                            m_receiving = false;
-                        }
-                        clearProtocolBuffer();  // Clear now that data is moved
-                    }
-                    
-                    // Exit loop - we're now in image receiving mode
-                    break;
-                } else {
-                    // Buffer allocation failed
-                    this->log_WARNING_HI_BufferAllocationFailed(IMAGE_BUFFER_SIZE);
+        }
+        
+        if (!hasCloseSizeTag) {
+            return;  // Invalid header
+        }
+        
+        // Valid header! Allocate buffer
+        if (allocateImageBuffer()) {
+            m_receiving = true;
+            m_bytes_received = 0;
+            m_expected_size = imageSize;
+            
+            // Generate filename
+            char filename[64];
+            snprintf(filename, sizeof(filename), "/mnt/data/img_%03d.jpg", m_data_file_count++);
+            m_currentFilename = filename;
+            
+            this->log_ACTIVITY_LO_ImageHeaderReceived();
+            
+            // Remove header
+            U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
+            if (remainingSize > 0) {
+                memmove(m_protocolBuffer, 
+                       &m_protocolBuffer[HEADER_SIZE], 
+                       remainingSize);
+            }
+            m_protocolBufferSize = remainingSize;
+            
+            // Transfer any remaining data (image data) to image buffer
+            if (m_protocolBufferSize > 0) {
+                if (!accumulateImageData(m_protocolBuffer, m_protocolBufferSize)) {
+                    this->log_WARNING_HI_ImageDataOverflow();
+                    deallocateImageBuffer();
+                    m_receiving = false;
                 }
-            } else {
-                // Log other commands/data for debugging
-                for (U32 i = 0; i < lineLength && i < 16; ++i) {
-                    this->log_ACTIVITY_LO_ByteReceived(m_protocolBuffer[i]);
-                }
-                
-                // Remove processed line from buffer
-                U32 remainingSize = m_protocolBufferSize - (lineEndIndex + 1);
-                if (remainingSize > 0) {
-                    memmove(m_protocolBuffer, 
-                           &m_protocolBuffer[lineEndIndex + 1], 
-                           remainingSize);
-                }
-                m_protocolBufferSize = remainingSize;
+                clearProtocolBuffer();
             }
         } else {
-            break;
+            // Buffer allocation failed
+            this->log_WARNING_HI_BufferAllocationFailed(IMAGE_BUFFER_SIZE);
         }
     }
 }
@@ -320,16 +298,15 @@ void PayloadHandler ::processCompleteImage() {
 I32 PayloadHandler ::findImageEndMarker(const U8* data, U32 size) {
     // Looking for "\n<IMG_END>" or "<IMG_END>"
     const char* marker = "<IMG_END>";
-    const U32 markerLen = 9;  // strlen("<IMG_END>")
     
-    if (size < markerLen) {
+    if (size < IMG_END_LEN) {
         return -1;
     }
     
     // Search for the marker
-    for (U32 i = 0; i <= size - markerLen; ++i) {
+    for (U32 i = 0; i <= size - IMG_END_LEN; ++i) {
         bool found = true;
-        for (U32 j = 0; j < markerLen; ++j) {
+        for (U32 j = 0; j < IMG_END_LEN; ++j) {
             if (data[i + j] != static_cast<U8>(marker[j])) {
                 found = false;
                 break;
@@ -350,13 +327,12 @@ I32 PayloadHandler ::findImageEndMarker(const U8* data, U32 size) {
 
 bool PayloadHandler ::isImageStartCommand(const U8* line, U32 length) {
     const char* command = "<IMG_START>";
-    const U32 cmdLen = 11;  // strlen("<IMG_START>")
     
-    if (length != cmdLen) {
+    if (length < IMG_START_LEN) {
         return false;
     }
     
-    for (U32 i = 0; i < cmdLen; ++i) {
+    for (U32 i = 0; i < IMG_START_LEN; ++i) {
         if (line[i] != static_cast<U8>(command[i])) {
             return false;
         }

@@ -18,9 +18,7 @@ The camera will:
 2. Save it locally as `images/img_NNNN.jpg`
 3. Send it back over UART with the protocol:
    ```
-   <IMG_START>
-   [JPEG data]
-   <IMG_END>
+   <IMG_START><SIZE>[4-byte size]</SIZE>[JPEG data]<IMG_END>
    ```
 
 ## F' Commands
@@ -43,7 +41,8 @@ This forwards the command over UART to the camera.
    - Event: `CommandSuccess` - "Command snap sent successfully"
 
 2. **Image Start**
-   - PayloadHandler receives `<IMG_START>\n`
+   - PayloadHandler receives `<IMG_START><SIZE>...bytes...</SIZE>`
+   - Parses image size from 4-byte little-endian value
    - Allocates 256 KB buffer from BufferManager
    - Event: `ImageHeaderReceived` - "Received image header"
 
@@ -53,10 +52,11 @@ This forwards the command over UART to the camera.
    - Event: `UartReceived` - "Received UART data" (multiple times)
 
 4. **Image Complete**
-   - Receives `<IMG_END>\n` marker
+   - Receives all expected bytes (size from header)
    - Writes image to `/mnt/data/img_NNN.jpg`
    - Event: `DataReceived` - "Stored NNNNN bytes of payload data to /mnt/data/img_NNN.jpg"
    - Returns buffer to BufferManager
+   - Note: Camera also sends `<IMG_END>` but it's trimmed off
 
 ### Image Filenames
 
@@ -66,7 +66,7 @@ Images are saved with sequential filenames:
 - `/mnt/data/img_002.jpg`
 - etc.
 
-Counter increments each time `<IMG_START>` is received.
+Counter increments each time a valid `<IMG_START><SIZE>...` header is received.
 
 ## Error Cases
 
@@ -150,9 +150,21 @@ TotalBuffs = 2
 
 ```
 Command from FS:  "snap\n"
-Camera response:  "<IMG_START>\n"
-                  [JPEG file bytes]
-                  "\n<IMG_END>\n"
+Camera response:  "<IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>"
+                  [JPEG file bytes - exact size from header]
+                  "<IMG_END>"
+```
+
+**Header format:**
+- `<IMG_START>` - 11 bytes ASCII
+- `<SIZE>` - 6 bytes ASCII
+- Size value - 4 bytes binary (little-endian uint32)
+- `</SIZE>` - 7 bytes ASCII
+- **Total:** 28 bytes
+
+**Example header for 51200 byte image:**
+```
+<IMG_START><SIZE>\x00\xC8\x00\x00</SIZE>
 ```
 
 ### Timing
@@ -276,17 +288,18 @@ Must also update `PayloadHandler.hpp`:
 static constexpr U32 IMAGE_BUFFER_SIZE = 512 * 1024;
 ```
 
-### Adding Image Size to Protocol
+### Verifying Image Integrity
 
-For better error handling, modify camera code to send size:
+Since the protocol now includes size, you can verify completeness:
 
-```python
-# Camera side
-size = uos.stat(filename)[6]  # Get file size
-uart.write(f"<IMG_START:{size}>\n".encode())
+```cpp
+// In processCompleteImage()
+if (m_imageBufferUsed != m_expected_size) {
+    this->log_WARNING_HI_ImageSizeMismatch(m_expected_size, m_imageBufferUsed);
+}
 ```
 
-Then parse in `isImageStartCommand()` to set `m_expected_size`.
+This catches truncation or corruption during transmission.
 
 ### Multiple Image Formats
 
