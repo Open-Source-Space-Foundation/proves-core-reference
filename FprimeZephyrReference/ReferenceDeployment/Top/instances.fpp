@@ -37,7 +37,42 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 4
 
-  instance loadSwitch1: Components.LoadSwitch base id 0x10004000 \
+  instance face4LoadSwitch: Components.LoadSwitch base id 0x10014000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance face0LoadSwitch: Components.LoadSwitch base id 0x10010000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance face1LoadSwitch: Components.LoadSwitch base id 0x10011000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance face2LoadSwitch: Components.LoadSwitch base id 0x10012000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance face3LoadSwitch: Components.LoadSwitch base id 0x10013000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance face5LoadSwitch: Components.LoadSwitch base id 0x10015000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10016000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 5
+
+  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x10017000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 5
