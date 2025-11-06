@@ -159,5 +159,9 @@ module ReferenceDeployment {
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
+
+    connections MyConnectionGraph {
+
+    }
   }
 }
