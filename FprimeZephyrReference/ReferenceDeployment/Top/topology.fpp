@@ -44,6 +44,7 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance spiDriver
+    instance mycomp
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -161,7 +162,7 @@ module ReferenceDeployment {
     }
 
     connections MyConnectionGraph {
-
+      mycomp.spiSend -> spiDriver.SpiReadWrite
     }
   }
 }
