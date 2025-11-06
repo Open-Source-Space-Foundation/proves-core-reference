@@ -61,11 +61,18 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
+  packet LoadSwitches id 9 group 4 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+  }
 
 } omit {
-  # Needs to be added appropriately later
-  loadSwitch1.IsOn
-
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
