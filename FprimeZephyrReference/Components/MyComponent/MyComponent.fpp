@@ -14,6 +14,8 @@ module Components {
         @ Command for testing
         sync command FOO()
 
+        output port spiSend: Drv.SpiReadWrite
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
