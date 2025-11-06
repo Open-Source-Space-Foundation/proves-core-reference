@@ -15,28 +15,34 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-MagnetorquerManager ::MagnetorquerManager(const char* const compName) : MagnetorquerManagerComponentBase(compName) {
-    dev = device_get_binding("DRV2605");
-}
+MagnetorquerManager ::MagnetorquerManager(const char* const compName) : MagnetorquerManagerComponentBase(compName) {}
 
 MagnetorquerManager ::~MagnetorquerManager() {}
 
+// ----------------------------------------------------------------------
+// Helper methods
+// ----------------------------------------------------------------------
+
+void MagnetorquerManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
+}
+
 void MagnetorquerManager ::START_PLAYBACK_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (!device_is_ready(dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return;
     }
-    drv2605_haptic_config(this->dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&this->rom);
+    drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&this->rom);
 }
 
 void MagnetorquerManager ::START_PLAYBACK_TEST2_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (!device_is_ready(dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return;
     }
 
     struct drv2605_rom_data rom2 = {.library = DRV2605_LIBRARY_TS2200_A, .seq_regs = {50, 0, 0, 0, 0, 0, 0, 0}};
-    drv2605_haptic_config(this->dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&rom2);
+    drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&rom2);
 }
 
 }  // namespace Drv

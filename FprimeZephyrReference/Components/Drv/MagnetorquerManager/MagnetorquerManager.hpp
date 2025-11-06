@@ -30,9 +30,12 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
     //! Destroy MagnetorquerManager object
     ~MagnetorquerManager();
 
+    //! Configure the DRV2605 device
+    void configure(const struct device* dev);
+
   private:
     //! Zephyr device to store initialized DRV2605
-    const struct device* dev;
+    const struct device* m_dev;
     struct drv2605_rom_data rom = {.library = DRV2605_LIBRARY_TS2200_A, .seq_regs = {47, 0, 0, 0, 0, 0, 0, 0}};
 
     void START_PLAYBACK_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
