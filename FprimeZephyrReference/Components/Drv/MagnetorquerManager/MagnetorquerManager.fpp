@@ -5,11 +5,13 @@ module Drv {
         @ Event for reporting DRV2605 not ready error
         event DeviceNotReady() severity warning high format "DRV2605 device not ready" throttle 5
 
-        @ Start DRV2605 playback with effect #47
-        sync command START_PLAYBACK_TEST()
+    @ Start DRV2605 playback on a device with effect #47 on a specific face
+    @ faceIdx: index of the face to actuate (valid range: 0..5)
+    sync command START_PLAYBACK_TEST(faceIdx: U8)
 
-        @ Start DRV2605 playback with effect #50
-        sync command START_PLAYBACK_TEST2()
+    @ Start DRV2605 playback on a device with effect #50 on a specific face
+    @ faceIdx: index of the face to actuate (valid range: 0..5)
+    sync command START_PLAYBACK_TEST2(faceIdx: U8)
 
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64

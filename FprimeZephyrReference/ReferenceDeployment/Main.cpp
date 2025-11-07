@@ -16,7 +16,14 @@ const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
-const struct device* drv2605 = device_get_binding("DRV2605");
+
+// Magnetorquer devices
+const struct device* face0_drv2605 = device_get_binding("FACE0_DRV2605");
+const struct device* face1_drv2605 = device_get_binding("FACE1_DRV2605");
+const struct device* face2_drv2605 = device_get_binding("FACE2_DRV2605");
+const struct device* face3_drv2605 = device_get_binding("FACE3_DRV2605");
+const struct device* face4_drv2605 = device_get_binding("FACE4_DRV2605");
+const struct device* face5_drv2605 = device_get_binding("FACE5_DRV2605");
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -33,7 +40,12 @@ int main(int argc, char* argv[]) {
     inputs.uartDevice = serial;
     inputs.lsm6dsoDevice = lsm6dso;
     inputs.lis2mdlDevice = lis2mdl;
-    inputs.drv2605Device = drv2605;
+    inputs.drv2605Devices[0] = face0_drv2605;
+    inputs.drv2605Devices[1] = face1_drv2605;
+    inputs.drv2605Devices[2] = face2_drv2605;
+    inputs.drv2605Devices[3] = face3_drv2605;
+    inputs.drv2605Devices[4] = face4_drv2605;
+    inputs.drv2605Devices[5] = face5_drv2605;
     inputs.baudRate = 115200;
 
     // Setup, cycle, and teardown topology

@@ -92,7 +92,7 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
-    magnetorquerManager.configure(state.drv2605Device);
+    magnetorquerManager.configure(state.drv2605Devices);
 }
 
 void startRateGroups() {
