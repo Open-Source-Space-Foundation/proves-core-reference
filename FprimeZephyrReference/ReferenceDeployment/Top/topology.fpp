@@ -26,7 +26,7 @@ module ReferenceDeployment {
     instance rateGroupDriver
     instance timer
     instance lora
-    instance gpioDriver
+    instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
     instance watchdog
