@@ -16,6 +16,7 @@
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
 static const struct gpio_dt_spec burnwire1Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire1), gpios);
+static const struct device* mcp23017_dev = DEVICE_DT_GET(DT_NODELABEL(mcp23017));
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -60,6 +61,14 @@ void configureTopology() {
     gpioDriver.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    face4LoadSwitch.pin_configuration(mcp23017_dev, 0);  // Pin 0 on MCP23017
+    face0LoadSwitch.pin_configuration(mcp23017_dev, 1);  // Pin 1 on MCP23017
+    face1LoadSwitch.pin_configuration(mcp23017_dev, 2);  // Pin 2 on MCP23017
+    face2LoadSwitch.pin_configuration(mcp23017_dev, 3);  // Pin 3 on MCP23017
+    face3LoadSwitch.pin_configuration(mcp23017_dev, 4);  // Pin 4 on MCP23017
+    face5LoadSwitch.pin_configuration(mcp23017_dev, 5);  // Pin 5 on MCP23017
+    payloadPowerLoadSwitch.pin_configuration(mcp23017_dev, 7);  // Pin 7 on MCP23017
+    payloadBatteryLoadSwitch.pin_configuration(mcp23017_dev, 9);  // Pin 9 on MCP23017
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
