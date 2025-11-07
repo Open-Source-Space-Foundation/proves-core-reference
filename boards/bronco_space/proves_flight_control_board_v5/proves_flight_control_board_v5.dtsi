@@ -164,9 +164,9 @@ zephyr_udc0: &usbd {
 		label = "INA219 sol";
 	};
 
-	tca9548a: tca9548a@70 {
+	tca9548a: tca9548a@77 {
 		compatible = "ti,tca9548a";
-		reg = <0x70>;
+		reg = <0x77>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		label = "TCA9548A";
