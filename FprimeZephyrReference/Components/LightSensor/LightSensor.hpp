@@ -7,6 +7,8 @@
 #ifndef Components_LightSensor_HPP
 #define Components_LightSensor_HPP
 
+#include "FprimeZephyrReference/Components/LightSensor/LightSensorComponentAc.hpp"
+
 #include <zephyr/kernel.h>
 
 #include <zephyr/sys/printk.h>
@@ -18,8 +20,6 @@
 #include <zephyr/drivers/i2c.h>
 
 #include <zephyr/drivers/sensor/veml6031.h>
-
-#include "FprimeZephyrReference/Components/LightSensor/LightSensorComponentAc.hpp"
 
 namespace Components {
 

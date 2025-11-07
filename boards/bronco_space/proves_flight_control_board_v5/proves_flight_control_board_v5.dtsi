@@ -178,6 +178,12 @@ zephyr_udc0: &usbd {
 		label = "LSM6DSO";
 	};
 
+	lightsensor: lightsensor@8A {
+		companitble = "whatever hardware it is in zephyr"
+		reg = <0x8A>
+		label = "whatever we wanna call it"
+	}
+
 	lis2mdl0: lis2mdl0@1e {
 		compatible = "st,lis2mdl";
 		reg = <0x1e>;
