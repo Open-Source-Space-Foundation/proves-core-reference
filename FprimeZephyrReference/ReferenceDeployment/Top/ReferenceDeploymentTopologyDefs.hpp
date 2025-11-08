@@ -75,7 +75,20 @@ struct TopologyState {
     const device* loraDevice;             //!< LoRa device path for communication
     const device* lsm6dsoDevice;          //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;          //!< LIS2MDL device path for magnetometer
-    const device* tmp112Device;           //!< TMP112 device path for temperature sensor
+
+    // TMP112 temperature sensor devices (11 sensors)
+    const device* face0TempDevice;        //!< TMP112 device for cube face 0
+    const device* face1TempDevice;        //!< TMP112 device for cube face 1
+    const device* face2TempDevice;        //!< TMP112 device for cube face 2
+    const device* face3TempDevice;        //!< TMP112 device for cube face 3
+    const device* face4TempDevice;        //!< TMP112 device for cube face 4
+    const device* face5TempDevice;        //!< TMP112 device for cube face 5
+    const device* topTempDevice;          //!< TMP112 device for cube top
+    const device* battCell1TempDevice;    //!< TMP112 device for battery cell 1
+    const device* battCell2TempDevice;    //!< TMP112 device for battery cell 2
+    const device* battCell3TempDevice;    //!< TMP112 device for battery cell 3
+    const device* battCell4TempDevice;    //!< TMP112 device for battery cell 4
+
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds

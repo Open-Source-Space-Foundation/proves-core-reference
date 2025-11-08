@@ -92,7 +92,19 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
-    tmp112Manager.configure(state.tmp112Device);
+
+    // Configure all 11 TMP112 temperature sensor managers
+    tmp112Face0Manager.configure(state.face0TempDevice);
+    tmp112Face1Manager.configure(state.face1TempDevice);
+    tmp112Face2Manager.configure(state.face2TempDevice);
+    tmp112Face3Manager.configure(state.face3TempDevice);
+    tmp112Face4Manager.configure(state.face4TempDevice);
+    tmp112Face5Manager.configure(state.face5TempDevice);
+    tmp112TopManager.configure(state.topTempDevice);
+    tmp112BattCell1Manager.configure(state.battCell1TempDevice);
+    tmp112BattCell2Manager.configure(state.battCell2TempDevice);
+    tmp112BattCell3Manager.configure(state.battCell3TempDevice);
+    tmp112BattCell4Manager.configure(state.battCell4TempDevice);
 }
 
 void startRateGroups() {

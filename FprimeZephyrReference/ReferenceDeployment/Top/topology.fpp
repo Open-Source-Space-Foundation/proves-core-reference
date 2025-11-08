@@ -47,7 +47,18 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
-    instance tmp112Manager
+    instance thermalManager
+    instance tmp112Face0Manager
+    instance tmp112Face1Manager
+    instance tmp112Face2Manager
+    instance tmp112Face3Manager
+    instance tmp112Face4Manager
+    instance tmp112Face5Manager
+    instance tmp112TopManager
+    instance tmp112BattCell1Manager
+    instance tmp112BattCell2Manager
+    instance tmp112BattCell3Manager
+    instance tmp112BattCell4Manager
 
 
   # ----------------------------------------------------------------------
@@ -142,6 +153,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> thermalManager.run
 
     }
 
@@ -174,6 +186,20 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
+
+    connections thermalMonitor {
+      thermalManager.face0TempGet -> tmp112Face0Manager.ambientTemperatureGet
+      thermalManager.face1TempGet -> tmp112Face1Manager.ambientTemperatureGet
+      thermalManager.face2TempGet -> tmp112Face2Manager.ambientTemperatureGet
+      thermalManager.face3TempGet -> tmp112Face3Manager.ambientTemperatureGet
+      thermalManager.face4TempGet -> tmp112Face4Manager.ambientTemperatureGet
+      thermalManager.face5TempGet -> tmp112Face5Manager.ambientTemperatureGet
+      thermalManager.topTempGet -> tmp112TopManager.ambientTemperatureGet
+      thermalManager.battCell1TempGet -> tmp112BattCell1Manager.ambientTemperatureGet
+      thermalManager.battCell2TempGet -> tmp112BattCell2Manager.ambientTemperatureGet
+      thermalManager.battCell3TempGet -> tmp112BattCell3Manager.ambientTemperatureGet
+      thermalManager.battCell4TempGet -> tmp112BattCell4Manager.ambientTemperatureGet
     }
 
   }

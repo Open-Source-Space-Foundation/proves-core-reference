@@ -49,7 +49,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lsm6dsoManager.AngularVelocity
     ReferenceDeployment.lsm6dsoManager.Temperature
     ReferenceDeployment.lis2mdlManager.MagneticField
-    ReferenceDeployment.tmp112Manager.AmbientTemperature
   }
 
   packet LoRa id 7 group 4 {
@@ -69,6 +68,20 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Voltage
     ReferenceDeployment.ina219SolManager.Current
     ReferenceDeployment.ina219SolManager.Power
+  }
+
+  packet Thermal id 10 group 4 {
+    ReferenceDeployment.tmp112Face0Manager.AmbientTemperature
+    ReferenceDeployment.tmp112Face1Manager.AmbientTemperature
+    ReferenceDeployment.tmp112Face2Manager.AmbientTemperature
+    ReferenceDeployment.tmp112Face3Manager.AmbientTemperature
+    ReferenceDeployment.tmp112Face4Manager.AmbientTemperature
+    ReferenceDeployment.tmp112Face5Manager.AmbientTemperature
+    ReferenceDeployment.tmp112TopManager.AmbientTemperature
+    ReferenceDeployment.tmp112BattCell1Manager.AmbientTemperature
+    ReferenceDeployment.tmp112BattCell2Manager.AmbientTemperature
+    ReferenceDeployment.tmp112BattCell3Manager.AmbientTemperature
+    ReferenceDeployment.tmp112BattCell4Manager.AmbientTemperature
   }
 
 } omit {

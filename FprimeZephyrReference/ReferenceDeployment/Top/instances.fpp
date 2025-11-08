@@ -96,5 +96,27 @@ module ReferenceDeployment {
 
   instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
 
-  instance tmp112Manager: Drv.TMP112Manager base id 0x10034000
+  instance thermalManager: Components.ThermalManager base id 0x10034000
+
+  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x10035000
+
+  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x10036000
+
+  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x10037000
+
+  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x10038000
+
+  instance tmp112Face4Manager: Drv.TMP112Manager base id 0x10039000
+
+  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x1003A000
+
+  instance tmp112TopManager: Drv.TMP112Manager base id 0x1003B000
+
+  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x1003C000
+
+  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x1003D000
+
+  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x1003E000
+
+  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1003F000
 }
