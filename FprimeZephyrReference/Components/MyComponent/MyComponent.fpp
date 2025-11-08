@@ -14,6 +14,7 @@ module Components {
         @ Command for testing
         sync command FOO()
 
+        @ SPI Output Port
         output port spiSend: Drv.SpiReadWrite
 
         ###############################################################################

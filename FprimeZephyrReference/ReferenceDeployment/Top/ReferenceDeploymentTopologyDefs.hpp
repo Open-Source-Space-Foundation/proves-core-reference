@@ -71,6 +71,7 @@ namespace ReferenceDeployment {
 struct TopologyState {
     const device* uartDevice;             //!< UART device path for communication
     const device* loraDevice;             //!< LoRa device path for communication
+    const device* spi0Device;             //!< Spi device path for s-band LoRa module
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds

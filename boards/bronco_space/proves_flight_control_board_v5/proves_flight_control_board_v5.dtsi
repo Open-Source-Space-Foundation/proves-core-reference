@@ -106,6 +106,14 @@ zephyr_udc0: &usbd {
 	};
 };
 
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-names = "default";
+};
+
+
 &i2c1 {
 	status = "okay";
 	pinctrl-0 = <&i2c1_default>;

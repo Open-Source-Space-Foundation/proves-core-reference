@@ -12,6 +12,7 @@
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/spi.h>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
@@ -85,6 +86,11 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
+
+    struct spi_config cfg = {
+        .frequency = 10000000  // 10 MHz -- sx1280 has maximum 18.18 MHz
+    };
+    spiDriver.configure(state.spi0Device, cfg)
 }
 
 void startRateGroups() {
