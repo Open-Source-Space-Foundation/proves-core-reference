@@ -90,7 +90,7 @@ void setupTopology(const TopologyState& state) {
     struct spi_config cfg = {
         .frequency = 10000000  // 10 MHz -- sx1280 has maximum 18.18 MHz
     };
-    spiDriver.configure(state.spi0Device, cfg)
+    spiDriver.configure(state.spi0Device, cfg);
 }
 
 void startRateGroups() {
