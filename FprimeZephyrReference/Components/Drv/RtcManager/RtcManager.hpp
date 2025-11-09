@@ -8,9 +8,8 @@
 
 #include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 
+#include <atomic>
 #include <cerrno>
-#include <string>
-#include <vector>
 
 #include <Fw/Logger/Logger.hpp>
 
@@ -64,6 +63,7 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
