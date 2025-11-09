@@ -11,6 +11,14 @@ The Authenticate component sits in the uplink communications path between the `T
 - Sequence number validation and anti-replay protection
 - APID-based filtering for command authentication requirements
 
+## Implementation Notes
+
+**FPP Limitations:** The FPP (F Prime Prime) modeling language has specific constraints that affect the event interface design:
+- Events are limited to a maximum of 3 parameters
+- String types (including `Fw.String`) are not displayable in events
+
+These limitations mean that detailed information like HMAC hash values, error reason strings, and APID lists cannot be included in event parameters. Such information can be logged through other mechanisms (e.g., dedicated log messages, extended telemetry) if needed for debugging or security auditing purposes.
+
 ## Topology Integration
 
 The component is integrated into the uplink path as follows:
@@ -32,29 +40,29 @@ The component forwards only authenticated packets (or non-authenticated packets 
 
 The security protocol operates at the Space Packet level per CCSDS 355.0-B-2. The security headers and trailers are embedded within the Space Packet Data Field, which is itself encapsulated in a TC Transfer Frame. The complete protocol stack is:
 
-1. 
+1.
 
 First the TC Transfer Frame is removed by TcDeframer
-[TC Header 5B] [Data Field] [TC Trailer 2B]            
+[TC Header 5B] [Data Field] [TC Trailer 2B]
 
 
-2. 
+2.
 THIS IS WHAT GOES THROUGH AUTHENTICATE
 
-Now the Security Header and Security Trailer must be inside the data field, as specificed by CCSDS 355.0-B-2 
+Now the Security Header and Security Trailer must be inside the data field, as specified by CCSDS 355.0-B-2
 
 Space Packet (received by Authenticate)
-[Space Packet Primary Header 6B]                          
-[Space Packet Data Field]                                 
+[Space Packet Primary Header 6B]
+[Space Packet Data Field]
     [Security Header 8B]
-    [F Prime Command Packet] 
-    [Security Trailer 8B]                                   
+    [F Prime Command Packet]
+    [Security Trailer 8B]
 
 The output from Authenticate:
 
-Space Packet 
-   [Space Packet Primary Header 6B]                          
-   [F Prime Command Packet] (security fields removed)        
+Space Packet
+   [Space Packet Primary Header 6B]
+   [F Prime Command Packet] (security fields removed)
 
 **Total packet structure:**
 - Space Packet Primary Header: 6 bytes
@@ -115,7 +123,7 @@ Framer plugin
 | AUTH06 | The component shall compare the computed HMAC with the received HMAC. If they match, authentication succeeds. If they do not match, authentication fails. | Unit Test |
 | AUTH07| If authentication succeeds, the component shall update the stored sequence number for the Security Association to the received sequence number. | Unit Test |
 | AUTH08 | If authentication succeeds, the component shall emit a ValidHash event containing the opcode (if extractable) and hash value for telemetry/logging purposes. | Unit Test |
-| AUTH09 | If authentication succeeds, the component shall remove the Security Header  and Security Trailer from the Space Packe. The modified buffer then goes to the data out. | Inspection |
+| AUTH09 | If authentication succeeds, the component shall remove the Security Header  and Security Trailer from the Space Packet. The modified buffer then goes to the data out. | Inspection |
 | AUTH015 | If authentication fails (invalid HMAC, invalid SPI, sequence number out of window), the component shall emit an InvalidHash event containing the opcode (if extractable) and hash value, then return the buffer via dataReturnOut for deallocation. | Unit Test |
 | AUTH010 | The component shall handle sequence number rollover correctly (when sequence number transitions from 0xFFFFFFFF to 0x00000000). | Unit Test |
 | AUTH011 | The component shall support multiple Security Associations (in our case, potentially one HMAC or just several keys for once HMAC), each identified by a unique SPI value and containing its own secret key, sequence number, and associated APIDs. | Unit Test, Inspection |
@@ -132,17 +140,18 @@ Framer plugin
 
 ## Events
 
-| Name | Severity | Description |
-|---|---|---|
-| ValidHash | Activity High | Emitted when a packet successfully passes HMAC authentication. Contains the extracted opcode (if available) and the computed hash value for telemetry/logging. Format: "Authenticated packet: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}" |
-| InvalidHash | Warning High | Emitted when a packet fails HMAC authentication, has an invalid SPI, or has a sequence number outside the acceptable window. Contains the extracted opcode (if available) and the received hash value. Format: "Authentication failed: APID={}, SPI={}, SeqNum={}, Opcode={}, Hash={}, Reason={}" |
-| SequenceNumberOutOfWindow | Warning High | Emitted when a packet is rejected due to sequence number being outside the configured window. Format: "Sequence number out of window: SPI={}, Expected={}, Received={}, Window={}" |
-| InvalidSPI | Warning High | Emitted when a packet contains an SPI value that does not correspond to any configured Security Association. Format: "Invalid SPI received: SPI={}, APID={}" |
-| APIDMismatch | Warning High | Emitted when the APID in FrameContext does not match the APIDs associated with the Security Association identified by the SPI. Format: "APID mismatch: SPI={}, Packet APID={}, SA APIDs={}" |
+**Note:** FPP has limitations on event parameters - events can only have a maximum of 3 parameters, and string types are not displayable in events. Therefore, hash values, reason strings, and other detailed information are omitted from the event parameters but can be logged separately through other means.
+
+| Name | Severity | Parameters | Description |
+|---|---|---|---|
+| ValidHash | Activity High | apid: U32, spi: U32, seqNum: U32 | Emitted when a packet successfully passes HMAC authentication. Contains the APID, SPI, and sequence number of the authenticated packet. Format: "Authenticated packet: APID={}, SPI={}, SeqNum={}" |
+| InvalidHash | Warning High | apid: U32, spi: U32, seqNum: U32 | Emitted when a packet fails HMAC authentication. Contains the APID, SPI, and sequence number of the failed packet. Format: "Authentication failed: APID={}, SPI={}, SeqNum={}" |
+| SequenceNumberOutOfWindow | Warning High | spi: U32, expected: U32, window: U32 | Emitted when a packet is rejected due to sequence number being outside the configured window. Contains the SPI, expected sequence number, and window size. Format: "Sequence number out of window: SPI={}, Expected={}, Window={}" |
+| InvalidSPI | Warning High | spi: U32, apid: U32 | Emitted when a packet contains an SPI value that does not correspond to any configured Security Association. Contains the invalid SPI and the APID. Format: "Invalid SPI received: SPI={}, APID={}" |
+| APIDMismatch | Warning High | spi: U32, packetApid: U32 | Emitted when the APID in FrameContext does not match the APIDs associated with the Security Association identified by the SPI. Contains the SPI and the mismatched packet APID. Format: "APID mismatch: SPI={}, Packet APID={}" |
 
 ## Telemetry Channels
 
-TODO (remove if not needed)
 | Name | Type | Description |
 |---|---|---|
 | AuthenticatedPacketsCount | U64 | Total count of successfully authenticated packets |
@@ -151,10 +160,10 @@ TODO (remove if not needed)
 
 ## Commands
 
-| Name | Parameters | Description |
-|---|---|---|
-| GET_SEQ_NUM | U16 | Command to retrieve the current sequence number |
-| SET_SEQ_NUM | U16 | Command to set the current sequence number |
+| Name | Type | Parameters | Description |
+|---|---|---|---|
+| GET_SEQ_NUM | Sync | None | Command to retrieve the current sequence number for debugging/verification purposes |
+| SET_SEQ_NUM | Sync | seq_num: U32 | Command to manually set the current sequence number (should be used with caution as it affects authentication) |
 
 ## Configuration
 

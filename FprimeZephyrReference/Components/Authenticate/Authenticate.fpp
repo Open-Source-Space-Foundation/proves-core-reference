@@ -1,4 +1,13 @@
 module Components {
+    @ String type for hash values
+    type HashString = string size 128
+
+    @ String type for error reasons
+    type ReasonString = string size 256
+
+    @ String type for APID lists
+    type ApidString = string size 256
+
     @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
     passive component Authenticate {
 
@@ -9,17 +18,49 @@ module Components {
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
 
+        sync command GET_SEQ_NUM()
+
+        sync command SET_SEQ_NUM(seq_num: U32)
+
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64
 
-        # @ Example event
-        # event ExampleStateEvent(example_state: Fw.On) severity activity high id 0 format "State set to {}"
+        telemetry AuthenticatedPacketsCount : U64
 
-        # @ Example port: receiving calls from the rate group
-        # sync input port run: Svc.Sched
+        telemetry RejectedPacketsCount : U64
+
+        telemetry CurrentSequenceNumber : U32
+
+        # @ Events for packet authentication
+
+        event ValidHash(apid: U32, spi: U32, seqNum: U32) severity activity high id 0 format "Authenticated packet: APID={}, SPI={}, SeqNum={}"
+
+        event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}"
+
+        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: SPI={}, Expected={}, Window={}"
+
+        event InvalidSPI(spi: U32, apid: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, APID={}"
+
+        event APIDMismatch(spi: U32, packetApid: U32) severity warning high id 4 format "APID mismatch: SPI={}, Packet APID={}"
+
+        # @ Ports for packet authentication
+
+        @ Port receiving Space Packets from TcDeframer
+        guarded input port dataIn: Svc.ComDataWithContext
+
+        @ Port forwarding authenticated or non-authenticated packets to SpacePacketDeframer
+        output port dataOut: Svc.ComDataWithContext
+
+        @ Port returning ownership of invalid/unauthorized packets back to upstream component
+        output port dataReturnOut: Svc.ComDataWithContext
+
+        @ Port receiving back ownership of buffers sent to dataOut
+        sync input port dataReturnIn: Svc.ComDataWithContext
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
+
+
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
