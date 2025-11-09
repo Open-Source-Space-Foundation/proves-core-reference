@@ -57,6 +57,9 @@ class Authenticate final : public AuthenticateComponentBase {
     void SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                 U32 cmdSeq,           //!< The command sequence number
                                 U32 seq_num) override;
+
+    std::atomic<U32> sequenceNumber;  
+
 };
 
 }  // namespace Components
