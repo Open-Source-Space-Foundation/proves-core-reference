@@ -4,7 +4,7 @@ module Drv {
 }
 
 # Component definition
-module Drv {
+module Drv {  
     @ LIS2MDL Manager Component for F Prime FSW framework.
     passive component Lis2mdlManager {
         @ Port to read the current magnetic field in gauss.
