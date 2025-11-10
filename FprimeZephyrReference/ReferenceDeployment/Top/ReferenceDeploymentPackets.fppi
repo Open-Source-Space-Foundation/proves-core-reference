@@ -61,7 +61,18 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet PowerMonitor id 9 group 4 {
+  packet LoadSwitches id 9 group 4 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+  }
+
+  packet PowerMonitor id 10 group 4 {
     ReferenceDeployment.ina219SysManager.Voltage
     ReferenceDeployment.ina219SysManager.Current
     ReferenceDeployment.ina219SysManager.Power
@@ -70,22 +81,34 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
   }
 
-  packet Thermal id 10 group 4 {
-    ReferenceDeployment.tmp112Face0Manager.AmbientTemperature
-    ReferenceDeployment.tmp112Face1Manager.AmbientTemperature
-    ReferenceDeployment.tmp112Face2Manager.AmbientTemperature
-    ReferenceDeployment.tmp112Face3Manager.AmbientTemperature
-    ReferenceDeployment.tmp112Face4Manager.AmbientTemperature
-    ReferenceDeployment.tmp112Face5Manager.AmbientTemperature
-    ReferenceDeployment.tmp112TopManager.AmbientTemperature
-    ReferenceDeployment.tmp112BattCell1Manager.AmbientTemperature
-    ReferenceDeployment.tmp112BattCell2Manager.AmbientTemperature
-    ReferenceDeployment.tmp112BattCell3Manager.AmbientTemperature
-    ReferenceDeployment.tmp112BattCell4Manager.AmbientTemperature
+  packet Thermal id 11 group 4 {
+    ReferenceDeployment.thermalManager.Face0Temperature
+    ReferenceDeployment.thermalManager.Face1Temperature
+    ReferenceDeployment.thermalManager.Face2Temperature
+    ReferenceDeployment.thermalManager.Face3Temperature
+    ReferenceDeployment.thermalManager.Face4Temperature
+    ReferenceDeployment.thermalManager.Face5Temperature
+    ReferenceDeployment.thermalManager.TopTemperature
+    ReferenceDeployment.thermalManager.BattCell1Temperature
+    ReferenceDeployment.thermalManager.BattCell2Temperature
+    ReferenceDeployment.thermalManager.BattCell3Temperature
+    ReferenceDeployment.thermalManager.BattCell4Temperature
   }
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
+  # TMP112Manager channels are aggregated through ThermalManager
+  ReferenceDeployment.tmp112Face0Manager.AmbientTemperature
+  ReferenceDeployment.tmp112Face1Manager.AmbientTemperature
+  ReferenceDeployment.tmp112Face2Manager.AmbientTemperature
+  ReferenceDeployment.tmp112Face3Manager.AmbientTemperature
+  ReferenceDeployment.tmp112Face4Manager.AmbientTemperature
+  ReferenceDeployment.tmp112Face5Manager.AmbientTemperature
+  ReferenceDeployment.tmp112TopManager.AmbientTemperature
+  ReferenceDeployment.tmp112BattCell1Manager.AmbientTemperature
+  ReferenceDeployment.tmp112BattCell2Manager.AmbientTemperature
+  ReferenceDeployment.tmp112BattCell3Manager.AmbientTemperature
+  ReferenceDeployment.tmp112BattCell4Manager.AmbientTemperature
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
   CdhCore.version.LibraryVersion03

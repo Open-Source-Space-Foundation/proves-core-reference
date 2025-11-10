@@ -30,6 +30,14 @@ const struct device* batt_cell2_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell2_tem
 const struct device* batt_cell3_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell3_temp_sens));
 const struct device* batt_cell4_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell4_temp_sens));
 
+// Magnetorquer devices
+const struct device* face0_drv2605 = device_get_binding("FACE0_DRV2605");
+const struct device* face1_drv2605 = device_get_binding("FACE1_DRV2605");
+const struct device* face2_drv2605 = device_get_binding("FACE2_DRV2605");
+const struct device* face3_drv2605 = device_get_binding("FACE3_DRV2605");
+const struct device* face4_drv2605 = device_get_binding("FACE4_DRV2605");
+const struct device* face5_drv2605 = device_get_binding("FACE5_DRV2605");
+
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
     //
@@ -58,6 +66,14 @@ int main(int argc, char* argv[]) {
     inputs.battCell2TempDevice = batt_cell2_temp;
     inputs.battCell3TempDevice = batt_cell3_temp;
     inputs.battCell4TempDevice = batt_cell4_temp;
+
+    // Magnetorquer devices
+    inputs.drv2605Devices[0] = face0_drv2605;
+    inputs.drv2605Devices[1] = face1_drv2605;
+    inputs.drv2605Devices[2] = face2_drv2605;
+    inputs.drv2605Devices[3] = face3_drv2605;
+    inputs.drv2605Devices[4] = face4_drv2605;
+    inputs.drv2605Devices[5] = face5_drv2605;
 
     inputs.baudRate = 115200;
 

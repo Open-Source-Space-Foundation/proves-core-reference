@@ -39,9 +39,54 @@ module Components {
         output port battCell4TempGet: Drv.AmbientTemperatureGet
 
         ###############################################################################
+        # Telemetry Channels                                                          #
+        ###############################################################################
+        @ Face 0 temperature in degrees Celsius
+        telemetry Face0Temperature: F64
+
+        @ Face 1 temperature in degrees Celsius
+        telemetry Face1Temperature: F64
+
+        @ Face 2 temperature in degrees Celsius
+        telemetry Face2Temperature: F64
+
+        @ Face 3 temperature in degrees Celsius
+        telemetry Face3Temperature: F64
+
+        @ Face 4 temperature in degrees Celsius
+        telemetry Face4Temperature: F64
+
+        @ Face 5 temperature in degrees Celsius
+        telemetry Face5Temperature: F64
+
+        @ Top temperature in degrees Celsius
+        telemetry TopTemperature: F64
+
+        @ Battery cell 1 temperature in degrees Celsius
+        telemetry BattCell1Temperature: F64
+
+        @ Battery cell 2 temperature in degrees Celsius
+        telemetry BattCell2Temperature: F64
+
+        @ Battery cell 3 temperature in degrees Celsius
+        telemetry BattCell3Temperature: F64
+
+        @ Battery cell 4 temperature in degrees Celsius
+        telemetry BattCell4Temperature: F64
+
+        ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for emitting telemetry
+        telemetry port tlmOut
+
+        @ Port for emitting events
+        event port logOut
+
+        @ Port for emitting text events
+        text event port logTextOut
     }
 }

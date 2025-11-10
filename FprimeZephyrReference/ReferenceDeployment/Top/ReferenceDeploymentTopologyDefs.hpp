@@ -89,6 +89,8 @@ struct TopologyState {
     const device* battCell3TempDevice;    //!< TMP112 device for battery cell 3
     const device* battCell4TempDevice;    //!< TMP112 device for battery cell 4
 
+    const device* drv2605Devices[6];      //!< Array of drv2605 devices (6)
+
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds

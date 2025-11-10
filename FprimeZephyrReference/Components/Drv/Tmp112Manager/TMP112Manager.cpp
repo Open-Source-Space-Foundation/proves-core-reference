@@ -37,9 +37,17 @@ F64 TMP112Manager ::ambientTemperatureGet_handler(FwIndexType portNum) {
 
     struct sensor_value temp;
 
-    sensor_sample_fetch(this->m_dev);
+    int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP);
+    if (rc != 0) {
+        // Sensor fetch failed - return 0 to indicate error
+        return 0;
+    }
 
-    sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+    if (rc != 0) {
+        // Channel get failed - return 0 to indicate error
+        return 0;
+    }
 
     this->tlmWrite_AmbientTemperature(sensor_value_to_double(&temp));
 
