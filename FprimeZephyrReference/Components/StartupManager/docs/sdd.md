@@ -22,8 +22,9 @@ Add diagrams here
 ## How to Run
 
 1. Choose the startup sequence from the sequences file. To update the .bin file run `make sequence SEQ=startup`
-2. Restart the cube, it should do the startup sequence right away
-3. To disable the startup sequence delete the sequence file. Use FileHandling.filemanager.RemoveFile to remove the startup.bin file
+2. Upload the startup.bin file using uplink. Make sure its set in root in the cube as startup.bin
+3. Restart the cube, it should do the startup sequence right away
+4. To disable the startup sequence delete the sequence file. Use FileHandling.filemanager.RemoveFile to remove the startup.bin file
 
 The StartupManager maintains internal state tracking its lifecycle:
 
