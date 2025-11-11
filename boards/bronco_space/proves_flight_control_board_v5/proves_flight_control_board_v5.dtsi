@@ -323,17 +323,6 @@ zephyr_udc0: &usbd {
 				compatible = "ti,tmp112";
 				reg = <0x72>;
 			};
-
-			face5_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE5_DRV2605";
-
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
 		};
 
 		i2c_mux@7 {

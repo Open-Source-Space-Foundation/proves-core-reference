@@ -75,7 +75,7 @@ struct TopologyState {
     const device* loraDevice;             //!< LoRa device path for communication
     const device* lsm6dsoDevice;          //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;          //!< LIS2MDL device path for magnetometer
-    const device* drv2605Devices[6];      //!< Array of drv2605 devices (6)
+    const device* drv2605Devices[5];      //!< Array of DRV2605 devices (5)
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
