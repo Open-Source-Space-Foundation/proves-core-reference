@@ -76,6 +76,17 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lightSensor.IRLightData
   }
 
+  packet LoadSwitches id 11 group 4 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
