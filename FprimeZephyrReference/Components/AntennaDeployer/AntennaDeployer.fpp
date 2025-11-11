@@ -68,6 +68,12 @@ module Components {
         ) severity activity high \
           format "Quiet time expired after {} seconds, starting deployment attempt"
 
+        @ Reports how many scheduler ticks the burn signal was held active for the latest attempt
+        event AntennaBurnSignalCount(
+            ticks: U32 @< Number of scheduler ticks spent in the burn state
+        ) severity activity low \
+          format "Burn signal active for {} scheduler ticks"
+
         ######################################################################
         # Ports
         ######################################################################

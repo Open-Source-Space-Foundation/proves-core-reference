@@ -6,8 +6,6 @@
 #ifndef Components_Burnwire_HPP
 #define Components_Burnwire_HPP
 
-#include <Fw/Time/Time.hpp>
-#include <Os/IntervalTimer.hpp>
 #include <atomic>
 #include "FprimeZephyrReference/Components/Burnwire/BurnwireComponentAc.hpp"
 
@@ -65,8 +63,6 @@ class Burnwire final : public BurnwireComponentBase {
     Fw::On m_state = Fw::On::OFF;      // keeps track if burnwire is on or off
     std::atomic<U32> m_safetyCounter;  // makes this an atomic variable (so its set only in one command),
                                        // you read and write half the value bc a corrupted read could be dangerouts
-    Os::IntervalTimer m_burnTimer;
-    bool m_timerRunning = false;
 };
 
 }  // namespace Components

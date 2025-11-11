@@ -137,8 +137,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
 
