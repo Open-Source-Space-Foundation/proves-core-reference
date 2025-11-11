@@ -4,6 +4,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219Manager.hpp"
+
 #include <Fw/Types/Assert.hpp>
 
 namespace Drv {

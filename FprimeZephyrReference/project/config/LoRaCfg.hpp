@@ -1,7 +1,8 @@
 #ifndef LORA_CFG_HPP
 #define LORA_CFG_HPP
-#include <zephyr/drivers/lora.h>
 #include <Fw/FPrimeBasicTypes.hpp>
+
+#include <zephyr/drivers/lora.h>
 namespace LoRaConfig {
 const U32 FREQUENCY = 437400000;               //!< LoRa frequency in Hz
 lora_signal_bandwidth BANDWIDTH = BW_125_KHZ;  //!< LoRa bandwidth
