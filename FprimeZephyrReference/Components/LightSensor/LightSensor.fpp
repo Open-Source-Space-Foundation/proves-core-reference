@@ -27,6 +27,9 @@ module Components {
         @ Port for polling the light sensor data - called by rate group
         sync input port run: Svc.Sched
 
+        @ Port for reading gpio status
+        output port gpioRead: Drv.GpioRead
+
         #### Events ####
 
         @ Event for light sensor errors

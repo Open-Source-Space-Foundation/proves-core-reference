@@ -163,6 +163,34 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sol";
 	};
+
+	tca9548a: tca9548a@77 {
+		compatible = "ti,tca9548a";
+		status = "okay";
+		reg = <0x77>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		label = "TCA9548A";
+		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+
+		i2c_mux@0 {
+			compatible = "ti,tca9548a-channel";
+			label = "face0_i2c";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face0_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+			light: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+			};
+		};
+
+
+	};
 };
 
 
@@ -177,12 +205,6 @@ zephyr_udc0: &usbd {
 		reg = <0x6b>;
 		label = "LSM6DSO";
 	};
-
-	lightsensor: lightsensor@8A {
-		companitble = "whatever hardware it is in zephyr"
-		reg = <0x8A>
-		label = "whatever we wanna call it"
-	}
 
 	lis2mdl0: lis2mdl0@1e {
 		compatible = "st,lis2mdl";

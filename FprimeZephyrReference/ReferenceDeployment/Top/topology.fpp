@@ -47,6 +47,7 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance lightSensor
 
 
   # ----------------------------------------------------------------------
@@ -141,7 +142,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
-
+      rateGroup1Hz.RateGroupMemberOut[11] -> lightSensor.run
     }
 
 

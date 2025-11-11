@@ -39,7 +39,7 @@ class LightSensor final : public LightSensorComponentBase {
 
     void ReadData();
 
-    void ConfigureSensor(const struct device* dev);
+    void configure(const struct device* dev);
 
   private:
     // ----------------------------------------------------------------------
@@ -52,6 +52,7 @@ class LightSensor final : public LightSensorComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+    
 
     F32 m_RawLightData;
 

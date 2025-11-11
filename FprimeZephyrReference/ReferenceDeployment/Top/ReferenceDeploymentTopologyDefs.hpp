@@ -78,6 +78,7 @@ struct TopologyState {
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    const device* lightsensor;            //!< device path for the light sensor
 };
 
 namespace PingEntries = ::PingEntries;
