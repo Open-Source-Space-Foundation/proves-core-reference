@@ -144,4 +144,6 @@ reboot
 ./run.sh
 ```
 
+You may have initial issues with running the scripts because of west installations. In order to setup the zephyr environment cd into your work folder (it should have asked you to choose a folder name, default would be _work), and then in proves-core-reference/proves-core-reference and run make. This will take care of all of the dependencies needed
+
 Ensure that you set our computer to not sleep or hibernate, as this will stop the runner. Also ensure that the runner is restarted if the machine reboots.
