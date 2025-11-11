@@ -28,7 +28,7 @@ module Components {
         ######################################################################
         # Telemetry
         ######################################################################
-        @ Counts the number of deployment attempts in the current deployment session
+        @ Counts the number of deployment attempts
         telemetry DeployAttemptCount: U32
 
         @ Tracks the last observed distance reading
