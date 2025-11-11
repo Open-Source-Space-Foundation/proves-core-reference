@@ -88,7 +88,11 @@ void setupTopology(const TopologyState& state) {
     comDriver.configure(state.uartDevice, state.baudRate);
 
     struct spi_config cfg = {
-        .frequency = 10000000  // 10 MHz -- sx1280 has maximum 18.18 MHz
+        .frequency = 1000000,  // 1 MHz -- sx1280 has maximum 18.18 MHz -- there is a 12MHz oscillator on-board
+        .operation = SPI_WORD_SET(8),
+        .slave = 0,
+        .cs = 0,
+
     };
     spiDriver.configure(state.spi0Device, cfg);
 }
