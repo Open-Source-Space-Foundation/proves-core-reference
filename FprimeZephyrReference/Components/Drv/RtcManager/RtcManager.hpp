@@ -6,14 +6,12 @@
 #ifndef Components_RtcManager_HPP
 #define Components_RtcManager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
-
+#include <Fw/Logger/Logger.hpp>
 #include <cerrno>
 #include <string>
 #include <vector>
 
-#include <Fw/Logger/Logger.hpp>
-
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>

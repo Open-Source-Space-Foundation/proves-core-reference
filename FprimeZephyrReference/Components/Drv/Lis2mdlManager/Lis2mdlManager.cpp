@@ -5,8 +5,9 @@
 
 #include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManager.hpp"
 
-#include <zephyr/kernel.h>
 #include <Fw/Types/Assert.hpp>
+
+#include <zephyr/kernel.h>
 
 namespace Drv {
 
@@ -14,18 +15,24 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {
-    dev = device_get_binding("LIS2MDL");
-}
+Lis2mdlManager ::Lis2mdlManager(const char* const compName) : Lis2mdlManagerComponentBase(compName) {}
 
 Lis2mdlManager ::~Lis2mdlManager() {}
+
+// ----------------------------------------------------------------------
+// Helper methods
+// ----------------------------------------------------------------------
+
+void Lis2mdlManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
 Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum) {
-    if (!device_is_ready(dev)) {
+    if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return Drv::MagneticField(0.0, 0.0, 0.0, -1);
     }
@@ -35,14 +42,14 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum
     struct sensor_value y;
     struct sensor_value z;
 
-    sensor_sample_fetch_chan(dev, SENSOR_CHAN_MAGN_XYZ);
+    sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_MAGN_XYZ);
 
-    sensor_channel_get(dev, SENSOR_CHAN_MAGN_X, &x);
-    sensor_channel_get(dev, SENSOR_CHAN_MAGN_Y, &y);
-    sensor_channel_get(dev, SENSOR_CHAN_MAGN_Z, &z);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_X, &x);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Y, &y);
+    sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Z, &z);
 
-    Drv::MagneticField magnetic_readings = Drv::MagneticField(Drv::sensor_value_to_f64(x), Drv::sensor_value_to_f64(y),
-                                                              Drv::sensor_value_to_f64(z), k_uptime_get());
+    Drv::MagneticField magnetic_readings =
+        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_MagneticField(magnetic_readings);
 
