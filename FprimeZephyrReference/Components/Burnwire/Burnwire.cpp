@@ -4,8 +4,6 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Burnwire/Burnwire.hpp"
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 namespace Components {
 
@@ -56,8 +54,6 @@ void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
 
     if (this->m_state == Fw::On::ON) {
         this->m_safetyCounter++;
-        printk("safety counter: %u\n", this->m_safetyCounter);
-        printk("Burnwire safety counter: %u\n", this->m_safetyCounter);
         if (this->m_safetyCounter == 1) {
             this->gpioSet_out(0, Fw::Logic::HIGH);
             this->gpioSet_out(1, Fw::Logic::HIGH);
