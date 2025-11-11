@@ -1,6 +1,6 @@
 module Components {
     @ A generic load switch for controlling power to components
-    active component LoadSwitch {
+    passive component LoadSwitch {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
@@ -11,8 +11,8 @@ module Components {
 
         # @ Example async command
         # async command COMMAND_NAME(param_name: U32)
-        async command TURN_ON()
-        async command TURN_OFF()
+        sync command TURN_ON()
+        sync command TURN_OFF()
 
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64
@@ -33,7 +33,7 @@ module Components {
         
         # Input that will be used by other components if they want to force a reset 
         # (off and on again) of the load switch
-        async input port Reset: Fw.Signal
+        sync input port Reset: Fw.Signal
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
