@@ -3,4 +3,9 @@ BasedOnStyle: Chromium
 IndentWidth: 4
 ColumnLimit: 120
 AccessModifierOffset: -2
-SortIncludes: false
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Zephyr headers come last
+  - Regex: '^<zephyr/.*>'
+    Priority: 3

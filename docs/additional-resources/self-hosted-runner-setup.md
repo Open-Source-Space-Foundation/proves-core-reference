@@ -136,9 +136,19 @@ reboot
 
    - When configuring the runner in `config.sh`, ensure that when prompted, you enter `proves` as the runner group, and that you add `integration` as a label, otherwise the runner won't fit the criteria to be used for the workflow.
 
-5. **Connect the PROVES hardware**: Ensure that the PROVES hardware is connected to the machine via USB.
+5. **Install dependencies**: Clone the repository & set up west dependencies beforehand to ensure tests will work correctly.
 
-6. **Run the self-hosted runner**: Start the runner using the provided script.
+   - Assuming default paths/settings for the runner:
+   - ```sh
+     cd ~/actions-runner/_work
+     mkdir proves-core-reference && cd proves-core-reference
+     git clone https://github.com/open-source-space-foundation/proves-core-reference
+     cd proves-core-reference
+     make
+     ```
+6. **Connect the PROVES hardware**: Ensure that the PROVES hardware is connected to the machine via USB.
+
+7. **Run the self-hosted runner**: Start the runner using the provided script.
 
 ```sh
 ./run.sh

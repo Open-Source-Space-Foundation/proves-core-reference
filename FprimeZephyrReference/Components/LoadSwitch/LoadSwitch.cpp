@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitch.hpp"
+
 #include <zephyr/drivers/gpio.h>
 
 namespace Components {
