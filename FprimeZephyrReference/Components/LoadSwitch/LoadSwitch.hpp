@@ -7,8 +7,8 @@
 #ifndef Components_LoadSwitch_HPP
 #define Components_LoadSwitch_HPP
 
-#include <zephyr/kernel.h>
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
+#include <zephyr/kernel.h>
 
 // Forward declare Zephyr types to avoid header conflicts
 struct device;
