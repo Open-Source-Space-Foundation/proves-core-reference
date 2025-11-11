@@ -23,7 +23,8 @@ static const struct gpio_dt_spec face3LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODEL
 static const struct gpio_dt_spec face4LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face4_enable), gpios);
 static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face5_enable), gpios);
 static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
-static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
+static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
+    GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -103,6 +104,11 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
+
+    lsm6dsoManager.configure(state.lsm6dsoDevice);
+    lis2mdlManager.configure(state.lis2mdlDevice);
+    ina219SysManager.configure(state.ina219SysDevice);
+    ina219SolManager.configure(state.ina219SolDevice);
 }
 
 void startRateGroups() {

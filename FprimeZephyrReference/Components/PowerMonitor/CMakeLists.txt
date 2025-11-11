@@ -16,20 +16,20 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PowerMonitor.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.cpp"
-    # DEPENDS
-    #     FprimeZephyrReference_Components_Drv_Helpers
+        "${CMAKE_CURRENT_LIST_DIR}/PowerMonitor.cpp"
+#   DEPENDS
+#       MyPackage_MyOtherModule
 )
 
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Lis2mdlManager.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/PowerMonitor.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlManagerTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Lis2mdlManagerTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PowerMonitorTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PowerMonitorTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

@@ -70,6 +70,14 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.face5LoadSwitch.IsOn
     ReferenceDeployment.payloadPowerLoadSwitch.IsOn
     ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+
+  packet PowerMonitor id 10 group 4 {
+    ReferenceDeployment.ina219SysManager.Voltage
+    ReferenceDeployment.ina219SysManager.Current
+    ReferenceDeployment.ina219SysManager.Power
+    ReferenceDeployment.ina219SolManager.Voltage
+    ReferenceDeployment.ina219SolManager.Current
+    ReferenceDeployment.ina219SolManager.Power
   }
 
 } omit {
