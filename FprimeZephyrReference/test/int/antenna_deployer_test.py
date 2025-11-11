@@ -217,12 +217,12 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     # Wait for burnwire to stop
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
-    # Verify the burnwire end count shows 3 seconds
-    burnwire_end_event: EventData = fprime_test_api.assert_event(
-        f"{burnwire}.BurnwireEndCount", timeout=5
+    # Verify the antenna deployer reports the burn duration in ticks (seconds)
+    burn_signal_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.AntennaBurnSignalCount", timeout=5
     )
-    assert burnwire_end_event.args[0].val == 3, (
-        "Burnwire should have burned for 3 seconds"
+    assert burn_signal_event.args[0].val == 3, (
+        "Burn signal should have been active for 3 scheduler ticks"
     )
 
     # Verify deployment finishes with failure (no distance sensor)
