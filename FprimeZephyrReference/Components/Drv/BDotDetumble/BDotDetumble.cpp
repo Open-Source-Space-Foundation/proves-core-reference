@@ -45,7 +45,8 @@ Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNu
 }
 
 F64 BDotDetumble::getMagnitude(const Drv::MagneticField magField) {
-    return sqrt(f64_square(magField.get_x()) + f64_square(magField.get_y()) + f64_square(magField.get_z()));
+    return sqrt((magField.get_x() * magField.get_x()) + (magField.get_y() * magField.get_y()) +
+                (magField.get_z() * magField.get_z()));
 }
 
 F64* BDotDetumble::dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField) {

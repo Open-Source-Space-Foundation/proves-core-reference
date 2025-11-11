@@ -8,7 +8,6 @@
 #define Drv_BDotDetumble_HPP
 
 #include "FprimeZephyrReference/Components/Drv/BDotDetumble/BDotDetumbleComponentAc.hpp"
-#include "FprimeZephyrReference/Components/Drv/Helpers/Helpers.hpp"
 
 namespace Drv {
 
