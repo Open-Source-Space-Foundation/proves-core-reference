@@ -123,8 +123,6 @@ module ReferenceDeployment {
 
   instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
 
-  instance fsSpace: Components.FsSpace base id 0x1003B000
-
   instance powerMonitor: Components.PowerMonitor base id 0x1003C000
 
   instance ina219SysManager: Drv.Ina219Manager base id 0x1003D000
