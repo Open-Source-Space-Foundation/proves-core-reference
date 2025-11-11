@@ -64,7 +64,7 @@ def test_02_turn_on_sets_high(fprime_test_api: IntegrationTestAPI, start_gds):
     turn_on(fprime_test_api)
 
     # Confirm Load-Switch turned ON
-    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[1], timeout=2)
+    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[ON], timeout=2)
 
     # Confirm telemetry IsOn is 1
     value = get_is_on(fprime_test_api)
@@ -80,7 +80,7 @@ def test_03_turn_off_sets_low(fprime_test_api: IntegrationTestAPI, start_gds):
     turn_off(fprime_test_api)
 
     # Confirm Load-Switch turned OFF
-    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[0], timeout=2)
+    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[OFF], timeout=2)
 
     # Confirm telemetry IsOn is 0
     value = get_is_on(fprime_test_api)
