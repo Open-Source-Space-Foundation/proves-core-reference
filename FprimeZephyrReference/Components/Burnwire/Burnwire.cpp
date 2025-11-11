@@ -4,6 +4,8 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Burnwire/Burnwire.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 namespace Components {
 
