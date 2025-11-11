@@ -57,7 +57,7 @@ classDiagram
 
 | Name             | Description                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------------------- |
-| SetMagnetorquers | Input port that takes in an array (I32[5]) and applies each value to the cooresponding face |
+| SetMagnetorquers | Input port that takes in an array (I32[5]) and applies each value to the corresponding face |
 
 ## Sequence Diagrams
 
@@ -108,8 +108,8 @@ sequenceDiagram
 
 ## Commands
 
-| Name                 | Description                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
+| Name                 | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
 | START_PLAYBACK_TEST  | Start DRV2605 playback on a device with effect #47 on a specific face (faceIdx: 0-4). Test only. |
 | START_PLAYBACK_TEST2 | Start DRV2605 playback on a device with effect #50 on a specific face (faceIdx: 0-4). Test only. |
 
