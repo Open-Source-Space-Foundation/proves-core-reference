@@ -61,7 +61,18 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet PowerMonitor id 9 group 4 {
+  packet LoadSwitches id 9 group 4 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+  }
+
+  packet PowerMonitor id 10 group 4 {
     ReferenceDeployment.ina219SysManager.Voltage
     ReferenceDeployment.ina219SysManager.Current
     ReferenceDeployment.ina219SysManager.Power

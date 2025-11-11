@@ -43,10 +43,20 @@ module ReferenceDeployment {
     instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
+
+    instance face4LoadSwitch
+    instance face0LoadSwitch
+    instance face1LoadSwitch
+    instance face2LoadSwitch
+    instance face3LoadSwitch
+    instance face5LoadSwitch
+    instance payloadPowerLoadSwitch
+    instance payloadBatteryLoadSwitch
     instance fsSpace
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance magnetorquerManager
 
 
   # ----------------------------------------------------------------------

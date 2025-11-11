@@ -163,6 +163,180 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sol";
 	};
+
+
+	tca9548a: tca9548a@77 {
+		compatible = "ti,tca9548a";
+		status = "okay";
+		reg = <0x77>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		label = "TCA9548A";
+		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+
+		i2c_mux@0 {
+			compatible = "ti,tca9548a-channel";
+			label = "face0_i2c";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face0_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+
+			face0_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE0_DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+
+		i2c_mux@1 {
+			compatible = "ti,tca9548a-channel";
+			label = "face1_i2c";
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face1_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+
+			face1_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE1_DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+
+		i2c_mux@2 {
+			compatible = "ti,tca9548a-channel";
+			label = "face2_i2c";
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face2_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+
+			face2_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE2_DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+
+		i2c_mux@3 {
+			compatible = "ti,tca9548a-channel";
+			label = "face3_i2c";
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face3_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+
+			face3_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE3_DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+
+		i2c_mux@4 {
+			compatible = "ti,tca9548a-channel";
+			label = "battery_i2c";
+			reg = <4>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			batt_cell1_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+			batt_cell2_temp_sens: tmp112@73 {
+				compatible = "ti,tmp112";
+				reg = <0x73>;
+			};
+			batt_cell3_temp_sens: tmp112@74 {
+				compatible = "ti,tmp112";
+				reg = <0x74>;
+			};
+			batt_cell4_temp_sens: tmp112@75 {
+				compatible = "ti,tmp112";
+				reg = <0x75>;
+			};
+		};
+
+		i2c_mux@5 {
+			compatible = "ti,tca9548a-channel";
+			label = "face4_i2c";
+			reg = <5>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face4_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+
+			face4_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE4_DRV2605";
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+		};
+
+		i2c_mux@6 {
+			compatible = "ti,tca9548a-channel";
+			label = "face5_i2c";
+			reg = <6>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			face5_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+		};
+
+		i2c_mux@7 {
+			compatible = "ti,tca9548a-channel";
+			label = "top_i2c";
+			reg = <7>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			top_temp_sens: tmp112@72 {
+				compatible = "ti,tmp112";
+				reg = <0x72>;
+			};
+		};
+	};
 };
 
 
@@ -190,4 +364,137 @@ zephyr_udc0: &usbd {
 		backup-switch-mode = "direct";
 		label = "RV3028";
 	};
+	ina219: ina219@40 {
+		compatible = "ti,ina219";
+		reg = <0x40>;
+		shunt-milliohm = <2>;
+		lsb-microamp = <100>;
+		label = "INA219";
+	};
+    mcp23017: mcp23017@20 {
+        compatible = "microchip,mcp23017";
+        reg = <0x20>;
+        gpio-controller;
+        #gpio-cells = <2>;
+
+        // GPIO line names for traceability
+        gpio-line-names = "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+                          "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE",
+                          "ENABLE_Heater", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+                          "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3";
+
+        reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
+
+        ngpios = <16>;
+    };
+};
+
+// GPIO Expander IO
+/ {
+
+    // Define the GPIO outputs based on your schematic
+    gpio_outputs {
+        compatible = "gpio-leds";  // Using gpio-leds as a convenient container
+
+        face4_enable: face4-enable {
+
+            gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>;  // GPB0
+            label = "FACE4_ENABLE";
+        };
+
+        face0_enable: face0-enable {
+
+            gpios = <&mcp23017 9 GPIO_ACTIVE_HIGH>;  // GPB1
+            label = "FACE0_ENABLE";
+        };
+
+        face1_enable: face1-enable {
+
+            gpios = <&mcp23017 10 GPIO_ACTIVE_HIGH>;  // GPB2
+            label = "FACE1_ENABLE";
+        };
+
+        face2_enable: face2-enable {
+
+            gpios = <&mcp23017 11 GPIO_ACTIVE_HIGH>;  // GPB3
+            label = "FACE2_ENABLE";
+        };
+
+        face3_enable: face3-enable {
+
+            gpios = <&mcp23017 12 GPIO_ACTIVE_HIGH>;  // GPB4
+            label = "FACE3_ENABLE";
+        };
+
+        face5_enable: face5-enable {
+
+            gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;  // GPB5
+            label = "FACE5_ENABLE";
+        };
+
+        enable_heater: enable-heater {
+
+            gpios = <&mcp23017 0 GPIO_ACTIVE_HIGH>;  // GPA0
+            label = "ENABLE_Heater";
+        };
+
+        payload_pwr_enable: payload-pwr-enable {
+
+            gpios = <&mcp23017 1 GPIO_ACTIVE_HIGH>;  // GPA1
+            label = "PAYLOAD_PWR_ENABLE";
+        };
+
+        fire_deploy2_b: fire-deploy2-b {
+
+            gpios = <&mcp23017 2 GPIO_ACTIVE_HIGH>;  // GPA2
+            label = "FIRE_DEPLOY2_B";
+        };
+
+        payload_batt_enable: payload-batt-enable {
+
+            gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
+            label = "PAYLOAD_BATT_ENABLE";
+        };
+    };
+
+    // Define GPIO inputs
+    gpio_inputs {
+        compatible = "gpio-keys";
+
+		charge: charge {
+
+            gpios = <&mcp23017 16 GPIO_ACTIVE_HIGH>;  // GPB7
+            label = "CHARGE";
+        };
+
+        readonly: readonly {
+
+            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB6
+            label = "READONLY";
+        };
+
+        rf2_io2: rf2-io2 {
+
+            gpios = <&mcp23017 4 GPIO_ACTIVE_HIGH>;  // GPA4
+            label = "RF2_IO2";
+        };
+
+        rf2_io1: rf2-io1 {
+
+            gpios = <&mcp23017 5 GPIO_ACTIVE_HIGH>;  // GPA5
+            label = "RF2_IO1";
+        };
+
+        rf2_io0: rf2-io0 {
+
+            gpios = <&mcp23017 6 GPIO_ACTIVE_HIGH>;  // GPA6
+            label = "RF2_IO0";
+        };
+
+        rf2_io3: rf2-io3 {
+
+            gpios = <&mcp23017 7 GPIO_ACTIVE_HIGH>;  // GPA7
+            label = "RF2_IO3";
+        };
+    };
 };
