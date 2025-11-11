@@ -5,6 +5,9 @@
 
 #include "FprimeZephyrReference/Components/Burnwire/Burnwire.hpp"
 
+#include <algorithm>
+#include <limits>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -14,6 +17,7 @@ namespace Components {
 Burnwire ::Burnwire(const char* const compName) : BurnwireComponentBase(compName) {
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::OFF;
+    this->m_timerRunning = false;
 }
 
 Burnwire ::~Burnwire() {}
@@ -34,6 +38,9 @@ void Burnwire::startBurn() {
     this->m_safetyCounter = 0;
     this->m_state = Fw::On::ON;
 
+    this->m_burnTimer.start();
+    this->m_timerRunning = true;
+
     Fw::ParamValid valid;
     U32 timeout = this->paramGet_SAFETY_TIMER(valid);
     this->log_ACTIVITY_HI_SafetyTimerState(timeout);
@@ -44,8 +51,23 @@ void Burnwire::stopBurn() {
     this->gpioSet_out(0, Fw::Logic::LOW);
     this->gpioSet_out(1, Fw::Logic::LOW);
 
+    const U32 countedSeconds = this->m_safetyCounter.load();
+
+    U32 elapsedSeconds = countedSeconds;
+    if (this->m_timerRunning) {
+        this->m_burnTimer.stop();
+        const U32 elapsedUsec = this->m_burnTimer.getDiffUsec();
+
+        if (elapsedUsec != std::numeric_limits<U32>::max()) {
+            const U32 roundedSeconds = static_cast<U32>((elapsedUsec + 500000U) / 1000000U);
+            elapsedSeconds = std::max(elapsedSeconds, roundedSeconds);
+        }
+
+        this->m_timerRunning = false;
+    }
+
     this->m_state = Fw::On::OFF;
-    this->log_ACTIVITY_LO_BurnwireEndCount(m_safetyCounter);
+    this->log_ACTIVITY_LO_BurnwireEndCount(elapsedSeconds);
 }
 
 void Burnwire ::schedIn_handler(FwIndexType portNum, U32 context) {
