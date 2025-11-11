@@ -7,8 +7,8 @@
 #ifndef Components_LoadSwitch_HPP
 #define Components_LoadSwitch_HPP
 
-#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
 #include <zephyr/kernel.h>
+#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
 
 // Forward declare Zephyr types to avoid header conflicts
 struct device;
@@ -50,7 +50,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Handler implementation for Reset
     void Reset_handler(FwIndexType portNum  //!< The port number
                        ) override;
-    
 };
 
 }  // namespace Components
