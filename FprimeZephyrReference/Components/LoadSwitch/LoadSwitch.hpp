@@ -56,7 +56,7 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Handler implementation for Reset
     void Reset_handler(FwIndexType portNum  //!< The port number
                        ) override;
-    
+
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------

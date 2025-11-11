@@ -26,12 +26,12 @@ module Components {
         # sync input port run: Svc.Sched
         #output port Status: Drv.GpioRead
         #We will not be putting a Drv.GpioRead port here, we are using the Gpio Driver component which has this already!
-        
+
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 
-        
-        # Input that will be used by other components if they want to force a reset 
+
+        # Input that will be used by other components if they want to force a reset
         # (off and on again) of the load switch
         async input port Reset: Fw.Signal
 
