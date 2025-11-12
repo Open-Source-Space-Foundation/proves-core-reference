@@ -53,6 +53,10 @@ jobs:
         run: |
           make zephyr-python-deps
 
+      - name: Clean build cache
+        run: |
+          make clean
+
       - name: Generate
         run: |
           make generate

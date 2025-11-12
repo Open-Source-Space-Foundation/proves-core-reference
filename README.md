@@ -21,6 +21,17 @@ cd proves-core-reference
 make
 ```
 
+## Configuration
+
+### Spacecraft ID
+
+The spacecraft ID is used to identify different spacecraft/devices in the communication protocol. The project uses different spacecraft IDs for different build environments:
+
+- **Development builds**: `0x0044` (68 in decimal) - Uses `ComCfg.fpp`
+- **CI builds**: `0x00C1` (193 in decimal) - Uses `ComCfg.CI.fpp`
+
+The build system automatically selects the appropriate configuration file based on the `CI` environment variable. CI builds (when `CI` environment variable is set) automatically use the CI spacecraft ID to prevent conflicts with development devices in shared lab environments.
+
 ## Running the code
 
 Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
