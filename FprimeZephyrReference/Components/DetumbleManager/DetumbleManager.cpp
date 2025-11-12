@@ -6,7 +6,6 @@
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
-
 #include <algorithm>
 #include <cmath>
 
@@ -25,13 +24,28 @@ DetumbleManager ::~DetumbleManager() {}
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
-    // Read from Lsm6dsoManager
-    this->accelerationGet_out(0);
-    this->angularVelocityGet_out(0);
-    this->temperatureGet_out(0);
+    U32 currTime = this->timeGet_out(0);
 
-    // Read from Lis2mdlManager
-    this->magneticFieldGet_out(0);
+    if (this->paramGet_DETUMBLE_RUNNING()) {
+        // Check if we've hit the max time detumble can run
+        if (currTime - this->paramGet_START_TIME() <= this->paramGet_MAX_TIME()) {
+            bool res = this->executeControlStep();
+            if (!res) {
+                // Log some error
+                continue;
+            }
+        } else {
+            // Max iterations reached, disable detumble for now
+            this->paramSet_DETUMBLE_RUNNING(false);
+            this->paramSet_LAST_COMPLETED(currTime);
+        }
+    } else {
+        // Check if the cooldown has ended, and start if so.
+        if (currTime - this->paramGet_LAST_COMPLETED() >= this->paramGet_COOLDOWN()) {
+            this->paramSet_DETUMBLE_RUNNING(true);
+            this->paramSet_START_TIME(currTime);
+        }
+    }
 }
 
 bool DetumbleManager::executeControlStep() {
@@ -69,7 +83,7 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 y2 = -limited_y;
     F64 z1 = limited_z;
 
-    // Apply values to magnetorquers here
+    this->magnetorquersSet_out(0, {x1, x2, y1, y2, z1});
 }
 
 }  // namespace Components

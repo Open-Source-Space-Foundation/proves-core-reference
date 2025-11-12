@@ -6,9 +6,9 @@
 #ifndef Components_DetumbleManager_HPP
 #define Components_DetumbleManager_HPP
 
-#include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
-
 #include <cmath>
+
+#include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
 
 namespace Components {
 
