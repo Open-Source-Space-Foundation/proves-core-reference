@@ -11,7 +11,8 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_console_throttled(false) {
+RtcManager ::RtcManager(const char* const compName)
+    : RtcManagerComponentBase(compName), m_console_throttled(false), m_retry_count(0) {
     // Initialize device
     this->dev = device_get_binding("RV3028");
 }
@@ -25,15 +26,47 @@ RtcManager ::~RtcManager() {}
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->dev)) {
-        // Use logger instead of events since this fn is in a critical path for FPrime
-        // to get time. Events require time, if this method fails an event will fail.
-        //
-        // Throttle this message to prevent console flooding and program delays
-        if (!this->m_console_throttled) {
-            this->m_console_throttled = true;
-            Fw::Logger::log("RTC not ready\n");
+        // Attempt to reinitialize device if we haven't exceeded retry limit
+        if (this->m_retry_count < MAX_RETRY_ATTEMPTS) {
+            if (this->tryReinitializeDevice()) {
+                // Device successfully reinitialized, reset retry counter
+                this->m_retry_count = 0;
+                this->m_console_throttled = false;
+                Fw::Logger::log("RTC reinitialized successfully\n");
+            } else {
+                // Increment retry counter
+                this->m_retry_count++;
+
+                // Use logger instead of events since this fn is in a critical path for FPrime
+                // to get time. Events require time, if this method fails an event will fail.
+                //
+                // Throttle this message to prevent console flooding and program delays
+                if (!this->m_console_throttled) {
+                    this->m_console_throttled = true;
+                    Fw::Logger::log("RTC not ready, retry attempt %u of %u\n",
+                                    static_cast<unsigned int>(this->m_retry_count.load()),
+                                    static_cast<unsigned int>(MAX_RETRY_ATTEMPTS));
+                }
+                return;
+            }
+        } else {
+            // Exceeded retry limit
+            if (!this->m_console_throttled) {
+                this->m_console_throttled = true;
+                Fw::Logger::log("RTC not ready after %u retry attempts\n",
+                                static_cast<unsigned int>(MAX_RETRY_ATTEMPTS));
+            }
+            return;
         }
-        return;
+    } else {
+        // Device is ready, reset retry counter if it was set
+        if (this->m_retry_count > 0) {
+            this->m_retry_count = 0;
+        }
+        // Reset throttle flag when device becomes ready
+        if (this->m_console_throttled) {
+            this->m_console_throttled = false;
+        }
     }
 
     // Get time from RTC
@@ -156,6 +189,18 @@ bool RtcManager ::timeDataIsValid(Drv::TimeData t) {
     }
 
     return valid;
+}
+
+bool RtcManager ::tryReinitializeDevice() {
+    // Attempt to re-bind to the device
+    this->dev = device_get_binding("RV3028");
+
+    // Check if device is now ready
+    if (this->dev != nullptr && device_is_ready(this->dev)) {
+        return true;
+    }
+
+    return false;
 }
 
 }  // namespace Drv

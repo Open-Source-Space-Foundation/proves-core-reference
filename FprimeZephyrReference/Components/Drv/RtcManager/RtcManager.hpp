@@ -61,10 +61,15 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
-    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
+    std::atomic<bool> m_console_throttled;         //!< Counter for console throttle
+    std::atomic<U32> m_retry_count;                //!< Number of device initialization retry attempts
+    static constexpr U32 MAX_RETRY_ATTEMPTS = 50;  //!< Maximum number of retry attempts
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
+
+    //! Attempt to reinitialize the RTC device
+    bool tryReinitializeDevice();
 
     //! device stores the initialized Zephyr RTC device
     const struct device* dev;
