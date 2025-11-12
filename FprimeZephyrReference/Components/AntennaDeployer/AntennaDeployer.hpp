@@ -37,6 +37,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     void DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
     void DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
     void RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+    void SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) override;
 
     // ----------------------------------------------------------------------
     // Internal helpers

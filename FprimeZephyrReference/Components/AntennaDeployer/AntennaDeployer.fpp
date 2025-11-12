@@ -28,6 +28,11 @@ module Components {
         @ RESET_DEPLOYMENT_STATE resets the deployment state flag for ground testing
         sync command RESET_DEPLOYMENT_STATE()
 
+        @ SET_DEPLOYMENT_STATE forces the persistent deployment state for ground testing
+        sync command SET_DEPLOYMENT_STATE(
+            deployed: bool @< True to mark as deployed, false to clear the flag
+        )
+
         ######################################################################
         # Telemetry
         ######################################################################

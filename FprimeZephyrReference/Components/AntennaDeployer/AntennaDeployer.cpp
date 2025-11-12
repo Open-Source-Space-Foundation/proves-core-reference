@@ -99,6 +99,19 @@ void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U3
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
+    if (deployed) {
+        this->writeDeploymentState();
+    } else {
+        Fw::ParamValid is_valid;
+        auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+        (void)Os::FileSystem::removeFile(file_path.toChar());
+    }
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Internal helpers
 // ----------------------------------------------------------------------
