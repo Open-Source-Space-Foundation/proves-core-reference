@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/StartupManager/StartupManager.hpp"
+
 #include "Os/File.hpp"
 
 namespace Components {

@@ -8,6 +8,7 @@
 #define Components_StartupManager_HPP
 
 #include <atomic>
+
 #include "FprimeZephyrReference/Components/StartupManager/StartupManagerComponentAc.hpp"
 
 namespace Components {
