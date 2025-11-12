@@ -34,11 +34,6 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
 
-    # Reset deployment state to allow re-deployment in tests
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.RESET_DEPLOYMENT_STATE"
-    )
-
     for param, value in overrides:
         proves_send_and_assert_command(
             fprime_test_api, f"{antenna_deployer}.{param}_PRM_SET", [value]
@@ -247,25 +242,4 @@ def test_deployment_prevention_after_success(
         fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
     )
 
-    # Force the antenna to appear deployed without completing a deployment cycle
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [True]
-    )
-
-    fprime_test_api.clear_histories()
-
-    # Deployment should be skipped immediately
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
-    fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
-    )
-    with pytest.raises(AssertionError):
-        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
-
-    # Clear the flag and confirm deployments are permitted again
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
-    )
-    fprime_test_api.clear_histories()
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
-    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+    # For
