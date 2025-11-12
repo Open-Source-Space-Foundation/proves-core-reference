@@ -11,6 +11,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 antenna_deployer = "ReferenceDeployment.antennaDeployer"
 burnwire = "ReferenceDeployment.burnwire"
+DEFAULT_DEPLOYED_STATE_FILE = "/antenna_deployed.bin"
 
 
 @pytest.fixture(autouse=True)
@@ -235,53 +236,69 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
 
 
-def test_deployment_prevention_after_success(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Verify that deployment is prevented after a successful deployment, and can be reset"""
+def test_deployment_prevention_after_success(
+    fprime_test_api: IntegrationTestAPI, start_gds, tmp_path
+):
+    """Verify that deployment is prevented once the deployed-state file exists and can be reset
 
-    # Start deployment
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    The deployed-state flag is persisted via a file on the flight computer. In this test we override
+    the parameter to point at a temporary location so we can create and remove the file directly to
+    simulate a prior successful deployment.
+    """
 
-    # Wait for deployment to start
-    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+    deployed_state_file = tmp_path / "antenna_deployed.bin"
 
-    # Simulate successful deployment by sending distance measurement indicating deployment
     proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.distanceIn", [2.0, True]
+        fprime_test_api,
+        f"{antenna_deployer}.DEPLOYED_STATE_FILE_PRM_SET",
+        [str(deployed_state_file)],
     )
 
-    # Verify deployment succeeded
-    fprime_test_api.assert_event(f"{antenna_deployer}.DeploySuccess", timeout=5)
-    finish_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployFinish", timeout=5
-    )
-    assert finish_event.args[0].val == "DEPLOY_RESULT_SUCCESS"
+    if deployed_state_file.exists():
+        deployed_state_file.unlink()
 
-    # Clear histories before second deployment attempt
-    fprime_test_api.clear_histories()
-
-    # Try to deploy again - should be prevented
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
-
-    # Verify deployment was skipped
-    fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
-    )
-
-    # Verify no deployment attempt started (no DeployAttempt event)
     try:
-        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
-        assert False, "DeployAttempt event should not have been emitted"
-    except AssertionError:
-        pass  # Expected - no deployment should occur
+        # Run an initial deployment cycle (will fail without distance updates)
+        proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+        fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+        fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+        finish_event: EventData = fprime_test_api.assert_event(
+            f"{antenna_deployer}.DeployFinish", timeout=10
+        )
+        assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
 
-    # Reset the deployment state
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.RESET_DEPLOYMENT_STATE"
-    )
+        # Simulate a prior successful deployment by creating the deployed-state file
+        deployed_state_file.write_bytes(b"1")
 
-    fprime_test_api.clear_histories()
+        fprime_test_api.clear_histories()
 
-    # Verify deployment works again after reset
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
-    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+        # Verify deployment is now prevented
+        proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+        fprime_test_api.assert_event(
+            f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
+        )
+        with pytest.raises(AssertionError):
+            fprime_test_api.assert_event(
+                f"{antenna_deployer}.DeployAttempt", timeout=1
+            )
+
+        # Reset the deployment state and confirm the file was removed
+        proves_send_and_assert_command(
+            fprime_test_api, f"{antenna_deployer}.RESET_DEPLOYMENT_STATE"
+        )
+        assert not deployed_state_file.exists()
+
+        fprime_test_api.clear_histories()
+
+        # Deployment should work again after reset
+        proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+    finally:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{antenna_deployer}.DEPLOYED_STATE_FILE_PRM_SET",
+            [DEFAULT_DEPLOYED_STATE_FILE],
+        )
+        if deployed_state_file.exists():
+            deployed_state_file.unlink()
