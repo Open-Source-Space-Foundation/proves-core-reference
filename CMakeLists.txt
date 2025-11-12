@@ -34,5 +34,11 @@ fprime_setup_included_code()
 
 # This includes project-wide objects
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/FprimeZephyrReference")
+if (FPRIME_USE_POSIX)
+    set_target_properties(Drv_Ip PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    set_target_properties(Drv_TcpServer PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    set_target_properties(Drv_TcpClient PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    set_target_properties(Drv_Udp PROPERTIES EXCLUDE_FROM_ALL TRUE)
++endif()
 set_target_properties(Svc_FatalHandler PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(fprime-zephyr_Drv_ZephyrSpiDriver PROPERTIES EXCLUDE_FROM_ALL TRUE)
