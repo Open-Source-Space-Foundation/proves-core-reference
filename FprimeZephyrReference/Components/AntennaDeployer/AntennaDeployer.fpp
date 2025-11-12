@@ -28,7 +28,7 @@ module Components {
         ######################################################################
         # Telemetry
         ######################################################################
-        @ Counts the number of deployment attempts across boots
+        @ Counts the number of deployment attempts
         telemetry DeployAttemptCount: U32
 
         @ Tracks the last observed distance reading
@@ -67,6 +67,12 @@ module Components {
             elapsedTime: U32 @< Time elapsed in seconds during quiet wait
         ) severity activity high \
           format "Quiet time expired after {} seconds, starting deployment attempt"
+
+        @ Reports how many scheduler ticks the burn signal was held active for the latest attempt
+        event AntennaBurnSignalCount(
+            ticks: U32 @< Number of scheduler ticks spent in the burn state
+        ) severity activity low \
+          format "Burn signal active for {} scheduler ticks"
 
         ######################################################################
         # Ports

@@ -8,6 +8,7 @@
 #define Components_ComDelay_HPP
 
 #include <atomic>
+
 #include "FprimeZephyrReference/Components/ComDelay/ComDelayComponentAc.hpp"
 
 namespace Components {

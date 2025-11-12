@@ -7,6 +7,7 @@
 #define Components_Burnwire_HPP
 
 #include <atomic>
+
 #include "FprimeZephyrReference/Components/Burnwire/BurnwireComponentAc.hpp"
 
 namespace Components {

@@ -27,9 +27,17 @@ module ReferenceDeployment {
     instance rateGroupDriver
     instance timer
     instance lora
-    instance gpioDriver
+    instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
+    instance gpioface0LS
+    instance gpioface1LS
+    instance gpioface2LS
+    instance gpioface3LS
+    instance gpioface4LS
+    instance gpioface5LS
+    instance gpioPayloadPowerLS
+    instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
     instance imuManager
@@ -43,6 +51,15 @@ module ReferenceDeployment {
     instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
+
+    instance face4LoadSwitch
+    instance face0LoadSwitch
+    instance face1LoadSwitch
+    instance face2LoadSwitch
+    instance face3LoadSwitch
+    instance face5LoadSwitch
+    instance payloadPowerLoadSwitch
+    instance payloadBatteryLoadSwitch
     instance fsSpace
     instance cmdSeq
     instance startupManager
@@ -158,7 +175,18 @@ module ReferenceDeployment {
 
 
     connections Watchdog {
-      watchdog.gpioSet -> gpioDriver.gpioWrite
+      watchdog.gpioSet -> gpioWatchdog.gpioWrite
+    }
+
+    connections LoadSwitches {
+      face4LoadSwitch.gpioSet -> gpioface4LS.gpioWrite
+      face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
+      face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
+      face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
+      face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
+      face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
+      payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
+      payloadBatteryLoadSwitch.gpioSet -> gpioPayloadBatteryLS.gpioWrite
     }
 
     connections BurnwireGpio {
