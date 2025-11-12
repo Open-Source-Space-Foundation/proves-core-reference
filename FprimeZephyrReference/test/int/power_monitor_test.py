@@ -22,7 +22,7 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
     proves_send_and_assert_command(
         fprime_test_api,
         "CdhCore.tlmSend.SEND_PKT",
-        ["9"],
+        ["10"],
     )
 
 
