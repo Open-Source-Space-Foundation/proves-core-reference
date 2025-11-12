@@ -57,7 +57,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
 
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=5
+        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
@@ -98,7 +98,7 @@ def test_change_quiet_time_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Verify deployment attempt starts after quiet time expires
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=2
+        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=2
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
@@ -140,7 +140,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Verify first attempt
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=5
+        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
     )
     assert attempt_event.args[0].val == 1, "First attempt should be #1"
 
@@ -153,7 +153,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify second attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=15
+        f"{antenna_deployer}.DeployAttempt", args=[2], timeout=15
     )
     assert attempt_event.args[0].val == 2, "Second attempt should be #2"
 
@@ -166,7 +166,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify third attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=15
+        f"{antenna_deployer}.DeployAttempt", args=[3], timeout=15
     )
     assert attempt_event.args[0].val == 3, "Third attempt should be #3"
 
@@ -205,7 +205,7 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Wait for deployment attempt to start
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=5
+        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
