@@ -81,6 +81,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Voltage
     ReferenceDeployment.ina219SolManager.Current
     ReferenceDeployment.ina219SolManager.Power
+    ReferenceDeployment.powerMonitor.TotalPowerConsumption
+    ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
 } omit {
