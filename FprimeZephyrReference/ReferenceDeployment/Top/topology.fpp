@@ -17,6 +17,7 @@ module ReferenceDeployment {
     import CdhCore.Subtopology
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
+    import FileHandling.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -38,7 +39,6 @@ module ReferenceDeployment {
     instance gpioPayloadPowerLS
     instance gpioPayloadBatteryLS
     instance watchdog
-    instance prmDb
     instance rtcManager
     instance imuManager
     instance lis2mdlManager
@@ -61,6 +61,8 @@ module ReferenceDeployment {
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
     instance fsSpace
+    instance cmdSeq
+    instance startupManager
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
@@ -76,7 +78,7 @@ module ReferenceDeployment {
     health connections instance CdhCore.$health
     time connections instance rtcManager
     telemetry connections instance CdhCore.tlmSend
-    param connections instance prmDb
+    param connections instance FileHandling.prmDb
 
   # ----------------------------------------------------------------------
   # Telemetry packets (only used when TlmPacketizer is used)
@@ -104,6 +106,9 @@ module ReferenceDeployment {
 
       ComCcsdsUart.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.fprimeRouter.cmdResponseIn
+
+      cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
     }
 
     connections CommunicationsRadio {
@@ -119,6 +124,9 @@ module ReferenceDeployment {
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
       lora.comStatusOut -> comDelay.comStatusIn
       comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+
+      startupManager.runSequence -> cmdSeq.seqRunIn
+      cmdSeq.seqDone -> startupManager.completeSequence
     }
 
     connections CommunicationsUart {
@@ -144,6 +152,8 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -157,7 +167,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
 
     }
 
@@ -193,6 +205,17 @@ module ReferenceDeployment {
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
+
+    connections ComCcsds_FileHandling {
+      # File Downlink <-> ComQueue
+      FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+
+      # Router <-> FileUplink
+      ComCcsdsUart.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
+      FileHandling.fileUplink.bufferSendOut -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
+    }
+
 
     connections sysPowerMonitor {
       powerMonitor.sysVoltageGet -> ina219SysManager.voltageGet

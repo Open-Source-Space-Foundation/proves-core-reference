@@ -11,7 +11,7 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_console_throttled(false) {
     // Initialize device
     this->dev = device_get_binding("RV3028");
 }
@@ -27,7 +27,12 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     if (!device_is_ready(this->dev)) {
         // Use logger instead of events since this fn is in a critical path for FPrime
         // to get time. Events require time, if this method fails an event will fail.
-        Fw::Logger::log("RTC not ready");
+        //
+        // Throttle this message to prevent console flooding and program delays
+        if (!this->m_console_throttled) {
+            this->m_console_throttled = true;
+            Fw::Logger::log("RTC not ready\n");
+        }
         return;
     }
 

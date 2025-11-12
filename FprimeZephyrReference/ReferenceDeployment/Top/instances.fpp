@@ -30,18 +30,22 @@ module ReferenceDeployment {
   instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 3
+    priority 2
 
   instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 4
+    priority 3
 
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 15
 
   instance prmDb: Svc.PrmDb base id 0x1000B000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 5
+    priority 14
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -128,4 +132,7 @@ module ReferenceDeployment {
   instance ina219SysManager: Drv.Ina219Manager base id 0x1003D000
 
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
+
+  instance startupManager: Components.StartupManager base id 0x1003F000
+
 }
