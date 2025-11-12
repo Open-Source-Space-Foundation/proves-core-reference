@@ -4,6 +4,10 @@ antenna_deployer_test.py:
 Integration tests for the Antenna Deployer component.
 """
 
+from pathlib import Path
+import tempfile
+import uuid
+
 import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
@@ -237,7 +241,7 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 def test_deployment_prevention_after_success(
-    fprime_test_api: IntegrationTestAPI, start_gds, tmp_path
+    fprime_test_api: IntegrationTestAPI, start_gds
 ):
     """Verify that deployment is prevented once the deployed-state file exists and can be reset
 
@@ -246,7 +250,8 @@ def test_deployment_prevention_after_success(
     simulate a prior successful deployment.
     """
 
-    deployed_state_file = tmp_path / "antenna_deployed.bin"
+    deployed_state_file = Path(tempfile.gettempdir()) / f"antenna_deployed_{uuid.uuid4().hex}.bin"
+    assert len(str(deployed_state_file)) <= 80, "Deployment state file path exceeds String_80 limit"
 
     proves_send_and_assert_command(
         fprime_test_api,
