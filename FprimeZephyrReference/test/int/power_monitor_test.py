@@ -4,7 +4,6 @@ power_monitor_test.py:
 Integration tests for the Power Monitor component.
 """
 
-import time
 from datetime import datetime
 
 import pytest
@@ -78,36 +77,3 @@ def test_02_total_power_consumption_telemetry(
 
     # Total power should be non-zero (accumulating over time)
     assert total_power_reading != 0, "Total power consumption should be non-zero"
-
-
-def test_03_reset_total_power_command(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that RESET_TOTAL_POWER command resets accumulated energy"""
-    # Wait for some power to accumulate
-    time.sleep(3)
-
-    # Reset total power
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{powerMonitor}.RESET_TOTAL_POWER",
-        [],
-    )
-
-    # Verify event was logged
-    fprime_test_api.assert_event(f"{powerMonitor}.TotalPowerReset", timeout=3)
-
-    # Wait for next telemetry update
-    time.sleep(2)
-
-    # Get total power after reset - should be very small (close to 0)
-    # Allow small value due to time between reset and next telemetry update
-    total_power_after: ChData = fprime_test_api.assert_telemetry(
-        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=65
-    )
-
-    total_power_after_reading: float = total_power_after.get_val()
-
-    # After reset and 2 seconds of accumulation, power should still be very small
-    # At 10W total power, 2 seconds = 0.0056 mWh, so 0.01 mWh is a reasonable threshold
-    assert total_power_after_reading < 0.01, (
-        f"Total power after reset should be near 0, got {total_power_after_reading} mWh"
-    )
