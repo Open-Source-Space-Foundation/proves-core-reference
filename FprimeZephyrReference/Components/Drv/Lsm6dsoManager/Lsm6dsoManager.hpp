@@ -7,7 +7,6 @@
 #define Components_Lsm6dsoManager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Lsm6dsoManager/Lsm6dsoManagerComponentAc.hpp"
-
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>

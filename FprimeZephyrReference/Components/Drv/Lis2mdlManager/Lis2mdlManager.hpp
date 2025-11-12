@@ -7,7 +7,6 @@
 #define Components_Lis2mdlManager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Lis2mdlManager/Lis2mdlManagerComponentAc.hpp"
-
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
