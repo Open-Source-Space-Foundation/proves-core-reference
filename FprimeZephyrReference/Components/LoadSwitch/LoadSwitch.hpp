@@ -62,7 +62,7 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     // ----------------------------------------------------------------------
 
     uint8_t m_pinNum;
-    static const struct device* m_device;
+    const struct device* m_device;
 };
 
 }  // namespace Components

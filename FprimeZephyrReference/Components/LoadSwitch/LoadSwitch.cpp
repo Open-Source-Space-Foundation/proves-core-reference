@@ -9,7 +9,6 @@
 
 namespace Components {
 
-const struct device* LoadSwitch::m_device = nullptr;
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
@@ -50,7 +49,7 @@ void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 void LoadSwitch ::pin_configuration(const struct device* device, uint8_t pinNum) {
     this->m_pinNum = pinNum;
     this->m_device = device;
-    gpio_pin_configure(m_device, m_pinNum, GPIO_OUTPUT_INACTIVE);
+    gpio_pin_configure(m_device, m_pinNum, GPIO_OUTPUT_ACTIVE);
 }
 
 }  // namespace Components

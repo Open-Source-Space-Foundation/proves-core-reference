@@ -12,6 +12,7 @@
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
@@ -69,6 +70,32 @@ void configureTopology() {
     face5LoadSwitch.pin_configuration(mcp23017_dev, 13);
     payloadPowerLoadSwitch.pin_configuration(mcp23017_dev, 1);
     payloadBatteryLoadSwitch.pin_configuration(mcp23017_dev, 3);
+    
+    // TMP112 temperature sensors (11 sensors behind I2C multiplexer)
+    const struct device* face0_temp = DEVICE_DT_GET(DT_NODELABEL(face0_temp_sens));
+    const struct device* face1_temp = DEVICE_DT_GET(DT_NODELABEL(face1_temp_sens));
+    const struct device* face2_temp = DEVICE_DT_GET(DT_NODELABEL(face2_temp_sens));
+    const struct device* face3_temp = DEVICE_DT_GET(DT_NODELABEL(face3_temp_sens));
+    const struct device* face4_temp = DEVICE_DT_GET(DT_NODELABEL(face4_temp_sens));
+    const struct device* face5_temp = DEVICE_DT_GET(DT_NODELABEL(face5_temp_sens));
+    const struct device* top_temp = DEVICE_DT_GET(DT_NODELABEL(top_temp_sens));
+    const struct device* batt_cell1_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell1_temp_sens));
+    const struct device* batt_cell2_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell2_temp_sens));
+    const struct device* batt_cell3_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell3_temp_sens));
+    const struct device* batt_cell4_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell4_temp_sens));
+
+    // Suppress unused variable warnings
+    (void)face0_temp;
+    (void)face1_temp;
+    (void)face2_temp;
+    (void)face3_temp;
+    (void)face4_temp;
+    (void)face5_temp;
+    (void)top_temp;
+    (void)batt_cell1_temp;
+    (void)batt_cell2_temp;
+    (void)batt_cell3_temp;
+    (void)batt_cell4_temp;
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
