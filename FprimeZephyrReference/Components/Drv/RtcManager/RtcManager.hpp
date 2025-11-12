@@ -6,14 +6,11 @@
 #ifndef Components_RtcManager_HPP
 #define Components_RtcManager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
-
-#include <cerrno>
-#include <string>
-#include <vector>
-
 #include <Fw/Logger/Logger.hpp>
+#include <atomic>
+#include <cerrno>
 
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
@@ -64,6 +61,7 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);

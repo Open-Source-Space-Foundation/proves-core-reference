@@ -113,8 +113,10 @@ void AntennaDeployer ::startNextAttempt() {
 
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
-    this->m_totalAttempts++;
     this->tlmWrite_DeployAttemptCount(this->m_totalAttempts);
+    this->m_totalAttempts++;
+
+    this->m_burnTicksThisAttempt = 0;
 
     if (this->isConnected_burnStart_OutputPort(0)) {
         this->burnStart_out(0);
@@ -140,6 +142,7 @@ void AntennaDeployer ::handleQuietWaitTick() {
 
 void AntennaDeployer ::handleBurningTick() {
     this->m_ticksInState++;
+    this->m_burnTicksThisAttempt = this->m_ticksInState;
 
     if (this->m_stopRequested) {
         this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
@@ -154,6 +157,7 @@ void AntennaDeployer ::handleBurningTick() {
     const U32 burnDuration = this->paramGet_BURN_DURATION_SEC(valid);
     if (this->m_ticksInState >= burnDuration) {
         this->ensureBurnwireStopped();
+        this->logBurnSignalCount();
 
         if (this->m_successDetected) {
             this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
@@ -205,6 +209,7 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
     }
 
     this->ensureBurnwireStopped();
+    this->logBurnSignalCount();
 
     if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
@@ -222,6 +227,7 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_stopRequested = false;
     this->m_successDetected = false;
     this->m_lastDistanceValid = false;
+    this->m_burnTicksThisAttempt = 0;
 }
 
 bool AntennaDeployer ::isDistanceWithinValidRange(F32 distance) {
@@ -240,6 +246,7 @@ bool AntennaDeployer ::isDistanceDeployed(F32 distance) {
 
     if (distance <= threshold) {
         this->m_successDetected = true;
+        this->logBurnSignalCount();
         return true;
     }
 
@@ -249,6 +256,13 @@ bool AntennaDeployer ::isDistanceDeployed(F32 distance) {
 void AntennaDeployer ::ensureBurnwireStopped() {
     if (this->isConnected_burnStop_OutputPort(0)) {
         this->burnStop_out(0);
+    }
+}
+
+void AntennaDeployer ::logBurnSignalCount() {
+    if (this->m_burnTicksThisAttempt > 0U) {
+        this->log_ACTIVITY_LO_AntennaBurnSignalCount(this->m_burnTicksThisAttempt);
+        this->m_burnTicksThisAttempt = 0;
     }
 }
 

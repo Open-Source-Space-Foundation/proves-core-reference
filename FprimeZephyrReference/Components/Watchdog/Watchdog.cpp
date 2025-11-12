@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Watchdog/Watchdog.hpp"
+
 #include "config/FpConfig.hpp"
 
 namespace Components {

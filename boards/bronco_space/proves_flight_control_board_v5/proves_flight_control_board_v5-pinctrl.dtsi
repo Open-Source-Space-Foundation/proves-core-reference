@@ -1,6 +1,16 @@
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h>
 
 &pinctrl {
+	spi0_default: spi0_default {
+		group1 {
+			pinmux = <SPI0_SCK_P18>, <SPI0_TX_P19>;
+		};
+
+		group2 {
+			pinmux = <SPI0_RX_P16>;
+			input-enable;
+		};
+	};
 	spi1_default: spi1_default {
 		group1 {
 			pinmux = <SPI1_SCK_P10>, <SPI1_TX_P11>;
@@ -8,6 +18,12 @@
 
 		group2 {
 			pinmux = <SPI1_RX_P12>;
+			input-enable;
+		};
+	};
+	i2c0_default: i2c0_default {
+		group1 {
+			pinmux = <I2C0_SCL_P25>, <I2C0_SDA_P24>;
 			input-enable;
 		};
 	};

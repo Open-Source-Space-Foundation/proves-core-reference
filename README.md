@@ -116,3 +116,7 @@ Now you want to be able to send commands through the radio. To do this, connect 
 Depending on the comdelay, the gds should turn green every time a packet is sent. If you want to change this parameter use
 
 ```ReferenceDeployment.comDelay.DIVIDER_PRM_SET``` on the gds. You can set it down to 2, but setting it to 1 may cause issues.
+
+## Sequences
+
+You can control the specific command lists of the satellite by writing a sequence file. Sequence files are contained in /sequences. For details on how to attack the startup sequence check the sdd in Startup Manager.
