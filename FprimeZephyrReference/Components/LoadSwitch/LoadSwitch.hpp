@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LoadSwitch.hpp
-// \author sarah
+// \author Moises, sarah
 // \brief  hpp file for LoadSwitch component implementation class
 // ======================================================================
 

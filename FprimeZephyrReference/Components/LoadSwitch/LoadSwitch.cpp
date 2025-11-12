@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LoadSwitch.cpp
-// \author sarah
+// \author Moises, sarah
 // \brief  cpp file for LoadSwitch component implementation class
 // ======================================================================
 
