@@ -4,6 +4,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/PowerMonitor/PowerMonitor.hpp"
+
 #include <Fw/Time/Time.hpp>
 
 namespace Components {
