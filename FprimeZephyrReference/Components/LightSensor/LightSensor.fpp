@@ -33,10 +33,16 @@ module Components {
         #### Events ####
 
         @ Event for light sensor errors
-        event LightSensorError() severity warning high format "Light Sensor Error"
+        event LightSensorError(log: string) severity warning high format "Light Sensor Error: {}"
+
+        event LightSensorErrorInt(log: U32) severity warning high format "Light Sensor Error: {}"
 
         @ Event for light sensor configuration 
         event LightSensorConfigured() severity activity low format "Light Sensor Configured"
+
+        event LightSensorRead() severity activity low format "Values Read from the Light Sensor"
+
+        
 
 
         ##############################################################################

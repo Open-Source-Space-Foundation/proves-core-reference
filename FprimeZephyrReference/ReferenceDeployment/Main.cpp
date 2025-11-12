@@ -16,7 +16,8 @@ const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
-const struct device* lightsensor = DEVICE_DT_GET(DT_NODELABEL(light));
+const struct device* lightsensor0 = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
+const struct device* lightsensor1 = DEVICE_DT_GET(DT_NODELABEL(face1_light_sens));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -34,7 +35,9 @@ int main(int argc, char* argv[]) {
     inputs.lsm6dsoDevice = lsm6dso;
     inputs.lis2mdlDevice = lis2mdl;
     inputs.baudRate = 115200;
-    inputs.lightsensor = lightsensor;
+    inputs.lightsensor0 = lightsensor0;
+    inputs.lightsensor1 = lightsensor1;
+
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);

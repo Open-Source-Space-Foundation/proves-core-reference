@@ -64,7 +64,8 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
-    instance lightSensor
+    instance lightSensor0
+    instance lightSensor1
 
 
   # ----------------------------------------------------------------------
@@ -159,7 +160,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[11] -> lightSensor.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> lightSensor0.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> lightSensor1.run
     }
 
 
@@ -202,6 +204,11 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
+
+    connections lightSensor {
+      lightSensor0.gpioRead -> gpioface0LS.gpioRead
+      lightSensor1.gpioRead -> gpioface1LS.gpioRead
     }
 
   }

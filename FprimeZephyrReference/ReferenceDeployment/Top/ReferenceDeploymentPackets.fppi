@@ -71,9 +71,13 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet LightSensor id 10 group 4 {
-    ReferenceDeployment.lightSensor.ALSLightData
-    ReferenceDeployment.lightSensor.RawLightData
-    ReferenceDeployment.lightSensor.IRLightData
+    ReferenceDeployment.lightSensor0.ALSLightData
+    ReferenceDeployment.lightSensor0.RawLightData
+    ReferenceDeployment.lightSensor0.IRLightData
+    
+    ReferenceDeployment.lightSensor1.ALSLightData
+    ReferenceDeployment.lightSensor1.RawLightData
+    ReferenceDeployment.lightSensor1.IRLightData
   }
 
   packet LoadSwitches id 11 group 4 {

@@ -8,6 +8,7 @@
 
 #include "FprimeZephyrReference/Components/LightSensor/LightSensor.hpp"
 
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -21,10 +22,10 @@ LightSensor ::~LightSensor() {}
 void LightSensor ::configure(const struct device* dev) {
     this->m_dev = dev;
     if (this->m_dev == nullptr) {
-        this->log_WARNING_HI_LightSensorError();
+		Fw::LogStringArg errMsg("Misconfigured");
+        this->log_WARNING_HI_LightSensorError(errMsg);
         return;
     }
-
     this->m_configured = true;
 }
 
@@ -41,33 +42,48 @@ void LightSensor ::ReadData() { // const struct device *dev,
 	sen.val2 = 0;
 
     Fw::ParamValid valid;
-	sen.val1 = paramGet_INTEGRATION_TIME(valid); // pass in saying that the parameter is valid
+	sen.val1 = 5; // pass in saying that the parameter is valid
 
     // Setting the integration time attribute for the light sensor
-	ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &sen);
-	if (ret) {
-		printf("Failed to set it attribute ret: %d\n", ret);
-	}
-    
-    // Set the sensor attribute for div4
-	sen.val1 = paramGet_DIV4(valid);
 
-	ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &sen);
-	if (ret) {
-		printf("Failed to set div4 attribute ret: %d\n", ret);
+	if (! (this->m_attributes_set)){
+		ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &sen);
+		if (ret) {
+			Fw::LogStringArg errMsg("Failed to set it attribute");
+			this->log_WARNING_HI_LightSensorError(errMsg);
+		}
+		
+		// Set the sensor attribute for div4
+		sen.val1 = paramGet_DIV4(valid);
+
+		ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &sen);
+		if (ret) {
+			Fw::LogStringArg errMsg("Failed to set div4 attribute");
+			this->log_WARNING_HI_LightSensorError(errMsg);
+		}
+
+		// Set the sensor attribute for the gain
+		sen.val1 = 0;
+		ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &sen);
+		if (ret) {
+			Fw::LogStringArg errMsg("Failed to set gain attribute ret");
+			this->log_WARNING_HI_LightSensorError(errMsg);
+		}
+
+		this->m_attributes_set = true;
 	}
 
-    // Set the sensor attribute for the gain
-	sen.val1 = paramGet_GAIN(valid);
-	ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &sen);
-	if (ret) {
-		printf("Failed to set gain attribute ret: %d\n", ret);
+	if (!device_is_ready(this->m_dev)) {
+		this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Device not ready"));
+		return;
 	}
 
     // Get the rate
 	ret = sensor_sample_fetch(this->m_dev);
 	if ((ret < 0) && (ret != -E2BIG)) {
-		printf("sample update error. ret: %d\n", ret);
+		Fw::LogStringArg errMsg("sample update error");
+		this->log_WARNING_HI_LightSensorError(errMsg);
+		this->log_WARNING_HI_LightSensorErrorInt(ret);
 	}
 
     // Get the light data
@@ -96,6 +112,10 @@ void LightSensor ::run_handler(FwIndexType portNum, U32 context) {
 		this->tlmWrite_RawLightData(this->m_RawLightData);
 		this->tlmWrite_IRLightData(this->m_IRLightData);
 		this->tlmWrite_ALSLightData(this->m_ALSLightData);
+	} else {
+		if(state == Fw::Logic::LOW && this->m_attributes_set == true){
+			this->m_attributes_set = false;
+		}
 	}
 	
 }

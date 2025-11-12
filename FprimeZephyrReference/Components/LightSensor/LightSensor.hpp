@@ -62,6 +62,8 @@ class LightSensor final : public LightSensorComponentBase {
 
     bool m_configured = false; 
 
+    bool m_attributes_set = false;
+
     const struct device* m_dev;
 };
 
