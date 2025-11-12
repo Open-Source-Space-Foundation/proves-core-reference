@@ -33,6 +33,14 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Destroy RtcManager object
     ~RtcManager();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Public helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the RTC device
+    void configure(const struct device* dev);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -67,7 +75,7 @@ class RtcManager final : public RtcManagerComponentBase {
     bool timeDataIsValid(Drv::TimeData t);
 
     //! device stores the initialized Zephyr RTC device
-    const struct device* dev;
+    const struct device* m_dev;
 };
 
 }  // namespace Drv

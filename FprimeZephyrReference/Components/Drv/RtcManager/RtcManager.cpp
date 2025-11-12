@@ -11,12 +11,17 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {
-    // Initialize device
-    this->dev = device_get_binding("RV3028");
-}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {}
 
 RtcManager ::~RtcManager() {}
+
+// ----------------------------------------------------------------------
+// Public helper methods
+// ----------------------------------------------------------------------
+
+void RtcManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -24,7 +29,7 @@ RtcManager ::~RtcManager() {}
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
-    if (!device_is_ready(this->dev)) {
+    if (!device_is_ready(this->m_dev)) {
         // Use logger instead of events since this fn is in a critical path for FPrime
         // to get time. Events require time, if this method fails an event will fail.
         Fw::Logger::log("RTC not ready");
@@ -33,7 +38,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Get time from RTC
     struct rtc_time time_rtc = {};
-    rtc_get_time(this->dev, &time_rtc);
+    rtc_get_time(this->m_dev, &time_rtc);
 
     // Convert to generic tm struct
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
@@ -62,7 +67,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
 void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // Check device readiness
-    if (!device_is_ready(this->dev)) {
+    if (!device_is_ready(this->m_dev)) {
         // Emit device not ready event
         this->log_WARNING_HI_DeviceNotReady();
 
@@ -99,7 +104,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     };
 
     // Set time on RTC
-    const int status = rtc_set_time(this->dev, &time_rtc);
+    const int status = rtc_set_time(this->m_dev, &time_rtc);
 
     if (status != 0) {
         // Emit time not set event
