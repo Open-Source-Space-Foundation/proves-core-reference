@@ -25,6 +25,9 @@ module Components {
         @ DEPLOY_STOP stops the deployment procedure
         sync command DEPLOY_STOP()
 
+        @ RESET_DEPLOYMENT_STATE resets the deployment state flag for ground testing
+        sync command RESET_DEPLOYMENT_STATE()
+
         ######################################################################
         # Telemetry
         ######################################################################
@@ -74,6 +77,11 @@ module Components {
         ) severity activity low \
           format "Burn signal active for {} scheduler ticks"
 
+        @ Emitted when deployment is skipped because antenna was already deployed
+        event DeploymentAlreadyComplete() \
+          severity activity high \
+          format "Antenna deployment skipped - antenna already deployed"
+
         ######################################################################
         # Ports
         ######################################################################
@@ -112,6 +120,9 @@ module Components {
 
         @ Distance readings below this value (cm) are considered invalid
         param INVALID_THRESHOLD_BOTTOM_CM: F32 default 0.1
+
+        @ File path for persistent deployment state (file exists = deployed)
+        param DEPLOYED_STATE_FILE: string default "/antenna_deployed.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters

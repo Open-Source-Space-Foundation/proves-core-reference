@@ -34,6 +34,9 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
 
+    # Reset deployment state to allow re-deployment in tests
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.RESET_DEPLOYMENT_STATE")
+
     for param, value in overrides:
         proves_send_and_assert_command(
             fprime_test_api, f"{antenna_deployer}.{param}_PRM_SET", [value]
@@ -230,3 +233,55 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+
+
+def test_deployment_prevention_after_success(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Verify that deployment is prevented after a successful deployment, and can be reset"""
+
+    # Start deployment
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+
+    # Wait for deployment to start
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
+
+    # Simulate successful deployment by sending distance measurement indicating deployment
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.distanceIn", [2.0, True]
+    )
+
+    # Verify deployment succeeded
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeploySuccess", timeout=5)
+    finish_event: EventData = fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeployFinish", timeout=5
+    )
+    assert finish_event.args[0].val == "DEPLOY_RESULT_SUCCESS"
+
+    # Clear histories before second deployment attempt
+    fprime_test_api.clear_histories()
+
+    # Try to deploy again - should be prevented
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+
+    # Verify deployment was skipped
+    fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
+    )
+
+    # Verify no deployment attempt started (no DeployAttempt event)
+    try:
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
+        assert False, "DeployAttempt event should not have been emitted"
+    except AssertionError:
+        pass  # Expected - no deployment should occur
+
+    # Reset the deployment state
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.RESET_DEPLOYMENT_STATE"
+    )
+
+    fprime_test_api.clear_histories()
+
+    # Verify deployment works again after reset
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
