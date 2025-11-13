@@ -70,6 +70,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
   }
 
+  packet authenticate id 11 group 4 {
+    ReferenceDeployment.authenticate.AuthenticatedPacketsCount
+    ReferenceDeployment.authenticate.RejectedPacketsCount
+    ReferenceDeployment.authenticate.CurrentSequenceNumber
+
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

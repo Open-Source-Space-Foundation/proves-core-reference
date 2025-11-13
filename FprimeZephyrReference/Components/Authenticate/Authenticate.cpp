@@ -42,26 +42,31 @@ void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-// void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-//     // Read Sequence Number from file system
-//     Os::File sequenceNumberFile;
-//     Os::File::Status sequenceNumberFileStatus = sequenceNumberFile.open("sequence_number.txt", Os::File::OPEN_READ);
-//     if (sequenceNumberFileStatus != Os::File::OP_OK) {
-//         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
-//         return;
-//     }
-//     sequenceNumberFile.close();
+void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    static constexpr const char* const sequenceNumberPath = "sequence_number.txt";
 
-//     // read the sequence number from the file
-//     U32 sequenceNumber;
-//     sequenceNumberFile.read(sequenceNumber, 1);
-//     this->sequenceNumber = sequenceNumber;
+    Os::File::Status openStatus = this->m_sequenceNumberFile.open(sequenceNumberPath, Os::File::OPEN_READ);
+    if (openStatus != Os::File::OP_OK) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
 
-//     // emit the sequence number as an event
-//     this->emit_EmitSequenceNumber(sequenceNumber);
+    U32 fileSequenceNumber = 0;
+    FwSizeType size = static_cast<FwSizeType>(sizeof(fileSequenceNumber));
+    FwSizeType expectedSize = size;
+    Os::File::Status readStatus =
+        this->m_sequenceNumberFile.read(reinterpret_cast<U8*>(&fileSequenceNumber), size, Os::File::WaitType::WAIT);
+    this->m_sequenceNumberFile.close();
 
-//     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-// }
+    if ((readStatus != Os::File::OP_OK) || (size != expectedSize)) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    this->sequenceNumber.store(fileSequenceNumber);
+    this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
 
 void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     // Writes the sequence number to the file system
