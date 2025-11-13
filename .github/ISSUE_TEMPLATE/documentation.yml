@@ -64,7 +64,7 @@ body:
       description: Quote or describe the current documentation that needs improvement
       placeholder: |
         Current text from docs/main-content/initial-setup.md:
-        "Run make to setup the project"
+        "Run make to set up the project"
         
         This is unclear because...
 
