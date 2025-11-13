@@ -11,6 +11,9 @@ module Components {
         @ Port receiving calls from the rate group
         sync input port run: Svc.Sched
 
+        # @ Import Communication Interface
+        # import Svc.Com
+
         @ Command for testing
         sync command FOO()
 
