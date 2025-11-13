@@ -110,10 +110,14 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     const U8* securityHeader = raw + 6;  // 8 bytes
     const U8* securityTrailer = raw + total - 8;
     const U8* commandPayload = raw + 14;
-    U32 received_sequenceNumber =
-        (securityHeader[0] << 24) | (securityHeader[1] << 16) | (securityHeader[2] << 8) | securityHeader[3];
+    U32 received_sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) |
+                                  (static_cast<U32>(securityHeader[3]) << 16) |
+                                  (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
     U32 received_hmac =
         (securityTrailer[0] << 24) | (securityTrailer[1] << 16) | (securityTrailer[2] << 8) | securityTrailer[3];
+
+    // get spi from the security header
+    const U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
 
     // Get packet APID and pass to PacketRequiresAuthentication
     ComCfg::Apid apid = context.get_apid();
@@ -121,10 +125,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     if (requiresAuthentication) {
         // Authenticate the packet
-
-        // TO DO
-        // get the SPI from the header
-        const U32 spi = 0U;
 
         // TO DO
         // use the SPI to get the type of authentication and the key
@@ -168,10 +168,14 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     } else {
         // Strip the security headers and trailers from the packet
         // TO DO Double check this with the gds addition and the other components
-        assert(data.getSize() >= 16);
-        data.setData(data.getData() + 8);
-        data.setSize(data.getSize() - 16);
-        // Forward the packet to the SpacePacketDeframer
+        FW_ASSERT(data.getSize() >= 6 + 8 + 8);
+        const FwSizeType total = data.getSize();
+        const FwSizeType payloadLength = total - 6 - 8 - 8;
+
+        const U8* src = data.getData();
+        U8* dest = data.getData();
+        std::memmove(dest + 6, src + 6 + 8, static_cast<size_t>(payloadLength));
+        data.setSize(6 + payloadLength);
         this->dataOut_out(0, data, context);
         return;
     }
