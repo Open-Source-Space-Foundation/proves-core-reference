@@ -57,7 +57,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
 
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
+        f"{antenna_deployer}.DeployAttempt", timeout=5
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
@@ -98,7 +98,7 @@ def test_change_quiet_time_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Verify deployment attempt starts after quiet time expires
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=2
+        f"{antenna_deployer}.DeployAttempt", timeout=2
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
@@ -140,7 +140,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Verify first attempt
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
+        f"{antenna_deployer}.DeployAttempt", timeout=5
     )
     assert attempt_event.args[0].val == 1, "First attempt should be #1"
 
@@ -153,7 +153,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify second attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[2], timeout=15
+        f"{antenna_deployer}.DeployAttempt", timeout=15
     )
     assert attempt_event.args[0].val == 2, "Second attempt should be #2"
 
@@ -166,7 +166,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
 
     # Wait for retry delay and verify third attempt
     attempt_event = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[3], timeout=15
+        f"{antenna_deployer}.DeployAttempt", timeout=15
     )
     assert attempt_event.args[0].val == 3, "Third attempt should be #3"
 
@@ -205,7 +205,7 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Wait for deployment attempt to start
     attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", args=[1], timeout=5
+        f"{antenna_deployer}.DeployAttempt", timeout=5
     )
     assert attempt_event.args[0].val == 1, (
         "First deployment attempt should be attempt #1"
@@ -230,3 +230,38 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+
+
+def test_deployment_prevention_after_success(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Verify that deployment is prevented once the deployed-state flag is asserted and can be reset"""
+
+    # Ensure the persistent flag is cleared before starting
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
+
+    # Force the antenna to appear deployed without completing a deployment cycle
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [True]
+    )
+
+    fprime_test_api.clear_histories()
+
+    # Deployment should be skipped immediately
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
+    )
+    # Verify that DeployAttempt event does NOT occur (assert_event will raise AssertionError if event is missing)
+    with pytest.raises(AssertionError):
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
+
+    # Clear the flag and confirm deployments are permitted again
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
+    fprime_test_api.clear_histories()
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)

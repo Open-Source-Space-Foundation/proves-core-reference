@@ -1,5 +1,8 @@
 #include "FprimeZephyrReference/Components/AntennaDeployer/AntennaDeployer.hpp"
 
+#include "Os/File.hpp"
+#include "Os/FileSystem.hpp"
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -61,6 +64,13 @@ void AntennaDeployer ::distanceIn_handler(FwIndexType portNum, F32 distance, boo
 // ----------------------------------------------------------------------
 
 void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Check if antenna has already been deployed
+    if (this->readDeploymentState()) {
+        this->log_ACTIVITY_HI_DeploymentAlreadyComplete();
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
     if (this->m_state != DeploymentState::IDLE) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
         return;
@@ -79,6 +89,28 @@ void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->m_stopRequested = true;
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
+}
+
+void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    (void)Os::FileSystem::removeFile(file_path.toChar());
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
+    if (deployed) {
+        this->writeDeploymentState();
+    } else {
+        Fw::ParamValid is_valid;
+        auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+        (void)Os::FileSystem::removeFile(file_path.toChar());
+    }
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 // ----------------------------------------------------------------------
@@ -213,6 +245,9 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
 
     if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
+
+        // Mark antenna as deployed by writing state file
+        this->writeDeploymentState();
     }
 
     this->log_ACTIVITY_HI_DeployFinish(result, this->m_currentAttempt);
@@ -264,6 +299,33 @@ void AntennaDeployer ::logBurnSignalCount() {
         this->log_ACTIVITY_LO_AntennaBurnSignalCount(this->m_burnTicksThisAttempt);
         this->m_burnTicksThisAttempt = 0;
     }
+}
+
+bool AntennaDeployer ::readDeploymentState() {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    Os::File file;
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
+    bool deployed = (status == Os::File::OP_OK);
+    (void)file.close();
+    return deployed;
+}
+
+void AntennaDeployer ::writeDeploymentState() {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    Os::File file;
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    if (status == Os::File::OP_OK) {
+        U8 marker = 1;
+        FwSizeType size = sizeof(marker);
+        (void)file.write(&marker, size);
+    }
+    (void)file.close();
 }
 
 }  // namespace Components
