@@ -15,13 +15,6 @@ namespace Components {
 Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {
     // We want to read the sequence number from the file system. If there is no sequence
     // // number file, we should create it with a default value of 0.
-    // Os::File sequenceNumberFile;
-    // Os::File::Status sequenceNumberFileStatus = sequenceNumberFile.open("sequence_number.txt", Os::File::OPEN_READ);
-    // if (sequenceNumberFileStatus != Os::File::OP_OK) {
-    //     sequenceNumberFile.open("sequence_number.txt", Os::File::OPEN_CREATE);
-    //     sequenceNumberFile.write("0", 1);
-    // }
-    // sequenceNumberFile.close();
 }
 
 Authenticate ::~Authenticate() {}
@@ -43,7 +36,7 @@ void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 // ----------------------------------------------------------------------
 
 void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    static constexpr const char* const sequenceNumberPath = "sequence_number.txt";
+    static constexpr const char* const sequenceNumberPath = "//sequence_number.txt";
 
     Os::File::Status openStatus = this->m_sequenceNumberFile.open(sequenceNumberPath, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {

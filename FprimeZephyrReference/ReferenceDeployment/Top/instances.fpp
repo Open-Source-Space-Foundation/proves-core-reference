@@ -30,17 +30,22 @@ module ReferenceDeployment {
   instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 3
+    priority 2
 
   instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 4
+    priority 3
 
-  instance prmDb: Svc.PrmDb base id 0x10003000 \
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 5
+    priority 15
+
+  instance prmDb: Svc.PrmDb base id 0x1000B000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 14
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -58,7 +63,7 @@ module ReferenceDeployment {
 
   instance comDriver: Zephyr.ZephyrUartDriver base id 0x10013000
 
-  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
+  instance gpioWatchdog: Zephyr.ZephyrGpioDriver base id 0x10014000
 
   instance watchdog: Components.Watchdog base id 0x10015000
 
@@ -88,13 +93,52 @@ module ReferenceDeployment {
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
-  instance fsSpace: Components.FsSpace base id 0x10030000
+  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
-  instance powerMonitor: Components.PowerMonitor base id 0x10031000
+  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
 
-  instance ina219SysManager: Drv.Ina219Manager base id 0x10032000
+  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x1002C000
 
+  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x1002D000
+
+  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x1002E000
+
+  instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x1002F000
+
+  instance gpioPayloadPowerLS: Zephyr.ZephyrGpioDriver base id 0x10030000
+
+  instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x10031000
+
+  instance fsSpace: Components.FsSpace base id 0x10032000
+
+  instance face4LoadSwitch: Components.LoadSwitch base id 0x10033000
+
+  instance face0LoadSwitch: Components.LoadSwitch base id 0x10034000
+
+  instance face1LoadSwitch: Components.LoadSwitch base id 0x10035000
+
+  instance face2LoadSwitch: Components.LoadSwitch base id 0x10036000
+
+  instance face3LoadSwitch: Components.LoadSwitch base id 0x10037000
+
+  instance face5LoadSwitch: Components.LoadSwitch base id 0x10038000
+
+  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000
+
+  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
+
+  instance powerMonitor: Components.PowerMonitor base id 0x1003C000
+
+  instance ina219SysManager: Drv.Ina219Manager base id 0x1003D000
+
+  instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
+
+  instance startupManager: Components.StartupManager base id 0x1003F000
+
+<<<<<<< HEAD
   instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
 
   instance authenticate: Components.Authenticate base id 0x10040000
+=======
+>>>>>>> d228c7a887a5a5bd23193a1f80d0539dda97fea9
 }

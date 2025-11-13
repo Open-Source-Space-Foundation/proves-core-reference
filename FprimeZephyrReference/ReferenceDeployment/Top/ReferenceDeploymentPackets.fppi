@@ -9,6 +9,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.startupManager.BootCount
+    ReferenceDeployment.startupManager.QuiescenceEndTime
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -61,13 +63,26 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet PowerMonitor id 9 group 4 {
+  packet LoadSwitches id 9 group 4 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+  }
+
+  packet PowerMonitor id 10 group 4 {
     ReferenceDeployment.ina219SysManager.Voltage
     ReferenceDeployment.ina219SysManager.Current
     ReferenceDeployment.ina219SysManager.Power
     ReferenceDeployment.ina219SolManager.Voltage
     ReferenceDeployment.ina219SolManager.Current
     ReferenceDeployment.ina219SolManager.Power
+    ReferenceDeployment.powerMonitor.TotalPowerConsumption
+    ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
   packet authenticate id 11 group 4 {
@@ -99,4 +114,17 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
+  ReferenceDeployment.cmdSeq.CS_LoadCommands
+  ReferenceDeployment.cmdSeq.CS_CancelCommands
+  ReferenceDeployment.cmdSeq.CS_CommandsExecuted
+  ReferenceDeployment.cmdSeq.CS_SequencesCompleted
+  ReferenceDeployment.cmdSeq.CS_Errors
+  FileHandling.fileUplink.FilesReceived
+  FileHandling.fileUplink.PacketsReceived
+  FileHandling.fileDownlink.FilesSent
+  FileHandling.fileDownlink.PacketsSent
+  FileHandling.fileManager.CommandsExecuted
+  FileHandling.fileManager.Errors
+  FileHandling.fileUplink.Warnings
+  FileHandling.fileDownlink.Warnings
 }

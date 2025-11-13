@@ -10,6 +10,7 @@
 #include "FprimeZephyrReference/Components/Watchdog/WatchdogComponentAc.hpp"
 // Need to explicitly include because Fw.On is no longer a tlm channel I believe
 #include <atomic>
+
 #include "Fw/Types/OnEnumAc.hpp"
 
 namespace Components {

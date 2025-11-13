@@ -52,6 +52,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     bool isDistanceWithinValidRange(F32 distance);
     bool isDistanceDeployed(F32 distance);
     void ensureBurnwireStopped();
+    void logBurnSignalCount();
 
     DeploymentState m_state = DeploymentState::IDLE;
     U32 m_currentAttempt = 0;
@@ -61,6 +62,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     bool m_successDetected = false;
     bool m_lastDistanceValid = false;
     F32 m_lastDistance = 0.0F;
+    U32 m_burnTicksThisAttempt = 0;
 };
 
 }  // namespace Components
