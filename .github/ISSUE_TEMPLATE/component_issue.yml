@@ -92,7 +92,7 @@ body:
         # From ImuManager.fpp
         async command IMU_START() \
           opcode 0x10
-        
+
         # Issue: Command opcode conflicts with another component...
         ```
       render: fpp
@@ -147,7 +147,7 @@ body:
       placeholder: |
         ```fpp
         instance imuManager: FprimeZephyrReference.ImuManager base id 0x0E00
-        
+
         connections ImuManagerConnections {
           imuManager.Time -> rateGroup1Hz.RateGroupOut[7]
           imuManager.imuDataOut -> dataLogger.sensorIn

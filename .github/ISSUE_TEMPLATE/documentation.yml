@@ -65,7 +65,7 @@ body:
       placeholder: |
         Current text from docs/main-content/initial-setup.md:
         "Run make to setup the project"
-        
+
         This is unclear because...
 
   - type: textarea
@@ -80,7 +80,7 @@ body:
         2. Create Python virtual environment
         3. Install dependencies
         4. Configure Zephyr workspace
-        
+
         This process takes approximately 5-10 minutes on first run."
     validations:
       required: true

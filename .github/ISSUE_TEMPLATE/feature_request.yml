@@ -37,7 +37,7 @@ body:
         As a [type of user/developer]
         I want to [goal/desire]
         So that [benefit/value]
-        
+
         Example:
         As a flight software developer
         I want to have a pre-configured IMU manager component
