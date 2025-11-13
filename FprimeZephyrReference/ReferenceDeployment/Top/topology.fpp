@@ -170,7 +170,6 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      DetumbleManager.timeGet -> rtcManager.timeGetPort
       DetumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
       DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet

@@ -24,26 +24,46 @@ DetumbleManager ::~DetumbleManager() {}
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
-    U32 currTime = this->timeGet_out(0);
+    U32 currTime = this->getTime().getSeconds();
 
-    if (this->paramGet_DETUMBLE_RUNNING()) {
+    // I'm not checking the value of isValid for paramGet calls since all of the parameters have a
+    // default value, but maybe there should still be specific logging for if the default parameter
+    // was used and retrieval failed.
+    Fw::ParamValid isValid;
+
+    if (this->detumbleRunning) {
         // Check if we've hit the max time detumble can run
-        if (currTime - this->paramGet_START_TIME() <= this->paramGet_MAX_TIME()) {
+        U32 maxTime = this->paramGet_MAX_TIME(isValid);
+        if (currTime - this->startTime <= maxTime) {
             bool res = this->executeControlStep();
             if (!res) {
                 // Log some error
-                continue;
+            }
+
+            this->iterations++;
+
+            // Every 10 iterations (every second), check if the rotation per second is less than 12 degrees
+            if (this->iterations % 10 == 0) {
+                Drv::AngularVelocity angVel = this->angularVelocityGet_out(0);
+                F64 rotationRate = this->getAngularVelocityMagnitude(angVel);
+
+                F64 threshold = this->paramGet_ROTATIONAL_THRESHOLD(isValid);
+                if (rotationRate < threshold) {
+                    // Rotation is below threshold - can stop detumbling
+                    this->detumbleRunning = false;
+                    this->lastCompleted = currTime;
+                }
             }
         } else {
-            // Max iterations reached, disable detumble for now
-            this->paramSet_DETUMBLE_RUNNING(false);
-            this->paramSet_LAST_COMPLETED(currTime);
+            // Max time reached, disable detumble for now
+            this->detumbleRunning = false;
+            this->lastCompleted = currTime;
         }
     } else {
         // Check if the cooldown has ended, and start if so.
-        if (currTime - this->paramGet_LAST_COMPLETED() >= this->paramGet_COOLDOWN()) {
-            this->paramSet_DETUMBLE_RUNNING(true);
-            this->paramSet_START_TIME(currTime);
+        if (currTime - this->lastCompleted >= this->paramGet_COOLDOWN(isValid)) {
+            this->detumbleRunning = true;
+            this->startTime = currTime;
         }
     }
 }
@@ -61,7 +81,6 @@ bool DetumbleManager::executeControlStep() {
     }
 
     this->prevMgField = mgField;
-
     this->setDipoleMoment(dpMoment);
 
     return true;
@@ -73,9 +92,9 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 unlimited_z = dpMoment.get_z() / (this->COIL_NUM_TURNS_Z * this->COIL_AREA_Z);
 
     // Limit current for each axis to max coil current
-    F64 limited_x = std::min(std::fabs(unlimited_x), this->COIL_MAX_CURRENT_X_Y) * (unlimited_x >= 0 ? 1.0f : -1.0f);
-    F64 limited_y = std::min(std::fabs(unlimited_y), this->COIL_MAX_CURRENT_X_Y) * (unlimited_y >= 0 ? 1.0f : -1.0f);
-    F64 limited_z = std::min(std::fabs(unlimited_z), this->COIL_MAX_CURRENT_Z) * (unlimited_z >= 0 ? 1.0f : -1.0f);
+    F64 limited_x = std::fmin(std::fabs(unlimited_x), this->COIL_MAX_CURRENT_X_Y) * (unlimited_x >= 0 ? 1.0 : -1.0);
+    F64 limited_y = std::fmin(std::fabs(unlimited_y), this->COIL_MAX_CURRENT_X_Y) * (unlimited_y >= 0 ? 1.0 : -1.0);
+    F64 limited_z = std::fmin(std::fabs(unlimited_z), this->COIL_MAX_CURRENT_Z) * (unlimited_z >= 0 ? 1.0 : -1.0);
 
     F64 x1 = limited_x;
     F64 x2 = -limited_x;
@@ -84,6 +103,15 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 z1 = limited_z;
 
     this->magnetorquersSet_out(0, {x1, x2, y1, y2, z1});
+}
+
+F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
+    // Calculate magnitude in rad/s
+    F64 magRadPerSec =
+        std::sqrt(angVel.get_x() * angVel.get_x() + angVel.get_y() * angVel.get_y() + angVel.get_z() * angVel.get_z());
+
+    // Convert rad/s to deg/s
+    return magRadPerSec * 180.0 / this->PI;
 }
 
 }  // namespace Components
