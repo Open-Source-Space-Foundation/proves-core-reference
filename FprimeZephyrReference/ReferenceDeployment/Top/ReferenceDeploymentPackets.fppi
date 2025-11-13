@@ -9,6 +9,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.startupManager.BootCount
+    ReferenceDeployment.startupManager.QuiescenceEndTime
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -79,6 +81,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Voltage
     ReferenceDeployment.ina219SolManager.Current
     ReferenceDeployment.ina219SolManager.Power
+    ReferenceDeployment.powerMonitor.TotalPowerConsumption
+    ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
 } omit {
@@ -103,4 +107,17 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.CustomVersion08
   CdhCore.version.CustomVersion09
   CdhCore.version.CustomVersion10
+  ReferenceDeployment.cmdSeq.CS_LoadCommands
+  ReferenceDeployment.cmdSeq.CS_CancelCommands
+  ReferenceDeployment.cmdSeq.CS_CommandsExecuted
+  ReferenceDeployment.cmdSeq.CS_SequencesCompleted
+  ReferenceDeployment.cmdSeq.CS_Errors
+  FileHandling.fileUplink.FilesReceived
+  FileHandling.fileUplink.PacketsReceived
+  FileHandling.fileDownlink.FilesSent
+  FileHandling.fileDownlink.PacketsSent
+  FileHandling.fileManager.CommandsExecuted
+  FileHandling.fileManager.Errors
+  FileHandling.fileUplink.Warnings
+  FileHandling.fileDownlink.Warnings
 }

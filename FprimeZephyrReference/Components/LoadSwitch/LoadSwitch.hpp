@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  LoadSwitch.hpp
-// \author sarah
+// \author Moises, sarah
 // \brief  hpp file for LoadSwitch component implementation class
 // ======================================================================
 
@@ -28,12 +28,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Destroy LoadSwitch object
     ~LoadSwitch();
 
-    // ----------------------------------------------------------------------
-    // Configuration Meant to be used in ***Topology.cpp
-    // ----------------------------------------------------------------------
-
-    void pin_configuration(const struct device* device, uint8_t pinNum);
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -56,13 +50,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Handler implementation for Reset
     void Reset_handler(FwIndexType portNum  //!< The port number
                        ) override;
-
-    // ----------------------------------------------------------------------
-    // Member variables
-    // ----------------------------------------------------------------------
-
-    uint8_t m_pinNum;
-    static const struct device* m_device;
 };
 
 }  // namespace Components
