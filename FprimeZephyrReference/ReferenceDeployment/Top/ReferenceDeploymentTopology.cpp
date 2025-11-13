@@ -103,6 +103,9 @@ void setupTopology(const TopologyState& state) {
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 
+    // Try to configure the RTC device first because all other components need time
+    rtcManager.configure(state.rtcDevice);
+
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
@@ -112,7 +115,6 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
-    rtcManager.configure(state.rtcDevice);
 }
 
 void startRateGroups() {
