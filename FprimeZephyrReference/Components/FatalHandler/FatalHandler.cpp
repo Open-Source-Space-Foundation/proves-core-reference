@@ -10,10 +10,11 @@
 //
 // ======================================================================
 
-#include <zephyr/sys/reboot.h>
 #include <FprimeZephyrReference/Components/FatalHandler/FatalHandler.hpp>
 #include <Fw/FPrimeBasicTypes.hpp>
 #include <Fw/Logger/Logger.hpp>
+
+#include <zephyr/sys/reboot.h>
 
 namespace Components {
 

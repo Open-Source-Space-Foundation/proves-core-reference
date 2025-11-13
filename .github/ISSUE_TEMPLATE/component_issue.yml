@@ -1,0 +1,168 @@
+name: Component Issue
+description: Report issues specific to F Prime components (ports, threading, FPP, etc.)
+title: "[COMPONENT]: "
+labels: ["component"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for issues related to F Prime component design, implementation, or behavior.
+
+  - type: input
+    id: component-name
+    attributes:
+      label: Component Name
+      description: Name of the component (e.g., ImuManager, Watchdog, AntennaDeployer)
+      placeholder: ImuManager
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component-type
+    attributes:
+      label: Component Type
+      description: What type of F Prime component is this?
+      options:
+        - Active Component (has thread)
+        - Passive Component (no thread)
+        - Queued Component
+        - Driver Component
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: component-location
+    attributes:
+      label: Component Location
+      description: Path to the component in the repository
+      placeholder: FprimeZephyrReference/Components/ImuManager
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What aspect of the component is problematic?
+      multiple: true
+      options:
+        - Port Connections (input/output ports)
+        - Port Invocation/Behavior
+        - Thread/Task Configuration
+        - Priority/Stack Size Issues
+        - Component State Management
+        - FPP Definition Errors
+        - Command Handler Issues
+        - Telemetry Channel Issues
+        - Event Reporting Issues
+        - Parameter Handling
+        - Autocoded Files (regeneration needed)
+        - Component Lifecycle (init, startup, shutdown)
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: port-interaction
+    attributes:
+      label: Port Interaction Issues
+      description: If this relates to port interactions, describe the ports involved and the issue
+      placeholder: |
+        - Port name: sensorDataOut
+        - Port type: output, async
+        - Connected to: DataLogger.sensorDataIn
+        - Issue: Port invocation causes deadlock when called from ISR context...
+
+  - type: textarea
+    id: thread-priority
+    attributes:
+      label: Thread/Priority Configuration
+      description: If this relates to threading, describe the configuration and issue
+      placeholder: |
+        - Thread priority: 50
+        - Stack size: 4096 bytes
+        - Issue: Component task preempts critical system tasks, causing missed deadlines...
+
+  - type: textarea
+    id: fpp-issues
+    attributes:
+      label: FPP Definition Issues
+      description: If this relates to FPP files, paste relevant FPP code and describe the issue
+      placeholder: |
+        ```fpp
+        # From ImuManager.fpp
+        async command IMU_START() \
+          opcode 0x10
+
+        # Issue: Command opcode conflicts with another component...
+        ```
+      render: fpp
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages
+      description: Paste any relevant error messages, compiler warnings, or runtime errors
+      placeholder: |
+        ```
+        [ERROR] Port imuDataOut not connected
+        [ERROR] Component ImuManager failed to initialize: -1
+        ```
+      render: shell
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this component issue?
+      placeholder: |
+        1. Build deployment with ImuManager
+        2. Send IMU_START command
+        3. Observe component hangs after receiving data
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Component Behavior
+      description: How should the component behave?
+      placeholder: Component should process IMU data and send telemetry every 100ms...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Component Behavior
+      description: What is the component actually doing?
+      placeholder: Component processes first data packet but then stops responding to commands...
+    validations:
+      required: true
+
+  - type: textarea
+    id: topology-excerpt
+    attributes:
+      label: Topology Excerpt
+      description: Paste relevant parts of topology.fpp or instances.fpp if applicable
+      placeholder: |
+        ```fpp
+        instance imuManager: FprimeZephyrReference.ImuManager base id 0x0E00
+
+        connections ImuManagerConnections {
+          imuManager.Time -> rateGroup1Hz.RateGroupOut[7]
+          imuManager.imuDataOut -> dataLogger.sensorIn
+        }
+        ```
+      render: fpp
+
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed Fix
+      description: If you have ideas on how to fix this, please describe them
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information about this component issue

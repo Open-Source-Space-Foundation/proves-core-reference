@@ -1,0 +1,155 @@
+name: Documentation Update
+description: Suggest improvements to documentation or report documentation issues
+title: "[DOCS]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation! Please provide details about what needs to be updated.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs attention?
+      options:
+        - README.md
+        - Setup/Installation Guide (docs/main-content/)
+        - Board-Specific Documentation (docs/additional-resources/)
+        - Component Documentation (SDDs)
+        - Build/Integration Guide
+        - Testing Documentation
+        - Code Comments
+        - API Documentation
+        - Troubleshooting Guide
+        - GitHub Copilot Instructions
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: doc-location
+    attributes:
+      label: Documentation Location
+      description: Path or URL to the documentation that needs updating
+      placeholder: docs/main-content/initial-setup.md or FprimeZephyrReference/Components/ImuManager/README.md
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Incorrect/Outdated Information
+        - Missing Information
+        - Unclear/Confusing Explanation
+        - Broken Links
+        - Typos/Grammar
+        - Code Examples Don't Work
+        - Missing Code Examples
+        - Poor Organization/Structure
+        - Missing Diagrams/Images
+        - Accessibility Issue
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-docs
+    attributes:
+      label: Current Documentation
+      description: Quote or describe the current documentation that needs improvement
+      placeholder: |
+        Current text from docs/main-content/initial-setup.md:
+        "Run make to set up the project"
+
+        This is unclear because...
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?
+      placeholder: |
+        Suggested text:
+        "Run `make` from the proves-core-reference directory to set up the project. This command will:
+        1. Initialize git submodules (F Prime, Zephyr)
+        2. Create Python virtual environment
+        3. Install dependencies
+        4. Configure Zephyr workspace
+
+        This process takes approximately 5-10 minutes on first run."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this improvement needed? Who would benefit?
+      placeholder: |
+        - New users are confused about what `make` does
+        - Current documentation doesn't explain the time commitment
+        - Users don't know if the command is working or hung
+        - This affects all new contributors and users
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this documentation fix?
+      options:
+        - Critical (blocks understanding)
+        - High (causes significant confusion)
+        - Medium (nice to have)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affects-new-users
+    attributes:
+      label: Affects New Users
+      description: Does this particularly affect people new to the project?
+      options:
+        - "Yes, critical for onboarding"
+        - "Yes, would help new users"
+        - "No, affects all users equally"
+        - "No, advanced topic only"
+
+  - type: textarea
+    id: related-docs
+    attributes:
+      label: Related Documentation
+      description: Are there other related docs that should be updated?
+      placeholder: |
+        - Similar issue in docs/additional-resources/troubleshooting.md
+        - Should cross-reference with README.md section on requirements
+        - Conflicts with information in GitHub Copilot instructions
+
+  - type: dropdown
+    id: willing-to-contribute
+    attributes:
+      label: Willing to Contribute
+      description: Are you willing to submit a PR with the documentation changes?
+      options:
+        - "Yes, I can write the documentation"
+        - "Yes, I can help review changes"
+        - "No, but I can provide feedback"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help improve the documentation
+      placeholder: |
+        Screenshots, diagrams, or examples that could be included:
+        - Console output showing what success looks like
+        - Error messages that users might encounter
+        - Links to related external documentation

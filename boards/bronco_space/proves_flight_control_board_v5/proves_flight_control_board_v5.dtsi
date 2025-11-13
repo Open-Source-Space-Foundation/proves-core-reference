@@ -14,6 +14,17 @@
 		zephyr,code-partition = &code_partition;
 	};
 
+	fstab {
+                compatible = "zephyr,fstab";
+                ffs1: ffs1 {
+                        compatible = "zephyr,fstab,fatfs";
+                        automount;
+                        disk-access;
+                        mount-point = "/";
+                };
+        };
+
+
 	aliases {
 		watchdog0 = &wdt0;
 	};
@@ -89,6 +100,24 @@ zephyr_udc0: &usbd {
 	status = "okay";
 };
 
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>, <&gpio0 15 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-names = "default";
+	sdhc0: sdhc@0 {
+                compatible = "zephyr,sdhc-spi-slot";
+                reg = <0>;
+                status = "okay";
+                mmc {
+                    compatible = "zephyr,sdmmc-disk";
+                    disk-name = "SD";
+                    status = "okay";
+                };
+                spi-max-frequency = <24000000>;
+        };
+};
+
 &spi1 {
 	status = "okay";
 	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
@@ -106,11 +135,35 @@ zephyr_udc0: &usbd {
 	};
 };
 
-&spi0 {
+&i2c0 {
 	status = "okay";
-	cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
-	pinctrl-0 = <&spi0_default>;
+	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
+	clock-frequency = <100000>;
+
+	ina219_0: ina219_0@40 {
+		compatible = "ti,ina219";
+		reg = <0x40>;
+		brng = <0>;
+		pg = <0>;
+		badc = <12>;
+		sadc = <12>;
+		shunt-milliohm = <2>;
+		lsb-microamp = <61>;
+		label = "INA219 sys";
+	};
+
+	ina219_1: ina219_1@41 {
+		compatible = "ti,ina219";
+		reg = <0x41>;
+		brng = <0>;
+		pg = <0>;
+		badc = <12>;
+		sadc = <12>;
+		shunt-milliohm = <2>;
+		lsb-microamp = <61>;
+		label = "INA219 sol";
+	};
 };
 
 
@@ -126,12 +179,13 @@ zephyr_udc0: &usbd {
 		label = "LSM6DSO";
 	};
 
-	lis2mdl: lis2mdl@1e {
+	lis2mdl0: lis2mdl0@1e {
 		compatible = "st,lis2mdl";
 		reg = <0x1e>;
 		label = "LIS2MDL";
 	};
-	rv3028: rv3028@52 {
+
+	rtc0: rtc0@52 {
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
@@ -145,4 +199,148 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <100>;
 		label = "INA219";
 	};
+	mcp23017: mcp23017@20 {
+		compatible = "microchip,mcp23017";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		/* gpio-line-names must match the numeric indexes used below. The
+		 * topology and gpio nodes expect the following mapping (index : name):
+		 *  0: ENABLE_HEATER (GPA0)
+		 *  1: PAYLOAD_PWR_ENABLE (GPA1)
+		 *  2: FIRE_DEPLOY2_B (GPA2)
+		 *  3: PAYLOAD_BATT_ENABLE (GPA3)
+		 *  4: RF2_IO2 (GPA4)
+		 *  5: RF2_IO1 (GPA5)
+		 *  6: RF2_IO0 (GPA6)
+		 *  7: RF2_IO3 (GPA7)
+		 *  8: FACE4_ENABLE (GPB0)
+		 *  9: FACE0_ENABLE (GPB1)
+		 * 10: FACE1_ENABLE (GPB2)
+		 * 11: FACE2_ENABLE (GPB3)
+		 * 12: FACE3_ENABLE (GPB4)
+		 * 13: FACE5_ENABLE (GPB5)
+		 * 14: READONLY (GPB6)
+		 * 15: CHARGE (GPB7)
+		 */
+		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+						  "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
+						  "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+						  "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE";
+
+		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
+
+		ngpios = <16>;
+	};
+};
+
+// GPIO Expander IO
+/ {
+
+    // Define the GPIO outputs based on your schematic
+    gpio_outputs {
+        compatible = "gpio-leds";  // Using gpio-leds as a convenient container
+
+        face4_enable: face4-enable {
+
+            gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>;  // GPB0
+            label = "FACE4_ENABLE";
+        };
+
+        face0_enable: face0-enable {
+
+            gpios = <&mcp23017 9 GPIO_ACTIVE_HIGH>;  // GPB1
+            label = "FACE0_ENABLE";
+        };
+
+        face1_enable: face1-enable {
+
+            gpios = <&mcp23017 10 GPIO_ACTIVE_HIGH>;  // GPB2
+            label = "FACE1_ENABLE";
+        };
+
+        face2_enable: face2-enable {
+
+            gpios = <&mcp23017 11 GPIO_ACTIVE_HIGH>;  // GPB3
+            label = "FACE2_ENABLE";
+        };
+
+        face3_enable: face3-enable {
+
+            gpios = <&mcp23017 12 GPIO_ACTIVE_HIGH>;  // GPB4
+            label = "FACE3_ENABLE";
+        };
+
+        face5_enable: face5-enable {
+
+            gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;  // GPB5
+            label = "FACE5_ENABLE";
+        };
+
+        enable_heater: enable-heater {
+
+            gpios = <&mcp23017 0 GPIO_ACTIVE_HIGH>;  // GPA0
+            label = "ENABLE_Heater";
+        };
+
+        payload_pwr_enable: payload-pwr-enable {
+
+            gpios = <&mcp23017 1 GPIO_ACTIVE_HIGH>;  // GPA1
+            label = "PAYLOAD_PWR_ENABLE";
+        };
+
+        fire_deploy2_b: fire-deploy2-b {
+
+            gpios = <&mcp23017 2 GPIO_ACTIVE_HIGH>;  // GPA2
+            label = "FIRE_DEPLOY2_B";
+        };
+
+        payload_batt_enable: payload-batt-enable {
+
+            gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
+            label = "PAYLOAD_BATT_ENABLE";
+        };
+    };
+
+    // Define GPIO inputs
+    gpio_inputs {
+        compatible = "gpio-keys";
+
+		charge: charge {
+
+            gpios = <&mcp23017 16 GPIO_ACTIVE_HIGH>;  // GPB7
+            label = "CHARGE";
+        };
+
+        readonly: readonly {
+
+            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB6
+            label = "READONLY";
+        };
+
+        rf2_io2: rf2-io2 {
+
+            gpios = <&mcp23017 4 GPIO_ACTIVE_HIGH>;  // GPA4
+            label = "RF2_IO2";
+        };
+
+        rf2_io1: rf2-io1 {
+
+            gpios = <&mcp23017 5 GPIO_ACTIVE_HIGH>;  // GPA5
+            label = "RF2_IO1";
+        };
+
+        rf2_io0: rf2-io0 {
+
+            gpios = <&mcp23017 6 GPIO_ACTIVE_HIGH>;  // GPA6
+            label = "RF2_IO0";
+        };
+
+        rf2_io3: rf2-io3 {
+
+            gpios = <&mcp23017 7 GPIO_ACTIVE_HIGH>;  // GPA7
+            label = "RF2_IO3";
+        };
+    };
 };
