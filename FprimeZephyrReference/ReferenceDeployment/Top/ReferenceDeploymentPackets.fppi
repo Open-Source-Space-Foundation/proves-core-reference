@@ -89,6 +89,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.authenticate.AuthenticatedPacketsCount
     ReferenceDeployment.authenticate.RejectedPacketsCount
     ReferenceDeployment.authenticate.CurrentSequenceNumber
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
 
   }
 
