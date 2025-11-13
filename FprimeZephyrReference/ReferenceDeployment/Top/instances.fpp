@@ -135,10 +135,5 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-<<<<<<< HEAD
-  instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
-
   instance authenticate: Components.Authenticate base id 0x10040000
-=======
->>>>>>> d228c7a887a5a5bd23193a1f80d0539dda97fea9
 }

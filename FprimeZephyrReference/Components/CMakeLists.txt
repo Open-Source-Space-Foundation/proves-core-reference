@@ -11,9 +11,6 @@ add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ImuManager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/NullPrmDb/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/PowerMonitor/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Watchdog")
-<<<<<<< HEAD
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Authenticate/")
-=======
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/StartupManager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/LoadSwitch/")
->>>>>>> d228c7a887a5a5bd23193a1f80d0539dda97fea9
