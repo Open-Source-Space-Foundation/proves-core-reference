@@ -50,15 +50,18 @@ class Authenticate final : public AuthenticateComponentBase {
 
   private:
     struct AuthenticationConfig {
-        U32 type;
-        U32 key;
+        std::string type;
+        std::string key;
     };
 
-    AuthenticationConfig lookupAuthenticationConfig(U32 spi) const;
+    AuthenticationConfig lookupAuthenticationConfig(U32 spi);
 
     bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
 
-    Fw::Buffer computeHMAC(const U8* frameHeader, const U8* securityHeader, const U8* commandPayload, U32 key);
+    Fw::Buffer computeHMAC(const U8* frameHeader,
+                           const U8* securityHeader,
+                           const U8* commandPayload,
+                           const std::string& key);
 
     bool validateSequenceNumber(U32 received, U32 expected);
 
@@ -79,6 +82,9 @@ class Authenticate final : public AuthenticateComponentBase {
     void SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                 U32 cmdSeq,           //!< The command sequence number
                                 U32 seq_num) override;
+
+    //! Handler implementation for command GET_KEY_FROM_SPI
+    void GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) override;
 
     std::atomic<U32> sequenceNumber;
     Os::File m_sequenceNumberFile;

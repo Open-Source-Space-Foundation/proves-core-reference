@@ -22,6 +22,8 @@ module Components {
 
         sync command SET_SEQ_NUM(seq_num: U32)
 
+        sync command GET_KEY_FROM_SPI(spi: U32)
+
         # @ Example telemetry counter
         # telemetry ExampleCounter: U64
 
@@ -39,7 +41,7 @@ module Components {
 
         event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: SPI={}, Expected={}, Window={}"
 
-        event InvalidSPI(spi: U32, apid: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, APID={}"
+        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}"
 
         event APIDMismatch(spi: U32, packetApid: U32) severity warning high id 4 format "APID mismatch: SPI={}, Packet APID={}"
 
@@ -47,8 +49,9 @@ module Components {
 
         event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}"
 
-        event InvalidAuthenticationType(authType: U32) severity warning high id 5 format "Invalid authentication type {}"
+        event InvalidAuthenticationType(authType: U32) severity warning high id 8 format "Invalid authentication type {}"
 
+        event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}"
 
         # @ Ports for packet authentication
 
