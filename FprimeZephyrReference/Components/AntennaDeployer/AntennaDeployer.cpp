@@ -1,5 +1,8 @@
 #include "FprimeZephyrReference/Components/AntennaDeployer/AntennaDeployer.hpp"
 
+#include "Os/File.hpp"
+#include "Os/FileSystem.hpp"
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -61,6 +64,13 @@ void AntennaDeployer ::distanceIn_handler(FwIndexType portNum, F32 distance, boo
 // ----------------------------------------------------------------------
 
 void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Check if antenna has already been deployed
+    if (this->readDeploymentState()) {
+        this->log_ACTIVITY_HI_DeploymentAlreadyComplete();
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
     if (this->m_state != DeploymentState::IDLE) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
         return;
@@ -83,6 +93,28 @@ void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    (void)Os::FileSystem::removeFile(file_path.toChar());
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
+    if (deployed) {
+        this->writeDeploymentState();
+    } else {
+        Fw::ParamValid is_valid;
+        auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+        (void)Os::FileSystem::removeFile(file_path.toChar());
+    }
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Internal helpers
 // ----------------------------------------------------------------------
@@ -101,8 +133,10 @@ void AntennaDeployer ::startNextAttempt() {
 
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
-    this->m_totalAttempts++;
     this->tlmWrite_DeployAttemptCount(this->m_totalAttempts);
+    this->m_totalAttempts++;
+
+    this->m_burnTicksThisAttempt = 0;
 
     if (this->isConnected_burnStart_OutputPort(0)) {
         this->burnStart_out(0);
@@ -123,6 +157,7 @@ void AntennaDeployer ::handleQuietWaitTick() {
 
 void AntennaDeployer ::handleBurningTick() {
     this->m_ticksInState++;
+    this->m_burnTicksThisAttempt = this->m_ticksInState;
 
     if (this->m_state != DeploymentState::BURNING) {
         return;
@@ -132,6 +167,7 @@ void AntennaDeployer ::handleBurningTick() {
     const U32 burnDuration = this->paramGet_BURN_DURATION_SEC(valid);
     if (this->m_ticksInState >= burnDuration) {
         this->ensureBurnwireStopped();
+        this->logBurnSignalCount();
 
         if (this->m_successDetected) {
             this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
@@ -178,9 +214,13 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
     }
 
     this->ensureBurnwireStopped();
+    this->logBurnSignalCount();
 
     if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
+
+        // Mark antenna as deployed by writing state file
+        this->writeDeploymentState();
     }
 
     this->log_ACTIVITY_HI_DeployFinish(result, this->m_currentAttempt);
@@ -194,6 +234,7 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_ticksInState = 0;
     this->m_successDetected = false;
     this->m_lastDistanceValid = false;
+    this->m_burnTicksThisAttempt = 0;
 }
 
 bool AntennaDeployer ::isDistanceWithinValidRange(F32 distance) {
@@ -212,6 +253,7 @@ bool AntennaDeployer ::isDistanceDeployed(F32 distance) {
 
     if (distance <= threshold) {
         this->m_successDetected = true;
+        this->logBurnSignalCount();
         return true;
     }
 
@@ -222,6 +264,40 @@ void AntennaDeployer ::ensureBurnwireStopped() {
     if (this->isConnected_burnStop_OutputPort(0)) {
         this->burnStop_out(0);
     }
+}
+
+void AntennaDeployer ::logBurnSignalCount() {
+    if (this->m_burnTicksThisAttempt > 0U) {
+        this->log_ACTIVITY_LO_AntennaBurnSignalCount(this->m_burnTicksThisAttempt);
+        this->m_burnTicksThisAttempt = 0;
+    }
+}
+
+bool AntennaDeployer ::readDeploymentState() {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    Os::File file;
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
+    bool deployed = (status == Os::File::OP_OK);
+    (void)file.close();
+    return deployed;
+}
+
+void AntennaDeployer ::writeDeploymentState() {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    Os::File file;
+    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    if (status == Os::File::OP_OK) {
+        U8 marker = 1;
+        FwSizeType size = sizeof(marker);
+        (void)file.write(&marker, size);
+    }
+    (void)file.close();
 }
 
 }  // namespace Components

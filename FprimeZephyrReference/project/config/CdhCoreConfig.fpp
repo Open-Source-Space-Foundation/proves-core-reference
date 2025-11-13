@@ -17,10 +17,10 @@ module CdhCoreConfig {
     }
 
     module Priorities {
-        constant cmdDisp     = 10
-        constant $health     = 11
-        constant events      = 12
-        constant tlmSend     = 13
+        constant cmdDisp     = 7
+        constant $health     = 8
+        constant events      = 9
+        constant tlmSend     = 10
 
     }
 }

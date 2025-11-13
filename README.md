@@ -83,6 +83,10 @@ On the board you want to receive data, make sure you have CircuitPython installe
 
 Once you have CircuitPython running, upload the files from the ```circuit-python-lora-passthrough``` folder in this repo. Make sure to overwrite any existing ```boot.py``` and ```code.py``` files on your CircuitPython board with the ones from this folder.
 
+> [!NOTE]
+> If you're targeting a Feather rather than a flight controller board, then
+> copy from ```circuit-python-lora-passthrough-feather``` instead.
+
 ```boot.py``` enables both virtual serial ports that the device presents over USB. This allows you to use one for the console and one for data. ```code.py``` acts as a LoRa radio forwarder over USB serial: The console port is used for logging and debugging, and is the first serial port that appears when the board is connected. The data port is used for actual data transfer, and is the second serial port.
 
 1. Open the console port on your computer. This is the first serial port that opens when you plug in the circuitpython board. It should start by printing:
@@ -101,3 +105,7 @@ Now you want to be able to send commands through the radio. To do this, connect 
 Depending on the comdelay, the gds should turn green every time a packet is sent. If you want to change this parameter use
 
 ```ReferenceDeployment.comDelay.DIVIDER_PRM_SET``` on the gds. You can set it down to 2, but setting it to 1 may cause issues.
+
+## Sequences
+
+You can control the specific command lists of the satellite by writing a sequence file. Sequence files are contained in /sequences. For details on how to attack the startup sequence check the sdd in Startup Manager.
