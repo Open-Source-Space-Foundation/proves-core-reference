@@ -49,6 +49,7 @@ module Components {
 
         event InvalidAuthenticationType(authType: U32) severity warning high id 5 format "Invalid authentication type {}"
 
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer
@@ -66,6 +67,7 @@ module Components {
         # @ Example parameter
         # param PARAMETER_NAME: U32
 
+        param SEQ_NUM_WINDOW : U32 default 50
 
 
         ###############################################################################
