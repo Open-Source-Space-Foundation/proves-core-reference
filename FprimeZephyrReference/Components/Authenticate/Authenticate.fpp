@@ -60,7 +60,7 @@ module Components {
         output port dataReturnOut: Svc.ComDataWithContext
 
         @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
-        sync input port : Svc.ComDataWithContext
+        sync input port dataReturnIn: Svc.ComDataWithContext
 
         # @ Example parameter
         # param PARAMETER_NAME: U32

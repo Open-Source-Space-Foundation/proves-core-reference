@@ -91,25 +91,39 @@ const int HMAC_AUTHENTIFICATION = 0
     void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer & data, const ComCfg::FrameContext& context) {
         // Get packet APID and pass to PacketRequiresAuthentication
         ComCfg::Apid apid = context.get_apid();
-        bool requiresAuthentication = this->PacketRequiresAuthentication(data, context);
+        bool requiresAuthentication = this->PacketRequiresAuthentication(data, apid);
 
         if (requiresAuthentication) {
             // Authenticate the packet
 
             // TO DO
             // get the SPI from the header
+            const U32 spi = 0U;
 
             // TO DO
             // use the SPI to get the type of authentication and the key
-            U32 type_authn = HMAC_AUTHENTIFICATION;
-            U32 key_authn = 2174i3o3214ouuio5uiou134oi5;
+            const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
+            const U32 type_authn = authConfig.type;
+            const U32 key_authn = authConfig.key;
 
             // get the sequence number from the sequence number file
             U32 sequenceNumber = this->sequenceNumber.load();
 
             if (type_authn == HMAC_AUTHENTIFICATION) {
+                // TO DO
+                // get the frame header, security header, and frame data field from the packet
                 // compute the HMAC of the packet
-                Fw::Buffer hmac = this->computeHMAC(data, context);
+                const U8* raw = data.getData();
+                const FwSizeType total = data.getSize();
+                FW_ASSERT(total >= 6 + 8 + 8);
+
+                const U8* frameHeader = raw;         // 6 bytes
+                const U8* securityHeader = raw + 6;  // 8 bytes
+                const U8* securityTrailer = raw + total - 8;
+                const U8* commandPayload = raw + 14;
+                FwSizeType commandLen = total - 14 - 8;
+
+                Fw::Buffer hmac = this->computeHMAC(frameHeader, securityHeader, frameDataField, key_authn);
                 // compare the HMAC with the computed HMAC
                 bool hmacMatches = this->compareHMAC(hmac, computedHMAC);
                 if (!hmacMatches) {
@@ -132,6 +146,15 @@ const int HMAC_AUTHENTIFICATION = 0
             // Forward the packet to the SpacePacketDeframer
             this->dataOut_out(0, data, context);
         }
+    }
+
+    Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32 spi) const {
+        (void)spi;
+        AuthenticationConfig config{};
+        config.type = HMAC_AUTHENTIFICATION;
+        config.key = 0U;
+        // TODO: fetch real authentication data for the provided SPI using the file!!!
+        return config;
     }
 
     void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer & data,

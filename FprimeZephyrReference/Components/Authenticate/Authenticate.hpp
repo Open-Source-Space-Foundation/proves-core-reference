@@ -47,6 +47,13 @@ class Authenticate final : public AuthenticateComponentBase {
                               const ComCfg::FrameContext& context) override;
 
   private:
+    struct AuthenticationConfig {
+        U32 type;
+        U32 key;
+    };
+
+    AuthenticationConfig lookupAuthenticationConfig(U32 spi) const;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
