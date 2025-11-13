@@ -95,7 +95,7 @@ module ReferenceDeployment {
 
   instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10030000
 
-  instance mycomp: Components.MyComponent base id 0x10031000
+  instance mycomp: Components.MyComponent base id 0x10041000
 
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
