@@ -8,6 +8,9 @@
 
 #include <Fw/Logger/Logger.hpp>
 
+#define OP_SET_TX 0x83
+#define OP_GET_STATUS 0xC0
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -31,29 +34,38 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // TODO
-    FwIndexType out_idx = 0;
-    // Firmware version is at 0x153 -- expect 0xB7A9 or 0xB5A9
-    //                 OP    ADDR_HI  ADDR_LOW NOP NOP NOP
-    /*U8 write_data[] = {0x19, 0x1,     0x53,    0,  0,  0};*/
-    U8 write_data[] = {0xC0, 0};
-    U8 read_data[sizeof(write_data)];
-    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
-    Fw::Buffer readBuffer(read_data, sizeof(read_data));
-    this->spiSend_out(out_idx, writeBuffer, readBuffer);
-    for (int i = 0; i < sizeof(read_data); i++) {
-        Fw::Logger::log("Byte %i: %" PRI_U8 "\n", i, read_data[i]);
-    }
+    this->spiSetTx();
+    U8 status = this->spiGetStatus();
+    Fw::Logger::log("status: %" PRI_U8 "\n", status);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // UNTESTED
     this->resetSend_out(0, Fw::Logic::LOW);
-    /*this->gpioSet_out(0, (Fw::On::ON == this->m_state) ? Fw::Logic::HIGH : Fw::Logic::LOW);*/
     Os::Task::delay(Fw::TimeInterval(0, 1000));
     this->resetSend_out(0, Fw::Logic::HIGH);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+// SPI Commands
+
+void MyComponent ::spiSetTx() {
+    //                            periodBase (1ms), periodBaseCount[15:8], periodBaseCount[7:0]
+    U8 write_data[] = {OP_SET_TX, 0x02, 0x4, 0x00};
+    U8 read_data[sizeof(write_data)];
+    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
+    Fw::Buffer readBuffer(read_data, sizeof(read_data));
+    this->spiSend_out(0, writeBuffer, readBuffer);
+}
+
+U8 MyComponent ::spiGetStatus() {
+    U8 write_data[] = {OP_GET_STATUS, 0x00};
+    U8 read_data[sizeof(write_data)];
+    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
+    Fw::Buffer readBuffer(read_data, sizeof(read_data));
+    this->spiSend_out(0, writeBuffer, readBuffer);
+    return read_data[sizeof(read_data) - 1];
 }
 
 }  // namespace Components

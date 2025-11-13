@@ -54,6 +54,11 @@ class MyComponent final : public MyComponentComponentBase {
     void RESET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                           U32 cmdSeq            //!< The command sequence number
                           ) override;
+
+    //! SX1280 SPI Commands
+
+    void spiSetTx();
+    U8 spiGetStatus();
 };
 
 }  // namespace Components
