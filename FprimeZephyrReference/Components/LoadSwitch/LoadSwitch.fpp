@@ -30,6 +30,9 @@ module Components {
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 
+        @ Port for telling the light sensor to init
+        output port init: InitPort
+
         
         # Input that will be used by other components if they want to force a reset 
         # (off and on again) of the load switch

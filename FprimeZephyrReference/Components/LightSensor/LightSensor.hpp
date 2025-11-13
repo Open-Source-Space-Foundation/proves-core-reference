@@ -53,6 +53,7 @@ class LightSensor final : public LightSensorComponentBase {
                      U32 context           //!< The call order
                      ) override;
     
+    void init_handler(FwIndexType portNum);
 
     F32 m_RawLightData;
 
@@ -63,6 +64,8 @@ class LightSensor final : public LightSensorComponentBase {
     bool m_configured = false; 
 
     bool m_attributes_set = false;
+
+    bool m_device_init = false;
 
     const struct device* m_dev;
 };

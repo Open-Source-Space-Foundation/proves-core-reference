@@ -7,7 +7,10 @@
 
 
 #include "FprimeZephyrReference/Components/LightSensor/LightSensor.hpp"
-
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/i2c.h>
 
 namespace Components {
 
@@ -20,13 +23,7 @@ LightSensor ::LightSensor(const char* const compName) : LightSensorComponentBase
 LightSensor ::~LightSensor() {}
 
 void LightSensor ::configure(const struct device* dev) {
-    this->m_dev = dev;
-    if (this->m_dev == nullptr) {
-		Fw::LogStringArg errMsg("Misconfigured");
-        this->log_WARNING_HI_LightSensorError(errMsg);
-        return;
-    }
-    this->m_configured = true;
+	return;
 }
 
 void LightSensor ::ReadData() { // const struct device *dev, 
@@ -73,11 +70,6 @@ void LightSensor ::ReadData() { // const struct device *dev,
 		this->m_attributes_set = true;
 	}
 
-	if (!device_is_ready(this->m_dev)) {
-		this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Device not ready"));
-		return;
-	}
-
     // Get the rate
 	ret = sensor_sample_fetch(this->m_dev);
 	if ((ret < 0) && (ret != -E2BIG)) {
@@ -113,11 +105,60 @@ void LightSensor ::run_handler(FwIndexType portNum, U32 context) {
 		this->tlmWrite_IRLightData(this->m_IRLightData);
 		this->tlmWrite_ALSLightData(this->m_ALSLightData);
 	} else {
+		if (this->m_device_init == true) {
+			this->m_device_init = false;
+		}
 		if(state == Fw::Logic::LOW && this->m_attributes_set == true){
 			this->m_attributes_set = false;
 		}
 	}
 	
 }
+
+void LightSensor::init_handler(FwIndexType portNum) {
+
+    const struct device *mux    = DEVICE_DT_GET(DT_NODELABEL(tca9548a));
+    const struct device *channel = DEVICE_DT_GET(DT_NODELABEL(face0_i2c));
+    const struct device *sensor = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
+
+    if (!mux || !channel || !sensor) {
+        this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Device DT_NODELABEL missing"));
+        return;
+    }
+
+    int ret = device_init(mux);
+    if (ret < 0) {
+        this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("TCA9548A init failed"));
+        return;
+    }
+    k_sleep(K_MSEC(30));
+
+    ret = device_init(channel);
+    if (ret < 0) {
+        this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Mux channel init failed"));
+        return;
+    }
+    k_sleep(K_MSEC(30));
+
+    ret = device_init(sensor);
+    if (ret < 0) {
+        this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Light sensor init failed"));
+        // Continue anyway - might still work
+    }
+    k_sleep(K_MSEC(50));
+
+    if (!device_is_ready(sensor)) {
+        this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("Light sensor not ready after timeout"));
+    }
+
+    this->m_dev = sensor;
+    this->m_device_init = true;
+
+    this->log_ACTIVITY_LO_LightSensorConfigured();
+}
+
+
+
+
 
 }  // namespace Components

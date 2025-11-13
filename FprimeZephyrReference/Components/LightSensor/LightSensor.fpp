@@ -1,5 +1,7 @@
 module Components {
     @ Component for reading light sensor data
+    port InitPort
+    
     passive component LightSensor {
 
         #### Parameters ####
@@ -29,6 +31,9 @@ module Components {
 
         @ Port for reading gpio status
         output port gpioRead: Drv.GpioRead
+
+        @ Port to tell us when to init the device
+        sync input port init: InitPort
 
         #### Events ####
 

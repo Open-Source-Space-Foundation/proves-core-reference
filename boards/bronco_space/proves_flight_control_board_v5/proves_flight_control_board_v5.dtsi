@@ -167,23 +167,27 @@ zephyr_udc0: &usbd {
 	tca9548a: tca9548a@77 {
 		compatible = "ti,tca9548a";
 		status = "okay";
+		zephyr,deferred-init;
 		reg = <0x77>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		label = "TCA9548A";
 		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
 
-		i2c_mux@0 {
+		face0_i2c: i2c_mux@0 {
 			compatible = "ti,tca9548a-channel";
 			label = "face0_i2c";
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "okay";
+			zephyr,deferred-init;
 
 			face0_light_sens: light@29 {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
+				zephyr,deferred-init;
 			};
 
 			face0_drv2605: drv2605@5a {
@@ -208,6 +212,7 @@ zephyr_udc0: &usbd {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
+				zephyr,deferred-init;
 			};
 
 			face1_drv2605: drv2605@5a {

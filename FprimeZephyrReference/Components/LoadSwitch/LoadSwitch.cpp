@@ -40,6 +40,8 @@ void LoadSwitch ::TURN_ON_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->log_ACTIVITY_HI_StatusChanged(Fw::On::ON);
     this->tlmWrite_IsOn(Fw::On::ON);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+
+    this->init_out(0);
 }
 
 void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {

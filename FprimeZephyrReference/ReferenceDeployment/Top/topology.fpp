@@ -209,6 +209,9 @@ module ReferenceDeployment {
     connections lightSensor {
       lightSensor0.gpioRead -> gpioface0LS.gpioRead
       lightSensor1.gpioRead -> gpioface1LS.gpioRead
+
+      face0LoadSwitch.init -> lightSensor0.init
+      face1LoadSwitch.init -> lightSensor1.init
     }
 
   }
