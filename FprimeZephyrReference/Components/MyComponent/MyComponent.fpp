@@ -17,8 +17,14 @@ module Components {
         @ Command for testing
         sync command FOO()
 
+        @ Reset Radio Module
+        sync command RESET()
+
         @ SPI Output Port
         output port spiSend: Drv.SpiReadWrite
+
+        @ Radio Module Reset GPIO
+        output port resetSend: Drv.GpioWrite
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

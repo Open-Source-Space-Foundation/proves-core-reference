@@ -47,4 +47,13 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // UNTESTED
+    this->resetSend_out(0, Fw::Logic::LOW);
+    /*this->gpioSet_out(0, (Fw::On::ON == this->m_state) ? Fw::Logic::HIGH : Fw::Logic::LOW);*/
+    Os::Task::delay(Fw::TimeInterval(0, 1000));
+    this->resetSend_out(0, Fw::Logic::HIGH);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 }  // namespace Components

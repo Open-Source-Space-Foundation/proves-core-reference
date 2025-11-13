@@ -53,7 +53,7 @@ module ReferenceDeployment {
     instance comDriver
     instance spiDriver
     instance mycomp
-
+    instance gpioSbandNrst
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch
@@ -211,7 +211,9 @@ module ReferenceDeployment {
 
     connections MyConnectionGraph {
       mycomp.spiSend -> spiDriver.SpiReadWrite
+      mycomp.resetSend -> gpioSbandNrst.gpioWrite
     }
+
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
       FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]

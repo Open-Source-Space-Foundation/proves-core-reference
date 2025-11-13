@@ -235,7 +235,7 @@ zephyr_udc0: &usbd {
 	};
 };
 
-// GPIO Expander IO
+// GPIO Names
 / {
 
     // Define the GPIO outputs based on your schematic
@@ -301,6 +301,11 @@ zephyr_udc0: &usbd {
             gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
             label = "PAYLOAD_BATT_ENABLE";
         };
+
+	sband_nrst: sband-nrst {
+            gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "SBAND_NRST";
+	};
     };
 
     // Define GPIO inputs

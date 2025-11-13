@@ -47,6 +47,13 @@ class MyComponent final : public MyComponentComponentBase {
     void FOO_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                         U32 cmdSeq            //!< The command sequence number
                         ) override;
+
+    //! Handler implementation for command RESET
+    //!
+    //! Reset Radio Module
+    void RESET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                          U32 cmdSeq            //!< The command sequence number
+                          ) override;
 };
 
 }  // namespace Components
