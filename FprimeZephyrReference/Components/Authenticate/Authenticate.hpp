@@ -58,9 +58,13 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
 
-    bool validateSequenceNumber(U32 received, U32 expected, U32 window);
+    Fw::Buffer computeHMAC(const U8* frameHeader, const U8* securityHeader, const U8* commandPayload, U32 key);
 
-    U32 loadSequenceNumber();
+    bool validateSequenceNumber(U32 received, U32 expected);
+
+    bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
+
+    U32 get_SequenceNumber();
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands

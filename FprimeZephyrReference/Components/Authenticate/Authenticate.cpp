@@ -6,6 +6,8 @@
 
 #include "FprimeZephyrReference/Components/Authenticate/Authenticate.hpp"
 
+#include <cstring>
+
 const int HMAC_AUTHENTIFICATION = 0;
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AS WELL
@@ -63,19 +65,22 @@ bool Authenticate ::PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg:
     return false;
 }
 
-void Authenticate::computeHMAC(string& frameHeader, string& securityHeader, string& frameDataField, string& hmacKey) {
-    // TODO: compute the HMAC of the packet
-    // 1. Frame Header**: The CCSDS Space Packet Primary Header (6 bytes) - Extracted directly from the buffer at
-    // bytes 0-5
-    // 2. **Security Header**: SPI (2 bytes) + Sequence Number (4 bytes) + Reserved (2 bytes) = 8 bytes (bytes 6-13
-    // of data field)
-    // 3. **Frame Data Field**: The F Prime command packet payload (bytes 22-N)
-    // compute the HMAC of the packet
-    // return the HMAC
+Fw::Buffer Authenticate::computeHMAC(const U8* frameHeader,
+                                     const U8* securityHeader,
+                                     const U8* commandPayload,
+                                     U32 key) {
+    (void)frameHeader;
+    (void)securityHeader;
+    (void)commandPayload;
+    (void)key;
+    // TODO: implement real HMAC computation
+    return Fw::Buffer();
 }
 
-bool Authenticate::validateSequenceNumber(U32 received, U32 expected, U32 window) {
+bool Authenticate::validateSequenceNumber(U32 received, U32 expected) {
     // validate the sequence number by checking if it is within the window of the expected sequence number
+    Fw::ParamValid valid;
+    U32 window = paramGet_SEQ_NUM_WINDOW(valid);
     const U32 delta = received - expected;  // wraps naturally in U32 arithmetic
     if (delta > window) {
         this->log_WARNING_HI_SequenceNumberOutOfWindow(received, expected, window);
@@ -84,12 +89,32 @@ bool Authenticate::validateSequenceNumber(U32 received, U32 expected, U32 window
     return true;
 }
 
-bool compareHMAC(FW : buffer& hmac, FW : buffer& computedHMAC) {
-    // compare the HMAC with the computed HMAC
-    return hmac.equals(computedHMAC);
+bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const {
+    if (expected == nullptr || actual == nullptr) {
+        return false;
+    }
+    return std::memcmp(expected, actual, static_cast<size_t>(length)) == 0;
 }
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // assert that the packet length is a correct length for a CCSDS Space Packet
+    FW_ASSERT(data.getSize() >= 6 + 8 + 8);
+    FW_ASSERT(data.getSize() <=
+              225 + 6 + 8 + 8);  // 225 is the maximum length of a F Prime command packet (TO DO double check this)
+
+    // unpack all of the information
+    const U8* raw = data.getData();
+    const FwSizeType total = data.getSize();
+    FW_ASSERT(total >= 6 + 8 + 8);
+    const U8* frameHeader = raw;         // 6 bytes
+    const U8* securityHeader = raw + 6;  // 8 bytes
+    const U8* securityTrailer = raw + total - 8;
+    const U8* commandPayload = raw + 14;
+    U32 received_sequenceNumber =
+        (securityHeader[0] << 24) | (securityHeader[1] << 16) | (securityHeader[2] << 8) | securityHeader[3];
+    U32 received_hmac =
+        (securityTrailer[0] << 24) | (securityTrailer[1] << 16) | (securityTrailer[2] << 8) | securityTrailer[3];
+
     // Get packet APID and pass to PacketRequiresAuthentication
     ComCfg::Apid apid = context.get_apid();
     bool requiresAuthentication = this->PacketRequiresAuthentication(data, context);
@@ -107,44 +132,33 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         const U32 type_authn = authConfig.type;
         const U32 key_authn = authConfig.key;
 
-        // get the sequence number from the sequence number file
-        U32 sequenceNumber = this->sequenceNumber.load();
-
         if (type_authn == HMAC_AUTHENTIFICATION) {
             // TO DO
             // get the frame header, security header, and frame data field from the packet
             // compute the HMAC of the packet
-            const U8* raw = data.getData();
             const FwSizeType total = data.getSize();
             FW_ASSERT(total >= 6 + 8 + 8);
 
-            const U8* frameHeader = raw;         // 6 bytes
-            const U8* securityHeader = raw + 6;  // 8 bytes
-            const U8* securityTrailer = raw + total - 8;
-            const U8* commandPayload = raw + 14;
-            FwSizeType commandLen = total - 14 - 8;
-
-            Fw::Buffer computed_hmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
-
-            // get hmac from the security trailer
-            const U8* received_hmac = securityTrailer + 8;
-
-            // TO DO
-            // validate the sequence number
-            bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSequenceNumber, window);
+            bool sequenceNumberValid =
+                this->validateSequenceNumber(received_sequenceNumber, this->get_SequenceNumber());
             if (!sequenceNumberValid) {
-                // Authentication failed
                 this->dataReturnOut_out(0, data, context);
                 return;
             }
 
-            // compare the HMAC with the computed HMAC
-            bool hmacMatches = this->compareHMAC(received_hmac, computed_hmac);
-            if (!hmacMatches) {
-                // Authentication failed
+            Fw::Buffer computedHmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
+            const U8* computedHmacData = computedHmac.getData();
+            const FwSizeType computedHmacLength = computedHmac.getSize();
+
+            const U8* receivedHmac = securityTrailer;
+            constexpr FwSizeType receivedHmacLength = 8;
+
+            if ((computedHmacData == nullptr) || (computedHmacLength < receivedHmacLength) ||
+                !this->compareHMAC(receivedHmac, computedHmacData, receivedHmacLength)) {
                 this->dataReturnOut_out(0, data, context);
                 return;
             }
+
         } else {
             this->log_WARNING_HI_InvalidAuthenticationType(type_authn);
             this->dataReturnOut_out(0, data, context);
@@ -159,7 +173,10 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         data.setSize(data.getSize() - 16);
         // Forward the packet to the SpacePacketDeframer
         this->dataOut_out(0, data, context);
+        return;
     }
+
+    this->dataOut_out(0, data, context);
 }
 
 Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32 spi) const {
