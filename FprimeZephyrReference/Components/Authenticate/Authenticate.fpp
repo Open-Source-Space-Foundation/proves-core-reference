@@ -43,11 +43,11 @@ module Components {
 
         event APIDMismatch(spi: U32, packetApid: U32) severity warning high id 4 format "APID mismatch: SPI={}, Packet APID={}"
 
-        event EmitSequenceNumber(seq_num: U32) severity event high id 6 format "The current sequence number is {}"
+        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}"
 
-        event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity event high id 7 format "sequence number has been set to {}: {}"
+        event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}"
 
-        
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer

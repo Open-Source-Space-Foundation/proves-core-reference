@@ -7,6 +7,8 @@
 #ifndef Components_Authenticate_HPP
 #define Components_Authenticate_HPP
 
+#include <Os/File.hpp>
+#include <atomic>
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 
 namespace Components {
@@ -58,8 +60,8 @@ class Authenticate final : public AuthenticateComponentBase {
                                 U32 cmdSeq,           //!< The command sequence number
                                 U32 seq_num) override;
 
-    std::atomic<U32> sequenceNumber;  
-
+    std::atomic<U32> sequenceNumber;
+    Os::File m_sequenceNumberFile;
 };
 
 }  // namespace Components

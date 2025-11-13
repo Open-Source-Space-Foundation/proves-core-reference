@@ -102,10 +102,10 @@ The component extracts the APID directly from the Space Packet Primary Header (b
 
 ### GDS Plugin / CircuitPython Plugin
 
-In order to send commands to the satelite and test this component we also need s GDS plugin
+In order to send commands to the satellite and test this component we also need s GDS plugin
 
 Here is the guide to make plugins
-https://fprime.jpl.nasa.gov/latest/docs/how-to/develop-gds-plugins/ 
+https://fprime.jpl.nasa.gov/latest/docs/how-to/develop-gds-plugins/
 
 https://fprime.jpl.nasa.gov/latest/docs/reference/gds-plugins/framing/
 Framer plugin
