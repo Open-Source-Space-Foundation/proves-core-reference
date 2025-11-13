@@ -9,6 +9,8 @@
 
 #include <Os/File.hpp>
 #include <atomic>
+#include <cassert>
+#include <string>
 
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 
@@ -53,6 +55,12 @@ class Authenticate final : public AuthenticateComponentBase {
     };
 
     AuthenticationConfig lookupAuthenticationConfig(U32 spi) const;
+
+    bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
+
+    bool validateSequenceNumber(U32 received, U32 expected, U32 window);
+
+    U32 loadSequenceNumber();
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands

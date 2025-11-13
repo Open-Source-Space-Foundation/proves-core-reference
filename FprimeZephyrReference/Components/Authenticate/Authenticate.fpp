@@ -47,6 +47,7 @@ module Components {
 
         event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}"
 
+        event InvalidAuthenticationType(authType: U32) severity warning high id 5 format "Invalid authentication type {}"
 
         # @ Ports for packet authentication
 
