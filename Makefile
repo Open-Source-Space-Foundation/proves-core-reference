@@ -83,6 +83,14 @@ gds: ## Run FPrime GDS
 gds-integration:
 	@$(GDS_COMMAND) --gui=none
 
+.PHONY: delete-shadow-gds
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
+
+
+
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
