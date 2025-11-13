@@ -61,7 +61,9 @@ def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_g
     assert sys_current_reading != 0, "System current reading should be non-zero"
     # assert sys_power_reading != 0, "System power reading should be non-zero"
     assert sol_voltage_reading != 0, "Solar voltage reading should be non-zero"
-    assert sol_current_reading != 0, "Solar current reading should be non-zero"
+    # Solar current can be 0.0 in valid scenarios (no sunlight, etc.)
+    # Existence is already verified by assert_telemetry() above
+    # assert sol_current_reading != 0, "Solar current reading should be non-zero"
     # assert sol_power_reading != 0, "Solar power reading should be non-zero"
 
 
