@@ -13,7 +13,7 @@ The Authenticate component sits in the uplink communications path between the `T
 
 Connections:
 TcDeFramer.dataOut -> Authenticate.dataIn
-Authenicate->dataOut -> SpacePacketDeframer.dataIn
+Authenicate->dataOut -> SpacePacketDeframer
 Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
 SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
 
