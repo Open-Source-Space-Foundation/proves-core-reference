@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
+
 #include <Fw/Logger/Logger.hpp>
 
 namespace Components {
