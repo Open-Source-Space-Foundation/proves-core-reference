@@ -256,9 +256,7 @@ def test_deployment_prevention_after_success(
     )
     # Verify that DeployAttempt event does NOT occur (assert_event will raise AssertionError if event is missing)
     with pytest.raises(AssertionError):
-        fprime_test_api.assert_event(
-            f"{antenna_deployer}.DeployAttempt", timeout=1
-        )
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
 
     # Clear the flag and confirm deployments are permitted again
     proves_send_and_assert_command(

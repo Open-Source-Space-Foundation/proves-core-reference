@@ -42,7 +42,7 @@ def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_g
     sol_voltage: ChData = fprime_test_api.assert_telemetry(
         f"{ina219SolManager}.Voltage", start=start, timeout=65
     )
-    sol_current: ChData = fprime_test_api.assert_telemetry(
+    _: ChData = fprime_test_api.assert_telemetry(
         f"{ina219SolManager}.Current", start=start, timeout=65
     )
     _: ChData = fprime_test_api.assert_telemetry(
@@ -54,7 +54,7 @@ def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_g
     sys_current_reading: dict[float] = sys_current.get_val()
     # sys_power_reading: dict[float] = sys_power.get_val()
     sol_voltage_reading: dict[float] = sol_voltage.get_val()
-    sol_current_reading: dict[float] = sol_current.get_val()
+    # sol_current_reading: dict[float] = sol_current.get_val()
     # sol_power_reading: dict[float] = sol_power.get_val()
 
     assert sys_voltage_reading != 0, "System voltage reading should be non-zero"
