@@ -11,6 +11,12 @@ The Authenticate component sits in the uplink communications path between the `T
 - Sequence number validation and anti-replay protection
 - APID-based filtering for command authentication requirements
 
+Connections:
+TcDeFramer.dataOut -> Authenticate.dataIn
+Authenicate->dataOut -> SpacePacketDeframer.dataIn
+Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
+SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
+
 ## Implementation Notes
 
 **FPP Limitations:** The FPP (F Prime Prime) modeling language has specific constraints that affect the event interface design:

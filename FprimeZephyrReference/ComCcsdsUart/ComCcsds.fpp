@@ -165,17 +165,26 @@ module ComCcsdsUart {
             # FrameAccumulator buffer allocations
             frameAccumulator.bufferDeallocate -> commsBufferManager.bufferSendIn
             frameAccumulator.bufferAllocate   -> commsBufferManager.bufferGetCallee
+
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # TcDeframer <-> SpacePacketDeframer
-            tcDeframer.dataOut                -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+
+            #Authenticate <-> SpacePacketDeframer
+            Authenticate->dataOut -> SpacePacketDeframer
+            SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
+
+            # TcDeframer <-> Authenticate
+            tcDeframer.dataOut                -> Authenticate.dataIn
+            Authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
-            # SpacePacketDeframer <-> Router
+
+            #SpacePacketDeframer <-> Router
             spacePacketDeframer.dataOut -> fprimeRouter.dataIn
             fprimeRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+
             # Router buffer allocations
             fprimeRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
             fprimeRouter.bufferDeallocate -> commsBufferManager.bufferSendIn

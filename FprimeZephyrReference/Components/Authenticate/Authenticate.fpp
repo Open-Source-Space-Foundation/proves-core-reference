@@ -56,11 +56,11 @@ module Components {
         @ Port forwarding authenticated or non-authenticated packets to SpacePacketDeframer
         output port dataOut: Svc.ComDataWithContext
 
-        @ Port returning ownership of invalid/unauthorized packets back to upstream component
+        @ Port returning ownership of invalid/unauthorized packets back to upstream component (TcDeframer)
         output port dataReturnOut: Svc.ComDataWithContext
 
-        @ Port receiving back ownership of buffers sent to dataOut
-        sync input port dataReturnIn: Svc.ComDataWithContext
+        @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
+        sync input port : Svc.ComDataWithContext
 
         # @ Example parameter
         # param PARAMETER_NAME: U32
