@@ -9,6 +9,7 @@
 
 #include <Os/File.hpp>
 #include <atomic>
+
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 
 namespace Components {
