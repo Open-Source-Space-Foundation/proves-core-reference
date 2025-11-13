@@ -1,0 +1,18 @@
+{
+    "0x0001": {
+        "type": "HMAC",
+        "key": "0x65b32a18e0c63a347b56e8ae6c51358a"
+    },
+    "0x0002": {
+        "type": "HMAC",
+        "key": "0x65b32a18e0c63a347b56e8ae6c51358a"
+    },
+    "0x0003": {
+        "type": "HMAC",
+        "key": "0x65b32a18e0c63a347b56e8ae6c51358a"
+    },
+    "0x0004": {
+        "type": "HMAC",
+        "key": "0x65b32a18e0c63a347b56e8ae6c51358a"
+    }
+}
