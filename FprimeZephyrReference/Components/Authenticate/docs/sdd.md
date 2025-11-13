@@ -17,13 +17,8 @@ Authenicate->dataOut -> SpacePacketDeframer
 Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
 SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
 
-## Implementation Notes
 
-**FPP Limitations:** The FPP (F Prime Prime) modeling language has specific constraints that affect the event interface design:
-- Events are limited to a maximum of 3 parameters
-- String types (including `Fw.String`) are not displayable in events
 
-These limitations mean that detailed information like HMAC hash values, error reason strings, and APID lists cannot be included in event parameters. Such information can be logged through other mechanisms (e.g., dedicated log messages, extended telemetry) if needed for debugging or security auditing purposes.
 
 ## Topology Integration
 
@@ -104,6 +99,11 @@ The HMAC is computed over the following fields in order (per CCSDS 355.0-B-2 sec
 The component extracts the APID directly from the Space Packet Primary Header (bytes 0-1, bottom 11 bits of Packet Identification field). This APID is used to:
 - Determine if the packet requires authentication (matches command APID list)
 - Validate that the APID matches the Security Association's associated APIDs (security requirement AUTH015)
+
+## Parameters
+name | type | use
+--- | ------| ----
+SEQ_NUM_WINDOW | U32 | default 50, how far from the hmac code number we can get
 
 
 ### GDS Plugin / CircuitPython Plugin
