@@ -58,6 +58,7 @@ class MyComponent final : public MyComponentComponentBase {
     //! SX1280 SPI Commands
 
     void spiSetTxParams();
+    void spiSetTxContinuousPreamble();
     void spiSetTxContinuousWave();
     void spiSetRfFrequency();
     void spiSetTx();

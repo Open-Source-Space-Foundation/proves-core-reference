@@ -9,6 +9,7 @@
 #include <Fw/Logger/Logger.hpp>
 
 #define OP_SET_TX_PARAMS 0x8E
+#define OP_SET_CONTINUOUS_PREAMBLE 0xD2
 #define OP_SET_CONTINUOUS_WAVE 0xD1
 #define OP_SET_RF_FREQUENCY 0x86
 #define OP_SET_TX 0x83
@@ -39,7 +40,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->spiSetRfFrequency();
     this->spiSetTxParams();
-    this->spiSetTxContinuousWave();
+    this->spiSetTxContinuousPreamble();
     U8 status = this->spiGetStatus();
     Fw::Logger::log("status: %" PRI_U8 "\n", status);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -58,6 +59,14 @@ void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 void MyComponent ::spiSetTxParams() {
     //                                   power, rampTime
     U8 write_data[] = {OP_SET_TX_PARAMS, 0x1F, 0x80};
+    U8 read_data[sizeof(write_data)];
+    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
+    Fw::Buffer readBuffer(read_data, sizeof(read_data));
+    this->spiSend_out(0, writeBuffer, readBuffer);
+}
+
+void MyComponent ::spiSetTxContinuousPreamble() {
+    U8 write_data[] = {OP_SET_CONTINUOUS_PREAMBLE};
     U8 read_data[sizeof(write_data)];
     Fw::Buffer writeBuffer(write_data, sizeof(write_data));
     Fw::Buffer readBuffer(read_data, sizeof(read_data));
