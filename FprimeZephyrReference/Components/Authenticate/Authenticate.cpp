@@ -20,8 +20,13 @@
 
 constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
 constexpr const char DEFAULT_AUTHENTICATION_KEY[] = "0x55b32a18e0c63a347b56e8ae6c51358a";
-constexpr const char SPI_DICT_PATH[] = "//spi_dict.json";
+constexpr const char SPI_DICT_PATH[] = "//spi_dict.txt";
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
+constexpr const char SPI_DICT_DELIMITER[] = " | ";
+
+/// Types of Authentication
+constexpr const int HMAC = 0;
+constexpr const int NONE = 1;
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AS WELL
 // TO DO: REMOVE FROM REFDEPLOYMENT BC ITS IN THE COMCCSDS UPPER LEVEL (?????)
@@ -204,6 +209,7 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     config.type = DEFAULT_AUTHENTICATION_TYPE;
     config.key = DEFAULT_AUTHENTICATION_KEY;
 
+    // open the file
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {
@@ -211,6 +217,7 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         return config;
     }
 
+    // check the file size is not 0, store the file size in a variable
     FwSizeType fileSize = 0;
     Os::File::Status sizeStatus = spiDictFile.size(fileSize);
     if ((sizeStatus != Os::File::OP_OK) || (fileSize == 0)) {
@@ -220,8 +227,10 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     }
 
     std::string fileContents;
+    // get a buffer the size of the file
     fileContents.resize(static_cast<size_t>(fileSize), '\0');
     FwSizeType bytesToRead = fileSize;
+    // read the file into the buffer
     Os::File::Status readStatus =
         spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
@@ -230,44 +239,16 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         return config;
     }
 
-    std::ostringstream keyBuilder;
-    keyBuilder << "\"0x" << std::nouppercase << std::hex << std::setw(4) << std::setfill('0') << spi << "\"";
-    const std::string keyToken = keyBuilder.str();
+    printk("fileContents: %s\n", fileContents.c_str());
+
+    std::string keyToken = std::to_string(spi);
+    printk("keyToken: %s\n", keyToken.c_str());
 
     const size_t entryPos = fileContents.find(keyToken);
+    printk("entryPos: %d\n", entryPos);
     if (entryPos == std::string::npos) {
         this->log_WARNING_HI_InvalidSPI(spi);
         return config;
-    }
-
-    auto extractField = [&](const std::string& fieldName, std::string& value) -> bool {
-        const size_t fieldPos = fileContents.find(fieldName, entryPos);
-        if (fieldPos == std::string::npos) {
-            return false;
-        }
-        const size_t colonPos = fileContents.find(':', fieldPos);
-        if (colonPos == std::string::npos) {
-            return false;
-        }
-        const size_t firstQuote = fileContents.find('"', colonPos);
-        if (firstQuote == std::string::npos) {
-            return false;
-        }
-        const size_t secondQuote = fileContents.find('"', firstQuote + 1);
-        if (secondQuote == std::string::npos) {
-            return false;
-        }
-        value = fileContents.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-        return true;
-    };
-
-    if (!extractField("\"type\"", config.type)) {
-        config.type = DEFAULT_AUTHENTICATION_TYPE;
-    }
-
-    if (!extractField("\"key\"", config.key)) {
-        config.key = DEFAULT_AUTHENTICATION_KEY;
-        this->log_WARNING_HI_InvalidSPI(spi);
     }
 
     return config;
