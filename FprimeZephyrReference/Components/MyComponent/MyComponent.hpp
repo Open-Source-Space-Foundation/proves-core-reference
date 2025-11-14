@@ -57,6 +57,7 @@ class MyComponent final : public MyComponentComponentBase {
 
     //! SX1280 SPI Commands
 
+    void spiSetRfFrequency();
     void spiSetTx();
     U8 spiGetStatus();
 };
