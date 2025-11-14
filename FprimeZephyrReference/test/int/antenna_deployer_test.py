@@ -270,6 +270,6 @@ def test_deployment_prevention_after_success(
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
     fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
 
-    # Stop the deployment cleanly before test ends to prevent race condition
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY_STOP")
+    # Wait for deployment to finish naturally to prevent race condition with next test
+    # (1 sec burn + failure due to no distance sensor)
     fprime_test_api.assert_event(f"{antenna_deployer}.DeployFinish", timeout=5)
