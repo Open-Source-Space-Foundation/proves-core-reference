@@ -33,6 +33,10 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     # Ensure a clean starting point
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
+    # Reset deployment state to stop any in-progress deployment and reset counters
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
 
     for param, value in overrides:
         proves_send_and_assert_command(
