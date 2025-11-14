@@ -174,12 +174,14 @@ module ComCcsdsUart {
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
             #Authenticate <-> SpacePacketDeframer
-            authenticate.dataOut -> spacePacketDeframer.dataReturnIn
-            spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
+            #authenticate.dataOut -> spacePacketDeframer.dataReturnIn
+            #spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
 
             # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticate.dataIn
-            authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+            #tcDeframer.dataOut                -> authenticate.dataIn
+            #authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+            spacePacketDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+            tcDeframer.dataOut -> spacePacketDeframer.dataIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
