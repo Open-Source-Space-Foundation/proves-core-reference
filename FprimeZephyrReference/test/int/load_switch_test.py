@@ -8,11 +8,7 @@ import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-
-ON = "ON"
-OFF = "OFF"
-
-loadswitch = "ReferenceDeployment.face0LoadSwitch"
+from wdk import loadswitch, off, on
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +48,7 @@ def get_is_on(fprime_test_api: IntegrationTestAPI) -> str:
 def test_01_loadswitch_telemetry_basic(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can read IsOn telemetry"""
     value = get_is_on(fprime_test_api)
-    assert value in (ON, OFF), f"IsOn should be {ON} or {OFF}, got {value}"
+    assert value in (on, off), f"IsOn should be {on} or {off}, got {value}"
 
 
 def test_02_turn_on_sets_high(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -64,11 +60,11 @@ def test_02_turn_on_sets_high(fprime_test_api: IntegrationTestAPI, start_gds):
     turn_on(fprime_test_api)
 
     # Confirm Load-Switch turned ON
-    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[ON], timeout=2)
+    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[on], timeout=2)
 
     # Confirm telemetry IsOn is 1
     value = get_is_on(fprime_test_api)
-    assert value == ON, f"Expected IsOn = {ON} after TURN_ON, got {value}"
+    assert value == on, f"Expected IsOn = {on} after TURN_ON, got {value}"
 
 
 def test_03_turn_off_sets_low(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -80,8 +76,8 @@ def test_03_turn_off_sets_low(fprime_test_api: IntegrationTestAPI, start_gds):
     turn_off(fprime_test_api)
 
     # Confirm Load-Switch turned OFF
-    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[OFF], timeout=2)
+    fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[off], timeout=2)
 
     # Confirm telemetry IsOn is 0
     value = get_is_on(fprime_test_api)
-    assert value == OFF, f"Expected IsOn = {OFF} after TURN_OFF, got {value}"
+    assert value == off, f"Expected IsOn = {off} after TURN_OFF, got {value}"
