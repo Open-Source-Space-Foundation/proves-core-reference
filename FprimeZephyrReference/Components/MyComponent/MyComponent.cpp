@@ -14,6 +14,7 @@
 #define OP_SET_CONTINUOUS_WAVE 0xD1
 #define OP_SET_RF_FREQUENCY 0x86
 #define OP_SET_TX 0x83
+#define OP_SET_STANDBY 0x80
 #define OP_GET_STATUS 0xC0
 
 namespace Components {
@@ -39,6 +40,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->spiSetStandby();
     this->spiSetRfFrequency();
     this->spiSetTxParams();
     this->spiSetModulationParams();
@@ -111,6 +113,15 @@ void MyComponent ::spiSetRfFrequency() {
 void MyComponent ::spiSetTx() {
     //                            periodBase (1ms), periodBaseCount[15:8], periodBaseCount[7:0]
     U8 write_data[] = {OP_SET_TX, 0x02, 0x4, 0x00};
+    U8 read_data[sizeof(write_data)];
+    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
+    Fw::Buffer readBuffer(read_data, sizeof(read_data));
+    this->spiSend_out(0, writeBuffer, readBuffer);
+}
+
+void MyComponent ::spiSetStandby() {
+    //                                 config
+    U8 write_data[] = {OP_SET_STANDBY, 0x00};
     U8 read_data[sizeof(write_data)];
     Fw::Buffer writeBuffer(write_data, sizeof(write_data));
     Fw::Buffer readBuffer(read_data, sizeof(read_data));

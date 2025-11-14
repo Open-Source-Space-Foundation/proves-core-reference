@@ -63,6 +63,7 @@ class MyComponent final : public MyComponentComponentBase {
     void spiSetTxContinuousWave();
     void spiSetRfFrequency();
     void spiSetTx();
+    void spiSetStandby();
     U8 spiGetStatus();
 };
 
