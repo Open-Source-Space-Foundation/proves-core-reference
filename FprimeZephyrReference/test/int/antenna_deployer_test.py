@@ -269,3 +269,7 @@ def test_deployment_prevention_after_success(
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
     fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)
+
+    # Stop the deployment cleanly before test ends to prevent race condition
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY_STOP")
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeployFinish", timeout=5)
