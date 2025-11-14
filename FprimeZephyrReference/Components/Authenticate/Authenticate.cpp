@@ -9,14 +9,19 @@
 #include <Fw/Log/LogString.hpp>
 #include <cstring>
 #include <functional>
+#include <iomanip>
+#include <sstream>
+
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 // Hardcoded Dictionary of Authentication Types
 // could be put in a file, but since its linked to the actual code its simpleer to have it here
 
 constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
-constexpr const char DEFAULT_AUTHENTICATION_KEY[] = "0x65b32a18e0c63a347b56e8ae6c51358a";
-constexpr const char SPI_DICT_PATH[] = "spi_dict.json";
-constexpr const char SEQUENCE_NUMBER_PATH[] = "sequence_number.txt";
+constexpr const char DEFAULT_AUTHENTICATION_KEY[] = "0x55b32a18e0c63a347b56e8ae6c51358a";
+constexpr const char SPI_DICT_PATH[] = "//spi_dict.json";
+constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AS WELL
 // TO DO: REMOVE FROM REFDEPLOYMENT BC ITS IN THE COMCCSDS UPPER LEVEL (?????)
@@ -104,89 +109,92 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     // assert that the packet length is a correct length for a CCSDS Space Packet
-    FW_ASSERT(data.getSize() >= 6 + 8 + 8);
-    FW_ASSERT(data.getSize() <=
-              225 + 6 + 8 + 8);  // 225 is the maximum length of a F Prime command packet (TO DO double check this)
+    printk("dataIn_handler: %lld\n", data.getSize());
+    printk("dataIn_handler: %hhn\n", data.getData());
+
+    // to do: use constants instead of hardcoded values like the tc deframer
+    // FW_ASSERT(data.getSize() >= 6 + 8 + 8);
+    // FW_ASSERT(data.getSize() <=
+    //           12 + 6 + 8 + 8);  // 12 is the minimum length of a F Prime command packet (TO DO double check this)
 
     // unpack all of the information
-    const U8* raw = data.getData();
-    const FwSizeType total = data.getSize();
-    FW_ASSERT(total >= 6 + 8 + 8);
-    const U8* frameHeader = raw;         // 6 bytes
-    const U8* securityHeader = raw + 6;  // 8 bytes
-    const U8* securityTrailer = raw + total - 8;
-    const U8* commandPayload = raw + 14;
-    U32 received_sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) |
-                                  (static_cast<U32>(securityHeader[3]) << 16) |
-                                  (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-    U32 received_hmac =
-        (securityTrailer[0] << 24) | (securityTrailer[1] << 16) | (securityTrailer[2] << 8) | securityTrailer[3];
+    // const U8* raw = data.getData();
+    // const FwSizeType total = data.getSize();
+    // FW_ASSERT(total >= 6 + 8 + 8);
+    // const U8* frameHeader = raw;         // 6 bytes
+    // const U8* securityHeader = raw + 6;  // 8 bytes
+    // const U8* securityTrailer = raw + total - 8;
+    // const U8* commandPayload = raw + 14;
+    // U32 received_sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) |
+    //                               (static_cast<U32>(securityHeader[3]) << 16) |
+    //                               (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
+    // U32 received_hmac =
+    //     (securityTrailer[0] << 24) | (securityTrailer[1] << 16) | (securityTrailer[2] << 8) | securityTrailer[3];
 
-    // get spi from the security header
-    const U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
+    // // get spi from the security header
+    // const U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
 
-    // Get packet APID and pass to PacketRequiresAuthentication
-    ComCfg::Apid apid = context.get_apid();
-    bool requiresAuthentication = this->PacketRequiresAuthentication(data, context);
+    // // Get packet APID and pass to PacketRequiresAuthentication
+    // ComCfg::Apid apid = context.get_apid();
+    // bool requiresAuthentication = this->PacketRequiresAuthentication(data, context);
 
-    if (requiresAuthentication) {
-        // Authenticate the packet
+    // if (requiresAuthentication) {
+    //     // Authenticate the packet
 
-        // TO DO
-        // use the SPI to get the type of authentication and the key
-        const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-        const std::string type_authn = authConfig.type;
-        const std::string& key_authn = authConfig.key;
+    //     // TO DO
+    //     // use the SPI to get the type of authentication and the key
+    //     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
+    //     const std::string type_authn = authConfig.type;
+    //     const std::string& key_authn = authConfig.key;
 
-        if (type_authn == "HMAC") {
-            // TO DO
-            // get the frame header, security header, and frame data field from the packet
-            // compute the HMAC of the packet
-            const FwSizeType total = data.getSize();
-            FW_ASSERT(total >= 6 + 8 + 8);
+    //     if (type_authn == "HMAC") {
+    //         // TO DO
+    //         // get the frame header, security header, and frame data field from the packet
+    //         // compute the HMAC of the packet
+    //         const FwSizeType total = data.getSize();
+    //         FW_ASSERT(total >= 6 + 8 + 8);
 
-            bool sequenceNumberValid =
-                this->validateSequenceNumber(received_sequenceNumber, this->get_SequenceNumber());
-            if (!sequenceNumberValid) {
-                this->dataReturnOut_out(0, data, context);
-                return;
-            }
+    //         bool sequenceNumberValid =
+    //             this->validateSequenceNumber(received_sequenceNumber, this->get_SequenceNumber());
+    //         if (!sequenceNumberValid) {
+    //             this->dataReturnOut_out(0, data, context);
+    //             return;
+    //         }
 
-            Fw::Buffer computedHmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
-            const U8* computedHmacData = computedHmac.getData();
-            const FwSizeType computedHmacLength = computedHmac.getSize();
+    //         Fw::Buffer computedHmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
+    //         const U8* computedHmacData = computedHmac.getData();
+    //         const FwSizeType computedHmacLength = computedHmac.getSize();
 
-            const U8* receivedHmac = securityTrailer;
-            constexpr FwSizeType receivedHmacLength = 8;
+    //         constexpr FwSizeType receivedHmacLength = 8;
 
-            if ((computedHmacData == nullptr) || (computedHmacLength < receivedHmacLength) ||
-                !this->compareHMAC(receivedHmac, computedHmacData, receivedHmacLength)) {
-                this->dataReturnOut_out(0, data, context);
-                return;
-            }
+    //         if ((computedHmacData == nullptr) || (computedHmacLength < receivedHmacLength) ||
+    //             !this->compareHMAC(receivedHmac, computedHmacData, receivedHmacLength)) {
+    //             this->dataReturnOut_out(0, data, context);
+    //             return;
+    //         }
 
-        } else {
-            // Current event expects a U32; hash the string for now until the event is updated.
-            const U32 hashedType = static_cast<U32>(std::hash<std::string>{}(type_authn));
-            this->log_WARNING_HI_InvalidAuthenticationType(hashedType);
-            this->dataReturnOut_out(0, data, context);
-            return;
-        }
+    //     } else {
+    //         // Current event expects a U32; hash the string for now until the event is updated.
+    //         const U32 hashedType = static_cast<U32>(std::hash<std::string>{}(type_authn));
+    //         this->log_WARNING_HI_InvalidAuthenticationType(hashedType);
+    //         this->dataReturnOut_out(0, data, context);
+    //         return;
+    //     }
 
-    } else {
-        // Strip the security headers and trailers from the packet
-        // TO DO Double check this with the gds addition and the other components
-        FW_ASSERT(data.getSize() >= 6 + 8 + 8);
-        const FwSizeType total = data.getSize();
-        const FwSizeType payloadLength = total - 6 - 8 - 8;
+    // } else {
+    //     // Strip the security headers and trailers from the packet
+    //     // TO DO Double check this with the gds addition and the other components
+    //     FW_ASSERT(data.getSize() >= 6 + 8 + 8);
+    //     const FwSizeType total = data.getSize();
+    //     const FwSizeType payloadLength = total - 6 - 8 - 8;
 
-        const U8* src = data.getData();
-        U8* dest = data.getData();
-        std::memmove(dest + 6, src + 6 + 8, static_cast<size_t>(payloadLength));
-        data.setSize(6 + payloadLength);
-        this->dataOut_out(0, data, context);
-        return;
-    }
+    //     const U8* src = data.getData();
+    //     U8* dest = data.getData();
+    //     std::memmove(dest + 6, src + 6 + 8, static_cast<size_t>(payloadLength));
+    //     data.setSize(6 + payloadLength);
+    //     this->dataOut_out(0, data, context);
+    //     return;
+    // }
 
     this->dataOut_out(0, data, context);
 }
@@ -199,15 +207,15 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {
-        this->log_WARNING_HI_InvalidSPI(spi);
+        this->log_WARNING_HI_FileOpenError(static_cast<U32>(openStatus));
         return config;
     }
 
     FwSizeType fileSize = 0;
     Os::File::Status sizeStatus = spiDictFile.size(fileSize);
-    if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
+    if ((sizeStatus != Os::File::OP_OK) || (fileSize == 0)) {
         spiDictFile.close();
-        this->log_WARNING_HI_InvalidSPI(spi);
+        this->log_WARNING_HI_FileOpenError(static_cast<U32>(sizeStatus));
         return config;
     }
 
@@ -217,14 +225,53 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     Os::File::Status readStatus =
         spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
-    if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
+    if ((readStatus != Os::File::OP_OK) || (bytesToRead != fileSize)) {
+        this->log_WARNING_HI_FileOpenError(static_cast<U32>(readStatus));
+        return config;
+    }
+
+    std::ostringstream keyBuilder;
+    keyBuilder << "\"0x" << std::nouppercase << std::hex << std::setw(4) << std::setfill('0') << spi << "\"";
+    const std::string keyToken = keyBuilder.str();
+
+    const size_t entryPos = fileContents.find(keyToken);
+    if (entryPos == std::string::npos) {
         this->log_WARNING_HI_InvalidSPI(spi);
         return config;
     }
 
+    auto extractField = [&](const std::string& fieldName, std::string& value) -> bool {
+        const size_t fieldPos = fileContents.find(fieldName, entryPos);
+        if (fieldPos == std::string::npos) {
+            return false;
+        }
+        const size_t colonPos = fileContents.find(':', fieldPos);
+        if (colonPos == std::string::npos) {
+            return false;
+        }
+        const size_t firstQuote = fileContents.find('"', colonPos);
+        if (firstQuote == std::string::npos) {
+            return false;
+        }
+        const size_t secondQuote = fileContents.find('"', firstQuote + 1);
+        if (secondQuote == std::string::npos) {
+            return false;
+        }
+        value = fileContents.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+        return true;
+    };
+
+    if (!extractField("\"type\"", config.type)) {
+        config.type = DEFAULT_AUTHENTICATION_TYPE;
+    }
+
+    if (!extractField("\"key\"", config.key)) {
+        config.key = DEFAULT_AUTHENTICATION_KEY;
+        this->log_WARNING_HI_InvalidSPI(spi);
+    }
+
     return config;
 }
-
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     this->dataReturnOut_out(0, data, context);
 }

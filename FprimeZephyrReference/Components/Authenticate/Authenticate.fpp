@@ -53,6 +53,8 @@ module Components {
 
         event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}"
 
+        event FileOpenError(error: U32) severity warning high id 10 format "File Error with Error {}"
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer

@@ -18,8 +18,6 @@ Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
 SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
 
 
-
-
 ## Topology Integration
 
 The component is integrated into the uplink path as follows:
