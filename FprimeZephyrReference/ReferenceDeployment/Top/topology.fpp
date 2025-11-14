@@ -54,6 +54,8 @@ module ReferenceDeployment {
     instance spiDriver
     instance mycomp
     instance gpioSbandNrst
+    instance gpioSbandRxEn
+    instance gpioSbandTxEn
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch
