@@ -90,7 +90,7 @@ module ReferenceDeployment {
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
-  
+
   instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
 
   instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x1002C000
@@ -102,26 +102,26 @@ module ReferenceDeployment {
   instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x1002F000
 
   instance gpioPayloadPowerLS: Zephyr.ZephyrGpioDriver base id 0x10030000
-  
+
   instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x10031000
 
   instance fsSpace: Components.FsSpace base id 0x10032000
 
-  instance face4LoadSwitch: Components.LoadSwitch base id 0x10033000 
+  instance face4LoadSwitch: Components.LoadSwitch base id 0x10033000
 
-  instance face0LoadSwitch: Components.LoadSwitch base id 0x10034000 
+  instance face0LoadSwitch: Components.LoadSwitch base id 0x10034000
 
-  instance face1LoadSwitch: Components.LoadSwitch base id 0x10035000 
+  instance face1LoadSwitch: Components.LoadSwitch base id 0x10035000
 
-  instance face2LoadSwitch: Components.LoadSwitch base id 0x10036000 
+  instance face2LoadSwitch: Components.LoadSwitch base id 0x10036000
 
-  instance face3LoadSwitch: Components.LoadSwitch base id 0x10037000 
+  instance face3LoadSwitch: Components.LoadSwitch base id 0x10037000
 
-  instance face5LoadSwitch: Components.LoadSwitch base id 0x10038000 
+  instance face5LoadSwitch: Components.LoadSwitch base id 0x10038000
 
-  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000 
+  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000
 
-  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000 
+  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
 
   instance powerMonitor: Components.PowerMonitor base id 0x10041000
 

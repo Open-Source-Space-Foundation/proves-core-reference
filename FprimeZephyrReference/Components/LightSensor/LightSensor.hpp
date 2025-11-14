@@ -11,13 +11,13 @@
 
 #include <zephyr/kernel.h>
 
+#include <stdio.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys_clock.h>
-#include <stdio.h>
 
 #include <zephyr/device.h>
-#include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/sensor.h>
 
 #include <zephyr/drivers/sensor/veml6031.h>
 
@@ -36,7 +36,6 @@ class LightSensor final : public LightSensorComponentBase {
     //! Destroy LightSensor object
     ~LightSensor();
 
-
     void ReadData();
 
     void configure(const struct device* dev);
@@ -52,7 +51,7 @@ class LightSensor final : public LightSensorComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
-    
+
     void init_handler(FwIndexType portNum);
 
     F32 m_RawLightData;
@@ -61,7 +60,7 @@ class LightSensor final : public LightSensorComponentBase {
 
     F32 m_ALSLightData;
 
-    bool m_configured = false; 
+    bool m_configured = false;
 
     bool m_attributes_set = false;
 
@@ -69,8 +68,6 @@ class LightSensor final : public LightSensorComponentBase {
 
     const struct device* m_dev;
 };
-
-
 
 }  // namespace Components
 

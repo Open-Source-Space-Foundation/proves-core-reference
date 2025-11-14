@@ -74,7 +74,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lightSensor0.ALSLightData
     ReferenceDeployment.lightSensor0.RawLightData
     ReferenceDeployment.lightSensor0.IRLightData
-    
+
     ReferenceDeployment.lightSensor1.ALSLightData
     ReferenceDeployment.lightSensor1.RawLightData
     ReferenceDeployment.lightSensor1.IRLightData

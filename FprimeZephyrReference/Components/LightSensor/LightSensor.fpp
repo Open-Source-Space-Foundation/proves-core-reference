@@ -1,7 +1,7 @@
 module Components {
     @ Component for reading light sensor data
     port InitPort
-    
+
     passive component LightSensor {
 
         #### Parameters ####
@@ -11,7 +11,7 @@ module Components {
         @ Parameter for setting the integration time of the light sensors
         param INTEGRATION_TIME: U32 default 100
 
-        @ Paremeter for setting the div4 mode of the light sensors 
+        @ Parameter for setting the div4 mode of the light sensors
         param DIV4: U32 default 0
 
         #### Telemetry ####
@@ -21,7 +21,7 @@ module Components {
         @ Telemetry for the IR light sensor data
         telemetry IRLightData: F32
 
-        @ Telemetry for the ALS light sensor data
+        @ Telemetry for the Ambient Light Sensor data
         telemetry ALSLightData: F32
 
         #### Ports ####
@@ -42,12 +42,12 @@ module Components {
 
         event LightSensorErrorInt(log: U32) severity warning high format "Light Sensor Error: {}"
 
-        @ Event for light sensor configuration 
+        @ Event for light sensor configuration
         event LightSensorConfigured() severity activity low format "Light Sensor Configured"
 
         event LightSensorRead() severity activity low format "Values Read from the Light Sensor"
 
-        
+
 
 
         ##############################################################################

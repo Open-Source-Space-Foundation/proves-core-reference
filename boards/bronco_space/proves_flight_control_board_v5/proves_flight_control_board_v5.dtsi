@@ -351,16 +351,24 @@ zephyr_udc0: &usbd {
 			};
 		};
 
-		i2c_mux@7 {
+		top_i2c: i2c_mux@7 {
 			compatible = "ti,tca9548a-channel";
 			label = "top_i2c";
 			reg = <7>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			zephyr,deferred-init;
 			top_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
+				zephyr,deferred-init;
+			};
+			top_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				zephyr,deferred-init;
 			};
 		};
 
@@ -393,13 +401,19 @@ zephyr_udc0: &usbd {
 		backup-switch-mode = "direct";
 		label = "RV3028";
 	};
-	ina219: ina219@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219";
+
+	temp_sens: tmp112@48 {
+		compatible = "ti,tmp112";
+		reg = <0x48>;
+		status = "okay";
 	};
+
+	light_sens: light@29 {
+		compatible = "vishay,veml6031";
+		reg = <0x29>;
+		status = "okay";
+	};
+
 	mcp23017: mcp23017@20 {
 		compatible = "microchip,mcp23017";
 		reg = <0x20>;
