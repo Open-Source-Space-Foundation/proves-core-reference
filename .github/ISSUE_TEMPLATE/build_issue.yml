@@ -1,0 +1,168 @@
+name: Build/Integration Issue
+description: Report problems with the build system, CMake, Zephyr integration, or toolchain
+title: "[BUILD]: "
+labels: ["build", "integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for issues related to building, compiling, linking, or integrating the F Prime Zephyr project.
+
+  - type: dropdown
+    id: build-stage
+    attributes:
+      label: Build Stage
+      description: At what stage does the build fail?
+      options:
+        - Submodule initialization (make submodules)
+        - Python environment setup (make fprime-venv)
+        - Zephyr setup (make zephyr-setup)
+        - F Prime generation (make generate)
+        - Build/Compilation (make build)
+        - Linking
+        - Flashing/Upload
+        - Runtime/Execution
+        - Testing (make test-integration)
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: Build System/Tool Versions
+      description: Provide version information for your build environment
+      placeholder: |
+        - OS: Ubuntu 22.04 / macOS 14.0 / Windows 11 + WSL2
+        - Python version: 3.13.0 (from `python --version`)
+        - CMake version: 3.28.0 (from `cmake --version`)
+        - GCC/ARM toolchain: (from `arm-none-eabi-gcc --version` or Zephyr SDK version)
+        - UV version: 0.8.13 (from `uv --version`)
+        - F Prime version: v4.0.0a1 (from lib/fprime/ git tag)
+        - Zephyr version: v4.2.0 (from west.yml)
+        - Make version: (from `make --version`)
+    validations:
+      required: true
+
+  - type: textarea
+    id: build-configuration
+    attributes:
+      label: Build Configuration
+      description: What is your build configuration?
+      placeholder: |
+        - Board: proves_flight_control_board_v5d/rp2350a/m33
+        - Build type: Release
+        - Custom CMake options: (if any)
+        - Environment variables: (if any special settings)
+        - Settings from settings.ini: (if modified)
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages
+      description: Paste the complete error output from the build
+      placeholder: |
+        ```
+        [build output here]
+        ```
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: cmake-snippet
+    attributes:
+      label: Relevant CMakeLists.txt Snippet
+      description: If the issue relates to CMake configuration, paste the relevant section
+      placeholder: |
+        ```cmake
+        # From FprimeZephyrReference/Components/MyComponent/CMakeLists.txt
+        register_fprime_module()
+        add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Drv/")
+        ```
+      render: cmake
+
+  - type: textarea
+    id: prjconf-snippet
+    attributes:
+      label: Relevant prj.conf Snippet
+      description: If the issue relates to Zephyr configuration, paste the relevant section
+      placeholder: |
+        ```
+        # From prj.conf
+        CONFIG_USB_DEVICE_STACK=y
+        CONFIG_USB_CDC_ACM=y
+        CONFIG_I2C=y
+        ```
+      render: shell
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide exact steps to reproduce the build issue
+      placeholder: |
+        1. Fresh clone: `git clone https://github.com/Open-Source-Space-Foundation/proves-core-reference`
+        2. Run: `make submodules`
+        3. Run: `make fprime-venv`
+        4. Run: `make zephyr-setup`
+        5. Run: `make generate`
+        6. Run: `make build`
+        7. Error occurs at step 6...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: clean-build
+    attributes:
+      label: Clean Build Test
+      description: Did you try a clean build?
+      options:
+        - "Yes, I ran 'make clean' and rebuilt"
+        - "No, I haven't tried a clean build yet"
+        - "Not applicable"
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Have you found any workarounds for this issue?
+      placeholder: |
+        Setting environment variable XYZ=123 allows the build to proceed, but...
+
+  - type: textarea
+    id: build-logs
+    attributes:
+      label: Additional Build Logs
+      description: If available, paste additional logs (CMake configure output, verbose build output)
+      placeholder: |
+        ```
+        # Output from: make build VERBOSE=1
+        ```
+      render: shell
+
+  - type: dropdown
+    id: affects-ci
+    attributes:
+      label: Affects CI/CD
+      description: Does this issue affect continuous integration builds?
+      options:
+        - "Yes, CI builds are failing"
+        - "No, only affects local builds"
+        - "Unknown"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information about the build issue
+      placeholder: |
+        This issue started after:
+        - Updating to latest main branch
+        - Installing new Zephyr SDK version
+        - Changing board configuration
+        ...

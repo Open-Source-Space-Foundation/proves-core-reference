@@ -36,6 +36,8 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     // ----------------------------------------------------------------------
     void DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
     void DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+    void RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+    void SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) override;
 
     // ----------------------------------------------------------------------
     // Internal helpers
@@ -52,6 +54,9 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     bool isDistanceWithinValidRange(F32 distance);
     bool isDistanceDeployed(F32 distance);
     void ensureBurnwireStopped();
+    void logBurnSignalCount();
+    bool readDeploymentState();
+    void writeDeploymentState();
 
     DeploymentState m_state = DeploymentState::IDLE;
     U32 m_currentAttempt = 0;
@@ -61,6 +66,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     bool m_successDetected = false;
     bool m_lastDistanceValid = false;
     F32 m_lastDistance = 0.0F;
+    U32 m_burnTicksThisAttempt = 0;
 };
 
 }  // namespace Components

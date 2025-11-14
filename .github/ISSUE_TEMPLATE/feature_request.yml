@@ -1,0 +1,130 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for the PROVES Core Reference project
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: Feature Category
+      description: What category does this feature fall under?
+      options:
+        - F Prime Component (new or enhanced)
+        - Deployment/Topology Enhancement
+        - Driver/Hardware Support
+        - Build System Improvement
+        - Testing/Validation Tools
+        - Documentation
+        - Integration (GDS, tooling)
+        - Zephyr Configuration
+        - Performance Optimization
+        - Developer Experience
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Describe the feature using the user story format
+      placeholder: |
+        As a [type of user/developer]
+        I want to [goal/desire]
+        So that [benefit/value]
+
+        Example:
+        As a flight software developer
+        I want to have a pre-configured IMU manager component
+        So that I can quickly integrate inertial measurement data into my deployment without writing driver code
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve? What is the current limitation or pain point?
+      placeholder: Currently, adding a new sensor requires manually creating driver code, FPP definitions, and topology connections. This is time-consuming and error-prone...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like to see this problem solved? Describe your ideal implementation.
+      placeholder: |
+        Create a sensor manager abstraction that:
+        1. Provides a standard interface for sensor components
+        2. Auto-generates FPP boilerplate
+        3. Includes example configurations for common sensors
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternative solutions or workarounds have you considered?
+      placeholder: |
+        Alternative 1: Use existing F Prime sensor patterns (requires more manual work)
+        Alternative 2: Create external code generator tool (adds dependency)
+        ...
+
+  - type: textarea
+    id: impact-assessment
+    attributes:
+      label: Impact Assessment
+      description: Who would benefit from this feature? How would it improve the project?
+      placeholder: |
+        - Benefits all developers working with sensors (estimated 80% of users)
+        - Reduces setup time from hours to minutes
+        - Improves code consistency across components
+        - Makes the project more accessible to newcomers
+        ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocking work)
+        - High (significant impact)
+        - Medium (nice to have)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: willing-to-contribute
+    attributes:
+      label: Willing to Contribute
+      description: Are you willing to help implement this feature?
+      options:
+        - "Yes, I can implement this"
+        - "Yes, I can help with implementation"
+        - "Yes, I can help with testing"
+        - "No, but I can provide feedback"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockups, diagrams, or references about the feature request here
+      placeholder: |
+        Related documentation:
+        - F Prime component guide: https://fprime.jpl.nasa.gov/...
+        - Similar implementations in other projects...

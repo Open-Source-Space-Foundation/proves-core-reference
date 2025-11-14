@@ -25,10 +25,18 @@ module Components {
         @ DEPLOY_STOP stops the deployment procedure
         sync command DEPLOY_STOP()
 
+        @ RESET_DEPLOYMENT_STATE resets the deployment state flag for ground testing
+        sync command RESET_DEPLOYMENT_STATE()
+
+        @ SET_DEPLOYMENT_STATE forces the persistent deployment state for ground testing
+        sync command SET_DEPLOYMENT_STATE(
+            deployed: bool @< True to mark as deployed, false to clear the flag
+        )
+
         ######################################################################
         # Telemetry
         ######################################################################
-        @ Counts the number of deployment attempts across boots
+        @ Counts the number of deployment attempts
         telemetry DeployAttemptCount: U32
 
         @ Tracks the last observed distance reading
@@ -68,6 +76,17 @@ module Components {
         ) severity activity high \
           format "Quiet time expired after {} seconds, starting deployment attempt"
 
+        @ Reports how many scheduler ticks the burn signal was held active for the latest attempt
+        event AntennaBurnSignalCount(
+            ticks: U32 @< Number of scheduler ticks spent in the burn state
+        ) severity activity low \
+          format "Burn signal active for {} scheduler ticks"
+
+        @ Emitted when deployment is skipped because antenna was already deployed
+        event DeploymentAlreadyComplete() \
+          severity activity high \
+          format "Antenna deployment skipped - antenna already deployed"
+
         ######################################################################
         # Ports
         ######################################################################
@@ -106,6 +125,9 @@ module Components {
 
         @ Distance readings below this value (cm) are considered invalid
         param INVALID_THRESHOLD_BOTTOM_CM: F32 default 0.1
+
+        @ File path for persistent deployment state (file exists = deployed)
+        param DEPLOYED_STATE_FILE: string default "/antenna_deployed.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters
