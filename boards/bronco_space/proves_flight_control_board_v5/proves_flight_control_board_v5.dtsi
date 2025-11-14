@@ -309,13 +309,13 @@ zephyr_udc0: &usbd {
 
 		charge: charge {
 
-            gpios = <&mcp23017 16 GPIO_ACTIVE_HIGH>;  // GPB7
+            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB7
             label = "CHARGE";
         };
 
         readonly: readonly {
 
-            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB6
+            gpios = <&mcp23017 14 GPIO_ACTIVE_HIGH>;  // GPB6
             label = "READONLY";
         };
 
