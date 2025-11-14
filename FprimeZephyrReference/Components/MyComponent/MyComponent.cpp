@@ -8,6 +8,7 @@
 
 #include <Fw/Logger/Logger.hpp>
 
+#define OP_SET_CONTINUOUS_WAVE 0xD1
 #define OP_SET_RF_FREQUENCY 0x86
 #define OP_SET_TX 0x83
 #define OP_GET_STATUS 0xC0
@@ -36,7 +37,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->spiSetRfFrequency();
-    this->spiSetTx();
+    this->spiSetTxContinuousWave();
     U8 status = this->spiGetStatus();
     Fw::Logger::log("status: %" PRI_U8 "\n", status);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -51,6 +52,14 @@ void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 // SPI Commands
+
+void MyComponent ::spiSetTxContinuousWave() {
+    U8 write_data[] = {OP_SET_CONTINUOUS_WAVE};
+    U8 read_data[sizeof(write_data)];
+    Fw::Buffer writeBuffer(write_data, sizeof(write_data));
+    Fw::Buffer readBuffer(read_data, sizeof(read_data));
+    this->spiSend_out(0, writeBuffer, readBuffer);
+}
 
 void MyComponent ::spiSetRfFrequency() {
     constexpr long double target_freq = 2405000000;                                   // 2.405 GHz
