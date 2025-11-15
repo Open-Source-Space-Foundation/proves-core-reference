@@ -104,6 +104,11 @@ void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 
     if (deployed) {
         this->writeDeploymentState();
     } else {
+        // Stop any ongoing deployment and reset all internal state
+        this->ensureBurnwireStopped();
+        this->resetDeploymentState();
+
+        // Remove the deployment state file
         Fw::ParamValid is_valid;
         auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
@@ -258,6 +263,7 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
 void AntennaDeployer ::resetDeploymentState() {
     this->m_state = DeploymentState::IDLE;
     this->m_currentAttempt = 0;
+    this->m_totalAttempts = 0;
     this->m_ticksInState = 0;
     this->m_stopRequested = false;
     this->m_successDetected = false;
