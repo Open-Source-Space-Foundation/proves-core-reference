@@ -8,9 +8,6 @@ module Components {
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
 
-        @ Port receiving calls from the rate group
-        sync input port run: Svc.Sched
-
         # @ Import Communication Interface
         # import Svc.Com
 

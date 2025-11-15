@@ -27,18 +27,6 @@ class MyComponent final : public MyComponentComponentBase {
 
   private:
     // ----------------------------------------------------------------------
-    // Handler implementations for typed input ports
-    // ----------------------------------------------------------------------
-
-    //! Handler implementation for run
-    //!
-    //! Port receiving calls from the rate group
-    void run_handler(FwIndexType portNum,  //!< The port number
-                     U32 context           //!< The call order
-                     ) override;
-
-  private:
-    // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
