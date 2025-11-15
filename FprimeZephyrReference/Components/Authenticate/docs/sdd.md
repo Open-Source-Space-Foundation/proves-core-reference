@@ -185,3 +185,18 @@ Saved in spi_dict.txt
 set in sequence_number.txt
 
 ## Unit Tests
+
+
+## Plugin
+
+To Run the Plugin, first activate the fprime-venv
+
+> source fprime-venv/bin/activate
+
+Then cd into the Framing Folder
+
+> cd Framing
+
+then run
+
+pip install -e .
