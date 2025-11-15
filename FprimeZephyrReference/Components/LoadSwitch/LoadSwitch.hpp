@@ -10,6 +10,11 @@
 #include <zephyr/kernel.h>
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
 
+// Undefine EMPTY macro from Zephyr headers to avoid conflict with F Prime Os::Queue::EMPTY
+#ifdef EMPTY
+#undef EMPTY
+#endif
+
 // Forward declare Zephyr types to avoid header conflicts
 struct device;
 

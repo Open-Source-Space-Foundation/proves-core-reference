@@ -7,6 +7,11 @@
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitch.hpp"
 #include <zephyr/drivers/gpio.h>
 
+// Undefine EMPTY macro from Zephyr headers to avoid conflict with F Prime Os::Queue::EMPTY
+#ifdef EMPTY
+#undef EMPTY
+#endif
+
 namespace Components {
 
 // ----------------------------------------------------------------------

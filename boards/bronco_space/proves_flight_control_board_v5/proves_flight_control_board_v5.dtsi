@@ -406,12 +406,14 @@ zephyr_udc0: &usbd {
 		compatible = "ti,tmp112";
 		reg = <0x48>;
 		status = "okay";
+		label = "TMP112";
 	};
 
 	light_sens: light@29 {
 		compatible = "vishay,veml6031";
 		reg = <0x29>;
 		status = "okay";
+		label = "VEML6031";
 	};
 
 	mcp23017: mcp23017@20 {
