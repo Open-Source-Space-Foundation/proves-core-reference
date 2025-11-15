@@ -11,7 +11,8 @@ dependencies = [
 ]
 
 [project.entry-points.fprime_gds]
-my_plugin = "my_plugin:MyPlugin"
+#my_plugin = "my_plugin:MyPlugin"
+autheticate_space_data_link = "my_plugin:AuthenticateCompFramer"
 
 [tool.setuptools_scm]
 

@@ -99,7 +99,7 @@ include lib/makelib/zephyr.mk
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
-	@$(UV_RUN) cd Framing && pip install -e .
+	@ cd Framing && $(UV_RUN) pip install -e .
 
 .PHONY: gds-with-framer
 gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
