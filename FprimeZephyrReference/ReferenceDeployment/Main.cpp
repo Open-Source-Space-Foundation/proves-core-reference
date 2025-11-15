@@ -120,6 +120,23 @@ int main(int argc, char* argv[]) {
     }
     printk("TMP112 sensor initialized and ready\n\n");
 
+    // Get VEML6031 sensor on the mux channel (deferred-init)
+    const struct device* mux_light_sens = DEVICE_DT_GET(DT_NODELABEL(mux_light_sens));
+    
+    // Initialize the VEML6031 sensor (deferred-init requires explicit init)
+    printk("Initializing VEML6031 on mux channel...\n");
+    int ret_2 = device_init(mux_light_sens);
+    if (ret_2 < 0) {
+        printk("ERROR: Failed to initialize VEML6031 (error %d)\n", ret_2);
+        return -1;
+    }
+    
+    if (!device_is_ready(mux_light_sens)) {
+        printk("ERROR: VEML6031 sensor on mux channel not ready after init\n");
+        return -1;
+    }
+    printk("VEML6031 sensor initialized and ready\n\n");
+
     // I2C address scanning function
     printk("Starting I2C address scan on TCA9548A channel 0...\n");
     printk("Scanning addresses 0x03 to 0x77...\n\n");
@@ -155,15 +172,36 @@ int main(int argc, char* argv[]) {
             printk("ERROR: Failed to get temperature channel (error %d)\n", ret);
         } else {
             double temp_celsius = sensor_value_to_double(&temperature);
-            printk("Temperature: %.2f °C\n", temp_celsius);
+            printk("Temperature: %.2f °C\n\n", temp_celsius);
         }
     }
 
-    // Loop forever - read temperature every 5 seconds
+    // Read light from VEML6031
+    printk("Reading light from VEML6031...\n");
+    
+    ret = sensor_sample_fetch(mux_light_sens);
+    if (ret == -E2BIG) {
+        printk("Light: OVERFLOW (>bright limit)\n");
+    } else if (ret < 0) {
+        printk("ERROR: Failed to fetch VEML6031 sample (error %d)\n", ret);
+    } else {
+        struct sensor_value light;
+        ret = sensor_channel_get(mux_light_sens, SENSOR_CHAN_LIGHT, &light);
+        if (ret < 0) {
+            printk("ERROR: Failed to get light channel (error %d)\n", ret);
+        } else {
+            double light_lux = sensor_value_to_double(&light);
+            printk("Light: %.2f lux\n\n", light_lux);
+        }
+    }
+
+    // Loop forever - read sensors every 5 seconds
     while (1) {
-        k_sleep(K_MSEC(5000));
+        k_sleep(K_MSEC(1000));
         
-        printk("\n--- Temperature Reading ---\n");
+        printk("\n--- Sensor Readings ---\n");
+        
+        // Temperature
         ret = sensor_sample_fetch(mux_temp_sens);
         if (ret < 0) {
             printk("ERROR: Failed to fetch TMP112 sample (error %d)\n", ret);
@@ -175,6 +213,23 @@ int main(int argc, char* argv[]) {
             } else {
                 double temp_celsius = sensor_value_to_double(&temperature);
                 printk("Temperature: %.2f °C\n", temp_celsius);
+            }
+        }
+        
+        // Light
+        ret = sensor_sample_fetch(mux_light_sens);
+        if (ret == -E2BIG) {
+            printk("Light: OVERFLOW (>bright limit)\n");
+        } else if (ret < 0) {
+            printk("ERROR: Failed to fetch VEML6031 sample (error %d)\n", ret);
+        } else {
+            struct sensor_value light;
+            ret = sensor_channel_get(mux_light_sens, SENSOR_CHAN_LIGHT, &light);
+            if (ret < 0) {
+                printk("ERROR: Failed to get light channel (error %d)\n", ret);
+            } else {
+                double light_lux = sensor_value_to_double(&light);
+                printk("Light: %.2f lux\n", light_lux);
             }
         }
     }

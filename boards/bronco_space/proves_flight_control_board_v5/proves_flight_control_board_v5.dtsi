@@ -188,6 +188,16 @@ zephyr_udc0: &usbd {
 				zephyr,deferred-init;
 			};
 
+			mux_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "MUX_VEML6031";
+				zephyr,deferred-init;
+			};
+
+
+
 
 		};
 		
