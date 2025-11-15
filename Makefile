@@ -95,3 +95,8 @@ gds-integration:
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
+
+.PHONY: framer-plugin
+framer-plugin: fprime-venv ## Build framer plugin
+	@echo "Framer plugin built and installed in virtual environment."
+	@cd Framing && pip install -e .
