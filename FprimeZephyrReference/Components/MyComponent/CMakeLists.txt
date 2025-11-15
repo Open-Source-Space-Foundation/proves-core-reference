@@ -19,9 +19,11 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+    DEPENDS
+        RadioLib
 )
+
+add_subdirectory("${FPRIME_PROJECT_ROOT}/lib/RadioLib" "${CMAKE_BINARY_DIR}/RadioLib")
 
 ### Unit Tests ###
 # register_fprime_ut(
