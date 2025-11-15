@@ -19,8 +19,6 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.cpp"
-        "${CMAKE_CURRENT_LIST_DIR}/sx1280.cpp"
-        "${CMAKE_CURRENT_LIST_DIR}/sx1280-hal.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
