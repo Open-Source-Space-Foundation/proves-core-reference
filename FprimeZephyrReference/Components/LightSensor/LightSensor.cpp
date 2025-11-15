@@ -117,6 +117,11 @@ void LightSensor ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 void LightSensor::init_handler(FwIndexType portNum) {
+    // TEMPORARILY DISABLED - Device tree nodes not configured
+    this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("LightSensor temporarily disabled"));
+    return;
+    
+    /* COMMENTED OUT FOR TESTING
     const struct device* mux = DEVICE_DT_GET(DT_NODELABEL(tca9548a));
     const struct device* channel = DEVICE_DT_GET(DT_NODELABEL(top_i2c));
     const struct device* sensor = DEVICE_DT_GET(DT_NODELABEL(top_light_sens));
@@ -173,6 +178,7 @@ void LightSensor::init_handler(FwIndexType portNum) {
             this->log_WARNING_HI_LightSensorError(Fw::LogStringArg("No Device at address"));
         }
     }
+    END COMMENTED OUT SECTION */
 }
 
 }  // namespace Components

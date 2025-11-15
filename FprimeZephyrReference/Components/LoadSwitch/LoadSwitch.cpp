@@ -4,13 +4,14 @@
 // \brief  cpp file for LoadSwitch component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitch.hpp"
 #include <zephyr/drivers/gpio.h>
 
 // Undefine EMPTY macro from Zephyr headers to avoid conflict with F Prime Os::Queue::EMPTY
 #ifdef EMPTY
 #undef EMPTY
 #endif
+
+#include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitch.hpp"
 
 namespace Components {
 
