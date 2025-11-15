@@ -88,6 +88,7 @@ class Authenticate final : public AuthenticateComponentBase {
 
     std::atomic<U32> sequenceNumber;
     Os::File m_sequenceNumberFile;
+    Os::File m_spiDictFile;
 };
 
 }  // namespace Components

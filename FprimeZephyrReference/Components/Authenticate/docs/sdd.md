@@ -17,6 +17,7 @@ Authenicate->dataOut -> SpacePacketDeframer
 Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
 SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
 
+// OR should it be bteween the deframer and the router? (Og spot)
 
 ## Topology Integration
 

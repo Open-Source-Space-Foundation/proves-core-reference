@@ -11,6 +11,7 @@
 #include <functional>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
@@ -24,7 +25,7 @@ constexpr const char SPI_DICT_PATH[] = "//spi_dict.txt";
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 constexpr const char SPI_DICT_DELIMITER[] = " | ";
 
-/// Types of Authentication
+/// Types of A
 constexpr const int HMAC = 0;
 constexpr const int NONE = 1;
 
@@ -209,50 +210,64 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     config.type = DEFAULT_AUTHENTICATION_TYPE;
     config.key = DEFAULT_AUTHENTICATION_KEY;
 
-    // open the file
+    // convert the spi from a decimal number to a hex string
+    std::stringstream ss;
+    ss << std::hex << spi;
+    std::string spiHex = ss.str();
+    // pad the spi hex string with 0s to make it 4 characters long
+    spiHex = std::string(4 - spiHex.length(), '0') + spiHex;
+    // add a space at the end and before the first character an enter
+    spiHex = "_" + spiHex + " ";
+
+    printk("SPI Hex: %s\n", spiHex.c_str());
+
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {
-        this->log_WARNING_HI_FileOpenError(static_cast<U32>(openStatus));
+        this->log_WARNING_HI_FileOpenError(openStatus);
         return config;
     }
 
-    // check the file size is not 0, store the file size in a variable
     FwSizeType fileSize = 0;
     Os::File::Status sizeStatus = spiDictFile.size(fileSize);
-    if ((sizeStatus != Os::File::OP_OK) || (fileSize == 0)) {
+    if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
         spiDictFile.close();
-        this->log_WARNING_HI_FileOpenError(static_cast<U32>(sizeStatus));
+        this->log_WARNING_HI_FileOpenError(sizeStatus);
         return config;
     }
 
     std::string fileContents;
-    // get a buffer the size of the file
     fileContents.resize(static_cast<size_t>(fileSize), '\0');
     FwSizeType bytesToRead = fileSize;
-    // read the file into the buffer
     Os::File::Status readStatus =
         spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
-    if ((readStatus != Os::File::OP_OK) || (bytesToRead != fileSize)) {
-        this->log_WARNING_HI_FileOpenError(static_cast<U32>(readStatus));
+    if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
+        this->log_WARNING_HI_FileOpenError(readStatus);
         return config;
     }
-
-    printk("fileContents: %s\n", fileContents.c_str());
-
-    std::string keyToken = std::to_string(spi);
-    printk("keyToken: %s\n", keyToken.c_str());
-
-    const size_t entryPos = fileContents.find(keyToken);
-    printk("entryPos: %d\n", entryPos);
-    if (entryPos == std::string::npos) {
-        this->log_WARNING_HI_InvalidSPI(spi);
-        return config;
+    // find the line that contains the spi hex string
+    size_t pos = fileContents.find(spiHex);
+    if (pos != std::string::npos) {
+        // get everything in the line after the spi hex string
+        std::string line = fileContents.substr(pos);
+        // get all the words in the line
+        std::vector<std::string> words;
+        std::istringstream iss(line);
+        std::string word;
+        while (iss >> word) {
+            words.push_back(word);
+        }
+        this->log_ACTIVITY_LO_FoundSPIKey(true);
+        config.type = words[1];
+        config.key = words[2];
+    } else {
+        this->log_ACTIVITY_LO_FoundSPIKey(false);
     }
 
     return config;
 }
+
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     this->dataReturnOut_out(0, data, context);
 }
