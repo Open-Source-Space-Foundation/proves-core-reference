@@ -407,6 +407,7 @@ zephyr_udc0: &usbd {
 		reg = <0x48>;
 		status = "okay";
 		label = "TMP112";
+		zephyr,deferred-init;
 	};
 
 	light_sens: light@29 {
@@ -414,6 +415,7 @@ zephyr_udc0: &usbd {
 		reg = <0x29>;
 		status = "okay";
 		label = "VEML6031";
+		zephyr,deferred-init;
 	};
 
 	mcp23017: mcp23017@20 {
