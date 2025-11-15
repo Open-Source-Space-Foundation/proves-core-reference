@@ -71,6 +71,25 @@ Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 #define assert_param(...)
 #endif
 
+/*SX1280Hal::SX1280Hal( PinName mosi, PinName miso, PinName sclk, PinName nss,*/
+/*                      PinName busy, PinName dio1, PinName dio2, PinName dio3, PinName rst,*/
+/*                      RadioCallbacks_t *callbacks )*/
+/*        :   SX1280( callbacks ),*/
+/*            RadioNss( nss ),*/
+/*            RadioReset( rst ),*/
+/*            RadioCtsn( NC ),*/
+/*            BUSY( busy )*/
+/*{*/
+/*    CreateDioPin( dio1, DIO1 );*/
+/*    CreateDioPin( dio2, DIO2 );*/
+/*    CreateDioPin( dio3, DIO3 );*/
+/*    RadioSpi = new SPI( mosi, miso, sclk );*/
+/*    RadioUart = NULL;*/
+/**/
+/*    RadioNss = 1;*/
+/*    RadioReset = 1;*/
+/*}*/
+/**/
 /*SX1280Hal::SX1280Hal( PinName tx, PinName rx, PinName ctsn,*/
 /*                      PinName busy, PinName dio1, PinName dio2, PinName dio3, PinName rst,*/
 /*                      RadioCallbacks_t *callbacks )*/

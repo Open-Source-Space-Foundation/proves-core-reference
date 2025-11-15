@@ -8,7 +8,6 @@
 #define Components_MyComponent_HPP
 
 #include "FprimeZephyrReference/Components/MyComponent/MyComponentComponentAc.hpp"
-#include "FprimeZephyrReference/Components/MyComponent/sx1280-hal.h"
 
 namespace Components {
 
@@ -66,8 +65,6 @@ class MyComponent final : public MyComponentComponentBase {
     void spiSetTx();
     void spiSetStandby();
     U8 spiGetStatus();
-
-    SX1280Hal hal;
 };
 
 }  // namespace Components
