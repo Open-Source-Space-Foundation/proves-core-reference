@@ -28,16 +28,7 @@ class SX1280Hal : public SX1280 {
      *
      * Represents the physical connectivity with the radio and set callback functions on radio interrupts
      */
-    /*SX1280Hal(PinName mosi,*/
-    /*          PinName miso,*/
-    /*          PinName sclk,*/
-    /*          PinName nss,*/
-    /*          PinName busy,*/
-    /*          PinName dio1,*/
-    /*          PinName dio2,*/
-    /*          PinName dio3,*/
-    /*          PinName rst,*/
-    /*          RadioCallbacks_t* callbacks);*/
+    explicit SX1280Hal(RadioCallbacks_t* callbacks) : SX1280(callbacks) {}
 
     /*!
      * \brief Constructor for SX1280Hal with UART support
