@@ -26,6 +26,9 @@ module Drv {
             t: Drv.TimeData @< Set the time
         ) opcode 0
 
+        @ TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time since boot.
+        sync command TEST_UNCONFIGURE_DEVICE() opcode 1
+
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
