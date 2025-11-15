@@ -52,32 +52,36 @@ THIS IS WHAT GOES THROUGH AUTHENTICATE
 Now the Security Header and Security Trailer must be inside the data field, as specified by CCSDS 355.0-B-2
 
 Space Packet (received by Authenticate)
+[Security Header 8B]
 [Space Packet Primary Header 6B]
-[Space Packet Data Field]
-    [Security Header 8B]
-    [F Prime Command Packet]
-    [Security Trailer 8B]
+   [Space Packet Data Field]
+      [F Prime Command Packet]
+[Security Trailer 8B]
 
 The output from Authenticate:
 
 Space Packet
    [Space Packet Primary Header 6B]
-   [F Prime Command Packet] (security fields removed)
+      [Space Packet Data Field]
+         [F Prime Command Packet]
 
 **Total packet structure:**
+- Security Header: 8 bytes (SPI + Sequence Number + Reserved)
+
 - Space Packet Primary Header: 6 bytes
 - Space Packet Data Field: 16 + command size bytes
-  - Security Header: 8 bytes (SPI + Sequence Number + Reserved)
-  - Security Trailer: 8 bytes (HMAC)
   - F Prime Command Packet: Variable (up to 225 bytes)
+
+- Security Trailer: 8 bytes (HMAC)
+
 
 Packets NOT requiring authentication are forwarded unchanged to `dataOut. Later we have to get the FPrime router to route radio packets
 
 ### HMAC Computation
 
 The HMAC is computed over the following fields in order (per CCSDS 355.0-B-2 section 2.3.2.3.1):
-1. **Frame Header**: The CCSDS Space Packet Primary Header (6 bytes) - Extracted directly from the buffer at bytes 0-5
-2. **Security Header**: SPI (2 bytes) + Sequence Number (4 bytes) + Reserved (2 bytes) = 8 bytes (bytes 6-13 of data field)
+1. **Frame Header**: The CCSDS Space Packet Primary Header (6 bytes)
+2. **Security Header**: SPI (2 bytes) + Sequence Number (4 bytes) + Reserved (2 bytes) = 8 bytes
 3. **Frame Data Field**: The F Prime command packet payload (bytes 22-N)
 
 **Key Selection**: The secret key is selected based on the SPI value from the security header. Each SPI maps to a Security Association containing:
@@ -120,8 +124,8 @@ Framer plugin
 
 | Name | Description | Validation |
 |---|---|---|
-| AUTH001 | The component shall only apply HMAC authentication to packets where the APID (extracted from the Space Packet Primary Header) matches a configured list of command APIDs requiring authentication. | Unit Test, Inspection |
-| AUTH002 | The component shall forward packets with APIDs matching a configured list of radio amateur command APIDs directly to `dataOut` without authentication. | Unit Test, Inspection |
+| AUTH001 | The component shall add a data field to the config saying whether or not the component is authenticated. | Unit Test, Inspection |
+| AUTH002 | The component shall forward packets with . | Unit Test, Inspection |
 | AUTH003 | The component shall validate that the SPI value corresponds to a configured Security Association. If the SPI is not recognized, the packet shall be rejected and returned via `dataReturnOut` and emit an event. | Unit Test |
 | AUTH004 | The component shall validate the received sequence number against the stored sequence number for the Security Association identified by SPI. The sequence number must be greater than the stored value and within the configured sequence number window. It should also be able to deal with rollover. If validation fails, the packet shall be rejected and returned via `dataReturnOut`. | Unit Test |
 | AUTH05 | The component shall compute the expected HMAC over: (a) the Space Packet Primary Header (bytes 0-5, actual header bytes), (b) the Security Header (bytes 6-13: SPI + Sequence Number + Reserved), and (c) the Frame Data Field (bytes 22-N: F Prime command packet payload). The HMAC shall be computed using HMAC-SHA256 with the secret key associated with the SPI, truncated to 64 bits. | Unit Test |
@@ -170,15 +174,14 @@ Framer plugin
 
 ## Configuration
 
-The component requires the following configuration (set in `Authenticate.hpp` (note should some of these be set in parameters?)):
+The component requires the following configuration:
 
-1. **Command APIDs List**: List of APIDs that do not require authentication (default: none)
-2. **Radio Amateur APIDs List**: List of APIDs for radio amateur commands that bypass authentication
-3. **Security Associations Table**: For each SPI:
-   - SPI value (U16)
+1. **Security Associations Table**: For each SPI:
+   - SPI value (U32), saved as hex
    - Secret key (256-bit key for HMAC-SHA256)
-   - Start sequence number (U32)
-   - Sequence number window (U32)
-4. Start Sequence number
+Saved in spi_dict.txt
+
+2. Start Sequence number
+set in sequence_number.txt
 
 ## Unit Tests
