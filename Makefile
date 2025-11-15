@@ -104,4 +104,4 @@ framer-plugin: fprime-venv ## Build framer plugin
 .PHONY: gds-with-framer
 gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
 	@echo "Running FPrime GDS with framer plugin..."
-	@$(UV_RUN) fprime-gds --framing-selection my-plugin
+	@$(UV_RUN) fprime-gds --framing-selection authenticate-space-data-link
