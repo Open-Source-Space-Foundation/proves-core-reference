@@ -119,7 +119,6 @@ void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 
 
 void AntennaDeployer ::enterQuietWait() {
     this->resetDeploymentState();
-    this->m_state = DeploymentState::QUIET_WAIT;
     this->m_ticksInState = 0;
     this->m_successDetected = false;
     this->m_stopRequested = false;
@@ -127,7 +126,11 @@ void AntennaDeployer ::enterQuietWait() {
     Fw::ParamValid valid;
     const U32 quietTime = this->paramGet_QUIET_TIME_SEC(valid);
     if (quietTime == 0U) {
+        // Skip QUIET_WAIT state entirely when quietTime is 0
         this->startNextAttempt();
+    } else {
+        // Only enter QUIET_WAIT if we actually need to wait
+        this->m_state = DeploymentState::QUIET_WAIT;
     }
 }
 
