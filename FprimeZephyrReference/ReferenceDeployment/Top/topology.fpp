@@ -216,10 +216,14 @@ module ReferenceDeployment {
       payload.out_port -> peripheralUartDriver.$send
       peripheralUartDriver.$recv -> payload.in_port
       
-      # Buffer management for image data
-      payload.allocate -> payloadBufferManager.bufferGetCallee
-      payload.deallocate -> payloadBufferManager.bufferSendIn
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload.bufferReturn -> peripheralUartDriver.recvReturnIn
+      
+      # UART driver allocates/deallocates from BufferManager
+      peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
+      peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
     }
+
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
       FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]

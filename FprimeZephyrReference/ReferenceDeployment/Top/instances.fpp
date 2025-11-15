@@ -120,8 +120,8 @@ module ReferenceDeployment {
     """
     phase Fpp.ToCpp.Phases.configComponents """
     memset(&ConfigObjects::ReferenceDeployment_payloadBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payloadBufferManager::bins));
-    // Configure for 256 KB image buffers, 2 buffers
-    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 256 * 1024;
+    // UART RX buffers for camera data streaming (4 KB, 2 buffers for ping-pong)
+    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 4 * 1024;
     ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].numBuffers = 2;
     ReferenceDeployment::payloadBufferManager.setup(
         1,  // manager ID

@@ -16,17 +16,20 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-PayloadHandler ::PayloadHandler(const char* const compName) 
+PayloadHandler ::PayloadHandler(const char* const compName)
     : PayloadHandlerComponentBase(compName),
       m_protocolBufferSize(0),
-      m_imageBufferUsed(0) {
+      m_fileOpen(false) {
     // Initialize protocol buffer to zero
     memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
 }
 
 PayloadHandler ::~PayloadHandler() {
-    // Clean up any allocated image buffer
-    deallocateImageBuffer();
+    // Close file if still open
+    if (m_fileOpen) {
+        m_file.close();
+        m_fileOpen = false;
+    }
 }
 
 
@@ -41,7 +44,10 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
 
     // Check if we received data successfully
     if (status != Drv::ByteStreamStatus::OP_OK) {
-        // TODO - log error event?
+        // Log error and abort if receiving
+        if (m_receiving && m_fileOpen) {
+            handleFileError();
+        }
         return;
     }
 
@@ -50,31 +56,48 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
         return;
     }
 
-    // Get the data from the incoming buffer
+    // Get the data from the UART driver's buffer (we don't own it, just read it)
     const U8* data = buffer.getData();
-    const U32 dataSize = static_cast<U32>(buffer.getSize());
+    U32 dataSize = static_cast<U32>(buffer.getSize());
 
-    // Unclear if this works as intended if data flow is interrupted
+    // DEBUG: Log first 8 bytes of EVERY incoming chunk
+    if (dataSize >= 8) {
+        this->log_ACTIVITY_LO_RawDataDump(
+            data[0], data[1], data[2], data[3],
+            data[4], data[5], data[6], data[7]
+        );
+    }
 
-    if (m_receiving && m_imageBuffer.isValid()) {
-        // Currently receiving image data - accumulate into large buffer
+    if (m_receiving && m_fileOpen) {
+        // Currently receiving image data - write directly to file
         
-        // First accumulate the new data
-        if (!accumulateImageData(data, dataSize)) {
-            // Image buffer overflow
-            this->log_WARNING_HI_ImageDataOverflow();
-            deallocateImageBuffer();
-            m_receiving = false;
+        // Calculate how much to write (don't exceed expected size)
+        U32 remaining = m_expected_size - m_bytes_received;
+        U32 toWrite = (dataSize < remaining) ? dataSize : remaining;
+        
+        // Write chunk to file
+        if (!writeChunkToFile(data, toWrite)) {
+            // Write failed
+            handleFileError();
             return;
         }
         
+        m_bytes_received += toWrite;
+        
         // Check if we've received all expected data
-        if (m_expected_size > 0 && m_imageBufferUsed >= m_expected_size) {
-            // We have all the data! Trim to exact size (in case we got <IMG_END> too)
-            m_imageBufferUsed = m_expected_size;
+        if (m_bytes_received >= m_expected_size) {
+            // Image is complete!
+            finalizeImageTransfer();
             
-            // Image is complete
-            processCompleteImage();
+            // If there's extra data after the image (e.g., <IMG_END> or next header),
+            // push it to protocol buffer
+            U32 extraBytes = dataSize - toWrite;
+            if (extraBytes > 0) {
+                const U8* extraData = data + toWrite;
+                if (accumulateProtocolData(extraData, extraBytes)) {
+                    processProtocolBuffer();
+                }
+            }
         }
     } else {
         // Not receiving image - accumulate protocol data
@@ -84,9 +107,18 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
             accumulateProtocolData(data, dataSize);
         }
 
+        // Log what we have in protocol buffer for debugging
+        if (m_protocolBufferSize > 0) {
+            this->log_ACTIVITY_LO_ProtocolBufferDebug(m_protocolBufferSize, m_protocolBuffer[0]);
+        }
+
         // Process protocol buffer to detect image headers/commands
         processProtocolBuffer();
     }
+    
+    // CRITICAL: Return buffer to driver so it can deallocate to BufferManager
+    // This matches the ComStub pattern: driver allocates, handler processes, handler returns
+    this->bufferReturn_out(0, buffer);
 }
 
 // ----------------------------------------------------------------------
@@ -141,6 +173,46 @@ bool PayloadHandler ::accumulateProtocolData(const U8* data, U32 size) {
 void PayloadHandler ::processProtocolBuffer() {
     // Protocol: <IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[image data]<IMG_END>
     
+    // Log parse attempt for debugging
+    if (m_protocolBufferSize > 0) {
+        this->log_ACTIVITY_LO_HeaderParseAttempt(m_protocolBufferSize);
+        
+        // Dump first 8 bytes for debugging
+        if (m_protocolBufferSize >= 8) {
+            this->log_ACTIVITY_LO_RawDataDump(
+                m_protocolBuffer[0], m_protocolBuffer[1], m_protocolBuffer[2], m_protocolBuffer[3],
+                m_protocolBuffer[4], m_protocolBuffer[5], m_protocolBuffer[6], m_protocolBuffer[7]
+            );
+        }
+    }
+    
+    // Search for <IMG_START> anywhere in the buffer (not just at position 0)
+    I32 headerStart = -1;
+    for (U32 i = 0; i <= m_protocolBufferSize - IMG_START_LEN; ++i) {
+        if (isImageStartCommand(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
+            headerStart = static_cast<I32>(i);
+            break;
+        }
+    }
+    
+    if (headerStart == -1) {
+        // No header found - if buffer is nearly full, discard old data
+        if (m_protocolBufferSize > PROTOCOL_BUFFER_SIZE - 64) {
+            // Keep last 32 bytes in case header is split
+            memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 32], 32);
+            m_protocolBufferSize = 32;
+        }
+        return;
+    }
+    
+    // Found header start! Discard everything before it
+    if (headerStart > 0) {
+        U32 remaining = m_protocolBufferSize - static_cast<U32>(headerStart);
+        memmove(m_protocolBuffer, &m_protocolBuffer[headerStart], remaining);
+        m_protocolBufferSize = remaining;
+    }
+    
+    // Now check if we have the complete header
     if (m_protocolBufferSize >= HEADER_SIZE) {
         // Check for <IMG_START> at the beginning
         if (!isImageStartCommand(m_protocolBuffer, m_protocolBufferSize)) {
@@ -184,40 +256,56 @@ void PayloadHandler ::processProtocolBuffer() {
             return;  // Invalid header
         }
         
-        // Valid header! Allocate buffer
-        if (allocateImageBuffer()) {
-            m_receiving = true;
-            m_bytes_received = 0;
-            m_expected_size = imageSize;
+        // Valid header! Open file immediately for streaming
+        m_receiving = true;
+        m_bytes_received = 0;
+        m_expected_size = imageSize;
+        
+        // Generate filename
+        char filename[64];
+        snprintf(filename, sizeof(filename), "/mnt/data/img_%03d.jpg", m_data_file_count++);
+        m_currentFilename = filename;
+        
+        // Open file for writing
+        Os::File::Status status = m_file.open(m_currentFilename.c_str(), Os::File::OPEN_WRITE);
+        
+        if (status != Os::File::OP_OK) {
+            // Failed to open file
+            this->log_WARNING_HI_CommandError(Fw::LogStringArg("Failed to open file"));
+            m_receiving = false;
+            m_expected_size = 0;
+            clearProtocolBuffer();
+            return;
+        }
+        
+        m_fileOpen = true;
+        this->log_ACTIVITY_LO_ImageHeaderReceived();
+        
+        // Remove header from protocol buffer
+        U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
+        if (remainingSize > 0) {
+            memmove(m_protocolBuffer, 
+                   &m_protocolBuffer[HEADER_SIZE], 
+                   remainingSize);
+        }
+        m_protocolBufferSize = remainingSize;
+        
+        // Write any remaining data (image data) directly to file
+        if (m_protocolBufferSize > 0) {
+            U32 toWrite = (m_protocolBufferSize < m_expected_size) ? m_protocolBufferSize : m_expected_size;
             
-            // Generate filename
-            char filename[64];
-            snprintf(filename, sizeof(filename), "/mnt/data/img_%03d.jpg", m_data_file_count++);
-            m_currentFilename = filename;
-            
-            this->log_ACTIVITY_LO_ImageHeaderReceived();
-            
-            // Remove header
-            U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
-            if (remainingSize > 0) {
-                memmove(m_protocolBuffer, 
-                       &m_protocolBuffer[HEADER_SIZE], 
-                       remainingSize);
-            }
-            m_protocolBufferSize = remainingSize;
-            
-            // Transfer any remaining data (image data) to image buffer
-            if (m_protocolBufferSize > 0) {
-                if (!accumulateImageData(m_protocolBuffer, m_protocolBufferSize)) {
-                    this->log_WARNING_HI_ImageDataOverflow();
-                    deallocateImageBuffer();
-                    m_receiving = false;
+            if (writeChunkToFile(m_protocolBuffer, toWrite)) {
+                m_bytes_received += toWrite;
+                
+                // Check if complete already
+                if (m_bytes_received >= m_expected_size) {
+                    finalizeImageTransfer();
                 }
-                clearProtocolBuffer();
+            } else {
+                handleFileError();
             }
-        } else {
-            // Buffer allocation failed
-            this->log_WARNING_HI_BufferAllocationFailed(IMAGE_BUFFER_SIZE);
+            
+            clearProtocolBuffer();
         }
     }
 }
@@ -227,72 +315,65 @@ void PayloadHandler ::clearProtocolBuffer() {
     memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
 }
 
-bool PayloadHandler ::allocateImageBuffer() {
-    // Request buffer from BufferManager
-    m_imageBuffer = this->allocate_out(0, IMAGE_BUFFER_SIZE);
-
-    // Check if allocation succeeded
-    if (!m_imageBuffer.isValid() || m_imageBuffer.getSize() < IMAGE_BUFFER_SIZE) {
-        this->log_WARNING_HI_BufferAllocationFailed(IMAGE_BUFFER_SIZE);
-        deallocateImageBuffer();
+bool PayloadHandler ::writeChunkToFile(const U8* data, U32 size) {
+    if (!m_fileOpen || size == 0) {
         return false;
     }
 
-    m_imageBufferUsed = 0;
-    return true;
-}
-
-void PayloadHandler ::deallocateImageBuffer() {
-    if (m_imageBuffer.isValid()) {
-        this->deallocate_out(0, m_imageBuffer);
-        m_imageBuffer = Fw::Buffer();  // Reset to invalid buffer
-    }
-    m_imageBufferUsed = 0;
-}
-
-bool PayloadHandler ::accumulateImageData(const U8* data, U32 size) {
-    FW_ASSERT(m_imageBuffer.isValid());
-
-    // Check if we have space
-    if (m_imageBufferUsed + size > m_imageBuffer.getSize()) {
-        return false;
-    }
-
-    // Copy data into image buffer
-    memcpy(&m_imageBuffer.getData()[m_imageBufferUsed], data, size);
-    m_imageBufferUsed += size;
-    m_bytes_received += size;
-
-    return true;
-}
-
-void PayloadHandler ::processCompleteImage() {
-    FW_ASSERT(m_imageBuffer.isValid());
-
-    // Write image to file
-    Os::File::Status status = m_file.open(m_currentFilename.c_str(), Os::File::OPEN_WRITE);
+    // Write data to file, handling partial writes
+    U32 totalWritten = 0;
+    const U8* ptr = data;
     
-    if (status == Os::File::OP_OK) {
-        // Os::File::write expects FwSizeType& for size parameter
-        FwSizeType sizeToWrite = static_cast<FwSizeType>(m_imageBufferUsed);
-        status = m_file.write(m_imageBuffer.getData(), sizeToWrite, Os::File::WaitType::NO_WAIT);
-        m_file.close();
+    while (totalWritten < size) {
+        FwSizeType toWrite = static_cast<FwSizeType>(size - totalWritten);
+        Os::File::Status status = m_file.write(ptr, toWrite, Os::File::WaitType::WAIT);
         
-        if (status == Os::File::OP_OK) {
-            // Success! sizeToWrite now contains actual bytes written
-            Fw::LogStringArg pathArg(m_currentFilename.c_str());
-            this->log_ACTIVITY_HI_DataReceived(m_imageBufferUsed, pathArg);
-        } else {
-            // TODO - log write error
+        if (status != Os::File::OP_OK) {
+            return false;
         }
-    } else {
-        // TODO - log open error
+        
+        // toWrite now contains the actual bytes written
+        totalWritten += static_cast<U32>(toWrite);
+        ptr += toWrite;
+    }
+    
+    return true;
+}
+
+void PayloadHandler ::finalizeImageTransfer() {
+    if (!m_fileOpen) {
+        return;
     }
 
-    // Clean up
-    deallocateImageBuffer();
+    // Close the file
+    m_file.close();
+    m_fileOpen = false;
+
+    // Log success
+    Fw::LogStringArg pathArg(m_currentFilename.c_str());
+    this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
+
+    // Reset state
     m_receiving = false;
     m_bytes_received = 0;
+    m_expected_size = 0;
+}
+
+void PayloadHandler ::handleFileError() {
+    // Close file if open
+    if (m_fileOpen) {
+        m_file.close();
+        m_fileOpen = false;
+    }
+
+    // Log error
+    this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write error"));
+
+    // Reset state
+    m_receiving = false;
+    m_bytes_received = 0;
+    m_expected_size = 0;
+    clearProtocolBuffer();
 }
 
 I32 PayloadHandler ::findImageEndMarker(const U8* data, U32 size) {

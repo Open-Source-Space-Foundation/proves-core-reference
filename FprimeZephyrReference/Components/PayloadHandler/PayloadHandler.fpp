@@ -4,7 +4,7 @@ module Components {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
-        @ TODO
+        @ Type in "snap" to capture an image
         sync command SEND_COMMAND(cmd: string)  # Command to send data over UART
 
         event CommandError(cmd: string) severity warning high format "Failed to send {} command over UART"
@@ -23,15 +23,24 @@ module Components {
 
         event ImageDataOverflow() severity warning high format "Image data overflow - buffer full"
 
+        event ProtocolBufferDebug(bufSize: U32, firstByte: U8) severity activity low format "Protocol buffer: {} bytes, first: 0x{x}"
+
+        event HeaderParseAttempt(bufSize: U32) severity activity low format "Attempting header parse with {} bytes"
+
+        event RawDataDump(byte0: U8, byte1: U8, byte2: U8, byte3: U8, byte4: U8, byte5: U8, byte6: U8, byte7: U8) severity activity low format "Raw: [{x} {x} {x} {x} {x} {x} {x} {x}]"
+
         output port out_port: Drv.ByteStreamSend
 
         sync input port in_port: Drv.ByteStreamData
 
-        @ Port for allocating buffers for image data
-        output port allocate: Fw.BufferGet
+        @ Return RX buffers to UART driver (driver will deallocate to BufferManager)
+        output port bufferReturn: Fw.BufferSend
 
-        @ Port for deallocating buffers
-        output port deallocate: Fw.BufferSend  
+        #@ Port for allocating buffers for image data
+        #output port allocate: Fw.BufferGet
+
+        #@ Port for deallocating buffers
+        #output port deallocate: Fw.BufferSend  
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####

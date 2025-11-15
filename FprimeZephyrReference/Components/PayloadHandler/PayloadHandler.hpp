@@ -35,16 +35,12 @@ class PayloadHandler final : public PayloadHandlerComponentBase {
     size_t m_lineIndex = 0;
     Os::File m_file;
     std::string m_currentFilename;
+    bool m_fileOpen = false;  // Track if file is currently open for writing
 
     // Small protocol buffer for commands/headers (static allocation)
-    static constexpr U32 PROTOCOL_BUFFER_SIZE = 2048;
+    static constexpr U32 PROTOCOL_BUFFER_SIZE = 128;  // Just enough for header
     U8 m_protocolBuffer[PROTOCOL_BUFFER_SIZE];
     U32 m_protocolBufferSize = 0;
-
-    // Large image buffer (dynamic allocation via BufferManager)
-    Fw::Buffer m_imageBuffer;
-    U32 m_imageBufferUsed = 0;  // Bytes used in image buffer
-    static constexpr U32 IMAGE_BUFFER_SIZE = 256 * 1024;  // 256 KB for images
     
     // Protocol constants for image transfer
     // Protocol: <IMG_START><SIZE>[4-byte uint32]</SIZE>[image data]<IMG_END>
@@ -99,19 +95,15 @@ class PayloadHandler final : public PayloadHandlerComponentBase {
     //! Clear the protocol buffer
     void clearProtocolBuffer();
 
-    //! Allocate image buffer from BufferManager
+    //! Write data chunk directly to open file
     //! Returns true on success
-    bool allocateImageBuffer();
+    bool writeChunkToFile(const U8* data, U32 size);
 
-    //! Deallocate image buffer
-    void deallocateImageBuffer();
+    //! Close file and finalize image transfer
+    void finalizeImageTransfer();
 
-    //! Accumulate image data into dynamically allocated buffer
-    //! Returns true on success, false on overflow
-    bool accumulateImageData(const U8* data, U32 size);
-
-    //! Process complete image (write to file, send event, etc.)
-    void processCompleteImage();
+    //! Handle file write error
+    void handleFileError();
 
     //! Check if buffer contains image end marker
     //! Returns position of marker start, or -1 if not found
