@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/FprimeHal.cpp"
     DEPENDS
         RadioLib
 )
