@@ -7,6 +7,7 @@
 #ifndef Components_MyComponent_HPP
 #define Components_MyComponent_HPP
 
+#include "FprimeHal.hpp"
 #include "FprimeZephyrReference/Components/MyComponent/MyComponentComponentAc.hpp"
 
 namespace Components {
@@ -23,6 +24,8 @@ class MyComponent final : public MyComponentComponentBase {
 
     //! Destroy MyComponent object
     ~MyComponent();
+
+    using MyComponentComponentBase::spiSend_out;
 
   private:
     // ----------------------------------------------------------------------

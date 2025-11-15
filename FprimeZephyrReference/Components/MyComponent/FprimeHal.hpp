@@ -3,11 +3,17 @@
 
 #include <RadioLib.h>
 
+#include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
+
+namespace Components {
+class MyComponent;
+}  // namespace Components
+
 // the HAL must inherit from the base RadioLibHal class
 // and implement all of its virtual methods
 class FprimeHal : public RadioLibHal {
   public:
-    FprimeHal();
+    explicit FprimeHal(Components::MyComponent* component);
 
     void init() override;
 
@@ -50,6 +56,7 @@ class FprimeHal : public RadioLibHal {
     void spiEnd();
 
   private:
+    Components::MyComponent* m_component;
 };
 
 #endif

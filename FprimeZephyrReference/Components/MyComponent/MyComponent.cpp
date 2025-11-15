@@ -4,15 +4,13 @@
 // \brief  cpp file for MyComponent component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
-
 #define RADIOLIB_LOW_LEVEL 1
+
+#include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
 
 #include <RadioLib.h>
 
 #include <Fw/Logger/Logger.hpp>
-
-#include "FprimeHal.hpp"
 
 #define OP_SET_MODULATION_PARAMS 0x8B
 #define OP_SET_TX_PARAMS 0x8E
@@ -46,9 +44,10 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    FprimeHal hal;
+    FprimeHal hal(this);
     Module m(&hal, 0, 0, 0);
-    SX1280 radio(&m);
+    SX1281 radio(&m);
+    radio.modSetup(RADIOLIB_SX128X_PACKET_TYPE_GFSK);
     U8 status = radio.getStatus();
     Fw::Logger::log("radio status: %" PRI_U8 "\n", status);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
