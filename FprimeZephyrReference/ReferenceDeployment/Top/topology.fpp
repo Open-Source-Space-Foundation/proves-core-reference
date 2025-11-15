@@ -181,7 +181,7 @@ module ReferenceDeployment {
     }
 
     connections RadioReset {
-      lora.resetOut -> gpioRadioReset.gpioWrite
+      resetManager.radioResetOut -> gpioRadioReset.gpioWrite
     }
 
     connections LoadSwitches {
