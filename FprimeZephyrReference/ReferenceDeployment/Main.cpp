@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
     // Enable Face0 temporarily for sensor initialization
     printk("Enabling Face0 for sensor initialization...\n");
-    gpio_pin_set_dt(&face0_enable, 1);
+    gpio_pin_set_dt(&face1_enable, 1);
     k_sleep(K_MSEC(200));  // Wait for power to stabilize
 
     // Get I2C multiplexer and channel devices
@@ -103,14 +103,22 @@ int main(int argc, char* argv[]) {
     }
     printk("Mux channel 0 is ready\n\n");
 
-    // Get TMP112 sensor on the mux channel
+    // Get TMP112 sensor on the mux channel (deferred-init)
     const struct device* mux_temp_sens = DEVICE_DT_GET(DT_NODELABEL(mux_temp_sens));
     
-    if (!device_is_ready(mux_temp_sens)) {
-        printk("ERROR: TMP112 sensor on mux channel not ready\n");
+    // Initialize the TMP112 sensor (deferred-init requires explicit init)
+    printk("Initializing TMP112 on mux channel...\n");
+    int ret_1 = device_init(mux_temp_sens);
+    if (ret_1 < 0) {
+        printk("ERROR: Failed to initialize TMP112 (error %d)\n", ret_1);
         return -1;
     }
-    printk("TMP112 sensor is ready\n\n");
+    
+    if (!device_is_ready(mux_temp_sens)) {
+        printk("ERROR: TMP112 sensor on mux channel not ready after init\n");
+        return -1;
+    }
+    printk("TMP112 sensor initialized and ready\n\n");
 
     // I2C address scanning function
     printk("Starting I2C address scan on TCA9548A channel 0...\n");

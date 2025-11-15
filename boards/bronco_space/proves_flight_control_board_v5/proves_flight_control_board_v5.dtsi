@@ -185,6 +185,7 @@ zephyr_udc0: &usbd {
 				reg = <0x48>;
 				status = "okay";
 				label = "MUX_TMP112";
+				zephyr,deferred-init;
 			};
 
 
