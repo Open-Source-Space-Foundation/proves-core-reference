@@ -34,20 +34,13 @@ def test_03_radio_reset(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.clear_histories()
 
     # Send RESET_RADIO command
-    fprime_test_api.send_and_assert_command(
-        f"{resetManager}.RESET_RADIO",
-        timeout=5
-    )
+    fprime_test_api.send_and_assert_command(f"{resetManager}.RESET_RADIO", timeout=5)
 
     # Assert INITIATE_RADIO_RESET event was emitted
     fprime_test_api.assert_event(
-        "ReferenceDeployment.resetManager.INITIATE_RADIO_RESET",
-        timeout=2
+        "ReferenceDeployment.resetManager.INITIATE_RADIO_RESET", timeout=2
     )
 
     # Verify system is still running (not rebooted like cold/warm reset)
     # We can do this by sending another simple command
-    fprime_test_api.send_and_assert_command(
-        "CdhCore.cmdDisp.CMD_NO_OP",
-        timeout=2
-    )
+    fprime_test_api.send_and_assert_command("CdhCore.cmdDisp.CMD_NO_OP", timeout=2)
