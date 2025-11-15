@@ -6,7 +6,13 @@
 
 #include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
 
+#define RADIOLIB_LOW_LEVEL 1
+
+#include <RadioLib.h>
+
 #include <Fw/Logger/Logger.hpp>
+
+#include "FprimeHal.hpp"
 
 #define OP_SET_MODULATION_PARAMS 0x8B
 #define OP_SET_TX_PARAMS 0x8E
@@ -40,13 +46,11 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->spiSetStandby();
-    this->spiSetRfFrequency();
-    this->spiSetTxParams();
-    this->spiSetModulationParams();
-    this->spiSetTxContinuousPreamble();
-    U8 status = this->spiGetStatus();
-    Fw::Logger::log("status: %" PRI_U8 "\n", status);
+    FprimeHal hal;
+    Module m(&hal, 0, 0, 0);
+    SX1280 radio(&m);
+    U8 status = radio.getStatus();
+    Fw::Logger::log("radio status: %" PRI_U8 "\n", status);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

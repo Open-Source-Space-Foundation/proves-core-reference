@@ -1,56 +1,43 @@
-#ifndef FPRIME_HAL_H
-#define FPRIME_HAL_H
+#include "FprimeHal.hpp"
 
-// include RadioLib
-#include <RadioLib.h>
+FprimeHal::FprimeHal() : RadioLibHal(0, 0, 0, 0, 0, 0) {}
 
-// the HAL must inherit from the base RadioLibHal class
-// and implement all of its virtual methods
-class FprimeHal : public RadioLibHal {
-  public:
-    FprimeHal() : RadioLibHal(0, 0, 0, 0, 0, 0) {}
+void FprimeHal::init() {}
 
-    void init() override {}
+void FprimeHal::term() {}
 
-    void term() override {}
+void FprimeHal::pinMode(uint32_t pin, uint32_t mode) {}
 
-    void pinMode(uint32_t pin, uint32_t mode) override {}
+void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {}
 
-    void digitalWrite(uint32_t pin, uint32_t value) override {}
+uint32_t FprimeHal::digitalRead(uint32_t pin) {}
 
-    uint32_t digitalRead(uint32_t pin) override {}
+void FprimeHal::attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void), uint32_t mode) {}
 
-    void attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void), uint32_t mode) override {}
+void FprimeHal::detachInterrupt(uint32_t interruptNum) {}
 
-    void detachInterrupt(uint32_t interruptNum) override {}
+void FprimeHal::delay(unsigned long ms) {}
 
-    void delay(unsigned long ms) override {}
+void FprimeHal::delayMicroseconds(unsigned long us) {}
 
-    void delayMicroseconds(unsigned long us) override {}
+unsigned long FprimeHal::millis() {}
 
-    unsigned long millis() override {}
+unsigned long FprimeHal::micros() {}
 
-    unsigned long micros() override {}
+long FprimeHal::pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) {}
 
-    long pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) override {}
+void FprimeHal::tone(uint32_t pin, unsigned int frequency, unsigned long duration) {}
 
-    void tone(uint32_t pin, unsigned int frequency, unsigned long duration = 0) override {}
+void FprimeHal::noTone(uint32_t pin) {}
 
-    void noTone(uint32_t pin) override {}
+void FprimeHal::spiBegin() {}
 
-    void spiBegin() {}
+void FprimeHal::spiBeginTransaction() {}
 
-    void spiBeginTransaction() {}
+void FprimeHal::spiTransfer(uint8_t* out, size_t len, uint8_t* in) {}
 
-    void spiTransfer(uint8_t* out, size_t len, uint8_t* in) {}
+void FprimeHal::yield() {}
 
-    void yield() override {}
+void FprimeHal::spiEndTransaction() {}
 
-    void spiEndTransaction() {}
-
-    void spiEnd() {}
-
-  private:
-};
-
-#endif
+void FprimeHal::spiEnd() {}
