@@ -6,6 +6,12 @@
 
 #include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
 
+/*#include "FprimeZephyrReference/Components/MyComponent/radio.h"*/
+/*#include "FprimeZephyrReference/Components/MyComponent/sx1280.h"*/
+/*#include "FprimeZephyrReference/Components/MyComponent/sx1280-hal.h"*/
+/*#include "FprimeZephyrReference/Components/MyComponent/sx1280.cpp"*/
+/*#include "FprimeZephyrReference/Components/MyComponent/sx1280-hal.cpp"*/
+
 #include <Fw/Logger/Logger.hpp>
 
 #define OP_SET_MODULATION_PARAMS 0x8B
