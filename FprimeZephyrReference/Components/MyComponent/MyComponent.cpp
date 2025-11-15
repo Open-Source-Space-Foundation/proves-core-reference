@@ -28,6 +28,14 @@ MyComponent ::MyComponent(const char* const compName) : MyComponentComponentBase
 MyComponent ::~MyComponent() {}
 
 // ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
+
+void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
+    // TODO
+}
+
+// ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
