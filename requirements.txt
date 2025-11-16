@@ -2,4 +2,5 @@ pip
 west
 patool
 semver
+tqdm
 -r lib/fprime/requirements.txt
