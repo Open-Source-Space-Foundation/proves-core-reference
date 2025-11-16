@@ -196,6 +196,18 @@ zephyr_udc0: &usbd {
 				zephyr,deferred-init;
 			};
 
+			mux_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "MUX_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
 
 
 

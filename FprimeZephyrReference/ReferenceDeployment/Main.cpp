@@ -7,6 +7,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/haptics.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
@@ -137,6 +138,23 @@ int main(int argc, char* argv[]) {
     }
     printk("VEML6031 sensor initialized and ready\n\n");
 
+    // Get DRV2605 haptic driver on the mux channel (deferred-init)
+    const struct device* mux_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux_drv2605));
+    
+    // Initialize the DRV2605 (deferred-init requires explicit init)
+    printk("Initializing DRV2605 on mux channel...\n");
+    int ret_3 = device_init(mux_drv2605);
+    if (ret_3 < 0) {
+        printk("ERROR: Failed to initialize DRV2605 (error %d)\n", ret_3);
+        return -1;
+    }
+    
+    if (!device_is_ready(mux_drv2605)) {
+        printk("ERROR: DRV2605 on mux channel not ready after init\n");
+        return -1;
+    }
+    printk("DRV2605 initialized and ready\n\n");
+
     // I2C address scanning function
     printk("Starting I2C address scan on TCA9548A channel 0...\n");
     printk("Scanning addresses 0x03 to 0x77...\n\n");
@@ -230,6 +248,23 @@ int main(int argc, char* argv[]) {
             } else {
                 double light_lux = sensor_value_to_double(&light);
                 printk("Light: %.2f lux\n", light_lux);
+            }
+        }
+        
+        // Haptic - trigger a short vibration
+        printk("Triggering haptic...\n");
+        ret = haptics_start_output(mux_drv2605);
+        if (ret < 0) {
+            printk("ERROR: Failed to start haptic (error %d)\n", ret);
+        } else {
+            printk("Haptic: Started\n");
+            k_sleep(K_MSEC(100));  // Vibrate for 100ms
+            
+            ret = haptics_stop_output(mux_drv2605);
+            if (ret < 0) {
+                printk("ERROR: Failed to stop haptic (error %d)\n", ret);
+            } else {
+                printk("Haptic: Stopped\n");
             }
         }
     }
