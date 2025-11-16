@@ -66,7 +66,9 @@ Space Packet
          [F Prime Command Packet]
 
 **Total packet structure:**
-- Security Header: 8 bytes (SPI + Sequence Number + Reserved)
+- Security Header: of 6 octets in length (TM Baseline)
+
+(SPI (2 octets + Sequence Number 4 octets))
 
 - Space Packet Primary Header: 6 bytes
 - Space Packet Data Field: 16 + command size bytes

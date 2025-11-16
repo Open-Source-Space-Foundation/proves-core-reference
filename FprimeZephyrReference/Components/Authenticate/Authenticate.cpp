@@ -7,6 +7,7 @@
 #include "FprimeZephyrReference/Components/Authenticate/Authenticate.hpp"
 
 #include <Fw/Log/LogString.hpp>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iomanip>
@@ -117,6 +118,31 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // assert that the packet length is a correct length for a CCSDS Space Packet
     printk("dataIn_handler: %lld\n", data.getSize());
     printk("dataIn_handler: %hhn\n", data.getData());
+
+    printk("data before chonking him off:\n ");
+    for (FwSizeType i = 0; i < data.getSize(); i++) {
+        printk("%02x ", data.getData()[i]);
+    }
+    printk("\n");
+
+    // Take the first 6 bytes as the security header
+    unsigned char securityHeader[6];
+    std::memcpy(securityHeader, data.getData(), 6);
+    // increment the pointer to the data to point to the rest of the packet
+    data.setData(data.getData() + 6);
+    data.setSize(data.getSize() - 6);
+
+    printk("security header: %02x %02x %02x %02x %02x %02x\n", securityHeader[0], securityHeader[1], securityHeader[2],
+           securityHeader[3], securityHeader[4], securityHeader[5]);
+
+    // the first two bytes are the SPI
+    U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
+    printk("SPI: %04x\n", spi);
+
+    // the next four bytes are the sequence number
+    U32 sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
+                         (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
+    printk("Sequence Number: %08x\n", sequenceNumber);
 
     // to do: use constants instead of hardcoded values like the tc deframer
     // FW_ASSERT(data.getSize() >= 6 + 8 + 8);
