@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from typing import List, Type
 
 from fprime_gds.common.communication.ccsds.chain import ChainedFramerDeframer
@@ -12,9 +14,6 @@ from fprime_gds.plugin.definitions import gds_plugin
 # pragma: no cover
 class MyPlugin(FramerDeframer):
     def frame(self, data: bytes) -> bytes:
-        print("framing data (Framer):", data)
-        print("length of data (Framer):", len(data))
-
         # Authentication Header (16 octets/bytes)
         # right now all default but later, should be able
         # to change with get_arguments
@@ -29,13 +28,19 @@ class MyPlugin(FramerDeframer):
 
         data = header + data
 
-        print("framing data (Framer):", data)
-        print("length of data (Framer):", len(data))
+        # compute HMAC
+        # should be security header + data (data is frame header and data)
 
-        # key is 256 bits in total length (32 bytes)
-
+        # key is also currently hardcoded but should be able to be chosen based on spi later
         # Security Trailer of 16 octets in length (TM Baseline)
         # the output MAC is 128 bits in total length. (16 bytes)
+        key = b"65b32a18e0c63a347b56e8ae6c51358a"
+
+        hmac_object = hmac.new(key, data, hashlib.sha256)
+
+        hmac_bytes = hmac_object.digest()
+
+        data += hmac_bytes[:16]  # take first 16 bytes (128 bits)
 
         return data
 

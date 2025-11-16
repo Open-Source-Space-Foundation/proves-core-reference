@@ -132,10 +132,23 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     data.setData(data.getData() + 6);
     data.setSize(data.getSize() - 6);
 
+    // now we get the footer (last 16 bytes)
+    unsigned char securityTrailer[16];
+    std::memcpy(securityTrailer, data.getData() + data.getSize() - 16, 16);
+    // decrement the size of the data to remove the footer
+    data.setSize(data.getSize() - 16);
+
     printk("security header: %02x %02x %02x %02x %02x %02x\n", securityHeader[0], securityHeader[1], securityHeader[2],
            securityHeader[3], securityHeader[4], securityHeader[5]);
 
+    printk("\n");
+    printk("security trailer: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+           securityTrailer[0], securityTrailer[1], securityTrailer[2], securityTrailer[3], securityTrailer[4],
+           securityTrailer[5], securityTrailer[6], securityTrailer[7], securityTrailer[8], securityTrailer[9],
+           securityTrailer[10], securityTrailer[11], securityTrailer[12], securityTrailer[13], securityTrailer[14],
+           securityTrailer[15]);
     // the first two bytes are the SPI
+    printk("\n");
     U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
     printk("SPI: %04x\n", spi);
 
