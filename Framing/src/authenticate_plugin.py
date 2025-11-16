@@ -10,9 +10,16 @@ from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramer
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
+# TO DO: add ablility to start/save sequence number
+
 
 # pragma: no cover
 class MyPlugin(FramerDeframer):
+    def __init__(self):
+        """Constructor"""
+        super().__init__()
+        self.bytes_seq_num = b"\x00\x00\x00\x00"
+
     def frame(self, data: bytes) -> bytes:
         # Authentication Header (16 octets/bytes)
         # right now all default but later, should be able
@@ -22,9 +29,16 @@ class MyPlugin(FramerDeframer):
         header = b""
         bytes_spi = b"\x00\x01"
         header += bytes_spi
-        # Sequence Number (32 bits/4 bytes, currently 0x00000000):
-        bytes_seq_num = b"\x00\x00\x00\x00"
-        header += bytes_seq_num
+        # Sequence Number (32 bits/4 bytes, starts at 0x00000000):
+        header += self.bytes_seq_num
+        sequence_number = int.from_bytes(
+            self.bytes_seq_num, byteorder="big", signed=False
+        )
+        sequence_number += 1
+        print("Sequence number updated:", sequence_number)
+        self.bytes_seq_num = sequence_number.to_bytes(
+            len(self.bytes_seq_num), byteorder="big", signed=False
+        )
 
         data = header + data
 
@@ -48,6 +62,22 @@ class MyPlugin(FramerDeframer):
         if len(data) == 0:
             return None, b"", b""
         return data, b"", b""
+
+    # @classmethod
+    # def get_arguments(cls):
+    #     """ Arguments to request from the CLI """
+    #     return {
+    #     ("--start_count", ): {
+    #       "type": int,
+    #       "help": "Start of the sequence counter",
+    #       "required": False
+    #     }
+    #   }
+
+    # @classmethod
+    # def check_arguments(cls):
+    #     """ Check arguments from the CLI """
+    #     pass
 
 
 @gds_plugin(FramerDeframer)

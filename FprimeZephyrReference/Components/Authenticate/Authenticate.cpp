@@ -73,16 +73,6 @@ Authenticate ::~Authenticate() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-bool Authenticate ::PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    (void)data;
-    (void)context;
-    // TODO: checks with the APID list to see if the packet requires authentication
-    // If it does, return true
-    // If it does not, return false
-    // by default, return true if the APID is not in the APID list
-    return false;
-}
-
 Fw::Buffer Authenticate::computeHMAC(const U8* frameHeader,
                                      const U8* securityHeader,
                                      const U8* commandPayload,
@@ -116,8 +106,8 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     // assert that the packet length is a correct length for a CCSDS Space Packet
-    printk("dataIn_handler: %lld\n", data.getSize());
-    printk("dataIn_handler: %hhn\n", data.getData());
+    // printk("dataIn_handler: %lld\n", data.getSize());
+    // printk("dataIn_handler: %hhn\n", data.getData());
     ComCfg::FrameContext contextOut = context;
 
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
@@ -125,15 +115,9 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         // return the packet, set to unauthenticated
         this->log_WARNING_HI_PacketTooShort(data.getSize());
         contextOut.set_authenticated(0);
-        this->dataReturnOut_out(0, data, contextOut);
+        this->dataOut_out(0, data, context);
         return;
     }
-
-    printk("data before chonking him off:\n ");
-    for (FwSizeType i = 0; i < data.getSize(); i++) {
-        printk("%02x ", data.getData()[i]);
-    }
-    printk("\n");
 
     // Take the first 6 bytes as the security header
     unsigned char securityHeader[6];
@@ -148,9 +132,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // decrement the size of the data to remove the footer
     data.setSize(data.getSize() - 16);
 
-    printk("security header: %02x %02x %02x %02x %02x %02x\n", securityHeader[0], securityHeader[1], securityHeader[2],
-           securityHeader[3], securityHeader[4], securityHeader[5]);
-
     printk("\n");
     printk("security trailer: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
            securityTrailer[0], securityTrailer[1], securityTrailer[2], securityTrailer[3], securityTrailer[4],
@@ -158,66 +139,33 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
            securityTrailer[10], securityTrailer[11], securityTrailer[12], securityTrailer[13], securityTrailer[14],
            securityTrailer[15]);
     // the first two bytes are the SPI
-    printk("\n");
     U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
-    printk("SPI: %04x\n", spi);
 
     // the next four bytes are the sequence number
     U32 sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
                          (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
     printk("Sequence Number: %08x\n", sequenceNumber);
 
-    // to do: use constants instead of hardcoded values like the tc deframer
-    // FW_ASSERT(data.getSize() <=
-    //           12 + 6 + 8 + 8);  // 12 is the minimum length of a F Prime command packet (TO DO double check this)
+    const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
+    const std::string type_authn = authConfig.type;
+    const std::string& key_authn = authConfig.key;
 
-    // unpack all of the information
-    // const U8* raw = data.getData();
-    // const FwSizeType total = data.getSize();
-    // FW_ASSERT(total >= 6 + 8 + 8);
-    // const U8* frameHeader = raw;         // 6 bytes
-    // const U8* securityHeader = raw + 6;  // 8 bytes
-    // const U8* securityTrailer = raw + total - 8;
-    // const U8* commandPayload = raw + 14;
-    // U32 received_sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) |
-    //                               (static_cast<U32>(securityHeader[3]) << 16) |
-    //                               (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-    // U32 received_hmac =
-    //     (securityTrailer[0] << 24) | (securityTrailer[1] << 16) | (securityTrailer[2] << 8) | securityTrailer[3];
+    // check the sequence number is valid
+    // cast trailer to U32
+    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
+    if (!sequenceNumberValid) {
+        contextOut.set_authenticated(0);
+        printk("sequence number not valid");
+        this->dataOut_out(0, data, contextOut);
+        return;
+    } else {
+        // increment the stored sequence number
+        this->sequenceNumber.store(sequenceNumber + 1);
+    }
 
-    // // get spi from the security header
-    // const U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
-
-    // // Get packet APID and pass to PacketRequiresAuthentication
-    // ComCfg::Apid apid = context.get_apid();
-    // bool requiresAuthentication = this->PacketRequiresAuthentication(data, context);
-
-    // if (requiresAuthentication) {
-    //     // Authenticate the packet
-
-    //     // TO DO
-    //     // use the SPI to get the type of authentication and the key
-    //     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-    //     const std::string type_authn = authConfig.type;
-    //     const std::string& key_authn = authConfig.key;
-
-    //     if (type_authn == "HMAC") {
-    //         // TO DO
-    //         // get the frame header, security header, and frame data field from the packet
-    //         // compute the HMAC of the packet
-    //         const FwSizeType total = data.getSize();
-    //         FW_ASSERT(total >= 6 + 8 + 8);
-
-    //         bool sequenceNumberValid =
-    //             this->validateSequenceNumber(received_sequenceNumber, this->get_SequenceNumber());
-    //         if (!sequenceNumberValid) {
-    //             this->dataReturnOut_out(0, data, context);
-    //             return;
-    //         }
-
-    //         Fw::Buffer computedHmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
-    //         const U8* computedHmacData = computedHmac.getData();
-    //         const FwSizeType computedHmacLength = computedHmac.getSize();
+    // Fw::Buffer computedHmac = this->computeHMAC(frameHeader, securityHeader, commandPayload, key_authn);
+    // const U8* computedHmacData = computedHmac.getData();
+    // const FwSizeType computedHmacLength = computedHmac.getSize();
 
     //         constexpr FwSizeType receivedHmacLength = 8;
 
@@ -235,20 +183,8 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     //         return;
     //     }
 
-    // } else {
-    //     // Strip the security headers and trailers from the packet
-    //     // TO DO Double check this with the gds addition and the other components
-    //     FW_ASSERT(data.getSize() >= 6 + 8 + 8);
-    //     const FwSizeType total = data.getSize();
-    //     const FwSizeType payloadLength = total - 6 - 8 - 8;
-
-    //     const U8* src = data.getData();
-    //     U8* dest = data.getData();
-    //     std::memmove(dest + 6, src + 6 + 8, static_cast<size_t>(payloadLength));
-    //     data.setSize(6 + payloadLength);
-    //     this->dataOut_out(0, data, context);
-    //     return;
-    // }
+    this->log_ACTIVITY_HI_ValidHash(context.get_apid(), spi, sequenceNumber);
+    contextOut.set_authenticated(1);
 
     this->dataOut_out(0, data, contextOut);
 }
