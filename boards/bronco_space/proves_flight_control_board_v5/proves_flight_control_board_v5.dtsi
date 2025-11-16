@@ -173,14 +173,14 @@ zephyr_udc0: &usbd {
 		label = "TCA9548A";
 		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
 
-		mux_channel_0: i2c_mux@1 {
+		mux_channel_0: i2c_mux@0 {
 			compatible = "ti,tca9548a-channel";
 			label = "mux_channel_1";
-			reg = <1>;
+			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			mux_temp_sens: tmp112@48 {
+			mux0_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
@@ -188,7 +188,7 @@ zephyr_udc0: &usbd {
 				zephyr,deferred-init;
 			};
 
-			mux_light_sens: light@29 {
+			mux0_light_sens: light@29 {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
@@ -196,7 +196,7 @@ zephyr_udc0: &usbd {
 				zephyr,deferred-init;
 			};
 
-			mux_drv2605: drv2605@5a {
+			mux0_drv2605: drv2605@5a {
 				compatible = "ti,drv2605";
 				status = "okay";
 				reg = <0x5a>;
@@ -208,8 +208,42 @@ zephyr_udc0: &usbd {
 				feedback-brake-factor = "2X";
 			};
 
+		};
 
+		mux_channel_1: i2c_mux@1 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_1";
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 
+			mux1_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "MUX_TMP112";
+				zephyr,deferred-init;
+			};
+
+			mux1_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "MUX_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			mux1_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "MUX_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
 
 		};
 		
