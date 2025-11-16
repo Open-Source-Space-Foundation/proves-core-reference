@@ -118,6 +118,16 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // assert that the packet length is a correct length for a CCSDS Space Packet
     printk("dataIn_handler: %lld\n", data.getSize());
     printk("dataIn_handler: %hhn\n", data.getData());
+    ComCfg::FrameContext contextOut = context;
+
+    // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
+    if (data.getSize() < 34) {
+        // return the packet, set to unauthenticated
+        this->log_WARNING_HI_PacketTooShort(data.getSize());
+        contextOut.set_authenticated(0);
+        this->dataReturnOut_out(0, data, contextOut);
+        return;
+    }
 
     printk("data before chonking him off:\n ");
     for (FwSizeType i = 0; i < data.getSize(); i++) {
@@ -158,7 +168,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     printk("Sequence Number: %08x\n", sequenceNumber);
 
     // to do: use constants instead of hardcoded values like the tc deframer
-    // FW_ASSERT(data.getSize() >= 6 + 8 + 8);
     // FW_ASSERT(data.getSize() <=
     //           12 + 6 + 8 + 8);  // 12 is the minimum length of a F Prime command packet (TO DO double check this)
 
@@ -241,7 +250,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     //     return;
     // }
 
-    this->dataOut_out(0, data, context);
+    this->dataOut_out(0, data, contextOut);
 }
 
 Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32 spi) {

@@ -33,7 +33,7 @@ class MyPlugin(FramerDeframer):
 
         # key is also currently hardcoded but should be able to be chosen based on spi later
         # Security Trailer of 16 octets in length (TM Baseline)
-        # the output MAC is 128 bits in total length. (16 bytes)
+        # the output MAC is 2*128 bits in total length. (32 bytes)
         key = b"65b32a18e0c63a347b56e8ae6c51358a"
 
         hmac_object = hmac.new(key, data, hashlib.sha256)

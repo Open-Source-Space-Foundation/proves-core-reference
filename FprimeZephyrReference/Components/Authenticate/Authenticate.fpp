@@ -57,6 +57,8 @@ module Components {
 
         event FoundSPIKey(found: bool) severity activity low id 11 format "Found SPI status: {}"
 
+        event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication"
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer
