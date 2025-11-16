@@ -48,11 +48,16 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
         if (m_receiving && m_fileOpen) {
             handleFileError();
         }
+        // CRITICAL: Must return buffer even on error to prevent leak
+        if (buffer.isValid()) {
+            this->bufferReturn_out(0, buffer);
+        }
         return;
     }
 
     // Check if buffer is valid
     if (!buffer.isValid()) {
+        // Buffer is invalid but status was OK - unusual case, just return
         return;
     }
 
@@ -60,8 +65,8 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
     const U8* data = buffer.getData();
     U32 dataSize = static_cast<U32>(buffer.getSize());
 
-    // DEBUG: Log first 8 bytes of EVERY incoming chunk
-    if (dataSize >= 8) {
+    // DEBUG: Log first 8 bytes ONLY if not receiving (reduces load during transfer)
+    if (!m_receiving && dataSize >= 8) {
         this->log_ACTIVITY_LO_RawDataDump(
             data[0], data[1], data[2], data[3],
             data[4], data[5], data[6], data[7]
@@ -78,11 +83,19 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
         // Write chunk to file
         if (!writeChunkToFile(data, toWrite)) {
             // Write failed
+            this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write failed"));
             handleFileError();
+            // CRITICAL: Return buffer even on error
+            this->bufferReturn_out(0, buffer);
             return;
         }
         
         m_bytes_received += toWrite;
+        
+        // Log progress less frequently to reduce system load (every 512 bytes)
+        if ((m_bytes_received % 512) < 64) {
+            this->log_ACTIVITY_LO_ImageTransferProgress(m_bytes_received, m_expected_size);
+        }
         
         // Check if we've received all expected data
         if (m_bytes_received >= m_expected_size) {
@@ -101,10 +114,27 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
         }
     } else {
         // Not receiving image - accumulate protocol data
+        
+        // If protocol buffer is getting too full (> 90%), clear old data
+        // This prevents overflow from text responses that aren't image headers
+        if (m_protocolBufferSize > (PROTOCOL_BUFFER_SIZE * 9 / 10)) {
+            // Keep only last 32 bytes in case header is split
+            if (m_protocolBufferSize > 32) {
+                memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 32], 32);
+                m_protocolBufferSize = 32;
+            }
+        }
+        
         if (!accumulateProtocolData(data, dataSize)) {
-            // Protocol buffer overflow - clear and retry
+            // Protocol buffer overflow - clear old data and keep new
             clearProtocolBuffer();
-            accumulateProtocolData(data, dataSize);
+            // Try again with cleared buffer
+            if (!accumulateProtocolData(data, dataSize)) {
+                // Still won't fit - just take what we can
+                U32 canFit = PROTOCOL_BUFFER_SIZE;
+                memcpy(m_protocolBuffer, data, canFit);
+                m_protocolBufferSize = canFit;
+            }
         }
 
         // Log what we have in protocol buffer for debugging
@@ -188,19 +218,29 @@ void PayloadHandler ::processProtocolBuffer() {
     
     // Search for <IMG_START> anywhere in the buffer (not just at position 0)
     I32 headerStart = -1;
-    for (U32 i = 0; i <= m_protocolBufferSize - IMG_START_LEN; ++i) {
-        if (isImageStartCommand(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
-            headerStart = static_cast<I32>(i);
-            break;
+    
+    // Only search if we have enough bytes for the header marker
+    if (m_protocolBufferSize >= IMG_START_LEN) {
+        for (U32 i = 0; i <= m_protocolBufferSize - IMG_START_LEN; ++i) {
+            if (isImageStartCommand(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
+                headerStart = static_cast<I32>(i);
+                break;
+            }
         }
     }
     
     if (headerStart == -1) {
         // No header found - if buffer is nearly full, discard old data
-        if (m_protocolBufferSize > PROTOCOL_BUFFER_SIZE - 64) {
-            // Keep last 32 bytes in case header is split
-            memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 32], 32);
-            m_protocolBufferSize = 32;
+        // Be aggressive: if buffer is > 50% full and no header, it's probably text responses
+        if (m_protocolBufferSize > (PROTOCOL_BUFFER_SIZE / 2)) {
+            // Keep last 16 bytes in case header is split across chunks
+            if (m_protocolBufferSize > 16) {
+                memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 16], 16);
+                m_protocolBufferSize = 16;
+            } else {
+                // Buffer is small enough, just clear it
+                clearProtocolBuffer();
+            }
         }
         return;
     }
@@ -210,9 +250,18 @@ void PayloadHandler ::processProtocolBuffer() {
         U32 remaining = m_protocolBufferSize - static_cast<U32>(headerStart);
         memmove(m_protocolBuffer, &m_protocolBuffer[headerStart], remaining);
         m_protocolBufferSize = remaining;
+        
+        // Log that we found and moved the header
+        this->log_ACTIVITY_LO_ProtocolBufferDebug(m_protocolBufferSize, m_protocolBuffer[0]);
     }
     
-    // Now check if we have the complete header
+    // Now check if we have the complete header (28 bytes minimum)
+    if (m_protocolBufferSize < HEADER_SIZE) {
+        // Not enough data yet, wait for more
+        return;
+    }
+    
+    // Check if we have the complete header
     if (m_protocolBufferSize >= HEADER_SIZE) {
         // Check for <IMG_START> at the beginning
         if (!isImageStartCommand(m_protocolBuffer, m_protocolBufferSize)) {
@@ -261,9 +310,12 @@ void PayloadHandler ::processProtocolBuffer() {
         m_bytes_received = 0;
         m_expected_size = imageSize;
         
-        // Generate filename
+        // Log the extracted size
+        this->log_ACTIVITY_HI_ImageSizeExtracted(imageSize);
+        
+        // Generate filename - save to root filesystem
         char filename[64];
-        snprintf(filename, sizeof(filename), "/mnt/data/img_%03d.jpg", m_data_file_count++);
+        snprintf(filename, sizeof(filename), "/img_%03d.jpg", m_data_file_count++);
         m_currentFilename = filename;
         
         // Open file for writing

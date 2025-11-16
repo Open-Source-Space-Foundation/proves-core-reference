@@ -17,6 +17,10 @@ module Components {
 
         event ImageHeaderReceived() severity activity low format "Received image header"
 
+        event ImageSizeExtracted(imageSize: U32) severity activity high format "Image size from header: {} bytes"
+
+        event ImageTransferProgress(received: U32, expected: U32) severity activity low format "Transfer progress: {}/{} bytes"
+
         event UartReceived() severity activity low format "Received UART data"
 
         event BufferAllocationFailed(buffer_size: U32) severity warning high format "Failed to allocate buffer of size {}"
