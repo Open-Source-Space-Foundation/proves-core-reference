@@ -191,12 +191,10 @@ set in sequence_number.txt
 
 To Run the Plugin, first activate the fprime-venv
 
-> source fprime-venv/bin/activate
+to build the framer plugin
 
-Then cd into the Framing Folder
+> make framer-plugin
 
-> cd Framing
+and to start the gds with the
 
-then run
-
-pip install -e .
+> make gds-with-framer
