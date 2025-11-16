@@ -1,4 +1,5 @@
 pip
 west
+patool
 
 -r lib/fprime/requirements.txt
