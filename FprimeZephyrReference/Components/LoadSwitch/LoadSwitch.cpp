@@ -32,6 +32,20 @@ void LoadSwitch ::Reset_handler(FwIndexType portNum) {
     this->tlmWrite_IsOn(Fw::On::ON);
 }
 
+void LoadSwitch ::turnOn_handler(FwIndexType portNum) {
+    // Turn on the load switch (called by other components like ModeManager)
+    this->gpioSet_out(0, Fw::Logic::HIGH);
+    this->log_ACTIVITY_HI_StatusChanged(Fw::On::ON);
+    this->tlmWrite_IsOn(Fw::On::ON);
+}
+
+void LoadSwitch ::turnOff_handler(FwIndexType portNum) {
+    // Turn off the load switch (called by other components like ModeManager)
+    this->gpioSet_out(0, Fw::Logic::LOW);
+    this->log_ACTIVITY_HI_StatusChanged(Fw::On::OFF);
+    this->tlmWrite_IsOn(Fw::On::OFF);
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------

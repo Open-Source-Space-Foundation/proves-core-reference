@@ -7,6 +7,7 @@
 #include "FprimeZephyrReference/Components/Watchdog/Watchdog.hpp"
 
 #include "config/FpConfig.hpp"
+#include <zephyr/drivers/hwinfo.h>
 
 namespace Components {
 
@@ -17,6 +18,23 @@ namespace Components {
 Watchdog ::Watchdog(const char* const compName) : WatchdogComponentBase(compName) {}
 
 Watchdog ::~Watchdog() {}
+
+void Watchdog ::preamble() {
+    // Check if the system was reset by watchdog timeout
+    uint32_t reset_cause = 0;
+    int ret = hwinfo_get_reset_cause(&reset_cause);
+
+    if (ret == 0 && (reset_cause & RESET_WATCHDOG)) {
+        // Watchdog timeout caused this boot - signal fault to ModeManager
+        if (this->isConnected_watchdogFault_OutputPort(0)) {
+            this->watchdogFault_out(0);  // Signal port - no parameters
+        }
+        this->log_ACTIVITY_HI_WatchdogStart();  // Log that watchdog fault was detected
+    }
+
+    // Clear reset cause after reading so it doesn't persist to next boot
+    hwinfo_clear_reset_cause();
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for user-defined typed input ports

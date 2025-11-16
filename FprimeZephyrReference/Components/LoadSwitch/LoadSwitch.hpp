@@ -50,6 +50,14 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Handler implementation for Reset
     void Reset_handler(FwIndexType portNum  //!< The port number
                        ) override;
+
+    //! Handler implementation for turnOn
+    void turnOn_handler(FwIndexType portNum  //!< The port number
+                        ) override;
+
+    //! Handler implementation for turnOff
+    void turnOff_handler(FwIndexType portNum  //!< The port number
+                         ) override;
 };
 
 }  // namespace Components

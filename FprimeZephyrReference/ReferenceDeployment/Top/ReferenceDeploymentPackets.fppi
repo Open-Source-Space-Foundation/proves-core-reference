@@ -11,6 +11,14 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
+    ReferenceDeployment.modeManager.CurrentMode
+    ReferenceDeployment.modeManager.VoltageFaultFlag
+    ReferenceDeployment.modeManager.WatchdogFaultFlag
+    ReferenceDeployment.modeManager.CommTimeoutFaultFlag
+    ReferenceDeployment.modeManager.CurrentVoltage
+    ReferenceDeployment.modeManager.SecondsSinceLastComm
+    ReferenceDeployment.modeManager.BeaconBackoffDivider
+    ReferenceDeployment.modeManager.SafeModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {

@@ -34,6 +34,9 @@ module Components {
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 
+        @ Port to signal watchdog fault detected on boot
+        output port watchdogFault: Fw.Signal
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
