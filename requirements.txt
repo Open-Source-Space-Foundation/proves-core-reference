@@ -1,5 +1,5 @@
 pip
 west
 patool
-
+semver
 -r lib/fprime/requirements.txt
