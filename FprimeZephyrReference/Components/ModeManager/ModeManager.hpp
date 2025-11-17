@@ -53,6 +53,18 @@ class ModeManager : public ModeManagerComponentBase {
     void watchdogFaultSignal_handler(FwIndexType portNum  //!< The port number
                                      ) override;
 
+    //! Handler implementation for forceSafeMode
+    //!
+    //! Port to force safe mode entry (callable by other components)
+    void forceSafeMode_handler(FwIndexType portNum  //!< The port number
+                               ) override;
+
+    //! Handler implementation for clearAllFaults
+    //!
+    //! Port to clear all faults (callable by other components)
+    void clearAllFaults_handler(FwIndexType portNum  //!< The port number
+                                ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -78,6 +90,11 @@ class ModeManager : public ModeManagerComponentBase {
                                            F32 entryVoltage,     //!< Entry voltage
                                            F32 exitVoltage       //!< Exit voltage
                                            ) override;
+
+    //! Handler implementation for command EXIT_SAFE_MODE
+    void EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                   U32 cmdSeq            //!< The command sequence number
+                                   ) override;
 
   private:
     // ----------------------------------------------------------------------

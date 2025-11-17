@@ -66,9 +66,9 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 
     if (anyFaultActive && this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode();
-    } else if (!anyFaultActive && this->m_mode == SystemMode::SAFE_MODE) {
-        this->exitSafeMode();
     }
+    // Auto-exit removed - all safe mode exits require manual EXIT_SAFE_MODE command
+    // This simplifies the logic and ensures operator awareness of all mode changes
 
     // 4. If in safe mode, update exponential backoff
     if (this->m_mode == SystemMode::SAFE_MODE) {
@@ -89,6 +89,28 @@ void ModeManager ::watchdogFaultSignal_handler(FwIndexType portNum) {
     this->tlmWrite_WatchdogFaultFlag(true);
 
     // Save state immediately
+    this->saveState();
+}
+
+void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
+    // Force entry into safe mode (called by other components)
+    if (this->m_mode == SystemMode::NORMAL) {
+        // Set voltage fault flag to trigger safe mode
+        this->m_voltageFaultFlag = true;
+        this->log_WARNING_HI_VoltageFaultDetected(this->m_currentVoltage);
+        this->tlmWrite_VoltageFaultFlag(true);
+        this->saveState();
+    }
+}
+
+void ModeManager ::clearAllFaults_handler(FwIndexType portNum) {
+    // Clear all fault flags (called by other components)
+    // Note: This doesn't validate conditions like the command handlers do
+    // Use with caution - typically commands are preferred for safety
+    this->m_voltageFaultFlag = false;
+    this->m_watchdogFaultFlag = false;
+    this->tlmWrite_VoltageFaultFlag(false);
+    this->tlmWrite_WatchdogFaultFlag(false);
     this->saveState();
 }
 
@@ -164,6 +186,52 @@ void ModeManager ::SET_VOLTAGE_THRESHOLDS_cmdHandler(FwOpcodeType opCode,
     // Note: In F Prime, parameters are typically loaded from files, not set programmatically
     // This command would need to update the parameter database file
     // For now, just acknowledge the command
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Manual command to exit safe mode
+    // This is required after watchdog faults to prevent boot loops
+
+    // Check if currently in safe mode
+    if (this->m_mode != SystemMode::SAFE_MODE) {
+        Fw::LogStringArg cmdNameStr("EXIT_SAFE_MODE");
+        Fw::LogStringArg reasonStr("Not currently in safe mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Check that all faults are cleared before allowing exit
+    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag);
+    if (anyFaultActive) {
+        Fw::LogStringArg cmdNameStr("EXIT_SAFE_MODE");
+        Fw::LogStringArg reasonStr;
+        char reasonBuf[100];
+        char* ptr = reasonBuf;
+        int remaining = sizeof(reasonBuf);
+
+        snprintf(ptr, remaining, "Active faults: ");
+        ptr += strlen(ptr);
+        remaining = sizeof(reasonBuf) - strlen(reasonBuf);
+
+        if (this->m_voltageFaultFlag) {
+            snprintf(ptr, remaining, "Voltage ");
+            ptr += strlen(ptr);
+            remaining = sizeof(reasonBuf) - strlen(reasonBuf);
+        }
+        if (this->m_watchdogFaultFlag) {
+            snprintf(ptr, remaining, "Watchdog");
+        }
+
+        reasonStr = reasonBuf;
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // All validations passed - exit safe mode
+    this->exitSafeMode();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -284,6 +352,11 @@ void ModeManager ::enterSafeMode() {
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
 
+    // Notify other components of mode change
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        this->modeChanged_out(0);
+    }
+
     // Save state
     this->saveState();
 }
@@ -303,6 +376,11 @@ void ModeManager ::exitSafeMode() {
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+
+    // Notify other components of mode change
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        this->modeChanged_out(0);
+    }
 
     // Save state
     this->saveState();

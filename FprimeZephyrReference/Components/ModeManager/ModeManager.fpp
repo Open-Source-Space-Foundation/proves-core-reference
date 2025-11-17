@@ -13,9 +13,18 @@ module Components {
         @ Port to receive watchdog fault signal on boot
         async input port watchdogFaultSignal: Fw.Signal
 
+        @ Port to force safe mode entry (callable by other components)
+        async input port forceSafeMode: Fw.Signal
+
+        @ Port to clear all faults (callable by other components)
+        async input port clearAllFaults: Fw.Signal
+
         # ----------------------------------------------------------------------
         # Output Ports
         # ----------------------------------------------------------------------
+
+        @ Port to notify other components of mode changes
+        output port modeChanged: Fw.Signal
 
         @ Ports to turn on LoadSwitch instances (8 total)
         output port loadSwitchTurnOn: [8] Fw.Signal
@@ -49,6 +58,11 @@ module Components {
             entryVoltage: F32 @< Voltage level to enter safe mode (default 7.0V)
             exitVoltage: F32 @< Voltage level required to exit safe mode (default 7.5V)
         )
+
+        @ Command to manually exit safe mode
+        @ Only succeeds if all faults are cleared
+        @ Required after watchdog faults (prevents boot loops)
+        sync command EXIT_SAFE_MODE()
 
         # ----------------------------------------------------------------------
         # Events
