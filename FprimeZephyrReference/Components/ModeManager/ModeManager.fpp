@@ -13,9 +13,6 @@ module Components {
         @ Port to receive watchdog fault signal on boot
         async input port watchdogFaultSignal: Fw.Signal
 
-        @ Port to receive ground communication heartbeat
-        async input port commHeartbeat: Fw.Signal
-
         # ----------------------------------------------------------------------
         # Output Ports
         # ----------------------------------------------------------------------
@@ -44,17 +41,8 @@ module Components {
         @ Can be cleared any time (manual only)
         sync command CLEAR_WATCHDOG_FAULT()
 
-        @ Command to clear communication timeout fault flag
-        @ Only succeeds if communication is currently active
-        sync command CLEAR_COMM_FAULT()
-
         @ Command to force system into safe mode
         sync command FORCE_SAFE_MODE()
-
-        @ Command to set communication timeout period in seconds
-        sync command SET_COMM_TIMEOUT(
-            timeoutSeconds: U32 @< Timeout in seconds before entering safe mode
-        )
 
         @ Command to set voltage thresholds
         sync command SET_VOLTAGE_THRESHOLDS(
@@ -102,18 +90,6 @@ module Components {
             severity activity high \
             format "Watchdog fault cleared by ground command"
 
-        @ Event emitted when communication timeout fault is detected
-        event CommTimeoutFaultDetected(
-            secondsSinceLastComm: U32 @< Seconds since last communication
-        ) \
-            severity warning high \
-            format "Communication timeout fault detected - {} seconds since last contact"
-
-        @ Event emitted when communication timeout fault is cleared
-        event CommTimeoutFaultCleared() \
-            severity activity high \
-            format "Communication timeout fault cleared"
-
         @ Event emitted when command validation fails
         event CommandValidationFailed(
             cmdName: string size 50 @< Command that failed validation
@@ -142,14 +118,8 @@ module Components {
         @ Watchdog fault flag status
         telemetry WatchdogFaultFlag: bool
 
-        @ Communication timeout fault flag status
-        telemetry CommTimeoutFaultFlag: bool
-
         @ Current system voltage
         telemetry CurrentVoltage: F32
-
-        @ Seconds since last ground communication
-        telemetry SecondsSinceLastComm: U32
 
         @ Current beacon backoff divider value
         telemetry BeaconBackoffDivider: U32
@@ -166,9 +136,6 @@ module Components {
 
         @ Voltage threshold to allow clearing voltage fault (default: 7.5V)
         param VOLTAGE_EXIT_THRESHOLD: F32 default 7.5
-
-        @ Communication timeout in seconds (default: 1 day = 86400 seconds)
-        param COMM_TIMEOUT_SECONDS: U32 default 86400
 
         @ Maximum beacon backoff divider (default: 3600 seconds = 1 hour)
         param MAX_BEACON_BACKOFF: U32 default 3600

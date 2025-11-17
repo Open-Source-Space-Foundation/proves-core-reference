@@ -22,9 +22,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_voltageFaultFlag(false),
       m_watchdogFaultFlag(false),
-      m_commTimeoutFaultFlag(false),
       m_safeModeEntryCount(0),
-      m_lastCommTimestamp(0),
       m_backoffCounter(0),
       m_currentVoltage(0.0f),
       m_runCounter(0),
@@ -45,7 +43,6 @@ void ModeManager ::preamble() {
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_VoltageFaultFlag(this->m_voltageFaultFlag);
     this->tlmWrite_WatchdogFaultFlag(this->m_watchdogFaultFlag);
-    this->tlmWrite_CommTimeoutFaultFlag(this->m_commTimeoutFaultFlag);
     this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
 }
 
@@ -64,11 +61,8 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // 1. Check voltage condition
     this->checkVoltageCondition();
 
-    // 2. Check communication timeout
-    this->checkCommTimeout();
-
-    // 3. Determine if mode change is needed
-    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag || this->m_commTimeoutFaultFlag);
+    // 2. Determine if mode change is needed
+    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag);
 
     if (anyFaultActive && this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode();
@@ -81,16 +75,11 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
         this->updateBeaconBackoff();
     }
 
-    // 5. Update telemetry
+    // 3. Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_VoltageFaultFlag(this->m_voltageFaultFlag);
     this->tlmWrite_WatchdogFaultFlag(this->m_watchdogFaultFlag);
-    this->tlmWrite_CommTimeoutFaultFlag(this->m_commTimeoutFaultFlag);
     this->tlmWrite_CurrentVoltage(this->m_currentVoltage);
-
-    // Calculate seconds since last comm (runCounter is in seconds since it's 1Hz)
-    U32 secondsSinceLastComm = this->m_runCounter - this->m_lastCommTimestamp;
-    this->tlmWrite_SecondsSinceLastComm(secondsSinceLastComm);
 }
 
 void ModeManager ::watchdogFaultSignal_handler(FwIndexType portNum) {
@@ -101,12 +90,6 @@ void ModeManager ::watchdogFaultSignal_handler(FwIndexType portNum) {
 
     // Save state immediately
     this->saveState();
-}
-
-void ModeManager ::commHeartbeat_handler(FwIndexType portNum) {
-    // Update last communication timestamp
-    this->m_lastCommTimestamp = this->m_runCounter;
-    this->tlmWrite_SecondsSinceLastComm(0);
 }
 
 // ----------------------------------------------------------------------
@@ -152,30 +135,6 @@ void ModeManager ::CLEAR_WATCHDOG_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdS
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void ModeManager ::CLEAR_COMM_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Check if communication is currently active (received heartbeat recently)
-    U32 secondsSinceLastComm = this->m_runCounter - this->m_lastCommTimestamp;
-
-    // Consider comm active if heartbeat received within last 60 seconds
-    if (secondsSinceLastComm < 60) {
-        // Clear the fault flag
-        this->m_commTimeoutFaultFlag = false;
-        this->log_ACTIVITY_HI_CommTimeoutFaultCleared();
-        this->tlmWrite_CommTimeoutFaultFlag(false);
-        this->saveState();
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    } else {
-        // Validation failed - no recent communication
-        Fw::LogStringArg reasonStr;
-        char reasonBuf[100];
-        snprintf(reasonBuf, sizeof(reasonBuf), "No active communication (last: %u seconds ago)", secondsSinceLastComm);
-        reasonStr = reasonBuf;
-        Fw::LogStringArg cmdNameStr("CLEAR_COMM_FAULT");
-        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
-    }
-}
-
 void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Force entry into safe mode
     if (this->m_mode == SystemMode::NORMAL) {
@@ -187,13 +146,6 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         // Already in safe mode
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     }
-}
-
-void ModeManager ::SET_COMM_TIMEOUT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 timeoutSeconds) {
-    // Note: In F Prime, parameters are typically loaded from files, not set programmatically
-    // This command would need to update the parameter database file
-    // For now, just acknowledge the command
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void ModeManager ::SET_VOLTAGE_THRESHOLDS_cmdHandler(FwOpcodeType opCode,
@@ -233,9 +185,7 @@ void ModeManager ::loadState() {
             this->m_mode = static_cast<SystemMode>(state.mode);
             this->m_voltageFaultFlag = state.voltageFaultFlag;
             this->m_watchdogFaultFlag = state.watchdogFaultFlag;
-            this->m_commTimeoutFaultFlag = state.commTimeoutFaultFlag;
             this->m_safeModeEntryCount = state.safeModeEntryCount;
-            this->m_lastCommTimestamp = state.lastCommTimestamp;
             this->m_backoffCounter = state.backoffCounter;
         }
 
@@ -245,9 +195,7 @@ void ModeManager ::loadState() {
         this->m_mode = SystemMode::NORMAL;
         this->m_voltageFaultFlag = false;
         this->m_watchdogFaultFlag = false;
-        this->m_commTimeoutFaultFlag = false;
         this->m_safeModeEntryCount = 0;
-        this->m_lastCommTimestamp = 0;
         this->m_backoffCounter = 0;
     }
 }
@@ -266,9 +214,7 @@ void ModeManager ::saveState() {
         state.mode = static_cast<U8>(this->m_mode);
         state.voltageFaultFlag = this->m_voltageFaultFlag;
         state.watchdogFaultFlag = this->m_watchdogFaultFlag;
-        state.commTimeoutFaultFlag = this->m_commTimeoutFaultFlag;
         state.safeModeEntryCount = this->m_safeModeEntryCount;
-        state.lastCommTimestamp = this->m_lastCommTimestamp;
         state.backoffCounter = this->m_backoffCounter;
 
         FwSizeType size = sizeof(PersistentState);
@@ -299,27 +245,6 @@ void ModeManager ::checkVoltageCondition() {
     }
 }
 
-void ModeManager ::checkCommTimeout() {
-    // Get communication timeout parameter
-    Fw::ParamValid valid;
-    U32 timeoutSeconds = this->paramGet_COMM_TIMEOUT_SECONDS(valid);
-    if (valid != Fw::ParamValid::VALID) {
-        timeoutSeconds = 86400;  // Default: 1 day
-    }
-
-    // Calculate seconds since last communication
-    U32 secondsSinceLastComm = this->m_runCounter - this->m_lastCommTimestamp;
-
-    // Check if timeout has been exceeded
-    if (!this->m_commTimeoutFaultFlag && secondsSinceLastComm >= timeoutSeconds) {
-        // Set fault flag
-        this->m_commTimeoutFaultFlag = true;
-        this->log_WARNING_HI_CommTimeoutFaultDetected(secondsSinceLastComm);
-        this->tlmWrite_CommTimeoutFaultFlag(true);
-        this->saveState();
-    }
-}
-
 void ModeManager ::enterSafeMode() {
     // Transition to safe mode
     this->m_mode = SystemMode::SAFE_MODE;
@@ -343,17 +268,7 @@ void ModeManager ::enterSafeMode() {
             ptr += written;
             remaining -= written;
         }
-        int written = snprintf(ptr, remaining, "Watchdog fault");
-        ptr += written;
-        remaining -= written;
-    }
-    if (this->m_commTimeoutFaultFlag) {
-        if (ptr != reasonBuf) {
-            int written = snprintf(ptr, remaining, ", ");
-            ptr += written;
-            remaining -= written;
-        }
-        snprintf(ptr, remaining, "Comm timeout");
+        snprintf(ptr, remaining, "Watchdog fault");
     }
 
     reasonStr = reasonBuf;

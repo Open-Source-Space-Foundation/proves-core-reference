@@ -14,9 +14,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.VoltageFaultFlag
     ReferenceDeployment.modeManager.WatchdogFaultFlag
-    ReferenceDeployment.modeManager.CommTimeoutFaultFlag
     ReferenceDeployment.modeManager.CurrentVoltage
-    ReferenceDeployment.modeManager.SecondsSinceLastComm
     ReferenceDeployment.modeManager.BeaconBackoffDivider
     ReferenceDeployment.modeManager.SafeModeEntryCount
   }

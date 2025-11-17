@@ -53,12 +53,6 @@ class ModeManager : public ModeManagerComponentBase {
     void watchdogFaultSignal_handler(FwIndexType portNum  //!< The port number
                                      ) override;
 
-    //! Handler implementation for commHeartbeat
-    //!
-    //! Port to receive ground communication heartbeat
-    void commHeartbeat_handler(FwIndexType portNum  //!< The port number
-                               ) override;
-
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -73,21 +67,10 @@ class ModeManager : public ModeManagerComponentBase {
                                          U32 cmdSeq            //!< The command sequence number
                                          ) override;
 
-    //! Handler implementation for command CLEAR_COMM_FAULT
-    void CLEAR_COMM_FAULT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                     U32 cmdSeq            //!< The command sequence number
-                                     ) override;
-
     //! Handler implementation for command FORCE_SAFE_MODE
     void FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                     U32 cmdSeq            //!< The command sequence number
                                     ) override;
-
-    //! Handler implementation for command SET_COMM_TIMEOUT
-    void SET_COMM_TIMEOUT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                     U32 cmdSeq,           //!< The command sequence number
-                                     U32 timeoutSeconds    //!< Timeout in seconds
-                                     ) override;
 
     //! Handler implementation for command SET_VOLTAGE_THRESHOLDS
     void SET_VOLTAGE_THRESHOLDS_cmdHandler(FwOpcodeType opCode,  //!< The opcode
@@ -109,9 +92,6 @@ class ModeManager : public ModeManagerComponentBase {
 
     //! Check voltage condition and update fault flag
     void checkVoltageCondition();
-
-    //! Check communication timeout and update fault flag
-    void checkCommTimeout();
 
     //! Enter safe mode
     void enterSafeMode();
@@ -142,29 +122,25 @@ class ModeManager : public ModeManagerComponentBase {
 
     //! Persistent state structure
     struct PersistentState {
-        U8 mode;                    //!< Current mode (SystemMode)
-        bool voltageFaultFlag;      //!< Voltage fault flag
-        bool watchdogFaultFlag;     //!< Watchdog fault flag
-        bool commTimeoutFaultFlag;  //!< Communication timeout fault flag
-        U32 safeModeEntryCount;     //!< Number of times safe mode entered
-        U32 lastCommTimestamp;      //!< Last communication timestamp
-        U32 backoffCounter;         //!< Beacon backoff counter
+        U8 mode;                 //!< Current mode (SystemMode)
+        bool voltageFaultFlag;   //!< Voltage fault flag
+        bool watchdogFaultFlag;  //!< Watchdog fault flag
+        U32 safeModeEntryCount;  //!< Number of times safe mode entered
+        U32 backoffCounter;      //!< Beacon backoff counter
     };
 
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
 
-    SystemMode m_mode;            //!< Current system mode
-    bool m_voltageFaultFlag;      //!< Voltage fault flag
-    bool m_watchdogFaultFlag;     //!< Watchdog fault flag
-    bool m_commTimeoutFaultFlag;  //!< Communication timeout fault flag
-    U32 m_safeModeEntryCount;     //!< Counter for safe mode entries
-    U32 m_lastCommTimestamp;      //!< Timestamp of last communication
-    U32 m_backoffCounter;         //!< Beacon backoff counter
-    F32 m_currentVoltage;         //!< Current system voltage
-    U32 m_runCounter;             //!< Counter for run handler calls (1Hz)
-    bool m_initialized;           //!< Initialization flag
+    SystemMode m_mode;         //!< Current system mode
+    bool m_voltageFaultFlag;   //!< Voltage fault flag
+    bool m_watchdogFaultFlag;  //!< Watchdog fault flag
+    U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
+    U32 m_backoffCounter;      //!< Beacon backoff counter
+    F32 m_currentVoltage;      //!< Current system voltage
+    U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
+    bool m_initialized;        //!< Initialization flag
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 };
