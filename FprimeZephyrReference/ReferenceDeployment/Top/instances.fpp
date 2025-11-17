@@ -38,7 +38,7 @@ module ReferenceDeployment {
     priority 3
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
-    queue size Default.QUEUE_SIZE \
+    queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
     priority 15
 
@@ -126,6 +126,8 @@ module ReferenceDeployment {
   instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000
 
   instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
+
+  instance resetManager: Components.ResetManager base id 0x1003B000
 
   instance powerMonitor: Components.PowerMonitor base id 0x1003C000
 

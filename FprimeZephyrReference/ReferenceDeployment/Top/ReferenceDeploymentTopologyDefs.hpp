@@ -79,6 +79,7 @@ struct TopologyState {
     const device* ina219SolDevice;                //!< device path for solar panel ina219
     const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
+    const device* rtcDevice;                      //!< RTC device path
     const device* drv2605Devices[5];              //!< Array of DRV2605 devices (5)
 };
 

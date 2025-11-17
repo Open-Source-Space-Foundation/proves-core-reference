@@ -32,6 +32,14 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Destroy RtcManager object
     ~RtcManager();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Public helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the RTC device
+    void configure(const struct device* dev);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -57,6 +65,14 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
+    //! Handler implementation for command TEST_UNCONFIGURE_DEVICE
+    //!
+    //! TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time
+    //! since boot.
+    void TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                            U32 cmdSeq            //!< The command sequence number
+                                            ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -67,7 +83,7 @@ class RtcManager final : public RtcManagerComponentBase {
     bool timeDataIsValid(Drv::TimeData t);
 
     //! device stores the initialized Zephyr RTC device
-    const struct device* dev;
+    const struct device* m_dev;
 };
 
 }  // namespace Drv

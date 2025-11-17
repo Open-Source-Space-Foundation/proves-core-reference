@@ -11,7 +11,6 @@
 		zephyr,flash = &flash0;
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
-		zephyr,code-partition = &code_partition;
 	};
 
 	fstab {
@@ -58,34 +57,7 @@ zephyr_udc0: &usbd {
 };
 
 &flash0 {
-	reg = <0x10000000 DT_SIZE_M(4)>;
-
-	partitions {
-		compatible = "fixed-partitions";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		/* Reserved memory for an image definition block. The block is much
-		* smaller than 256 bytes, but in practice the linker places the vector
-		* table at a much larger alignment offset.
-		*/
-		image_def: partition@0 {
-			label = "image_def";
-			reg = <0x00000000 0x100>;
-			read-only;
-		};
-
-		/*
-		* Usable flash. Starts at 0x100, after the image definition block.
-		* The partition size is 4MB minus the 0x100 bytes taken by the
-		* image definition.
-		*/
-		code_partition: partition@100 {
-			label = "code-partition";
-			reg = <0x100 (DT_SIZE_M(4) - 0x100)>;
-			read-only;
-		};
-	};
+       reg = <0x10000000 DT_SIZE_M(4)>;
 };
 
 &timer0 {
@@ -141,7 +113,7 @@ zephyr_udc0: &usbd {
 	pinctrl-names = "default";
 	clock-frequency = <100000>;
 
-	ina219Sys: ina219Sys@40 {
+	ina219_0: ina219_0@40 {
 		compatible = "ti,ina219";
 		reg = <0x40>;
 		brng = <0>;
@@ -152,7 +124,8 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sys";
 	};
-	ina219Sol: ina219Sol@41 {
+
+	ina219_1: ina219_1@41 {
 		compatible = "ti,ina219";
 		reg = <0x41>;
 		brng = <0>;
