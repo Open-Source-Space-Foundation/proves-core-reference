@@ -256,9 +256,6 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
-
-      # Communication heartbeat from ground
-      # Note: This will be wired when the comm router is implemented
     }
 
   }

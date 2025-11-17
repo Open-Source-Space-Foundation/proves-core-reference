@@ -79,17 +79,15 @@ class ModeManager : public ModeManagerComponentBase {
                                          U32 cmdSeq            //!< The command sequence number
                                          ) override;
 
+    //! Handler implementation for command CLEAR_EXTERNAL_FAULT
+    void CLEAR_EXTERNAL_FAULT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                         U32 cmdSeq            //!< The command sequence number
+                                         ) override;
+
     //! Handler implementation for command FORCE_SAFE_MODE
     void FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                     U32 cmdSeq            //!< The command sequence number
                                     ) override;
-
-    //! Handler implementation for command SET_VOLTAGE_THRESHOLDS
-    void SET_VOLTAGE_THRESHOLDS_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                           U32 cmdSeq,           //!< The command sequence number
-                                           F32 entryVoltage,     //!< Entry voltage
-                                           F32 exitVoltage       //!< Exit voltage
-                                           ) override;
 
     //! Handler implementation for command EXIT_SAFE_MODE
     void EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
@@ -110,14 +108,11 @@ class ModeManager : public ModeManagerComponentBase {
     //! Check voltage condition and update fault flag
     void checkVoltageCondition();
 
-    //! Enter safe mode
-    void enterSafeMode();
+    //! Enter safe mode with optional reason override
+    void enterSafeMode(const char* reason = nullptr);
 
     //! Exit safe mode
     void exitSafeMode();
-
-    //! Update beacon backoff divider
-    void updateBeaconBackoff();
 
     //! Turn off non-critical components
     void turnOffNonCriticalComponents();
@@ -125,10 +120,11 @@ class ModeManager : public ModeManagerComponentBase {
     //! Turn on components (restore normal operation)
     void turnOnComponents();
 
-    //! Get current voltage from PowerMonitor
-    //! Note: In a real implementation, this would subscribe to telemetry
-    //! For now, we'll use a simulated approach
-    F32 getCurrentVoltage();
+    //! Get current voltage from INA219 system power manager
+    //! Queries voltage via the voltageGet output port
+    //! \param valid Output parameter indicating if the voltage reading is valid
+    //! \return Current voltage (only valid if valid parameter is set to true)
+    F32 getCurrentVoltage(bool& valid);
 
     // ----------------------------------------------------------------------
     // Private enums and types
@@ -142,8 +138,8 @@ class ModeManager : public ModeManagerComponentBase {
         U8 mode;                 //!< Current mode (SystemMode)
         bool voltageFaultFlag;   //!< Voltage fault flag
         bool watchdogFaultFlag;  //!< Watchdog fault flag
+        bool externalFaultFlag;  //!< External fault flag
         U32 safeModeEntryCount;  //!< Number of times safe mode entered
-        U32 backoffCounter;      //!< Beacon backoff counter
     };
 
     // ----------------------------------------------------------------------
@@ -153,8 +149,8 @@ class ModeManager : public ModeManagerComponentBase {
     SystemMode m_mode;         //!< Current system mode
     bool m_voltageFaultFlag;   //!< Voltage fault flag
     bool m_watchdogFaultFlag;  //!< Watchdog fault flag
+    bool m_externalFaultFlag;  //!< External fault flag
     U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
-    U32 m_backoffCounter;      //!< Beacon backoff counter
     F32 m_currentVoltage;      //!< Current system voltage
     U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
     bool m_initialized;        //!< Initialization flag

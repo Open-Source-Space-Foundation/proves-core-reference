@@ -32,9 +32,6 @@ module Components {
         @ Ports to turn off LoadSwitch instances (8 total)
         output port loadSwitchTurnOff: [8] Fw.Signal
 
-        @ Port to set beacon divider parameter on ComDelay
-        output port beaconDividerSet: Fw.PrmSet
-
         @ Port to get system voltage from INA219 manager
         output port voltageGet: Drv.VoltageGet
 
@@ -50,14 +47,12 @@ module Components {
         @ Can be cleared any time (manual only)
         sync command CLEAR_WATCHDOG_FAULT()
 
+        @ Command to clear external fault flag
+        @ Can be cleared any time (manual only)
+        sync command CLEAR_EXTERNAL_FAULT()
+
         @ Command to force system into safe mode
         sync command FORCE_SAFE_MODE()
-
-        @ Command to set voltage thresholds
-        sync command SET_VOLTAGE_THRESHOLDS(
-            entryVoltage: F32 @< Voltage level to enter safe mode (default 7.0V)
-            exitVoltage: F32 @< Voltage level required to exit safe mode (default 7.5V)
-        )
 
         @ Command to manually exit safe mode
         @ Only succeeds if all faults are cleared
@@ -104,6 +99,16 @@ module Components {
             severity activity high \
             format "Watchdog fault cleared by ground command"
 
+        @ Event emitted when external fault is detected
+        event ExternalFaultDetected() \
+            severity warning high \
+            format "External fault detected - external component forced safe mode"
+
+        @ Event emitted when external fault is cleared
+        event ExternalFaultCleared() \
+            severity activity high \
+            format "External fault cleared by ground command"
+
         @ Event emitted when command validation fails
         event CommandValidationFailed(
             cmdName: string size 50 @< Command that failed validation
@@ -111,13 +116,6 @@ module Components {
         ) \
             severity warning low \
             format "Command {} failed: {}"
-
-        @ Event emitted when beacon backoff is updated
-        event BeaconBackoffUpdated(
-            divider: U32 @< New beacon divider value in seconds
-        ) \
-            severity activity low \
-            format "Beacon backoff updated to {} seconds"
 
         # ----------------------------------------------------------------------
         # Telemetry
@@ -132,11 +130,11 @@ module Components {
         @ Watchdog fault flag status
         telemetry WatchdogFaultFlag: bool
 
+        @ External fault flag status
+        telemetry ExternalFaultFlag: bool
+
         @ Current system voltage
         telemetry CurrentVoltage: F32
-
-        @ Current beacon backoff divider value
-        telemetry BeaconBackoffDivider: U32
 
         @ Number of times safe mode has been entered
         telemetry SafeModeEntryCount: U32
@@ -150,9 +148,6 @@ module Components {
 
         @ Voltage threshold to allow clearing voltage fault (default: 7.5V)
         param VOLTAGE_EXIT_THRESHOLD: F32 default 7.5
-
-        @ Maximum beacon backoff divider (default: 3600 seconds = 1 hour)
-        param MAX_BEACON_BACKOFF: U32 default 3600
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

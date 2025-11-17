@@ -22,8 +22,8 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_voltageFaultFlag(false),
       m_watchdogFaultFlag(false),
+      m_externalFaultFlag(false),
       m_safeModeEntryCount(0),
-      m_backoffCounter(0),
       m_currentVoltage(0.0f),
       m_runCounter(0),
       m_initialized(false) {}
@@ -43,6 +43,7 @@ void ModeManager ::preamble() {
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_VoltageFaultFlag(this->m_voltageFaultFlag);
     this->tlmWrite_WatchdogFaultFlag(this->m_watchdogFaultFlag);
+    this->tlmWrite_ExternalFaultFlag(this->m_externalFaultFlag);
     this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
 }
 
@@ -61,24 +62,20 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // 1. Check voltage condition
     this->checkVoltageCondition();
 
-    // 2. Determine if mode change is needed
-    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag);
+    // 2. Determine if mode change is needed (entry only - exit requires manual command)
+    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag || this->m_externalFaultFlag);
 
     if (anyFaultActive && this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode();
     }
-    // Auto-exit removed - all safe mode exits require manual EXIT_SAFE_MODE command
-    // This simplifies the logic and ensures operator awareness of all mode changes
-
-    // 4. If in safe mode, update exponential backoff
-    if (this->m_mode == SystemMode::SAFE_MODE) {
-        this->updateBeaconBackoff();
-    }
+    // Note: Safe mode exit requires manual EXIT_SAFE_MODE command
+    // This ensures operator awareness of all mode changes and prevents boot loops
 
     // 3. Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_VoltageFaultFlag(this->m_voltageFaultFlag);
     this->tlmWrite_WatchdogFaultFlag(this->m_watchdogFaultFlag);
+    this->tlmWrite_ExternalFaultFlag(this->m_externalFaultFlag);
     this->tlmWrite_CurrentVoltage(this->m_currentVoltage);
 }
 
@@ -94,23 +91,43 @@ void ModeManager ::watchdogFaultSignal_handler(FwIndexType portNum) {
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Force entry into safe mode (called by other components)
+    // Provides immediate safe mode entry for critical component-detected faults
+    this->m_externalFaultFlag = true;
+    this->log_WARNING_HI_ExternalFaultDetected();
+    this->tlmWrite_ExternalFaultFlag(true);
+    this->saveState();
+
     if (this->m_mode == SystemMode::NORMAL) {
-        // Set voltage fault flag to trigger safe mode
-        this->m_voltageFaultFlag = true;
-        this->log_WARNING_HI_VoltageFaultDetected(this->m_currentVoltage);
-        this->tlmWrite_VoltageFaultFlag(true);
-        this->saveState();
+        this->enterSafeMode("External component request");
     }
 }
 
 void ModeManager ::clearAllFaults_handler(FwIndexType portNum) {
     // Clear all fault flags (called by other components)
-    // Note: This doesn't validate conditions like the command handlers do
-    // Use with caution - typically commands are preferred for safety
+    //
+    // ⚠️ SAFETY WARNING ⚠️
+    // This port handler bypasses all validation checks that the command handlers perform:
+    // - Does NOT verify voltage > 7.5V before clearing voltage fault
+    // - Does NOT check if system is actually ready to recover
+    // - Clears faults unconditionally without operator approval
+    //
+    // USE WITH EXTREME CAUTION
+    // This port is intended ONLY for automated recovery scenarios where:
+    // 1. The calling component has already verified system health
+    // 2. Immediate fault clearing is required for autonomous operation
+    // 3. The risk of premature recovery has been assessed
+    //
+    // For normal operations, prefer using ground commands:
+    // - CLEAR_VOLTAGE_FAULT (validates voltage > 7.5V)
+    // - CLEAR_WATCHDOG_FAULT (manual operator approval)
+    // - CLEAR_EXTERNAL_FAULT (manual operator approval)
+    //
     this->m_voltageFaultFlag = false;
     this->m_watchdogFaultFlag = false;
+    this->m_externalFaultFlag = false;
     this->tlmWrite_VoltageFaultFlag(false);
     this->tlmWrite_WatchdogFaultFlag(false);
+    this->tlmWrite_ExternalFaultFlag(false);
     this->saveState();
 }
 
@@ -120,14 +137,25 @@ void ModeManager ::clearAllFaults_handler(FwIndexType portNum) {
 
 void ModeManager ::CLEAR_VOLTAGE_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Get current voltage exit threshold parameter
-    Fw::ParamValid valid;
-    F32 exitThreshold = this->paramGet_VOLTAGE_EXIT_THRESHOLD(valid);
-    if (valid != Fw::ParamValid::VALID) {
+    Fw::ParamValid paramValid;
+    F32 exitThreshold = this->paramGet_VOLTAGE_EXIT_THRESHOLD(paramValid);
+    if (paramValid != Fw::ParamValid::VALID) {
         exitThreshold = 7.5f;  // Default value
     }
 
-    // Check if voltage is above exit threshold
-    F32 currentVoltage = this->getCurrentVoltage();
+    // Check if voltage reading is valid
+    bool voltageValid = false;
+    F32 currentVoltage = this->getCurrentVoltage(voltageValid);
+
+    if (!voltageValid) {
+        // CRITICAL: Voltage measurement unavailable - cannot verify safe conditions
+        // Fail validation to prevent clearing fault with stale/fake data
+        Fw::LogStringArg cmdNameStr("CLEAR_VOLTAGE_FAULT");
+        Fw::LogStringArg reasonStr("Voltage measurement unavailable (INA219 disconnected or failed)");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
 
     if (currentVoltage >= exitThreshold) {
         // Clear the fault flag
@@ -140,7 +168,8 @@ void ModeManager ::CLEAR_VOLTAGE_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdSe
         // Validation failed - voltage still too low
         Fw::LogStringArg reasonStr;
         char reasonBuf[100];
-        snprintf(reasonBuf, sizeof(reasonBuf), "Voltage %.2fV below threshold %.2fV", currentVoltage, exitThreshold);
+        snprintf(reasonBuf, sizeof(reasonBuf), "Voltage %.2fV below threshold %.2fV",
+                 static_cast<double>(currentVoltage), static_cast<double>(exitThreshold));
         reasonStr = reasonBuf;
         Fw::LogStringArg cmdNameStr("CLEAR_VOLTAGE_FAULT");
         this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
@@ -157,35 +186,27 @@ void ModeManager ::CLEAR_WATCHDOG_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdS
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Force entry into safe mode
-    if (this->m_mode == SystemMode::NORMAL) {
-        // Set a flag to force safe mode (we'll use voltage flag as the trigger)
-        this->m_voltageFaultFlag = true;
-        this->enterSafeMode();
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    } else {
-        // Already in safe mode
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    }
+void ModeManager ::CLEAR_EXTERNAL_FAULT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Clear external fault flag (no validation needed - manual clear only)
+    this->m_externalFaultFlag = false;
+    this->log_ACTIVITY_HI_ExternalFaultCleared();
+    this->tlmWrite_ExternalFaultFlag(false);
+    this->saveState();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void ModeManager ::SET_VOLTAGE_THRESHOLDS_cmdHandler(FwOpcodeType opCode,
-                                                     U32 cmdSeq,
-                                                     F32 entryVoltage,
-                                                     F32 exitVoltage) {
-    // Validate that exit voltage is higher than entry voltage
-    if (exitVoltage <= entryVoltage) {
-        Fw::LogStringArg cmdNameStr("SET_VOLTAGE_THRESHOLDS");
-        Fw::LogStringArg reasonStr("Exit voltage must be greater than entry voltage");
-        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
-        return;
+void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Force entry into safe mode
+    // Set external fault flag to require explicit CLEAR_EXTERNAL_FAULT before EXIT_SAFE_MODE
+    this->m_externalFaultFlag = true;
+    this->log_WARNING_HI_ExternalFaultDetected();
+    this->tlmWrite_ExternalFaultFlag(true);
+    this->saveState();
+
+    if (this->m_mode == SystemMode::NORMAL) {
+        this->enterSafeMode("Ground command");
     }
 
-    // Note: In F Prime, parameters are typically loaded from files, not set programmatically
-    // This command would need to update the parameter database file
-    // For now, just acknowledge the command
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -203,7 +224,7 @@ void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     }
 
     // Check that all faults are cleared before allowing exit
-    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag);
+    bool anyFaultActive = (this->m_voltageFaultFlag || this->m_watchdogFaultFlag || this->m_externalFaultFlag);
     if (anyFaultActive) {
         Fw::LogStringArg cmdNameStr("EXIT_SAFE_MODE");
         Fw::LogStringArg reasonStr;
@@ -221,7 +242,12 @@ void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
             remaining = sizeof(reasonBuf) - strlen(reasonBuf);
         }
         if (this->m_watchdogFaultFlag) {
-            snprintf(ptr, remaining, "Watchdog");
+            snprintf(ptr, remaining, "Watchdog ");
+            ptr += strlen(ptr);
+            remaining = sizeof(reasonBuf) - strlen(reasonBuf);
+        }
+        if (this->m_externalFaultFlag) {
+            snprintf(ptr, remaining, "External");
         }
 
         reasonStr = reasonBuf;
@@ -253,8 +279,8 @@ void ModeManager ::loadState() {
             this->m_mode = static_cast<SystemMode>(state.mode);
             this->m_voltageFaultFlag = state.voltageFaultFlag;
             this->m_watchdogFaultFlag = state.watchdogFaultFlag;
+            this->m_externalFaultFlag = state.externalFaultFlag;
             this->m_safeModeEntryCount = state.safeModeEntryCount;
-            this->m_backoffCounter = state.backoffCounter;
         }
 
         file.close();
@@ -263,8 +289,8 @@ void ModeManager ::loadState() {
         this->m_mode = SystemMode::NORMAL;
         this->m_voltageFaultFlag = false;
         this->m_watchdogFaultFlag = false;
+        this->m_externalFaultFlag = false;
         this->m_safeModeEntryCount = 0;
-        this->m_backoffCounter = 0;
     }
 }
 
@@ -282,8 +308,8 @@ void ModeManager ::saveState() {
         state.mode = static_cast<U8>(this->m_mode);
         state.voltageFaultFlag = this->m_voltageFaultFlag;
         state.watchdogFaultFlag = this->m_watchdogFaultFlag;
+        state.externalFaultFlag = this->m_externalFaultFlag;
         state.safeModeEntryCount = this->m_safeModeEntryCount;
-        state.backoffCounter = this->m_backoffCounter;
 
         FwSizeType size = sizeof(PersistentState);
         file.write(reinterpret_cast<U8*>(&state), size, Os::File::WaitType::WAIT);
@@ -293,14 +319,31 @@ void ModeManager ::saveState() {
 
 void ModeManager ::checkVoltageCondition() {
     // Get current voltage
-    F32 voltage = this->getCurrentVoltage();
-    this->m_currentVoltage = voltage;
+    bool voltageValid = false;
+    F32 voltage = this->getCurrentVoltage(voltageValid);
+
+    // Update telemetry only if reading is valid
+    if (voltageValid) {
+        this->m_currentVoltage = voltage;
+    }
 
     // Get voltage entry threshold parameter
-    Fw::ParamValid valid;
-    F32 entryThreshold = this->paramGet_VOLTAGE_ENTRY_THRESHOLD(valid);
-    if (valid != Fw::ParamValid::VALID) {
+    Fw::ParamValid paramValid;
+    F32 entryThreshold = this->paramGet_VOLTAGE_ENTRY_THRESHOLD(paramValid);
+    if (paramValid != Fw::ParamValid::VALID) {
         entryThreshold = 7.0f;  // Default value
+    }
+
+    // SAFETY: If voltage measurement is unavailable, treat it as a fault condition
+    // This prevents the system from running blind without power monitoring
+    if (!voltageValid) {
+        if (!this->m_voltageFaultFlag) {
+            this->m_voltageFaultFlag = true;
+            this->log_WARNING_HI_VoltageFaultDetected(0.0f);  // Log with 0.0f to indicate invalid reading
+            this->tlmWrite_VoltageFaultFlag(true);
+            this->saveState();
+        }
+        return;
     }
 
     // Check if voltage has dropped below entry threshold
@@ -313,40 +356,60 @@ void ModeManager ::checkVoltageCondition() {
     }
 }
 
-void ModeManager ::enterSafeMode() {
+void ModeManager ::enterSafeMode(const char* reasonOverride) {
     // Transition to safe mode
     this->m_mode = SystemMode::SAFE_MODE;
     this->m_safeModeEntryCount++;
-    this->m_backoffCounter = 0;  // Reset backoff counter
 
     // Build reason string
     Fw::LogStringArg reasonStr;
     char reasonBuf[100];
-    char* ptr = reasonBuf;
-    int remaining = sizeof(reasonBuf);
+    reasonBuf[0] = '\0';
+    if (reasonOverride != nullptr) {
+        reasonStr = reasonOverride;
+    } else {
+        char* ptr = reasonBuf;
+        int remaining = sizeof(reasonBuf);
+        bool wroteReason = false;
 
-    if (this->m_voltageFaultFlag) {
-        int written = snprintf(ptr, remaining, "Low voltage");
-        ptr += written;
-        remaining -= written;
-    }
-    if (this->m_watchdogFaultFlag) {
-        if (ptr != reasonBuf) {
-            int written = snprintf(ptr, remaining, ", ");
+        if (this->m_voltageFaultFlag) {
+            int written = snprintf(ptr, remaining, "Low voltage");
             ptr += written;
             remaining -= written;
+            wroteReason = true;
         }
-        snprintf(ptr, remaining, "Watchdog fault");
+        if (this->m_watchdogFaultFlag) {
+            if (wroteReason) {
+                int written = snprintf(ptr, remaining, ", ");
+                ptr += written;
+                remaining -= written;
+            }
+            int written = snprintf(ptr, remaining, "Watchdog fault");
+            ptr += written;
+            remaining -= written;
+            wroteReason = true;
+        }
+        if (this->m_externalFaultFlag) {
+            if (wroteReason) {
+                int written = snprintf(ptr, remaining, ", ");
+                ptr += written;
+                remaining -= written;
+            }
+            snprintf(ptr, remaining, "External fault");
+            wroteReason = true;
+        }
+
+        if (!wroteReason) {
+            snprintf(reasonBuf, sizeof(reasonBuf), "Unknown trigger");
+        }
+
+        reasonStr = reasonBuf;
     }
 
-    reasonStr = reasonBuf;
     this->log_WARNING_HI_EnteringSafeMode(reasonStr);
 
     // Turn off non-critical components
     this->turnOffNonCriticalComponents();
-
-    // Set initial beacon backoff (2 seconds)
-    this->updateBeaconBackoff();
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -364,15 +427,11 @@ void ModeManager ::enterSafeMode() {
 void ModeManager ::exitSafeMode() {
     // Transition back to normal mode
     this->m_mode = SystemMode::NORMAL;
-    this->m_backoffCounter = 0;
 
     this->log_ACTIVITY_HI_ExitingSafeMode();
 
     // Turn on components (restore normal operation)
     this->turnOnComponents();
-
-    // Restore normal beacon rate (divider = 30)
-    // Note: This will be implemented when we wire to ComDelay in topology
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -384,34 +443,6 @@ void ModeManager ::exitSafeMode() {
 
     // Save state
     this->saveState();
-}
-
-void ModeManager ::updateBeaconBackoff() {
-    // Get max backoff parameter
-    Fw::ParamValid valid;
-    U32 maxBackoff = this->paramGet_MAX_BEACON_BACKOFF(valid);
-    if (valid != Fw::ParamValid::VALID) {
-        maxBackoff = 3600;  // Default: 1 hour
-    }
-
-    // Calculate exponential backoff: 2^n, capped at maxBackoff
-    U32 divider = 2;
-    if (this->m_backoffCounter > 0) {
-        divider = 1 << this->m_backoffCounter;  // 2^m_backoffCounter
-    }
-    divider = std::min(divider, maxBackoff);
-
-    // Update backoff counter for next iteration
-    if (divider < maxBackoff) {
-        this->m_backoffCounter++;
-    }
-
-    // Update telemetry
-    this->tlmWrite_BeaconBackoffDivider(divider);
-    this->log_ACTIVITY_LO_BeaconBackoffUpdated(divider);
-
-    // Note: Actual beacon rate update will be implemented via topology connection
-    // this->beaconDividerSet_out(...) when topology is wired
 }
 
 void ModeManager ::turnOffNonCriticalComponents() {
@@ -441,15 +472,18 @@ void ModeManager ::turnOnComponents() {
     }
 }
 
-F32 ModeManager ::getCurrentVoltage() {
+F32 ModeManager ::getCurrentVoltage(bool& valid) {
     // Call the voltage get port to get current system voltage
     if (this->isConnected_voltageGet_OutputPort(0)) {
         F64 voltage = this->voltageGet_out(0);
+        valid = true;
         return static_cast<F32>(voltage);  // Convert from F64 to F32
     }
 
-    // Fallback: return last known voltage or default
-    return this->m_currentVoltage > 0.0f ? this->m_currentVoltage : 8.0f;
+    // Port is not connected - voltage reading is INVALID
+    // Do NOT return a fake value that could mask a real brown-out condition
+    valid = false;
+    return 0.0f;
 }
 
 }  // namespace Components
