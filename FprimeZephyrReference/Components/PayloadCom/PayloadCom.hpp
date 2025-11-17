@@ -1,31 +1,31 @@
 // ======================================================================
-// \title  PayloadHandler.hpp
-// \author robertpendergrast
-// \brief  hpp file for PayloadHandler component implementation class
+// \title  PayloadCom.hpp
+// \author robertpendergrast, moisesmata
+// \brief  hpp file for PayloadCom component implementation class
 // ======================================================================
 
-#ifndef FprimeZephyrReference_PayloadHandler_HPP
-#define FprimeZephyrReference_PayloadHandler_HPP
+#ifndef FprimeZephyrReference_PayloadCom_HPP
+#define FprimeZephyrReference_PayloadCom_HPP
 
 #include <string>
 #include <cstddef>
 #include "Os/File.hpp"
-#include "FprimeZephyrReference/Components/PayloadHandler/PayloadHandlerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/PayloadCom/PayloadComComponentAc.hpp"
 
 namespace Components {
 
-class PayloadHandler final : public PayloadHandlerComponentBase {
+class PayloadCom final : public PayloadComComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct PayloadHandler object
-    PayloadHandler(const char* const compName  //!< The component name
+    //! Construct PayloadCom object
+    PayloadCom(const char* const compName  //!< The component name
     );
 
-    //! Destroy PayloadHandler object
-    ~PayloadHandler();
+    //! Destroy PayloadCom object
+    ~PayloadCom();
 
     U8 m_data_file_count = 0;
     bool m_receiving = false; 

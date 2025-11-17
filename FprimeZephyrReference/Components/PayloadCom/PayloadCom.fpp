@@ -1,6 +1,6 @@
 module Components {
     @ Manager for Nicla Vision
-    passive component PayloadHandler {
+    passive component PayloadCom {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port

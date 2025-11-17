@@ -1,12 +1,12 @@
 // ======================================================================
-// \title  PayloadHandler.cpp
+// \title  PayloadCom.cpp
 // \author robertpendergrast, moisesmata
-// \brief  cpp file for PayloadHandler component implementation class
+// \brief  cpp file for PayloadCom component implementation class
 // ======================================================================
 #include "Os/File.hpp"
 #include "Fw/Types/Assert.hpp"
 #include "Fw/Types/BasicTypes.hpp"
-#include "FprimeZephyrReference/Components/PayloadHandler/PayloadHandler.hpp"
+#include "FprimeZephyrReference/Components/PayloadCom/PayloadCom.hpp"
 #include <cstring>
 #include <cstdio>
 
@@ -16,15 +16,15 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-PayloadHandler ::PayloadHandler(const char* const compName)
-    : PayloadHandlerComponentBase(compName),
+PayloadCom ::PayloadCom(const char* const compName)
+    : PayloadComComponentBase(compName),
       m_protocolBufferSize(0),
       m_fileOpen(false) {
     // Initialize protocol buffer to zero
     memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
 }
 
-PayloadHandler ::~PayloadHandler() {
+PayloadCom ::~PayloadCom() {
     // Close file if still open
     if (m_fileOpen) {
         m_file.close();
@@ -38,7 +38,7 @@ PayloadHandler ::~PayloadHandler() {
 // ----------------------------------------------------------------------
 
 
-void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
+void PayloadCom ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
 
     this->log_ACTIVITY_LO_UartReceived();
 
@@ -158,7 +158,7 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void PayloadHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
+void PayloadCom ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
 
     // Append newline to command to send over UART
     Fw::CmdStringArg tempCmd = cmd;  
@@ -190,7 +190,7 @@ void PayloadHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, c
 // Helper method implementations
 // ----------------------------------------------------------------------
 
-bool PayloadHandler ::accumulateProtocolData(const U8* data, U32 size) {
+bool PayloadCom ::accumulateProtocolData(const U8* data, U32 size) {
     // Check if we have space for the new data
     if (m_protocolBufferSize + size > PROTOCOL_BUFFER_SIZE) {
         return false;
@@ -203,7 +203,7 @@ bool PayloadHandler ::accumulateProtocolData(const U8* data, U32 size) {
     return true;
 }
 
-void PayloadHandler ::processProtocolBuffer() {
+void PayloadCom ::processProtocolBuffer() {
     // Protocol: <IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[image data]<IMG_END>
     
     // Log parse attempt for debugging
@@ -369,12 +369,12 @@ void PayloadHandler ::processProtocolBuffer() {
     }
 }
 
-void PayloadHandler ::clearProtocolBuffer() {
+void PayloadCom ::clearProtocolBuffer() {
     m_protocolBufferSize = 0;
     memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
 }
 
-bool PayloadHandler ::writeChunkToFile(const U8* data, U32 size) {
+bool PayloadCom ::writeChunkToFile(const U8* data, U32 size) {
     if (!m_fileOpen || size == 0) {
         return false;
     }
@@ -399,7 +399,7 @@ bool PayloadHandler ::writeChunkToFile(const U8* data, U32 size) {
     return true;
 }
 
-void PayloadHandler ::finalizeImageTransfer() {
+void PayloadCom ::finalizeImageTransfer() {
     if (!m_fileOpen) {
         return;
     }
@@ -421,7 +421,7 @@ void PayloadHandler ::finalizeImageTransfer() {
     m_expected_size = 0;
 }
 
-void PayloadHandler ::handleFileError() {
+void PayloadCom ::handleFileError() {
     // Close file if open
     if (m_fileOpen) {
         m_file.close();
@@ -438,7 +438,7 @@ void PayloadHandler ::handleFileError() {
     clearProtocolBuffer();
 }
 
-I32 PayloadHandler ::findImageEndMarker(const U8* data, U32 size) {
+I32 PayloadCom ::findImageEndMarker(const U8* data, U32 size) {
     // Looking for "\n<IMG_END>" or "<IMG_END>"
     const char* marker = "<IMG_END>";
     
@@ -468,7 +468,7 @@ I32 PayloadHandler ::findImageEndMarker(const U8* data, U32 size) {
     return -1;  // Not found
 }
 
-bool PayloadHandler ::isImageStartCommand(const U8* line, U32 length) {
+bool PayloadCom ::isImageStartCommand(const U8* line, U32 length) {
     const char* command = "<IMG_START>";
     
     if (length < IMG_START_LEN) {
@@ -484,7 +484,7 @@ bool PayloadHandler ::isImageStartCommand(const U8* line, U32 length) {
     return true;
 }
 
-void PayloadHandler ::sendAck(){
+void PayloadCom ::sendAck(){
     // Send an acknowledgment over UART
     const char* ackMsg = "<MOISES>\n";
     Fw::Buffer ackBuffer(

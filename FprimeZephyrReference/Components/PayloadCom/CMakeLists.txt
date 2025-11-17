@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/PayloadHandler.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PayloadCom.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/PayloadHandler.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PayloadCom.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/PayloadHandler.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/PayloadCom.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PayloadHandlerTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PayloadHandlerTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PayloadComTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PayloadComTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

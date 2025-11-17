@@ -109,7 +109,7 @@ module ReferenceDeployment {
 
   instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
-  instance payload: Components.PayloadHandler base id 0x1002B000
+  instance payload: Components.PayloadCom base id 0x1002B000
 
   instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x1002C000
 

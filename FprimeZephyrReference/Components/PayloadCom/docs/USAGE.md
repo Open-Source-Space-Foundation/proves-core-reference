@@ -1,8 +1,8 @@
-# PayloadHandler Usage Guide
+# PayloadCom Usage Guide
 
 ## Overview
 
-The PayloadHandler receives images from the Nicla Vision camera over UART and saves them to the filesystem.
+The PayloadCom receives images from the Nicla Vision camera over UART and saves them to the filesystem.
 
 ## Camera Commands
 
@@ -41,7 +41,7 @@ This forwards the command over UART to the camera.
    - Event: `CommandSuccess` - "Command snap sent successfully"
 
 2. **Image Start**
-   - PayloadHandler receives `<IMG_START><SIZE>...bytes...</SIZE>`
+   - PayloadCom receives `<IMG_START><SIZE>...bytes...</SIZE>`
    - Parses image size from 4-byte little-endian value
    - Allocates 256 KB buffer from BufferManager
    - Event: `ImageHeaderReceived` - "Received image header"
@@ -91,7 +91,7 @@ Counter increments each time a valid `<IMG_START><SIZE>...` header is received.
 - Camera sent more data than buffer can hold
 
 **Recovery:**
-- Increase `IMAGE_BUFFER_SIZE` in PayloadHandler.hpp
+- Increase `IMAGE_BUFFER_SIZE` in PayloadCom.hpp
 - Update BufferManager configuration in instances.fpp
 
 ### Command Error
@@ -283,7 +283,7 @@ bins[0].bufferSize = 512 * 1024;
 bins[0].numBuffers = 4;
 ```
 
-Must also update `PayloadHandler.hpp`:
+Must also update `PayloadCom.hpp`:
 ```cpp
 static constexpr U32 IMAGE_BUFFER_SIZE = 512 * 1024;
 ```

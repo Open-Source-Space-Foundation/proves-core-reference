@@ -212,7 +212,7 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-    connections PayloadHandler {
+    connections PayloadCom {
       payload.out_port -> peripheralUartDriver.$send
       peripheralUartDriver.$recv -> payload.in_port
       

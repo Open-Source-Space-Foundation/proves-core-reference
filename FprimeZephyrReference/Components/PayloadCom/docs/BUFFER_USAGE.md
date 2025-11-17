@@ -1,8 +1,8 @@
-# PayloadHandler Buffer Strategy
+# PayloadCom Buffer Strategy
 
 ## Overview
 
-The PayloadHandler uses a **two-buffer strategy** to efficiently handle both protocol/header data and large image data:
+The PayloadCom uses a **two-buffer strategy** to efficiently handle both protocol/header data and large image data:
 
 1. **Small static buffer** (2 KB) for protocol headers/commands
 2. **Large dynamic buffer** (256 KB) from BufferManager for image data
@@ -25,7 +25,7 @@ The PayloadHandler uses a **two-buffer strategy** to efficiently handle both pro
 ```
 UART Driver (64 byte chunks)
          ↓
-   PayloadHandler
+   PayloadCom
          ↓
    ┌─────┴─────┐
    ↓           ↓
@@ -154,12 +154,12 @@ payload.deallocate -> payloadBufferManager.bufferSendIn
 
 ### To Change Buffer Sizes
 
-1. **Protocol buffer** (PayloadHandler.hpp):
+1. **Protocol buffer** (PayloadCom.hpp):
 ```cpp
 static constexpr U32 PROTOCOL_BUFFER_SIZE = 2048;  // Change this
 ```
 
-2. **Image buffer** (PayloadHandler.hpp):
+2. **Image buffer** (PayloadCom.hpp):
 ```cpp
 static constexpr U32 IMAGE_BUFFER_SIZE = 256 * 1024;  // Change this
 ```
