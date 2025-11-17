@@ -1,11 +1,33 @@
 module Components {
-    @ passive component that handles camera specific payload capabilities
+    @ active component that handles camera specific payload capabilities
     active component CameraHandler {
 
         # One async command/port is required for active components
         # This should be overridden by the developers with a useful command/port
-        @ TODO
-        async command TODO opcode 0
+        @ Type in "snap" to capture an image
+        async command TAKE_IMAGE()  # Command to send data over UART
+
+        async command SEND_COMMAND(cmd: string)  # Command to send data over UART
+
+        #async command SET_ATTRIBUTES
+
+        event ImageHeaderReceived() severity activity low format "Received image header"
+
+        event ImageSizeExtracted(imageSize: U32) severity activity high format "Image size from header: {} bytes"
+
+        event ImageTransferProgress(received: U32, expected: U32) severity activity low format "Transfer progress: {}/{} bytes"
+
+        event ImageDataOverflow() severity warning high format "Image data overflow - buffer full"
+
+        event ProtocolBufferDebug(bufSize: U32, firstByte: U8) severity activity low format "Protocol buffer: {} bytes, first: 0x{x}"
+
+        event HeaderParseAttempt(bufSize: U32) severity activity low format "Attempting header parse with {} bytes"
+
+        @ Sends command to PayloadCom to be forwarded over UART
+        output port commandOut: Drv.ByteStreamData  
+
+        @ Receives data from PayloadCom over UART, handles image file saving logic
+        sync input port dataIn: Drv.ByteStreamData
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
