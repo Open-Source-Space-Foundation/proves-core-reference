@@ -112,6 +112,9 @@ class PayloadHandler final : public PayloadHandlerComponentBase {
     //! Parse line for image start command
     //! Returns true if line is "<IMG_START>"
     bool isImageStartCommand(const U8* line, U32 length);
+
+    //! Send acknowledgment over UART
+    void sendAck();
 };
 
 }  // namespace Components

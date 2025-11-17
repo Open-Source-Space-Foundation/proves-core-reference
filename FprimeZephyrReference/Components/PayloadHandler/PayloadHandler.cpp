@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  PayloadHandler.cpp
-// \author robertpendergrast
+// \author robertpendergrast, moisesmata
 // \brief  cpp file for PayloadHandler component implementation class
 // ======================================================================
 #include "Os/File.hpp"
@@ -91,6 +91,9 @@ void PayloadHandler ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, c
         }
         
         m_bytes_received += toWrite;
+        
+        // Send ACK after successfully writing chunk
+        sendAck();
         
         // Log progress less frequently to reduce system load (every 512 bytes)
         if ((m_bytes_received % 512) < 64) {
@@ -332,6 +335,9 @@ void PayloadHandler ::processProtocolBuffer() {
         
         m_fileOpen = true;
         this->log_ACTIVITY_LO_ImageHeaderReceived();
+
+        // Send ACK to camera after successfully parsing header and opening file
+        sendAck();
         
         // Remove header from protocol buffer
         U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
@@ -343,6 +349,7 @@ void PayloadHandler ::processProtocolBuffer() {
         m_protocolBufferSize = remainingSize;
         
         // Write any remaining data (image data) directly to file
+        // NOTE: This should be empty since camera waits for ACK before sending data
         if (m_protocolBufferSize > 0) {
             U32 toWrite = (m_protocolBufferSize < m_expected_size) ? m_protocolBufferSize : m_expected_size;
             
@@ -404,6 +411,9 @@ void PayloadHandler ::finalizeImageTransfer() {
     // Log success
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
     this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
+    
+    // Send final ACK to camera to confirm complete transfer
+    sendAck();
 
     // Reset state
     m_receiving = false;
@@ -472,6 +482,17 @@ bool PayloadHandler ::isImageStartCommand(const U8* line, U32 length) {
     }
     
     return true;
+}
+
+void PayloadHandler ::sendAck(){
+    // Send an acknowledgment over UART
+    const char* ackMsg = "<MOISES>\n";
+    Fw::Buffer ackBuffer(
+        reinterpret_cast<U8*>(const_cast<char*>(ackMsg)), 
+        strlen(ackMsg)
+    );
+    this->out_port_out(0, ackBuffer);
+
 }
 
 }  // namespace Components
