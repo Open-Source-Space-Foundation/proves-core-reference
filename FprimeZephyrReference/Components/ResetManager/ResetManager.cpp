@@ -48,6 +48,11 @@ void ResetManager ::WARM_RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
 }
 
+void ResetManager ::RESET_RADIO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->handleRadioReset();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------
@@ -64,6 +69,20 @@ void ResetManager ::handleWarmReset() {
     this->log_ACTIVITY_HI_INITIATE_WARM_RESET();
 
     sys_reboot(SYS_REBOOT_WARM);
+}
+
+void ResetManager ::handleRadioReset() {
+    // Log the radio reset event
+    this->log_ACTIVITY_HI_INITIATE_RADIO_RESET();
+
+    // Pull radio reset line LOW (active low) to reset the radio
+    this->radioResetOut_out(0, Fw::Logic::LOW);
+
+    // Hold reset for a short time (implementation could add a delay if needed)
+    // For now, we'll just pulse it low then high
+
+    // Release reset line (set back to HIGH)
+    this->radioResetOut_out(0, Fw::Logic::HIGH);
 }
 
 }  // namespace Components
