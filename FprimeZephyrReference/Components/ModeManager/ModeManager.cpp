@@ -59,6 +59,12 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
 
+    // Wait 5 seconds after boot before checking voltage
+    // This allows INA219 and other hardware to fully initialize
+    if (this->m_runCounter < 5) {
+        return;  // Skip voltage checking for first 5 seconds
+    }
+
     // 1. Check voltage condition
     this->checkVoltageCondition();
 
