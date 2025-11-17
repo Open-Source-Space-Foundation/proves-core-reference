@@ -88,6 +88,12 @@ gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
 	@$(GDS_COMMAND)
 
+.PHONY: delete-shadow-gds
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
+
 .PHONY: gds-integration
 gds-integration:
 	@$(GDS_COMMAND) --gui=none

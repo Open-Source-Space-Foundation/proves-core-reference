@@ -67,6 +67,7 @@ module ReferenceDeployment {
     instance ina219SysManager
     instance ina219SolManager
     instance authenticate
+    instance resetManager
 
 
   # ----------------------------------------------------------------------

@@ -11,20 +11,31 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_console_throttled(false) {
-    // Initialize device
-    this->dev = device_get_binding("RV3028");
-}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {}
 
 RtcManager ::~RtcManager() {}
+
+// ----------------------------------------------------------------------
+// Public helper methods
+// ----------------------------------------------------------------------
+
+void RtcManager ::configure(const struct device* dev) {
+    this->m_dev = dev;
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
+    // Get microseconds from system clock cycles
+    // Note: RV3028 does not provide sub-second precision, so this is
+    // just an approximation based on system cycles.
+    // FPrime expects microseconds in the range [0, 999999]
+    uint32_t useconds = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
+
     // Check device readiness
-    if (!device_is_ready(this->dev)) {
+    if (!device_is_ready(this->m_dev)) {
         // Use logger instead of events since this fn is in a critical path for FPrime
         // to get time. Events require time, if this method fails an event will fail.
         //
@@ -33,12 +44,16 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
             this->m_console_throttled = true;
             Fw::Logger::log("RTC not ready\n");
         }
+
+        // Use monotonic time as fallback
+        uint32_t seconds = k_uptime_seconds();
+        time.set(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
         return;
     }
 
     // Get time from RTC
     struct rtc_time time_rtc = {};
-    rtc_get_time(this->dev, &time_rtc);
+    rtc_get_time(this->m_dev, &time_rtc);
 
     // Convert to generic tm struct
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
@@ -51,12 +66,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         return;
     }
 
-    // Get microseconds from system clock cycles
-    // Note: RV3028 does not provide sub-second precision, so this is
-    // just an approximation based on system cycles.
-    // FPrime expects microseconds in the range [0, 999999]
-    uint32_t useconds = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
-
     // Set FPrime time object
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
 }
@@ -67,7 +76,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
 void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // Check device readiness
-    if (!device_is_ready(this->dev)) {
+    if (!device_is_ready(this->m_dev)) {
         // Emit device not ready event
         this->log_WARNING_HI_DeviceNotReady();
 
@@ -104,7 +113,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     };
 
     // Set time on RTC
-    const int status = rtc_set_time(this->dev, &time_rtc);
+    const int status = rtc_set_time(this->m_dev, &time_rtc);
 
     if (status != 0) {
         // Emit time not set event
@@ -119,6 +128,13 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void RtcManager ::TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Unconfigure the RTC device by setting m_dev to nullptr
+    this->m_dev = nullptr;
+
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
