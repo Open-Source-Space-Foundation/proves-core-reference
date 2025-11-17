@@ -6,6 +6,8 @@
 
 #include "FprimeZephyrReference/Components/Authenticate/Authenticate.hpp"
 
+#include <psa/crypto.h>
+
 #include <Fw/Log/LogString.hpp>
 #include <cstdint>
 #include <cstring>
