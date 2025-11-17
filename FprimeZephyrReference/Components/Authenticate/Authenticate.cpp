@@ -83,37 +83,23 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
                                      const std::string& key) {
     // Initialize PSA crypto (idempotent, safe to call multiple times)
     psa_status_t status = psa_crypto_init();
-    U32 statusU32 = static_cast<U32>(status);
     if (status != PSA_SUCCESS) {
-        printk("Crypto Computation Error: FIRST ERROR %d\n", statusU32);
+        U32 statusU32 = static_cast<U32>(status);
+        printk("Crypto Computation Error: PSA init failed %d\n", statusU32);
         this->log_WARNING_HI_CryptoComputationError(statusU32);
         return Fw::Buffer();
     }
 
-    // Prepare key attributes for HMAC-SHA-256
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    // For psa_mac_compute, we only need SIGN_MESSAGE flag
-    // VERIFY_MESSAGE is for psa_mac_verify operations
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
-    // Set algorithm in key attributes - some implementations require this
-    psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
-    // Try PSA_KEY_TYPE_RAW_DATA instead of PSA_KEY_TYPE_HMAC
-    // Some PSA implementations don't support PSA_KEY_TYPE_HMAC
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_RAW_DATA);
-
-    // Convert hex string key to binary if needed
-    // Keys can be provided as hex strings with or without "0x" prefix
-    printk("Key String: %s (length: %zu)\n", key.c_str(), key.length());
+    // Parse key from hex string (with or without "0x" prefix) or use as raw bytes
     std::vector<U8> keyBytes;
-
-    // Check if key starts with "0x" prefix
     std::string hexKey = key;
+
+    // Remove "0x" prefix if present
     if (key.length() > 2 && key.substr(0, 2) == "0x") {
         hexKey = key.substr(2);
-        printk("Key has 0x prefix, hex part: %s\n", hexKey.c_str());
     }
 
-    // Try to parse as hex string (check if all characters are hex digits)
+    // Check if all characters are hex digits
     bool isHexString = true;
     for (char c : hexKey) {
         if (!std::isxdigit(static_cast<unsigned char>(c))) {
@@ -122,43 +108,15 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         }
     }
 
+    // Parse as hex string if valid, otherwise use as raw bytes
     if (isHexString && hexKey.length() > 0 && hexKey.length() % 2 == 0) {
-        // Parse as hex string
-        printk("Parsing key as hex string\n");
         for (size_t i = 0; i < hexKey.length(); i += 2) {
             std::string byteStr = hexKey.substr(i, 2);
             keyBytes.push_back(static_cast<U8>(std::stoul(byteStr, nullptr, 16)));
         }
     } else {
-        // Use key as raw bytes
-        printk("Parsing key as raw bytes (not hex)\n");
         keyBytes.assign(key.begin(), key.end());
     }
-
-    printk("Key Bytes (parsed): %zu bytes\n", keyBytes.size());
-    printk("Key Bytes (hex): ");
-    for (size_t i = 0; i < keyBytes.size() && i < 16; i++) {
-        printk("%02x ", keyBytes[i]);
-    }
-    if (keyBytes.size() > 16) {
-        printk("...");
-    }
-    printk("\n");
-    // Import the key
-    printk("Importing key: size=%zu, type=RAW_DATA, alg=HMAC-SHA256, usage=SIGN_MESSAGE\n", keyBytes.size());
-    mbedtls_svc_key_id_t keyId = MBEDTLS_SVC_KEY_ID_INIT;
-    status = psa_import_key(&attributes, keyBytes.data(), keyBytes.size(), &keyId);
-    psa_reset_key_attributes(&attributes);
-    if (status != PSA_SUCCESS) {
-        statusU32 = static_cast<U32>(status);
-        printk("Crypto Computation Error: SECOND ERROR (key import failed) %d\n", statusU32);
-        printk("  Key size: %zu bytes\n", keyBytes.size());
-        printk("  Key type: HMAC\n");
-        printk("  Algorithm: HMAC-SHA256\n");
-        this->log_WARNING_HI_CryptoComputationError(statusU32);
-        return Fw::Buffer();
-    }
-    printk("Key imported successfully, keyId: %lu\n", (unsigned long)keyId);
 
     // Combine security header and command payload into a single input buffer
     const size_t totalInputLength = static_cast<size_t>(securityHeaderLength + commandPayloadLength);
@@ -168,42 +126,102 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     inputBuffer.insert(inputBuffer.end(), commandPayload, commandPayload + commandPayloadLength);
 
     printk("Input Buffer: %zu bytes\n", inputBuffer.size());
-    printk("Input Buffer (first 16 bytes): ");
-    for (size_t i = 0; i < inputBuffer.size() && i < 16; i++) {
+    printk("Input Buffer (hex): ");
+    for (size_t i = 0; i < inputBuffer.size() && i < 32; i++) {
         printk("%02x ", inputBuffer[i]);
     }
+    if (inputBuffer.size() > 32) {
+        printk("...");
+    }
+    printk("\n");
+    // input buffer as string
+    printk("Input Buffer (string): %s\n", inputBuffer.data());
+
     printk("\n");
 
-    // Compute HMAC (HMAC-SHA-256 produces 32 bytes)
-    // const size_t macLength = 32;
+    // Implement HMAC-SHA-256 manually using PSA hash API (RFC 2104)
+    // HMAC(k, m) = H(k XOR opad || H(k XOR ipad || m))
+    const size_t blockSize = 64;  // SHA-256 block size
+    const U8 ipad = 0x36;
+    const U8 opad = 0x5C;
     U8 macOutput[32];
     size_t macOutputLength = 0;
 
-    printk("Calling psa_mac_compute: keyId=%lu, alg=HMAC-SHA256, inputLen=%zu, outputBuf=%zu\n", (unsigned long)keyId,
-           inputBuffer.size(), sizeof(macOutput));
+    // Prepare key: pad with zeros or hash if longer than block size
+    std::vector<U8> preparedKey(blockSize, 0);
+    if (keyBytes.size() <= blockSize) {
+        std::memcpy(preparedKey.data(), keyBytes.data(), keyBytes.size());
+    } else {
+        // Hash key if longer than block size
+        psa_hash_operation_t hashOp = PSA_HASH_OPERATION_INIT;
+        status = psa_hash_setup(&hashOp, PSA_ALG_SHA_256);
+        if (status != PSA_SUCCESS) {
+            U32 statusU32 = static_cast<U32>(status);
+            printk("Crypto Computation Error: Key preparation failed %d\n", statusU32);
+            this->log_WARNING_HI_CryptoComputationError(statusU32);
+            return Fw::Buffer();
+        }
+        status = psa_hash_update(&hashOp, keyBytes.data(), keyBytes.size());
+        if (status == PSA_SUCCESS) {
+            size_t hashLen = 0;
+            status = psa_hash_finish(&hashOp, preparedKey.data(), blockSize, &hashLen);
+        }
+        if (status != PSA_SUCCESS) {
+            U32 statusU32 = static_cast<U32>(status);
+            printk("Crypto Computation Error: Key preparation failed %d\n", statusU32);
+            this->log_WARNING_HI_CryptoComputationError(statusU32);
+            return Fw::Buffer();
+        }
+    }
 
-    status = psa_mac_compute(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), inputBuffer.data(), inputBuffer.size(), macOutput,
-                             sizeof(macOutput), &macOutputLength);
+    // Compute inner hash: H(k XOR ipad || m)
+    std::vector<U8> innerKey(blockSize);
+    for (size_t i = 0; i < blockSize; i++) {
+        innerKey[i] = preparedKey[i] ^ ipad;
+    }
 
-    printk("psa_mac_compute returned: status=%d, macOutputLength=%zu\n", status, macOutputLength);
-
-    // Destroy the key
-    (void)psa_destroy_key(keyId);
+    psa_hash_operation_t innerHash = PSA_HASH_OPERATION_INIT;
+    status = psa_hash_setup(&innerHash, PSA_ALG_SHA_256);
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&innerHash, innerKey.data(), blockSize);
+    }
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&innerHash, inputBuffer.data(), inputBuffer.size());
+    }
+    U8 innerHashOutput[32];
+    size_t innerHashLen = 0;
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_finish(&innerHash, innerHashOutput, sizeof(innerHashOutput), &innerHashLen);
+    }
 
     if (status != PSA_SUCCESS) {
-        statusU32 = static_cast<U32>(status);
-        printk("Crypto Computation Error: THIRD ERROR (psa_mac_compute failed) %d\n", statusU32);
-        printk("  Error code: %d (0x%x)\n", statusU32, statusU32);
-        printk("  Key ID: %lu\n", (unsigned long)keyId);
-        printk("  Algorithm: HMAC-SHA256\n");
-        printk("  Input length: %zu bytes\n", inputBuffer.size());
-        printk("  Output buffer size: %zu bytes\n", sizeof(macOutput));
-        printk("  MAC output length: %zu bytes\n", macOutputLength);
-        printk("  Possible causes:\n");
-        printk("    - Key size invalid for HMAC-SHA256 (should be 1-64 bytes)\n");
-        printk("    - Algorithm not supported by PSA implementation\n");
-        printk("    - Key usage flags incompatible\n");
-        printk("    - Input buffer size invalid\n");
+        U32 statusU32 = static_cast<U32>(status);
+        printk("Crypto Computation Error: Inner hash failed %d\n", statusU32);
+        this->log_WARNING_HI_CryptoComputationError(statusU32);
+        return Fw::Buffer();
+    }
+
+    // Compute outer hash: H(k XOR opad || innerHash)
+    std::vector<U8> outerKey(blockSize);
+    for (size_t i = 0; i < blockSize; i++) {
+        outerKey[i] = preparedKey[i] ^ opad;
+    }
+
+    psa_hash_operation_t outerHash = PSA_HASH_OPERATION_INIT;
+    status = psa_hash_setup(&outerHash, PSA_ALG_SHA_256);
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&outerHash, outerKey.data(), blockSize);
+    }
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&outerHash, innerHashOutput, innerHashLen);
+    }
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_finish(&outerHash, macOutput, sizeof(macOutput), &macOutputLength);
+    }
+
+    if (status != PSA_SUCCESS) {
+        U32 statusU32 = static_cast<U32>(status);
+        printk("Crypto Computation Error: Outer hash failed %d\n", statusU32);
         this->log_WARNING_HI_CryptoComputationError(statusU32);
         return Fw::Buffer();
     }
@@ -216,6 +234,12 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         return Fw::Buffer();
     }
     std::memcpy(hmacData, macOutput, hmacOutputLength);
+
+    printk("computed HMAC with key: %s\n", key.c_str());
+    // printk("computed HMAC: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+    //        hmacData[0], hmacData[1], hmacData[2], hmacData[3], hmacData[4], hmacData[5], hmacData[6], hmacData[7],
+    //        hmacData[8], hmacData[9], hmacData[10], hmacData[11], hmacData[12], hmacData[13], hmacData[14],
+    //        hmacData[15]);
 
     // Create Fw::Buffer with the HMAC data (context 0 for now)
     return Fw::Buffer(hmacData, static_cast<FwSizeType>(hmacOutputLength), 0);
@@ -268,19 +292,13 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // decrement the size of the data to remove the footer
     data.setSize(data.getSize() - 16);
 
-    printk("\n");
-    printk("security trailer: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-           securityTrailer[0], securityTrailer[1], securityTrailer[2], securityTrailer[3], securityTrailer[4],
-           securityTrailer[5], securityTrailer[6], securityTrailer[7], securityTrailer[8], securityTrailer[9],
-           securityTrailer[10], securityTrailer[11], securityTrailer[12], securityTrailer[13], securityTrailer[14],
-           securityTrailer[15]);
     // the first two bytes are the SPI
     U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
 
     // the next four bytes are the sequence number
     U32 sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
                          (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-    printk("Sequence Number: %08x\n", sequenceNumber);
+    // printk("Sequence Number: %08x\n", sequenceNumber);
 
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
     const std::string type_authn = authConfig.type;
@@ -303,28 +321,31 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     const U8* computedHmacData = computedHmac.getData();
     const FwSizeType computedHmacLength = computedHmac.getSize();
     if (computedHmacData != nullptr && computedHmacLength >= 8) {
-        printk("Computed HMAC: %02x %02x %02x %02x %02x %02x %02x %02x\n", computedHmacData[0], computedHmacData[1],
-               computedHmacData[2], computedHmacData[3], computedHmacData[4], computedHmacData[5], computedHmacData[6],
-               computedHmacData[7]);
+        printk("Computed HMAC: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+               computedHmacData[0], computedHmacData[1], computedHmacData[2], computedHmacData[3], computedHmacData[4],
+               computedHmacData[5], computedHmacData[6], computedHmacData[7], computedHmacData[8], computedHmacData[9],
+               computedHmacData[10], computedHmacData[11], computedHmacData[12], computedHmacData[13],
+               computedHmacData[14], computedHmacData[15]);
+
     } else {
-        printk("Computed HMAC: (null or too short, length=%u)\n", computedHmacLength);
+        printk("Computed HMAC: (null or too short, length=%llu)\n", computedHmacLength);
     }
 
-    //         constexpr FwSizeType receivedHmacLength = 8;
+    // compare the computed hmac to the security trailer
+    printk("Security Trailer: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+           securityTrailer[0], securityTrailer[1], securityTrailer[2], securityTrailer[3], securityTrailer[4],
+           securityTrailer[5], securityTrailer[6], securityTrailer[7], securityTrailer[8], securityTrailer[9],
+           securityTrailer[10], securityTrailer[11], securityTrailer[12], securityTrailer[13], securityTrailer[14],
+           securityTrailer[15]);
 
-    //         if ((computedHmacData == nullptr) || (computedHmacLength < receivedHmacLength) ||
-    //             !this->compareHMAC(receivedHmac, computedHmacData, receivedHmacLength)) {
-    //             this->dataReturnOut_out(0, data, context);
-    //             return;
-    //         }
-
-    //     } else {
-    //         // Current event expects a U32; hash the string for now until the event is updated.
-    //         const U32 hashedType = static_cast<U32>(std::hash<std::string>{}(type_authn));
-    //         this->log_WARNING_HI_InvalidAuthenticationType(hashedType);
-    //         this->dataReturnOut_out(0, data, context);
-    //         return;
-    //     }
+    bool hmacValid = this->compareHMAC(securityTrailer, computedHmacData, computedHmacLength);
+    if (!hmacValid) {
+        printk("HMAC not valid");
+        this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        contextOut.set_authenticated(0);
+        this->dataOut_out(0, data, contextOut);
+        return;
+    }
 
     this->log_ACTIVITY_HI_ValidHash(context.get_apid(), spi, sequenceNumber);
     contextOut.set_authenticated(1);
@@ -346,7 +367,7 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     // add a space at the end and before the first character an enter
     spiHex = "_" + spiHex + " ";
 
-    printk("SPI Hex: %s\n", spiHex.c_str());
+    // printk("SPI Hex: %s\n", spiHex.c_str());
 
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
@@ -376,7 +397,7 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         this->log_WARNING_HI_FileOpenError(readStatus);
         return config;
     }
-    printk("File Contents: %s\n", fileContents.c_str());
+    // printk("File Contents: %s\n", fileContents.c_str());
     // find the line that contains the spi hex string
     size_t pos = fileContents.find(spiHex);
     if (pos != std::string::npos) {
