@@ -59,6 +59,8 @@ module Components {
 
         event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication"
 
+        event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}"
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer

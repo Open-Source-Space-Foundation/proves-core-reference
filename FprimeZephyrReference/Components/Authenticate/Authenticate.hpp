@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  Authenticate.hpp
-// \author t38talon
+// \author Ines
 // \brief  hpp file for Authenticate component implementation class
 // ======================================================================
 
@@ -58,9 +58,10 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
 
-    Fw::Buffer computeHMAC(const U8* frameHeader,
-                           const U8* securityHeader,
+    Fw::Buffer computeHMAC(const U8* securityHeader,
+                           const FwSizeType securityHeaderLength,
                            const U8* commandPayload,
+                           const FwSizeType commandPayloadLength,
                            const std::string& key);
 
     bool validateSequenceNumber(U32 received, U32 expected);
