@@ -62,6 +62,7 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsSpace
     instance payload
+    instance cameraHandler
     instance peripheralUartDriver
     instance payloadBufferManager
     instance cmdSeq
@@ -213,11 +214,19 @@ module ReferenceDeployment {
     }
 
     connections PayloadCom {
-      payload.out_port -> peripheralUartDriver.$send
-      peripheralUartDriver.$recv -> payload.in_port
+      # PayloadCom <-> UART Driver
+      payload.uartForward -> peripheralUartDriver.$send
+      peripheralUartDriver.$recv -> payload.uartDataIn
       
       # Buffer return path (critical! - matches ComStub pattern)
       payload.bufferReturn -> peripheralUartDriver.recvReturnIn
+      
+      # PayloadCom <-> CameraHandler data flow
+      payload.uartDataOut -> cameraHandler.dataIn
+      cameraHandler.commandOut -> payload.commandIn
+      
+      # CameraHandler buffer return (after processing data)
+      cameraHandler.bufferReturn -> payloadBufferManager.bufferSendIn
       
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee

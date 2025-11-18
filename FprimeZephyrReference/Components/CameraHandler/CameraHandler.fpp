@@ -1,15 +1,21 @@
 module Components {
-    @ active component that handles camera specific payload capabilities
+    @ Active component that handles camera-specific payload protocol processing and file saving
+    @ Receives data from PayloadCom, parses image protocol, saves files
     active component CameraHandler {
 
-        # One async command/port is required for active components
-        # This should be overridden by the developers with a useful command/port
+        # Commands
         @ Type in "snap" to capture an image
-        async command TAKE_IMAGE()  # Command to send data over UART
+        async command TAKE_IMAGE()
 
-        async command SEND_COMMAND(cmd: string)  # Command to send data over UART
+        @ Send command to camera via PayloadCom
+        async command SEND_COMMAND(cmd: string)
 
-        #async command SET_ATTRIBUTES
+        # Events for protocol processing and file handling
+        event CommandError(cmd: string) severity warning high format "Failed to send {} command"
+
+        event CommandSuccess(cmd: string) severity activity high format "Command {} sent successfully"
+
+        event DataReceived(data: U8, path: string) severity activity high format "Stored {} bytes of payload data to {}"
 
         event ImageHeaderReceived() severity activity low format "Received image header"
 
@@ -23,11 +29,17 @@ module Components {
 
         event HeaderParseAttempt(bufSize: U32) severity activity low format "Attempting header parse with {} bytes"
 
-        @ Sends command to PayloadCom to be forwarded over UART
-        output port commandOut: Drv.ByteStreamData  
+        event RawDataDump(byte0: U8, byte1: U8, byte2: U8, byte3: U8, byte4: U8, byte5: U8, byte6: U8, byte7: U8) severity activity low format "Raw: [{x} {x} {x} {x} {x} {x} {x} {x}]"
 
-        @ Receives data from PayloadCom over UART, handles image file saving logic
+        # Ports
+        @ Sends command to PayloadCom to be forwarded over UART
+        output port commandOut: Drv.ByteStreamData
+
+        @ Receives data from PayloadCom, handles image protocol parsing and file saving
         sync input port dataIn: Drv.ByteStreamData
+
+        @ Return buffers after processing
+        output port bufferReturn: Fw.BufferSend
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####

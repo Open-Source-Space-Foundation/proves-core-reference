@@ -2,6 +2,7 @@
 // \title  CameraHandler.cpp
 // \author moises
 // \brief  cpp file for CameraHandler component implementation class
+//         Handles camera protocol processing and image file saving
 // ======================================================================
 
 #include "Os/File.hpp"
@@ -19,17 +20,48 @@ namespace Components {
 
 CameraHandler ::CameraHandler(const char* const compName) : CameraHandlerComponentBase(compName) {}
 
-CameraHandler ::~CameraHandler() {}
+CameraHandler ::~CameraHandler() {
+    // Close file if still open
+    if (m_fileOpen) {
+        m_file.close();
+        m_fileOpen = false;
+    }
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
 void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
+    // Check if we received data successfully
+    if (status != Drv::ByteStreamStatus::OP_OK) {
+        // Log error and abort if receiving
+        if (m_receiving && m_fileOpen) {
+            handleFileError();
+        }
+        // Return buffer even on error
+        if (buffer.isValid()) {
+            this->bufferReturn_out(0, buffer);
+        }
+        return;
+    }
 
-    // Get the data from the UART driver's buffer (we don't own it, just read it)
+    // Check if buffer is valid
+    if (!buffer.isValid()) {
+        return;
+    }
+
+    // Get the data from the buffer (we don't own it, just read it)
     const U8* data = buffer.getData();
     U32 dataSize = static_cast<U32>(buffer.getSize());
+
+    // DEBUG: Log first 8 bytes ONLY if not receiving (reduces load during transfer)
+    if (!m_receiving && dataSize >= 8) {
+        this->log_ACTIVITY_LO_RawDataDump(
+            data[0], data[1], data[2], data[3],
+            data[4], data[5], data[6], data[7]
+        );
+    }
 
     if (m_receiving && m_fileOpen) {
         // Currently receiving image data - write directly to file
@@ -43,7 +75,7 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
             // Write failed
             this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write failed"));
             handleFileError();
-            // CRITICAL: Return buffer even on error
+            // Return buffer even on error
             this->bufferReturn_out(0, buffer);
             return;
         }
@@ -104,8 +136,7 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         processProtocolBuffer();
     }
     
-    // CRITICAL: Return buffer to driver so it can deallocate to BufferManager
-    // This matches the ComStub pattern: driver allocates, handler processes, handler returns
+    // Return buffer to allow reuse
     this->bufferReturn_out(0, buffer);
 }
 
@@ -114,12 +145,12 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
 // ----------------------------------------------------------------------
 
 void CameraHandler ::TAKE_IMAGE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // TODO
+    // TODO: Implement image capture command
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
-    // Append newline to command to send over UART
+    // Append newline to command to send to PayloadCom
     Fw::CmdStringArg tempCmd = cmd;  
     tempCmd += "\n";                  
     Fw::Buffer commandBuffer(
@@ -127,21 +158,12 @@ void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, co
         tempCmd.length()
     );
 
-    // Send command over output port
-    Drv::ByteStreamStatus sendStatus = this->out_port_out(0, commandBuffer);
+    // Send command to PayloadCom (which will forward to UART)
+    // ByteStreamData ports require buffer and status
+    this->commandOut_out(0, commandBuffer, Drv::ByteStreamStatus::OP_OK);
 
     Fw::LogStringArg logCmd(cmd);
-    
-    // Log success or failure
-    if (sendStatus != Drv::ByteStreamStatus::OP_OK) {
-        this->log_WARNING_HI_CommandError(logCmd);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
-    else {
-        this->log_ACTIVITY_HI_CommandSuccess(logCmd);
-    }
-
+    this->log_ACTIVITY_HI_CommandSuccess(logCmd);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -296,8 +318,8 @@ void CameraHandler ::processProtocolBuffer() {
         m_fileOpen = true;
         this->log_ACTIVITY_LO_ImageHeaderReceived();
 
-        // Send ACK to camera after successfully parsing header and opening file
-        sendAck();
+        // NOTE: PayloadCom sends ACK automatically after forwarding data
+        // No need to send ACK here - that's handled by the communication layer
         
         // Remove header from protocol buffer
         U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
@@ -372,8 +394,7 @@ void CameraHandler ::finalizeImageTransfer() {
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
     this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
     
-    // Send final ACK to camera to confirm complete transfer
-    sendAck();
+    // NOTE: PayloadCom sends ACK automatically - no need to send here
 
     // Reset state
     m_receiving = false;

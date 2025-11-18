@@ -3,12 +3,9 @@
 // \author robertpendergrast, moisesmata
 // \brief  cpp file for PayloadCom component implementation class
 // ======================================================================
-#include "Os/File.hpp"
-#include "Fw/Types/Assert.hpp"
-#include "Fw/Types/BasicTypes.hpp"
 #include "FprimeZephyrReference/Components/PayloadCom/PayloadCom.hpp"
+#include "Fw/Types/BasicTypes.hpp"
 #include <cstring>
-#include <cstdio>
 
 namespace Components {
 
@@ -17,29 +14,16 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 PayloadCom ::PayloadCom(const char* const compName)
-    : PayloadComComponentBase(compName),
-      m_protocolBufferSize(0),
-      m_fileOpen(false) {
-    // Initialize protocol buffer to zero
-    memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
-}
+    : PayloadComComponentBase(compName) {}
 
-PayloadCom ::~PayloadCom() {
-    // Close file if still open
-    if (m_fileOpen) {
-        m_file.close();
-        m_fileOpen = false;
-    }
-}
+PayloadCom ::~PayloadCom() {}
 
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-
-void PayloadCom ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
-
+void PayloadCom ::uartDataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
     this->log_ACTIVITY_LO_UartReceived();
 
     // Check if we received data successfully
@@ -51,8 +35,10 @@ void PayloadCom ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const
         return;
     }
 
-    this->uartDataOut_out(0, buffer, Drv::ByteStreamStatus::OP_OK);
+    // Forward data to specific payload handler for protocol processing
+    this->uartDataOut_out(0, buffer, status);
 
+    // Send ACK to acknowledge receipt
     sendAck();
         
     // CRITICAL: Return buffer to driver so it can deallocate to BufferManager
@@ -60,38 +46,21 @@ void PayloadCom ::in_port_handler(FwIndexType portNum, Fw::Buffer& buffer, const
     this->bufferReturn_out(0, buffer);
 }
 
-// ----------------------------------------------------------------------
-// Handler implementations for commands
-// ----------------------------------------------------------------------
-
-void PayloadCom ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
-
-    // Append newline to command to send over UART
-    Fw::CmdStringArg tempCmd = cmd;  
-    tempCmd += "\n";                  
-    Fw::Buffer commandBuffer(
-        reinterpret_cast<U8*>(const_cast<char*>(tempCmd.toChar())), 
-        tempCmd.length()
-    );
-
-    // Send command over output port
-    Drv::ByteStreamStatus sendStatus = this->out_port_out(0, commandBuffer);
-
-    Fw::LogStringArg logCmd(cmd);
+void PayloadCom ::commandIn_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
+    // Forward command from CameraHandler to UART
+    // uartForward is ByteStreamSend which returns status
+    Drv::ByteStreamStatus sendStatus = this->uartForward_out(0, buffer);
     
-    // Log success or failure
+    // Log if send failed (optional)
     if (sendStatus != Drv::ByteStreamStatus::OP_OK) {
-        this->log_WARNING_HI_CommandError(logCmd);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
+        Fw::LogStringArg logStr("command");
+        this->log_WARNING_HI_CommandForwardError(logStr);
     }
-    else {
-        this->log_ACTIVITY_HI_CommandSuccess(logCmd);
-    }
-
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+// ----------------------------------------------------------------------
+// Helper method implementations
+// ----------------------------------------------------------------------
 
 void PayloadCom ::sendAck(){
     // Send an acknowledgment over UART
@@ -100,8 +69,15 @@ void PayloadCom ::sendAck(){
         reinterpret_cast<U8*>(const_cast<char*>(ackMsg)), 
         strlen(ackMsg)
     );
-    this->out_port_out(0, ackBuffer);
-
+    // uartForward is ByteStreamSend which returns status
+    Drv::ByteStreamStatus sendStatus = this->uartForward_out(0, ackBuffer);
+    
+    if (sendStatus == Drv::ByteStreamStatus::OP_OK) {
+        this->log_ACTIVITY_LO_AckSent();
+    } else {
+        Fw::LogStringArg logStr("ACK");
+        this->log_WARNING_HI_CommandForwardError(logStr);
+    }
 }
 
 }  // namespace Components
