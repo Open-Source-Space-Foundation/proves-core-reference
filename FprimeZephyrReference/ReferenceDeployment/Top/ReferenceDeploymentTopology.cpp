@@ -88,6 +88,8 @@ void setupTopology(const TopologyState& state) {
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
 
+    TlmLoggerTee::comLog.init_log_file("/ComLoggerFiles/Tlm", 1024 * 30, true);
+
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);

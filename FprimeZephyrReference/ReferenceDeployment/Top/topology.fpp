@@ -17,6 +17,7 @@ module ReferenceDeployment {
     import CdhCore.Subtopology
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
+    import TlmLoggerTee.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -77,7 +78,9 @@ module ReferenceDeployment {
       comSplitterEvents.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
       comSplitterEvents.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
-      CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
+      CdhCore.tlmSend.PktSend -> TlmLoggerTee.comSplitter.comIn
+      TlmLoggerTee.comSplitter.comOut -> comSplitterTelemetry.comIn
+      # CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
       comSplitterTelemetry.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 

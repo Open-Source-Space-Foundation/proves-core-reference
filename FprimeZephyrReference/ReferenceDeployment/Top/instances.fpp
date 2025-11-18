@@ -42,6 +42,7 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 5
 
+ 
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
