@@ -145,7 +145,7 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     // Check the length of the key bytes
     if (keyBytes.size() != 16) {
-        this->log_WARNING_HI_InvalidSPIKey(spi);
+        this->log_WARNING_HI_InvalidSPI(-1);
         return Fw::Buffer();
     }
 
@@ -438,7 +438,7 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         }
         this->log_ACTIVITY_LO_FoundSPIKey(true);
         if (words.size() < 3) {
-            this->log_WARNING_HI_InvalidSPIKey(spi);
+            this->log_WARNING_HI_InvalidSPI(spi);
             return config;
         }
         config.type = words[1];
