@@ -6,8 +6,15 @@
 
 #include "FprimeZephyrReference/Components/Drv/MagnetorquerManager/MagnetorquerManager.hpp"
 
+#include <errno.h>
+
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/haptics.h>
 #include <zephyr/drivers/haptics/drv2605.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/util.h>
 
 namespace Drv {
 
@@ -42,7 +49,21 @@ void MagnetorquerManager ::START_PLAYBACK_TEST_cmdHandler(FwOpcodeType opCode, U
         return;
     }
 
-    drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&this->rom);
+    static struct drv2605_rom_data rom_data = {
+        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
+        .library = DRV2605_LIBRARY_LRA,
+        .seq_regs = {1, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 2, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 3,
+                     DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 4},
+        .overdrive_time = 0,
+        .sustain_pos_time = 0,
+        .sustain_neg_time = 0,
+        .brake_time = 0,
+    };
+    union drv2605_config_data config_data = {};
+
+    config_data.rom_data = &rom_data;
+
+    int ret = drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data);
 }
 
 void MagnetorquerManager ::START_PLAYBACK_TEST2_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) {

@@ -10,7 +10,7 @@ module Drv {
     passive component MagnetorquerManager {
 
         @ Event for reporting DRV2605 not ready error
-        event DeviceNotReady() severity warning high format "DRV2605 device not ready" throttle 5
+        event DeviceNotReady() severity warning high format "DRV2605 device not ready"
 
         @ Event to report an invalid face index passed in
         event InvalidFaceIndex() severity warning low format "The faceIdx should be between 0-4"
