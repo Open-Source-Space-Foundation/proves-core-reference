@@ -21,8 +21,8 @@
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
 // Devices
-const struct device* ina219Sys = device_get_binding("INA219 sys");
-const struct device* ina219Sol = device_get_binding("INA219 sol");
+const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
+const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
@@ -43,36 +43,12 @@ static const struct gpio_dt_spec face1_enable = GPIO_DT_SPEC_GET(DT_NODELABEL(fa
 static const struct gpio_dt_spec face2_enable = GPIO_DT_SPEC_GET(DT_NODELABEL(face2_enable), gpios);
 static const struct gpio_dt_spec face3_enable = GPIO_DT_SPEC_GET(DT_NODELABEL(face3_enable), gpios);
 
-if (gpio_is_ready_dt(&face0_enable) && gpio_pin_configure_dt(&face0_enable, GPIO_OUTPUT_INACTIVE) == 0) {
-    gpio_pin_set_dt(&face0_enable, 1);
-}
-
-if (gpio_is_ready_dt(&face1_enable) && gpio_pin_configure_dt(&face1_enable, GPIO_OUTPUT_INACTIVE) == 0) {
-    gpio_pin_set_dt(&face1_enable, 1);
-}
-
-if (gpio_is_ready_dt(&face2_enable) && gpio_pin_configure_dt(&face2_enable, GPIO_OUTPUT_INACTIVE) == 0) {
-    gpio_pin_set_dt(&face2_enable, 1);
-}
-
-if (gpio_is_ready_dt(&face3_enable) && gpio_pin_configure_dt(&face3_enable, GPIO_OUTPUT_INACTIVE) == 0) {
-    gpio_pin_set_dt(&face3_enable, 1);
-}
-
-k_sleep(K_MSEC(200));  // Wait for power to stabilize
-
 // Set up DRV2605 Devices
-const struct device* face0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux0_drv2605));
-const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux1_drv2605));
-const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux2_drv2605));
-const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux3_drv2605));
-const struct device* face4_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux4_drv2605));
-
-int ret = device_init(face0_drv2605);
-ret = device_init(face1_drv2605);
-ret = device_init(face2_drv2605);
-ret = device_init(face3_drv2605);
-ret = device_init(face4_drv2605);
+const struct device* face0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face0_drv2605));
+const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
+const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
+const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
+const struct device* face4_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face4_drv2605));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -80,6 +56,30 @@ int main(int argc, char* argv[]) {
     // This sleep is necessary to allow the USB CDC ACM interface to initialize before
     // the application starts writing to it.
     k_sleep(K_MSEC(3000));
+
+    if (gpio_is_ready_dt(&face0_enable) && gpio_pin_configure_dt(&face0_enable, GPIO_OUTPUT_INACTIVE) == 0) {
+        gpio_pin_set_dt(&face0_enable, 1);
+    }
+
+    if (gpio_is_ready_dt(&face1_enable) && gpio_pin_configure_dt(&face1_enable, GPIO_OUTPUT_INACTIVE) == 0) {
+        gpio_pin_set_dt(&face1_enable, 1);
+    }
+
+    if (gpio_is_ready_dt(&face2_enable) && gpio_pin_configure_dt(&face2_enable, GPIO_OUTPUT_INACTIVE) == 0) {
+        gpio_pin_set_dt(&face2_enable, 1);
+    }
+
+    if (gpio_is_ready_dt(&face3_enable) && gpio_pin_configure_dt(&face3_enable, GPIO_OUTPUT_INACTIVE) == 0) {
+        gpio_pin_set_dt(&face3_enable, 1);
+    }
+
+    int ret = device_init(face0_drv2605);
+    ret = device_init(face1_drv2605);
+    ret = device_init(face2_drv2605);
+    ret = device_init(face3_drv2605);
+    ret = device_init(face4_drv2605);
+
+    k_sleep(K_MSEC(200));  // Wait for power to stabilize
     Os::init();
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
