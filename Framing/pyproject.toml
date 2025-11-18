@@ -16,4 +16,3 @@ authenticate_space_data_link = "authenticate_plugin:AuthenticateCompFramer"
 [tool.setuptools_scm]
 
 [tool.interrogate]
-ignore = ["Framing/"]

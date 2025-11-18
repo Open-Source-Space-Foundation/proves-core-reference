@@ -46,4 +46,3 @@ repos:
         - -vv
         - --color
         - --exclude=Framing/*
-        - --exclude=Framing/**/*.py
