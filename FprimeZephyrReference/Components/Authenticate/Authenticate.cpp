@@ -254,7 +254,14 @@ bool Authenticate::validateSequenceNumber(U32 received, U32 expected) {
     // validate the sequence number by checking if it is within the window of the expected sequence number
     Fw::ParamValid valid;
     U32 window = paramGet_SEQ_NUM_WINDOW(valid);
-    const U32 delta = received - expected;  // wraps naturally in U32 arithmetic
+    /*
+     * Compute the difference between received and expected sequence numbers using unsigned
+     * 32-bit arithmetic. This handles wraparound correctly due to the well-defined behavior
+     * of unsigned integer overflow in C++. For example, if expected=0xFFFFFFFE and received=1,
+     * then (received - expected) == 3 (modulo 2^32). This is a standard technique for
+     * sequence number window validation (see RFC 1982: Serial Number Arithmetic).
+     */
+    const U32 delta = received - expected;
     if (delta > window) {
         this->log_WARNING_HI_SequenceNumberOutOfWindow(received, expected, window);
         return false;
