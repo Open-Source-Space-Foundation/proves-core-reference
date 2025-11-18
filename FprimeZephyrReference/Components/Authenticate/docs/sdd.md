@@ -95,7 +95,7 @@ You can make it by running
 
 and run it by running
 
-> made gds-with-framer
+> make gds-with-framer
 
 ### Uploads to run this code
 
