@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 // Hardcoded Dictionary of Authentication Types
 // could be put in a file, but since its linked to the actual code its simpleer to have it here
@@ -85,7 +84,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     psa_status_t status = psa_crypto_init();
     if (status != PSA_SUCCESS) {
         U32 statusU32 = static_cast<U32>(status);
-        printk("Crypto Computation Error: PSA init failed %d\n", statusU32);
         this->log_WARNING_HI_CryptoComputationError(statusU32);
         return Fw::Buffer();
     }
@@ -125,20 +123,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     inputBuffer.insert(inputBuffer.end(), securityHeader, securityHeader + securityHeaderLength);
     inputBuffer.insert(inputBuffer.end(), commandPayload, commandPayload + commandPayloadLength);
 
-    printk("Input Buffer: %zu bytes\n", inputBuffer.size());
-    printk("Input Buffer (hex): ");
-    for (size_t i = 0; i < inputBuffer.size() && i < 32; i++) {
-        printk("%02x ", inputBuffer[i]);
-    }
-    if (inputBuffer.size() > 32) {
-        printk("...");
-    }
-    printk("\n");
-    // input buffer as string
-    printk("Input Buffer (string): %s\n", inputBuffer.data());
-
-    printk("\n");
-
     // Implement HMAC-SHA-256 manually using PSA hash API (RFC 2104)
     // HMAC(k, m) = H(k XOR opad || H(k XOR ipad || m))
     const size_t blockSize = 64;  // SHA-256 block size
@@ -157,7 +141,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         status = psa_hash_setup(&hashOp, PSA_ALG_SHA_256);
         if (status != PSA_SUCCESS) {
             U32 statusU32 = static_cast<U32>(status);
-            printk("Crypto Computation Error: Key preparation failed %d\n", statusU32);
             this->log_WARNING_HI_CryptoComputationError(statusU32);
             return Fw::Buffer();
         }
@@ -168,7 +151,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         }
         if (status != PSA_SUCCESS) {
             U32 statusU32 = static_cast<U32>(status);
-            printk("Crypto Computation Error: Key preparation failed %d\n", statusU32);
             this->log_WARNING_HI_CryptoComputationError(statusU32);
             return Fw::Buffer();
         }
@@ -196,7 +178,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     if (status != PSA_SUCCESS) {
         U32 statusU32 = static_cast<U32>(status);
-        printk("Crypto Computation Error: Inner hash failed %d\n", statusU32);
         this->log_WARNING_HI_CryptoComputationError(statusU32);
         return Fw::Buffer();
     }
@@ -221,7 +202,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     if (status != PSA_SUCCESS) {
         U32 statusU32 = static_cast<U32>(status);
-        printk("Crypto Computation Error: Outer hash failed %d\n", statusU32);
         this->log_WARNING_HI_CryptoComputationError(statusU32);
         return Fw::Buffer();
     }
@@ -234,12 +214,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         return Fw::Buffer();
     }
     std::memcpy(hmacData, macOutput, hmacOutputLength);
-
-    printk("computed HMAC with key: %s\n", key.c_str());
-    // printk("computed HMAC: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-    //        hmacData[0], hmacData[1], hmacData[2], hmacData[3], hmacData[4], hmacData[5], hmacData[6], hmacData[7],
-    //        hmacData[8], hmacData[9], hmacData[10], hmacData[11], hmacData[12], hmacData[13], hmacData[14],
-    //        hmacData[15]);
 
     // Create Fw::Buffer with the HMAC data (context 0 for now)
     return Fw::Buffer(hmacData, static_cast<FwSizeType>(hmacOutputLength), 0);
@@ -265,9 +239,6 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
 }
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // assert that the packet length is a correct length for a CCSDS Space Packet
-    // printk("dataIn_handler: %lld\n", data.getSize());
-    // printk("dataIn_handler: %hhn\n", data.getData());
     ComCfg::FrameContext contextOut = context;
 
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
@@ -298,7 +269,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // the next four bytes are the sequence number
     U32 sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
                          (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-    // printk("Sequence Number: %08x\n", sequenceNumber);
 
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
     const std::string type_authn = authConfig.type;
@@ -309,7 +279,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
     if (!sequenceNumberValid) {
         contextOut.set_authenticated(0);
-        printk("sequence number not valid");
         this->dataOut_out(0, data, contextOut);
         return;
     } else {
@@ -320,27 +289,15 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     Fw::Buffer computedHmac = this->computeHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn);
     const U8* computedHmacData = computedHmac.getData();
     const FwSizeType computedHmacLength = computedHmac.getSize();
-    if (computedHmacData != nullptr && computedHmacLength >= 8) {
-        printk("Computed HMAC: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-               computedHmacData[0], computedHmacData[1], computedHmacData[2], computedHmacData[3], computedHmacData[4],
-               computedHmacData[5], computedHmacData[6], computedHmacData[7], computedHmacData[8], computedHmacData[9],
-               computedHmacData[10], computedHmacData[11], computedHmacData[12], computedHmacData[13],
-               computedHmacData[14], computedHmacData[15]);
-
-    } else {
-        printk("Computed HMAC: (null or too short, length=%llu)\n", computedHmacLength);
+    if (computedHmacData == nullptr || computedHmacLength < 8) {
+        this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        contextOut.set_authenticated(0);
+        this->dataOut_out(0, data, contextOut);
+        return;
     }
-
-    // compare the computed hmac to the security trailer
-    printk("Security Trailer: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-           securityTrailer[0], securityTrailer[1], securityTrailer[2], securityTrailer[3], securityTrailer[4],
-           securityTrailer[5], securityTrailer[6], securityTrailer[7], securityTrailer[8], securityTrailer[9],
-           securityTrailer[10], securityTrailer[11], securityTrailer[12], securityTrailer[13], securityTrailer[14],
-           securityTrailer[15]);
 
     bool hmacValid = this->compareHMAC(securityTrailer, computedHmacData, computedHmacLength);
     if (!hmacValid) {
-        printk("HMAC not valid");
         this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
         contextOut.set_authenticated(0);
         this->dataOut_out(0, data, contextOut);
@@ -367,12 +324,9 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     // add a space at the end and before the first character an enter
     spiHex = "_" + spiHex + " ";
 
-    // printk("SPI Hex: %s\n", spiHex.c_str());
-
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {
-        printk("File Open Error, one: %d\n", openStatus);
         this->log_WARNING_HI_FileOpenError(openStatus);
         return config;
     }
@@ -381,7 +335,6 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     Os::File::Status sizeStatus = spiDictFile.size(fileSize);
     if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
         spiDictFile.close();
-        printk("File Open Error, two: %d\n", sizeStatus);
         this->log_WARNING_HI_FileOpenError(sizeStatus);
         return config;
     }
@@ -393,11 +346,9 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
     if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
-        printk("File Open Error, three: %d\n", readStatus);
         this->log_WARNING_HI_FileOpenError(readStatus);
         return config;
     }
-    // printk("File Contents: %s\n", fileContents.c_str());
     // find the line that contains the spi hex string
     size_t pos = fileContents.find(spiHex);
     if (pos != std::string::npos) {
@@ -416,9 +367,6 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     } else {
         this->log_ACTIVITY_LO_FoundSPIKey(false);
     }
-
-    printk("Config Type: %s\n", config.type.c_str());
-    printk("Config Key: %s\n", config.key.c_str());
 
     return config;
 }

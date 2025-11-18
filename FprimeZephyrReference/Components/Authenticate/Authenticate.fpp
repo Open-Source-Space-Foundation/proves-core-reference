@@ -39,7 +39,7 @@ module Components {
 
         event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}"
 
-        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: SPI={}, Expected={}, Window={}"
+        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: seq_num={}, Expected={}, Window={}"
 
         event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}"
 
