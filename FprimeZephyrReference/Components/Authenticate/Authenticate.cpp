@@ -26,6 +26,8 @@ constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
 constexpr const char DEFAULT_AUTHENTICATION_KEY[] = "0x55b32a18e0c63a347b56e8ae6c51358a";
 constexpr const char SPI_DICT_PATH[] = "//spi_dict.txt";
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
+constexpr const char REJECTED_PACKETS_COUNT_PATH[] = "//rejected_packets_count.txt";
+constexpr const char AUTHENTICATED_PACKETS_COUNT_PATH[] = "//authenticated_packets_count.txt";
 constexpr const char SPI_DICT_DELIMITER[] = " | ";
 
 /// Types of A
@@ -41,32 +43,61 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {
-    U32 fileSequenceNumber = 0;
+    U32 fileSequenceNumber = this->initializeFiles(SEQUENCE_NUMBER_PATH);
+    this->sequenceNumber.store(fileSequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
+
+    U32 fileRejectedPacketsCount = this->initializeFiles(REJECTED_PACKETS_COUNT_PATH);
+    this->rejectedPacketsCount.store(fileRejectedPacketsCount);
+    this->tlmWrite_RejectedPacketsCount(fileRejectedPacketsCount);
+
+    U32 fileAuthenticatedPacketsCount = this->initializeFiles(AUTHENTICATED_PACKETS_COUNT_PATH);
+    this->authenticatedPacketsCount.store(fileAuthenticatedPacketsCount);
+    this->tlmWrite_AuthenticatedPacketsCount(fileAuthenticatedPacketsCount);
+}
+
+U32 Authenticate::initializeFiles(const char* filePath) {
+    U32 count = 0;
     bool loadedFromFile = false;
 
-    Os::File::Status openStatus = this->m_sequenceNumberFile.open(SEQUENCE_NUMBER_PATH, Os::File::OPEN_READ);
+    // Use a local file object instead of a member variable
+    Os::File file;
+
+    // Try to open and read from the file
+    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_READ);
     if (openStatus == Os::File::OP_OK) {
-        FwSizeType size = static_cast<FwSizeType>(sizeof(fileSequenceNumber));
+        FwSizeType size = static_cast<FwSizeType>(sizeof(count));
         FwSizeType expectedSize = size;
-        Os::File::Status readStatus =
-            this->m_sequenceNumberFile.read(reinterpret_cast<U8*>(&fileSequenceNumber), size, Os::File::WaitType::WAIT);
-        this->m_sequenceNumberFile.close();
+        Os::File::Status readStatus = file.read(reinterpret_cast<U8*>(&count), size, Os::File::WaitType::WAIT);
+        file.close();
         loadedFromFile = (readStatus == Os::File::OP_OK) && (size == expectedSize);
     }
 
+    // If file doesn't exist or read failed, create it with value 0
     if (!loadedFromFile) {
-        fileSequenceNumber = 0;
-        Os::File::Status createStatus = this->m_sequenceNumberFile.open(SEQUENCE_NUMBER_PATH, Os::File::OPEN_CREATE,
-                                                                        Os::File::OverwriteType::NO_OVERWRITE);
+        count = 0;
+        Os::File::Status createStatus =
+            file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
         if (createStatus == Os::File::OP_OK) {
-            const U8* buffer = reinterpret_cast<const U8*>(&fileSequenceNumber);
-            FwSizeType size = static_cast<FwSizeType>(sizeof(fileSequenceNumber));
-            (void)this->m_sequenceNumberFile.write(buffer, size, Os::File::WaitType::WAIT);
-            this->m_sequenceNumberFile.close();
+            const U8* buffer = reinterpret_cast<const U8*>(&count);
+            FwSizeType size = static_cast<FwSizeType>(sizeof(count));
+            (void)file.write(buffer, size, Os::File::WaitType::WAIT);
+            file.close();
         }
     }
 
-    this->sequenceNumber.store(fileSequenceNumber);
+    return count;
+}
+
+void Authenticate::persistToFile(const char* filePath, U32 value) {
+    Os::File file;
+    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
+    if (openStatus == Os::File::OP_OK) {
+        const U8* buffer = reinterpret_cast<const U8*>(&value);
+        FwSizeType size = static_cast<FwSizeType>(sizeof(value));
+        (void)file.write(buffer, size, Os::File::WaitType::WAIT);
+        file.close();
+    }
 }
 
 Authenticate ::~Authenticate() {}
@@ -244,6 +275,10 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
     if (data.getSize() < 34) {
         // return the packet, set to unauthenticated
+        U32 newCount = this->rejectedPacketsCount.load() + 1;
+        this->rejectedPacketsCount.store(newCount);
+        this->tlmWrite_RejectedPacketsCount(newCount);
+        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         this->log_WARNING_HI_PacketTooShort(data.getSize());
         contextOut.set_authenticated(0);
         this->dataOut_out(0, data, context);
@@ -278,12 +313,19 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // cast trailer to U32
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
     if (!sequenceNumberValid) {
+        U32 newCount = this->rejectedPacketsCount.load() + 1;
+        this->rejectedPacketsCount.store(newCount);
+        this->tlmWrite_RejectedPacketsCount(newCount);
+        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         contextOut.set_authenticated(0);
         this->dataOut_out(0, data, contextOut);
         return;
     } else {
         // increment the stored sequence number
-        this->sequenceNumber.store(sequenceNumber + 1);
+        U32 newSequenceNumber = sequenceNumber + 1;
+        this->sequenceNumber.store(newSequenceNumber);
+        this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
+        this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
     }
 
     Fw::Buffer computedHmac = this->computeHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn);
@@ -291,6 +333,10 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     const FwSizeType computedHmacLength = computedHmac.getSize();
     if (computedHmacData == nullptr || computedHmacLength < 8) {
         this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        U32 newCount = this->rejectedPacketsCount.load() + 1;
+        this->rejectedPacketsCount.store(newCount);
+        this->tlmWrite_RejectedPacketsCount(newCount);
+        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         contextOut.set_authenticated(0);
         this->dataOut_out(0, data, contextOut);
         return;
@@ -299,12 +345,20 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     bool hmacValid = this->compareHMAC(securityTrailer, computedHmacData, computedHmacLength);
     if (!hmacValid) {
         this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        U32 newCount = this->rejectedPacketsCount.load() + 1;
+        this->rejectedPacketsCount.store(newCount);
+        this->tlmWrite_RejectedPacketsCount(newCount);
+        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         contextOut.set_authenticated(0);
         this->dataOut_out(0, data, contextOut);
         return;
     }
 
     this->log_ACTIVITY_HI_ValidHash(context.get_apid(), spi, sequenceNumber);
+    U32 newCount = this->authenticatedPacketsCount.load() + 1;
+    this->authenticatedPacketsCount.store(newCount);
+    this->tlmWrite_AuthenticatedPacketsCount(newCount);
+    this->persistToFile(AUTHENTICATED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(1);
 
     this->dataOut_out(0, data, contextOut);
@@ -395,6 +449,7 @@ U32 Authenticate ::get_SequenceNumber() {
 
     if (loadedFromFile) {
         this->sequenceNumber.store(fileSequenceNumber);
+        this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
         return fileSequenceNumber;
     } else {
         fileSequenceNumber = this->sequenceNumber.load();

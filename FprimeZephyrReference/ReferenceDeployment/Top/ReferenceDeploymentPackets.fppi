@@ -86,9 +86,6 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet authenticate id 11 group 4 {
-    ReferenceDeployment.authenticate.AuthenticatedPacketsCount
-    ReferenceDeployment.authenticate.RejectedPacketsCount
-    ReferenceDeployment.authenticate.CurrentSequenceNumber
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
     ComCcsdsUart.authenticate.CurrentSequenceNumber

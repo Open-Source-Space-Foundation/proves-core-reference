@@ -70,6 +70,10 @@ class Authenticate final : public AuthenticateComponentBase {
 
     U32 get_SequenceNumber();
 
+    U32 initializeFiles(const char* filePath);
+
+    void persistToFile(const char* filePath, U32 value);
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -89,7 +93,11 @@ class Authenticate final : public AuthenticateComponentBase {
 
     std::atomic<U32> sequenceNumber;
     Os::File m_sequenceNumberFile;
+    Os::File m_rejectedPacketsCountFile;
+    Os::File m_authenticatedPacketsCountFile;
     Os::File m_spiDictFile;
+    std::atomic<U32> rejectedPacketsCount;
+    std::atomic<U32> authenticatedPacketsCount;
 };
 
 }  // namespace Components
