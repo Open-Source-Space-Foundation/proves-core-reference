@@ -12,8 +12,8 @@ The Authenticate component sits in the uplink communications path between the `T
 
 Connections:
 TcDeFramer.dataOut -> Authenticate.dataIn
-Authenicate->dataOut -> SpacePacketDeframer
-Autenticate->dataReturnOut -> TcDeframer.dataReturnIn
+Authenticate->dataOut -> SpacePacketDeframer
+Authenticate->dataReturnOut -> TcDeframer.dataReturnIn
 SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
 
 Authenticate is positioned before SpacePacketDeframer because CCSDS 355.0-B-2 specifies HMAC computation over the actual frame header bytes, which requires the header to be present

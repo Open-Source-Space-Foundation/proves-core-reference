@@ -20,7 +20,6 @@
 #include <zephyr/kernel.h>
 
 // Hardcoded Dictionary of Authentication Types
-// could be put in a file, but since its linked to the actual code its simpleer to have it here
 
 constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
 constexpr const char DEFAULT_AUTHENTICATION_KEY[] = "0x55b32a18e0c63a347b56e8ae6c51358a";
@@ -28,14 +27,11 @@ constexpr const char SPI_DICT_PATH[] = "//spi_dict.txt";
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 constexpr const char REJECTED_PACKETS_COUNT_PATH[] = "//rejected_packets_count.txt";
 constexpr const char AUTHENTICATED_PACKETS_COUNT_PATH[] = "//authenticated_packets_count.txt";
-constexpr const char SPI_DICT_DELIMITER[] = " | ";
+constexpr const int SECURITY_HEADER_LENGTH = 6;
+constexpr const int SECURITY_TRAILER_LENGTH = 16;
 
-/// Types of A
-constexpr const int HMAC = 0;
-constexpr const int NONE = 1;
-
-// TO DO: ADD TO THE DOWNLINK PATH FOR LORA AS WELL
-// TO DO: REMOVE FROM REFDEPLOYMENT BC ITS IN THE COMCCSDS UPPER LEVEL (?????)
+// TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
+// TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
 
 namespace Components {
 // ----------------------------------------------------------------------
@@ -145,6 +141,12 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         }
     } else {
         keyBytes.assign(key.begin(), key.end());
+    }
+
+    // Check the length of the key bytes
+    if (keyBytes.size() != 16) {
+        this->log_WARNING_HI_InvalidSPIKey(spi);
+        return Fw::Buffer();
     }
 
     // Combine security header and command payload into a single input buffer
@@ -273,7 +275,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     ComCfg::FrameContext contextOut = context;
 
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
-    if (data.getSize() < 34) {
+    if (data.getSize() < 12 + SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
         // return the packet, set to unauthenticated
         U32 newCount = this->rejectedPacketsCount.load() + 1;
         this->rejectedPacketsCount.store(newCount);
@@ -281,22 +283,22 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         this->log_WARNING_HI_PacketTooShort(data.getSize());
         contextOut.set_authenticated(0);
-        this->dataOut_out(0, data, context);
+        this->dataOut_out(0, data, contextOut);
         return;
     }
 
     // Take the first 6 bytes as the security header
-    unsigned char securityHeader[6];
-    std::memcpy(securityHeader, data.getData(), 6);
+    unsigned char securityHeader[SECURITY_HEADER_LENGTH];
+    std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
     // increment the pointer to the data to point to the rest of the packet
-    data.setData(data.getData() + 6);
-    data.setSize(data.getSize() - 6);
+    data.setData(data.getData() + SECURITY_HEADER_LENGTH);
+    data.setSize(data.getSize() - SECURITY_HEADER_LENGTH);
 
     // now we get the footer (last 16 bytes)
-    unsigned char securityTrailer[16];
-    std::memcpy(securityTrailer, data.getData() + data.getSize() - 16, 16);
+    unsigned char securityTrailer[SECURITY_TRAILER_LENGTH];
+    std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
     // decrement the size of the data to remove the footer
-    data.setSize(data.getSize() - 16);
+    data.setSize(data.getSize() - SECURITY_TRAILER_LENGTH);
 
     // the first two bytes are the SPI
     U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
@@ -331,8 +333,16 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     Fw::Buffer computedHmac = this->computeHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn);
     const U8* computedHmacData = computedHmac.getData();
     const FwSizeType computedHmacLength = computedHmac.getSize();
+
+    // Clean up the allocated memory when done (Fw::Buffer doesn't manage memory)
+    // Store non-const pointer for deletion (getData() returns const, but we allocated with new[])
+    U8* hmacDataToDelete = const_cast<U8*>(computedHmacData);
+
     if (computedHmacData == nullptr || computedHmacLength < 8) {
-        this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        if (hmacDataToDelete != nullptr) {
+            delete[] hmacDataToDelete;
+        }
+        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         U32 newCount = this->rejectedPacketsCount.load() + 1;
         this->rejectedPacketsCount.store(newCount);
         this->tlmWrite_RejectedPacketsCount(newCount);
@@ -342,7 +352,11 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         return;
     }
 
-    bool hmacValid = this->compareHMAC(securityTrailer, computedHmacData, computedHmacLength);
+    bool hmacValid = this->compareHMAC(computedHmacData, securityTrailer, computedHmacLength);
+
+    // Memory is no longer needed after comparison - delete before any return
+    delete[] hmacDataToDelete;
+
     if (!hmacValid) {
         this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
         U32 newCount = this->rejectedPacketsCount.load() + 1;
@@ -354,7 +368,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         return;
     }
 
-    this->log_ACTIVITY_HI_ValidHash(context.get_apid(), spi, sequenceNumber);
+    this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
     U32 newCount = this->authenticatedPacketsCount.load() + 1;
     this->authenticatedPacketsCount.store(newCount);
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
@@ -416,6 +430,10 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
             words.push_back(word);
         }
         this->log_ACTIVITY_LO_FoundSPIKey(true);
+        if (words.size() < 3) {
+            this->log_WARNING_HI_InvalidSPIKey(spi);
+            return config;
+        }
         config.type = words[1];
         config.key = words[2];
     } else {

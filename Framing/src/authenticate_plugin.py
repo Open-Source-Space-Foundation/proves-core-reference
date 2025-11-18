@@ -10,8 +10,6 @@ from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramer
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
-# TO DO: add ablility to start/save sequence number
-
 
 # pragma: no cover
 class MyPlugin(FramerDeframer):
@@ -42,8 +40,6 @@ class MyPlugin(FramerDeframer):
 
         data = header + data
 
-        print("Data: ", data)
-
         # compute HMAC
         # should be security header + data (data is frame header and data)
 
@@ -65,22 +61,6 @@ class MyPlugin(FramerDeframer):
         if len(data) == 0:
             return None, b"", b""
         return data, b"", b""
-
-    # @classmethod
-    # def get_arguments(cls):
-    #     """ Arguments to request from the CLI """
-    #     return {
-    #     ("--start_count", ): {
-    #       "type": int,
-    #       "help": "Start of the sequence counter",
-    #       "required": False
-    #     }
-    #   }
-
-    # @classmethod
-    # def check_arguments(cls):
-    #     """ Check arguments from the CLI """
-    #     pass
 
 
 @gds_plugin(FramerDeframer)
