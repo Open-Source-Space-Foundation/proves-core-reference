@@ -164,11 +164,12 @@ void ModeManager ::saveState() {
     state.mode = static_cast<U8>(this->m_mode);
     state.safeModeEntryCount = this->m_safeModeEntryCount;
 
-    FwSizeType size = sizeof(PersistentState);
-    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), size, Os::File::WaitType::WAIT);
+    FwSizeType bytesToWrite = sizeof(PersistentState);
+    FwSizeType bytesWritten = bytesToWrite;
+    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
 
     // Check if write succeeded and correct number of bytes written
-    if (writeStatus != Os::File::OP_OK || size != sizeof(PersistentState)) {
+    if (writeStatus != Os::File::OP_OK || bytesWritten != bytesToWrite) {
         // Log failure but allow component to continue operating
         // This is critical - we don't want to crash during safe mode entry
         Fw::LogStringArg opStr("save-write");
