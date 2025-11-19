@@ -234,6 +234,8 @@ module ReferenceDeployment {
       modeManager.voltageGet -> ina219SysManager.voltageGet
 
       # Load switch control connections
+      # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
+      # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.
       # face4 = index 0, face0 = index 1, face1 = index 2, face2 = index 3
       # face3 = index 4, face5 = index 5, payloadPower = index 6, payloadBattery = index 7
       modeManager.loadSwitchTurnOn[0] -> face4LoadSwitch.turnOn
