@@ -28,6 +28,7 @@ ModeManager ::~ModeManager() {}
 
 void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
     ModeManagerComponentBase::init(queueDepth, instance);
+    this->loadState();
 }
 
 // ----------------------------------------------------------------------
@@ -113,10 +114,28 @@ void ModeManager ::loadState() {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
+
+                // Restore physical hardware state to match loaded mode
+                if (this->m_mode == SystemMode::SAFE_MODE) {
+                    // Skip the 5-second voltage check delay since a mode decision
+                    // was already made before the restart
+                    this->m_runCounter = 5;
+
+                    // Turn off non-critical components to match safe mode state
+                    this->turnOffNonCriticalComponents();
+
+                    // Log that we're restoring safe mode (not entering it fresh)
+                    Fw::LogStringArg reasonStr("State restored from persistent storage");
+                    this->log_WARNING_HI_EnteringSafeMode(reasonStr);
+                } else {
+                    // NORMAL mode - ensure components are turned on
+                    this->turnOnComponents();
+                }
             } else {
                 // Corrupted state - use defaults
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
+                this->turnOnComponents();
             }
         }
 
@@ -125,26 +144,37 @@ void ModeManager ::loadState() {
         // File doesn't exist or can't be opened - initialize to default state
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
+        this->turnOnComponents();
     }
 }
 
 void ModeManager ::saveState() {
     Os::File file;
     Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
-    if (status == Os::File::OP_OK) {
-        PersistentState state;
-        state.mode = static_cast<U8>(this->m_mode);
-        state.safeModeEntryCount = this->m_safeModeEntryCount;
 
-        FwSizeType size = sizeof(PersistentState);
-        Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), size, Os::File::WaitType::WAIT);
-
-        // Verify write succeeded and correct number of bytes written
-        FW_ASSERT(writeStatus == Os::File::OP_OK && size == sizeof(PersistentState),
-                  static_cast<FwAssertArgType>(writeStatus));
-
-        file.close();
+    if (status != Os::File::OP_OK) {
+        // Log failure to open file, but allow component to continue
+        Fw::LogStringArg opStr("save-open");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+        return;
     }
+
+    PersistentState state;
+    state.mode = static_cast<U8>(this->m_mode);
+    state.safeModeEntryCount = this->m_safeModeEntryCount;
+
+    FwSizeType size = sizeof(PersistentState);
+    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), size, Os::File::WaitType::WAIT);
+
+    // Check if write succeeded and correct number of bytes written
+    if (writeStatus != Os::File::OP_OK || size != sizeof(PersistentState)) {
+        // Log failure but allow component to continue operating
+        // This is critical - we don't want to crash during safe mode entry
+        Fw::LogStringArg opStr("save-write");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(writeStatus));
+    }
+
+    file.close();
 }
 
 void ModeManager ::checkVoltageCondition() {

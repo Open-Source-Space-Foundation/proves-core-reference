@@ -77,6 +77,14 @@ module Components {
             severity warning low \
             format "Command {} failed: {}"
 
+        @ Event emitted when state persistence fails
+        event StatePersistenceFailure(
+            operation: string size 20 @< Operation that failed (save/load)
+            status: I32 @< File operation status code
+        ) \
+            severity warning low \
+            format "State persistence {} failed with status {}"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------

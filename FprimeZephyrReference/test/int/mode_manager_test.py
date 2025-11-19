@@ -1,7 +1,7 @@
 """
 mode_manager_test.py:
 
-Integration tests for the ModeManager component (simplified on/off mode).
+Integration tests for the ModeManager component (safe/normal mode).
 
 Tests cover:
 - Basic functionality and telemetry
