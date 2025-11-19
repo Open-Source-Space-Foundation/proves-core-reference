@@ -97,6 +97,53 @@ and run it by running
 
 > make gds-with-framer
 
+#### Configuring Plugin Parameters
+
+The authentication plugin supports several configurable parameters that can be set via command-line arguments when running `fprime-gds`. These parameters control the authentication behavior on the ground station side to match the flight software configuration.
+
+**Available Parameters:**
+
+| Parameter | CLI Argument | Type | Default | Description |
+|-----------|--------------|------|---------|-------------|
+| Initial Sequence Number | `--initial-sequence-number` | int | 0 | Starting sequence number for authentication packets |
+| SPI | `--spi` | int | 1 | Security Parameter Index used to identify the Security Association |
+| Window Size | `--window-size` | int | 50 | Sequence number window size for anti-replay protection |
+| Authentication Type | `--authentication-type` | string | "HMAC" | Type of authentication algorithm (currently supports HMAC) |
+| Authentication Key | `--authentication-key` | string | "0x65b32a18e0c63a347b56e8ae6c51358a" | Secret key as hex string with 0x prefix (must match flight software) |
+
+**Usage Examples:**
+
+```bash
+# Use all default values
+fprime-gds --framing authenticate-space-data-link
+
+# Set a custom initial sequence number
+fprime-gds --framing authenticate-space-data-link --initial-sequence-number 100
+
+# Set multiple parameters
+fprime-gds --framing authenticate-space-data-link \
+  --spi 5 \
+  --initial-sequence-number 1000 \
+  --window-size 100 \
+  --authentication-key "0x1234567890abcdef1234567890abcdef"
+
+# Configure all parameters
+fprime-gds --framing authenticate-space-data-link \
+  --spi 10 \
+  --initial-sequence-number 5000 \
+  --window-size 200 \
+  --authentication-type "HMAC" \
+  --authentication-key "0xabcdef1234567890abcdef1234567890"
+```
+
+**Important Notes:**
+
+- The `--authentication-key` must match the key configured in the flight software's SPI dictionary (`spi_dict.txt`) for the corresponding SPI value
+- The `--initial-sequence-number` should be synchronized with the flight software's current sequence number to avoid authentication failures
+- The `--window-size` should match the `SEQ_NUM_WINDOW` parameter configured in the flight software
+- All parameters are optional and will use their defaults if not specified
+- To view all available arguments, run: `fprime-gds --help`
+
 ### Uploads to run this code
 
 To run the SPI selection (otherwise the encryption will be the default encryption), you should Uplink the spi_dict.txt file in the AuthenticateFiles folder
