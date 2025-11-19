@@ -282,7 +282,11 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     ComCfg::FrameContext contextOut = context;
 
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
-    if (data.getSize() < 12 + SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
+    // some packets will be missed here, because we don't have a clear way to tell if the packet is long because its
+    // authenticating or because its not a valid packet.
+    // later we will change the integration tests to all run on plugins, but for now, only the 12 bytes will be
+    // authenticated.
+    if (data.getSize() != 12 + SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
         // return the packet, set to unauthenticated
         U32 newCount = this->rejectedPacketsCount.load() + 1;
         this->rejectedPacketsCount.store(newCount);
