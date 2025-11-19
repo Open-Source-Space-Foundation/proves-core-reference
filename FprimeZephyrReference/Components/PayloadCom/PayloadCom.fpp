@@ -1,7 +1,7 @@
 module Components {
     @ Barebones UART communication layer for payload (Nicla Vision camera)
     @ Handles UART forwarding and ACK handshake, protocol processing done by specific payload handler
-    passive component PayloadCom {
+    active component PayloadCom {
 
         event CommandForwardError(cmd: string) severity warning high format "Failed to send {} command over UART"
 
@@ -12,7 +12,7 @@ module Components {
         event AckSent() severity activity low format "ACK sent to payload"
 
         @ Receives the desired command to forward through the payload UART
-        sync input port commandIn: Drv.ByteStreamData
+        async input port commandIn: Drv.ByteStreamData
 
         @ Receives data from the UART, forwards to handler and sends ACK
         sync input port uartDataIn: Drv.ByteStreamData

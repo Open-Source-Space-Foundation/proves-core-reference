@@ -1,14 +1,14 @@
 module Components {
     @ Active component that handles camera-specific payload protocol processing and file saving
     @ Receives data from PayloadCom, parses image protocol, saves files
-    active component CameraHandler {
+    passive component CameraHandler {
 
         # Commands
         @ Type in "snap" to capture an image
-        async command TAKE_IMAGE()
+        sync command TAKE_IMAGE()
 
         @ Send command to camera via PayloadCom
-        async command SEND_COMMAND(cmd: string)
+        sync command SEND_COMMAND(cmd: string)
 
         # Events for protocol processing and file handling
         event CommandError(cmd: string) severity warning high format "Failed to send {} command"
