@@ -47,42 +47,15 @@ class ModeManager : public ModeManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    //! Handler implementation for watchdogFaultSignal
-    //!
-    //! Port to receive watchdog fault signal on boot
-    void watchdogFaultSignal_handler(FwIndexType portNum  //!< The port number
-                                     ) override;
-
     //! Handler implementation for forceSafeMode
     //!
     //! Port to force safe mode entry (callable by other components)
     void forceSafeMode_handler(FwIndexType portNum  //!< The port number
                                ) override;
 
-    //! Handler implementation for clearAllFaults
-    //!
-    //! Port to clear all faults (callable by other components)
-    void clearAllFaults_handler(FwIndexType portNum  //!< The port number
-                                ) override;
-
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
-
-    //! Handler implementation for command CLEAR_VOLTAGE_FAULT
-    void CLEAR_VOLTAGE_FAULT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                        U32 cmdSeq            //!< The command sequence number
-                                        ) override;
-
-    //! Handler implementation for command CLEAR_WATCHDOG_FAULT
-    void CLEAR_WATCHDOG_FAULT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                         U32 cmdSeq            //!< The command sequence number
-                                         ) override;
-
-    //! Handler implementation for command CLEAR_EXTERNAL_FAULT
-    void CLEAR_EXTERNAL_FAULT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                         U32 cmdSeq            //!< The command sequence number
-                                         ) override;
 
     //! Handler implementation for command FORCE_SAFE_MODE
     void FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
@@ -136,9 +109,6 @@ class ModeManager : public ModeManagerComponentBase {
     //! Persistent state structure
     struct PersistentState {
         U8 mode;                 //!< Current mode (SystemMode)
-        bool voltageFaultFlag;   //!< Voltage fault flag
-        bool watchdogFaultFlag;  //!< Watchdog fault flag
-        bool externalFaultFlag;  //!< External fault flag
         U32 safeModeEntryCount;  //!< Number of times safe mode entered
     };
 
@@ -147,9 +117,6 @@ class ModeManager : public ModeManagerComponentBase {
     // ----------------------------------------------------------------------
 
     SystemMode m_mode;         //!< Current system mode
-    bool m_voltageFaultFlag;   //!< Voltage fault flag
-    bool m_watchdogFaultFlag;  //!< Watchdog fault flag
-    bool m_externalFaultFlag;  //!< External fault flag
     U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
     F32 m_currentVoltage;      //!< Current system voltage
     U32 m_runCounter;          //!< Counter for run handler calls (1Hz)

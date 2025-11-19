@@ -230,9 +230,6 @@ module ReferenceDeployment {
     }
 
     connections ModeManager {
-      # Watchdog fault signal to mode manager
-      watchdog.watchdogFault -> modeManager.watchdogFaultSignal
-
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
 

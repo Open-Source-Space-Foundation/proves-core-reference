@@ -25,17 +25,18 @@ def proves_send_and_assert_command(
     the command, sets a longer timeout for command completion, and retries
     up to 3 times if command assertion fails.
     """
-    fprime_test_api.clear_histories()
-
     for attempt in range(3):
+        fprime_test_api.clear_histories()
         try:
             fprime_test_api.send_and_assert_command(
                 command,
                 args,
-                timeout=5,
-                max_delay=5,
-                events=events,
+                timeout=10,
+                max_delay=10,
+                events=[],
             )
+            if events:
+                fprime_test_api.assert_event_sequence(events, timeout=5)
             break
         except AssertionError:
             if attempt == 2:

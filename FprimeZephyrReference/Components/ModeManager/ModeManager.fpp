@@ -10,14 +10,9 @@ module Components {
         @ Port receiving calls from the rate group (1Hz)
         sync input port run: Svc.Sched
 
-        @ Port to receive watchdog fault signal on boot
-        async input port watchdogFaultSignal: Fw.Signal
-
         @ Port to force safe mode entry (callable by other components)
         async input port forceSafeMode: Fw.Signal
 
-        @ Port to clear all faults (callable by other components)
-        async input port clearAllFaults: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports
@@ -39,24 +34,12 @@ module Components {
         # Commands
         # ----------------------------------------------------------------------
 
-        @ Command to clear voltage fault flag
-        @ Only succeeds if voltage > 7.5V
-        sync command CLEAR_VOLTAGE_FAULT()
-
-        @ Command to clear watchdog fault flag
-        @ Can be cleared any time (manual only)
-        sync command CLEAR_WATCHDOG_FAULT()
-
-        @ Command to clear external fault flag
-        @ Can be cleared any time (manual only)
-        sync command CLEAR_EXTERNAL_FAULT()
 
         @ Command to force system into safe mode
         sync command FORCE_SAFE_MODE()
 
         @ Command to manually exit safe mode
-        @ Only succeeds if all faults are cleared
-        @ Required after watchdog faults (prevents boot loops)
+        @ Only succeeds if currently in safe mode
         sync command EXIT_SAFE_MODE()
 
         # ----------------------------------------------------------------------
@@ -73,41 +56,18 @@ module Components {
         @ Event emitted when exiting safe mode
         event ExitingSafeMode() \
             severity activity high \
-            format "Exiting safe mode - all faults cleared"
+            format "Exiting safe mode"
 
-        @ Event emitted when voltage fault is detected
-        event VoltageFaultDetected(
-            voltage: F32 @< Current voltage level
-        ) \
-            severity warning high \
-            format "Voltage fault detected: {} V (threshold: 7.0V)"
-
-        @ Event emitted when voltage fault is cleared
-        event VoltageFaultCleared(
-            voltage: F32 @< Current voltage level
-        ) \
+        @ Event emitted when safe mode is manually commanded
+        event ManualSafeModeEntry() \
             severity activity high \
-            format "Voltage fault cleared: {} V"
-
-        @ Event emitted when watchdog fault is detected
-        event WatchdogFaultDetected() \
-            severity warning high \
-            format "Watchdog fault detected - system was reset by watchdog timeout"
-
-        @ Event emitted when watchdog fault is cleared
-        event WatchdogFaultCleared() \
-            severity activity high \
-            format "Watchdog fault cleared by ground command"
+            format "Safe mode entry commanded manually"
 
         @ Event emitted when external fault is detected
         event ExternalFaultDetected() \
             severity warning high \
             format "External fault detected - external component forced safe mode"
 
-        @ Event emitted when external fault is cleared
-        event ExternalFaultCleared() \
-            severity activity high \
-            format "External fault cleared by ground command"
 
         @ Event emitted when command validation fails
         event CommandValidationFailed(
@@ -124,14 +84,6 @@ module Components {
         @ Current system mode
         telemetry CurrentMode: U8
 
-        @ Voltage fault flag status
-        telemetry VoltageFaultFlag: bool
-
-        @ Watchdog fault flag status
-        telemetry WatchdogFaultFlag: bool
-
-        @ External fault flag status
-        telemetry ExternalFaultFlag: bool
 
         @ Current system voltage
         telemetry CurrentVoltage: F32
@@ -139,15 +91,6 @@ module Components {
         @ Number of times safe mode has been entered
         telemetry SafeModeEntryCount: U32
 
-        # ----------------------------------------------------------------------
-        # Parameters
-        # ----------------------------------------------------------------------
-
-        @ Voltage threshold to enter safe mode (default: 7.0V)
-        param VOLTAGE_ENTRY_THRESHOLD: F32 default 7.0
-
-        @ Voltage threshold to allow clearing voltage fault (default: 7.5V)
-        param VOLTAGE_EXIT_THRESHOLD: F32 default 7.5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

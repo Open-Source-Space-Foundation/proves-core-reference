@@ -12,9 +12,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
-    ReferenceDeployment.modeManager.VoltageFaultFlag
-    ReferenceDeployment.modeManager.WatchdogFaultFlag
-    ReferenceDeployment.modeManager.ExternalFaultFlag
+    ReferenceDeployment.modeManager.SafeModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -91,9 +89,8 @@ telemetry packets ReferenceDeploymentPackets {
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
-  # ModeManager non-critical telemetry (voltage available from INA219, count is diagnostic only)
+  # ModeManager non-critical telemetry (voltage available from INA219)
   ReferenceDeployment.modeManager.CurrentVoltage
-  ReferenceDeployment.modeManager.SafeModeEntryCount
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
   CdhCore.version.LibraryVersion03
