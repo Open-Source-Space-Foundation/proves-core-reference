@@ -168,11 +168,10 @@ void ModeManager ::enterSafeMode(const char* reasonOverride) {
     // Build reason string
     Fw::LogStringArg reasonStr;
     char reasonBuf[100];
-    reasonBuf[0] = '\0';
     if (reasonOverride != nullptr) {
         reasonStr = reasonOverride;
     } else {
-        snprintf(reasonBuf, sizeof(reasonBuf), "Manual entry");
+        snprintf(reasonBuf, sizeof(reasonBuf), "Unknown");
         reasonStr = reasonBuf;
     }
 
