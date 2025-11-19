@@ -132,13 +132,7 @@ void ModeManager ::loadState() {
 
 void ModeManager ::saveState() {
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_WRITE);
-
-    if (status != Os::File::OP_OK) {
-        // Try to create the file
-        status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
-    }
-
+    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
     if (status == Os::File::OP_OK) {
         PersistentState state;
         state.mode = static_cast<U8>(this->m_mode);
