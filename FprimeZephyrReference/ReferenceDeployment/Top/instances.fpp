@@ -137,4 +137,5 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
+  instance authenticate: Components.Authenticate base id 0x10040000
 }
