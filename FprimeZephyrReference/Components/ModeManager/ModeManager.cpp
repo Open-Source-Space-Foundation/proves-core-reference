@@ -22,8 +22,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_currentVoltage(0.0f),
-      m_runCounter(0),
-      m_initialized(false) {}
+      m_runCounter(0) {}
 
 ModeManager ::~ModeManager() {}
 
@@ -31,25 +30,11 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
     ModeManagerComponentBase::init(queueDepth, instance);
 }
 
-void ModeManager ::preamble() {
-    // Load persistent state from file
-    this->loadState();
-    this->m_initialized = true;
-
-    // Emit initial telemetry
-    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
-    this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
-}
-
 // ----------------------------------------------------------------------
 // Handler implementations for user-defined typed input ports
 // ----------------------------------------------------------------------
 
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
-    if (!this->m_initialized) {
-        return;
-    }
-
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
 

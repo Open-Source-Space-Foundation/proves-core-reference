@@ -32,9 +32,6 @@ class ModeManager : public ModeManagerComponentBase {
               FwEnumStoreType instance = 0  //!< Instance ID
     );
 
-    //! Preamble function called before scheduler starts
-    void preamble();
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for user-defined typed input ports
@@ -120,7 +117,6 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
     F32 m_currentVoltage;      //!< Current system voltage
     U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
-    bool m_initialized;        //!< Initialization flag
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 };

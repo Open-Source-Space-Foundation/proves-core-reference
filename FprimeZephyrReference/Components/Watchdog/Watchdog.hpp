@@ -28,9 +28,6 @@ class Watchdog : public WatchdogComponentBase {
     //! Destroy Watchdog object
     ~Watchdog();
 
-    //! Preamble function called before scheduler starts
-    void preamble();
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for user-defined typed input ports
