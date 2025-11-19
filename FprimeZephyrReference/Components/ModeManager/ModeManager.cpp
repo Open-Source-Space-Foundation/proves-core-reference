@@ -106,9 +106,10 @@ void ModeManager ::loadState() {
     if (status == Os::File::OP_OK) {
         PersistentState state;
         FwSizeType size = sizeof(PersistentState);
-        status = file.read(reinterpret_cast<U8*>(&state), size, Os::File::WaitType::WAIT);
+        FwSizeType bytesRead = size;
+        status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
 
-        if (status == Os::File::OP_OK && size == sizeof(PersistentState)) {
+        if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
             // Validate state data before restoring
             if (state.mode <= static_cast<U8>(SystemMode::SAFE_MODE)) {
                 // Valid mode value - restore state
