@@ -47,6 +47,13 @@ void PayloadCom ::uartDataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, co
 }
 
 void PayloadCom ::commandIn_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
+    // Log received command for debugging
+    if (buffer.isValid()) {
+        U32 size = static_cast<U32>(buffer.getSize());
+        Fw::LogStringArg logStr("Forwarding command");
+        this->log_ACTIVITY_HI_CommandForwardSuccess(logStr);
+    }
+    
     // Forward command from CameraHandler to UART
     // uartForward is ByteStreamSend which returns status
     Drv::ByteStreamStatus sendStatus = this->uartForward_out(0, buffer);
@@ -55,6 +62,9 @@ void PayloadCom ::commandIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
     if (sendStatus != Drv::ByteStreamStatus::OP_OK) {
         Fw::LogStringArg logStr("command");
         this->log_WARNING_HI_CommandForwardError(logStr);
+    } else {
+        Fw::LogStringArg logStr("command");
+        this->log_ACTIVITY_HI_CommandForwardSuccess(logStr);
     }
 }
 

@@ -38,9 +38,6 @@ module Components {
         @ Receives data from PayloadCom, handles image protocol parsing and file saving
         sync input port dataIn: Drv.ByteStreamData
 
-        @ Return buffers after processing
-        output port bufferReturn: Fw.BufferSend
-
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################

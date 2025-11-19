@@ -225,9 +225,6 @@ module ReferenceDeployment {
       payload.uartDataOut -> cameraHandler.dataIn
       cameraHandler.commandOut -> payload.commandIn
       
-      # CameraHandler buffer return (after processing data)
-      cameraHandler.bufferReturn -> payloadBufferManager.bufferSendIn
-      
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn

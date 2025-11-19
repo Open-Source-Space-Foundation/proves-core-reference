@@ -39,10 +39,7 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         if (m_receiving && m_fileOpen) {
             handleFileError();
         }
-        // Return buffer even on error
-        if (buffer.isValid()) {
-            this->bufferReturn_out(0, buffer);
-        }
+        // NOTE: PayloadCom will handle buffer return, not us
         return;
     }
 
@@ -75,8 +72,6 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
             // Write failed
             this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write failed"));
             handleFileError();
-            // Return buffer even on error
-            this->bufferReturn_out(0, buffer);
             return;
         }
         
@@ -136,8 +131,8 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         processProtocolBuffer();
     }
     
-    // Return buffer to allow reuse
-    this->bufferReturn_out(0, buffer);
+    // NOTE: Do NOT return buffer here - PayloadCom owns the buffer and will return it
+    // Returning it twice causes buffer management issues
 }
 
 // ----------------------------------------------------------------------

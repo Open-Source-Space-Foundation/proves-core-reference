@@ -12,10 +12,10 @@ module Components {
         event AckSent() severity activity low format "ACK sent to payload"
 
         @ Receives the desired command to forward through the payload UART
-        async input port commandIn: Drv.ByteStreamData
+        sync input port commandIn: Drv.ByteStreamData
 
         @ Receives data from the UART, forwards to handler and sends ACK
-        sync input port uartDataIn: Drv.ByteStreamData
+        async input port uartDataIn: Drv.ByteStreamData
 
         @ Sends data to the UART (forwards commands and acknowledgement signals)
         output port uartForward: Drv.ByteStreamSend
