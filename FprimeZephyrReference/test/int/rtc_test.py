@@ -28,6 +28,10 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
     # Wait for system to restart after reset
     fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
+    # Wait for command dispatcher to be ready by sending a NO_OP command
+    fprime_test_api.send_and_assert_command(
+        command=f"{cmdDispatch}.CMD_NO_OP", timeout=10
+    )
     set_time(fprime_test_api)
     fprime_test_api.clear_histories()
 
