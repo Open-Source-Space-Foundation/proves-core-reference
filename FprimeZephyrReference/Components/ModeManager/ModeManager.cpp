@@ -56,7 +56,6 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Force entry into safe mode (called by other components)
     // Provides immediate safe mode entry for critical component-detected faults
     this->log_WARNING_HI_ExternalFaultDetected();
-    this->saveState();
 
     if (this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode("External component request");
@@ -70,7 +69,6 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
 void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Force entry into safe mode
     this->log_ACTIVITY_HI_ManualSafeModeEntry();
-    this->saveState();
 
     if (this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode("Ground command");
