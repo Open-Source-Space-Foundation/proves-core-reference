@@ -10,12 +10,13 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-const struct device* ina219Sys = device_get_binding("INA219 sys");
-const struct device* ina219Sol = device_get_binding("INA219 sol");
+const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
+const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
+const struct device* rtc = DEVICE_DT_GET(DT_NODELABEL(rtc0));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -32,6 +33,7 @@ int main(int argc, char* argv[]) {
     inputs.uartDevice = serial;
     inputs.lsm6dsoDevice = lsm6dso;
     inputs.lis2mdlDevice = lis2mdl;
+    inputs.rtcDevice = rtc;
     inputs.baudRate = 115200;
 
     printk("starting setup...\n");

@@ -6,14 +6,11 @@
 #ifndef Components_RtcManager_HPP
 #define Components_RtcManager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
-
-#include <cerrno>
-#include <string>
-#include <vector>
-
 #include <Fw/Logger/Logger.hpp>
+#include <atomic>
+#include <cerrno>
 
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
@@ -34,6 +31,14 @@ class RtcManager final : public RtcManagerComponentBase {
 
     //! Destroy RtcManager object
     ~RtcManager();
+
+  public:
+    // ----------------------------------------------------------------------
+    // Public helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the RTC device
+    void configure(const struct device* dev);
 
   private:
     // ----------------------------------------------------------------------
@@ -60,16 +65,25 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
+    //! Handler implementation for command TEST_UNCONFIGURE_DEVICE
+    //!
+    //! TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time
+    //! since boot.
+    void TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                            U32 cmdSeq            //!< The command sequence number
+                                            ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
     //! device stores the initialized Zephyr RTC device
-    const struct device* dev;
+    const struct device* m_dev;
 };
 
 }  // namespace Drv

@@ -5,9 +5,10 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/FsSpace/FsSpace.hpp"
+
+#include "Os/FileSystem.hpp"
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
-#include "Os/FileSystem.hpp"
 
 namespace Components {
 
