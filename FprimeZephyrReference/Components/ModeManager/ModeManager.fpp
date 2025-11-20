@@ -1,4 +1,17 @@
 module Components {
+
+    @ System mode enumeration
+    enum SystemMode {
+        NORMAL = 0 @< Normal operational mode
+        SAFE_MODE = 1 @< Safe mode with non-critical components powered off
+    }
+
+    @ Port for notifying about mode changes
+    port SystemModeChanged(mode: SystemMode)
+
+    @ Port for querying the current system mode
+    port GetSystemMode -> SystemMode
+
     @ Component to manage system modes and orchestrate safe mode transitions
     @ based on voltage, watchdog faults, and communication timeouts
     active component ModeManager {
@@ -13,13 +26,15 @@ module Components {
         @ Port to force safe mode entry (callable by other components)
         async input port forceSafeMode: Fw.Signal
 
+        @ Port to query the current system mode
+        sync input port getMode: Components.GetSystemMode
 
         # ----------------------------------------------------------------------
         # Output Ports
         # ----------------------------------------------------------------------
 
-        @ Port to notify other components of mode changes
-        output port modeChanged: Fw.Signal
+        @ Port to notify other components of mode changes (with current mode)
+        output port modeChanged: Components.SystemModeChanged
 
         @ Ports to turn on LoadSwitch instances (8 total)
         output port loadSwitchTurnOn: [8] Fw.Signal

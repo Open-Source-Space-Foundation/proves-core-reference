@@ -50,6 +50,12 @@ class ModeManager : public ModeManagerComponentBase {
     void forceSafeMode_handler(FwIndexType portNum  //!< The port number
                                ) override;
 
+    //! Handler implementation for getMode
+    //!
+    //! Port to query the current system mode
+    Components::SystemMode getMode_handler(FwIndexType portNum  //!< The port number
+                                           ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------

@@ -63,6 +63,12 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     }
 }
 
+Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
+    // Return the current system mode
+    // Convert internal C++ enum to FPP-generated enum type
+    return static_cast<Components::SystemMode::T>(this->m_mode);
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
@@ -214,9 +220,10 @@ void ModeManager ::enterSafeMode(const char* reasonOverride) {
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
 
-    // Notify other components of mode change
+    // Notify other components of mode change with new mode value
     if (this->isConnected_modeChanged_OutputPort(0)) {
-        this->modeChanged_out(0);
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
     }
 
     // Save state
@@ -235,9 +242,10 @@ void ModeManager ::exitSafeMode() {
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
 
-    // Notify other components of mode change
+    // Notify other components of mode change with new mode value
     if (this->isConnected_modeChanged_OutputPort(0)) {
-        this->modeChanged_out(0);
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
     }
 
     // Save state
