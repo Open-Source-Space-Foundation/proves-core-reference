@@ -26,6 +26,9 @@ module Components {
         @ Radio Module Reset GPIO
         output port resetSend: Drv.GpioWrite
 
+        @ S-Band radio busy read (caller port)
+        output port gpioBusyRead: Drv.GpioRead
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
