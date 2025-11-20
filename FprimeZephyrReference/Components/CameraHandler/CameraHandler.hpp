@@ -87,6 +87,9 @@ class CameraHandler final : public CameraHandlerComponentBase {
     //! Returns true if line is "<IMG_START>"
     bool isImageStartCommand(const U8* line, U32 length);
 
+    //! Send acknowledgment through PayloadCom to UART
+    void sendAck();
+
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------

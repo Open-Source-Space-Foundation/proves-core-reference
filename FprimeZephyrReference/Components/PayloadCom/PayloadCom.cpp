@@ -38,8 +38,8 @@ void PayloadCom ::uartDataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, co
     // Forward data to specific payload handler for protocol processing
     this->uartDataOut_out(0, buffer, status);
 
-    // Send ACK to acknowledge receipt
-    sendAck();
+    // NOTE: CameraHandler will send ACKs after successful file operations
+    // No ACK sent here - let the handler decide when to ACK
         
     // CRITICAL: Return buffer to driver so it can deallocate to BufferManager
     // This matches the ComStub pattern: driver allocates, handler processes, handler returns

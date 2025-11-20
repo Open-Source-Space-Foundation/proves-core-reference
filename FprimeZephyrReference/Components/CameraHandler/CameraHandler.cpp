@@ -8,9 +8,8 @@
 #include "Os/File.hpp"
 #include "Fw/Types/Assert.hpp"
 #include "Fw/Types/BasicTypes.hpp"
-#include <cstring>
-#include <cstdio>
 #include "FprimeZephyrReference/Components/CameraHandler/CameraHandler.hpp"
+#include <cstring>
 
 namespace Components {
 
@@ -76,6 +75,9 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         }
         
         m_bytes_received += toWrite;
+        
+        // Send ACK after successfully writing chunk
+        sendAck();
         
         // Log progress less frequently to reduce system load (every 512 bytes)
         if ((m_bytes_received % 512) < 64) {
@@ -313,8 +315,8 @@ void CameraHandler ::processProtocolBuffer() {
         m_fileOpen = true;
         this->log_ACTIVITY_LO_ImageHeaderReceived();
 
-        // NOTE: PayloadCom sends ACK automatically after forwarding data
-        // No need to send ACK here - that's handled by the communication layer
+        // Send ACK to camera after successfully parsing header and opening file
+        sendAck();
         
         // Remove header from protocol buffer
         U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
@@ -392,7 +394,8 @@ void CameraHandler ::finalizeImageTransfer() {
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
     this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
     
-    // NOTE: PayloadCom sends ACK automatically - no need to send here
+    // Send final ACK to camera to confirm complete transfer
+    sendAck();
 
     // Reset state
     m_receiving = false;
@@ -461,5 +464,16 @@ bool CameraHandler ::isImageStartCommand(const U8* line, U32 length) {
     }
     
     return true;
+}
+
+void CameraHandler ::sendAck() {
+    // Send an acknowledgment through PayloadCom to UART
+    const char* ackMsg = "<MOISES>\n";
+    Fw::Buffer ackBuffer(
+        reinterpret_cast<U8*>(const_cast<char*>(ackMsg)), 
+        strlen(ackMsg)
+    );
+    // Send through commandOut port which PayloadCom forwards to UART
+    this->commandOut_out(0, ackBuffer, Drv::ByteStreamStatus::OP_OK);
 }
 }  // namespace Components
