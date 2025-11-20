@@ -20,16 +20,22 @@ void FprimeHal::attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void)
 
 void FprimeHal::detachInterrupt(uint32_t interruptNum) {}
 
-void FprimeHal::delay(unsigned long ms) {}
+void FprimeHal::delay(unsigned long ms) {
+    Os::Task::delay(Fw::TimeInterval(0, ms * 1000));
+}
 
-void FprimeHal::delayMicroseconds(unsigned long us) {}
+void FprimeHal::delayMicroseconds(unsigned long us) {
+    Os::Task::delay(Fw::TimeInterval(0, us));
+}
 
 unsigned long FprimeHal::millis() {
-    return 0;
+    Fw::Time time = this->m_component->getTime();
+    return time.getSeconds() * 1000 + time.getUSeconds() / 1000;
 }
 
 unsigned long FprimeHal::micros() {
-    return 0;
+    Fw::Time time = this->m_component->getTime();
+    return time.getSeconds() * 1000000 + time.getUSeconds();
 }
 
 long FprimeHal::pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) {
