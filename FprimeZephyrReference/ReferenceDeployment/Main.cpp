@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {
     inputs.lis2mdlDevice = lis2mdl;
     inputs.baudRate = 115200;
 
+    printk("starting setup...\n");
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);
     ReferenceDeployment::startRateGroups();  // Program loop
