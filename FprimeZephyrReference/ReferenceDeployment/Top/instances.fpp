@@ -103,6 +103,8 @@ module ReferenceDeployment {
 
   instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10044000
 
+  instance gpioSbandBusy: Zephyr.ZephyrGpioDriver base id 0x10045000
+
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
   instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
