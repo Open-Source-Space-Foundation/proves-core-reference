@@ -46,10 +46,14 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FprimeHal hal(this);
     Module m(&hal, 0, 0, 0);
-    SX1281 radio(&m);
-    radio.modSetup(RADIOLIB_SX128X_PACKET_TYPE_GFSK);
-    U8 status = radio.getStatus();
-    Fw::Logger::log("radio status: %" PRI_U8 "\n", status);
+    SX1280 radio(&m);
+    int state = radio.begin();
+    if (state == RADIOLIB_ERR_NONE) {
+        Fw::Logger::log("radio.begin() success!\n");
+    } else {
+        Fw::Logger::log("radio.begin() failed!\n");
+        Fw::Logger::log("state: %i\n", state);
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
