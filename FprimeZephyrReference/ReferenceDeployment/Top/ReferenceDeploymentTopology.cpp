@@ -88,31 +88,23 @@ namespace ReferenceDeployment {
 void setupTopology(const TopologyState& state) {
 
     // Autocoded initialization. Function provided by autocoder.
-    printk("init components\n");
     initComponents(state);
     // Autocoded id setup. Function provided by autocoder.
-    printk("base Ids\n");
     setBaseIds();
     // Autocoded connection wiring. Function provided by autocoder.
-    printk("connect components\n");
     connectComponents();
     // Autocoded command registration. Function provided by autocoder.
-    printk("reg commands\n");
     regCommands();
     // Autocoded configuration. Function provided by autocoder.
-    printk("config components\n");
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
-    printk("configure topology\n");
     configureTopology();
     // Read parameters from persistent storage
     printk("read params\n");
     readParameters();
     // Autocoded parameter loading. Function provided by autocoder.
-    printk("load params\n");
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
-    printk("start tasks\n");
     startTasks(state);
 
     // Try to configure the RTC device first because all other components need time
@@ -121,16 +113,11 @@ void setupTopology(const TopologyState& state) {
 
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.
-    printk("lora start\n");
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
-    printk("com driver configure\n");
     comDriver.configure(state.uartDevice, state.baudRate);
 
-    printk("initializing log file... \n");
-    TlmLoggerTee::comLog.init_log_file("/Tlm", 1024 * 30, true);
-    EventLoggerTee::comLog.init_log_file("/Event", 1024 * 30, true);
-    printk("log file initialized\n");
-    
+    TlmLoggerTee::comLog.init_log_file("/ComLoggerFiles/Tlm", 1024 * 30, true);
+
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);

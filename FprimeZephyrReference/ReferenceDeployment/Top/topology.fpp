@@ -100,8 +100,6 @@ module ReferenceDeployment {
       EventLoggerTee.comSplitter.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
       EventLoggerTee.comSplitter.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
-      # CdhCore.tlmSend.PktSend -> TlmLoggerTee.comSplitter.comIn
-      # TlmLoggerTee.comSplitter.comOut -> comSplitterTelemetry.comIn
       CdhCore.tlmSend.PktSend -> TlmLoggerTee.comSplitter.comIn
       TlmLoggerTee.comSplitter.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       TlmLoggerTee.comSplitter.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
