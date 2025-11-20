@@ -1,6 +1,14 @@
 # Components::ModeManager
 
-The ModeManager component manages system operational modes and orchestrates safe mode transitions based on voltage monitoring, watchdog faults, and communication timeouts. It provides centralized mode management for the satellite, controlling power to non-critical components during safe mode and maintaining mode state across reboots.
+The ModeManager component manages system operational modes and orchestrates transitions (NORMAL, SAFE_MODE, and planned PAYLOAD and HIBERNATION modes). It evaluates voltage monitoring, watchdog faults, and communication timeouts to make mode decisions, controls power to non‑critical subsystems during transitions, and maintains/persists mode state across reboots to ensure consistent post‑recovery behavior.
+
+Planned additions:
+- PAYLOAD mode — A mid‑power operational mode that prioritizes payload activity while limiting non‑critical subsystems; intended for mission operations when power is constrained but payload operation must continue.
+- HIBERNATION mode — A deep low‑power state for long‑term battery preservation, with strict wake conditions (e.g., RTC alarm, hardware wake interrupt); minimal subsystems remain active.
+- ModeManager will extend its API and telemetry: new commands (ENTER/EXIT_PAYLOAD, ENTER/EXIT_HIBERNATION), an expanded SystemMode enumeration, modeChanged notifications reflecting new modes, and getMode support for queries.
+- Persistence and validation: new modes will be persisted like existing modes, restored on boot, and have explicit validation for entry/exit (e.g., exit from HIBERNATION requires approved wake condition).
+
+These mode additions will be integrated incrementally with corresponding telemetry, events, commands, unit tests, and integration tests to verify correct behavior, power control, and persistence semantics.
 
 ## Requirements
 | Name | Description | Validation |
