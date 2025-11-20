@@ -373,6 +373,9 @@ bool CameraHandler ::writeChunkToFile(const U8* data, U32 size) {
         ptr += toWrite;
     }
     
+    // Log bytes written
+    this->log_ACTIVITY_LO_ChunkWritten(totalWritten);
+    
     return true;
 }
 

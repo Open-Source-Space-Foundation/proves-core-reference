@@ -23,6 +23,8 @@ module Components {
 
         event ImageTransferProgress(received: U32, expected: U32) severity activity low format "Transfer progress: {}/{} bytes"
 
+        event ChunkWritten(chunkSize: U32) severity activity low format "Wrote {} bytes to file"
+
         event ImageDataOverflow() severity warning high format "Image data overflow - buffer full"
 
         event ProtocolBufferDebug(bufSize: U32, firstByte: U8) severity activity low format "Protocol buffer: {} bytes, first: 0x{x}"
