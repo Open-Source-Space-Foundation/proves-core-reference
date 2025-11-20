@@ -140,8 +140,8 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
 // ----------------------------------------------------------------------
 
 void CameraHandler ::TAKE_IMAGE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // TODO: Implement image capture command
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    const char* takeImageCmd = "snap";
+    SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(takeImageCmd));
 }
 
 void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
