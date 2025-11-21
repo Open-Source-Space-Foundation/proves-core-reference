@@ -7,6 +7,8 @@
 
 #include <Fw/Types/Assert.hpp>
 
+#include <zephyr/kernel.h>
+
 namespace Drv {
 
 // ----------------------------------------------------------------------
@@ -32,7 +34,7 @@ void Lis2mdlManager ::configure(const struct device* dev) {
 Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum) {
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0);
+        return Drv::MagneticField(0.0, 0.0, 0.0, -1);
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
@@ -46,8 +48,8 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Z, &z);
 
-    Drv::MagneticField magnetic_readings =
-        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+    Drv::MagneticField magnetic_readings = Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y),
+                                                              sensor_value_to_double(&z), k_uptime_get());
 
     this->tlmWrite_MagneticField(magnetic_readings);
 

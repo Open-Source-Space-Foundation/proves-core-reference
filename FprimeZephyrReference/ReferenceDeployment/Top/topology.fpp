@@ -40,7 +40,7 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance imuManager
+    instance DetumbleManager
     instance lis2mdlManager
     instance lsm6dsoManager
     instance bootloaderTrigger
@@ -67,6 +67,7 @@ module ReferenceDeployment {
     instance ina219SysManager
     instance ina219SolManager
     instance resetManager
+    instance magnetorquerManager
 
 
   # ----------------------------------------------------------------------
@@ -155,6 +156,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> DetumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -163,7 +165,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
@@ -200,11 +201,11 @@ module ReferenceDeployment {
       antennaDeployer.burnStop -> burnwire.burnStop
     }
 
-    connections imuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    connections DetumbleManager {
+      DetumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
     connections ComCcsds_FileHandling {
