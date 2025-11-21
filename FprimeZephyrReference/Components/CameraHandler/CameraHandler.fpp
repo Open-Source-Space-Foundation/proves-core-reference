@@ -33,6 +33,19 @@ module Components {
 
         event RawDataDump(byte0: U8, byte1: U8, byte2: U8, byte3: U8, byte4: U8, byte5: U8, byte6: U8, byte7: U8) severity activity low format "Raw: [{x} {x} {x} {x} {x} {x} {x} {x}]"
 
+        # Telemetry for debugging image transfer state
+        @ Number of bytes received so far in current image transfer
+        telemetry BytesReceived: U32
+        
+        @ Expected total size of image being received
+        telemetry ExpectedSize: U32
+        
+        @ Whether currently receiving image data
+        telemetry IsReceiving: bool
+        
+        @ Whether file is currently open for writing
+        telemetry FileOpen: bool
+
         # Ports
         @ Sends command to PayloadCom to be forwarded over UART
         output port commandOut: Drv.ByteStreamData

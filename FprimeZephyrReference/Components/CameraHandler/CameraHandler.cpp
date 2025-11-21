@@ -51,6 +51,12 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
     // Get the data from the buffer (we don't own it, just read it)
     const U8* data = buffer.getData();
     U32 dataSize = static_cast<U32>(buffer.getSize());
+    
+    // Emit telemetry to track state at entry to handler
+    this->tlmWrite_BytesReceived(m_bytes_received);
+    this->tlmWrite_ExpectedSize(m_expected_size);
+    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_FileOpen(m_fileOpen);
 
     // DEBUG: Log first 8 bytes ONLY if not receiving (reduces load during transfer)
     if (!m_receiving && dataSize >= 8) {
@@ -76,6 +82,10 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         }
         
         m_bytes_received += toWrite;
+        
+        // Emit telemetry after each write
+        this->tlmWrite_BytesReceived(m_bytes_received);
+        this->tlmWrite_ExpectedSize(m_expected_size);
         
         // Log progress less frequently to reduce system load (every 512 bytes)
         if ((m_bytes_received % 512) < 64) {
@@ -312,6 +322,12 @@ void CameraHandler ::processProtocolBuffer() {
         
         m_fileOpen = true;
         this->log_ACTIVITY_LO_ImageHeaderReceived();
+        
+        // Emit telemetry after opening file
+        this->tlmWrite_BytesReceived(m_bytes_received);
+        this->tlmWrite_ExpectedSize(m_expected_size);
+        this->tlmWrite_IsReceiving(m_receiving);
+        this->tlmWrite_FileOpen(m_fileOpen);
 
         // NOTE: PayloadCom sends ACK automatically after forwarding data
         // No need to send ACK here - that's handled by the communication layer
@@ -398,6 +414,12 @@ void CameraHandler ::finalizeImageTransfer() {
     m_receiving = false;
     m_bytes_received = 0;
     m_expected_size = 0;
+    
+    // Emit telemetry after finalizing
+    this->tlmWrite_BytesReceived(m_bytes_received);
+    this->tlmWrite_ExpectedSize(m_expected_size);
+    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_FileOpen(m_fileOpen);
 }
 
 void CameraHandler ::handleFileError() {
@@ -415,6 +437,12 @@ void CameraHandler ::handleFileError() {
     m_bytes_received = 0;
     m_expected_size = 0;
     clearProtocolBuffer();
+    
+    // Emit telemetry after error handling
+    this->tlmWrite_BytesReceived(m_bytes_received);
+    this->tlmWrite_ExpectedSize(m_expected_size);
+    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_FileOpen(m_fileOpen);
 }
 
 I32 CameraHandler ::findImageEndMarker(const U8* data, U32 size) {
