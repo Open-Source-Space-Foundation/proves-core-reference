@@ -201,11 +201,11 @@ module ReferenceDeployment {
       antennaDeployer.burnStop -> burnwire.burnStop
     }
 
-    connections imuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    connections DetumbleManager {
+      DetumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
     connections ComCcsds_FileHandling {
