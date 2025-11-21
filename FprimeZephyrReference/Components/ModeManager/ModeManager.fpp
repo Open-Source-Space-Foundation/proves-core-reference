@@ -107,10 +107,6 @@ module Components {
         @ Current system mode
         telemetry CurrentMode: U8
 
-
-        @ Current system voltage
-        telemetry CurrentVoltage: F32
-
         @ Number of times safe mode has been entered
         telemetry SafeModeEntryCount: U32
 

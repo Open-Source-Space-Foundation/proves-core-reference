@@ -26,7 +26,7 @@ static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
 
 // Increased from 90 to 512 buckets to accommodate anticipated future growth in telemetry channels,
 // and to minimize hash collisions for improved performance. While currently only a few new channels
-// are added (e.g., ModeManager: CurrentMode, CurrentVoltage, SafeModeEntryCount), this sizing is
+// are added (e.g., ModeManager: CurrentMode, SafeModeEntryCount), this sizing is
 // intentionally over-provisioned to support planned expansion and to ensure efficient hash table usage.
 static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS =
     512;  // !< Buckets assignable to a hash slot.

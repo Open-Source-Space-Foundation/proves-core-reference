@@ -89,8 +89,6 @@ telemetry packets ReferenceDeploymentPackets {
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
-  # ModeManager non-critical telemetry (voltage available from INA219)
-  ReferenceDeployment.modeManager.CurrentVoltage
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
   CdhCore.version.LibraryVersion03

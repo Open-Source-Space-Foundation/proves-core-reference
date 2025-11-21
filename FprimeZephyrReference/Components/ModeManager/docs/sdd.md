@@ -1,6 +1,6 @@
 # Components::ModeManager
 
-The ModeManager component manages system operational modes and orchestrates transitions (NORMAL, SAFE_MODE, and planned PAYLOAD and HIBERNATION modes). It evaluates voltage monitoring, watchdog faults, and communication timeouts to make mode decisions, controls power to non‑critical subsystems during transitions, and maintains/persists mode state across reboots to ensure consistent post‑recovery behavior.
+The ModeManager component manages system operational modes and orchestrates transitions (NORMAL, SAFE_MODE, and planned PAYLOAD and HIBERNATION modes). It evaluates watchdog faults and communication timeouts to make mode decisions, controls power to non‑critical subsystems during transitions, and maintains/persists mode state across reboots to ensure consistent post‑recovery behavior.
 
 Planned additions:
 - PAYLOAD mode — A mid‑power operational mode that prioritizes payload activity while limiting non‑critical subsystems; intended for mission operations when power is constrained but payload operation must continue.
@@ -25,8 +25,6 @@ These mode additions will be integrated incrementally with corresponding telemet
 | MM0010 | The ModeManager shall track and report the number of times safe mode has been entered | Integration Testing |
 | MM0011 | The ModeManager shall allow downstream components to query the current mode via getMode port | Unit Testing |
 | MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Unit Testing |
-| MM0013 | The ModeManager shall monitor system voltage from INA219 power monitor | Integration Testing |
-| MM0014 | The ModeManager shall wait 5 seconds after boot before monitoring voltage | Integration Testing |
 
 ## Usage Examples
 
@@ -41,8 +39,7 @@ The ModeManager component operates as an active component that manages system-wi
    - Begins 1Hz periodic execution via rate group
 
 2. **Normal Operation**
-   - Monitors system voltage every second (after 5-second boot delay)
-   - Updates telemetry channels (CurrentMode, CurrentVoltage, SafeModeEntryCount)
+   - Updates telemetry channels (CurrentMode, SafeModeEntryCount)
    - Responds to mode query requests from downstream components
 
 3. **Safe Mode Entry**
@@ -83,7 +80,6 @@ classDiagram
             <<Active Component>>
             - m_mode: SystemMode
             - m_safeModeEntryCount: U32
-            - m_currentVoltage: F32
             - m_runCounter: U32
             - STATE_FILE_PATH: const char*
             + ModeManager(const char* compName)
@@ -96,7 +92,6 @@ classDiagram
             - EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
             - loadState()
             - saveState()
-            - checkVoltageCondition()
             - enterSafeMode(const char* reason)
             - exitSafeMode()
             - turnOffNonCriticalComponents()
@@ -118,7 +113,7 @@ classDiagram
 ### Input Ports
 | Name | Type | Kind | Description |
 |---|---|---|---|
-| run | Svc.Sched | sync | Receives periodic calls from rate group (1Hz) for voltage monitoring and telemetry updates |
+| run | Svc.Sched | sync | Receives periodic calls from rate group (1Hz) for telemetry updates |
 | forceSafeMode | Fw.Signal | async | Receives safe mode requests from external components detecting faults |
 | getMode | Components.GetSystemMode | sync | Allows downstream components to query current system mode |
 
@@ -136,8 +131,7 @@ classDiagram
 |---|---|---|
 | m_mode | SystemMode | Current operational mode (NORMAL or SAFE_MODE) |
 | m_safeModeEntryCount | U32 | Number of times safe mode has been entered since initial deployment |
-| m_currentVoltage | F32 | Most recent voltage reading from INA219 power monitor |
-| m_runCounter | U32 | Counter for 1Hz run handler calls, used to implement boot delay |
+| m_runCounter | U32 | Counter for 1Hz run handler calls |
 
 ### Persistent State
 The component persists the following state to `/mode_state.bin`:
@@ -225,17 +219,10 @@ sequenceDiagram
 sequenceDiagram
     participant RateGroup
     participant ModeManager
-    participant INA219Manager
 
     RateGroup->>ModeManager: run(portNum, context)
     ModeManager->>ModeManager: Increment m_runCounter
-    alt m_runCounter >= 5
-        ModeManager->>INA219Manager: voltageGet()
-        INA219Manager-->>ModeManager: Return voltage (F64)
-        ModeManager->>ModeManager: Update m_currentVoltage
-    end
     ModeManager->>ModeManager: Write CurrentMode telemetry
-    ModeManager->>ModeManager: Write CurrentVoltage telemetry
 ```
 
 ## Commands
@@ -261,7 +248,6 @@ sequenceDiagram
 | Name | Type | Update Rate | Description |
 |---|---|---|---|
 | CurrentMode | U8 | 1Hz | Current system mode (0 = NORMAL, 1 = SAFE_MODE) |
-| CurrentVoltage | F32 | 1Hz | Current system voltage in volts from INA219 power monitor |
 | SafeModeEntryCount | U32 | On change | Number of times safe mode has been entered (persists across reboots) |
 
 ## Load Switch Mapping
@@ -311,9 +297,6 @@ The component provides both pull-based (getMode port) and push-based (modeChange
   - Avoiding polling overhead
 
 This dual approach ensures downstream components can reliably track system mode even if they miss a transition notification.
-
-### 5-Second Boot Delay
-The component waits 5 seconds after boot before monitoring voltage to allow INA219 and other hardware to fully initialize. This prevents false voltage readings during startup transients.
 
 ### State Persistence
 Mode state is persisted to `/mode_state.bin` to maintain operational context across:

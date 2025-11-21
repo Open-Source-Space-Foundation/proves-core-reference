@@ -18,11 +18,7 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 ModeManager ::ModeManager(const char* const compName)
-    : ModeManagerComponentBase(compName),
-      m_mode(SystemMode::NORMAL),
-      m_safeModeEntryCount(0),
-      m_currentVoltage(0.0f),
-      m_runCounter(0) {}
+    : ModeManagerComponentBase(compName), m_mode(SystemMode::NORMAL), m_safeModeEntryCount(0), m_runCounter(0) {}
 
 ModeManager ::~ModeManager() {}
 
@@ -39,18 +35,8 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
 
-    // Wait 5 seconds after boot before checking voltage
-    // This allows INA219 and other hardware to fully initialize
-    if (this->m_runCounter < 5) {
-        return;  // Skip voltage checking for first 5 seconds
-    }
-
-    // 1. Check voltage condition (telemetry only)
-    this->checkVoltageCondition();
-
-    // 2. Update telemetry
+    // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
-    this->tlmWrite_CurrentVoltage(this->m_currentVoltage);
 }
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
@@ -124,10 +110,6 @@ void ModeManager ::loadState() {
 
                 // Restore physical hardware state to match loaded mode
                 if (this->m_mode == SystemMode::SAFE_MODE) {
-                    // Skip the 5-second voltage check delay since a mode decision
-                    // was already made before the restart
-                    this->m_runCounter = 5;
-
                     // Turn off non-critical components to match safe mode state
                     this->turnOffNonCriticalComponents();
 
@@ -183,17 +165,6 @@ void ModeManager ::saveState() {
     }
 
     file.close();
-}
-
-void ModeManager ::checkVoltageCondition() {
-    // Get current voltage
-    bool voltageValid = false;
-    F32 voltage = this->getCurrentVoltage(voltageValid);
-
-    // Update telemetry only if reading is valid
-    if (voltageValid) {
-        this->m_currentVoltage = voltage;
-    }
 }
 
 void ModeManager ::enterSafeMode(const char* reasonOverride) {

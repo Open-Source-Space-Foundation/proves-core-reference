@@ -81,9 +81,6 @@ class ModeManager : public ModeManagerComponentBase {
     //! Save persistent state to file
     void saveState();
 
-    //! Check voltage condition and update fault flag
-    void checkVoltageCondition();
-
     //! Enter safe mode with optional reason override
     void enterSafeMode(const char* reason = nullptr);
 
@@ -121,7 +118,6 @@ class ModeManager : public ModeManagerComponentBase {
 
     SystemMode m_mode;         //!< Current system mode
     U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
-    F32 m_currentVoltage;      //!< Current system voltage
     U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
