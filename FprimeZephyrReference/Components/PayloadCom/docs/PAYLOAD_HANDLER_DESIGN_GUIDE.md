@@ -10,17 +10,7 @@ This guide explains how to design your own payload handler component that works 
 
 ## Architecture
 
-```
-┌─────────────────┐         ┌──────────────┐         ┌──────────────────┐
-│   Your Handler  │◄───────►│  PayloadCom  │◄───────►│  UART Driver     │
-│  (e.g., Camera  │         │  (Generic)    │         │  (Hardware)      │
-│    Handler)     │         │              │         │                  │
-└─────────────────┘         └──────────────┘         └──────────────────┘
-       ▲                            ▲
-       │                            │
-       └────────────────────────────┘
-         Data Flow (Buffers)
-```
+![PayloadCom Architecture Diagram](diagram.svg)
 
 ### Component Responsibilities
 
