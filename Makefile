@@ -74,10 +74,25 @@ clean: ## Remove all gitignored files
 GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
+.PHONY: sequence
+sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=startup)
+	@if [ -z "$(SEQ)" ]; then \
+		echo "Error: SEQ variable not set. Usage: make sequence SEQ=startup"; \
+		exit 1; \
+	fi
+	@echo "Compiling sequence: $(SEQ).seq"
+	@$(UV_RUN) fprime-seqgen sequences/$(SEQ).seq -d $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment
+
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
 	@$(GDS_COMMAND)
+
+.PHONY: delete-shadow-gds
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
 gds-integration:

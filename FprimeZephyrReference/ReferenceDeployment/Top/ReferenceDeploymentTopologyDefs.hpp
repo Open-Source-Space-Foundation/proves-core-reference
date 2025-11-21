@@ -15,6 +15,7 @@
 // SubtopologyTopologyDefs includes
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
+#include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
 // ComCcsds Enum Includes
 #include "Svc/Subtopologies/ComCcsds/Ports_ComBufferQueueEnumAc.hpp"
@@ -52,7 +53,7 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
-namespace ReferenceDeployment_prmDb {
+namespace ReferenceDeployment_cmdSeq {
 enum { WARN = 3, FATAL = 5 };
 }
 }  // namespace PingEntries
@@ -68,16 +69,18 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* ina219SysDevice;        //!< device path for battery board ina219
-    const device* ina219SolDevice;        //!< device path for solar panel ina219
-    const device* uartDevice;             //!< UART device path for communication
-    const device* loraDevice;             //!< LoRa device path for communication
-    const device* lsm6dsoDevice;          //!< LSM6DSO device path for accelerometer/gyroscope
-    const device* lis2mdlDevice;          //!< LIS2MDL device path for magnetometer
-    const device* drv2605Devices[5];      //!< Array of DRV2605 devices (5)
-    U32 baudRate;                         //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    const device* uartDevice;                     //!< UART device path for communication
+    const device* loraDevice;                     //!< LoRa device path for communication
+    U32 baudRate;                                 //!< Baud rate for UART communication
+    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
+    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
+    FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
+    const device* ina219SysDevice;                //!< device path for battery board ina219
+    const device* ina219SolDevice;                //!< device path for solar panel ina219
+    const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
+    const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
+    const device* rtcDevice;                      //!< RTC device path
+    const device* drv2605Devices[5];              //!< Array of DRV2605 devices (5)
 };
 
 namespace PingEntries = ::PingEntries;

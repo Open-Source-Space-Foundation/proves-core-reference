@@ -230,3 +230,38 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{antenna_deployer}.DeployFinish", timeout=10
     )
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
+
+
+def test_deployment_prevention_after_success(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Verify that deployment is prevented once the deployed-state flag is asserted and can be reset"""
+
+    # Ensure the persistent flag is cleared before starting
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
+
+    # Force the antenna to appear deployed without completing a deployment cycle
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [True]
+    )
+
+    fprime_test_api.clear_histories()
+
+    # Deployment should be skipped immediately
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    fprime_test_api.assert_event(
+        f"{antenna_deployer}.DeploymentAlreadyComplete", timeout=2
+    )
+    # Verify that DeployAttempt event does NOT occur (assert_event will raise AssertionError if event is missing)
+    with pytest.raises(AssertionError):
+        fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=1)
+
+    # Clear the flag and confirm deployments are permitted again
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
+    fprime_test_api.clear_histories()
+    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
+    fprime_test_api.assert_event(f"{antenna_deployer}.DeployAttempt", timeout=5)

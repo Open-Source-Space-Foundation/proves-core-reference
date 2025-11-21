@@ -1,1 +1,1 @@
-source "../../../boards/bronco_space/proves_flight_control_board_v5/Kconfig.defconfig"
+rsource "../../../boards/bronco_space/proves_flight_control_board_v5/Kconfig.defconfig"

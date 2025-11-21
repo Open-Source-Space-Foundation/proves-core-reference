@@ -11,7 +11,6 @@
 		zephyr,flash = &flash0;
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
-		zephyr,code-partition = &code_partition;
 	};
 
 	fstab {
@@ -58,34 +57,7 @@ zephyr_udc0: &usbd {
 };
 
 &flash0 {
-	reg = <0x10000000 DT_SIZE_M(4)>;
-
-	partitions {
-		compatible = "fixed-partitions";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		/* Reserved memory for an image definition block. The block is much
-		* smaller than 256 bytes, but in practice the linker places the vector
-		* table at a much larger alignment offset.
-		*/
-		image_def: partition@0 {
-			label = "image_def";
-			reg = <0x00000000 0x100>;
-			read-only;
-		};
-
-		/*
-		* Usable flash. Starts at 0x100, after the image definition block.
-		* The partition size is 4MB minus the 0x100 bytes taken by the
-		* image definition.
-		*/
-		code_partition: partition@100 {
-			label = "code-partition";
-			reg = <0x100 (DT_SIZE_M(4) - 0x100)>;
-			read-only;
-		};
-	};
+       reg = <0x10000000 DT_SIZE_M(4)>;
 };
 
 &timer0 {
@@ -141,7 +113,7 @@ zephyr_udc0: &usbd {
 	pinctrl-names = "default";
 	clock-frequency = <100000>;
 
-	ina219Sys: ina219Sys@40 {
+	ina219_0: ina219_0@40 {
 		compatible = "ti,ina219";
 		reg = <0x40>;
 		brng = <0>;
@@ -152,7 +124,8 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sys";
 	};
-	ina219Sol: ina219Sol@41 {
+
+	ina219_1: ina219_1@41 {
 		compatible = "ti,ina219";
 		reg = <0x41>;
 		brng = <0>;
@@ -357,7 +330,8 @@ zephyr_udc0: &usbd {
 		reg = <0x1e>;
 		label = "LIS2MDL";
 	};
-	rv3028: rv3028@52 {
+
+	rtc0: rtc0@52 {
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
@@ -371,22 +345,40 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <100>;
 		label = "INA219";
 	};
-    mcp23017: mcp23017@20 {
-        compatible = "microchip,mcp23017";
-        reg = <0x20>;
-        gpio-controller;
-        #gpio-cells = <2>;
+	mcp23017: mcp23017@20 {
+		compatible = "microchip,mcp23017";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
 
-        // GPIO line names for traceability
-        gpio-line-names = "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
-                          "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE",
-                          "ENABLE_Heater", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
-                          "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3";
+		/* gpio-line-names must match the numeric indexes used below. The
+		 * topology and gpio nodes expect the following mapping (index : name):
+		 *  0: ENABLE_HEATER (GPA0)
+		 *  1: PAYLOAD_PWR_ENABLE (GPA1)
+		 *  2: FIRE_DEPLOY2_B (GPA2)
+		 *  3: PAYLOAD_BATT_ENABLE (GPA3)
+		 *  4: RF2_IO2 (GPA4)
+		 *  5: RF2_IO1 (GPA5)
+		 *  6: RF2_IO0 (GPA6)
+		 *  7: RF2_IO3 (GPA7)
+		 *  8: FACE4_ENABLE (GPB0)
+		 *  9: FACE0_ENABLE (GPB1)
+		 * 10: FACE1_ENABLE (GPB2)
+		 * 11: FACE2_ENABLE (GPB3)
+		 * 12: FACE3_ENABLE (GPB4)
+		 * 13: FACE5_ENABLE (GPB5)
+		 * 14: READONLY (GPB6)
+		 * 15: CHARGE (GPB7)
+		 */
+		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+						  "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
+						  "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+						  "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE";
 
-        reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
 
-        ngpios = <16>;
-    };
+		ngpios = <16>;
+	};
 };
 
 // GPIO Expander IO
@@ -463,13 +455,13 @@ zephyr_udc0: &usbd {
 
 		charge: charge {
 
-            gpios = <&mcp23017 16 GPIO_ACTIVE_HIGH>;  // GPB7
+            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB7
             label = "CHARGE";
         };
 
         readonly: readonly {
 
-            gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB6
+            gpios = <&mcp23017 14 GPIO_ACTIVE_HIGH>;  // GPB6
             label = "READONLY";
         };
 
