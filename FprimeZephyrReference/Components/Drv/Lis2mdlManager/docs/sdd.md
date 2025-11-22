@@ -35,8 +35,9 @@ classDiagram
 ```
 
 ## Port Descriptions
-| Name | Type | Description |
-|---|---|---|
+
+| Name             | Type       | Description                                                                |
+| ---------------- | ---------- | -------------------------------------------------------------------------- |
 | MagneticFieldGet | sync input | Triggers magnetic field data collection and returns a MagneticField struct |
 
 ## Sequence Diagrams
@@ -58,12 +59,16 @@ sequenceDiagram
 ```
 
 ## Requirements
+
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
 | MagneticFieldGet Port | The component shall provide access magnetic field sensor data and return in MagneticField struct, readings will be in gauss | Verify output matches expected values from sensor datasheet |
+| Sampling Rate | The component will sample at 100hz |
 
 ## Change Log
-| Date | Description |
-|---|---|
-| 2025-9-15 | Initial LIS2MDL Manager component |
+
+| Date       | Description                                |
+| ---------- | ------------------------------------------ |
+| 2025-9-15  | Initial LIS2MDL Manager component          |
+| 2025-11-22 | Add configuration for setting odr to 100hz |
