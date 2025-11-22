@@ -63,7 +63,10 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("radio.setOutputPower() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
-    char s[] = "Hello, World\0";
+    char s[] =
+        "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
+        "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
+        "world!\nHello, world!\nHello, world!\nHello, world!\n";
     state = radio.transmit(s, sizeof(s));
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
