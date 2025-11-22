@@ -288,6 +288,11 @@ zephyr_udc0: &usbd {
             gpios = <&gpio0 22 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "SBAND_TX_EN";
 	};
+
+	sband_cs: sband-cs {
+            gpios = <&gpio0 7 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_CS";
+	};
     };
 
     // Define GPIO inputs

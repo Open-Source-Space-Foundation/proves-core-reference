@@ -120,17 +120,11 @@ void setupTopology(const TopologyState& state) {
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
 
-    static struct spi_cs_control cs_ctrl = {
-        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 0),
-        .delay = 0U, /* us to wait after asserting CS before transfer */
-    };
-
     struct spi_config cfg = {
         .frequency = 100000,  // 100 KHz -- sx1280 has maximum 18.18 MHz -- there is a 12MHz oscillator on-board
         .operation = SPI_WORD_SET(8),
         .slave = 0,
-        .cs = cs_ctrl,
-
+        .cs = 0,
     };
     spiDriver.configure(state.spi0Device, cfg);
     lsm6dsoManager.configure(state.lsm6dsoDevice);
