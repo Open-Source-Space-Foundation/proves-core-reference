@@ -29,7 +29,7 @@ static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
 static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_nrst), gpios);
 static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
 static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
-static const struct gpio_dt_spec sbandBusyGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_busy), gpios);
+static const struct gpio_dt_spec sbandBusyGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io0), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
