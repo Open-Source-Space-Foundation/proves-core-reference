@@ -24,7 +24,7 @@ PayloadCom ::~PayloadCom() {}
 // ----------------------------------------------------------------------
 
 void PayloadCom ::uartDataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, const Drv::ByteStreamStatus& status) {
-    this->log_ACTIVITY_LO_UartReceived();
+    // this->log_ACTIVITY_LO_UartReceived();
 
     // Check if we received data successfully
     if (status != Drv::ByteStreamStatus::OP_OK) {
@@ -83,7 +83,7 @@ void PayloadCom ::sendAck(){
     Drv::ByteStreamStatus sendStatus = this->uartForward_out(0, ackBuffer);
     
     if (sendStatus == Drv::ByteStreamStatus::OP_OK) {
-        this->log_ACTIVITY_LO_AckSent();
+        // this->log_ACTIVITY_LO_AckSent();
     } else {
         Fw::LogStringArg logStr("ACK");
         this->log_WARNING_HI_CommandForwardError(logStr);
