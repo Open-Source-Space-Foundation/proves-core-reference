@@ -47,6 +47,12 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
+instance updater: Zephyr.Updater base id 0x1000C000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 15
+
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
