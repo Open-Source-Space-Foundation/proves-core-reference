@@ -5,6 +5,12 @@
 
 #include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
 
+#define GPIO_LEVEL_LOW 0
+#define GPIO_LEVEL_HIGH 1
+
+#define RST_PIN 2
+#define BUSY_PIN 3
+
 namespace Components {
 class MyComponent;
 }  // namespace Components

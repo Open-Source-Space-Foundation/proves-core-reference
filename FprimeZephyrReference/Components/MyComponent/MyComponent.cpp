@@ -45,7 +45,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FprimeHal hal(this);
-    Module m(&hal, 0, 0, 0);
+    Module m(&hal, 0, 0, RST_PIN, BUSY_PIN);
     SX1280 radio(&m);
     int state = radio.begin();
     if (state == RADIOLIB_ERR_NONE) {

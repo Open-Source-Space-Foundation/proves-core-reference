@@ -26,6 +26,8 @@ class MyComponent final : public MyComponentComponentBase {
     ~MyComponent();
 
     using MyComponentComponentBase::getTime;
+    using MyComponentComponentBase::gpioBusyRead_out;
+    using MyComponentComponentBase::resetSend_out;
     using MyComponentComponentBase::spiSend_out;
 
   private:

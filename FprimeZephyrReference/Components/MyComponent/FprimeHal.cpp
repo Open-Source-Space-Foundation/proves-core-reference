@@ -2,7 +2,10 @@
 
 #include "FprimeHal.hpp"
 
-FprimeHal::FprimeHal(Components::MyComponent* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
+#include <Fw/Logger/Logger.hpp>
+
+FprimeHal::FprimeHal(Components::MyComponent* component)
+    : RadioLibHal(0, 0, GPIO_LEVEL_LOW, GPIO_LEVEL_HIGH, 0, 0), m_component(component) {}
 
 void FprimeHal::init() {}
 
@@ -10,9 +13,22 @@ void FprimeHal::term() {}
 
 void FprimeHal::pinMode(uint32_t pin, uint32_t mode) {}
 
-void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {}
+void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {
+    Fw::Logger::log("digitalWrite pin %u value %u\n", pin, value);
+    if (pin == RST_PIN) {
+        Fw::Logic state = (value == GPIO_LEVEL_HIGH) ? Fw::Logic::HIGH : Fw::Logic::LOW;
+        this->m_component->resetSend_out(0, state);
+    }
+}
 
 uint32_t FprimeHal::digitalRead(uint32_t pin) {
+    Fw::Logger::log("digitalRead pin %u\n", pin);
+    if (pin == BUSY_PIN) {
+        Fw::Logic state;
+        Drv::GpioStatus status = this->m_component->gpioBusyRead_out(0, state);
+        FW_ASSERT(status == Drv::GpioStatus::OP_OK);
+        return (state == Fw::Logic::HIGH) ? 1 : 0;
+    }
     return 0;
 }
 
