@@ -404,6 +404,9 @@ void CameraHandler ::finalizeImageTransfer() {
     m_file.close();
     m_fileOpen = false;
 
+    // Increment success counter
+    m_images_saved++;
+    
     // Log success
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
     this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
@@ -420,6 +423,7 @@ void CameraHandler ::finalizeImageTransfer() {
     this->tlmWrite_ExpectedSize(m_expected_size);
     this->tlmWrite_IsReceiving(m_receiving);
     this->tlmWrite_FileOpen(m_fileOpen);
+    this->tlmWrite_ImagesSaved(m_images_saved);
 }
 
 void CameraHandler ::handleFileError() {

@@ -48,6 +48,9 @@ module Components {
         
         @ Total number of file errors encountered
         telemetry FileErrorCount: U32
+        
+        @ Total number of images successfully saved
+        telemetry ImagesSaved: U32
 
         # Ports
         @ Sends command to PayloadCom to be forwarded over UART
