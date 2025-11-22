@@ -54,7 +54,6 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("radio.begin() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
-    Fw::Logger::log("TIMEOUT ms: %i\n", m.spiConfig.timeout);
     state = radio.setOutputPower(13);  // 13dB is max
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.setOutputPower() success!\n");
