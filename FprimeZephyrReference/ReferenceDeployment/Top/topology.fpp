@@ -61,6 +61,10 @@ module ReferenceDeployment {
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
     instance fsSpace
+    instance payload
+    instance cameraHandler
+    instance peripheralUartDriver
+    instance payloadBufferManager
     instance cmdSeq
     instance startupManager
     instance powerMonitor
@@ -153,8 +157,9 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
-      rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[4] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> cmdSeq.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -168,9 +173,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
 
     }
 
@@ -205,6 +211,23 @@ module ReferenceDeployment {
       imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
+
+    connections PayloadCom {
+      # PayloadCom <-> UART Driver
+      payload.uartForward -> peripheralUartDriver.$send
+      peripheralUartDriver.$recv -> payload.uartDataIn
+
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload.bufferReturn -> peripheralUartDriver.recvReturnIn
+
+      # PayloadCom <-> CameraHandler data flow
+      payload.uartDataOut -> cameraHandler.dataIn
+      cameraHandler.commandOut -> payload.commandIn
+
+      # UART driver allocates/deallocates from BufferManager
+      peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
+      peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
     }
 
     connections ComCcsds_FileHandling {

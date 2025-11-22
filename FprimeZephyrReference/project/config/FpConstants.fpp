@@ -51,7 +51,7 @@ constant FW_PARAM_BUFFER_MAX_SIZE = FW_COM_BUFFER_MAX_SIZE - SIZE_OF_FwPrmIdType
 constant FW_PARAM_STRING_MAX_SIZE = 40
 
 @ Specifies the maximum size of a file downlink chunk
-constant FW_FILE_BUFFER_MAX_SIZE = FW_COM_BUFFER_MAX_SIZE
+constant FW_FILE_BUFFER_MAX_SIZE = FW_COM_BUFFER_MAX_SIZE - 6
 
 @ Specifies the maximum size of a string in an interface call
 constant FW_INTERNAL_INTERFACE_STRING_MAX_SIZE = 256

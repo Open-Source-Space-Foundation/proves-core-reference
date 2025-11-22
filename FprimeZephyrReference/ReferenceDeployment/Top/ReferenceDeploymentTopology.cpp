@@ -111,6 +111,8 @@ void setupTopology(const TopologyState& state) {
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
 
+    // UART from the board to the payload
+    peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
