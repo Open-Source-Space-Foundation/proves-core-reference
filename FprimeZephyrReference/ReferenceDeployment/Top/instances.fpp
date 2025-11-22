@@ -47,6 +47,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
+  instance modeManager: Components.ModeManager base id 0x10040000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 16
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -136,10 +141,5 @@ module ReferenceDeployment {
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
 
   instance startupManager: Components.StartupManager base id 0x1003F000
-
-  instance modeManager: Components.ModeManager base id 0x10040000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 10
 
 }
