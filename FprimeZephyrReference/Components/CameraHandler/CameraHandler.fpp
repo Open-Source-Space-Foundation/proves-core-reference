@@ -45,6 +45,9 @@ module Components {
         
         @ Whether file is currently open for writing
         telemetry FileOpen: bool
+        
+        @ Total number of file errors encountered
+        telemetry FileErrorCount: U32
 
         # Ports
         @ Sends command to PayloadCom to be forwarded over UART

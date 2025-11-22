@@ -429,6 +429,9 @@ void CameraHandler ::handleFileError() {
         m_fileOpen = false;
     }
 
+    // Increment error counter
+    m_file_error_count++;
+
     // Log error
     this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write error"));
 
@@ -443,6 +446,7 @@ void CameraHandler ::handleFileError() {
     this->tlmWrite_ExpectedSize(m_expected_size);
     this->tlmWrite_IsReceiving(m_receiving);
     this->tlmWrite_FileOpen(m_fileOpen);
+    this->tlmWrite_FileErrorCount(m_file_error_count);
 }
 
 I32 CameraHandler ::findImageEndMarker(const U8* data, U32 size) {

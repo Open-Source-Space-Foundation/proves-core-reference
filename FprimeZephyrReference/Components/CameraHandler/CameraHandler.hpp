@@ -94,6 +94,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     U8 m_data_file_count = 0;
     bool m_receiving = false; 
     U32 m_bytes_received = 0;
+    U32 m_file_error_count = 0;  // Track total file errors
 
     U8 m_lineBuffer[128];
     size_t m_lineIndex = 0;

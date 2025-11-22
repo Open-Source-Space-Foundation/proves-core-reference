@@ -95,6 +95,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler.ExpectedSize
     ReferenceDeployment.cameraHandler.IsReceiving
     ReferenceDeployment.cameraHandler.FileOpen
+    ReferenceDeployment.cameraHandler.FileErrorCount
   }
 
 } omit {
