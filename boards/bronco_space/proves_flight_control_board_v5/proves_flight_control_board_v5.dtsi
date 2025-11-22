@@ -9,8 +9,10 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,flash-controller = &qmi;
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
+		zephyr,code-partition = &slot0_partition;
 	};
 
 	fstab {
@@ -56,8 +58,42 @@ zephyr_udc0: &usbd {
 	};
 };
 
+&qmi {
+	status = "okay";
+};
+
 &flash0 {
-       reg = <0x10000000 DT_SIZE_M(4)>;
+    reg = <0x10000000 DT_SIZE_M(4)>;
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+
+        boot_partition: partition@0 {
+            label = "mcuboot";
+            reg = <0x0 0x100000>;
+        };
+
+        slot0_partition: partition@100000 {
+            label = "current";
+            reg = <0x100000 0x100000>;
+        };
+
+        slot1_partition: partition@200000 {
+            label = "golden";
+            reg = <0x200000 0x100000>;
+        };
+
+        slot2_partition: partition@300000 {
+            label = "test";
+            reg = <0x300000 0x100000>;
+        };
+
+        storage_partition: partition@400000 {
+            label = "storage";
+            reg = <0x400000 0xC00000>;
+        };
+    };
 };
 
 &timer0 {
