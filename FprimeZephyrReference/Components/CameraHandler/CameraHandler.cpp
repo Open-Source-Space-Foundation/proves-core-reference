@@ -205,7 +205,7 @@ void CameraHandler ::processProtocolBuffer() {
             );
         }
     }
-    
+
     // Search for <IMG_START> anywhere in the buffer (not just at position 0)
     I32 headerStart = -1;
     

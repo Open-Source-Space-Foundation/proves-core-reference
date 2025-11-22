@@ -90,6 +90,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
+  packet CameraDebug id 11 group 5 {
+    ReferenceDeployment.cameraHandler.BytesReceived
+    ReferenceDeployment.cameraHandler.ExpectedSize
+    ReferenceDeployment.cameraHandler.IsReceiving
+    ReferenceDeployment.cameraHandler.FileOpen
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
