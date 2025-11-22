@@ -54,6 +54,24 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("radio.begin() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
+    Fw::Logger::log("TIMEOUT ms: %i\n", m.spiConfig.timeout);
+    state = radio.setOutputPower(13);  // 13dB is max
+    if (state == RADIOLIB_ERR_NONE) {
+        Fw::Logger::log("radio.setOutputPower() success!\n");
+    } else if (state == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
+        Fw::Logger::log("Selected output power is invalid for this module!");
+    } else {
+        Fw::Logger::log("radio.setOutputPower() failed!\n");
+        Fw::Logger::log("state: %i\n", state);
+    }
+    char s[] = "Hello, World\0";
+    state = radio.transmit(s, sizeof(s));
+    if (state == RADIOLIB_ERR_NONE) {
+        Fw::Logger::log("radio.transmit() success!\n");
+    } else {
+        Fw::Logger::log("radio.transmit() failed!\n");
+        Fw::Logger::log("state: %i\n", state);
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
