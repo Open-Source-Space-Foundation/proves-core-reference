@@ -246,4 +246,3 @@ No need to search for end markers in every chunk!
 - [ ] Handle protocol buffer overflow
 - [ ] Handle image buffer overflow
 - [ ] Component cleanup (destructor)
-

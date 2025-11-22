@@ -8,8 +8,9 @@
 #ifndef Components_CameraHandler_HPP
 #define Components_CameraHandler_HPP
 
-#include <string>
 #include <cstddef>
+#include <string>
+
 #include "FprimeZephyrReference/Components/CameraHandler/CameraHandlerComponentAc.hpp"
 #include "Os/File.hpp"
 
@@ -95,7 +96,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     // ----------------------------------------------------------------------
 
     U8 m_data_file_count = 0;
-    bool m_receiving = false; 
+    bool m_receiving = false;
     U32 m_bytes_received = 0;
 
     U8 m_lineBuffer[128];
@@ -108,21 +109,21 @@ class CameraHandler final : public CameraHandlerComponentBase {
     static constexpr U32 PROTOCOL_BUFFER_SIZE = 128;  // Just enough for header
     U8 m_protocolBuffer[PROTOCOL_BUFFER_SIZE];
     U32 m_protocolBufferSize = 0;
-    
+
     // Protocol constants for image transfer
     // Protocol: <IMG_START><SIZE>[4-byte uint32]</SIZE>[image data]<IMG_END>
-    static constexpr U32 IMG_START_LEN = 11;     // strlen("<IMG_START>")
-    static constexpr U32 SIZE_TAG_LEN = 6;       // strlen("<SIZE>")
-    static constexpr U32 SIZE_VALUE_LEN = 4;     // 4-byte little-endian uint32
-    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7; // strlen("</SIZE>")
-    static constexpr U32 IMG_END_LEN = 9;        // strlen("<IMG_END>")
-    
+    static constexpr U32 IMG_START_LEN = 11;      // strlen("<IMG_START>")
+    static constexpr U32 SIZE_TAG_LEN = 6;        // strlen("<SIZE>")
+    static constexpr U32 SIZE_VALUE_LEN = 4;      // 4-byte little-endian uint32
+    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7;  // strlen("</SIZE>")
+    static constexpr U32 IMG_END_LEN = 9;         // strlen("<IMG_END>")
+
     // Derived constants
     static constexpr U32 HEADER_SIZE = IMG_START_LEN + SIZE_TAG_LEN + SIZE_VALUE_LEN + SIZE_CLOSE_TAG_LEN;  // 28 bytes
-    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                    // 11
-    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;   // 17
-    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;  // 21
-    
+    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                                                   // 11
+    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;                                  // 17
+    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;                        // 21
+
     U32 m_expected_size = 0;  // Expected image size from header
 };
 

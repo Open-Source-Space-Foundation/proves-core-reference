@@ -217,14 +217,14 @@ module ReferenceDeployment {
       # PayloadCom <-> UART Driver
       payload.uartForward -> peripheralUartDriver.$send
       peripheralUartDriver.$recv -> payload.uartDataIn
-      
+
       # Buffer return path (critical! - matches ComStub pattern)
       payload.bufferReturn -> peripheralUartDriver.recvReturnIn
-      
+
       # PayloadCom <-> CameraHandler data flow
       payload.uartDataOut -> cameraHandler.dataIn
       cameraHandler.commandOut -> payload.commandIn
-      
+
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn

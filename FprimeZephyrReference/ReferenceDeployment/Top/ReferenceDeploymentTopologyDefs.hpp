@@ -69,7 +69,6 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-
     const device* uartDevice;             //!< UART device path for communication
     const device* loraDevice;             //!< LoRa device path for communication
     U32 baudRate;                         //!< Baud rate for UART communication
@@ -83,7 +82,6 @@ struct TopologyState {
     const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
     const device* rtcDevice;                      //!< RTC device path
-
 };
 
 namespace PingEntries = ::PingEntries;

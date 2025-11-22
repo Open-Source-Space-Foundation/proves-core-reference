@@ -41,13 +41,13 @@ Send commands to your payload through UART.
 // Example: Send "snap\n" command
 const char* cmd = "snap\n";
 Fw::Buffer cmdBuffer(
-    reinterpret_cast<U8*>(const_cast<char*>(cmd)), 
+    reinterpret_cast<U8*>(const_cast<char*>(cmd)),
     strlen(cmd)
 );
 this->commandOut_out(0, cmdBuffer, Drv::ByteStreamStatus::OP_OK);
 ```
 
-**Important:** 
+**Important:**
 - Commands should include newline (`\n`) if your payload expects it
 - Buffer is automatically managed by PayloadCom
 - Status should be `OP_OK` for normal commands
@@ -68,13 +68,13 @@ void YourHandler::dataIn_handler(
         // Handle error - PayloadCom will return buffer
         return;
     }
-    
+
     // Process data
     const U8* data = buffer.getData();
     U32 size = buffer.getSize();
-    
+
     // ... your protocol processing ...
-    
+
     // CRITICAL: Do NOT return buffer here!
     // PayloadCom owns the buffer and will return it automatically
 }
@@ -117,7 +117,7 @@ Commands:
 
 Image Transfer Protocol:
   <IMG_START><SIZE>[4-byte LE uint32]</SIZE>[image data chunks]<IMG_END>
-  
+
 ACK Protocol:
   Payload sends: <MOISES>\n
   Handler sends: <MOISES>\n (after header, after each chunk, after footer)
@@ -131,23 +131,23 @@ ACK Protocol:
 module Components {
     @ Your payload handler description
     passive component YourHandler {
-        
+
         # Commands
         sync command YOUR_COMMAND()
         sync command SEND_COMMAND(cmd: string)
-        
+
         # Events
         event CommandSuccess(cmd: string) severity activity high format "Command {} sent"
         event DataReceived(size: U32, path: string) severity activity high format "Received {} bytes"
         event ProtocolError(msg: string) severity warning high format "Protocol error: {}"
-        
+
         # Ports
         @ Send commands to PayloadCom
         output port commandOut: Drv.ByteStreamData
-        
+
         @ Receive data from PayloadCom
         sync input port dataIn: Drv.ByteStreamData
-        
+
         # Standard AC ports...
         time get port timeCaller
         command reg port cmdRegOut
@@ -173,7 +173,7 @@ namespace Components {
     public:
         YourHandler(const char* const compName);
         ~YourHandler();
-        
+
     private:
         // Handler for data from PayloadCom
         void dataIn_handler(
@@ -181,7 +181,7 @@ namespace Components {
             Fw::Buffer& buffer,
             const Drv::ByteStreamStatus& status
         ) override;
-        
+
         // Command handlers
         void YOUR_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
         void SEND_COMMAND_cmdHandler(
@@ -189,19 +189,19 @@ namespace Components {
             U32 cmdSeq,
             const Fw::CmdStringArg& cmd
         ) override;
-        
+
         // Protocol processing helpers
         void processProtocolBuffer();
         void sendAck();
         bool parseHeader(const U8* data, U32 size);
-        
+
         // State variables
         bool m_receiving = false;
         U32 m_bytesReceived = 0;
         U32 m_expectedSize = 0;
         U8 m_protocolBuffer[128];
         U32 m_protocolBufferSize = 0;
-        
+
         // File handling (if needed)
         Os::File m_file;
         std::string m_currentFilename;
@@ -228,16 +228,16 @@ void YourHandler::dataIn_handler(
         }
         return;  // PayloadCom handles buffer return
     }
-    
+
     // 2. Validate buffer
     if (!buffer.isValid()) {
         return;
     }
-    
+
     // 3. Get data (don't store pointer - copy what you need)
     const U8* data = buffer.getData();
     U32 dataSize = static_cast<U32>(buffer.getSize());
-    
+
     // 4. Process based on state
     if (m_receiving && m_fileOpen) {
         // Currently receiving data stream
@@ -247,7 +247,7 @@ void YourHandler::dataIn_handler(
         accumulateProtocolData(data, dataSize);
         processProtocolBuffer();
     }
-    
+
     // 5. DO NOT return buffer - PayloadCom owns it!
 }
 ```
@@ -289,13 +289,13 @@ void handleDataChunk(const U8* data, U32 size) {
     // Write directly to file (or process)
     U32 remaining = m_expectedSize - m_bytesReceived;
     U32 toWrite = (size < remaining) ? size : remaining;
-    
+
     if (writeChunkToFile(data, toWrite)) {
         m_bytesReceived += toWrite;
-        
+
         // Send ACK after chunk (if protocol requires)
         sendAck();
-        
+
         // Check if complete
         if (m_bytesReceived >= m_expectedSize) {
             finalizeTransfer();
@@ -314,7 +314,7 @@ ACKs are sent through PayloadCom's `commandOut` port:
 void YourHandler::sendAck() {
     const char* ackMsg = "<MOISES>\n";  // Your ACK format
     Fw::Buffer ackBuffer(
-        reinterpret_cast<U8*>(const_cast<char*>(ackMsg)), 
+        reinterpret_cast<U8*>(const_cast<char*>(ackMsg)),
         strlen(ackMsg)
     );
     // Send through commandOut - PayloadCom forwards to UART
@@ -341,15 +341,15 @@ void YourHandler::SEND_COMMAND_cmdHandler(
     // Append newline if payload expects it
     Fw::CmdStringArg tempCmd = cmd;
     tempCmd += "\n";
-    
+
     Fw::Buffer commandBuffer(
-        reinterpret_cast<U8*>(const_cast<char*>(tempCmd.toChar())), 
+        reinterpret_cast<U8*>(const_cast<char*>(tempCmd.toChar())),
         tempCmd.length()
     );
-    
+
     // Send to PayloadCom (forwards to UART)
     this->commandOut_out(0, commandBuffer, Drv::ByteStreamStatus::OP_OK);
-    
+
     this->log_ACTIVITY_HI_CommandSuccess(Fw::LogStringArg(cmd));
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -442,10 +442,10 @@ bool writeChunkToFile(const U8* data, U32 size) {
     if (!m_fileOpen || size == 0) {
         return false;
     }
-    
+
     U32 totalWritten = 0;
     const U8* ptr = data;
-    
+
     while (totalWritten < size) {
         FwSizeType toWrite = static_cast<FwSizeType>(size - totalWritten);
         Os::File::Status status = m_file.write(
@@ -453,15 +453,15 @@ bool writeChunkToFile(const U8* data, U32 size) {
             toWrite,
             Os::File::WaitType::WAIT
         );
-        
+
         if (status != Os::File::OP_OK) {
             return false;
         }
-        
+
         totalWritten += static_cast<U32>(toWrite);
         ptr += toWrite;
     }
-    
+
     return true;
 }
 ```
@@ -474,11 +474,11 @@ void finalizeTransfer() {
         m_file.close();
         m_fileOpen = false;
     }
-    
+
     // Log success
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
     this->log_ACTIVITY_HI_DataReceived(m_bytesReceived, pathArg);
-    
+
     // Reset state
     m_receiving = false;
     m_bytesReceived = 0;
@@ -625,23 +625,23 @@ wait_for_ack()  # Final ACK
 ## Troubleshooting
 
 ### Issue: Buffer Management Errors
-**Symptom:** Crashes, memory leaks  
+**Symptom:** Crashes, memory leaks
 **Solution:** Ensure you never return buffers from handler, don't keep buffer pointers
 
 ### Issue: Protocol Not Parsing
-**Symptom:** Headers not detected  
+**Symptom:** Headers not detected
 **Solution:** Check protocol buffer size, handle split headers across multiple buffers
 
 ### Issue: ACK Timing Issues
-**Symptom:** Payload times out  
+**Symptom:** Payload times out
 **Solution:** Send ACKs immediately after receiving data, check UART timeout settings
 
 ### Issue: File Write Failures
-**Symptom:** Files incomplete or missing  
+**Symptom:** Files incomplete or missing
 **Solution:** Check filesystem space, handle partial writes, verify file close
 
 ### Issue: Commands Not Working
-**Symptom:** Payload doesn't respond  
+**Symptom:** Payload doesn't respond
 **Solution:** Verify newline included, check UART baud rate, verify command format
 
 ---
@@ -657,4 +657,3 @@ wait_for_ack()  # Final ACK
 7. **State** = Track receiving state, reset on errors
 
 Follow the `CameraHandler` example as a reference implementation, and adapt the patterns to your specific payload protocol.
-
