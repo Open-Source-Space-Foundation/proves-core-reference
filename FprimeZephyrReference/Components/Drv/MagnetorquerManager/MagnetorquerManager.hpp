@@ -43,6 +43,10 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
     void START_PLAYBACK_TEST2_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) override;
 
     void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
+    void run_handler(FwIndexType portNum, U32 context) override;
+    bool enabled = false;
+    bool lastEnabledState = false;
+    void SET_ENABLED_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool enable) override;
 };
 
 }  // namespace Drv
