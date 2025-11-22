@@ -1,0 +1,22 @@
+name: "Question"
+description: "General question about using or developing the project."
+title: "[QUESTION] {summary}"
+labels:
+  - "question"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Question
+        Please provide details so we can help you more quickly.
+  - type: input
+    id: summary
+    attributes:
+      label: "Short summary"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: "Details"
+      description: "Include environment, versions, and any relevant logs."

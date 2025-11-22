@@ -38,7 +38,7 @@ module ReferenceDeployment {
     priority 3
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
+    queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
     priority 15
 
