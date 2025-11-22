@@ -32,7 +32,7 @@
 
 /* S-Band busy pin override for rev C: RP2350 GPIO 23 */
 / {
-	gpio_outputs {
+	gpio_inputs {
 		sband_busy: sband-busy {
 			gpios = <&gpio0 23 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
 			label = "SBAND_BUSY";
