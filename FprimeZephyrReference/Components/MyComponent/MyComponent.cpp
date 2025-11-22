@@ -77,9 +77,9 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // BROKEN
-    this->resetSend_out(0, Fw::Logic::HIGH);
-    Os::Task::delay(Fw::TimeInterval(0, 1000));
     this->resetSend_out(0, Fw::Logic::LOW);
+    Os::Task::delay(Fw::TimeInterval(1, 0));
+    this->resetSend_out(0, Fw::Logic::HIGH);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
