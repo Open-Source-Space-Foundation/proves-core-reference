@@ -109,3 +109,22 @@ Depending on the comdelay, the gds should turn green every time a packet is sent
 ## Sequences
 
 You can control the specific command lists of the satellite by writing a sequence file. Sequence files are contained in /sequences. For details on how to attack the startup sequence check the sdd in Startup Manager.
+
+## MCUBootloader
+
+First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr.
+
+```
+cd <zephyr>/samples/sysbuild/with_mcubuild
+<proves>/tools/bin/build-with-proves --sysbuild
+```
+
+Once built, upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
+
+Then build Proves like normal. This will make a UF2, but not for the second flash region.  To build a bootable image, use:
+
+```
+<proves>/tools/bin/build-bootable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
+```
+
+Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image

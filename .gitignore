@@ -23,5 +23,5 @@ settings.ini
 **/__pycache__/
 **/*.egg-info/
 
-bin/
+/bin/
 _codeql_detected_source_root
