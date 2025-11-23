@@ -72,6 +72,22 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         // Calculate how much to write (don't exceed expected size)
         U32 remaining = m_expected_size - m_bytes_received;
         U32 toWrite = (dataSize < remaining) ? dataSize : remaining;
+
+        // Check if we've received all expected data
+        if (m_bytes_received >= m_expected_size) {
+            // Image is complete!
+            finalizeImageTransfer();
+            
+            // If there's extra data after the image (e.g., <IMG_END> or next header),
+            // push it to protocol buffer
+            U32 extraBytes = dataSize - toWrite;
+            if (extraBytes > 0) {
+                const U8* extraData = data + toWrite;
+                if (accumulateProtocolData(extraData, extraBytes)) {
+                    processProtocolBuffer();
+                }
+            }
+        }
         
         // Write chunk to file
         if (!writeChunkToFile(data, toWrite)) {
@@ -92,21 +108,6 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
             this->log_ACTIVITY_LO_ImageTransferProgress(m_bytes_received, m_expected_size);
         }
         
-        // Check if we've received all expected data
-        if (m_bytes_received >= m_expected_size) {
-            // Image is complete!
-            finalizeImageTransfer();
-            
-            // If there's extra data after the image (e.g., <IMG_END> or next header),
-            // push it to protocol buffer
-            U32 extraBytes = dataSize - toWrite;
-            if (extraBytes > 0) {
-                const U8* extraData = data + toWrite;
-                if (accumulateProtocolData(extraData, extraBytes)) {
-                    processProtocolBuffer();
-                }
-            }
-        }
     } else {
         // Not receiving image - accumulate protocol data
         
