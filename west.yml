@@ -84,6 +84,10 @@ manifest:
       revision: 96576b341ee19f1c3af6622256b0d4f3d408e1e3
       path: lib/zephyr-workspace/bootloader/mcuboot
 
+    - name: fatfs
+      revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
+      path: lib/zephyr-workspace/modules/fatfs
+
   self:
     path: .
     west-commands: west-commands.yml
