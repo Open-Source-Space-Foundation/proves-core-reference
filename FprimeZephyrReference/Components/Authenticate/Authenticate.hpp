@@ -105,8 +105,8 @@ class Authenticate final : public AuthenticateComponentBase {
     Os::File m_rejectedPacketsCountFile;
     Os::File m_authenticatedPacketsCountFile;
     Os::File m_spiDictFile;
-    std::atomic<U32> rejectedPacketsCount;
-    std::atomic<U32> authenticatedPacketsCount;
+    std::atomic<U32> m_rejectedPacketsCount;
+    std::atomic<U32> m_authenticatedPacketsCount;
 };
 
 }  // namespace Components

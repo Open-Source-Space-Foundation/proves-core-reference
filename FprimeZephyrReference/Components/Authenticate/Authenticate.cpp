@@ -44,11 +44,11 @@ Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentB
     this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
 
     U32 fileRejectedPacketsCount = this->initializeFiles(REJECTED_PACKETS_COUNT_PATH);
-    this->rejectedPacketsCount.store(fileRejectedPacketsCount);
+    this->m_rejectedPacketsCount.store(fileRejectedPacketsCount);
     this->tlmWrite_RejectedPacketsCount(fileRejectedPacketsCount);
 
     U32 fileAuthenticatedPacketsCount = this->initializeFiles(AUTHENTICATED_PACKETS_COUNT_PATH);
-    this->authenticatedPacketsCount.store(fileAuthenticatedPacketsCount);
+    this->m_authenticatedPacketsCount.store(fileAuthenticatedPacketsCount);
     this->tlmWrite_AuthenticatedPacketsCount(fileAuthenticatedPacketsCount);
 }
 
@@ -97,8 +97,8 @@ void Authenticate::persistToFile(const char* filePath, U32 value) {
 }
 
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
-    U32 newCount = this->rejectedPacketsCount.load() + 1;
-    this->rejectedPacketsCount.store(newCount);
+    U32 newCount = this->m_rejectedPacketsCount.load() + 1;
+    this->m_rejectedPacketsCount.store(newCount);
     this->tlmWrite_RejectedPacketsCount(newCount);
     this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(0);
@@ -381,8 +381,8 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     }
 
     this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
-    U32 newCount = this->authenticatedPacketsCount.load() + 1;
-    this->authenticatedPacketsCount.store(newCount);
+    U32 newCount = this->m_authenticatedPacketsCount.load() + 1;
+    this->m_authenticatedPacketsCount.store(newCount);
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
     this->persistToFile(AUTHENTICATED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(1);
