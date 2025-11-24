@@ -25,3 +25,6 @@ settings.ini
 
 bin/
 _codeql_detected_source_root
+
+# Generated authentication files (generated at build time)
+FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h

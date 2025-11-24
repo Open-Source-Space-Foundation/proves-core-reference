@@ -94,14 +94,41 @@ def main():
     parser.add_argument(
         "--skip-generation",
         action="store_true",
-        help="Skip generation, only extract key (requires --print-first-key)",
+        help="Skip generation, only extract key from existing file",
+    )
+    parser.add_argument(
+        "--print-first-key",
+        action="store_true",
+        help="Print the first key to stdout (for use in Makefile)",
     )
 
     args = parser.parse_args()
 
-    if not args.skip_generation:
+    if args.skip_generation:
+        # Just extract from existing file
+        if args.print_first_key:
+            try:
+                _, first_key_with_prefix = extract_first_key_from_file(args.output)
+                print(first_key_with_prefix)
+            except (FileNotFoundError, ValueError) as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            print(
+                "Error: --skip-generation requires --print-first-key", file=sys.stderr
+            )
+            sys.exit(1)
+    else:
+        # Generate new file
         try:
-            generate_spi_dict(args.num_keys, args.output)
+            first_key, first_key_with_prefix = generate_spi_dict(
+                args.num_keys, args.output
+            )
+            if args.print_first_key:
+                print(first_key_with_prefix)
+            else:
+                print(f"Generated {args.num_keys} keys in {args.output}")
+                print(f"First key: {first_key_with_prefix}")
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

@@ -43,6 +43,8 @@ module Components {
 
         event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication"
 
+        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 14 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}"
+
         event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}"
 
         # @ Ports for packet authentication

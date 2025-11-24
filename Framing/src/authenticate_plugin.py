@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 from typing import List, Type
 
 from fprime_gds.common.communication.ccsds.chain import ChainedFramerDeframer
@@ -11,15 +12,62 @@ from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
 
+def get_default_auth_key_from_spi_dict() -> str:
+    """
+    Read the first key from spi_dict.txt file.
+
+    Returns:
+        Default authentication key with 0x prefix from first entry in spi_dict.txt
+
+    Raises:
+        FileNotFoundError: If spi_dict.txt file is not found
+        ValueError: If spi_dict.txt is empty or contains no valid keys
+        IOError: If there is an error reading the file
+    """
+    path = "UploadsFIlesystem/AuthenticateFiles/spi_dict.txt"
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"spi_dict.txt not found at {path}. "
+            "Authentication plugin requires spi_dict.txt to be present. "
+            "Ensure the file exists or run 'make generate-spi-dict' to create it."
+        )
+
+    try:
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        key = parts[2]
+                        # Ensure key has 0x prefix
+                        if not key.startswith("0x") and not key.startswith("0X"):
+                            key = f"0x{key}"
+                        print(f"Using key from spi_dict.txt: {key}")
+                        return key
+    except (IOError, OSError) as e:
+        raise IOError(
+            f"Error reading spi_dict.txt from {path}: {e}. "
+            "Authentication plugin cannot proceed without a valid spi_dict.txt file."
+        ) from e
+
+    # If we get here, file exists but contains no valid keys
+    raise ValueError(
+        f"No valid keys found in {path}. "
+        "spi_dict.txt must contain at least one entry with format: '_XXXX HMAC <key>'"
+    )
+
+
 # pragma: no cover
 class AuthenticateFramer(FramerDeframer):
     def __init__(
         self,
         initial_sequence_number=0,
-        spi=1,
+        spi=0,
         window_size=50,
         authentication_type="HMAC",
-        authentication_key="0x65b32a18e0c63a347b56e8ae6c51358a",
+        authentication_key=None,
         **kwargs,
     ):
         """Constructor
@@ -29,7 +77,7 @@ class AuthenticateFramer(FramerDeframer):
             spi: Security Parameter Index (default: 1)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
-            authentication_key: Authentication key as hex string with 0x prefix (default: "0x65b32a18e0c63a347b56e8ae6c51358a")
+            authentication_key: Authentication key as hex string with 0x prefix (default: reads from spi_dict.txt)
             **kwargs: Additional keyword arguments (ignored for now)
         """
         super().__init__()
@@ -42,6 +90,10 @@ class AuthenticateFramer(FramerDeframer):
         self.sequence_number = initial_sequence_number
         self.window_size = window_size
         self.authentication_type = authentication_type
+        # Use provided key or read from spi_dict.txt
+        if authentication_key is None:
+            authentication_key = get_default_auth_key_from_spi_dict()
+        print(f"Using authentication key: {authentication_key}")
         self.authentication_key = authentication_key
 
     def frame(self, data: bytes) -> bytes:
@@ -93,6 +145,8 @@ class AuthenticateFramer(FramerDeframer):
     @classmethod
     def get_arguments(cls) -> dict:
         """Return CLI argument definitions for this plugin"""
+        # Get default key from spi_dict.txt for help text
+        default_key = get_default_auth_key_from_spi_dict()
         return {
             ("--initial-sequence-number",): {
                 "type": int,
@@ -116,8 +170,8 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--authentication-key",): {
                 "type": str,
-                "help": "Authentication key as hex string with 0x prefix (default: 0x65b32a18e0c63a347b56e8ae6c51358a)",
-                "default": "0x65b32a18e0c63a347b56e8ae6c51358a",
+                "help": f"Authentication key as hex string with 0x prefix (default: {default_key} from spi_dict.txt)",
+                "default": None,  # Will be set to first key from spi_dict.txt in __init__
             },
         }
 
