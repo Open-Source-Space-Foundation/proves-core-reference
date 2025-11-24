@@ -75,12 +75,16 @@ class Authenticate final : public AuthenticateComponentBase {
                       const std::string& key,
                       const U8* securityTrailer);
 
+    // function to get the current sequence number
     U32 get_SequenceNumber();
 
+    // function to make sure files exist and are initialized
     U32 initializeFiles(const char* filePath);
 
+    // function to read a U32 value from a file
     void persistToFile(const char* filePath, U32 value);
 
+    // function to reject packets that fail authentication
     void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
 
     // ----------------------------------------------------------------------
