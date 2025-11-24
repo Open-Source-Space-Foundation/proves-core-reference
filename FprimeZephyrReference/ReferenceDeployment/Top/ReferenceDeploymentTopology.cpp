@@ -100,7 +100,6 @@ void setupTopology(const TopologyState& state) {
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
     // Read parameters from persistent storage
-    printk("read params\n");
     readParameters();
     // Autocoded parameter loading. Function provided by autocoder.
     loadParameters();
@@ -108,16 +107,15 @@ void setupTopology(const TopologyState& state) {
     startTasks(state);
 
     // Try to configure the RTC device first because all other components need time
-    printk("configure rtc\n");
     rtcManager.configure(state.rtcDevice);
 
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
-
+    printk("initializing log file... \n");
     TlmLoggerTee::comLog.init_log_file("/ComLoggerFiles/Tlm", 1024 * 30, true);
-
+    printk("log file initialized\n");
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
