@@ -28,3 +28,6 @@ _codeql_detected_source_root
 
 # Generated authentication files (generated at build time)
 FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+spi
+# Generated spi_dict.txt
+UploadsFIlesystem/AuthenticateFiles/spi_dict.txt
