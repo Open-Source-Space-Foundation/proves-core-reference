@@ -12,7 +12,7 @@ from fprime_gds.plugin.definitions import gds_plugin
 
 
 # pragma: no cover
-class MyPlugin(FramerDeframer):
+class AuthenticateFramer(FramerDeframer):
     def __init__(
         self,
         initial_sequence_number=0,
@@ -130,7 +130,11 @@ class AuthenticateCompFramer(ChainedFramerDeframer):
     def get_composites(cls) -> List[Type[FramerDeframer]]:
         """Return the composite list of this chain
         Innermost FramerDeframer should be first in the list."""
-        return [SpacePacketFramerDeframer, MyPlugin, SpaceDataLinkFramerDeframer]
+        return [
+            SpacePacketFramerDeframer,
+            AuthenticateFramer,
+            SpaceDataLinkFramerDeframer,
+        ]
 
     @classmethod
     def get_name(cls):
@@ -140,7 +144,7 @@ class AuthenticateCompFramer(ChainedFramerDeframer):
     @classmethod
     def get_arguments(cls) -> dict:
         """Return CLI argument definitions for this plugin"""
-        # Collect arguments from composites (MyPlugin)
+        # Collect arguments from composites (AuthenticateFramer)
         all_arguments = {}
         for composite in cls.get_composites():
             if hasattr(composite, "get_arguments"):

@@ -378,12 +378,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     if (!sequenceNumberValid) {
         this->rejectPacket(data, contextOut);
         return;
-    } else {
-        // increment the stored sequence number
-        U32 newSequenceNumber = sequenceNumber + 1;
-        this->sequenceNumber.store(newSequenceNumber);
-        this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
-        this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
     }
 
     // Validate HMAC - all memory management is handled inside validateHMAC()
@@ -396,6 +390,12 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         this->rejectPacket(data, contextOut);
         return;
     }
+
+    // increment the stored sequence number and persist it to the file system
+    U32 newSequenceNumber = sequenceNumber + 1;
+    this->sequenceNumber.store(newSequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
+    this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
 
     this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
     U32 newCount = this->m_authenticatedPacketsCount.load() + 1;
