@@ -18,7 +18,7 @@ const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
 const struct device* rtc = DEVICE_DT_GET(DT_NODELABEL(rtc0));
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) { 
     // ** DO NOT REMOVE **//
     //
     // This sleep is necessary to allow the USB CDC ACM interface to initialize before
