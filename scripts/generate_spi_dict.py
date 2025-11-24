@@ -10,6 +10,7 @@ import argparse
 import os
 import secrets
 import sys
+from typing import Tuple
 
 
 def generate_random_key() -> str:
@@ -17,7 +18,7 @@ def generate_random_key() -> str:
     return secrets.token_hex(16)
 
 
-def generate_spi_dict(num_keys: int, output_path: str) -> tuple[str, str]:
+def generate_spi_dict(num_keys: int, output_path: str) -> Tuple[str, str]:
     """
     Generate spi_dict.txt file with random keys.
 
@@ -49,7 +50,7 @@ def generate_spi_dict(num_keys: int, output_path: str) -> tuple[str, str]:
     return first_key, f"0x{first_key}"
 
 
-def extract_first_key_from_file(file_path: str) -> tuple[str, str]:
+def extract_first_key_from_file(file_path: str) -> Tuple[str, str]:
     """
     Extract the first key from an existing spi_dict.txt file.
 
