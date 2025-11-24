@@ -75,6 +75,21 @@ class Authenticate final : public AuthenticateComponentBase {
                       const std::string& key,
                       const U8* securityTrailer);
 
+    //! Validate and extract security header information
+    //! \param data: Input buffer containing security header + data + security trailer
+    //! \param contextOut: Frame context (modified if packet is rejected)
+    //! \param securityHeader: Output parameter for extracted security header (6 bytes)
+    //! \param securityTrailer: Output parameter for extracted security trailer (16 bytes)
+    //! \param spi: Output parameter for Security Parameter Index
+    //! \param sequenceNumber: Output parameter for sequence number
+    //! \return true if header is valid and extracted, false if packet should be rejected
+    bool validateHeader(Fw::Buffer& data,
+                        ComCfg::FrameContext& contextOut,
+                        U8* securityHeader,
+                        U8* securityTrailer,
+                        U32& spi,
+                        U32& sequenceNumber);
+
     // function to get the current sequence number
     U32 get_SequenceNumber();
 

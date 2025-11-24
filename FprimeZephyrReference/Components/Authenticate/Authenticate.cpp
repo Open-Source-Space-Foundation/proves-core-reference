@@ -316,9 +316,12 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
     return hmacValid;
 }
 
-void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    ComCfg::FrameContext contextOut = context;
-
+bool Authenticate::validateHeader(Fw::Buffer& data,
+                                  ComCfg::FrameContext& contextOut,
+                                  U8* securityHeader,
+                                  U8* securityTrailer,
+                                  U32& spi,
+                                  U32& sequenceNumber) {
     // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
     // some packets will be missed here, because we don't have a clear way to tell if the packet is long because its
     // authenticating or because its not a valid packet.
@@ -328,35 +331,49 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         // return the packet, set to unauthenticated
         this->log_WARNING_HI_PacketTooShort(data.getSize());
         this->rejectPacket(data, contextOut);
-        return;
+        return false;
     }
 
     // Take the first 6 bytes as the security header
-    unsigned char securityHeader[SECURITY_HEADER_LENGTH];
     std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
     // increment the pointer to the data to point to the rest of the packet
     data.setData(data.getData() + SECURITY_HEADER_LENGTH);
     data.setSize(data.getSize() - SECURITY_HEADER_LENGTH);
 
     // now we get the footer (last 16 bytes)
-    unsigned char securityTrailer[SECURITY_TRAILER_LENGTH];
     std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
     // decrement the size of the data to remove the footer
     data.setSize(data.getSize() - SECURITY_TRAILER_LENGTH);
 
     // the first two bytes are the SPI
-    U32 spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
+    spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
 
     // the next four bytes are the sequence number
-    U32 sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
-                         (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
+    sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
+                     (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
+
+    return true;
+}
+
+void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    ComCfg::FrameContext contextOut = context;
+
+    // Extract security header information
+    U8 securityHeader[SECURITY_HEADER_LENGTH];
+    U8 securityTrailer[SECURITY_TRAILER_LENGTH];
+    U32 spi = 0;
+    U32 sequenceNumber = 0;
+
+    if (!this->validateHeader(data, contextOut, securityHeader, securityTrailer, spi, sequenceNumber)) {
+        // Packet was rejected in validateHeader (already logged and output)
+        return;
+    }
 
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
     const std::string type_authn = authConfig.type;
     const std::string& key_authn = authConfig.key;
 
     // check the sequence number is valid
-    // cast trailer to U32
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
     if (!sequenceNumberValid) {
         this->rejectPacket(data, contextOut);
