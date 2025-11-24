@@ -278,6 +278,35 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
     return std::memcmp(expected, actual, static_cast<size_t>(length)) == 0;
 }
 
+bool Authenticate::validateHMAC(const U8* securityHeader,
+                                FwSizeType securityHeaderLength,
+                                const U8* data,
+                                FwSizeType dataLength,
+                                const std::string& key,
+                                const U8* securityTrailer) {
+    // Compute HMAC (allocates memory)
+    Fw::Buffer computedHmac = this->computeHMAC(securityHeader, securityHeaderLength, data, dataLength, key);
+    const U8* computedHmacData = computedHmac.getData();
+    const FwSizeType computedHmacLength = computedHmac.getSize();
+
+    // Store non-const pointer for deletion (getData() returns const, but we allocated with new[])
+    // This pointer is scoped to this function only - cannot be accidentally used after return
+    U8* hmacDataToDelete = const_cast<U8*>(computedHmacData);
+
+    if (computedHmacData == nullptr || computedHmacLength < 8) {
+        // Clean up memory before returning (delete[] nullptr is safe)
+        delete[] hmacDataToDelete;
+        return false;
+    }
+
+    // Compare computed HMAC with expected HMAC from security trailer
+    bool hmacValid = this->compareHMAC(computedHmacData, securityTrailer, computedHmacLength);
+
+    delete[] hmacDataToDelete;
+
+    return hmacValid;
+}
+
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
 
@@ -341,35 +370,13 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
     }
 
-    Fw::Buffer computedHmac = this->computeHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn);
-    const U8* computedHmacData = computedHmac.getData();
-    const FwSizeType computedHmacLength = computedHmac.getSize();
-
-    // Clean up the allocated memory when done (Fw::Buffer doesn't manage memory)
-    // Store non-const pointer for deletion (getData() returns const, but we allocated with new[])
-    U8* hmacDataToDelete = const_cast<U8*>(computedHmacData);
-
-    if (computedHmacData == nullptr || computedHmacLength < 8) {
-        if (hmacDataToDelete != nullptr) {
-            delete[] hmacDataToDelete;
-        }
-        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
-        U32 newCount = this->rejectedPacketsCount.load() + 1;
-        this->rejectedPacketsCount.store(newCount);
-        this->tlmWrite_RejectedPacketsCount(newCount);
-        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
-        contextOut.set_authenticated(0);
-        this->dataOut_out(0, data, contextOut);
-        return;
-    }
-
-    bool hmacValid = this->compareHMAC(computedHmacData, securityTrailer, computedHmacLength);
-
-    // Memory is no longer needed after comparison - delete before any return
-    delete[] hmacDataToDelete;
+    // Validate HMAC - all memory management is handled inside validateHMAC()
+    // The raw pointer hmacDataToDelete is scoped to validateHMAC() and cannot be
+    // accidentally referenced after this call
+    bool hmacValid = this->validateHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn, securityTrailer);
 
     if (!hmacValid) {
-        this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         U32 newCount = this->rejectedPacketsCount.load() + 1;
         this->rejectedPacketsCount.store(newCount);
         this->tlmWrite_RejectedPacketsCount(newCount);

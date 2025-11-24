@@ -68,6 +68,13 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
 
+    bool validateHMAC(const U8* securityHeader,
+                      FwSizeType securityHeaderLength,
+                      const U8* data,
+                      FwSizeType dataLength,
+                      const std::string& key,
+                      const U8* securityTrailer);
+
     U32 get_SequenceNumber();
 
     U32 initializeFiles(const char* filePath);
