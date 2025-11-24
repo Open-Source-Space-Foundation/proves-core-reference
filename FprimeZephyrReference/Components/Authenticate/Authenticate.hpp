@@ -81,6 +81,8 @@ class Authenticate final : public AuthenticateComponentBase {
 
     void persistToFile(const char* filePath, U32 value);
 
+    void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------

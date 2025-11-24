@@ -96,6 +96,15 @@ void Authenticate::persistToFile(const char* filePath, U32 value) {
     }
 }
 
+void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
+    U32 newCount = this->rejectedPacketsCount.load() + 1;
+    this->rejectedPacketsCount.store(newCount);
+    this->tlmWrite_RejectedPacketsCount(newCount);
+    this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
+    contextOut.set_authenticated(0);
+    this->dataOut_out(0, data, contextOut);
+}
+
 Authenticate ::~Authenticate() {}
 
 // ----------------------------------------------------------------------
@@ -317,13 +326,8 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // authenticated.
     if (data.getSize() != 12 + SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
         // return the packet, set to unauthenticated
-        U32 newCount = this->rejectedPacketsCount.load() + 1;
-        this->rejectedPacketsCount.store(newCount);
-        this->tlmWrite_RejectedPacketsCount(newCount);
-        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
         this->log_WARNING_HI_PacketTooShort(data.getSize());
-        contextOut.set_authenticated(0);
-        this->dataOut_out(0, data, contextOut);
+        this->rejectPacket(data, contextOut);
         return;
     }
 
@@ -355,12 +359,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // cast trailer to U32
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
     if (!sequenceNumberValid) {
-        U32 newCount = this->rejectedPacketsCount.load() + 1;
-        this->rejectedPacketsCount.store(newCount);
-        this->tlmWrite_RejectedPacketsCount(newCount);
-        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
-        contextOut.set_authenticated(0);
-        this->dataOut_out(0, data, contextOut);
+        this->rejectPacket(data, contextOut);
         return;
     } else {
         // increment the stored sequence number
@@ -377,12 +376,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     if (!hmacValid) {
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
-        U32 newCount = this->rejectedPacketsCount.load() + 1;
-        this->rejectedPacketsCount.store(newCount);
-        this->tlmWrite_RejectedPacketsCount(newCount);
-        this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
-        contextOut.set_authenticated(0);
-        this->dataOut_out(0, data, contextOut);
+        this->rejectPacket(data, contextOut);
         return;
     }
 
