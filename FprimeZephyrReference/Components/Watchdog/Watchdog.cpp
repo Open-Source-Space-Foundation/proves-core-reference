@@ -38,6 +38,9 @@ void Watchdog ::start_handler(FwIndexType portNum) {
     // Start the watchdog
     this->m_run = true;
 
+    // Write initial telemetry value to ensure it's available immediately
+    this->tlmWrite_WatchdogTransitions(this->m_transitions);
+
     // Report watchdog started
     this->log_ACTIVITY_HI_WatchdogStart();
 }
