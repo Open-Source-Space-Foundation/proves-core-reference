@@ -58,6 +58,9 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     state = radio.setCodingRate(5);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
+    state = radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255, RADIOLIB_SX128X_LORA_CRC_ON,
+                                      RADIOLIB_SX128X_LORA_IQ_STANDARD);
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
