@@ -25,7 +25,7 @@ rtcManager = "ReferenceDeployment.rtcManager"
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+    fprime_test_api.send_command(f"{resetManager}.COLD_RESET")
     # Wait for system to restart after reset
     fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
     # Add a small delay to ensure Authenticate component is fully initialized
@@ -46,7 +46,7 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     )
     if device_not_ready_event is not None:
         # RTC is not ready, perform a soft reset
-        fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+        fprime_test_api.send_command(f"{resetManager}.COLD_RESET")
         # Wait for system to restart after reset
         fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
         # Add a small delay to ensure Authenticate component is fully initialized
