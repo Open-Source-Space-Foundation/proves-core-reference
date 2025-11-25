@@ -26,117 +26,36 @@ MagnetorquerManager ::MagnetorquerManager(const char* const compName) : Magnetor
 
 MagnetorquerManager ::~MagnetorquerManager() {}
 
+void MagnetorquerManager ::configure(const struct device* const devices[5]) {
+    for (int i = 0; i < 5; ++i) {
+        this->m_devices[i] = devices[i];
+        drv2605_haptic_config(this->m_devices[i], DRV2605_HAPTICS_SOURCE_ROM, &this->config_data);
+    }
+}
+
 // ----------------------------------------------------------------------
 // Helper methods
 // ----------------------------------------------------------------------
 void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
-    // const struct device* dev = this->m_devices[0];
-    // if (!device_is_ready(dev)) {
-    //     this->log_WARNING_HI_DeviceNotReady();
-    //     return;
-    // }
-    // if (this->enabled) {
-    //     static struct drv2605_rom_data rom_data = {
-    //         .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-    //         .library = DRV2605_LIBRARY_LRA,
-    //         .seq_regs = {1, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 2, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 3,
-    //                      DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 4},
-    //         .overdrive_time = 0,
-    //         .sustain_pos_time = 0,
-    //         .sustain_neg_time = 0,
-    //         .brake_time = 0,
-    //     };
-    //     union drv2605_config_data config_data = {};
-
-    //     config_data.rom_data = &rom_data;
-    //     this->log_ACTIVITY_HI_RetResult(0);
-    //     int ret = drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data);
-    //     this->log_ACTIVITY_HI_RetResult(ret);
-    // }
-    // this->enabled ? haptics_start_output(dev) : haptics_stop_output(dev);
-}
-
-void MagnetorquerManager ::SET_ENABLED_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool enable) {
-    const struct device* dev = this->m_devices[0];
-    if (!device_is_ready(dev)) {
-        this->log_WARNING_HI_DeviceNotReady();
-        return;
+    if (this->enabled) {
+        for (int i = 0; i < 5; ++i) {
+            const struct device* dev = this->m_devices[i];
+            if (!device_is_ready(dev)) {
+                this->log_WARNING_HI_DeviceNotReady();
+                return;
+            }
+            haptics_start_output(dev);
+        }
+    } else {
+        for (int i = 0; i < 5; ++i) {
+            const struct device* dev = this->m_devices[i];
+            if (!device_is_ready(dev)) {
+                this->log_WARNING_HI_DeviceNotReady();
+                return;
+            }
+            haptics_stop_output(dev);
+        }
     }
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {1, 1, 1, 1, 1, 1, 1, 1},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    union drv2605_config_data config_data = {};
-
-    config_data.rom_data = &rom_data;
-    int ret = drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data);
-    haptics_start_output(dev);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void MagnetorquerManager ::configure(const struct device* const devices[5]) {
-    for (int i = 0; i < 5; ++i) {
-        this->m_devices[i] = devices[i];
-    }
-}
-
-void MagnetorquerManager ::START_PLAYBACK_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) {
-    // Validate face index (0..4)
-    if (faceIdx >= 5) {
-        this->log_WARNING_LO_InvalidFaceIndex();
-        return;
-    }
-
-    const struct device* dev = this->m_devices[faceIdx];
-    if (!device_is_ready(dev)) {
-        this->log_WARNING_HI_DeviceNotReady();
-        return;
-    }
-
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {1, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 2, DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 3,
-                     DRV2605_WAVEFORM_SEQUENCER_WAIT_MS(100), 4},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    union drv2605_config_data config_data = {};
-
-    config_data.rom_data = &rom_data;
-
-    for (int i = 0; i < 10; ++i) {
-        haptics_start_output(dev);
-        k_sleep(K_MSEC(1000));
-        haptics_stop_output(dev);
-        k_sleep(K_MSEC(500));
-    }
-    // int ret = drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void MagnetorquerManager ::START_PLAYBACK_TEST2_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) {
-    // Validate face index (0..4)
-    if (faceIdx >= 5) {
-        this->log_WARNING_LO_InvalidFaceIndex();
-        return;
-    }
-
-    const struct device* dev = this->m_devices[faceIdx];
-    if (!device_is_ready(dev)) {
-        this->log_WARNING_HI_DeviceNotReady();
-        return;
-    }
-
-    struct drv2605_rom_data rom2 = {.library = DRV2605_LIBRARY_TS2200_A, .seq_regs = {50, 0, 0, 0, 0, 0, 0, 0}};
-    drv2605_haptic_config(dev, DRV2605_HAPTICS_SOURCE_ROM, (union drv2605_config_data*)&rom2);
 }
 
 void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) {

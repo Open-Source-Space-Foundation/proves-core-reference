@@ -36,17 +36,22 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
   private:
     //! Zephyr device to store initialized DRV2605 devices
     const struct device* m_devices[5];
-    struct drv2605_rom_data rom = {.library = DRV2605_LIBRARY_TS2200_A, .seq_regs = {47, 0, 0, 0, 0, 0, 0, 0}};
+    static struct drv2605_rom_data rom_data = {
+        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
+        .library = DRV2605_LIBRARY_LRA,
+        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
+        .overdrive_time = 0,
+        .sustain_pos_time = 0,
+        .sustain_neg_time = 0,
+        .brake_time = 0,
+    };
+    union drv2605_config_data config_data = {};
+    config_data.rom_data = &rom_data;
 
     // Command handlers updated to accept a face index (0..5)
-    void START_PLAYBACK_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) override;
-    void START_PLAYBACK_TEST2_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 faceIdx) override;
-
     void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
     void run_handler(FwIndexType portNum, U32 context) override;
     bool enabled = false;
-    bool lastEnabledState = false;
-    void SET_ENABLED_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool enable) override;
 };
 
 }  // namespace Drv
