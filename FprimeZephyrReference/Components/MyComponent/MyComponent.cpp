@@ -12,6 +12,8 @@
 
 #include <Fw/Logger/Logger.hpp>
 
+#include "FprimeHal.hpp"
+
 #define OP_SET_MODULATION_PARAMS 0x8B
 #define OP_SET_TX_PARAMS 0x8E
 #define OP_SET_CONTINUOUS_PREAMBLE 0xD2
@@ -27,7 +29,11 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-MyComponent ::MyComponent(const char* const compName) : MyComponentComponentBase(compName) {}
+MyComponent ::MyComponent(const char* const compName)
+    : MyComponentComponentBase(compName),
+      m_rlb_hal(this),
+      m_rlb_module(&m_rlb_hal, 0, 0, 0),
+      m_rlb_radio(&m_rlb_module) {}
 
 MyComponent ::~MyComponent() {}
 
@@ -44,28 +50,25 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    FprimeHal hal(this);
-    Module m(&hal, 0, 0, 0);
-    SX1280 radio(&m);
-    int state = radio.begin();
+    int state = this->m_rlb_radio.begin();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = radio.setOutputPower(13);  // 13dB is max
+    state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     // Match modulation parameters to CircuitPython defaults
-    state = radio.setSpreadingFactor(7);
+    state = this->m_rlb_radio.setSpreadingFactor(7);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = radio.setBandwidth(406.25);
+    state = this->m_rlb_radio.setBandwidth(406.25);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = radio.setCodingRate(5);
+    state = this->m_rlb_radio.setCodingRate(5);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255, RADIOLIB_SX128X_LORA_CRC_ON,
-                                      RADIOLIB_SX128X_LORA_IQ_STANDARD);
+    state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
+                                                  RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\n";
-    state = radio.transmit(s, sizeof(s));
+    state = this->m_rlb_radio.transmit(s, sizeof(s));
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
     } else {

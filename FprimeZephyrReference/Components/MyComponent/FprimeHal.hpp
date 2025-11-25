@@ -3,8 +3,6 @@
 
 #include <RadioLib.h>
 
-#include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
-
 namespace Components {
 class MyComponent;
 }  // namespace Components

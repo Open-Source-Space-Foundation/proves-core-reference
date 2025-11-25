@@ -69,6 +69,11 @@ class MyComponent final : public MyComponentComponentBase {
     void spiSetTx();
     void spiSetStandby();
     U8 spiGetStatus();
+
+  private:
+    FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
+    Module m_rlb_module;  //!< RadioLib Module instance
+    SX1280 m_rlb_radio;   //!< RadioLib SX1280 radio instance
 };
 
 }  // namespace Components

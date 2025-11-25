@@ -2,6 +2,12 @@
 
 #include "FprimeHal.hpp"
 
+#include <Fw/Buffer/Buffer.hpp>
+#include <Fw/Time/Time.hpp>
+#include <Os/Task.hpp>
+
+#include "MyComponent.hpp"
+
 FprimeHal::FprimeHal(Components::MyComponent* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
 
 void FprimeHal::init() {}
