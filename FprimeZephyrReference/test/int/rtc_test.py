@@ -34,7 +34,31 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_and_assert_command(
         command=f"{cmdDispatch}.CMD_NO_OP", timeout=10
     )
+
+    # Try to set the time and check if RTC is ready
+    fprime_test_api.clear_histories()
     set_time(fprime_test_api)
+
+    # Check if DeviceNotReady event was emitted (indicating RTC is not ready)
+    # Search from start of history with short timeout to check if event exists
+    device_not_ready_event = fprime_test_api.await_event(
+        f"{rtcManager}.DeviceNotReady", start=0, timeout=1
+    )
+    if device_not_ready_event is not None:
+        # RTC is not ready, perform a soft reset
+        fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+        # Wait for system to restart after reset
+        fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
+        # Add a small delay to ensure Authenticate component is fully initialized
+        time.sleep(0.5)
+        # Wait for command dispatcher to be ready by sending a NO_OP command
+        fprime_test_api.send_and_assert_command(
+            command=f"{cmdDispatch}.CMD_NO_OP", timeout=10
+        )
+        # Try setting time again after reset
+        fprime_test_api.clear_histories()
+        set_time(fprime_test_api)
+
     fprime_test_api.clear_histories()
 
 
