@@ -44,7 +44,6 @@ def get_default_auth_key_from_spi_dict() -> str:
                         # Ensure key has 0x prefix
                         if not key.startswith("0x") and not key.startswith("0X"):
                             key = f"0x{key}"
-                        print(f"Using key from spi_dict.txt: {key}")
                         return key
     except (IOError, OSError) as e:
         raise IOError(

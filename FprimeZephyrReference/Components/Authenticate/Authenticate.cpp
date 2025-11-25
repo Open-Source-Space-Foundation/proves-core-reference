@@ -148,20 +148,10 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     std::vector<U8> keyBytes;
     std::string hexKey = key;
 
-    printk("Key: %s\n", key.c_str());
-    printk("Default Key: %s\n", DEFAULT_AUTHENTICATION_KEY);
-
-    // Remove "0x" prefix if present
-    if (key.length() > 2 && key.substr(0, 2) == "0x") {
-        hexKey = key.substr(2);
-    }
-    printk("Hex Key: %s\n", hexKey.c_str());
-
     // Check if all characters are hex digits
     bool isHexString = true;
     for (char c : hexKey) {
         if (!std::isxdigit(static_cast<unsigned char>(c))) {
-            printk("Not a hex digit: %c\n", c);
             isHexString = false;
             break;
         }
@@ -179,7 +169,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     // Check the length of the key bytes
     if (keyBytes.size() != 16) {
-        printk("Key bytes size: %zu\n", keyBytes.size());
         this->log_WARNING_HI_InvalidSPI(-1);
         return Fw::Buffer();
     }
@@ -283,11 +272,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     }
     std::memcpy(hmacData, macOutput, hmacOutputLength);
 
-    printk("HMAC Data: ");
-    for (size_t i = 0; i < hmacOutputLength; i++) {
-        printk("%02x ", hmacData[i]);
-    }
-    printk("\n");
     // Create Fw::Buffer with the HMAC data (context 0 for now)
     return Fw::Buffer(hmacData, static_cast<FwSizeType>(hmacOutputLength), 0);
 }
