@@ -17,6 +17,12 @@ module Components {
         @ Command to transmit data
         sync command TRANSMIT()
 
+        @ Command to begin receive
+        sync command RECEIVE()
+
+        @ Command to read recv data buffer
+        sync command READ_DATA()
+
         @ Reset Radio Module
         sync command RESET()
 

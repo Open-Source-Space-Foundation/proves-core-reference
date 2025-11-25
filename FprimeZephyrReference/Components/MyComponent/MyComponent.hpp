@@ -52,6 +52,20 @@ class MyComponent final : public MyComponentComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
+    //! Handler implementation for command RECEIVE
+    //!
+    //! Command to begin receive
+    void RECEIVE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                            U32 cmdSeq            //!< The command sequence number
+                            ) override;
+
+    //! Handler implementation for command READ_DATA
+    //!
+    //! Command to read recv data buffer
+    void READ_DATA_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq            //!< The command sequence number
+                              ) override;
+
     //! Handler implementation for command RESET
     //!
     //! Reset Radio Module

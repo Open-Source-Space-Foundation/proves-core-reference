@@ -70,6 +70,50 @@ void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->rxEnable_out(0, Fw::Logic::HIGH);
+
+    int state = this->configure_radio();
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    state = this->m_rlb_radio.startReceive();
+    if (state == RADIOLIB_ERR_NONE) {
+        Fw::Logger::log("radio.startReceive() success!\n");
+    } else {
+        Fw::Logger::log("radio.startReceive() failed!\n");
+        Fw::Logger::log("state: %i\n", state);
+    }
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Allocate a buffer large enough for the maximum packet size
+    constexpr size_t MAX_PKT = RADIOLIB_SX128X_MAX_PACKET_LENGTH + 1;
+    uint8_t buf[MAX_PKT] = {0};
+
+    int16_t state = this->m_rlb_radio.readData(buf, MAX_PKT);
+    if (state == RADIOLIB_ERR_NONE) {
+        Fw::Logger::log("radio.readData() success!\n");
+    } else {
+        Fw::Logger::log("radio.readData() failed!\n");
+        Fw::Logger::log("state: %i\n", state);
+    }
+
+    // Log the entire receive buffer so user can observe any changes
+    Fw::Logger::log("readData() buffer (full %u bytes):\n", (unsigned)MAX_PKT);
+
+    char msg[sizeof(buf) * 3 + 1];
+
+    for (size_t i = 0; i < MAX_PKT; ++i) {
+        sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
+    }
+    msg[sizeof(buf) * 3] = '\0';
+
+    Fw::Logger::log("%s\n", msg);
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 int MyComponent ::configure_radio() {
     int state = this->m_rlb_radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
