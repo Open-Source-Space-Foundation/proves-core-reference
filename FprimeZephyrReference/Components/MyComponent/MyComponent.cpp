@@ -48,21 +48,16 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     Module m(&hal, 0, 0, 0);
     SX1280 radio(&m);
     int state = radio.begin();
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.begin() success!\n");
-    } else {
-        Fw::Logger::log("radio.begin() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
     state = radio.setOutputPower(13);  // 13dB is max
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.setOutputPower() success!\n");
-    } else if (state == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
-        Fw::Logger::log("Selected output power is invalid for this module!");
-    } else {
-        Fw::Logger::log("radio.setOutputPower() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+    // Match modulation parameters to CircuitPython defaults
+    state = radio.setSpreadingFactor(7);
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+    state = radio.setBandwidth(406.25);
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+    state = radio.setCodingRate(5);
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
