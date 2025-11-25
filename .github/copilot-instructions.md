@@ -166,6 +166,7 @@ FprimeZephyrReference/
 │   ├── BootloaderTrigger/
 │   ├── Drv/          # Driver components (IMU, RTC, sensor managers)
 │   ├── FatalHandler/
+│   ├── MagnetorquerManager/
 │   ├── DetumbleManager/
 │   └── Watchdog/
 ├── ReferenceDeployment/
