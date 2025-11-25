@@ -37,16 +37,28 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Try to set the time and check if RTC is ready
     fprime_test_api.clear_histories()
-    set_time(fprime_test_api)
 
-    # Check if DeviceNotReady event was emitted (indicating RTC is not ready)
-    # Search from start of history with short timeout to check if event exists
-    device_not_ready_event = fprime_test_api.await_event(
-        f"{rtcManager}.DeviceNotReady", start=0, timeout=1
+    # Send TIME_SET command and check for DeviceNotReady event
+    dt = datetime.now(timezone.utc)
+    time_data = dict(
+        Year=dt.year,
+        Month=dt.month,
+        Day=dt.day,
+        Hour=dt.hour,
+        Minute=dt.minute,
+        Second=dt.second,
     )
+    time_data_str = json.dumps(time_data)
+    fprime_test_api.send_command(f"{rtcManager}.TIME_SET", [time_data_str])
+
+    # Wait a bit for the command to process and check for DeviceNotReady event
+    device_not_ready_event = fprime_test_api.await_event(
+        f"{rtcManager}.DeviceNotReady", timeout=2
+    )
+
     if device_not_ready_event is not None:
         # RTC is not ready, perform a soft reset
-        fprime_test_api.send_command(f"{resetManager}.COLD_RESET")
+        fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
         # Wait for system to restart after reset
         fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
         # Add a small delay to ensure Authenticate component is fully initialized
@@ -58,6 +70,11 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
         # Try setting time again after reset
         fprime_test_api.clear_histories()
         set_time(fprime_test_api)
+    else:
+        # RTC is ready, verify the command completed successfully
+        # Wait for OpCodeDispatched and OpCodeCompleted events
+        fprime_test_api.assert_event(f"{cmdDispatch}.OpCodeDispatched", timeout=2)
+        fprime_test_api.assert_event(f"{cmdDispatch}.OpCodeCompleted", timeout=2)
 
     fprime_test_api.clear_histories()
 
