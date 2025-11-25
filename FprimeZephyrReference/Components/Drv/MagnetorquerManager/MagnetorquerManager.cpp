@@ -27,6 +27,19 @@ MagnetorquerManager ::MagnetorquerManager(const char* const compName) : Magnetor
 MagnetorquerManager ::~MagnetorquerManager() {}
 
 void MagnetorquerManager ::configure(const struct device* const devices[5]) {
+    // Configure DRV2605 config struct
+    static struct drv2605_rom_data rom_data = {
+        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
+        .library = DRV2605_LIBRARY_LRA,
+        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
+        .overdrive_time = 0,
+        .sustain_pos_time = 0,
+        .sustain_neg_time = 0,
+        .brake_time = 0,
+    };
+    this->config_data.rom_data = &rom_data;
+
+    // Configure each device
     for (int i = 0; i < 5; ++i) {
         this->m_devices[i] = devices[i];
         drv2605_haptic_config(this->m_devices[i], DRV2605_HAPTICS_SOURCE_ROM, &this->config_data);

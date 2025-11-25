@@ -36,17 +36,7 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
   private:
     //! Zephyr device to store initialized DRV2605 devices
     const struct device* m_devices[5];
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    union drv2605_config_data config_data = {};
-    config_data.rom_data = &rom_data;
+    union drv2605_config_data config_data;
 
     // Command handlers updated to accept a face index (0..5)
     void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
