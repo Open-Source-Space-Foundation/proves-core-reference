@@ -45,12 +45,12 @@ class MyComponent final : public MyComponentComponentBase {
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for command FOO
+    //! Handler implementation for command TRANSMIT
     //!
-    //! Command for testing
-    void FOO_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                        U32 cmdSeq            //!< The command sequence number
-                        ) override;
+    //! Command to transmit data
+    void TRANSMIT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq            //!< The command sequence number
+                             ) override;
 
     //! Handler implementation for command RESET
     //!

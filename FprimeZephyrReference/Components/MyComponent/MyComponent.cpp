@@ -49,7 +49,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     char s[] =

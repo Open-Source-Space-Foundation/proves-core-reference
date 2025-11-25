@@ -14,8 +14,8 @@ module Components {
         # @ Import Communication Interface
         # import Svc.Com
 
-        @ Command for testing
-        sync command FOO()
+        @ Command to transmit data
+        sync command TRANSMIT()
 
         @ Reset Radio Module
         sync command RESET()
