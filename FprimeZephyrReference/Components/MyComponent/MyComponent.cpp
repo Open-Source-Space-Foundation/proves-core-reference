@@ -50,19 +50,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    int state = this->m_rlb_radio.begin();
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    // Match modulation parameters to CircuitPython defaults
-    state = this->m_rlb_radio.setSpreadingFactor(7);
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = this->m_rlb_radio.setBandwidth(406.25);
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = this->m_rlb_radio.setCodingRate(5);
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-    state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
-                                                  RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
+    int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
@@ -76,6 +64,38 @@ void MyComponent ::FOO_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("state: %i\n", state);
     }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+int MyComponent ::configure_radio() {
+    int state = this->m_rlb_radio.begin();
+    if (state != RADIOLIB_ERR_NONE) {
+        return state;
+    }
+
+    state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
+    if (state != RADIOLIB_ERR_NONE) {
+        return state;
+    }
+
+    // Match modulation parameters to CircuitPython defaults
+    state = this->m_rlb_radio.setSpreadingFactor(7);
+    if (state != RADIOLIB_ERR_NONE) {
+        return state;
+    }
+
+    state = this->m_rlb_radio.setBandwidth(406.25);
+    if (state != RADIOLIB_ERR_NONE) {
+        return state;
+    }
+
+    state = this->m_rlb_radio.setCodingRate(5);
+    if (state != RADIOLIB_ERR_NONE) {
+        return state;
+    }
+
+    state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
+                                                  RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
+    return state;
 }
 
 void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {

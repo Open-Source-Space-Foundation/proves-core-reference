@@ -70,6 +70,9 @@ class MyComponent final : public MyComponentComponentBase {
     void spiSetStandby();
     U8 spiGetStatus();
 
+    // Configure the SX1280 radio (setup and parameter tuning)
+    int configure_radio();
+
   private:
     FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
     Module m_rlb_module;  //!< RadioLib Module instance
