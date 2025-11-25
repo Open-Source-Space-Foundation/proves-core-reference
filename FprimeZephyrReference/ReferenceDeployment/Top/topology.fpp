@@ -214,6 +214,7 @@ module ReferenceDeployment {
     connections MyConnectionGraph {
       mycomp.spiSend -> spiDriver.SpiReadWrite
       mycomp.resetSend -> gpioSbandNrst.gpioWrite
+      mycomp.txEnable -> gpioSbandTxEn.gpioWrite
     }
 
     connections ComCcsds_FileHandling {

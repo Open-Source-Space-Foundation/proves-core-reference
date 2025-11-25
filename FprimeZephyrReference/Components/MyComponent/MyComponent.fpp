@@ -26,6 +26,9 @@ module Components {
         @ Radio Module Reset GPIO
         output port resetSend: Drv.GpioWrite
 
+        @ S-Band TX Enable GPIO (separate from reset)
+        output port txEnable: Drv.GpioWrite
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
