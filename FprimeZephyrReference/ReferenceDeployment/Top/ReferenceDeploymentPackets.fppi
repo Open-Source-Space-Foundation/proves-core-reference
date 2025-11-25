@@ -3,8 +3,8 @@ telemetry packets ReferenceDeploymentPackets {
   packet Health id 1 group 1 {
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsLora.comQueue.comQueueDepth
+    ComCcsdsLora.commsBufferManager.HiBuffs
     ComCcsdsUart.comQueue.comQueueDepth
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
@@ -17,8 +17,8 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthWarnings id 2 group 1 {
     CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
-    ComCcsds.commsBufferManager.EmptyBuffs
+    ComCcsdsLora.commsBufferManager.NoBuffs
+    ComCcsdsLora.commsBufferManager.EmptyBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
@@ -27,9 +27,9 @@ telemetry packets ReferenceDeploymentPackets {
 
 
   packet HealthAuxillary id 3 group 2 {
-    ComCcsds.commsBufferManager.TotalBuffs
-    ComCcsds.commsBufferManager.CurrBuffs
-    ComCcsds.comQueue.buffQueueDepth
+    ComCcsdsLora.commsBufferManager.TotalBuffs
+    ComCcsdsLora.commsBufferManager.CurrBuffs
+    ComCcsdsLora.comQueue.buffQueueDepth
     ComCcsdsUart.commsBufferManager.TotalBuffs
     ComCcsdsUart.commsBufferManager.CurrBuffs
     ComCcsdsUart.comQueue.buffQueueDepth

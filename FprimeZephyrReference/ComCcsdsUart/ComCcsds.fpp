@@ -94,7 +94,7 @@ module ComCcsdsUart {
         """
     }
 
-    instance fprimeRouter: Svc.FprimeRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000
+    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x04000
 
@@ -132,7 +132,7 @@ module ComCcsdsUart {
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance fprimeRouter
+        instance authenticationRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer
@@ -185,12 +185,12 @@ module ComCcsdsUart {
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
 
             # SpacePacketDeframer <-> Router
-            spacePacketDeframer.dataOut -> fprimeRouter.dataIn
-            fprimeRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+            spacePacketDeframer.dataOut -> authenticationRouter.dataIn
+            authenticationRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
 
             # Router buffer allocations
-            fprimeRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
-            fprimeRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
+            authenticationRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
+            authenticationRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
         }
     } # end FramingSubtopology
 

@@ -7,19 +7,22 @@
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 
 // Subtopology PingEntries includes
+#include "FprimeZephyrReference/ComCcsdsLora/PingEntries.hpp"
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
-#include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
 #include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
 #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
+#include "FprimeZephyrReference/ComCcsdsLora/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
-#include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
-// ComCcsds Enum Includes
+// ComCcsds Enum Includes (for ComCcsdsLora)
 #include "Svc/Subtopologies/ComCcsds/Ports_ComBufferQueueEnumAc.hpp"
 #include "Svc/Subtopologies/ComCcsds/Ports_ComPacketQueueEnumAc.hpp"
+// ComCcsdsUart Enum Includes
+#include "FprimeZephyrReference/ComCcsdsUart/Ports_ComBufferQueueEnumAc.hpp"
+#include "FprimeZephyrReference/ComCcsdsUart/Ports_ComPacketQueueEnumAc.hpp"
 
 // Include autocoded FPP constants
 #include "FprimeZephyrReference/ReferenceDeployment/Top/FppConstantsAc.hpp"
@@ -73,7 +76,7 @@ struct TopologyState {
     const device* loraDevice;                     //!< LoRa device path for communication
     U32 baudRate;                                 //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
+    ComCcsdsLora::SubtopologyState comCcsdsLora;  //!< Subtopology state for ComCcsdsLora
     FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
     const device* ina219SysDevice;                //!< device path for battery board ina219
     const device* ina219SolDevice;                //!< device path for solar panel ina219
