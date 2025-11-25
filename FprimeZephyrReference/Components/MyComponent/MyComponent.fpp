@@ -29,6 +29,9 @@ module Components {
         @ S-Band TX Enable GPIO (separate from reset)
         output port txEnable: Drv.GpioWrite
 
+        @ S-Band RX Enable GPIO
+        output port rxEnable: Drv.GpioWrite
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
