@@ -40,7 +40,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-spi-dict ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -64,7 +64,7 @@ generate-spi-dict: ## Generate spi_dict.txt with random HMAC keys
 	@echo "Generated $(SPI_DICT_PATH) and $(AUTH_DEFAULT_KEY_HEADER)"
 
 .PHONY: build
-build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-spi-dict generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
