@@ -44,13 +44,11 @@ void FprimeHal::delayMicroseconds(unsigned long us) {
 }
 
 unsigned long FprimeHal::millis() {
-    Fw::Time time = this->m_component->getTime();
-    return time.getSeconds() * 1000 + time.getUSeconds() / 1000;
+    return k_uptime_get();
 }
 
 unsigned long FprimeHal::micros() {
-    Fw::Time time = this->m_component->getTime();
-    return time.getSeconds() * 1000000 + time.getUSeconds();
+    return k_uptime_get() * 1000;
 }
 
 long FprimeHal::pulseIn(uint32_t pin, uint32_t state, unsigned long timeout) {
