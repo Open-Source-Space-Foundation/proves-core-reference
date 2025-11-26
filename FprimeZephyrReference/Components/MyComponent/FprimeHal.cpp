@@ -19,6 +19,15 @@ void FprimeHal::pinMode(uint32_t pin, uint32_t mode) {}
 void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {}
 
 uint32_t FprimeHal::digitalRead(uint32_t pin) {
+    if (pin == 5) {
+        Fw::Logic irqState;
+        Drv::GpioStatus state = this->m_component->getIRQLine_out(0, irqState);
+        FW_ASSERT(state == Drv::GpioStatus::OP_OK);
+        if (irqState == Fw::Logic::HIGH)
+            return 1;
+        else
+            return 0;
+    }
     return 0;
 }
 

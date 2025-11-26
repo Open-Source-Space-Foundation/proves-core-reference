@@ -56,6 +56,7 @@ module ReferenceDeployment {
     instance gpioSbandNrst
     instance gpioSbandRxEn
     instance gpioSbandTxEn
+    instance gpioSbandIRQ
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch
@@ -216,6 +217,7 @@ module ReferenceDeployment {
       mycomp.resetSend -> gpioSbandNrst.gpioWrite
       mycomp.txEnable -> gpioSbandTxEn.gpioWrite
       mycomp.rxEnable -> gpioSbandRxEn.gpioWrite
+      mycomp.getIRQLine -> gpioSbandRxEn.gpioRead
     }
 
     connections ComCcsds_FileHandling {

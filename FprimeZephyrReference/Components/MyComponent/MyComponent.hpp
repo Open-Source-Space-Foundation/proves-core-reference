@@ -25,6 +25,7 @@ class MyComponent final : public MyComponentComponentBase {
     //! Destroy MyComponent object
     ~MyComponent();
 
+    using MyComponentComponentBase::getIRQLine_out;
     using MyComponentComponentBase::getTime;
     using MyComponentComponentBase::spiSend_out;
 

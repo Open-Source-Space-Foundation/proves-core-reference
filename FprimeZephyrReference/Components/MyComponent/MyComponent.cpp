@@ -32,7 +32,7 @@ namespace Components {
 MyComponent ::MyComponent(const char* const compName)
     : MyComponentComponentBase(compName),
       m_rlb_hal(this),
-      m_rlb_module(&m_rlb_hal, 0, 0, 0),
+      m_rlb_module(&m_rlb_hal, 0, 5, 0),
       m_rlb_radio(&m_rlb_module) {}
 
 MyComponent ::~MyComponent() {}

@@ -38,6 +38,9 @@ module Components {
         @ S-Band RX Enable GPIO
         output port rxEnable: Drv.GpioWrite
 
+        @ S-Band IRQ Line
+        output port getIRQLine: Drv.GpioRead
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
