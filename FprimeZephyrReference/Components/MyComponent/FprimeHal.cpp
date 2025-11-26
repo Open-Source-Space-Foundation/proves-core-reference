@@ -7,6 +7,7 @@
 #include <Os/Task.hpp>
 
 #include "MyComponent.hpp"
+#include <zephyr/kernel.h>
 
 FprimeHal::FprimeHal(Components::MyComponent* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
 
