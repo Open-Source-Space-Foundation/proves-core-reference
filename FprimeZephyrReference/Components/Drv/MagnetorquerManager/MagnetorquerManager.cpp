@@ -59,22 +59,26 @@ void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
             }
             haptics_start_output(dev);
         }
-    } else {
-        for (int i = 0; i < 5; ++i) {
-            const struct device* dev = this->m_devices[i];
-            if (!device_is_ready(dev)) {
-                this->log_WARNING_HI_DeviceNotReady();
-                return;
-            }
-            haptics_stop_output(dev);
-        }
     }
 }
 
 void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) {
-    // TODO(hrfarmer): Once its possible to properly interact with the DRV2605, I'll figure out how to
-    // determine how the passed in amps should translate to a specific pattern(s) that should be ran.
-    return;
+    this->enabled = true;
+
+    for (int i = 0; i < 5; ++i) {
+        this->enabled_faces[i] = value[i];
+    }
 }
 
+void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
+    this->enabled = false;
+    for (int i = 0; i < 5; ++i) {
+        const struct device* dev = this->m_devices[i];
+        if (!device_is_ready(dev)) {
+            this->log_WARNING_HI_DeviceNotReady();
+            return;
+        }
+        haptics_stop_output(dev);
+    }
+}
 }  // namespace Drv

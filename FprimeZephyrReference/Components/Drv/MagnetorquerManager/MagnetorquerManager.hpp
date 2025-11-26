@@ -40,10 +40,12 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
 
     // Command handlers updated to accept a face index (0..5)
     void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
+    void SetDisabled_handler(const FwIndexType portNum) override;
     void run_handler(FwIndexType portNum, U32 context) override;
-    bool enabled = false;
-};
 
+    bool enabled = false;
+    bool enabled_faces[5] = {false, false, false, false, false};
+};
 }  // namespace Drv
 
 #endif

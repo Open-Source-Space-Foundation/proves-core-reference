@@ -1,8 +1,9 @@
 module Drv {
-    array InputArray = [5] I32;
+    array InputArray = [5] bool;
     port SetMagnetorquers(
-        value: InputArray @< Amp value for each face in the order x1, x2, y1, y2, z1
+        value: InputArray @< Enabled/disabled vale for each face in the order x1, x2, y1, y2, z1
     )
+    port SetDisabled()
 }
 
 module Drv {
@@ -16,6 +17,9 @@ module Drv {
 
         @ Input port to set magnetorquer values
         sync input port SetMagnetorquers: SetMagnetorquers
+
+        @ Input port to disable magnetorquers
+        sync input port SetDisabled: SetDisabled
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
