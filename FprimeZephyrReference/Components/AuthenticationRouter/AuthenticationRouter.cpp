@@ -10,6 +10,8 @@
 #include "Fw/FPrimeBasicTypes.hpp"
 #include "Fw/Logger/Logger.hpp"
 #include "config/ApidEnumAc.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 namespace Svc {
 
@@ -27,6 +29,7 @@ AuthenticationRouter ::~AuthenticationRouter() {}
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
+    printk("AuthenticationRouter ::dataIn_handler\n");
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
     // Route based on received APID (packet type)

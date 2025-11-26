@@ -1,11 +1,27 @@
 module Svc {
     @ Routes packets deframed by the Deframer to the rest of the system
-    passive component AuthenticationRouter {
+    active component AuthenticationRouter {
 
         # ----------------------------------------------------------------------
-        # Router interface
+        # Router interface (ports defined explicitly for active component)
         # ----------------------------------------------------------------------
-        import Router
+        # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
+        async input port dataIn: Svc.ComDataWithContext
+
+        # Port for returning ownership of data (includes Fw.Buffer) received on dataIn
+        output port dataReturnOut: Svc.ComDataWithContext
+
+        # Port for sending file packets as Fw::Buffer (ownership passed to receiver)
+        output port fileOut: Fw.BufferSend
+
+        # Port for receiving ownership back of buffers sent on fileOut
+        sync input port fileBufferReturnIn: Fw.BufferSend
+
+        # Port for sending command packets as Fw::ComBuffers
+        output port commandOut: Fw.Com
+
+        # Port for receiving command responses from a command dispatcher (can be a no-op)
+        sync input port cmdResponseIn: Fw.CmdResponse
 
         @ Port for forwarding non-recognized packet types
         @ Ownership of the buffer is retained by the AuthenticationRouter, meaning receiving

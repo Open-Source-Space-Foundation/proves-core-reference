@@ -82,7 +82,10 @@ module ComCcsdsLora {
 
     instance fprimeRouter: Svc.FprimeRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03000
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500
+    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500 \
+        queue size ComCcsdsConfig.QueueSizes.comQueue \
+        stack size ComCcsdsConfig.StackSizes.comQueue \
+        priority ComCcsdsConfig.Priorities.comQueue
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x04000
 
