@@ -398,5 +398,5 @@ The FORCE_SAFE_MODE command can be called from any mode without error. If alread
 ## Change Log
 | Date | Description |
 |---|---|
-| 2026-02-18 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
+| 2025-11-20 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
 | 2025-11-19 | Added getMode query port and enhanced modeChanged to carry mode value |
