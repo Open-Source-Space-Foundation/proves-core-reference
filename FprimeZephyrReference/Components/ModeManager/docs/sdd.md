@@ -341,15 +341,16 @@ The ModeManager controls 8 load switches that power non-critical satellite subsy
 
 | Index | Subsystem | Safe Mode State | Payload Mode State |
 |---|---|---|---|
-| 0 | Satellite Face 0 | OFF | ON |
-| 1 | Satellite Face 1 | OFF | ON |
-| 2 | Satellite Face 2 | OFF | ON |
-| 3 | Satellite Face 3 | OFF | ON |
-| 4 | Satellite Face 4 | OFF | ON |
-| 5 | Satellite Face 5 | OFF | ON |
+| 0 | Satellite Face 0 | OFF | PREV/OFF |
+| 1 | Satellite Face 1 | OFF | PREV/OFF |
+| 2 | Satellite Face 2 | OFF | PREV/OFF |
+| 3 | Satellite Face 3 | OFF | PREV/OFF |
+| 4 | Satellite Face 4 | OFF | PREV/OFF |
+| 5 | Satellite Face 5 | OFF | PREV/OFF |
 | 6 | Payload Power | OFF | ON |
 | 7 | Payload Battery | OFF | ON |
 
+> **Note:** In payload mode, only the payload switches (indices 6 & 7) are explicitly turned ON. The state of face switches (0-5) depends on their state prior to entering payload mode (typically OFF after safe mode). See requirement MM0016 and implementation for details.
 ## Integration Tests
 
 See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrReference/test/int/payload_mode_test.py` for comprehensive integration tests covering:
