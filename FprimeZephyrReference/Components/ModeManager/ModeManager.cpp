@@ -18,7 +18,11 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 ModeManager ::ModeManager(const char* const compName)
-    : ModeManagerComponentBase(compName), m_mode(SystemMode::NORMAL), m_safeModeEntryCount(0), m_runCounter(0) {}
+    : ModeManagerComponentBase(compName),
+      m_mode(SystemMode::NORMAL),
+      m_safeModeEntryCount(0),
+      m_payloadModeEntryCount(0),
+      m_runCounter(0) {}
 
 ModeManager ::~ModeManager() {}
 
@@ -44,8 +48,17 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Provides immediate safe mode entry for critical component-detected faults
     this->log_WARNING_HI_ExternalFaultDetected();
 
-    if (this->m_mode == SystemMode::NORMAL) {
+    // Allow safe mode entry from NORMAL or PAYLOAD_MODE (emergency override)
+    if (this->m_mode == SystemMode::NORMAL || this->m_mode == SystemMode::PAYLOAD_MODE) {
         this->enterSafeMode("External component request");
+    }
+}
+
+void ModeManager ::forcePayloadMode_handler(FwIndexType portNum) {
+    // Force entry into payload mode (called by other components)
+    // Only allowed from NORMAL mode (not from SAFE_MODE)
+    if (this->m_mode == SystemMode::NORMAL) {
+        this->enterPayloadMode("External component request");
     }
 }
 
@@ -63,7 +76,8 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Force entry into safe mode
     this->log_ACTIVITY_HI_ManualSafeModeEntry();
 
-    if (this->m_mode == SystemMode::NORMAL) {
+    // Allow safe mode entry from NORMAL or PAYLOAD_MODE (emergency override)
+    if (this->m_mode == SystemMode::NORMAL || this->m_mode == SystemMode::PAYLOAD_MODE) {
         this->enterSafeMode("Ground command");
     }
 
@@ -87,6 +101,48 @@ void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void ModeManager ::ENTER_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Command to enter payload mode - only allowed from NORMAL mode
+
+    // Check if currently in safe mode (not allowed)
+    if (this->m_mode == SystemMode::SAFE_MODE) {
+        Fw::LogStringArg cmdNameStr("ENTER_PAYLOAD_MODE");
+        Fw::LogStringArg reasonStr("Cannot enter payload mode from safe mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Check if already in payload mode
+    if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+        // Already in payload mode - success (idempotent)
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
+    // Enter payload mode
+    this->log_ACTIVITY_HI_ManualPayloadModeEntry();
+    this->enterPayloadMode("Ground command");
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void ModeManager ::EXIT_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Command to exit payload mode
+
+    // Check if currently in payload mode
+    if (this->m_mode != SystemMode::PAYLOAD_MODE) {
+        Fw::LogStringArg cmdNameStr("EXIT_PAYLOAD_MODE");
+        Fw::LogStringArg reasonStr("Not currently in payload mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Exit payload mode
+    this->exitPayloadMode();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------
@@ -103,10 +159,11 @@ void ModeManager ::loadState() {
 
         if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
             // Validate state data before restoring
-            if (state.mode <= static_cast<U8>(SystemMode::SAFE_MODE)) {
+            if (state.mode <= static_cast<U8>(SystemMode::PAYLOAD_MODE)) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
+                this->m_payloadModeEntryCount = state.payloadModeEntryCount;
 
                 // Restore physical hardware state to match loaded mode
                 if (this->m_mode == SystemMode::SAFE_MODE) {
@@ -116,6 +173,13 @@ void ModeManager ::loadState() {
                     // Log that we're restoring safe mode (not entering it fresh)
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
                     this->log_WARNING_HI_EnteringSafeMode(reasonStr);
+                } else if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+                    // PAYLOAD_MODE - turn on payload switches
+                    this->turnOnPayload();
+
+                    // Log that we're restoring payload mode
+                    Fw::LogStringArg reasonStr("State restored from persistent storage");
+                    this->log_ACTIVITY_HI_EnteringPayloadMode(reasonStr);
                 } else {
                     // NORMAL mode - ensure components are turned on
                     this->turnOnComponents();
@@ -124,6 +188,7 @@ void ModeManager ::loadState() {
                 // Corrupted state - use defaults
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
+                this->m_payloadModeEntryCount = 0;
                 this->turnOnComponents();
             }
         }
@@ -133,6 +198,7 @@ void ModeManager ::loadState() {
         // File doesn't exist or can't be opened - initialize to default state
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
+        this->m_payloadModeEntryCount = 0;
         this->turnOnComponents();
     }
 }
@@ -151,6 +217,7 @@ void ModeManager ::saveState() {
     PersistentState state;
     state.mode = static_cast<U8>(this->m_mode);
     state.safeModeEntryCount = this->m_safeModeEntryCount;
+    state.payloadModeEntryCount = this->m_payloadModeEntryCount;
 
     FwSizeType bytesToWrite = sizeof(PersistentState);
     FwSizeType bytesWritten = bytesToWrite;
@@ -223,6 +290,62 @@ void ModeManager ::exitSafeMode() {
     this->saveState();
 }
 
+void ModeManager ::enterPayloadMode(const char* reasonOverride) {
+    // Transition to payload mode
+    this->m_mode = SystemMode::PAYLOAD_MODE;
+    this->m_payloadModeEntryCount++;
+
+    // Build reason string
+    Fw::LogStringArg reasonStr;
+    char reasonBuf[100];
+    if (reasonOverride != nullptr) {
+        reasonStr = reasonOverride;
+    } else {
+        snprintf(reasonBuf, sizeof(reasonBuf), "Unknown");
+        reasonStr = reasonBuf;
+    }
+
+    this->log_ACTIVITY_HI_EnteringPayloadMode(reasonStr);
+
+    // Turn on payload switches (6 & 7)
+    this->turnOnPayload();
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+    this->tlmWrite_PayloadModeEntryCount(this->m_payloadModeEntryCount);
+
+    // Notify other components of mode change with new mode value
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state
+    this->saveState();
+}
+
+void ModeManager ::exitPayloadMode() {
+    // Transition back to normal mode
+    this->m_mode = SystemMode::NORMAL;
+
+    this->log_ACTIVITY_HI_ExitingPayloadMode();
+
+    // Turn off payload switches
+    this->turnOffPayload();
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+
+    // Notify other components of mode change with new mode value
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state
+    this->saveState();
+}
+
 void ModeManager ::turnOffNonCriticalComponents() {
     // Turn OFF:
     // - Satellite faces 0-5 (LoadSwitch instances 0-5)
@@ -240,13 +363,34 @@ void ModeManager ::turnOffNonCriticalComponents() {
 }
 
 void ModeManager ::turnOnComponents() {
-    // Turn ON all load switches to restore normal operation
+    // Turn ON face load switches (0-5) to restore normal operation
+    // Note: Payload switches (6-7) are NOT turned on here - they require PAYLOAD_MODE
 
-    // Send turn on signal to all 8 load switches
-    for (FwIndexType i = 0; i < 8; i++) {
+    // Send turn on signal to face load switches only (indices 0-5)
+    for (FwIndexType i = 0; i < 6; i++) {
         if (this->isConnected_loadSwitchTurnOn_OutputPort(i)) {
             this->loadSwitchTurnOn_out(i);
         }
+    }
+}
+
+void ModeManager ::turnOnPayload() {
+    // Turn ON payload load switches (6 = payload power, 7 = payload battery)
+    if (this->isConnected_loadSwitchTurnOn_OutputPort(6)) {
+        this->loadSwitchTurnOn_out(6);
+    }
+    if (this->isConnected_loadSwitchTurnOn_OutputPort(7)) {
+        this->loadSwitchTurnOn_out(7);
+    }
+}
+
+void ModeManager ::turnOffPayload() {
+    // Turn OFF payload load switches (6 = payload power, 7 = payload battery)
+    if (this->isConnected_loadSwitchTurnOff_OutputPort(6)) {
+        this->loadSwitchTurnOff_out(6);
+    }
+    if (this->isConnected_loadSwitchTurnOff_OutputPort(7)) {
+        this->loadSwitchTurnOff_out(7);
     }
 }
 

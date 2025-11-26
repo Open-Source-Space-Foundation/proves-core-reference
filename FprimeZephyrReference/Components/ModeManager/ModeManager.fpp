@@ -4,6 +4,7 @@ module Components {
     enum SystemMode {
         NORMAL = 0 @< Normal operational mode
         SAFE_MODE = 1 @< Safe mode with non-critical components powered off
+        PAYLOAD_MODE = 2 @< Payload mode with payload power and battery enabled
     }
 
     @ Port for notifying about mode changes
@@ -25,6 +26,9 @@ module Components {
 
         @ Port to force safe mode entry (callable by other components)
         async input port forceSafeMode: Fw.Signal
+
+        @ Port to force payload mode entry (callable by other components)
+        async input port forcePayloadMode: Fw.Signal
 
         @ Port to query the current system mode
         sync input port getMode: Components.GetSystemMode
@@ -57,6 +61,14 @@ module Components {
         @ Only succeeds if currently in safe mode
         sync command EXIT_SAFE_MODE()
 
+        @ Command to enter payload mode
+        @ Only succeeds if currently in normal mode
+        sync command ENTER_PAYLOAD_MODE()
+
+        @ Command to exit payload mode
+        @ Only succeeds if currently in payload mode
+        sync command EXIT_PAYLOAD_MODE()
+
         # ----------------------------------------------------------------------
         # Events
         # ----------------------------------------------------------------------
@@ -83,6 +95,22 @@ module Components {
             severity warning high \
             format "External fault detected - external component forced safe mode"
 
+        @ Event emitted when entering payload mode
+        event EnteringPayloadMode(
+            reason: string size 100 @< Reason for entering payload mode
+        ) \
+            severity activity high \
+            format "ENTERING PAYLOAD MODE: {}"
+
+        @ Event emitted when exiting payload mode
+        event ExitingPayloadMode() \
+            severity activity high \
+            format "Exiting payload mode"
+
+        @ Event emitted when payload mode is manually commanded
+        event ManualPayloadModeEntry() \
+            severity activity high \
+            format "Payload mode entry commanded manually"
 
         @ Event emitted when command validation fails
         event CommandValidationFailed(
@@ -109,6 +137,9 @@ module Components {
 
         @ Number of times safe mode has been entered
         telemetry SafeModeEntryCount: U32
+
+        @ Number of times payload mode has been entered
+        telemetry PayloadModeEntryCount: U32
 
 
         ###############################################################################
