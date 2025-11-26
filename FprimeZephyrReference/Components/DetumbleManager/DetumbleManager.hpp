@@ -60,6 +60,9 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     U32 lastCompleted = 0;
     bool detumbleRunning = true;
 
+    bool bDotRunning = false;
+    U32 bDotStartTime = -1;
+
     // Functions
     bool executeControlStep();
     void setDipoleMoment(Drv::DipoleMoment dpMoment);

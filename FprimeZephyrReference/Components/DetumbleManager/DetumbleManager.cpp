@@ -24,47 +24,37 @@ DetumbleManager ::~DetumbleManager() {}
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
-    U32 currTime = this->getTime().getSeconds();
-
     // I'm not checking the value of isValid for paramGet calls since all of the parameters have a
     // default value, but maybe there should still be specific logging for if the default parameter
     // was used and retrieval failed.
     Fw::ParamValid isValid;
 
-    if (this->detumbleRunning) {
-        // Check if we've hit the max time detumble can run
-        U32 maxTime = this->paramGet_MAX_TIME(isValid);
-        if (currTime - this->startTime <= maxTime) {
-            bool res = this->executeControlStep();
-            if (!res) {
-                // Log some error
+    if (this->bDotRunning) {
+        U32 currTime = this->getTime().getSeconds();
+        if (currTime - this->bDotStartTime >= 20) {
+            bool stepSuccess = this->executeControlStep();
+            // TODO: Re-enable magnetorquers
+
+            if (!stepSuccess) {
+                // Log error/failure somewhere
             }
 
-            this->iterations++;
-
-            // Every 10 iterations (every second), check if the rotation per second is less than 12 degrees
-            if (this->iterations % 10 == 0) {
-                Drv::AngularVelocity angVel = this->angularVelocityGet_out(0);
-                F64 rotationRate = this->getAngularVelocityMagnitude(angVel);
-
-                F64 threshold = this->paramGet_ROTATIONAL_THRESHOLD(isValid);
-                if (rotationRate < threshold) {
-                    // Rotation is below threshold - can stop detumbling
-                    this->detumbleRunning = false;
-                    this->lastCompleted = currTime;
-                }
-            }
-        } else {
-            // Max time reached, disable detumble for now
-            this->detumbleRunning = false;
-            this->lastCompleted = currTime;
+            this->bDotRunning = false;
         }
+
+        return;
+    }
+
+    F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0));
+    if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
+        // Disable magnetorquers
     } else {
-        // Check if the cooldown has ended, and start if so.
-        if (currTime - this->lastCompleted >= this->paramGet_COOLDOWN(isValid)) {
-            this->detumbleRunning = true;
-            this->startTime = currTime;
-        }
+        this->bDotRunning = true;
+
+        U32 currTime = this->getTime().getSeconds();
+        this->bDotStartTime = currTime;
+
+        // TODO: Disable the magnetorquers so magnetic reading can take place
     }
 }
 
