@@ -24,8 +24,13 @@ static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
     999;  // !< The modulo value of the hashing function.
           // Should be set to a little below the ID gaps to spread the entries around
 
-static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS = 90;  // !< Buckets assignable to a hash slot.
-                                                            // Buckets must be >= number of telemetry channels in system
+// Increased from 90 to 512 buckets to accommodate anticipated future growth in telemetry channels,
+// and to minimize hash collisions for improved performance. While currently only a few new channels
+// are added (e.g., ModeManager: CurrentMode, SafeModeEntryCount), this sizing is
+// intentionally over-provisioned to support planned expansion and to ensure efficient hash table usage.
+static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS =
+    512;  // !< Buckets assignable to a hash slot.
+          // Buckets must be >= number of telemetry channels in system
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks
 
