@@ -49,14 +49,6 @@ int main(int argc, char* argv[]) {
     const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
     const struct device* face4_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face4_drv2605));
 
-    // TCA Setup
-    const struct device* tca9548a = DEVICE_DT_GET(DT_NODELABEL(tca9548a));
-    const struct device* mux_channel_0 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_0));
-    const struct device* mux_channel_1 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_1));
-    const struct device* mux_channel_2 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_2));
-    const struct device* mux_channel_3 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_3));
-    const struct device* mux_channel_4 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_4));
-
     if (gpio_is_ready_dt(&face0_enable) && gpio_pin_configure_dt(&face0_enable, GPIO_OUTPUT_INACTIVE) == 0) {
         gpio_pin_set_dt(&face0_enable, 1);
     } else {
