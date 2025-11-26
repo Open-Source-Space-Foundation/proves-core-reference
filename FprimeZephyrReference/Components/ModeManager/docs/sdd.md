@@ -340,18 +340,18 @@ sequenceDiagram
 
 The ModeManager controls 8 load switches that power non-critical satellite subsystems:
 
-| Index | Subsystem | Safe Mode State | Payload Mode State |
-|---|---|---|---|
-| 0 | Satellite Face 0 | OFF | PREV/OFF |
-| 1 | Satellite Face 1 | OFF | PREV/OFF |
-| 2 | Satellite Face 2 | OFF | PREV/OFF |
-| 3 | Satellite Face 3 | OFF | PREV/OFF |
-| 4 | Satellite Face 4 | OFF | PREV/OFF |
-| 5 | Satellite Face 5 | OFF | PREV/OFF |
-| 6 | Payload Power | OFF | ON |
-| 7 | Payload Battery | OFF | ON |
+| Index | Subsystem | NORMAL State | SAFE_MODE State | PAYLOAD_MODE State |
+|---|---|---|---|---|
+| 0 | Satellite Face 0 | ON | OFF | ON |
+| 1 | Satellite Face 1 | ON | OFF | ON |
+| 2 | Satellite Face 2 | ON | OFF | ON |
+| 3 | Satellite Face 3 | ON | OFF | ON |
+| 4 | Satellite Face 4 | ON | OFF | ON |
+| 5 | Satellite Face 5 | ON | OFF | ON |
+| 6 | Payload Power | OFF | OFF | ON |
+| 7 | Payload Battery | OFF | OFF | ON |
 
-> **Note:** In payload mode, only the payload switches (indices 6 & 7) are explicitly turned ON. The state of face switches (0-5) depends on their state prior to entering payload mode (typically OFF after safe mode). See requirement MM0016 and implementation for details.
+> **Note:** PAYLOAD_MODE can only be entered from NORMAL mode (not from SAFE_MODE). When restoring PAYLOAD_MODE from persistent storage after a reboot, both face switches (0-5) and payload switches (6-7) are explicitly turned ON to ensure consistent state.
 ## Integration Tests
 
 See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrReference/test/int/payload_mode_test.py` for comprehensive integration tests covering:
@@ -399,5 +399,5 @@ The FORCE_SAFE_MODE command can be called from any mode without error. If alread
 ## Change Log
 | Date | Description |
 |---|---|
-| 2025-11-20 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
+| 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
 | 2025-11-19 | Added getMode query port and enhanced modeChanged to carry mode value |
