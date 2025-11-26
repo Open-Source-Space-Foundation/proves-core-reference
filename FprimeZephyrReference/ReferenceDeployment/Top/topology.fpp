@@ -67,6 +67,7 @@ module ReferenceDeployment {
     instance ina219SolManager
     instance resetManager
     instance magnetorquerManager
+    instance imuManager
 
 
   # ----------------------------------------------------------------------
@@ -171,7 +172,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
-
     }
 
 
@@ -220,5 +220,11 @@ module ReferenceDeployment {
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
     }
 
+    connections ImuManager {
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
   }
 }
