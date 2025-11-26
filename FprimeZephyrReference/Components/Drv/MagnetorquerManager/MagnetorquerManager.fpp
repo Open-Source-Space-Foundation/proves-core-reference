@@ -21,6 +21,9 @@ module Drv {
         @ Input port to disable magnetorquers
         sync input port SetDisabled: SetDisabled
 
+        @ Command to manually enable magnetorquers, for testing purposes
+        sync command EnableMagnetorquers(InputArray: InputArray)
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

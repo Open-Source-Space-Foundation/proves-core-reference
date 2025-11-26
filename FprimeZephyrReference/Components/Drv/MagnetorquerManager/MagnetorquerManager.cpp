@@ -86,4 +86,13 @@ void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
         this->enabled_faces[i] = false;
     }
 }
+
+void MagnetorquerManager ::EnableMagnetorquers_cmdHandler(const FwOpcodeType opCode,
+                                                          const U32 cmdSeq,
+                                                          const Drv::InputArray& inputArray) {
+    this->enabled = true;
+
+    for (int i = 0; i < 5; ++i) {
+        this->enabled_faces[i] = inputArray[i];
+    }
 }  // namespace Drv
