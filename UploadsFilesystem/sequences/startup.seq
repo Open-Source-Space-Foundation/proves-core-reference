@@ -1,0 +1,10 @@
+R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
+R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
+
+; UPDATE ARM PARAMETERS
+R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SET FALSE
+R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SAVE
+
+R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
+
+R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED

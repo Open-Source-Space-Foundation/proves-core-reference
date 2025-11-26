@@ -51,7 +51,7 @@ generate-if-needed:
 ##@ Authentication Keys
 
 SPI_DICT_NUM_KEYS ?= 10
-SPI_DICT_PATH ?= UploadsFIlesystem/AuthenticateFiles/spi_dict.txt
+SPI_DICT_PATH ?= UploadsFilesystem/AuthenticateFiles/spi_dict.txt
 AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
 
 .PHONY: generate-spi-dict

@@ -84,8 +84,8 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="UploadsFIlesystem/AuthenticateFiles/spi_dict.txt",
-        help="Output path for spi_dict.txt (default: UploadsFIlesystem/AuthenticateFiles/spi_dict.txt)",
+        default="UploadsFilesystem/AuthenticateFiles/spi_dict.txt",
+        help="Output path for spi_dict.txt (default: UploadsFilesystem/AuthenticateFiles/spi_dict.txt)",
     )
     parser.add_argument(
         "--num-keys",

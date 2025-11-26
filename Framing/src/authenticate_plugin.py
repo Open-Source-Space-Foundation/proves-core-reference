@@ -26,7 +26,7 @@ def get_default_auth_key_from_spi_dict() -> str:
         ValueError: If spi_dict.txt is empty or contains no valid keys
         IOError: If there is an error reading the file
     """
-    path = "UploadsFIlesystem/AuthenticateFiles/spi_dict.txt"
+    path = "UploadsFilesystem/AuthenticateFiles/spi_dict.txt"
 
     if not os.path.exists(path):
         raise FileNotFoundError(
