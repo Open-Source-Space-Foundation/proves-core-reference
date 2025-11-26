@@ -13,7 +13,7 @@ Future work: a HIBERNATION mode remains planned; it will follow the same persist
 | MM0004 | The ModeManager shall exit safe mode only via explicit EXIT_SAFE_MODE command | Integration Testing |
 | MM0005 | The ModeManager shall prevent exit from safe mode when not currently in safe mode | Integration Testing |
 | MM0006 | The ModeManager shall turn off all 8 load switches when entering safe mode | Integration Testing |
-| MM0007 | The ModeManager shall turn on all 8 load switches when exiting safe mode | Integration Testing |
+| MM0007 | The ModeManager shall turn on face load switches (indices 0-5) when exiting safe mode; payload switches remain off until payload mode | Integration Testing |
 | MM0008 | The ModeManager shall persist current mode and safe mode entry count to non-volatile storage | Integration Testing |
 | MM0009 | The ModeManager shall restore mode state from persistent storage on initialization | Integration Testing |
 | MM0010 | The ModeManager shall track and report the number of times safe mode has been entered | Integration Testing |
@@ -42,6 +42,7 @@ The ModeManager component operates as an active component that manages system-wi
 2. **Normal Operation**
    - Updates telemetry channels (CurrentMode, SafeModeEntryCount, PayloadModeEntryCount)
    - Responds to mode query requests from downstream components
+   - Keeps payload load switches (indices 6 and 7) off unless payload mode is explicitly entered
 
 3. **Safe Mode Entry**
    - Can be triggered by:
@@ -85,7 +86,7 @@ The ModeManager component operates as an active component that manages system-wi
    - Actions performed:
      - Transitions mode to NORMAL
      - Emits `ExitingSafeMode` event
-     - Turns on all 8 load switches
+     - Turns on face load switches (indices 0-5); payload switches remain off until explicitly entering payload mode
      - Notifies downstream components via `modeChanged` port
      - Persists state to flash storage
 
@@ -233,7 +234,7 @@ sequenceDiagram
     ModeManager->>ModeManager: Validate currently in SAFE_MODE
     ModeManager->>ModeManager: Set m_mode = NORMAL
     ModeManager->>ModeManager: Emit ExitingSafeMode event
-    ModeManager->>LoadSwitches: Turn on all 8 switches
+    ModeManager->>LoadSwitches: Turn on face switches (indices 0-5)
     ModeManager->>ModeManager: Update telemetry
     ModeManager->>DownstreamComponents: modeChanged_out(NORMAL)
     ModeManager->>FlashStorage: Save state to /mode_state.bin
@@ -339,16 +340,16 @@ sequenceDiagram
 
 The ModeManager controls 8 load switches that power non-critical satellite subsystems:
 
-| Index | Subsystem | Safe Mode State | Payload Mode State |
-|---|---|---|---|
-| 0 | Satellite Face 0 | OFF | ON |
-| 1 | Satellite Face 1 | OFF | ON |
-| 2 | Satellite Face 2 | OFF | ON |
-| 3 | Satellite Face 3 | OFF | ON |
-| 4 | Satellite Face 4 | OFF | ON |
-| 5 | Satellite Face 5 | OFF | ON |
-| 6 | Payload Power | OFF | ON |
-| 7 | Payload Battery | OFF | ON |
+| Index | Subsystem | Normal State | Safe Mode State | Payload Mode State |
+|---|---|---|---|---|
+| 0 | Satellite Face 0 | ON | OFF | ON |
+| 1 | Satellite Face 1 | ON | OFF | ON |
+| 2 | Satellite Face 2 | ON | OFF | ON |
+| 3 | Satellite Face 3 | ON | OFF | ON |
+| 4 | Satellite Face 4 | ON | OFF | ON |
+| 5 | Satellite Face 5 | ON | OFF | ON |
+| 6 | Payload Power | OFF | OFF | ON |
+| 7 | Payload Battery | OFF | OFF | ON |
 
 ## Integration Tests
 

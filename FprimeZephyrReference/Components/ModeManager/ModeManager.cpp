@@ -174,8 +174,9 @@ void ModeManager ::loadState() {
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
                     this->log_WARNING_HI_EnteringSafeMode(reasonStr);
                 } else if (this->m_mode == SystemMode::PAYLOAD_MODE) {
-                    // PAYLOAD_MODE - turn on payload switches
-                    this->turnOnPayload();
+                    // PAYLOAD_MODE - turn on face switches AND payload switches
+                    this->turnOnComponents();  // Face switches (0-5)
+                    this->turnOnPayload();     // Payload switches (6-7)
 
                     // Log that we're restoring payload mode
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
@@ -332,6 +333,10 @@ void ModeManager ::exitPayloadMode() {
 
     // Turn off payload switches
     this->turnOffPayload();
+
+    // Ensure face switches (0-5) are ON for NORMAL mode
+    // This guarantees consistent state regardless of transition path
+    this->turnOnComponents();
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
