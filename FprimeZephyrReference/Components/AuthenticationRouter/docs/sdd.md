@@ -66,13 +66,6 @@ SVC-ROUER
 |---|---|---|
 | LastCommandPacketTime | U64 | The Time of the Last Command Packet |
 
-## Commands
-
-| Name | Type | Parameters | Description |
-|---|---|---|---|
-| GET_LOSS_MAX_TIME | Sync | None | Command to retrieve the loss max time. |
-| SET_LOSS_MAX_TIME | Sync | loss_max_time: U32 | Command to manually set the loss max time
-
 ## Parameters
 name | type | use
 --- | ------| ----

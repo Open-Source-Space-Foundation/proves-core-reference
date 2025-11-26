@@ -73,6 +73,12 @@ module Svc {
         @ Telemetry port
         telemetry port tlmOut
 
+        @ Parameter get port
+        param get port prmGetOut
+
+        @ Parameter set port
+        param set port prmSetOut
+
         ################################################
         # Custom For This Router
         #################################
@@ -85,14 +91,17 @@ module Svc {
             severity activity high \
             format "SafeModeOn: {}"
 
+        @ Emits Current Loss Time
+        event CurrentLossTime(loss_max_time: U32) \
+            severity activity low \
+            format "Current Loss Time: {}"
+
         @ Telemetry Channel to commit the time of the last command packet
         telemetry LastCommandPacketTime : U64
 
-        @ Command to get the loss max time parameter
-        sync command GET_LOSS_MAX_TIME
+        @ loss time max parameter
+        param LOSS_MAX_TIME : U32 default 10
 
-        @ Command to set the loss max time parameter
-        sync command SET_LOSS_MAX_TIME (loss_max_time : U32)
 
     }
 }

@@ -51,21 +51,6 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     void fileBufferReturnIn_handler(FwIndexType portNum,  //!< The port number
                                     Fw::Buffer& fwBuffer  //!< The buffer
                                     ) override;
-
-    // ----------------------------------------------------------------------
-    // Command handler implementations
-    // ----------------------------------------------------------------------
-
-    //! Handler implementation for command GET_LOSS_MAX_TIME
-    void GET_LOSS_MAX_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                      U32 cmdSeq            //!< The command sequence number
-                                      ) override;
-
-    //! Handler implementation for command SET_LOSS_MAX_TIME
-    void SET_LOSS_MAX_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                      U32 cmdSeq,           //!< The command sequence number
-                                      U32 loss_max_time     //!< The loss max time parameter
-                                      ) override;
 };
 }  // namespace Svc
 
