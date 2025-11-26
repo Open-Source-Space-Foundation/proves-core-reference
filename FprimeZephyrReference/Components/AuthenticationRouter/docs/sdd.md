@@ -39,6 +39,7 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 | `output` | `unknownDataOut` | `Svc.ComDataWithContext` | Port forwarding unknown data (useful for adding custom routing rules with a  project-defined router) |
 | `output`| `bufferAllocate` | `Fw.BufferGet` | Port for allocating buffers, allowing copy of received data |
 | `output`| `bufferDeallocate` | `Fw.BufferSend` | Port for deallocating buffers |
+| `output`| `SafeModeOn` | `Fw.Signal` | Port for to tell safe mode to set safe mode |
 
 ## Requirements
 
@@ -70,7 +71,7 @@ SVC-ROUER
 | Name | Type | Parameters | Description |
 |---|---|---|---|
 | GET_LOSS_MAX_TIME | Sync | None | Command to retrieve the loss max time. |
-| SET_LOSS_MAX_TIME | Sync | seq_num: U32 | Command to manually set the loss max time
+| SET_LOSS_MAX_TIME | Sync | loss_max_time: U32 | Command to manually set the loss max time
 
 ## Parameters
 name | type | use

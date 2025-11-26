@@ -99,4 +99,18 @@ void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::
     this->bufferDeallocate_out(0, fwBuffer);
 }
 
+// ----------------------------------------------------------------------
+// Command handler implementations
+// ----------------------------------------------------------------------
+
+void AuthenticationRouter ::GET_LOSS_MAX_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // TODO: Implement command handler
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void AuthenticationRouter ::SET_LOSS_MAX_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 loss_max_time) {
+    // TODO: Implement command handler
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 }  // namespace Svc

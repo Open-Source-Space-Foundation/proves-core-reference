@@ -129,4 +129,6 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
+  ComCcsdsLora.authenticationRouter.LastCommandPacketTime
+  ComCcsdsUart.authenticationRouter.LastCommandPacketTime
 }

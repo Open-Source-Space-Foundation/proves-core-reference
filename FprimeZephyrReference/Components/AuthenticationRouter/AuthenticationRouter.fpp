@@ -52,6 +52,15 @@ module Svc {
         ###############################################################################
         # Standard AC Ports for Events
         ###############################################################################
+        @ Command receive port
+        command recv port cmdIn
+
+        @ Command registration port
+        command reg port cmdRegOut
+
+        @ Command response port
+        command resp port cmdResponseOut
+
         @ Port for requesting the current time
         time get port timeCaller
 
@@ -60,6 +69,30 @@ module Svc {
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Telemetry port
+        telemetry port tlmOut
+
+        ################################################
+        # Custom For This Router
+        #################################
+
+        @ Port for sending signal to safemode
+        output port SafeModeOn: Fw.Signal
+
+        @ event to emit when command loss time expires
+        event CommandLossTimeExpired(safemode: Fw.On) \
+            severity activity high \
+            format "SafeModeOn: {}"
+
+        @ Telemetry Channel to commit the time of the last command packet
+        telemetry LastCommandPacketTime : U64
+
+        @ Command to get the loss max time parameter
+        sync command GET_LOSS_MAX_TIME
+
+        @ Command to set the loss max time parameter
+        sync command SET_LOSS_MAX_TIME (loss_max_time : U32)
 
     }
 }
