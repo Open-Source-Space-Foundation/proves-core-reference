@@ -77,6 +77,7 @@ def extract_first_key_from_file(file_path: str) -> Tuple[str, str]:
 
 
 def main():
+    """Main function to parse arguments and generate/extract spi_dict.txt."""
     parser = argparse.ArgumentParser(
         description="Generate spi_dict.txt with random HMAC keys"
     )
