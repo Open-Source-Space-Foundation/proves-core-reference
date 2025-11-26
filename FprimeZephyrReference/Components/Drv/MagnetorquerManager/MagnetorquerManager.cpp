@@ -52,12 +52,14 @@ void MagnetorquerManager ::configure(const struct device* const devices[5]) {
 void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
     if (this->enabled) {
         for (int i = 0; i < 5; ++i) {
-            const struct device* dev = this->m_devices[i];
-            if (!device_is_ready(dev)) {
-                this->log_WARNING_HI_DeviceNotReady();
-                return;
+            if (this->enabled_faces[i]) {
+                const struct device* dev = this->m_devices[i];
+                if (!device_is_ready(dev)) {
+                    this->log_WARNING_HI_DeviceNotReady();
+                    return;
+                }
+                haptics_start_output(dev);
             }
-            haptics_start_output(dev);
         }
     }
 }
@@ -72,6 +74,7 @@ void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, c
 
 void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
     this->enabled = false;
+
     for (int i = 0; i < 5; ++i) {
         const struct device* dev = this->m_devices[i];
         if (!device_is_ready(dev)) {
@@ -79,6 +82,8 @@ void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
             return;
         }
         haptics_stop_output(dev);
+
+        this->enabled_faces[i] = false;
     }
 }
 }  // namespace Drv
