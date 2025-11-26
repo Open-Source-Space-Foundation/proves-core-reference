@@ -426,7 +426,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 #else
     // Authentication is disabled - pass data through unchanged
     // Mark as authenticated (or leave context unchanged) and pass through
-    // Note: You may want to set authenticated to 0 or leave it as-is depending on your requirements
     contextOut.set_authenticated(
         1);  // Pass through as authenticated, or use context.authenticated if you want to preserve
 #endif

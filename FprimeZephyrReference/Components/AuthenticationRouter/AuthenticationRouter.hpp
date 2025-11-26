@@ -29,6 +29,12 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     // Handler implementations for user-defined typed input ports
     // ----------------------------------------------------------------------
 
+    //! Handler implementation for schedIn
+    //! Port receiving calls from the rate group
+    void schedIn_handler(FwIndexType portNum,  //!< The port number
+                         U32 context           //!< The call order
+                         ) override;
+
     //! Handler implementation for bufferIn
     //! Receiving Fw::Buffer from Deframer
     void dataIn_handler(FwIndexType portNum,                 //!< The port number
@@ -51,6 +57,29 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     void fileBufferReturnIn_handler(FwIndexType portNum,  //!< The port number
                                     Fw::Buffer& fwBuffer  //!< The buffer
                                     ) override;
+
+    //! Handler implementation for initializeFiles
+    //!
+    //! Port for initializing the files
+    U32 initializeFiles(const char* filePath);
+
+    //! Handler implementation for writeToFile
+    //!
+    //! Writes the time to the file
+    U32 writeToFile(const char* filePath, U32 time);
+
+    //! Handler implementation for readFromFile
+    //!
+    //! Reads the time from the file
+    U32 readFromFile(const char* filePath);
+
+    //! Handler implementation for getTimeFromRTC
+    //!
+    //! Gets the time from the RTC
+    U32 getTimeFromRTC();
+
+    Fw::On m_state_rtc = Fw::On::OFF;           // keeps track if the RTC is on or if we are using Zephyr's time
+    std::atomic<U32> m_commandLossTimeCounter;  // makes this an atomic variable (so its set only in one command),
 };
 }  // namespace Svc
 
