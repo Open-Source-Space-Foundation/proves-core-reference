@@ -27,9 +27,6 @@ module Components {
         @ Port to force safe mode entry (callable by other components)
         async input port forceSafeMode: Fw.Signal
 
-        @ Port to force payload mode entry (callable by other components)
-        async input port forcePayloadMode: Fw.Signal
-
         @ Port to query the current system mode
         sync input port getMode: Components.GetSystemMode
 

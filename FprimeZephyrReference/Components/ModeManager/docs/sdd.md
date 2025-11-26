@@ -20,8 +20,7 @@ Future work: a HIBERNATION mode remains planned; it will follow the same persist
 | MM0011 | The ModeManager shall allow downstream components to query the current mode via getMode port | Unit Testing |
 | MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Unit Testing |
 | MM0013 | The ModeManager shall enter payload mode when commanded via ENTER_PAYLOAD_MODE while in NORMAL and reject entry from SAFE_MODE | Integration Testing |
-| MM0014 | The ModeManager shall enter payload mode when requested by external components via forcePayloadMode port while in NORMAL | Integration Testing |
-| MM0015 | The ModeManager shall exit payload mode only via explicit EXIT_PAYLOAD_MODE command and reject exit when not in payload mode | Integration Testing |
+| MM0014 | The ModeManager shall exit payload mode only via explicit EXIT_PAYLOAD_MODE command and reject exit when not in payload mode | Integration Testing |
 | MM0016 | The ModeManager shall turn on payload load switches (indices 6 and 7) when entering payload mode and turn them off when exiting payload mode | Integration Testing |
 | MM0017 | The ModeManager shall track and report the number of times payload mode has been entered | Integration Testing |
 | MM0018 | The ModeManager shall persist payload mode state and payload mode entry count to non-volatile storage and restore them on initialization | Integration Testing |
@@ -57,9 +56,7 @@ The ModeManager component operates as an active component that manages system-wi
      - Persists state to flash storage
 
 4. **Payload Mode Entry**
-   - Can be triggered by:
-     - Ground command: `ENTER_PAYLOAD_MODE` (only allowed from NORMAL)
-     - External component request via `forcePayloadMode` port (only allowed from NORMAL)
+   - Triggered by ground command: `ENTER_PAYLOAD_MODE` (only allowed from NORMAL)
    - Actions performed:
      - Transitions mode to PAYLOAD_MODE
      - Increments payload mode entry counter
@@ -114,7 +111,6 @@ classDiagram
             + init(FwSizeType queueDepth, FwEnumStoreType instance)
             - run_handler(FwIndexType portNum, U32 context)
             - forceSafeMode_handler(FwIndexType portNum)
-            - forcePayloadMode_handler(FwIndexType portNum)
             - getMode_handler(FwIndexType portNum): SystemMode
             - FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
             - EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
@@ -150,7 +146,6 @@ classDiagram
 |---|---|---|---|
 | run | Svc.Sched | sync | Receives periodic calls from rate group (1Hz) for telemetry updates |
 | forceSafeMode | Fw.Signal | async | Receives safe mode requests from external components detecting faults |
-| forcePayloadMode | Fw.Signal | async | Receives payload mode requests from external components while in NORMAL |
 | getMode | Components.GetSystemMode | sync | Allows downstream components to query current system mode |
 
 ### Output Ports
@@ -322,7 +317,7 @@ sequenceDiagram
 | ExitingSafeMode | ACTIVITY_HI | None | Emitted when exiting safe mode and returning to normal operation |
 | ManualSafeModeEntry | ACTIVITY_HI | None | Emitted when safe mode is manually commanded via FORCE_SAFE_MODE |
 | ExternalFaultDetected | WARNING_HI | None | Emitted when an external component triggers safe mode via forceSafeMode port |
-| EnteringPayloadMode | ACTIVITY_HI | reason: string size 100 | Emitted when entering payload mode, includes reason (e.g., "Ground command", "External component request") |
+| EnteringPayloadMode | ACTIVITY_HI | reason: string size 100 | Emitted when entering payload mode, includes reason (e.g., "Ground command") |
 | ExitingPayloadMode | ACTIVITY_HI | None | Emitted when exiting payload mode and returning to normal operation |
 | ManualPayloadModeEntry | ACTIVITY_HI | None | Emitted when payload mode is manually commanded via ENTER_PAYLOAD_MODE |
 | CommandValidationFailed | WARNING_LO | cmdName: string size 50<br>reason: string size 100 | Emitted when a command fails validation (e.g., EXIT_SAFE_MODE when not in safe mode) |
@@ -399,5 +394,6 @@ The FORCE_SAFE_MODE command can be called from any mode without error. If alread
 ## Change Log
 | Date | Description |
 |---|---|
+| 2025-11-26 | Removed forcePayloadMode port - payload mode now only entered via ENTER_PAYLOAD_MODE ground command |
 | 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
 | 2025-11-19 | Added getMode query port and enhanced modeChanged to carry mode value |

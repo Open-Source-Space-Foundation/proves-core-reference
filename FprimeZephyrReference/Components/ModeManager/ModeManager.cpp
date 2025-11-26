@@ -54,14 +54,6 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     }
 }
 
-void ModeManager ::forcePayloadMode_handler(FwIndexType portNum) {
-    // Force entry into payload mode (called by other components)
-    // Only allowed from NORMAL mode (not from SAFE_MODE)
-    if (this->m_mode == SystemMode::NORMAL) {
-        this->enterPayloadMode("External component request");
-    }
-}
-
 Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
     // Return the current system mode
     // Convert internal C++ enum to FPP-generated enum type

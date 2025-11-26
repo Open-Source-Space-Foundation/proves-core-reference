@@ -50,12 +50,6 @@ class ModeManager : public ModeManagerComponentBase {
     void forceSafeMode_handler(FwIndexType portNum  //!< The port number
                                ) override;
 
-    //! Handler implementation for forcePayloadMode
-    //!
-    //! Port to force payload mode entry (callable by other components)
-    void forcePayloadMode_handler(FwIndexType portNum  //!< The port number
-                                  ) override;
-
     //! Handler implementation for getMode
     //!
     //! Port to query the current system mode
