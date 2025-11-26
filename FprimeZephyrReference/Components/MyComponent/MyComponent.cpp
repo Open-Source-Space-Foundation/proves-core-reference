@@ -87,11 +87,9 @@ void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Allocate a buffer large enough for the maximum packet size
-    constexpr size_t MAX_PKT = RADIOLIB_SX128X_MAX_PACKET_LENGTH + 1;
-    uint8_t buf[MAX_PKT] = {0};
+    uint8_t buf[256] = {0};
 
-    int16_t state = this->m_rlb_radio.readData(buf, MAX_PKT);
+    int16_t state = this->m_rlb_radio.readData(buf, sizeof(buf));
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.readData() success!\n");
     } else {
@@ -99,12 +97,11 @@ void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("state: %i\n", state);
     }
 
-    // Log the entire receive buffer so user can observe any changes
-    Fw::Logger::log("readData() buffer (full %u bytes):\n", (unsigned)MAX_PKT);
+    Fw::Logger::log("readData() buffer:\n");
 
     char msg[sizeof(buf) * 3 + 1];
 
-    for (size_t i = 0; i < MAX_PKT; ++i) {
+    for (size_t i = 0; i < sizeof(buf); ++i) {
         sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
     }
     msg[sizeof(buf) * 3] = '\0';
