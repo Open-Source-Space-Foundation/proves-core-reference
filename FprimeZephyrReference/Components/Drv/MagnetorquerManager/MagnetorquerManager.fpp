@@ -18,6 +18,9 @@ module Drv {
 
         sync input port run: Svc.Sched
 
+        @ Port for turning on LoadSwitch instances (5 total), may be deleted
+        output port loadSwitchTurnOn: [5] Fw.Signal
+
         @ Event for reporting DRV2605 not ready error
         event DeviceNotReady(face: string) severity warning high format "DRV2605 device on face {} not ready"
 

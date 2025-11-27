@@ -251,6 +251,14 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
     }
 
+    connections MagnetorquerManager {
+      magnetorquerManager.loadSwitchTurnOn[0] -> face0LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[1] -> face1LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[4] -> face4LoadSwitch.turnOn
+    }
+
     connections ImuManager {
       imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
       imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet

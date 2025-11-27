@@ -39,6 +39,11 @@ void MagnetorquerManager ::configure(const std::map<std::string, const struct de
     };
     this->config_data.rom_data = &rom_data;
 
+    // Manually enable load switches
+    for (int i = 0; i < 5; i++) {
+        this->loadSwitchTurnOn_out(i);
+    }
+
     // Configure each device
     for (const auto& [key, device] : devices) {
         this->m_devices[key] = device;
