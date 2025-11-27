@@ -41,34 +41,54 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     (void)context;
 
     // // Check if the last loss time is past the current time
-    // U32 last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
-    // U32 current_time = // TODO: Get time from the rtc here
-    // if (current_time - last_loss_time > this->get_LOSS_MAX_TIME_param()) {
-    //     this->log_WARNING_HI_CommandLossTimeExpired();
-    //     // TODO: Send out to safemode
-    // }
+    U32 last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
+    U32 current_loss_time = this->getTimeFromRTC();
+    printk("Last loss time: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
 
-    U32 last_loss_time_from_file = this->readFromFile(LAST_LOSS_TIME_FILE);
-    printk("Last loss time from file: %d\n", last_loss_time_from_file);
+    // If last_loss_time is 0 or uninitialized, initialize it with current time
+    // This handles the first run case or when file initialization failed
+    const U32 MIN_VALID_TIME = 1577836800;  // 2020-01-01 00:00:00 UTC
+    bool justInitialized = false;
+    if (last_loss_time == 0 || last_loss_time < MIN_VALID_TIME) {
+        printk("Initializing last loss time with current RTC time\n");
+        last_loss_time = this->writeToFile(LAST_LOSS_TIME_FILE, current_loss_time);
+        justInitialized = true;
+    }
 
-    printk("Now writing new time to file\n");
-    this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time_from_file + 1);
-    printk("New time written to file: %d\n", last_loss_time_from_file + 1);
+    // Get the LOSS_MAX_TIME parameter
+    Fw::ParamValid valid;
+    U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
 
-    printk("Now reading time from file\n");
-    U32 time_from_file = this->readFromFile(LAST_LOSS_TIME_FILE);
-    printk("Time from file: %d\n", time_from_file);
+    // Only check for command loss timeout if we didn't just initialize
+    // This prevents triggering safemode immediately after initialization
+    if (!justInitialized && current_loss_time >= last_loss_time &&
+        (current_loss_time - last_loss_time) > loss_max_time) {
+        this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
+        // Only send safemode signal if port is connected
+        if (this->isConnected_SafeModeOn_OutputPort(0)) {
+            this->SafeModeOn_out(0);
+        }
+    }
 }
 
 U32 AuthenticationRouter ::getTimeFromRTC() {
     // TODO: Get time from the rtc here
-    return 0;
+    // use the RtcManager timeGetPort to get the time
+    // getTime() automatically calls the timeCaller port which is connected to RtcManager
+    Fw::Time time = this->getTime();
+    printk("Time from RTC: %d\n", time.getSeconds());
+    return time.getSeconds();
 }
 
 U32 AuthenticationRouter ::writeToFile(const char* filePath, U32 time) {
     // TO DO: Add File Opening Error Handling here and in all the other file functions
     Os::File file;
-    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
+    // Use OVERWRITE to update existing files with new time values
+    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_WRITE);
+    if (openStatus != Os::File::OP_OK) {
+        // If file doesn't exist, create it
+        openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
+    }
     if (openStatus == Os::File::OP_OK) {
         const U8* buffer = reinterpret_cast<const U8*>(&time);
         FwSizeType size = static_cast<FwSizeType>(sizeof(time));
@@ -95,8 +115,9 @@ U32 AuthenticationRouter ::readFromFile(const char* filePath) {
 }
 
 U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
-    U32 last_loss_time = 0;  // TO DO GET TIME FROM THE RTC HERE
+    U32 last_loss_time = 0;
     bool loadedFromFile = false;
+    bool timeIsValid = false;
 
     Os::File file;
 
@@ -108,10 +129,23 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
         Os::File::Status readStatus = file.read(reinterpret_cast<U8*>(&last_loss_time), size, Os::File::WaitType::WAIT);
         file.close();
         loadedFromFile = (readStatus == Os::File::OP_OK) && (size == expectedSize);
+
+        // Validate the stored time - it should be a reasonable Unix timestamp (after 2020-01-01 = 1577836800)
+        // and not too far in the future (within 10 years from now)
+        if (loadedFromFile) {
+            U32 current_time = this->getTimeFromRTC();
+            // Check if stored time is reasonable: after 2020-01-01 and not more than 10 years in the future
+            const U32 MIN_VALID_TIME = 1577836800;    // 2020-01-01 00:00:00 UTC
+            const U32 MAX_FUTURE_OFFSET = 315360000;  // 10 years in seconds
+            if (last_loss_time >= MIN_VALID_TIME && last_loss_time <= (current_time + MAX_FUTURE_OFFSET)) {
+                timeIsValid = true;
+            }
+        }
     }
 
-    // If the file doesn't exist, create it
-    if (!loadedFromFile) {
+    // If the file doesn't exist or contains invalid time, initialize with current RTC time
+    if (!loadedFromFile || !timeIsValid) {
+        last_loss_time = this->getTimeFromRTC();
         Os::File::Status createStatus =
             file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
         if (createStatus == Os::File::OP_OK) {
@@ -135,6 +169,12 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     switch (packetType) {
         // Handle a command packet
         case Fw::ComPacketType::FW_PACKET_COMMAND: {
+            // Update the last command time when a command is received
+            U32 current_time = this->getTimeFromRTC();
+            this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
+            // Update telemetry with the last command packet time
+            this->tlmWrite_LastCommandPacketTime(static_cast<U64>(current_time));
+
             // Allocate a com buffer on the stack
             Fw::ComBuffer com;
             // Copy the contents of the packet buffer into the com buffer
