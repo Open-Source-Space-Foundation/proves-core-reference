@@ -16,7 +16,7 @@
 namespace Components {
 
 class CameraHandler final : public CameraHandlerComponentBase {
-  public:
+  public: 
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
