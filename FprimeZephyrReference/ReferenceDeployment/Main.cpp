@@ -5,6 +5,8 @@
 // ======================================================================
 // Used to access topology functions
 
+#include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
+
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/haptics.h>
@@ -12,13 +14,6 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
-
-// Undefine EMPTY macro from Zephyr headers to avoid conflict with F Prime Os::Queue::EMPTY
-#ifdef EMPTY
-#undef EMPTY
-#endif
-
-#include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
 // Devices
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
