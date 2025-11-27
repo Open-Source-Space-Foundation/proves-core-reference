@@ -180,6 +180,12 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
     printk("AuthenticationRouter ::dataIn_handler\n");
+
+    // When you get a command, reset the last loss time to the current time
+    U32 current_time = this->getTimeFromRTC();
+    this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
+    printk("RESET Last loss time: %d\n", current_time);
+
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
     // Route based on received APID (packet type)
