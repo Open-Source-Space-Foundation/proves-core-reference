@@ -1,4 +1,4 @@
-# Svc::AuthenicationRouter
+# Svc::AuthenticationRouter
 
 The `Svc::AuthenticationRouter` component routes F´ packets (such as command or file packets) to other components. It is based on the FPrime Router, explained and linked later in the sdd, with two exceptions
 
@@ -31,15 +31,17 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 
 | Kind | Name | Type | Description |
 |---|---|---|---|
-| `guarded input` | `dataIn` | `Svc.ComDataWithContext` | Receiving Fw::Buffer with context buffer from Deframer
-| `guarded input` | `dataReturnOut` | `Svc.ComDataWithContext` | Returning ownership of buffer received on `dataIn`
+| `async input` | `schedIn` | `Svc.Sched` | Port receiving calls from the rate group for periodic command loss time checking |
+| `async input` | `dataIn` | `Svc.ComDataWithContext` | Receiving Fw::Buffer with context buffer from Deframer |
+| `output` | `dataReturnOut` | `Svc.ComDataWithContext` | Returning ownership of buffer received on `dataIn` |
 | `output` | `commandOut` | `Fw.Com` | Port for sending command packets as Fw::ComBuffers |
 | `output` | `fileOut` | `Fw.BufferSend` | Port for sending file packets as Fw::Buffer (ownership passed to receiver) |
 | `sync input` | `fileBufferReturnIn` | `Fw.BufferSend` | Receiving back ownership of buffer sent on `fileOut` and `unknownDataOut` |
-| `output` | `unknownDataOut` | `Svc.ComDataWithContext` | Port forwarding unknown data (useful for adding custom routing rules with a  project-defined router) |
-| `output`| `bufferAllocate` | `Fw.BufferGet` | Port for allocating buffers, allowing copy of received data |
-| `output`| `bufferDeallocate` | `Fw.BufferSend` | Port for deallocating buffers |
-| `output`| `SafeModeOn` | `Fw.Signal` | Port for to tell safe mode to set safe mode |
+| `sync input` | `cmdResponseIn` | `Fw.CmdResponse` | Port for receiving command responses from a command dispatcher (can be a no-op) |
+| `output` | `unknownDataOut` | `Svc.ComDataWithContext` | Port forwarding unknown data (useful for adding custom routing rules with a project-defined router) |
+| `output` | `bufferAllocate` | `Fw.BufferGet` | Port for allocating buffers, allowing copy of received data |
+| `output` | `bufferDeallocate` | `Fw.BufferSend` | Port for deallocating buffers |
+| `output` | `SafeModeOn` | `Fw.Signal` | Port for sending signal to safemode when command loss time expires |
 
 ## Requirements
 
@@ -51,22 +53,29 @@ SVC-ROUTER-003 | `Svc::AuthenticationRouter` shall route packets of type `Fw::Co
 SVC-ROUTER-004 | `Svc::AuthenticationRouter` shall route data that is neither `Fw::ComPacketType::FW_PACKET_COMMAND` nor `Fw::ComPacketType::FW_PACKET_FILE` to the `unknownDataOut` output port. | Allows for projects to provide custom routing for additional (project-specific) uplink data types | Unit test |
 SVC-ROUTER-005 | `Svc::AuthenticationRouter` shall emit warning events if serialization errors occur during processing of incoming packets | Aid in diagnosing uplink issues | Unit test |
 SVC-ROUTER-005 | `Svc::AuthenticationRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` | Aid in memory management of file buffers | Unit test |
-SVC-ROUTER-005 | `Svc::AuthenticationRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
-SVC-ROUER
+SVC-ROUTER-006 | `Svc::AuthenticationRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
+SVC-ROUTER-007 | `Svc::AuthenticationRouter` shall check command loss time periodically via the `schedIn` port | Command loss time monitoring | Unit test |
+SVC-ROUTER-008 | `Svc::AuthenticationRouter` shall emit `CommandLossTimeExpired` event when command loss time exceeds `LOSS_MAX_TIME` parameter | Command loss time monitoring | Unit test |
+SVC-ROUTER-009 | `Svc::AuthenticationRouter` shall send `SafeModeOn` signal when command loss time expires | Safe mode activation | Unit test |
+SVC-ROUTER-010 | `Svc::AuthenticationRouter` shall update `LastCommandPacketTime` telemetry when a packet is received | Telemetry tracking | Unit test |
 
 
 ## Events
 
 | Name | Severity | Parameters | Description |
 |---|---|---|---|
-| CommandLossTimeExpired | Activity High | apid: U32, spi: U32, seqNum: U32 | Emitted when . Format: "Command Loss Time {} seconds expired since {}" |
+| CommandLossTimeExpired | Activity High | safemode: Fw.On | Emitted when command loss time expires. Format: "SafeModeOn: {}" |
+| CurrentLossTime | Activity Low | loss_max_time: U32 | Emitted with current loss time information. Format: "Current Loss Time: {}" |
 
 ## Telemetry Channels
+
 | Name | Type | Description |
 |---|---|---|
-| LastCommandPacketTime | U64 | The Time of the Last Command Packet |
+| LastCommandPacketTime | U64 | The time of the last command packet |
+| CommandLossSafeOn | bool | The status of the command loss time sending to safe mode |
 
 ## Parameters
-name | type | use
---- | ------| ----
-LOSS_MAX_TIME | U32 | The maximum amount of command loss to do before going back to safe mode
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| LOSS_MAX_TIME | U32 | 10 | The maximum amount of time (in seconds) since the last command before triggering safe mode |
