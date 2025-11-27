@@ -38,11 +38,18 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for ambientTemperatureGet
+    //! Handler implementation for init
     //!
-    //! Port to read the ambient temperature in degrees Celsius
-    F64 ambientTemperatureGet_handler(FwIndexType portNum  //!< The port number
-                                      ) override;
+    //! Port to initialize the TMP112 device
+    void init_handler(FwIndexType portNum,    //!< The port number
+                      Fw::Success& condition  //!< Condition success/failure
+                      ) override;
+
+    //! Handler implementation for temperatureGet
+    //!
+    //! Port to read the temperature in degrees Celsius
+    F64 temperatureGet_handler(FwIndexType portNum  //!< The port number
+                               ) override;
 
     // ----------------------------------------------------------------------
     // Member variables

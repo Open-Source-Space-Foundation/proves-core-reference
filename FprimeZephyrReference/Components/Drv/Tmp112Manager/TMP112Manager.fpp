@@ -1,21 +1,27 @@
 module Drv {
-    port AmbientTemperatureGet -> F64
+    port temperatureGet -> F64
 }
 
 module Drv {
     @ Manager for TMP112 device
     passive component TMP112Manager {
         # Ports
-        @ Port to read the ambient temperature in degrees Celsius
-        sync input port ambientTemperatureGet: AmbientTemperatureGet
+        @ Port to initialize the TMP112 device
+        sync input port init: Fw.SuccessCondition
+
+        @ Port to read the temperature in degrees Celsius
+        sync input port temperatureGet: temperatureGet
 
         # Telemetry channels
 
-        @ Telemetry channel for ambient temperature in degrees Celsius
-        telemetry AmbientTemperature: F64
+        @ Telemetry channel for temperature in degrees Celsius
+        telemetry Temperature: F64
 
         @ Event for reporting TMP112 not ready error
         event DeviceNotReady() severity warning high format "TMP112 device not ready" throttle 5
+
+        @ Event for reporting TMP112 initialization failure
+        event DeviceInitFailed(ret: U8) severity warning high format "TMP112 initialization failed with return code: {}" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

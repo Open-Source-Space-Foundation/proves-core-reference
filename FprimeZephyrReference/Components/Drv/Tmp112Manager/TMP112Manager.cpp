@@ -31,7 +31,20 @@ void TMP112Manager::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-F64 TMP112Manager ::ambientTemperatureGet_handler(FwIndexType portNum) {
+void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
+    int ret = device_init(this->m_dev);
+    if (ret != 0 && ret != -EALREADY) {
+        // Emit an error? or ignore because face is off? Talk to load manager to see if face is on before erroring?
+        this->log_WARNING_HI_DeviceInitFailed(ret);
+        condition = Fw::Success::FAILURE;
+        return;
+    }
+
+    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+    condition = Fw::Success::SUCCESS;
+}
+
+F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         printk("[TMP112Manager] Device not ready: %s (ptr: %p)\n", this->m_dev->name, this->m_dev);
@@ -55,7 +68,7 @@ F64 TMP112Manager ::ambientTemperatureGet_handler(FwIndexType portNum) {
         return 0;
     }
 
-    this->tlmWrite_AmbientTemperature(sensor_value_to_double(&temp));
+    this->tlmWrite_Temperature(sensor_value_to_double(&temp));
 
     return sensor_value_to_double(&temp);
 }

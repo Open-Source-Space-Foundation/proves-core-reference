@@ -22,36 +22,54 @@ ThermalManager::~ThermalManager() {}
 // ----------------------------------------------------------------------
 
 void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
-    // Read all 11 temperature sensors and write telemetry
+    // Cube face sensors (5 sensors)
+    Fw::Success condition;
 
-    // Cube face sensors (6 sensors)
-    F64 face0Temp = this->face0TempGet_out(0);
-    this->tlmWrite_Face0Temperature(face0Temp);
+    this->face0Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->face0TempGet_out(0);
+    }
 
-    F64 face1Temp = this->face1TempGet_out(0);
-    this->tlmWrite_Face1Temperature(face1Temp);
+    this->face1Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->face1TempGet_out(0);
+    }
 
-    F64 face2Temp = this->face2TempGet_out(0);
-    this->tlmWrite_Face2Temperature(face2Temp);
+    this->face2Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->face2TempGet_out(0);
+    }
 
-    F64 face3Temp = this->face3TempGet_out(0);
-    this->tlmWrite_Face3Temperature(face3Temp);
+    this->face3Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->face3TempGet_out(0);
+    }
 
-    F64 face5Temp = this->face5TempGet_out(0);
-    this->tlmWrite_Face5Temperature(face5Temp);
+    this->face5Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->face5TempGet_out(0);
+    }
 
     // Battery cell sensors (4 sensors)
-    F64 battCell1Temp = this->battCell1TempGet_out(0);
-    this->tlmWrite_BattCell1Temperature(battCell1Temp);
+    this->battCell1Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->battCell1TempGet_out(0);
+    }
 
-    F64 battCell2Temp = this->battCell2TempGet_out(0);
-    this->tlmWrite_BattCell2Temperature(battCell2Temp);
+    this->battCell2Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->battCell2TempGet_out(0);
+    }
 
-    F64 battCell3Temp = this->battCell3TempGet_out(0);
-    this->tlmWrite_BattCell3Temperature(battCell3Temp);
+    this->battCell3Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->battCell3TempGet_out(0);
+    }
 
-    F64 battCell4Temp = this->battCell4TempGet_out(0);
-    this->tlmWrite_BattCell4Temperature(battCell4Temp);
+    this->battCell4Init_out(0, condition);
+    if (condition == Fw::Success::SUCCESS) {
+        this->battCell4TempGet_out(0);
+    }
 }
 
 }  // namespace Components

@@ -241,15 +241,32 @@ module ReferenceDeployment {
     }
 
     connections thermalMonitor {
-      thermalManager.face0TempGet -> tmp112Face0Manager.ambientTemperatureGet
-      thermalManager.face1TempGet -> tmp112Face1Manager.ambientTemperatureGet
-      thermalManager.face2TempGet -> tmp112Face2Manager.ambientTemperatureGet
-      thermalManager.face3TempGet -> tmp112Face3Manager.ambientTemperatureGet
-      thermalManager.face5TempGet -> tmp112Face5Manager.ambientTemperatureGet
-      thermalManager.battCell1TempGet -> tmp112BattCell1Manager.ambientTemperatureGet
-      thermalManager.battCell2TempGet -> tmp112BattCell2Manager.ambientTemperatureGet
-      thermalManager.battCell3TempGet -> tmp112BattCell3Manager.ambientTemperatureGet
-      thermalManager.battCell4TempGet -> tmp112BattCell4Manager.ambientTemperatureGet
+      thermalManager.face0Init -> tmp112Face0Manager.init
+      thermalManager.face0TempGet -> tmp112Face0Manager.temperatureGet
+
+      thermalManager.face1Init -> tmp112Face1Manager.init
+      thermalManager.face1TempGet -> tmp112Face1Manager.temperatureGet
+
+      thermalManager.face2Init -> tmp112Face2Manager.init
+      thermalManager.face2TempGet -> tmp112Face2Manager.temperatureGet
+
+      thermalManager.face3Init -> tmp112Face3Manager.init
+      thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
+
+      thermalManager.face5Init -> tmp112Face5Manager.init
+      thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
+
+      thermalManager.battCell1Init -> tmp112BattCell1Manager.init
+      thermalManager.battCell1TempGet -> tmp112BattCell1Manager.temperatureGet
+
+      thermalManager.battCell2Init -> tmp112BattCell2Manager.init
+      thermalManager.battCell2TempGet -> tmp112BattCell2Manager.temperatureGet
+
+      thermalManager.battCell3Init -> tmp112BattCell3Manager.init
+      thermalManager.battCell3TempGet -> tmp112BattCell3Manager.temperatureGet
+
+      thermalManager.battCell4Init -> tmp112BattCell4Manager.init
+      thermalManager.battCell4TempGet -> tmp112BattCell4Manager.temperatureGet
     }
 
     connections ModeManager {
