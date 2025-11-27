@@ -20,8 +20,5 @@ if (FPRIME_PLATFORM STREQUAL "Zephyr")
             "${CMAKE_CURRENT_LIST_DIR}/Main.cpp"
         DEPENDS
             ${FPRIME_CURRENT_MODULE}_Top
-        CHOOSES_IMPLEMENTATIONS
-            # Can remain stubs for now
-            Os_File_Posix
     )
 endif()

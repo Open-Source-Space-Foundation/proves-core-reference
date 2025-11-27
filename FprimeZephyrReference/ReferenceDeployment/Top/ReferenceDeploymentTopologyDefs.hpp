@@ -15,6 +15,7 @@
 // SubtopologyTopologyDefs includes
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
+#include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
 // ComCcsds Enum Includes
 #include "Svc/Subtopologies/ComCcsds/Ports_ComBufferQueueEnumAc.hpp"
@@ -22,8 +23,8 @@
 
 // Include autocoded FPP constants
 #include "FprimeZephyrReference/ReferenceDeployment/Top/FppConstantsAc.hpp"
-
 #include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 
@@ -53,7 +54,7 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
-namespace ReferenceDeployment_prmDb {
+namespace ReferenceDeployment_cmdSeq {
 enum { WARN = 3, FATAL = 5 };
 }
 }  // namespace PingEntries
@@ -69,31 +70,34 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* ina219SysDevice;        //!< device path for battery board ina219
-    const device* ina219SolDevice;        //!< device path for solar panel ina219
-    const device* uartDevice;             //!< UART device path for communication
-    const device* loraDevice;             //!< LoRa device path for communication
-    const device* lsm6dsoDevice;          //!< LSM6DSO device path for accelerometer/gyroscope
-    const device* lis2mdlDevice;          //!< LIS2MDL device path for magnetometer
+    // FC devices
+    const device* ina219SysDevice;  //!< device path for battery board ina219
+    const device* ina219SolDevice;  //!< device path for solar panel ina219
+    const device* uartDevice;       //!< UART device path for communication
+    const device* loraDevice;       //!< LoRa device path for communication
+    const device* lsm6dsoDevice;    //!< LSM6DSO device path for accelerometer/gyroscope
+    const device* lis2mdlDevice;    //!< LIS2MDL device path for magnetometer
+    const device* rtcDevice;        //!< RTC device path
+    const device* mcp23017;         //!< MCP23017 GPIO expander device path
 
-    // TMP112 temperature sensor devices (11 sensors)
-    const device* face0TempDevice;        //!< TMP112 device for cube face 0
-    const device* face1TempDevice;        //!< TMP112 device for cube face 1
-    const device* face2TempDevice;        //!< TMP112 device for cube face 2
-    const device* face3TempDevice;        //!< TMP112 device for cube face 3
-    const device* face4TempDevice;        //!< TMP112 device for cube face 4
-    const device* face5TempDevice;        //!< TMP112 device for cube face 5
-    const device* topTempDevice;          //!< TMP112 device for cube top
-    const device* battCell1TempDevice;    //!< TMP112 device for battery cell 1
-    const device* battCell2TempDevice;    //!< TMP112 device for battery cell 2
-    const device* battCell3TempDevice;    //!< TMP112 device for battery cell 3
-    const device* battCell4TempDevice;    //!< TMP112 device for battery cell 4
+    // Face devices
+    // - Temperature sensors
+    const device* face0TempDevice;      //!< TMP112 device for cube face 0
+    const device* face1TempDevice;      //!< TMP112 device for cube face 1
+    const device* face2TempDevice;      //!< TMP112 device for cube face 2
+    const device* face3TempDevice;      //!< TMP112 device for cube face 3
+    const device* face4TempDevice;      //!< TMP112 device for cube face 4
+    const device* face5TempDevice;      //!< TMP112 device for cube face 5
+    const device* topTempDevice;        //!< TMP112 device for cube top
+    const device* battCell1TempDevice;  //!< TMP112 device for battery cell 1
+    const device* battCell2TempDevice;  //!< TMP112 device for battery cell 2
+    const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3
+    const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
 
-    const device* drv2605Devices[6];      //!< Array of drv2605 devices (6)
-
-    U32 baudRate;                         //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    U32 baudRate;                                 //!< Baud rate for UART communication
+    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
+    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
+    FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
 };
 
 namespace PingEntries = ::PingEntries;

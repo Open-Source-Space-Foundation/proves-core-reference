@@ -32,7 +32,7 @@ class ThermalManager final : public ThermalManagerComponentBase {
     //!
     //! Scheduled port for periodic temperature reading
     void run_handler(FwIndexType portNum,  //!< The port number
-                     U32 context            //!< The call order
+                     U32 context           //!< The call order
                      ) override;
 };
 

@@ -8,12 +8,10 @@
 #define Drv_MagnetorquerManager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/MagnetorquerManager/MagnetorquerManagerComponentAc.hpp"
-
 #include <zephyr/device.h>
+#include <zephyr/drivers/haptics/drv2605.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
-
-#include <zephyr/drivers/haptics/drv2605.h>
 
 namespace Drv {
 

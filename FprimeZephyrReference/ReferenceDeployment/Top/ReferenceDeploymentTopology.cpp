@@ -17,7 +17,15 @@
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
 static const struct gpio_dt_spec burnwire1Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire1), gpios);
-static const struct device* mcp23017_dev = DEVICE_DT_GET(DT_NODELABEL(mcp23017));
+static const struct gpio_dt_spec face0LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face0_enable), gpios);
+static const struct gpio_dt_spec face1LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face1_enable), gpios);
+static const struct gpio_dt_spec face2LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face2_enable), gpios);
+static const struct gpio_dt_spec face3LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face3_enable), gpios);
+static const struct gpio_dt_spec face4LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face4_enable), gpios);
+static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face5_enable), gpios);
+static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
+static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
+    GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -52,50 +60,29 @@ U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGr
  * desired, but is extracted here for clarity.
  */
 void configureTopology() {
-    prmDb.configure("/prmDb.dat");
+    FileHandling::prmDb.configure("/prmDb.dat");
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
 
-    gpioDriver.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
+
+    // FC GPIO configuration
+    gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    face4LoadSwitch.pin_configuration(mcp23017_dev, 8);
-    face0LoadSwitch.pin_configuration(mcp23017_dev, 9);
-    face1LoadSwitch.pin_configuration(mcp23017_dev, 10);
-    face2LoadSwitch.pin_configuration(mcp23017_dev, 11);
-    face3LoadSwitch.pin_configuration(mcp23017_dev, 12);
-    face5LoadSwitch.pin_configuration(mcp23017_dev, 13);
-    payloadPowerLoadSwitch.pin_configuration(mcp23017_dev, 1);
-    payloadBatteryLoadSwitch.pin_configuration(mcp23017_dev, 3);
-    
-    // TMP112 temperature sensors (11 sensors behind I2C multiplexer)
-    const struct device* face0_temp = DEVICE_DT_GET(DT_NODELABEL(face0_temp_sens));
-    const struct device* face1_temp = DEVICE_DT_GET(DT_NODELABEL(face1_temp_sens));
-    const struct device* face2_temp = DEVICE_DT_GET(DT_NODELABEL(face2_temp_sens));
-    const struct device* face3_temp = DEVICE_DT_GET(DT_NODELABEL(face3_temp_sens));
-    const struct device* face4_temp = DEVICE_DT_GET(DT_NODELABEL(face4_temp_sens));
-    const struct device* face5_temp = DEVICE_DT_GET(DT_NODELABEL(face5_temp_sens));
-    const struct device* top_temp = DEVICE_DT_GET(DT_NODELABEL(top_temp_sens));
-    const struct device* batt_cell1_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell1_temp_sens));
-    const struct device* batt_cell2_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell2_temp_sens));
-    const struct device* batt_cell3_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell3_temp_sens));
-    const struct device* batt_cell4_temp = DEVICE_DT_GET(DT_NODELABEL(batt_cell4_temp_sens));
 
-    // Suppress unused variable warnings
-    (void)face0_temp;
-    (void)face1_temp;
-    (void)face2_temp;
-    (void)face3_temp;
-    (void)face4_temp;
-    (void)face5_temp;
-    (void)top_temp;
-    (void)batt_cell1_temp;
-    (void)batt_cell2_temp;
-    (void)batt_cell3_temp;
-    (void)batt_cell4_temp;
+    // Face load switch GPIO configuration
+    gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioface2LS.open(face2LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioface3LS.open(face3LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioface5LS.open(face5LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioPayloadPowerLS.open(payloadPowerLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioPayloadBatteryLS.open(payloadBatteryLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
@@ -113,11 +100,15 @@ void setupTopology(const TopologyState& state) {
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
+    // Read parameters from persistent storage
+    readParameters();
     // Autocoded parameter loading. Function provided by autocoder.
-    prmDb.readParamFile();
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
+
+    // Try to configure the RTC device first because all other components need time
+    rtcManager.configure(state.rtcDevice);
 
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.
@@ -141,8 +132,6 @@ void setupTopology(const TopologyState& state) {
     tmp112BattCell2Manager.configure(state.battCell2TempDevice);
     tmp112BattCell3Manager.configure(state.battCell3TempDevice);
     tmp112BattCell4Manager.configure(state.battCell4TempDevice);
-
-    magnetorquerManager.configure(state.drv2605Devices);
 }
 
 void startRateGroups() {
@@ -162,5 +151,6 @@ void teardownTopology(const TopologyState& state) {
     stopTasks(state);
     freeThreads(state);
     tearDownComponents(state);
+    cmdSeq.deallocateBuffer(mallocator);
 }
 };  // namespace ReferenceDeployment

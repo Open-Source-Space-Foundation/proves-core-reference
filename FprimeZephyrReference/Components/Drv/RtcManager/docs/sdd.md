@@ -1,6 +1,6 @@
 # Components::RtcManager
 
-The RTC Manager component interfaces with the RTC Real Time Clock (RTC) to provide time measurements.
+The RTC Manager component interfaces with the Real Time Clock (RTC) to provide time measurements. When the RTC is unavailable, the component automatically fails over to monotonic time (uptime since boot) to ensure continuous system operation.
 
 ### Typical Usage
 
@@ -8,33 +8,38 @@ The RTC Manager component interfaces with the RTC Real Time Clock (RTC) to provi
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `TIME_SET` command with the desired time
 3. On each command, the component:
-    - Sets the time on the RTC
-    - Emits a `TimeSet` event if the time is set successfully
+    - Validates the time data (year >= 1900, month [1-12], day [1-31], hour [0-23], minute [0-59], second [0-59])
+    - Emits validation failure events if any field is invalid
+    - Sets the time on the RTC if validation passes
+    - Emits a `TimeSet` event with the previous time if the time is set successfully
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
 
 #### `timeGetPort` Port Usage
 1. The component is instantiated and initialized during system startup
-2. In a deployment topology, a `time connection` relation is made.
+2. In a deployment topology, a `time connection` relation is made to sync FPrime's internal clock
 3. On each call, the component:
-    - Fetches and returns the time from the RTC
-    - Emits a `DeviceNotReady` event if the device is not ready
-
-#### `timeGet` Port Usage
-1. The component is instantiated and initialized during system startup
-2. A manager calls the `timeGet` ports
-3. On each call, the component:
-    - Fetches and returns the time from the RTC
-    - Emits a `DeviceNotReady` event if the device is not ready
+    - Checks if the RTC device is ready
+    - If the RTC is ready:
+        - Fetches time from the RTC hardware
+        - Returns time with `TB_WORKSTATION_TIME` time base
+    - If the RTC is not ready (failover mode):
+        - Logs a warning message (throttled to prevent console flooding)
+        - Fetches monotonic uptime from the system
+        - Returns time with `TB_PROC_TIME` time base (uptime since boot)
+    - Calculates microseconds from system clock cycles for sub-second precision
 
 ## Requirements
 | Name | Description | Validation |
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
-| RtcManager-002 | The RTC Manager has a port which, when called, set the time in FPrime | Integration test |
-| RtcManager-003 | A device not ready event is emitted if the RTC is not ready | Manual |
-| RtcManager-004 | A time set event is emitted if the time is set successfully | Integration test |
+| RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or monotonic uptime | Integration test |
+| RtcManager-003 | The RTC Manager logs a warning when the RTC is not ready and falls back to monotonic time | Integration test |
+| RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
+| RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
+| RtcManager-007 | The RTC Manager provides monotonic uptime when the RTC device is unavailable | Integration test |
+| RtcManager-008 | Time increments continuously regardless of RTC availability | Integration test |
 
 ## Port Descriptions
 | Name | Description |
@@ -44,14 +49,21 @@ The RTC Manager component interfaces with the RTC Real Time Clock (RTC) to provi
 ## Commands
 | Name | Description |
 |---|---|
-| SET_TIME | Sets the time on the RTC |
+| TIME_SET | Sets the time on the RTC with validation of all time fields |
+| TEST_UNCONFIGURE_DEVICE | (Test only) Unconfigures the RTC device to test monotonic time failover |
 
 ## Events
 | Name | Description |
 |---|---|
-| DeviceNotReady | Emits on unsuccessful device connection |
-| TimeSet | Emits on successful time set |
-| TimeNotSet | Emits on unsuccessful time set |
+| DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
+| TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
+| TimeNotSet | Emitted on unsuccessful time set |
+| YearValidationFailed | Emitted when provided year is invalid (should be >= 1900) |
+| MonthValidationFailed | Emitted when provided month is invalid (should be [1-12]) |
+| DayValidationFailed | Emitted when provided day is invalid (should be [1-31]) |
+| HourValidationFailed | Emitted when provided hour is invalid (should be [0-23]) |
+| MinuteValidationFailed | Emitted when provided minute is invalid (should be [0-59]) |
+| SecondValidationFailed | Emitted when provided second is invalid (should be [0-59]) |
 
 ## Class Diagram
 ```mermaid
@@ -61,12 +73,15 @@ classDiagram
             <<Auto-generated>>
         }
         class RtcManager {
-            - dev: device*
+            - m_dev: device*
+            - m_console_throttled: atomic~bool~
             + RtcManager(char* compName)
             + ~RtcManager()
+            + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - Fw::CmdResponse timeSet_cmdHandler(const FwOpcodeType opCode, const U32 cmdSeq, const Drv::TimeData& time)
-            - Fw::Time timeGet(U32& posix_time, U32& u_secs)
+            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
+            - void TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
+            - bool timeDataIsValid(Drv::TimeData t)
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
@@ -76,43 +91,49 @@ classDiagram
 
 ### `timeGetPort` port
 
-The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock.
+The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to monotonic uptime if the RTC is unavailable.
 
-#### Success
+#### Success (RTC Available)
 ```mermaid
 sequenceDiagram
     participant Deployment Time Connection
     participant RTC Manager
-    participant Zephyr Time API
-    participant RTC
-    Deployment Time Connection-->>RTC Manager: Call timeGetPort time port
-    RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC: Read time
-    RTC->>Zephyr Time API: Return time
-    Zephyr Time API->>RTC Manager: Return time
-    RTC Manager-->>Deployment Time Connection: Return time
+    participant System Clock
+    participant Zephyr RTC API
+    participant RTC Sensor
+    Deployment Time Connection->>RTC Manager: Call timeGetPort time port
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    RTC Manager->>System Clock: Get microseconds from k_cycle_get_32()
+    System Clock-->>RTC Manager: Return cycle-based microseconds
+    RTC Manager->>Zephyr RTC API: Read time via rtc_get_time()
+    Zephyr RTC API->>RTC Sensor: Read time
+    RTC Sensor-->>Zephyr RTC API: Return time
+    Zephyr RTC API-->>RTC Manager: Return rtc_time struct
+    RTC Manager->>RTC Manager: Convert to time_t via timeutil_timegm()
+    RTC Manager-->>Deployment Time Connection: Return Fw::Time (TB_WORKSTATION_TIME)
 ```
 
-#### Device Not Ready
+#### Failover to Monotonic Time (RTC Unavailable)
 ```mermaid
 sequenceDiagram
-    participant Event Log
+    participant Console Log
     participant Deployment Time Connection
     participant RTC Manager
-    participant Zephyr Time API
-    participant RTC
+    participant System Clock
     Deployment Time Connection->>RTC Manager: Call timeGetPort time port
-    RTC Manager->>Zephyr Time API: Read time
-    Zephyr Time API->>RTC: Read time
-    RTC->>Zephyr Time API: Return device not ready
-    Zephyr Time API->>RTC Manager: Return device not ready
-    RTC Manager->>Event Log: Emit DeviceNotReady event
-    RTC Manager->>Deployment Time Connection: Return 0 time
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    Note over RTC Manager: Device not ready
+    RTC Manager->>Console Log: Log "RTC not ready" (throttled)
+    RTC Manager->>System Clock: Get microseconds from k_cycle_get_32()
+    System Clock-->>RTC Manager: Return cycle-based microseconds
+    RTC Manager->>System Clock: Get uptime via k_uptime_seconds()
+    System Clock-->>RTC Manager: Return seconds since boot
+    RTC Manager-->>Deployment Time Connection: Return Fw::Time (TB_PROC_TIME)
 ```
 
 ### `TIME_SET` Command
 
-The `TIME_SET` command is called to set the current time on the RTC.
+The `TIME_SET` command is called to set the current time on the RTC. The component validates all time fields before attempting to set the time.
 
 #### Success
 ```mermaid
@@ -120,14 +141,34 @@ sequenceDiagram
     participant Ground Station
     participant Event Log
     participant RTC Manager
-    participant Zephyr Time API
-    participant RTC
-    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
-    RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC: Set time
-    RTC->>Zephyr Time API: Return set success
-    Zephyr Time API->>RTC Manager: Return set success
-    RTC Manager->>Event Log: Emit event TimeSet
+    participant Zephyr RTC API
+    participant RTC Sensor
+    Ground Station->>RTC Manager: Command TIME_SET with Drv::TimeData struct
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    Note over RTC Manager: Check year >= 1900<br/>month [1-12], day [1-31]<br/>hour [0-23], min [0-59], sec [0-59]
+    RTC Manager->>RTC Manager: Store previous time via getTime()
+    RTC Manager->>Zephyr RTC API: Set time via rtc_set_time()
+    Zephyr RTC API->>RTC Sensor: Set time
+    RTC Sensor-->>Zephyr RTC API: Return success
+    Zephyr RTC API-->>RTC Manager: Return success (status = 0)
+    RTC Manager->>Event Log: Emit TimeSet event (with previous time)
+    RTC Manager-->>Ground Station: Command response OK
+```
+
+#### Validation Failure
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    Ground Station->>RTC Manager: Command TIME_SET with invalid Drv::TimeData
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    Note over RTC Manager: Validation fails
+    RTC Manager->>Event Log: Emit validation failure events<br/>(YearValidationFailed, etc.)
+    RTC Manager->>Event Log: Emit TimeNotSet event
+    RTC Manager-->>Ground Station: Command response VALIDATION_ERROR
 ```
 
 #### Device Not Ready
@@ -136,33 +177,34 @@ sequenceDiagram
     participant Ground Station
     participant Event Log
     participant RTC Manager
-    participant Zephyr Time API
-    participant RTC
-    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
-    RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC: Set time
-    RTC->>Zephyr Time API: Return device not ready
-    Zephyr Time API->>RTC Manager: Return device not ready
-    RTC Manager->>Event Log: Emit event DeviceNotReady
+    Ground Station->>RTC Manager: Command TIME_SET with Drv::TimeData struct
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    Note over RTC Manager: Device not ready
+    RTC Manager->>Event Log: Emit DeviceNotReady event
+    RTC Manager-->>Ground Station: Command response EXECUTION_ERROR
 ```
 
-#### Time Not Set
+#### Time Not Set (RTC Failure)
 ```mermaid
 sequenceDiagram
     participant Ground Station
     participant Event Log
     participant RTC Manager
-    participant Zephyr Time API
-    participant RTC
-    Ground Station-->>RTC Manager: Command to set time with Drv::TimeData struct
-    RTC Manager->>Zephyr Time API: Set time
-    Zephyr Time API->>RTC: Set time
-    RTC->>Zephyr Time API: Return set failure
-    Zephyr Time API->>RTC Manager: Return set failure
-    RTC Manager->>Event Log: Emit event TimeNotSet
+    participant Zephyr RTC API
+    participant RTC Sensor
+    Ground Station->>RTC Manager: Command TIME_SET with Drv::TimeData struct
+    RTC Manager->>RTC Manager: Check device_is_ready()
+    RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    RTC Manager->>Zephyr RTC API: Set time via rtc_set_time()
+    Zephyr RTC API->>RTC Sensor: Set time
+    RTC Sensor-->>Zephyr RTC API: Return failure
+    Zephyr RTC API-->>RTC Manager: Return failure (status != 0)
+    RTC Manager->>Event Log: Emit TimeNotSet event
+    RTC Manager-->>Ground Station: Command response EXECUTION_ERROR
 ```
 
 ## Change Log
 | Date | Description |
 |---|---|
 | 2025-9-18 | Initial RTC Manager component |
+| 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |

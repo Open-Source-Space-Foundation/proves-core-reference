@@ -4,6 +4,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/ThermalManager/ThermalManager.hpp"
+
 #include <Fw/Types/Assert.hpp>
 
 namespace Components {

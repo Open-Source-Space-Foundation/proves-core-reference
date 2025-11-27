@@ -40,7 +40,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-spi-dict ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -48,8 +48,23 @@ BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
+##@ Authentication Keys
+
+SPI_DICT_NUM_KEYS ?= 10
+SPI_DICT_PATH ?= UploadsFilesystem/AuthenticateFiles/spi_dict.txt
+AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+
+.PHONY: generate-spi-dict
+generate-spi-dict: ## Generate spi_dict.txt with random HMAC keys
+	@echo "Generating spi_dict.txt with $(SPI_DICT_NUM_KEYS) keys..."
+	@python3 scripts/generate_spi_dict.py --num-keys $(SPI_DICT_NUM_KEYS) --output $(SPI_DICT_PATH)
+	@echo "Extracting first key and generating header..."
+	@FIRST_KEY=$$(python3 scripts/generate_spi_dict.py --output $(SPI_DICT_PATH) --print-first-key --skip-generation); \
+	sed "s|@AUTH_DEFAULT_KEY@|$$FIRST_KEY|g" scripts/generate_auth_default_key.h > $(AUTH_DEFAULT_KEY_HEADER)
+	@echo "Generated $(SPI_DICT_PATH) and $(AUTH_DEFAULT_KEY_HEADER)"
+
 .PHONY: build
-build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-spi-dict generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
@@ -74,10 +89,25 @@ clean: ## Remove all gitignored files
 GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
+.PHONY: sequence
+sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=startup)
+	@if [ -z "$(SEQ)" ]; then \
+		echo "Error: SEQ variable not set. Usage: make sequence SEQ=startup"; \
+		exit 1; \
+	fi
+	@echo "Compiling sequence: $(SEQ).seq"
+	@$(UV_RUN) fprime-seqgen sequences/$(SEQ).seq -d $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment
+
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
 	@$(GDS_COMMAND)
+
+.PHONY: delete-shadow-gds
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
 gds-integration:
@@ -86,3 +116,13 @@ gds-integration:
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
+
+.PHONY: framer-plugin
+framer-plugin: fprime-venv ## Build framer plugin
+	@echo "Framer plugin built and installed in virtual environment."
+	@ cd Framing && $(UV_RUN) pip install -e .
+
+.PHONY: gds-with-framer
+gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
+	@echo "Running FPrime GDS with framer plugin..."
+	@$(UV_RUN) fprime-gds --framing-selection authenticate-space-data-link

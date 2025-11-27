@@ -8,6 +8,7 @@
 
 @ The width of packet descriptors when they are serialized by the framework
 type FwPacketDescriptorType = U16
+constant SIZE_OF_FwPacketDescriptorType = 2  @< Size of FwPacketDescriptorType in bytes
 
 module ComCfg {
 
@@ -42,6 +43,7 @@ module ComCfg {
         apid: Apid                  @< 11 bits APID in CCSDS
         sequenceCount: U16          @< 14 bit Sequence count - sequence count is incremented per APID
         vcId: U8                    @< 6 bit Virtual Channel ID - used for TC and TM
+        authenticated: U8           @< Whether the packet has been authenticated
     } default {
         comQueueIndex = 0
         apid = Apid.FW_PACKET_UNKNOWN

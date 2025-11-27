@@ -7,7 +7,6 @@
 #define Drv_TMP112Manager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Tmp112Manager/TMP112ManagerComponentAc.hpp"
-
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>

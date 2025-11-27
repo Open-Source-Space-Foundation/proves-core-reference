@@ -30,57 +30,27 @@ module ReferenceDeployment {
   instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 3
+    priority 2
 
   instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 4
+    priority 3
 
-  instance face4LoadSwitch: Components.LoadSwitch base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
+    queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
-    priority 5
-
-  instance face0LoadSwitch: Components.LoadSwitch base id 0x10004000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance face1LoadSwitch: Components.LoadSwitch base id 0x10005000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance face2LoadSwitch: Components.LoadSwitch base id 0x10006000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance face3LoadSwitch: Components.LoadSwitch base id 0x10007000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance face5LoadSwitch: Components.LoadSwitch base id 0x10008000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10009000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1000A000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
+    priority 15
 
   instance prmDb: Svc.PrmDb base id 0x1000B000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 5
+    priority 14
+
+  instance modeManager: Components.ModeManager base id 0x10040000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 16
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -98,7 +68,7 @@ module ReferenceDeployment {
 
   instance comDriver: Zephyr.ZephyrUartDriver base id 0x10013000
 
-  instance gpioDriver: Zephyr.ZephyrGpioDriver base id 0x10014000
+  instance gpioWatchdog: Zephyr.ZephyrGpioDriver base id 0x10014000
 
   instance watchdog: Components.Watchdog base id 0x10015000
 
@@ -128,37 +98,72 @@ module ReferenceDeployment {
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
-  instance fsSpace: Components.FsSpace base id 0x10030000
+  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
-  instance powerMonitor: Components.PowerMonitor base id 0x10031000
+  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
 
-  instance ina219SysManager: Drv.Ina219Manager base id 0x10032000
+  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x1002C000
 
-  instance ina219SolManager: Drv.Ina219Manager base id 0x10033000
+  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x1002D000
 
-  instance thermalManager: Components.ThermalManager base id 0x10034000
+  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x1002E000
 
-  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x10035000
+  instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x1002F000
 
-  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x10036000
+  instance gpioPayloadPowerLS: Zephyr.ZephyrGpioDriver base id 0x10030000
 
-  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x10037000
+  instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x10031000
 
-  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x10038000
+  instance fsSpace: Components.FsSpace base id 0x10032000
 
-  instance tmp112Face4Manager: Drv.TMP112Manager base id 0x10039000
+  instance face4LoadSwitch: Components.LoadSwitch base id 0x10033000
 
-  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x1003A000
+  instance face0LoadSwitch: Components.LoadSwitch base id 0x10034000
 
-  instance tmp112TopManager: Drv.TMP112Manager base id 0x1003B000
+  instance face1LoadSwitch: Components.LoadSwitch base id 0x10035000
 
-  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x1003C000
+  instance face2LoadSwitch: Components.LoadSwitch base id 0x10036000
 
-  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x1003D000
+  instance face3LoadSwitch: Components.LoadSwitch base id 0x10037000
 
-  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x1003E000
+  instance face5LoadSwitch: Components.LoadSwitch base id 0x10038000
 
-  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1003F000
+  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000
 
-  instance magnetorquerManager: Drv.MagnetorquerManager base id 0x10040000
+  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
+
+  instance resetManager: Components.ResetManager base id 0x1003B000
+
+  instance powerMonitor: Components.PowerMonitor base id 0x1003C000
+
+  instance ina219SysManager: Drv.Ina219Manager base id 0x1003D000
+
+  instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
+
+  instance startupManager: Components.StartupManager base id 0x1003F000
+
+  instance thermalManager: Components.ThermalManager base id 0x10041000
+
+  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x10042000
+
+  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x10043000
+
+  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x10044000
+
+  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x10045000
+
+  instance tmp112Face4Manager: Drv.TMP112Manager base id 0x10046000
+
+  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x10047000
+
+  instance tmp112TopManager: Drv.TMP112Manager base id 0x10048000
+
+  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x10049000
+
+  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x1004A000
+
+  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x1004B000
+
+  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1004C000
+
 }

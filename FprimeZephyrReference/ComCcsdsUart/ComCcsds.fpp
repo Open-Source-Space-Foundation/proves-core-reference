@@ -110,6 +110,8 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
+    instance authenticate: Components.Authenticate base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+
     topology FramingSubtopology {
         # Usage Note:
         #
@@ -138,6 +140,7 @@ module ComCcsdsUart {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
+        instance authenticate
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -166,17 +169,26 @@ module ComCcsdsUart {
             # FrameAccumulator buffer allocations
             frameAccumulator.bufferDeallocate -> commsBufferManager.bufferSendIn
             frameAccumulator.bufferAllocate   -> commsBufferManager.bufferGetCallee
+
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # TcDeframer <-> SpacePacketDeframer
-            tcDeframer.dataOut                -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+
+            # Authenticate <-> SpacePacketDeframer
+            authenticate.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
+
+            # TcDeframer <-> Authenticate
+            tcDeframer.dataOut                -> authenticate.dataIn
+            authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
+
             # SpacePacketDeframer <-> Router
             spacePacketDeframer.dataOut -> fprimeRouter.dataIn
             fprimeRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+
             # Router buffer allocations
             fprimeRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
             fprimeRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
