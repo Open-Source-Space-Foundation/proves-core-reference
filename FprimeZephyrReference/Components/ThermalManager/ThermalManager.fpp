@@ -17,14 +17,8 @@ module Components {
         @ Port for face 3 temperature sensor
         output port face3TempGet: Drv.AmbientTemperatureGet
 
-        @ Port for face 4 temperature sensor
-        output port face4TempGet: Drv.AmbientTemperatureGet
-
         @ Port for face 5 temperature sensor
         output port face5TempGet: Drv.AmbientTemperatureGet
-
-        @ Port for top temperature sensor
-        output port topTempGet: Drv.AmbientTemperatureGet
 
         @ Port for battery cell 1 temperature sensor
         output port battCell1TempGet: Drv.AmbientTemperatureGet
@@ -53,14 +47,8 @@ module Components {
         @ Face 3 temperature in degrees Celsius
         telemetry Face3Temperature: F64
 
-        @ Face 4 temperature in degrees Celsius
-        telemetry Face4Temperature: F64
-
         @ Face 5 temperature in degrees Celsius
         telemetry Face5Temperature: F64
-
-        @ Top temperature in degrees Celsius
-        telemetry TopTemperature: F64
 
         @ Battery cell 1 temperature in degrees Celsius
         telemetry BattCell1Temperature: F64

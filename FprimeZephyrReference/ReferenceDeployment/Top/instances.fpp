@@ -152,18 +152,14 @@ module ReferenceDeployment {
 
   instance tmp112Face3Manager: Drv.TMP112Manager base id 0x10045000
 
-  instance tmp112Face4Manager: Drv.TMP112Manager base id 0x10046000
+  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x10046000
 
-  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x10047000
+  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x10047000
 
-  instance tmp112TopManager: Drv.TMP112Manager base id 0x10048000
+  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x10048000
 
-  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x10049000
+  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x10049000
 
-  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x1004A000
-
-  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x1004B000
-
-  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1004C000
+  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1004A000
 
 }

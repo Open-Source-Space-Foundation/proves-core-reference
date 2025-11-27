@@ -99,9 +99,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.thermalManager.Face1Temperature
     ReferenceDeployment.thermalManager.Face2Temperature
     ReferenceDeployment.thermalManager.Face3Temperature
-    ReferenceDeployment.thermalManager.Face4Temperature
     ReferenceDeployment.thermalManager.Face5Temperature
-    ReferenceDeployment.thermalManager.TopTemperature
     ReferenceDeployment.thermalManager.BattCell1Temperature
     ReferenceDeployment.thermalManager.BattCell2Temperature
     ReferenceDeployment.thermalManager.BattCell3Temperature
@@ -115,9 +113,7 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.tmp112Face1Manager.AmbientTemperature
   ReferenceDeployment.tmp112Face2Manager.AmbientTemperature
   ReferenceDeployment.tmp112Face3Manager.AmbientTemperature
-  ReferenceDeployment.tmp112Face4Manager.AmbientTemperature
   ReferenceDeployment.tmp112Face5Manager.AmbientTemperature
-  ReferenceDeployment.tmp112TopManager.AmbientTemperature
   ReferenceDeployment.tmp112BattCell1Manager.AmbientTemperature
   ReferenceDeployment.tmp112BattCell2Manager.AmbientTemperature
   ReferenceDeployment.tmp112BattCell3Manager.AmbientTemperature

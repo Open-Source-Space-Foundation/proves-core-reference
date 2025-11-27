@@ -37,15 +37,8 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     F64 face3Temp = this->face3TempGet_out(0);
     this->tlmWrite_Face3Temperature(face3Temp);
 
-    F64 face4Temp = this->face4TempGet_out(0);
-    this->tlmWrite_Face4Temperature(face4Temp);
-
     F64 face5Temp = this->face5TempGet_out(0);
     this->tlmWrite_Face5Temperature(face5Temp);
-
-    // Top sensor
-    F64 topTemp = this->topTempGet_out(0);
-    this->tlmWrite_TopTemperature(topTemp);
 
     // Battery cell sensors (4 sensors)
     F64 battCell1Temp = this->battCell1TempGet_out(0);

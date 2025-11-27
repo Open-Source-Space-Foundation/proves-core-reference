@@ -89,9 +89,7 @@ struct TopologyState {
     const device* face1TempDevice;      //!< TMP112 device for cube face 1
     const device* face2TempDevice;      //!< TMP112 device for cube face 2
     const device* face3TempDevice;      //!< TMP112 device for cube face 3
-    const device* face4TempDevice;      //!< TMP112 device for cube face 4
     const device* face5TempDevice;      //!< TMP112 device for cube face 5
-    const device* topTempDevice;        //!< TMP112 device for cube top
     const device* battCell1TempDevice;  //!< TMP112 device for battery cell 1
     const device* battCell2TempDevice;  //!< TMP112 device for battery cell 2
     const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3

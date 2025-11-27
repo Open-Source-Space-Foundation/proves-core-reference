@@ -124,9 +124,7 @@ void setupTopology(const TopologyState& state) {
     tmp112Face1Manager.configure(state.face1TempDevice);
     tmp112Face2Manager.configure(state.face2TempDevice);
     tmp112Face3Manager.configure(state.face3TempDevice);
-    tmp112Face4Manager.configure(state.face4TempDevice);
     tmp112Face5Manager.configure(state.face5TempDevice);
-    tmp112TopManager.configure(state.topTempDevice);
     tmp112BattCell1Manager.configure(state.battCell1TempDevice);
     tmp112BattCell2Manager.configure(state.battCell2TempDevice);
     tmp112BattCell3Manager.configure(state.battCell3TempDevice);

@@ -71,9 +71,7 @@ module ReferenceDeployment {
     instance tmp112Face1Manager
     instance tmp112Face2Manager
     instance tmp112Face3Manager
-    instance tmp112Face4Manager
     instance tmp112Face5Manager
-    instance tmp112TopManager
     instance tmp112BattCell1Manager
     instance tmp112BattCell2Manager
     instance tmp112BattCell3Manager
@@ -247,9 +245,7 @@ module ReferenceDeployment {
       thermalManager.face1TempGet -> tmp112Face1Manager.ambientTemperatureGet
       thermalManager.face2TempGet -> tmp112Face2Manager.ambientTemperatureGet
       thermalManager.face3TempGet -> tmp112Face3Manager.ambientTemperatureGet
-      thermalManager.face4TempGet -> tmp112Face4Manager.ambientTemperatureGet
       thermalManager.face5TempGet -> tmp112Face5Manager.ambientTemperatureGet
-      thermalManager.topTempGet -> tmp112TopManager.ambientTemperatureGet
       thermalManager.battCell1TempGet -> tmp112BattCell1Manager.ambientTemperatureGet
       thermalManager.battCell2TempGet -> tmp112BattCell2Manager.ambientTemperatureGet
       thermalManager.battCell3TempGet -> tmp112BattCell3Manager.ambientTemperatureGet
