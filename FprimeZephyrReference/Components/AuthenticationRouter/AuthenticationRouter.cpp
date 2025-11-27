@@ -60,10 +60,12 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
         if (m_previousTypeTimeFlag == false && m_TypeTimeFlag == true) {
             // Switched from RTC to monotonic - update monotonic file
             printk("Switched from RTC to MONOTONIC - updating monotonic file\n");
+            printk("FILE OVERWRITTEN BECAUSE: Time type switched from RTC to MONOTONIC\n");
             this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_loss_time);
         } else if (m_previousTypeTimeFlag == true && m_TypeTimeFlag == false) {
             // Switched from monotonic to RTC - update RTC file
             printk("Switched from MONOTONIC to RTC - updating RTC file\n");
+            printk("FILE OVERWRITTEN BECAUSE: Time type switched from MONOTONIC to RTC\n");
             this->writeToFile(LAST_LOSS_TIME_FILE, current_loss_time);
         }
         // Update previous flag to current flag
@@ -77,22 +79,16 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
         printk("MONOTONIC TIME\n");
         last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE_MONOTONIC);
         printk("Last loss time MONOTONIC: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
-        // if the last loss time is 0, initialize it with the current time
-        if (last_loss_time == 0) {
-            last_loss_time = this->getTimeFromRTC();
-            this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, last_loss_time);
-            printk("RESET Last loss time MONOTONIC: %d\n", last_loss_time);
-        }
+        // Don't overwrite the file here - initializeFiles() should have already handled initialization
+        // If last_loss_time is 0, it means the file doesn't exist or read failed, but we don't want to
+        // overwrite on every schedIn call. The file should only be written when commands are received.
     } else {
         printk("RTC TIME\n");
         last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
         printk("Last loss time RTC: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
-        // if the last loss time is 0, initialize it with the current time
-        if (last_loss_time == 0) {
-            last_loss_time = this->getTimeFromRTC();
-            this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time);
-            printk("RESET Last loss time RTC: %d\n", last_loss_time);
-        }
+        // Don't overwrite the file here - initializeFiles() should have already handled initialization
+        // If last_loss_time is 0, it means the file doesn't exist or read failed, but we don't want to
+        // overwrite on every schedIn call. The file should only be written when commands are received.
     }
 
     // // Check if the last loss time is past the current time
@@ -120,6 +116,7 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
             printk("Command loss time expired EMIT EVENT\n");
             this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
             m_commandLossTimeExpiredLogged = true;
+            this->tlmWrite_CommandLossSafeOn(true);
             // Only send safemode signal if port is connected
             if (this->isConnected_SafeModeOn_OutputPort(0)) {
                 this->SafeModeOn_out(0);
@@ -158,17 +155,16 @@ U32 AuthenticationRouter ::getTimeFromRTC() {
 U32 AuthenticationRouter ::writeToFile(const char* filePath, U32 time) {
     // TO DO: Add File Opening Error Handling here and in all the other file functions
     Os::File file;
-    // Use OVERWRITE to update existing files with new time values
-    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_WRITE);
-    if (openStatus != Os::File::OP_OK) {
-        // If file doesn't exist, create it
-        openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
-    }
+    // Use OPEN_CREATE with OVERWRITE to ensure the file is properly overwritten
+    // This ensures data persists across boots and the file is fully overwritten
+    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
     if (openStatus == Os::File::OP_OK) {
         const U8* buffer = reinterpret_cast<const U8*>(&time);
         FwSizeType size = static_cast<FwSizeType>(sizeof(time));
+        // Use WAIT to ensure data is synced to disk (fsync/flush)
         (void)file.write(buffer, size, Os::File::WaitType::WAIT);
         file.close();
+        // Note: Specific reason for overwrite is printed at the call site
     }
     return time;
 }
@@ -206,29 +202,40 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
         file.close();
         loadedFromFile = (readStatus == Os::File::OP_OK) && (size == expectedSize);
 
-        // Validate the stored time - it should be a reasonable Unix timestamp (after 2020-01-01 = 1577836800)
-        // and not too far in the future (within 10 years from now)
+        // Validate the stored time - only check if it's 0 (RTC wasn't initialized when written)
+        // If it's not 0, preserve it regardless of value (no range checking)
         if (loadedFromFile) {
-            U32 current_time = this->getTimeFromRTC();
-            // Check if stored time is reasonable: after 2020-01-01 and not more than 10 years in the future
-            const U32 MIN_VALID_TIME = 1577836800;    // 2020-01-01 00:00:00 UTC
-            const U32 MAX_FUTURE_OFFSET = 315360000;  // 10 years in seconds
-            if (last_loss_time >= MIN_VALID_TIME && last_loss_time <= (current_time + MAX_FUTURE_OFFSET)) {
+            // If time is 0, it means RTC wasn't initialized when file was written - should overwrite
+            if (last_loss_time == 0) {
+                printk("File contains 0 (RTC was not initialized when written) - will overwrite\n");
+                timeIsValid = false;  // Force overwrite
+            } else {
+                // Any non-zero value is considered valid - preserve it
                 timeIsValid = true;
+                printk("Loaded time from file: %d\n", last_loss_time);
             }
         }
     }
 
-    // If the file doesn't exist or contains invalid time, initialize with current RTC time
+    // Create or overwrite file if:
+    // 1. File doesn't exist, OR
+    // 2. File contains 0 (RTC wasn't initialized when written), OR
+    // 3. File contains invalid time
     if (!loadedFromFile || !timeIsValid) {
         last_loss_time = this->getTimeFromRTC();
-        Os::File::Status createStatus =
-            file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
+        Os::File::Status createStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
         if (createStatus == Os::File::OP_OK) {
             const U8* buffer = reinterpret_cast<const U8*>(&last_loss_time);
             FwSizeType size = static_cast<FwSizeType>(sizeof(last_loss_time));
             (void)file.write(buffer, size, Os::File::WaitType::WAIT);
             file.close();
+            if (!loadedFromFile) {
+                printk("FILE OVERWRITTEN BECAUSE: File did not exist (creating new file)\n");
+                printk("Created new file with time: %d\n", last_loss_time);
+            } else {
+                printk("FILE OVERWRITTEN BECAUSE: File contained 0 (RTC was not initialized when written)\n");
+                printk("Overwrote file with current time: %d\n", last_loss_time);
+            }
         }
     }
 
@@ -242,12 +249,16 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
 
     U32 current_time = this->getTimeFromRTC();
     if (m_TypeTimeFlag == true) {
+        printk("FILE OVERWRITTEN BECAUSE: Command received (updating monotonic file)\n");
         this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_time);
     } else {
+        printk("FILE OVERWRITTEN BECAUSE: Command received (updating RTC file)\n");
         this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
     }
     // Reset the flag when a new command is received
     m_commandLossTimeExpiredLogged = false;
+    // Update telemetry with the command loss safe on status
+    this->tlmWrite_CommandLossSafeOn(false);
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
@@ -258,7 +269,6 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
             // When you get a command, reset the last loss time to the current time
             // Update telemetry with the last command packet time
             this->tlmWrite_LastCommandPacketTime(static_cast<U64>(current_time));
-
             // Allocate a com buffer on the stack
             Fw::ComBuffer com;
             // Copy the contents of the packet buffer into the com buffer

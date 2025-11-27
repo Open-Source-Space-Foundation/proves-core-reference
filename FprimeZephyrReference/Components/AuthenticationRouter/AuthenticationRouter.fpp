@@ -102,6 +102,9 @@ module Svc {
         @ Telemetry Channel to commit the time of the last command packet
         telemetry LastCommandPacketTime : U64
 
+        @ Telemetry Channel for the status of the command loss time sending to safe mode
+        telemetry CommandLossSafeOn : bool
+
         @ loss time max parameter
         param LOSS_MAX_TIME : U32 default 10
 
