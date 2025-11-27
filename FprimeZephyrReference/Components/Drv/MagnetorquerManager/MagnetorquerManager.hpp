@@ -7,6 +7,9 @@
 #ifndef Drv_MagnetorquerManager_HPP
 #define Drv_MagnetorquerManager_HPP
 
+#include <map>
+#include <string>
+
 #include "FprimeZephyrReference/Components/Drv/MagnetorquerManager/MagnetorquerManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/haptics/drv2605.h>
@@ -29,29 +32,23 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
     ~MagnetorquerManager();
 
     //! Configure the DRV2605 device
-    // Accept an array of five pointers to const device objects. The pointers themselves are const
-    // to match callers that provide const device* const* types.
-    void configure(const struct device* const devices[5]);
+    void configure(const std::map<std::string, const struct device*>& devices);
 
   private:
     void run_handler(FwIndexType portNum, U32 context) override;
 
     //! Zephyr device to store initialized DRV2605 devices
-    const struct device* m_devices[5];
+    std::map<std::string, const struct device*> m_devices;
+
     union drv2605_config_data config_data;
 
     // Port handler implementations
     void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
     void SetDisabled_handler(const FwIndexType portNum) override;
 
-    // Command handler implementations
-    void EnableMagnetorquers_cmdHandler(const FwOpcodeType opCode,
-                                        const U32 cmdSeq,
-                                        const Drv::InputArray& inputArray) override;
-
     // Local variables
     bool enabled = false;
-    bool enabled_faces[5] = {false, false, false, false, false};
+    std::map<std::string, bool> enabled_faces;
 };
 }  // namespace Drv
 

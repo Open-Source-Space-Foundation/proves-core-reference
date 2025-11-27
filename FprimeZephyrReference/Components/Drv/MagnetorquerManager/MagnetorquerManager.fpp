@@ -1,7 +1,13 @@
 module Drv {
-    array InputArray = [5] bool;
+    # Making the array 10 elements in case of any future expansion
+    array InputArray = [10] InputStruct
+    struct InputStruct {
+        key: string
+        value: bool
+    }
+
     port SetMagnetorquers(
-        value: InputArray @< Enabled/disabled vale for each face in the order x1, x2, y1, y2, z1
+        value: InputArray @< Enabled/disabled values for each face
     )
     port SetDisabled()
 }
@@ -13,16 +19,19 @@ module Drv {
         sync input port run: Svc.Sched
 
         @ Event for reporting DRV2605 not ready error
-        event DeviceNotReady() severity warning high format "DRV2605 device not ready"
+        event DeviceNotReady(face: string) severity warning high format "DRV2605 device on face {} not ready"
+
+        @ Event for reporting DRV2605 initialization error
+        event DeviceNotInitialized(face: string) severity warning high format "DRV2605 device on face {} not initialized"
+
+        @ Event for reporting that an invalid face was specified
+        event InvalidFace(face: string) severity warning high format "Invalid face specified: {}"
 
         @ Input port to set magnetorquer values
         sync input port SetMagnetorquers: SetMagnetorquers
 
         @ Input port to disable magnetorquers
         sync input port SetDisabled: SetDisabled
-
-        @ Command to manually enable magnetorquers, for testing purposes
-        sync command EnableMagnetorquers(InputArray: InputArray)
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
