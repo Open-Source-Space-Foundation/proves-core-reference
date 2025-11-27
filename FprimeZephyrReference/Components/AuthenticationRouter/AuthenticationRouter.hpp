@@ -93,7 +93,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
 
     bool m_TypeTimeFlag;                          //!< Flag to indicate if the time is RTC or monotonic
     bool m_previousTypeTimeFlag;                  //!< Flag to track previous time type to detect switches
-    bool m_commandLossTimeExpiredLogged = false;  //!< Flag to indicate if the command loss time has expired
+    bool m_commandLossTimeExpiredLogged = false;  //!< Flag to indicate if the command loss time has expired, false by
+                                                  //!< default meaning no command loss time has expired yet
+    // if the file system fails this will prevent it from being stuck in a boot loop. Need to ensure false is written to
+    // the file when the system by default
 };
 
 }  // namespace Svc
