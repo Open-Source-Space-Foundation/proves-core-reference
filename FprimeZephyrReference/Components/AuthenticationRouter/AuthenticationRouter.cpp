@@ -28,10 +28,12 @@ namespace Svc {
 // ----------------------------------------------------------------------
 
 AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {
+    m_commandLossTimeExpiredLogged = false;  // Initialize flag to false
     U32 last_loss_time = this->initializeFiles(LAST_LOSS_TIME_FILE);
     U32 last_loss_time_monotonic = this->initializeFiles(LAST_LOSS_TIME_FILE_MONOTONIC);
     printk("FIRST Last loss time: %d\n", last_loss_time);
     printk("FIRST Last loss time monotonic: %d\n", last_loss_time_monotonic);
+    printk("Initialized m_commandLossTimeExpiredLogged to: %d\n", m_commandLossTimeExpiredLogged);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -67,8 +69,15 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid valid;
     U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
 
+    U32 time_diff = (current_loss_time >= last_loss_time) ? (current_loss_time - last_loss_time) : 0;
+    printk("Time diff: %d, Loss max time: %d, Flag before check: %d\n", time_diff, loss_max_time,
+           m_commandLossTimeExpiredLogged);
+
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
-        this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
+        if (m_commandLossTimeExpiredLogged == false) {
+            this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
+            m_commandLossTimeExpiredLogged = true;
+        }
         // Only send safemode signal if port is connected
         if (this->isConnected_SafeModeOn_OutputPort(0)) {
             this->SafeModeOn_out(0);
@@ -181,10 +190,10 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            const ComCfg::FrameContext& context) {
     printk("AuthenticationRouter ::dataIn_handler\n");
 
-    // When you get a command, reset the last loss time to the current time
     U32 current_time = this->getTimeFromRTC();
     this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
-    printk("RESET Last loss time: %d\n", current_time);
+    // Reset the flag when a new command is received
+    m_commandLossTimeExpiredLogged = false;
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
@@ -192,9 +201,7 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     switch (packetType) {
         // Handle a command packet
         case Fw::ComPacketType::FW_PACKET_COMMAND: {
-            // Update the last command time when a command is received
-            U32 current_time = this->getTimeFromRTC();
-            this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
+            // When you get a command, reset the last loss time to the current time
             // Update telemetry with the last command packet time
             this->tlmWrite_LastCommandPacketTime(static_cast<U64>(current_time));
 
