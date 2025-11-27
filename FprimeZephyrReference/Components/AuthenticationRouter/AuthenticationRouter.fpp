@@ -105,7 +105,7 @@ module Svc {
         @ Telemetry Channel for the status of the command loss time sending to safe mode
         telemetry CommandLossSafeOn : bool
 
-        @ loss time max parameter: Right now set to 3 days
+        @ loss time max parameter: Right now set to 3 days 259200 seconds
         param LOSS_MAX_TIME : U32 default 259200
 
 

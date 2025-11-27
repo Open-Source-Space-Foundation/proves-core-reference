@@ -78,6 +78,16 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! Gets the time from the RTC
     U32 getTimeFromRTC();
 
+    //! Reads the command loss expired flag from file
+    //!
+    //! Returns the flag value from file, or false if file doesn't exist
+    bool readCommandLossExpiredFlag();
+
+    //! Writes the command loss expired flag to file
+    //!
+    //! Persists the flag value to file
+    void writeCommandLossExpiredFlag(bool flag);
+
     Fw::On m_state_rtc = Fw::On::OFF;           // keeps track if the RTC is on or if we are using Zephyr's time
     std::atomic<U32> m_commandLossTimeCounter;  // makes this an atomic variable (so its set only in one command),
 

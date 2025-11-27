@@ -15,9 +15,12 @@
 #include "Fw/Logger/Logger.hpp"
 #include "Os/File.hpp"
 #include "config/ApidEnumAc.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 constexpr const char LAST_LOSS_TIME_FILE[] = "//loss_max_time.txt";
 constexpr const char LAST_LOSS_TIME_FILE_MONOTONIC[] = "//loss_max_time_monotonic.txt";
+constexpr const char COMMAND_LOSS_EXPIRED_FLAG_FILE[] = "//command_loss_expired_flag.txt";
 
 namespace Svc {
 
@@ -26,14 +29,18 @@ namespace Svc {
 // ----------------------------------------------------------------------
 
 AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {
-    m_commandLossTimeExpiredLogged = false;  // Initialize flag to false
     // Initialize previous time type flag by checking current time type
     Fw::Time time = this->getTime();
     TimeBase b = time.getTimeBase();
     m_previousTypeTimeFlag = (b == TimeBase::TB_PROC_TIME);  // true if monotonic, false if RTC
     m_TypeTimeFlag = m_previousTypeTimeFlag;                 // Initialize current flag to match
-    U32 last_loss_time = this->initializeFiles(LAST_LOSS_TIME_FILE);
-    U32 last_loss_time_monotonic = this->initializeFiles(LAST_LOSS_TIME_FILE_MONOTONIC);
+
+    this->initializeFiles(LAST_LOSS_TIME_FILE);
+    this->initializeFiles(LAST_LOSS_TIME_FILE_MONOTONIC);
+
+    // Load the command loss expired flag from file (persists across boots)
+    m_commandLossTimeExpiredLogged = this->readCommandLossExpiredFlag();
+    printk("Loaded command loss expired flag from file: %d\n", m_commandLossTimeExpiredLogged);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -84,22 +91,35 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
 
     U32 time_diff = (current_loss_time >= last_loss_time) ? (current_loss_time - last_loss_time) : 0;
 
+    printk("DEBUG: Current loss time: %d, Last loss time: %d, Time diff: %d, Loss max time: %d, Flag: %d\n",
+           current_loss_time, last_loss_time, time_diff, loss_max_time, m_commandLossTimeExpiredLogged);
+
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
         // Timeout condition is met
+        printk("DEBUG: Timeout condition MET! Flag value: %d\n", m_commandLossTimeExpiredLogged);
         if (m_commandLossTimeExpiredLogged == false) {
+            printk("DEBUG: Emitting CommandLossTimeExpired event (flag was false)\n");
             this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
             m_commandLossTimeExpiredLogged = true;
+            this->writeCommandLossExpiredFlag(true);  // Persist flag to file
             this->tlmWrite_CommandLossSafeOn(true);
+            printk("DEBUG: Event emitted, flag set to true, telemetry updated\n");
             // Only send safemode signal if port is connected
             if (this->isConnected_SafeModeOn_OutputPort(0)) {
+                printk("DEBUG: Sending SafeModeOn signal\n");
                 this->SafeModeOn_out(0);
+            } else {
+                printk("DEBUG: SafeModeOn port not connected\n");
             }
+        } else {
+            printk("DEBUG: Event NOT emitted because flag is already true (%d)\n", m_commandLossTimeExpiredLogged);
         }
-
+        // Flag stays true - signal will not be sent again until a command is received
     } else {
         // Timeout condition is NOT met - reset the flag so event can trigger again if timeout occurs later
         if (m_commandLossTimeExpiredLogged == true) {
             m_commandLossTimeExpiredLogged = false;
+            this->writeCommandLossExpiredFlag(false);  // Persist flag to file
         }
     }
 }
@@ -156,6 +176,40 @@ U32 AuthenticationRouter ::readFromFile(const char* filePath) {
     return time;
 }
 
+bool AuthenticationRouter ::readCommandLossExpiredFlag() {
+    Os::File file;
+    bool flag = false;
+    Os::File::Status openStatus = file.open(COMMAND_LOSS_EXPIRED_FLAG_FILE, Os::File::OPEN_READ);
+    if (openStatus == Os::File::OP_OK) {
+        FwSizeType size = static_cast<FwSizeType>(sizeof(flag));
+        FwSizeType expectedSize = size;
+        Os::File::Status readStatus = file.read(reinterpret_cast<U8*>(&flag), size, Os::File::WaitType::WAIT);
+        file.close();
+        if (readStatus == Os::File::OP_OK && size == expectedSize) {
+            printk("Read command loss expired flag from file: %d\n", flag);
+            return flag;
+        }
+    }
+    // File doesn't exist or read failed - return false (default)
+    printk("Command loss expired flag file not found or read failed - using default: false\n");
+    return false;
+}
+
+void AuthenticationRouter ::writeCommandLossExpiredFlag(bool flag) {
+    Os::File file;
+    Os::File::Status openStatus =
+        file.open(COMMAND_LOSS_EXPIRED_FLAG_FILE, Os::File::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
+    if (openStatus == Os::File::OP_OK) {
+        const U8* buffer = reinterpret_cast<const U8*>(&flag);
+        FwSizeType size = static_cast<FwSizeType>(sizeof(flag));
+        (void)file.write(buffer, size, Os::File::WaitType::WAIT);
+        file.close();
+        printk("Wrote command loss expired flag to file: %d\n", flag);
+    } else {
+        printk("Failed to write command loss expired flag to file\n");
+    }
+}
+
 U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
     U32 last_loss_time = this->getTimeFromRTC();
     bool loadedFromFile = false;
@@ -206,17 +260,21 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
+    // Any packet received resets the flag and updates the last loss time
     U32 current_time = this->getTimeFromRTC();
     if (m_TypeTimeFlag == true) {
         this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_time);
     } else {
         this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
     }
-    // Reset the flag when a new command is received
+    // Reset the flag when any packet is received
+    printk("DEBUG: Packet received - resetting flag from %d to false\n", m_commandLossTimeExpiredLogged);
     m_commandLossTimeExpiredLogged = false;
+    this->writeCommandLossExpiredFlag(false);  // Persist flag to file
     // Update telemetry with the command loss safe on status
     this->tlmWrite_CommandLossSafeOn(false);
     this->tlmWrite_LastCommandPacketTime(static_cast<U64>(current_time));
+    printk("DEBUG: Flag reset, telemetry updated, last packet time: %d\n", current_time);
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
@@ -224,7 +282,6 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     switch (packetType) {
         // Handle a command packet
         case Fw::ComPacketType::FW_PACKET_COMMAND: {
-            // When you get a command, reset the last loss time to the current time
             // Update telemetry with the last command packet time
             // Allocate a com buffer on the stack
             Fw::ComBuffer com;
