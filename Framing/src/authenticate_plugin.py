@@ -1,3 +1,5 @@
+"""Authenticate Plugin for Framing Package."""
+
 import hashlib
 import hmac
 import os
@@ -24,7 +26,7 @@ def get_default_auth_key_from_spi_dict() -> str:
         ValueError: If spi_dict.txt is empty or contains no valid keys
         IOError: If there is an error reading the file
     """
-    path = "UploadsFIlesystem/AuthenticateFiles/spi_dict.txt"
+    path = "UploadsFilesystem/AuthenticateFiles/spi_dict.txt"
 
     if not os.path.exists(path):
         raise FileNotFoundError(
@@ -60,6 +62,8 @@ def get_default_auth_key_from_spi_dict() -> str:
 
 # pragma: no cover
 class AuthenticateFramer(FramerDeframer):
+    """FramerDeframer that adds authentication headers and trailers to data frames"""
+
     def __init__(
         self,
         initial_sequence_number=0,
@@ -96,6 +100,7 @@ class AuthenticateFramer(FramerDeframer):
         self.authentication_key = authentication_key
 
     def frame(self, data: bytes) -> bytes:
+        """Frame data by adding authentication header and trailer"""
         # Authentication Header (16 octets/bytes)
         # right now all default but later, should be able
 
@@ -137,6 +142,7 @@ class AuthenticateFramer(FramerDeframer):
         return data
 
     def deframe(self, data: bytes, no_copy=False) -> tuple[bytes, bytes, bytes]:
+        """Not implemented - AuthenticateFramer is only for framing/sending"""
         if len(data) == 0:
             return None, b"", b""
         return data, b"", b""

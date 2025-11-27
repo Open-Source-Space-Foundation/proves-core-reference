@@ -77,14 +77,15 @@ def extract_first_key_from_file(file_path: str) -> Tuple[str, str]:
 
 
 def main():
+    """Main function to parse arguments and generate/extract spi_dict.txt."""
     parser = argparse.ArgumentParser(
         description="Generate spi_dict.txt with random HMAC keys"
     )
     parser.add_argument(
         "--output",
         type=str,
-        default="UploadsFIlesystem/AuthenticateFiles/spi_dict.txt",
-        help="Output path for spi_dict.txt (default: UploadsFIlesystem/AuthenticateFiles/spi_dict.txt)",
+        default="UploadsFilesystem/AuthenticateFiles/spi_dict.txt",
+        help="Output path for spi_dict.txt (default: UploadsFilesystem/AuthenticateFiles/spi_dict.txt)",
     )
     parser.add_argument(
         "--num-keys",
