@@ -87,6 +87,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
+  packet authenticate id 11 group 4 {
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
+
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
