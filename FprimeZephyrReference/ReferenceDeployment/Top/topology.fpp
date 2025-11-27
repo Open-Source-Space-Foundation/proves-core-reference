@@ -38,6 +38,7 @@ module ReferenceDeployment {
     instance gpioface5LS
     instance gpioPayloadPowerLS
     instance gpioPayloadBatteryLS
+    instance gpioRadioReset
     instance watchdog
     instance rtcManager
     instance imuManager
@@ -179,6 +180,10 @@ module ReferenceDeployment {
 
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
+    }
+
+    connections RadioReset {
+      resetManager.radioResetOut -> gpioRadioReset.gpioWrite
     }
 
     connections LoadSwitches {
