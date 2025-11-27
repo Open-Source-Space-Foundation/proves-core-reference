@@ -28,7 +28,7 @@ namespace Svc {
 
 AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {
     U32 last_loss_time = this->initializeFiles(LAST_LOSS_TIME_FILE);
-    printk("Last loss time: %d\n", last_loss_time);
+    printk("FIRST Last loss time: %d\n", last_loss_time);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -42,32 +42,27 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
 
     // // Check if the last loss time is past the current time
     U32 last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
+
+    // if the last loss time is 0, initialize it with the current time
+    if (last_loss_time == 0) {
+        last_loss_time = this->getTimeFromRTC();
+        this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time);
+        printk("RESET Last loss time: %d\n", last_loss_time);
+    }
+
     U32 current_loss_time = this->getTimeFromRTC();
     printk("Last loss time: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
-
-    // If last_loss_time is 0 or uninitialized, initialize it with current time
-    // This handles the first run case or when file initialization failed
-    const U32 MIN_VALID_TIME = 1577836800;  // 2020-01-01 00:00:00 UTC
-    bool justInitialized = false;
-    if (last_loss_time == 0 || last_loss_time < MIN_VALID_TIME) {
-        printk("Initializing last loss time with current RTC time\n");
-        last_loss_time = this->writeToFile(LAST_LOSS_TIME_FILE, current_loss_time);
-        justInitialized = true;
-    }
 
     // Get the LOSS_MAX_TIME parameter
     Fw::ParamValid valid;
     U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
 
-    // Only check for command loss timeout if we didn't just initialize
-    // This prevents triggering safemode immediately after initialization
-    if (!justInitialized && current_loss_time >= last_loss_time &&
-        (current_loss_time - last_loss_time) > loss_max_time) {
+    if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
         this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
         // Only send safemode signal if port is connected
-        if (this->isConnected_SafeModeOn_OutputPort(0)) {
-            this->SafeModeOn_out(0);
-        }
+        // if (this->isConnected_SafeModeOn_OutputPort(0)) {
+        //     this->SafeModeOn_out(0);
+        // }
     }
 }
 
@@ -115,7 +110,8 @@ U32 AuthenticationRouter ::readFromFile(const char* filePath) {
 }
 
 U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
-    U32 last_loss_time = 0;
+    U32 last_loss_time = this->getTimeFromRTC();
+    printk("INITIAL Last loss time: %d\n", last_loss_time);
     bool loadedFromFile = false;
     bool timeIsValid = false;
 
