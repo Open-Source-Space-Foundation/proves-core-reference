@@ -7,7 +7,6 @@
 
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
@@ -39,9 +38,6 @@ int main(int argc, char* argv[]) {
     // the application starts writing to it.
     k_sleep(K_MSEC(3000));
     Os::init();
-
-    // NOTE: Load switches are now powered on during early boot (SYS_INIT)
-    // before sensor initialization. See proves_board_power_init() above.
 
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;

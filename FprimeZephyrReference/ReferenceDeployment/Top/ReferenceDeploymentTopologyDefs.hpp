@@ -24,7 +24,6 @@
 // Include autocoded FPP constants
 #include "FprimeZephyrReference/ReferenceDeployment/Top/FppConstantsAc.hpp"
 #include <zephyr/device.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 
@@ -70,15 +69,19 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    // FC devices
-    const device* ina219SysDevice;  //!< device path for battery board ina219
-    const device* ina219SolDevice;  //!< device path for solar panel ina219
-    const device* uartDevice;       //!< UART device path for communication
-    const device* loraDevice;       //!< LoRa device path for communication
-    const device* lsm6dsoDevice;    //!< LSM6DSO device path for accelerometer/gyroscope
-    const device* lis2mdlDevice;    //!< LIS2MDL device path for magnetometer
-    const device* rtcDevice;        //!< RTC device path
-    const device* mcp23017;         //!< MCP23017 GPIO expander device path
+    const device* uartDevice;  //!< UART device path for communication
+    const device* loraDevice;  //!< LoRa device path for communication
+
+    U32 baudRate;                                 //!< Baud rate for UART communication
+    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
+    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
+    FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
+    const device* ina219SysDevice;                //!< device path for battery board ina219
+    const device* ina219SolDevice;                //!< device path for solar panel ina219
+    const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
+    const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
+    const device* rtcDevice;                      //!< RTC device path
+    const device* mcp23017;                       //!< MCP23017 GPIO expander device path
 
     // Face devices
     // - Temperature sensors
@@ -93,11 +96,6 @@ struct TopologyState {
     const device* battCell2TempDevice;  //!< TMP112 device for battery cell 2
     const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3
     const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
-
-    U32 baudRate;                                 //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
-    FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
 };
 
 namespace PingEntries = ::PingEntries;
