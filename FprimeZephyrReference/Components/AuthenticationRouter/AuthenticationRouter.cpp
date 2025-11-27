@@ -29,11 +29,17 @@ namespace Svc {
 
 AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {
     m_commandLossTimeExpiredLogged = false;  // Initialize flag to false
+    // Initialize previous time type flag by checking current time type
+    Fw::Time time = this->getTime();
+    TimeBase b = time.getTimeBase();
+    m_previousTypeTimeFlag = (b == TimeBase::TB_PROC_TIME);  // true if monotonic, false if RTC
+    m_TypeTimeFlag = m_previousTypeTimeFlag;                 // Initialize current flag to match
     U32 last_loss_time = this->initializeFiles(LAST_LOSS_TIME_FILE);
     U32 last_loss_time_monotonic = this->initializeFiles(LAST_LOSS_TIME_FILE_MONOTONIC);
     printk("FIRST Last loss time: %d\n", last_loss_time);
     printk("FIRST Last loss time monotonic: %d\n", last_loss_time_monotonic);
     printk("Initialized m_commandLossTimeExpiredLogged to: %d\n", m_commandLossTimeExpiredLogged);
+    printk("Initialized time type flag to: %d (0=RTC, 1=Monotonic)\n", m_TypeTimeFlag);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -47,24 +53,50 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
 
     U32 current_loss_time = this->getTimeFromRTC();
 
-    // check if the time is RTC or monotonic and set the flag accordingly
+    // Check if time type has switched from RTC to monotonic or vice versa
+    // If switched, update the appropriate file to prevent false timeout triggers
+    if (m_previousTypeTimeFlag != m_TypeTimeFlag) {
+        printk("Time type switch detected! Previous: %d, Current: %d\n", m_previousTypeTimeFlag, m_TypeTimeFlag);
+        if (m_previousTypeTimeFlag == false && m_TypeTimeFlag == true) {
+            // Switched from RTC to monotonic - update monotonic file
+            printk("Switched from RTC to MONOTONIC - updating monotonic file\n");
+            this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_loss_time);
+        } else if (m_previousTypeTimeFlag == true && m_TypeTimeFlag == false) {
+            // Switched from monotonic to RTC - update RTC file
+            printk("Switched from MONOTONIC to RTC - updating RTC file\n");
+            this->writeToFile(LAST_LOSS_TIME_FILE, current_loss_time);
+        }
+        // Update previous flag to current flag
+        m_previousTypeTimeFlag = m_TypeTimeFlag;
+    }
 
+    // check if the time is RTC or monotonic and set the flag accordingly
+    // Read from the appropriate file based on the time type
+    U32 last_loss_time;
     if (m_TypeTimeFlag == true) {
         printk("MONOTONIC TIME\n");
+        last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE_MONOTONIC);
+        printk("Last loss time MONOTONIC: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
+        // if the last loss time is 0, initialize it with the current time
+        if (last_loss_time == 0) {
+            last_loss_time = this->getTimeFromRTC();
+            this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, last_loss_time);
+            printk("RESET Last loss time MONOTONIC: %d\n", last_loss_time);
+        }
     } else {
         printk("RTC TIME\n");
+        last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
+        printk("Last loss time RTC: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
+        // if the last loss time is 0, initialize it with the current time
+        if (last_loss_time == 0) {
+            last_loss_time = this->getTimeFromRTC();
+            this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time);
+            printk("RESET Last loss time RTC: %d\n", last_loss_time);
+        }
     }
 
     // // Check if the last loss time is past the current time
-    U32 last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
-    printk("Last loss time: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
 
-    // if the last loss time is 0, initialize it with the current time
-    if (last_loss_time == 0) {
-        last_loss_time = this->getTimeFromRTC();
-        this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time);
-        printk("RESET Last loss time: %d\n", last_loss_time);
-    }
     // Get the LOSS_MAX_TIME parameter
     Fw::ParamValid valid;
     U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
@@ -73,14 +105,32 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     printk("Time diff: %d, Loss max time: %d, Flag before check: %d\n", time_diff, loss_max_time,
            m_commandLossTimeExpiredLogged);
 
+    printk("Current loss time: %d, Last loss time: %d, Loss max time: %d, Flag before check: %d\n", current_loss_time,
+           last_loss_time, loss_max_time, m_commandLossTimeExpiredLogged);
+    printk("Loss max time: %d\n", loss_max_time);
+    printk("Command loss time expired logged: %d\n", m_commandLossTimeExpiredLogged);
+    printk("Current loss time: %d\n", current_loss_time);
+    printk("Last loss time: %d\n", last_loss_time);
+    printk("Time diff: %d\n", time_diff);
+    printk("Loss max time: %d\n", loss_max_time);
+    printk("Command loss time expired logged: %d\n", m_commandLossTimeExpiredLogged);
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
+        // Timeout condition is met
         if (m_commandLossTimeExpiredLogged == false) {
+            printk("Command loss time expired EMIT EVENT\n");
             this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
             m_commandLossTimeExpiredLogged = true;
+            // Only send safemode signal if port is connected
+            if (this->isConnected_SafeModeOn_OutputPort(0)) {
+                this->SafeModeOn_out(0);
+            }
         }
-        // Only send safemode signal if port is connected
-        if (this->isConnected_SafeModeOn_OutputPort(0)) {
-            this->SafeModeOn_out(0);
+
+    } else {
+        // Timeout condition is NOT met - reset the flag so event can trigger again if timeout occurs later
+        if (m_commandLossTimeExpiredLogged == true) {
+            printk("Timeout condition cleared - resetting flag to allow future event emission\n");
+            m_commandLossTimeExpiredLogged = false;
         }
     }
 }
@@ -191,7 +241,11 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     printk("AuthenticationRouter ::dataIn_handler\n");
 
     U32 current_time = this->getTimeFromRTC();
-    this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
+    if (m_TypeTimeFlag == true) {
+        this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_time);
+    } else {
+        this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
+    }
     // Reset the flag when a new command is received
     m_commandLossTimeExpiredLogged = false;
 

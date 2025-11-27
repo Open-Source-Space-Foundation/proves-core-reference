@@ -82,6 +82,7 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     std::atomic<U32> m_commandLossTimeCounter;  // makes this an atomic variable (so its set only in one command),
 
     bool m_TypeTimeFlag;                          //!< Flag to indicate if the time is RTC or monotonic
+    bool m_previousTypeTimeFlag;                  //!< Flag to track previous time type to detect switches
     bool m_commandLossTimeExpiredLogged = false;  //!< Flag to indicate if the command loss time has expired
 };
 
