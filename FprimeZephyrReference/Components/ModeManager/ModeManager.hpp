@@ -125,8 +125,8 @@ class ModeManager : public ModeManagerComponentBase {
     // Private enums and types
     // ----------------------------------------------------------------------
 
-    //! System mode enumeration
-    enum class SystemMode : U8 { NORMAL = 0, SAFE_MODE = 1, PAYLOAD_MODE = 2 };
+    //! System mode enumeration (values ordered for +1/-1 sequential transitions)
+    enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2, PAYLOAD_MODE = 3 };
 
     //! Persistent state structure
     struct PersistentState {

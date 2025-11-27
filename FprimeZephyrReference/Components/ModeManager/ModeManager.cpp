@@ -45,13 +45,14 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Force entry into safe mode (called by other components)
-    // Provides immediate safe mode entry for critical component-detected faults
+    // Only allowed from NORMAL (sequential +1/-1 transitions)
     this->log_WARNING_HI_ExternalFaultDetected();
 
-    // Allow safe mode entry from NORMAL or PAYLOAD_MODE (emergency override)
-    if (this->m_mode == SystemMode::NORMAL || this->m_mode == SystemMode::PAYLOAD_MODE) {
+    // Only enter safe mode from NORMAL - payload mode must be exited first
+    if (this->m_mode == SystemMode::NORMAL) {
         this->enterSafeMode("External component request");
     }
+    // Note: Request ignored if in PAYLOAD_MODE or already in SAFE_MODE
 }
 
 Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
@@ -65,14 +66,26 @@ Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
 // ----------------------------------------------------------------------
 
 void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Force entry into safe mode
-    this->log_ACTIVITY_HI_ManualSafeModeEntry();
+    // Force entry into safe mode - only allowed from NORMAL (sequential +1/-1 transitions)
 
-    // Allow safe mode entry from NORMAL or PAYLOAD_MODE (emergency override)
-    if (this->m_mode == SystemMode::NORMAL || this->m_mode == SystemMode::PAYLOAD_MODE) {
-        this->enterSafeMode("Ground command");
+    // Reject if in payload mode - must exit payload mode first
+    if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+        Fw::LogStringArg cmdNameStr("FORCE_SAFE_MODE");
+        Fw::LogStringArg reasonStr("Must exit payload mode first");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
     }
 
+    // Already in safe mode - idempotent success
+    if (this->m_mode == SystemMode::SAFE_MODE) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
+    // Enter safe mode from NORMAL
+    this->log_ACTIVITY_HI_ManualSafeModeEntry();
+    this->enterSafeMode("Ground command");
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -150,8 +163,9 @@ void ModeManager ::loadState() {
         status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
 
         if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
-            // Validate state data before restoring
-            if (state.mode <= static_cast<U8>(SystemMode::PAYLOAD_MODE)) {
+            // Validate state data before restoring (valid range: 1-3 for SAFE, NORMAL, PAYLOAD)
+            if (state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
+                state.mode <= static_cast<U8>(SystemMode::PAYLOAD_MODE)) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;

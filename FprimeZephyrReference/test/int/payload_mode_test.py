@@ -6,10 +6,12 @@ Integration tests for the ModeManager component (payload mode).
 Tests cover:
 - Payload mode entry and exit
 - Mode transition validation (cannot enter from safe mode)
-- Emergency safe mode override from payload mode
+- Sequential transitions (FORCE_SAFE_MODE rejected from payload mode)
 - State persistence
 
 Total: 4 tests
+
+Mode enum values: SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
 """
 
 import time
@@ -84,10 +86,10 @@ def test_payload_01_enter_exit_payload_mode(
     Test ENTER_PAYLOAD_MODE and EXIT_PAYLOAD_MODE commands.
     Verifies:
     - EnteringPayloadMode event is emitted
-    - CurrentMode telemetry = 2 (PAYLOAD_MODE)
+    - CurrentMode telemetry = 3 (PAYLOAD_MODE)
     - Payload load switches (6 & 7) are ON
     - ExitingPayloadMode event is emitted on exit
-    - CurrentMode returns to 0 (NORMAL)
+    - CurrentMode returns to 2 (NORMAL)
     """
     # Enter payload mode
     proves_send_and_assert_command(
@@ -98,12 +100,12 @@ def test_payload_01_enter_exit_payload_mode(
 
     time.sleep(2)
 
-    # Verify mode is PAYLOAD_MODE (2)
+    # Verify mode is PAYLOAD_MODE (3)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
-    assert mode_result.get_val() == 2, "Should be in PAYLOAD_MODE"
+    assert mode_result.get_val() == 3, "Should be in PAYLOAD_MODE"
 
     # Verify payload load switches are ON
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
@@ -123,12 +125,12 @@ def test_payload_01_enter_exit_payload_mode(
 
     time.sleep(2)
 
-    # Verify mode is NORMAL (0)
+    # Verify mode is NORMAL (2)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
-    assert mode_result.get_val() == 0, "Should be in NORMAL mode"
+    assert mode_result.get_val() == 2, "Should be in NORMAL mode"
 
     # Verify payload load switches are OFF in NORMAL mode
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
@@ -176,16 +178,16 @@ def test_payload_02_cannot_enter_from_safe_mode(
     assert mode_result.get_val() == 1, "Should still be in SAFE_MODE"
 
 
-def test_payload_03_safe_mode_override_from_payload(
+def test_payload_03_safe_mode_rejected_from_payload(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
     """
-    Test that FORCE_SAFE_MODE works from PAYLOAD_MODE (emergency override).
+    Test that FORCE_SAFE_MODE is rejected from PAYLOAD_MODE (sequential transitions).
+    Must exit payload mode first before entering safe mode.
     Verifies:
-    - Can enter safe mode from payload mode
-    - EnteringSafeMode event is emitted
-    - CurrentMode = 1 (SAFE_MODE)
-    - All load switches are OFF
+    - FORCE_SAFE_MODE fails with validation error from payload mode
+    - CommandValidationFailed event is emitted
+    - Remains in PAYLOAD_MODE (3)
     """
     # Enter payload mode first
     proves_send_and_assert_command(fprime_test_api, f"{component}.ENTER_PAYLOAD_MODE")
@@ -196,33 +198,22 @@ def test_payload_03_safe_mode_override_from_payload(
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
-    assert mode_result.get_val() == 2, "Should be in PAYLOAD_MODE"
+    assert mode_result.get_val() == 3, "Should be in PAYLOAD_MODE"
 
-    # Force safe mode (emergency override)
+    # Try to force safe mode - should fail (sequential transitions required)
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{component}.FORCE_SAFE_MODE",
-        events=[f"{component}.ManualSafeModeEntry"],
-    )
+    with pytest.raises(Exception):
+        proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
 
-    time.sleep(2)
+    # Verify CommandValidationFailed event
+    fprime_test_api.assert_event(f"{component}.CommandValidationFailed", timeout=3)
 
-    # Verify mode is SAFE_MODE (1)
+    # Verify still in payload mode
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE"
-
-    # Verify all load switches are OFF
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
-    for channel in all_load_switch_channels:
-        value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
-        if isinstance(value, str):
-            assert value.upper() == "OFF", f"{channel} should be OFF in safe mode"
-        else:
-            assert value == 0, f"{channel} should be OFF in safe mode"
+    assert mode_result.get_val() == 3, "Should still be in PAYLOAD_MODE"
 
 
 def test_payload_04_state_persists(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -234,12 +225,12 @@ def test_payload_04_state_persists(fprime_test_api: IntegrationTestAPI, start_gd
     proves_send_and_assert_command(fprime_test_api, f"{component}.ENTER_PAYLOAD_MODE")
     time.sleep(2)
 
-    # Verify mode is saved as PAYLOAD_MODE
+    # Verify mode is saved as PAYLOAD_MODE (3)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
-    assert mode_result.get_val() == 2, "Mode should be saved as PAYLOAD_MODE"
+    assert mode_result.get_val() == 3, "Mode should be saved as PAYLOAD_MODE"
 
     # Verify PayloadModeEntryCount is tracking
     count_result: ChData = fprime_test_api.assert_telemetry(

@@ -24,7 +24,7 @@ Future work: a HIBERNATION mode remains planned; it will follow the same persist
 | MM0016 | The ModeManager shall turn on payload load switches (indices 6 and 7) when entering payload mode and turn them off when exiting payload mode | Integration Testing |
 | MM0017 | The ModeManager shall track and report the number of times payload mode has been entered | Integration Testing |
 | MM0018 | The ModeManager shall persist payload mode state and payload mode entry count to non-volatile storage and restore them on initialization | Integration Testing |
-| MM0019 | The ModeManager shall allow FORCE_SAFE_MODE to override payload mode and transition to safe mode | Integration Testing |
+| MM0019 | The ModeManager shall reject FORCE_SAFE_MODE from payload mode (must exit payload mode first for sequential transitions) | Integration Testing |
 
 ## Usage Examples
 
@@ -44,7 +44,7 @@ The ModeManager component operates as an active component that manages system-wi
    - Keeps payload load switches (indices 6 and 7) off unless payload mode is explicitly entered
 
 3. **Safe Mode Entry**
-   - Can be triggered by:
+   - Can be triggered by (only from NORMAL mode - sequential transitions enforced):
      - Ground command: `FORCE_SAFE_MODE`
      - External component request via `forceSafeMode` port
    - Actions performed:
@@ -130,9 +130,9 @@ classDiagram
         }
         class SystemMode {
             <<enumeration>>
-            NORMAL = 0
             SAFE_MODE = 1
-            PAYLOAD_MODE = 2
+            NORMAL = 2
+            PAYLOAD_MODE = 3
         }
     }
     ModeManagerComponentBase <|-- ModeManager : inherits
@@ -304,7 +304,7 @@ sequenceDiagram
 
 | Name | Arguments | Description |
 |---|---|---|
-| FORCE_SAFE_MODE | None | Forces the system into safe mode immediately. Emits ManualSafeModeEntry event. Can be called from any mode (idempotent). |
+| FORCE_SAFE_MODE | None | Forces the system into safe mode. Only allowed from NORMAL mode (rejects from PAYLOAD_MODE with validation error). Emits ManualSafeModeEntry event. Idempotent when already in safe mode. |
 | EXIT_SAFE_MODE | None | Exits safe mode and returns to normal operation. Fails with CommandValidationFailed if not currently in safe mode. |
 | ENTER_PAYLOAD_MODE | None | Enters payload mode from NORMAL. Fails with CommandValidationFailed if issued from SAFE_MODE or if already in payload mode (idempotent success when already in payload). Emits ManualPayloadModeEntry event. |
 | EXIT_PAYLOAD_MODE | None | Exits payload mode and returns to normal operation. Fails with CommandValidationFailed if not currently in payload mode. |
@@ -327,7 +327,7 @@ sequenceDiagram
 
 | Name | Type | Update Rate | Description |
 |---|---|---|---|
-| CurrentMode | U8 | 1Hz | Current system mode (0 = NORMAL, 1 = SAFE_MODE, 2 = PAYLOAD_MODE) |
+| CurrentMode | U8 | 1Hz | Current system mode (1 = SAFE_MODE, 2 = NORMAL, 3 = PAYLOAD_MODE) |
 | SafeModeEntryCount | U32 | On change | Number of times safe mode has been entered (persists across reboots) |
 | PayloadModeEntryCount | U32 | On change | Number of times payload mode has been entered (persists across reboots) |
 
@@ -360,7 +360,7 @@ See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrRefer
 | test_19_safe_mode_state_persists | Verifies safe mode persistence to flash | State persistence |
 | test_payload_01_enter_exit_payload_mode | Validates payload mode entry/exit, events, telemetry, payload load switches | Payload mode entry/exit |
 | test_payload_02_cannot_enter_from_safe_mode | Ensures ENTER_PAYLOAD_MODE fails from SAFE_MODE | Command validation |
-| test_payload_03_safe_mode_override_from_payload | Ensures FORCE_SAFE_MODE overrides payload mode | Emergency override |
+| test_payload_03_safe_mode_rejected_from_payload | Ensures FORCE_SAFE_MODE is rejected from payload mode (sequential transitions) | Command validation |
 | test_payload_04_state_persists | Verifies payload mode and counters persist | Payload persistence |
 
 ## Design Decisions
@@ -388,12 +388,13 @@ Mode state is persisted to `/mode_state.bin` to maintain operational context acr
 
 This ensures the system resumes in the correct mode after recovery.
 
-### Idempotent Safe Mode Entry
-The FORCE_SAFE_MODE command can be called from any mode without error. If already in safe mode, it succeeds without re-entering. This simplifies fault handling logic in external components.
+### Sequential Mode Transitions
+Mode transitions follow a +1/-1 sequential pattern: SAFE_MODE(1) ↔ NORMAL(2) ↔ PAYLOAD_MODE(3). Direct jumps (e.g., PAYLOAD→SAFE) are not allowed - users must exit payload mode first before entering safe mode. FORCE_SAFE_MODE is idempotent when already in safe mode.
 
 ## Change Log
 | Date | Description |
 |---|---|
+| 2025-11-26 | Reordered enum values (SAFE=1, NORMAL=2, PAYLOAD=3) for sequential +1/-1 transitions; FORCE_SAFE_MODE now rejected from payload mode |
 | 2025-11-26 | Removed forcePayloadMode port - payload mode now only entered via ENTER_PAYLOAD_MODE ground command |
 | 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
 | 2025-11-19 | Added getMode query port and enhanced modeChanged to carry mode value |

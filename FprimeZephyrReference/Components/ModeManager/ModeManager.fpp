@@ -1,10 +1,10 @@
 module Components {
 
-    @ System mode enumeration
+    @ System mode enumeration (values ordered for +1/-1 sequential transitions)
     enum SystemMode {
-        NORMAL = 0 @< Normal operational mode
         SAFE_MODE = 1 @< Safe mode with non-critical components powered off
-        PAYLOAD_MODE = 2 @< Payload mode with payload power and battery enabled
+        NORMAL = 2 @< Normal operational mode
+        PAYLOAD_MODE = 3 @< Payload mode with payload power and battery enabled
     }
 
     @ Port for notifying about mode changes
