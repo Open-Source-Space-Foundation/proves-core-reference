@@ -136,6 +136,247 @@ zephyr_udc0: &usbd {
 		lsb-microamp = <61>;
 		label = "INA219 sol";
 	};
+
+	tca9548a: tca9548a@77 {
+		compatible = "ti,tca9548a";
+		status = "okay";
+		reg = <0x77>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		label = "TCA9548A";
+		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+
+		mux_channel_0: i2c_mux@0 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_0";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face0_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE0_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face0_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE0_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face0_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE0_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		mux_channel_1: i2c_mux@1 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_1";
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face1_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE1_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face1_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE1_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face1_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE1_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		mux_channel_2: i2c_mux@2 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_2";
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face2_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE2_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face2_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE2_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face2_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE2_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		mux_channel_3: i2c_mux@3 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_3";
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face3_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE3_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face3_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE3_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face3_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE3_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		// Battery
+		mux_channel_4: i2c_mux@4 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_4";
+			reg = <7>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			batt_cell1_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+			};
+			batt_cell2_temp_sens: tmp112@49 {
+				compatible = "ti,tmp112";
+				reg = <0x49>;
+				status = "okay";
+			};
+			batt_cell3_temp_sens: tmp112@4a {
+				compatible = "ti,tmp112";
+				reg = <0x4a>;
+				status = "okay";
+			};
+			batt_cell4_temp_sens: tmp112@4b {
+				compatible = "ti,tmp112";
+				reg = <0x4b>;
+				status = "okay";
+			};
+		};
+
+		// Z- Face
+		mux_channel_5: i2c_mux@5 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_5";
+			reg = <4>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face5_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE5_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face5_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE5_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face5_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE5_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		// Top is always powered so no deferred init needed
+		mux_channel_7: i2c_mux@7 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_7";
+			reg = <7>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			// TODO add top cap temp sensor (it's not a TMP112)
+			face7_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE7_VEML6031";
+			};
+		};
+	};
 };
 
 
