@@ -46,10 +46,8 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Force entry into safe mode (called by other components)
     // Only allowed from NORMAL (sequential +1/-1 transitions)
-    this->log_WARNING_HI_ExternalFaultDetected();
-
-    // Only enter safe mode from NORMAL - payload mode must be exited first
     if (this->m_mode == SystemMode::NORMAL) {
+        this->log_WARNING_HI_ExternalFaultDetected();
         this->enterSafeMode("External component request");
     }
     // Note: Request ignored if in PAYLOAD_MODE or already in SAFE_MODE
