@@ -256,6 +256,10 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
+
+      # Connect AuthenticationRouter from ComCcsdsLora subtopology to ModeManager
+      ComCcsdsLora.authenticationRouter.SafeModeOn -> modeManager.forceSafeMode
+
     }
 
   }

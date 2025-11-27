@@ -19,6 +19,7 @@
 #include <zephyr/sys/printk.h>
 
 constexpr const char LAST_LOSS_TIME_FILE[] = "//loss_max_time.txt";
+constexpr const char LAST_LOSS_TIME_FILE_MONOTONIC[] = "//loss_max_time_monotonic.txt";
 
 namespace Svc {
 
@@ -28,7 +29,9 @@ namespace Svc {
 
 AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {
     U32 last_loss_time = this->initializeFiles(LAST_LOSS_TIME_FILE);
+    U32 last_loss_time_monotonic = this->initializeFiles(LAST_LOSS_TIME_FILE_MONOTONIC);
     printk("FIRST Last loss time: %d\n", last_loss_time);
+    printk("FIRST Last loss time monotonic: %d\n", last_loss_time_monotonic);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -40,8 +43,19 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     (void)portNum;
     (void)context;
 
+    U32 current_loss_time = this->getTimeFromRTC();
+
+    // check if the time is RTC or monotonic and set the flag accordingly
+
+    if (m_TypeTimeFlag == true) {
+        printk("MONOTONIC TIME\n");
+    } else {
+        printk("RTC TIME\n");
+    }
+
     // // Check if the last loss time is past the current time
     U32 last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
+    printk("Last loss time: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
 
     // if the last loss time is 0, initialize it with the current time
     if (last_loss_time == 0) {
@@ -49,10 +63,6 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
         this->writeToFile(LAST_LOSS_TIME_FILE, last_loss_time);
         printk("RESET Last loss time: %d\n", last_loss_time);
     }
-
-    U32 current_loss_time = this->getTimeFromRTC();
-    printk("Last loss time: %d, Current loss time: %d\n", last_loss_time, current_loss_time);
-
     // Get the LOSS_MAX_TIME parameter
     Fw::ParamValid valid;
     U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
@@ -60,9 +70,9 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
         this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
         // Only send safemode signal if port is connected
-        // if (this->isConnected_SafeModeOn_OutputPort(0)) {
-        //     this->SafeModeOn_out(0);
-        // }
+        if (this->isConnected_SafeModeOn_OutputPort(0)) {
+            this->SafeModeOn_out(0);
+        }
     }
 }
 
@@ -71,6 +81,17 @@ U32 AuthenticationRouter ::getTimeFromRTC() {
     // use the RtcManager timeGetPort to get the time
     // getTime() automatically calls the timeCaller port which is connected to RtcManager
     Fw::Time time = this->getTime();
+
+    // Check if the time is RTC or monotonic and set the flag accordingly
+    TimeBase b = time.getTimeBase();
+    if (b == TimeBase::TB_PROC_TIME) {
+        // monotonic time
+        m_TypeTimeFlag = true;
+    } else {
+        // RTC time
+        m_TypeTimeFlag = false;
+    }
+
     printk("Time from RTC: %d\n", time.getSeconds());
     return time.getSeconds();
 }

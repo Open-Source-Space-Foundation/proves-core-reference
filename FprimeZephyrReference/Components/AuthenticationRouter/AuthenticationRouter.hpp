@@ -80,7 +80,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
 
     Fw::On m_state_rtc = Fw::On::OFF;           // keeps track if the RTC is on or if we are using Zephyr's time
     std::atomic<U32> m_commandLossTimeCounter;  // makes this an atomic variable (so its set only in one command),
+
+    bool m_TypeTimeFlag;  //!< Flag to indicate if the time is RTC or monotonic
 };
+
 }  // namespace Svc
 
 #endif
