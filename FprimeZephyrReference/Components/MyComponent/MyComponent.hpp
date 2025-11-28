@@ -74,17 +74,6 @@ class MyComponent final : public MyComponentComponentBase {
                           U32 cmdSeq            //!< The command sequence number
                           ) override;
 
-    //! SX1280 SPI Commands
-
-    void spiSetModulationParams();
-    void spiSetTxParams();
-    void spiSetTxContinuousPreamble();
-    void spiSetTxContinuousWave();
-    void spiSetRfFrequency();
-    void spiSetTx();
-    void spiSetStandby();
-    U8 spiGetStatus();
-
     // Configure the SX1280 radio (setup and parameter tuning)
     int configure_radio();
 
