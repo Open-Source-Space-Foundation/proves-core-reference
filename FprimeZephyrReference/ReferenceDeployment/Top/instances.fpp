@@ -142,24 +142,40 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-  instance thermalManager: Components.ThermalManager base id 0x10041000
+  instance tcaMonitor: Components.GenericDeviceMonitor base id 0x10041000
 
-  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x10042000
+  instance muxChannel0Monitor: Components.GenericDeviceMonitor base id 0x10042000
 
-  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x10043000
+  instance muxChannel1Monitor: Components.GenericDeviceMonitor base id 0x10043000
 
-  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x10044000
+  instance muxChannel2Monitor: Components.GenericDeviceMonitor base id 0x10044000
 
-  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x10045000
+  instance muxChannel3Monitor: Components.GenericDeviceMonitor base id 0x10045000
 
-  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x10046000
+  instance muxChannel4Monitor: Components.GenericDeviceMonitor base id 0x10046000
 
-  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x10047000
+  instance muxChannel5Monitor: Components.GenericDeviceMonitor base id 0x10047000
 
-  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x10048000
+  instance muxChannel7Monitor: Components.GenericDeviceMonitor base id 0x10048000
 
-  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x10049000
+  instance thermalManager: Components.ThermalManager base id 0x10049000
 
-  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x1004A000
+  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x1004A000
+
+  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x1004B000
+
+  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x1004C000
+
+  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x1004D000
+
+  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x1004E000
+
+  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x1004F000
+
+  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x10050000
+
+  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x10051000
+
+  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x10052000
 
 }

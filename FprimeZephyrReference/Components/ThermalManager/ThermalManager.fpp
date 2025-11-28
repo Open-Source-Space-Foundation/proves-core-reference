@@ -5,11 +5,17 @@ module Components {
         sync input port run: Svc.Sched
 
         # Output ports to TMP112Manager instances
+        @ Port to return the state of the load switch for face 0
+        output port face0LoadSwitchStateGet: Components.loadSwitchState
+
         @ Port for face 0 temperature sensor initialization
         output port face0Init: Fw.SuccessCondition
 
         @ Port for face 0 temperature sensor
         output port face0TempGet: Drv.temperatureGet
+
+        @ Port for face 1 load switch state
+        output port face1LoadSwitchStateGet: Components.loadSwitchState
 
         @ Port for face 1 temperature sensor initialization
         output port face1Init: Fw.SuccessCondition
@@ -17,17 +23,26 @@ module Components {
         @ Port for face 1 temperature sensor
         output port face1TempGet: Drv.temperatureGet
 
+        @ Port for face 2 load switch state
+        output port face2LoadSwitchStateGet: Components.loadSwitchState
+
         @ Port for face 2 temperature sensor initialization
         output port face2Init: Fw.SuccessCondition
 
         @ Port for face 2 temperature sensor
         output port face2TempGet: Drv.temperatureGet
 
+        @ Port for face 3 load switch state
+        output port face3LoadSwitchStateGet: Components.loadSwitchState
+
         @ Port for face 3 temperature sensor initialization
         output port face3Init: Fw.SuccessCondition
 
         @ Port for face 3 temperature sensor
         output port face3TempGet: Drv.temperatureGet
+
+        @ Port for face 5 load switch state
+        output port face5LoadSwitchStateGet: Components.loadSwitchState
 
         @ Port for face 5 temperature sensor initialization
         output port face5Init: Fw.SuccessCondition

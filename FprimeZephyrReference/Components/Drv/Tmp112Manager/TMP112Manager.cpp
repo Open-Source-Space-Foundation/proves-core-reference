@@ -33,14 +33,28 @@ void TMP112Manager::configure(const struct device* dev) {
 
 void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
     int ret = device_init(this->m_dev);
-    if (ret != 0 && ret != -EALREADY) {
+    // do i need to start the mux first?
+    // if (ret != 0 && ret != -EALREADY) {
+    // if (ret == -EALREADY) {
+    //     // Device already initialized - treat as success
+    //     this->log_WARNING_HI_DeviceAlreadyInitialized();
+    //     return;
+    // }
+    if (ret != 0) {
         // Emit an error? or ignore because face is off? Talk to load manager to see if face is on before erroring?
         this->log_WARNING_HI_DeviceInitFailed(ret);
         condition = Fw::Success::FAILURE;
+
+        // Even after a failure to init, the device will stay in an initialized state
+        // so we need to deinit to allow future init attempts
+        int deinit_ret = device_deinit(this->m_dev);  // TODO: Check output?
+        if (deinit_ret != 0) {
+            this->log_WARNING_HI_DeviceDeinitFailed(deinit_ret);
+        }
         return;
     }
 
-    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+    // this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
     condition = Fw::Success::SUCCESS;
 }
 
@@ -50,7 +64,7 @@ F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
         printk("[TMP112Manager] Device not ready: %s (ptr: %p)\n", this->m_dev->name, this->m_dev);
         return 0;
     }
-    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
+    // this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
     struct sensor_value temp;
 

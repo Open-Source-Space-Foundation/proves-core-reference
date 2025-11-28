@@ -66,6 +66,16 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance tcaMonitor
+    instance muxChannel0Monitor
+    instance muxChannel1Monitor
+    instance muxChannel2Monitor
+    instance muxChannel3Monitor
+    instance muxChannel4Monitor
+    instance muxChannel5Monitor
+    instance muxChannel7Monitor
+
+    # Face Board Instances
     instance thermalManager
     instance tmp112Face0Manager
     instance tmp112Face1Manager
@@ -183,7 +193,15 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] ->  muxChannel0Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[16] ->  muxChannel1Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[17] ->  muxChannel2Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[18] ->  muxChannel3Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] ->  muxChannel4Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[20] ->  muxChannel5Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[21] ->  muxChannel7Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
 
     }
 
@@ -194,13 +212,28 @@ module ReferenceDeployment {
 
     connections LoadSwitches {
       face4LoadSwitch.gpioSet -> gpioface4LS.gpioWrite
+      face4LoadSwitch.gpioGet -> gpioface4LS.gpioRead
+
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
+      face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
+      face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
+      face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
+      face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
+      face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
+      payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
+
       payloadBatteryLoadSwitch.gpioSet -> gpioPayloadBatteryLS.gpioWrite
+      payloadBatteryLoadSwitch.gpioGet -> gpioPayloadBatteryLS.gpioRead
     }
 
     connections BurnwireGpio {
@@ -241,18 +274,23 @@ module ReferenceDeployment {
     }
 
     connections thermalMonitor {
+      thermalManager.face0LoadSwitchStateGet -> face0LoadSwitch.loadSwitchStateGet
       thermalManager.face0Init -> tmp112Face0Manager.init
       thermalManager.face0TempGet -> tmp112Face0Manager.temperatureGet
 
+      thermalManager.face1LoadSwitchStateGet -> face1LoadSwitch.loadSwitchStateGet
       thermalManager.face1Init -> tmp112Face1Manager.init
       thermalManager.face1TempGet -> tmp112Face1Manager.temperatureGet
 
+      thermalManager.face2LoadSwitchStateGet -> face2LoadSwitch.loadSwitchStateGet
       thermalManager.face2Init -> tmp112Face2Manager.init
       thermalManager.face2TempGet -> tmp112Face2Manager.temperatureGet
 
+      thermalManager.face3LoadSwitchStateGet -> face3LoadSwitch.loadSwitchStateGet
       thermalManager.face3Init -> tmp112Face3Manager.init
       thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
 
+      thermalManager.face5LoadSwitchStateGet -> face5LoadSwitch.loadSwitchStateGet
       thermalManager.face5Init -> tmp112Face5Manager.init
       thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
 

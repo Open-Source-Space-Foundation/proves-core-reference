@@ -94,7 +94,18 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
-  packet Thermal id 12 group 4 {
+  packet TcaMonitor id 12 group 4 {
+    ReferenceDeployment.tcaMonitor.Healthy
+    ReferenceDeployment.muxChannel0Monitor.Healthy
+    ReferenceDeployment.muxChannel1Monitor.Healthy
+    ReferenceDeployment.muxChannel2Monitor.Healthy
+    ReferenceDeployment.muxChannel3Monitor.Healthy
+    ReferenceDeployment.muxChannel4Monitor.Healthy
+    ReferenceDeployment.muxChannel5Monitor.Healthy
+    ReferenceDeployment.muxChannel7Monitor.Healthy
+  }
+
+  packet Thermal id 13 group 4 {
     ReferenceDeployment.tmp112Face0Manager.Temperature
     ReferenceDeployment.tmp112Face1Manager.Temperature
     ReferenceDeployment.tmp112Face2Manager.Temperature

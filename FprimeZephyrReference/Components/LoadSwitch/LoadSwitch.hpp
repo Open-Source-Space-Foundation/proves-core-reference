@@ -51,6 +51,12 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     void Reset_handler(FwIndexType portNum  //!< The port number
                        ) override;
 
+    //! Handler implementation for loadSwitchStateGet
+    //!
+    //! Input port to get the state of the load switch (called by other components)
+    Fw::On loadSwitchStateGet_handler(FwIndexType portNum  //!< The port number
+                                      ) override;
+
     //! Handler implementation for turnOn
     void turnOn_handler(FwIndexType portNum  //!< The port number
                         ) override;

@@ -28,6 +28,12 @@ void LoadSwitch ::Reset_handler(FwIndexType portNum) {
     this->setLoadSwitchState(Fw::On::ON);
 }
 
+Fw::On LoadSwitch ::loadSwitchStateGet_handler(FwIndexType portNum) {
+    Fw::Logic state;
+    this->gpioGet_out(0, state);
+    return state ? Fw::On::ON : Fw::On::OFF;
+}
+
 void LoadSwitch ::turnOn_handler(FwIndexType portNum) {
     this->setLoadSwitchState(Fw::On::ON);
 }
