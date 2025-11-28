@@ -32,7 +32,7 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     if (this->muxChannel0HealthGet_out(0) == Fw::Health::HEALTHY &&
         this->face0LoadSwitchStateGet_out(0) == Fw::On::ON) {
-        this->face0Init_out(0, condition);  // If init fails, try deinit?
+        this->face0Init_out(0, condition);  // TODO(nateinaction): If init fails, try deinit?
         if (condition == Fw::Success::SUCCESS) {
             this->face0TempGet_out(0);
         }

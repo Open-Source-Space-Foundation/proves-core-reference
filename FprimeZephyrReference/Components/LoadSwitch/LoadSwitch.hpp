@@ -73,9 +73,13 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     void setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
     );
 
+    //! Get current load switch state
+    Fw::On getLoadSwitchState();  //<! Get the current state (ON or OFF)
+
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
+    Fw::Time m_on_timeout;  //!< Time when load switch was turned on plus a delay time
 };
 
 }  // namespace Components

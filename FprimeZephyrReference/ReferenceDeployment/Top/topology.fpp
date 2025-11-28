@@ -7,6 +7,7 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1_6Hz
   }
 
   topology ReferenceDeployment {
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    # instance rateGroup1_6Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -177,7 +179,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
 
-      # Slow rate (1Hz) rate group
+      # Medium rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
@@ -193,15 +195,18 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[15] ->  muxChannel0Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[16] ->  muxChannel1Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[17] ->  muxChannel2Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[18] ->  muxChannel3Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[19] ->  muxChannel4Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[20] ->  muxChannel5Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[21] ->  muxChannel7Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
+
+      # Slow rate (1/6 Hz) rate group
+      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
+      # rateGroup1_6Hz.RateGroupMemberOut[0] -> tcaMonitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[1] ->  muxChannel0Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[2] ->  muxChannel1Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[3] ->  muxChannel2Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[4] ->  muxChannel3Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[5] ->  muxChannel4Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[6] ->  muxChannel5Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[7] ->  muxChannel7Monitor.run
+      # rateGroup1_6Hz.RateGroupMemberOut[8] -> thermalManager.run
 
     }
 

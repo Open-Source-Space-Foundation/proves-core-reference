@@ -18,15 +18,15 @@ module Drv {
         telemetry Temperature: F64
 
         @ Event for reporting TMP112 not ready error
-        event DeviceNotReady() severity warning high format "TMP112 device not ready"
-        # event DeviceNotReady() severity warning high format "TMP112 device not ready" throttle 5
+        # event DeviceNotReady() severity warning high format "TMP112 device not ready"
+        event DeviceNotReady() severity warning high format "TMP112 device not ready" throttle 5
 
         @ Event for reporting TMP112 initialization failure
-        event DeviceInitFailed(ret: I8) severity warning high format "TMP112 initialization failed with return code: {}"
-        # event DeviceInitFailed(ret: U8) severity warning high format "TMP112 initialization failed with return code: {}" throttle 5
+        # event DeviceInitFailed(ret: I8) severity warning high format "TMP112 initialization failed with return code: {}"
+        event DeviceInitFailed(ret: U8) severity warning high format "TMP112 initialization failed with return code: {}" throttle 5
 
         @ Event for reporting TMP112 deinitialization failure
-        event DeviceDeinitFailed(ret: I8) severity warning high format "TMP112 initialization failed with return code: {}"
+        event DeviceDeinitFailed(ret: I8) severity warning high format "TMP112 initialization failed with return code: {}" throttle 5
 
         # TODO: REMOVE ME
         # event DeviceAlreadyInitialized() severity warning high format "TMP112 device already initialized"

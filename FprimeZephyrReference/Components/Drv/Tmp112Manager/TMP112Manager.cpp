@@ -50,11 +50,13 @@ void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
         int deinit_ret = device_deinit(this->m_dev);  // TODO: Check output?
         if (deinit_ret != 0) {
             this->log_WARNING_HI_DeviceDeinitFailed(deinit_ret);
+            return;
         }
+        this->log_WARNING_HI_DeviceDeinitFailed_ThrottleClear();
         return;
     }
 
-    // this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
     condition = Fw::Success::SUCCESS;
 }
 
@@ -64,7 +66,7 @@ F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
         printk("[TMP112Manager] Device not ready: %s (ptr: %p)\n", this->m_dev->name, this->m_dev);
         return 0;
     }
-    // this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
+    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
     struct sensor_value temp;
 
