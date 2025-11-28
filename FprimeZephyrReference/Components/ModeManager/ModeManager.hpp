@@ -70,6 +70,16 @@ class ModeManager : public ModeManagerComponentBase {
                                    U32 cmdSeq            //!< The command sequence number
                                    ) override;
 
+    //! Handler implementation for command ENTER_PAYLOAD_MODE
+    void ENTER_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                       U32 cmdSeq            //!< The command sequence number
+                                       ) override;
+
+    //! Handler implementation for command EXIT_PAYLOAD_MODE
+    void EXIT_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                      U32 cmdSeq            //!< The command sequence number
+                                      ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -87,8 +97,20 @@ class ModeManager : public ModeManagerComponentBase {
     //! Exit safe mode
     void exitSafeMode();
 
+    //! Enter payload mode with optional reason override
+    void enterPayloadMode(const char* reason = nullptr);
+
+    //! Exit payload mode
+    void exitPayloadMode();
+
     //! Turn off non-critical components
     void turnOffNonCriticalComponents();
+
+    //! Turn on payload (load switches 6 & 7)
+    void turnOnPayload();
+
+    //! Turn off payload (load switches 6 & 7)
+    void turnOffPayload();
 
     //! Turn on components (restore normal operation)
     void turnOnComponents();
@@ -103,22 +125,24 @@ class ModeManager : public ModeManagerComponentBase {
     // Private enums and types
     // ----------------------------------------------------------------------
 
-    //! System mode enumeration
-    enum class SystemMode : U8 { NORMAL = 0, SAFE_MODE = 1 };
+    //! System mode enumeration (values ordered for +1/-1 sequential transitions)
+    enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2, PAYLOAD_MODE = 3 };
 
     //! Persistent state structure
     struct PersistentState {
-        U8 mode;                 //!< Current mode (SystemMode)
-        U32 safeModeEntryCount;  //!< Number of times safe mode entered
+        U8 mode;                    //!< Current mode (SystemMode)
+        U32 safeModeEntryCount;     //!< Number of times safe mode entered
+        U32 payloadModeEntryCount;  //!< Number of times payload mode entered
     };
 
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
 
-    SystemMode m_mode;         //!< Current system mode
-    U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
-    U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
+    SystemMode m_mode;            //!< Current system mode
+    U32 m_safeModeEntryCount;     //!< Counter for safe mode entries
+    U32 m_payloadModeEntryCount;  //!< Counter for payload mode entries
+    U32 m_runCounter;             //!< Counter for run handler calls (1Hz)
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 };
