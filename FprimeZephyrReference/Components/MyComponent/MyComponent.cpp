@@ -23,6 +23,10 @@
 #define OP_SET_STANDBY 0x80
 #define OP_GET_STATUS 0xC0
 
+// Temporary includes for Zephyr GPIO access before integrating with F' GPIO driver
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -101,27 +105,57 @@ void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+static void rf2_io1_isr(const struct device* dev, struct gpio_callback* cb, uint32_t pins) {
+    ARG_UNUSED(dev);
+    ARG_UNUSED(cb);
+    ARG_UNUSED(pins);
+
+    Fw::Logger::log("RF2 IO1 Interrupt Triggered!\n");
+}
+
+static int rf2_io1_init(void) {
+#define RF2_IO1_NODE DT_NODELABEL(rf2_io1)
+    static const struct gpio_dt_spec rf2_io1 = GPIO_DT_SPEC_GET(RF2_IO1_NODE, gpios);
+
+    static struct gpio_callback rf2_io1_cb;
+
+    int ret;
+
+    Fw::Logger::log("Initializing RF2 IO1 GPIO...\n");
+    if (!device_is_ready(rf2_io1.port)) {
+        return -ENODEV;
+    }
+
+    Fw::Logger::log("RF2 IO1 GPIO device is ready.\n");
+    /* Configure as input (flags from DT are already in rf2_io1.dt_flags) */
+    ret = gpio_pin_configure_dt(&rf2_io1, GPIO_INPUT);
+    if (ret < 0) {
+        return ret;
+    }
+
+    Fw::Logger::log("RF2 IO1 GPIO configured as input.\n");
+    /* Interrupt when the line goes active (high in your case) */
+    // ret = gpio_pin_interrupt_configure_dt(&rf2_io1,
+    //                                       GPIO_INT_EDGE_TO_ACTIVE);
+    ret = gpio_pin_interrupt_configure_dt(&rf2_io1, GPIO_INT_EDGE_BOTH);
+    Fw::Logger::log("ret after interrupt configure: %d\n", ret);
+    // I get -134, ENOTSUP and I believe the reason is that mcp23017 inta and
+    // intb pins are not connected the MCU
+    if (ret < 0) {
+        return ret;
+    }
+
+    Fw::Logger::log("RF2 IO1 GPIO interrupt configured.\n");
+    /* Register callback */
+    gpio_init_callback(&rf2_io1_cb, rf2_io1_isr, BIT(rf2_io1.pin));
+    gpio_add_callback(rf2_io1.port, &rf2_io1_cb);
+
+    return 0;
+}
+
 void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    uint8_t buf[256] = {0};
-
-    int16_t state = this->m_rlb_radio.readData(buf, sizeof(buf));
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.readData() success!\n");
-    } else {
-        Fw::Logger::log("radio.readData() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
-
-    Fw::Logger::log("readData() buffer:\n");
-
-    char msg[sizeof(buf) * 3 + 1];
-
-    for (size_t i = 0; i < sizeof(buf); ++i) {
-        sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
-    }
-    msg[sizeof(buf) * 3] = '\0';
-
-    Fw::Logger::log("%s\n", msg);
+    static int init_done = rf2_io1_init();
+    FW_ASSERT(init_done == 0);
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
