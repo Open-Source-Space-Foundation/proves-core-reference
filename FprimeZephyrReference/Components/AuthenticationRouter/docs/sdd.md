@@ -58,10 +58,11 @@ SVC-ROUTER-007 | `Svc::AuthenticationRouter` shall check command loss time perio
 SVC-ROUTER-008 | `Svc::AuthenticationRouter` shall emit `CommandLossTimeExpired` event when command loss time exceeds `LOSS_MAX_TIME` parameter | Command loss time monitoring | Unit test |
 SVC-ROUTER-009 | `Svc::AuthenticationRouter` shall send `SafeModeOn` signal when command loss time expires | Safe mode activation | Unit test |
 SVC-ROUTER-010 | `Svc::AuthenticationRouter` shall update `LastCommandPacketTime` telemetry when a packet is received | Telemetry tracking | Unit test |
-SVC-ROUTER-011 | `Svc::AuthenticationRouter` shall use the 0/1 setting in `authenticaCfg.hpp` to enable or disable authentication functionality in this router component | Authentication configuration | Unit test |
+SVC-ROUTER-011 | `Svc::AuthenticationRouter` shall use the 0/1 setting in `authenticateCfg.hpp` to enable or disable authentication functionality in this router component | Authentication configuration | Unit test |
 SVC-ROUTER-012 | `Svc::AuthenticationRouter` shall check a file for OpCodes that do not require authentication | OpCode exemption list | Unit test |
 SVC-ROUTER-013 | `Svc::AuthenticationRouter` shall only pass authenticated commands and files that are not on the list of opcodes to be executed | Authentication filtering | Unit test |
-SVC-ROUTER-014 | `Svc::AuthenticationRouter` shall pass non-authenticated commands and events backwards to `dataOut` and shall emit events for authenticated commands and non-authenticated commands | Non-authenticated packet handling | Unit test |
+SVC-ROUTER-014 | `Svc::AuthenticationRouter` shall pass non-authenticated commands and events backwards to `dataOut` | Non-authenticated packet routing | Unit test |
+SVC-ROUTER-015 | `Svc::AuthenticationRouter` shall emit events for authenticated commands and non-authenticated commands | Authentication event reporting | Unit test |
 
 ## Events
 
