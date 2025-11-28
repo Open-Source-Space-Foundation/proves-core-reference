@@ -17,7 +17,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.authenticationRouter.CommandLossSafeOn
     ComCcsdsUart.authenticationRouter.LastCommandPacketTime
     ComCcsdsUart.authenticationRouter.CommandLossSafeOn
-    ReferenceDeployment.modeManager.PayloadModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {
