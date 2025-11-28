@@ -25,12 +25,6 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     // Cube face sensors (5 sensors)
     Fw::Success condition;
 
-    // ??
-    // TODO(nateinaction): muxTempSensor.tempGet (checks tca and mux channel healths) -> loadSwitchTempSensor.tempGet
-    // (checks load switch state) -> tmp112Manager.temperatureGet
-    //                                                                                -> tmp112Manager.temperatureGet
-    // ??
-
     // If the TCA is not healthy, skip reading sensors
     if (this->tcaHealthGet_out(0) != Fw::Health::HEALTHY) {
         return;
@@ -38,7 +32,7 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     if (this->muxChannel0HealthGet_out(0) == Fw::Health::HEALTHY &&
         this->face0LoadSwitchStateGet_out(0) == Fw::On::ON) {
-        this->face0Init_out(0, condition);
+        this->face0Init_out(0, condition);  // TODO(nateinaction): If init fails, try deinit?
         if (condition == Fw::Success::SUCCESS) {
             this->face0TempGet_out(0);
         }

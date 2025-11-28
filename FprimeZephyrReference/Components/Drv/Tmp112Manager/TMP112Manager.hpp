@@ -45,26 +45,21 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
                       Fw::Success& condition  //!< Condition success/failure
                       ) override;
 
-    //! Handler implementation for deinit
-    //!
-    //! Port to deinitialize the TMP112 device
-    void deinit_handler(FwIndexType portNum,    //!< The port number
-                        Fw::Success& condition  //!< Condition success/failure
-                        ) override;
-
     //! Handler implementation for temperatureGet
     //!
     //! Port to read the temperature in degrees Celsius
     F64 temperatureGet_handler(FwIndexType portNum  //!< The port number
                                ) override;
 
-  private:
     // ----------------------------------------------------------------------
-    // Private member variables
+    // Member variables
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
+
+    //! Initialization state
+    bool m_initialized = false;
 };
 
 }  // namespace Drv

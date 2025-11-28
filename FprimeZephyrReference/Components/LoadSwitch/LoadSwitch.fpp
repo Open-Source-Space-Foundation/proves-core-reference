@@ -1,5 +1,5 @@
 module Components {
-    port loadSwitchStateGet -> Fw.On
+    port loadSwitchState -> Fw.On
 }
 
 module Components {
@@ -34,7 +34,7 @@ module Components {
         sync input port turnOff: Fw.Signal
 
         @ Input port to get the state of the load switch (called by other components)
-        sync input port loadSwitchStateGet: loadSwitchStateGet
+        sync input port loadSwitchStateGet: loadSwitchState
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
