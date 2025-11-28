@@ -49,8 +49,6 @@ void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         "world!\nHello, world!\nHello, world!\nHello, world!\n";
     this->txEnable_out(0, Fw::Logic::HIGH);
     state = this->m_rlb_radio.transmit(s, sizeof(s));
-    // TODO replace with proper TX done interrupt handling
-    Os::Task::delay(Fw::TimeInterval(0, 1000));
     this->txEnable_out(0, Fw::Logic::LOW);
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
