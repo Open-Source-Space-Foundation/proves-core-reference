@@ -57,6 +57,9 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
 
     //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
+
+    //! Initialization state
+    bool m_initialized = false;
 };
 
 }  // namespace Drv

@@ -192,21 +192,21 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
+      # rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run # Causing rate group to slip?
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> muxChannel0Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> muxChannel1Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> muxChannel2Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> muxChannel3Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> muxChannel4Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> muxChannel5Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[21] -> muxChannel7Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
 
       # Slow rate (1/6 Hz) rate group
       # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-      # rateGroup1_6Hz.RateGroupMemberOut[0] -> tcaMonitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[1] ->  muxChannel0Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[2] ->  muxChannel1Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[3] ->  muxChannel2Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[4] ->  muxChannel3Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[5] ->  muxChannel4Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[6] ->  muxChannel5Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[7] ->  muxChannel7Monitor.run
-      # rateGroup1_6Hz.RateGroupMemberOut[8] -> thermalManager.run
 
     }
 

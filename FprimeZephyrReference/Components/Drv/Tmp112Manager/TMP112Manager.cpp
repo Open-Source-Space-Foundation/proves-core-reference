@@ -32,31 +32,23 @@ void TMP112Manager::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
-    int ret = device_init(this->m_dev);
-    // do i need to start the mux first?
-    // if (ret != 0 && ret != -EALREADY) {
-    // if (ret == -EALREADY) {
-    //     // Device already initialized - treat as success
-    //     this->log_WARNING_HI_DeviceAlreadyInitialized();
-    //     return;
-    // }
-    if (ret != 0) {
-        // Emit an error? or ignore because face is off? Talk to load manager to see if face is on before erroring?
-        this->log_WARNING_HI_DeviceInitFailed(ret);
-        condition = Fw::Success::FAILURE;
+    // TODO(nateinaction): I could check TCA, MUX, LoadSwitch here.
+    // If I don't want to call init over and over again, I can store state in the component.
 
-        // Even after a failure to init, the device will stay in an initialized state
-        // so we need to deinit to allow future init attempts
-        int deinit_ret = device_deinit(this->m_dev);  // TODO: Check output?
-        if (deinit_ret != 0) {
-            this->log_WARNING_HI_DeviceDeinitFailed(deinit_ret);
-            return;
-        }
-        this->log_WARNING_HI_DeviceDeinitFailed_ThrottleClear();
-        return;
+    // Reset the device initialization state to allow device_init to run again.
+    if (this->m_dev && this->m_dev->state) {
+        this->m_dev->state->initialized = false;
     }
 
+    int ret = device_init(this->m_dev);
+    if (ret < 0) {
+        condition = Fw::Success::FAILURE;
+        this->log_WARNING_HI_DeviceInitFailed(ret);
+        return;
+    }
     this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+
+    // this->m_initialized = true; // This cannot be used until it can be set false when the load switch is turned off.
     condition = Fw::Success::SUCCESS;
 }
 
