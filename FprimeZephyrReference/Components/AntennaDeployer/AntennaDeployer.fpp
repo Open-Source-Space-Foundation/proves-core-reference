@@ -127,7 +127,7 @@ module Components {
         param INVALID_THRESHOLD_BOTTOM_CM: F32 default 0.1
 
         @ File path for persistent deployment state (file exists = deployed)
-        param DEPLOYED_STATE_FILE: string default "/antenna_deployed.bin"
+        param DEPLOYED_STATE_FILE: string default "//antenna_deployed.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters
