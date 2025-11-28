@@ -11,6 +11,8 @@ Tests cover:
 - Edge cases
 
 Total: 9 tests
+
+Mode enum values: SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
 """
 
 import time
@@ -87,12 +89,12 @@ def test_01_initial_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     # Trigger telemetry update by sending Health packet (ID 1)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
 
-    # Read CurrentMode telemetry (0 = NORMAL, 1 = SAFE_MODE)
+    # Read CurrentMode telemetry (1 = SAFE_MODE, 2 = NORMAL, 3 = PAYLOAD_MODE)
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
     current_mode = mode_result.get_val()
-    assert current_mode in [0, 1], f"Invalid mode value: {current_mode}"
+    assert current_mode in [1, 2, 3], f"Invalid mode value: {current_mode}"
 
 
 # ==============================================================================
@@ -103,13 +105,11 @@ def test_01_initial_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_04_force_safe_mode_command(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Test FORCE_SAFE_MODE command enters safe mode by checking telemetry.
+    Note: With idempotent behavior, ManualSafeModeEntry is only emitted when
+    transitioning from NORMAL, not when already in SAFE_MODE.
     """
-    # Send FORCE_SAFE_MODE command - still expect ManualSafeModeEntry for logging
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{component}.FORCE_SAFE_MODE",
-        events=[f"{component}.ManualSafeModeEntry"],
-    )
+    # Send FORCE_SAFE_MODE command (idempotent - succeeds even if already in safe mode)
+    proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
 
     # Wait for mode transition (happens in 1Hz rate group)
     time.sleep(3)
@@ -201,7 +201,7 @@ def test_13_exit_safe_mode_fails_not_in_safe_mode(
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
 
-    if mode_result.get_val() != 0:
+    if mode_result.get_val() != 2:
         pytest.skip("Not in NORMAL mode - cannot test this scenario")
 
     # Try to exit safe mode when not in it - should fail
@@ -219,7 +219,7 @@ def test_14_exit_safe_mode_success(fprime_test_api: IntegrationTestAPI, start_gd
     Test EXIT_SAFE_MODE succeeds.
     Verifies:
     - ExitingSafeMode event is emitted
-    - CurrentMode returns to NORMAL (0)
+    - CurrentMode returns to NORMAL (2)
     """
     # Enter safe mode
     proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
@@ -234,12 +234,12 @@ def test_14_exit_safe_mode_success(fprime_test_api: IntegrationTestAPI, start_gd
 
     time.sleep(2)
 
-    # Verify mode is NORMAL (0)
+    # Verify mode is NORMAL (2)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
-    assert mode_result.get_val() == 0, "Should be in NORMAL mode"
+    assert mode_result.get_val() == 2, "Should be in NORMAL mode"
 
 
 # ==============================================================================
@@ -250,7 +250,7 @@ def test_14_exit_safe_mode_success(fprime_test_api: IntegrationTestAPI, start_gd
 def test_18_force_safe_mode_idempotent(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Test that calling FORCE_SAFE_MODE while already in safe mode is idempotent.
-    Should succeed and not cause issues.
+    Should succeed without emitting events (no re-entry).
     """
     # Enter safe mode first time
     proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
@@ -259,13 +259,8 @@ def test_18_force_safe_mode_idempotent(fprime_test_api: IntegrationTestAPI, star
     # Clear event history
     fprime_test_api.clear_histories()
 
-    # Force safe mode again - should succeed without EnteringSafeMode event
-    # But ManualSafeModeEntry event is still emitted (logging)
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{component}.FORCE_SAFE_MODE",
-        events=[f"{component}.ManualSafeModeEntry"],
-    )
+    # Force safe mode again - should succeed silently (no events, no re-entry)
+    proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
 
     # Verify still in safe mode
     time.sleep(1)
