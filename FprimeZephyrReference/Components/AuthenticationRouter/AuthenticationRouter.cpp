@@ -15,8 +15,6 @@
 #include "Fw/Logger/Logger.hpp"
 #include "Os/File.hpp"
 #include "config/ApidEnumAc.hpp"
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 constexpr const char LAST_LOSS_TIME_FILE[] = "//loss_max_time.txt";
 constexpr const char LAST_LOSS_TIME_FILE_MONOTONIC[] = "//loss_max_time_monotonic.txt";
@@ -40,7 +38,6 @@ AuthenticationRouter ::AuthenticationRouter(const char* const compName) : Authen
 
     // Load the command loss expired flag from file (persists across boots)
     m_commandLossTimeExpiredLogged = this->readCommandLossExpiredFlag();
-    printk("Loaded command loss expired flag from file: %d\n", m_commandLossTimeExpiredLogged);
 }
 AuthenticationRouter ::~AuthenticationRouter() {}
 
@@ -91,28 +88,17 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
 
     U32 time_diff = (current_loss_time >= last_loss_time) ? (current_loss_time - last_loss_time) : 0;
 
-    printk("DEBUG: Current loss time: %d, Last loss time: %d, Time diff: %d, Loss max time: %d, Flag: %d\n",
-           current_loss_time, last_loss_time, time_diff, loss_max_time, m_commandLossTimeExpiredLogged);
-
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
         // Timeout condition is met
-        printk("DEBUG: Timeout condition MET! Flag value: %d\n", m_commandLossTimeExpiredLogged);
         if (m_commandLossTimeExpiredLogged == false) {
-            printk("DEBUG: Emitting CommandLossTimeExpired event (flag was false)\n");
             this->log_ACTIVITY_HI_CommandLossTimeExpired(Fw::On::ON);
             m_commandLossTimeExpiredLogged = true;
             this->writeCommandLossExpiredFlag(true);  // Persist flag to file
             this->tlmWrite_CommandLossSafeOn(true);
-            printk("DEBUG: Event emitted, flag set to true, telemetry updated\n");
             // Only send safemode signal if port is connected
             if (this->isConnected_SafeModeOn_OutputPort(0)) {
-                printk("DEBUG: Sending SafeModeOn signal\n");
                 this->SafeModeOn_out(0);
-            } else {
-                printk("DEBUG: SafeModeOn port not connected\n");
             }
-        } else {
-            printk("DEBUG: Event NOT emitted because flag is already true (%d)\n", m_commandLossTimeExpiredLogged);
         }
         // Flag stays true - signal will not be sent again until a command is received
     } else {
@@ -186,12 +172,10 @@ bool AuthenticationRouter ::readCommandLossExpiredFlag() {
         Os::File::Status readStatus = file.read(reinterpret_cast<U8*>(&flag), size, Os::File::WaitType::WAIT);
         file.close();
         if (readStatus == Os::File::OP_OK && size == expectedSize) {
-            printk("Read command loss expired flag from file: %d\n", flag);
             return flag;
         }
     }
     // File doesn't exist or read failed - return false (default)
-    printk("Command loss expired flag file not found or read failed - using default: false\n");
     return false;
 }
 
@@ -204,9 +188,6 @@ void AuthenticationRouter ::writeCommandLossExpiredFlag(bool flag) {
         FwSizeType size = static_cast<FwSizeType>(sizeof(flag));
         (void)file.write(buffer, size, Os::File::WaitType::WAIT);
         file.close();
-        printk("Wrote command loss expired flag to file: %d\n", flag);
-    } else {
-        printk("Failed to write command loss expired flag to file\n");
     }
 }
 
@@ -268,13 +249,11 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
         this->writeToFile(LAST_LOSS_TIME_FILE, current_time);
     }
     // Reset the flag when any packet is received
-    printk("DEBUG: Packet received - resetting flag from %d to false\n", m_commandLossTimeExpiredLogged);
     m_commandLossTimeExpiredLogged = false;
     this->writeCommandLossExpiredFlag(false);  // Persist flag to file
     // Update telemetry with the command loss safe on status
     this->tlmWrite_CommandLossSafeOn(false);
     this->tlmWrite_LastCommandPacketTime(static_cast<U64>(current_time));
-    printk("DEBUG: Flag reset, telemetry updated, last packet time: %d\n", current_time);
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
