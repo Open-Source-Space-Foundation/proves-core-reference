@@ -13,7 +13,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
-    ReferenceDeployment.modeManager.PayloadModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {
