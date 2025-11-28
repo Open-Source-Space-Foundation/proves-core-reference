@@ -1,30 +1,30 @@
 # Components::ModeManager
 
-The ModeManager component manages system operational modes and orchestrates transitions across NORMAL, SAFE_MODE, and PAYLOAD_MODE. It evaluates watchdog faults and communication timeouts to make mode decisions, controls power to non‑critical subsystems during transitions, and maintains/persists mode state across reboots to ensure consistent post‑recovery behavior.
+The ModeManager component manages system operational modes and orchestrates transitions (NORMAL, SAFE_MODE, and planned PAYLOAD and HIBERNATION modes). It evaluates watchdog faults and communication timeouts to make mode decisions, controls power to non‑critical subsystems during transitions, and maintains/persists mode state across reboots to ensure consistent post‑recovery behavior.
 
-Future work: a HIBERNATION mode remains planned; it will follow the same persistence and validation patterns once implemented.
+Planned additions:
+- PAYLOAD mode — A mid‑power operational mode that prioritizes payload activity while limiting non‑critical subsystems; intended for mission operations when power is constrained but payload operation must continue.
+- HIBERNATION mode — A deep low‑power state for long‑term battery preservation, with strict wake conditions (e.g., RTC alarm, hardware wake interrupt); minimal subsystems remain active.
+- ModeManager will extend its API and telemetry: new commands (ENTER/EXIT_PAYLOAD, ENTER/EXIT_HIBERNATION), an expanded SystemMode enumeration, modeChanged notifications reflecting new modes, and getMode support for queries.
+- Persistence and validation: new modes will be persisted like existing modes, restored on boot, and have explicit validation for entry/exit (e.g., exit from HIBERNATION requires approved wake condition).
+
+These mode additions will be integrated incrementally with corresponding telemetry, events, commands, unit tests, and integration tests to verify correct behavior, power control, and persistence semantics.
 
 ## Requirements
 | Name | Description | Validation |
 |---|---|---|
-| MM0001 | The ModeManager shall maintain three operational modes: NORMAL, SAFE_MODE, and PAYLOAD_MODE | Integration Testing |
+| MM0001 | The ModeManager shall maintain two distinct operational modes: NORMAL and SAFE_MODE | Integration Testing |
 | MM0002 | The ModeManager shall enter safe mode when commanded manually via FORCE_SAFE_MODE command | Integration Testing |
 | MM0003 | The ModeManager shall enter safe mode when requested by external components via forceSafeMode port | Integration Testing |
 | MM0004 | The ModeManager shall exit safe mode only via explicit EXIT_SAFE_MODE command | Integration Testing |
 | MM0005 | The ModeManager shall prevent exit from safe mode when not currently in safe mode | Integration Testing |
 | MM0006 | The ModeManager shall turn off all 8 load switches when entering safe mode | Integration Testing |
-| MM0007 | The ModeManager shall turn on face load switches (indices 0-5) when exiting safe mode; payload switches remain off until payload mode | Integration Testing |
+| MM0007 | The ModeManager shall turn on all 8 load switches when exiting safe mode | Integration Testing |
 | MM0008 | The ModeManager shall persist current mode and safe mode entry count to non-volatile storage | Integration Testing |
 | MM0009 | The ModeManager shall restore mode state from persistent storage on initialization | Integration Testing |
 | MM0010 | The ModeManager shall track and report the number of times safe mode has been entered | Integration Testing |
 | MM0011 | The ModeManager shall allow downstream components to query the current mode via getMode port | Unit Testing |
 | MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Unit Testing |
-| MM0013 | The ModeManager shall enter payload mode when commanded via ENTER_PAYLOAD_MODE while in NORMAL and reject entry from SAFE_MODE | Integration Testing |
-| MM0014 | The ModeManager shall exit payload mode only via explicit EXIT_PAYLOAD_MODE command and reject exit when not in payload mode | Integration Testing |
-| MM0016 | The ModeManager shall turn on payload load switches (indices 6 and 7) when entering payload mode and turn them off when exiting payload mode | Integration Testing |
-| MM0017 | The ModeManager shall track and report the number of times payload mode has been entered | Integration Testing |
-| MM0018 | The ModeManager shall persist payload mode state and payload mode entry count to non-volatile storage and restore them on initialization | Integration Testing |
-| MM0019 | The ModeManager shall reject FORCE_SAFE_MODE from payload mode (must exit payload mode first for sequential transitions) | Integration Testing |
 
 ## Usage Examples
 
@@ -39,12 +39,11 @@ The ModeManager component operates as an active component that manages system-wi
    - Begins 1Hz periodic execution via rate group
 
 2. **Normal Operation**
-   - Updates telemetry channels (CurrentMode, SafeModeEntryCount, PayloadModeEntryCount)
+   - Updates telemetry channels (CurrentMode, SafeModeEntryCount)
    - Responds to mode query requests from downstream components
-   - Keeps payload load switches (indices 6 and 7) off unless payload mode is explicitly entered
 
 3. **Safe Mode Entry**
-   - Can be triggered by (only from NORMAL mode - sequential transitions enforced):
+   - Can be triggered by:
      - Ground command: `FORCE_SAFE_MODE`
      - External component request via `forceSafeMode` port
    - Actions performed:
@@ -55,39 +54,17 @@ The ModeManager component operates as an active component that manages system-wi
      - Notifies downstream components via `modeChanged` port
      - Persists state to flash storage
 
-4. **Payload Mode Entry**
-   - Triggered by ground command: `ENTER_PAYLOAD_MODE` (only allowed from NORMAL)
-   - Actions performed:
-     - Transitions mode to PAYLOAD_MODE
-     - Increments payload mode entry counter
-     - Emits `EnteringPayloadMode` event and, for commands, `ManualPayloadModeEntry`
-     - Turns on payload load switches (indices 6 and 7)
-     - Notifies downstream components via `modeChanged` port
-     - Updates telemetry (CurrentMode, PayloadModeEntryCount)
-     - Persists state to flash storage
-
-5. **Payload Mode Exit**
-   - Triggered by ground command: `EXIT_PAYLOAD_MODE`
-   - Validates currently in payload mode before allowing exit
-   - Actions performed:
-     - Transitions mode to NORMAL
-     - Emits `ExitingPayloadMode` event
-     - Turns off payload load switches (indices 6 and 7)
-     - Notifies downstream components via `modeChanged` port
-     - Updates telemetry
-     - Persists state to flash storage
-
-6. **Safe Mode Exit**
+4. **Safe Mode Exit**
    - Triggered only by ground command: `EXIT_SAFE_MODE`
    - Validates currently in safe mode before allowing exit
    - Actions performed:
      - Transitions mode to NORMAL
      - Emits `ExitingSafeMode` event
-     - Turns on face load switches (indices 0-5); payload switches remain off until explicitly entering payload mode
+     - Turns on all 8 load switches
      - Notifies downstream components via `modeChanged` port
      - Persists state to flash storage
 
-7. **Mode Queries**
+5. **Mode Queries**
    - Downstream components can call `getMode` port to query current mode
    - Returns immediate synchronous response with current mode
 
@@ -103,7 +80,6 @@ classDiagram
             <<Active Component>>
             - m_mode: SystemMode
             - m_safeModeEntryCount: U32
-            - m_payloadModeEntryCount: U32
             - m_runCounter: U32
             - STATE_FILE_PATH: const char*
             + ModeManager(const char* compName)
@@ -114,25 +90,18 @@ classDiagram
             - getMode_handler(FwIndexType portNum): SystemMode
             - FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
             - EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
-            - ENTER_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
-            - EXIT_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
             - loadState()
             - saveState()
             - enterSafeMode(const char* reason)
             - exitSafeMode()
-            - enterPayloadMode(const char* reason)
-            - exitPayloadMode()
             - turnOffNonCriticalComponents()
             - turnOnComponents()
-            - turnOnPayload()
-            - turnOffPayload()
             - getCurrentVoltage(bool& valid): F32
         }
         class SystemMode {
             <<enumeration>>
+            NORMAL = 0
             SAFE_MODE = 1
-            NORMAL = 2
-            PAYLOAD_MODE = 3
         }
     }
     ModeManagerComponentBase <|-- ModeManager : inherits
@@ -160,16 +129,14 @@ classDiagram
 
 | Name | Type | Description |
 |---|---|---|
-| m_mode | SystemMode | Current operational mode (NORMAL, SAFE_MODE, or PAYLOAD_MODE) |
+| m_mode | SystemMode | Current operational mode (NORMAL or SAFE_MODE) |
 | m_safeModeEntryCount | U32 | Number of times safe mode has been entered since initial deployment |
-| m_payloadModeEntryCount | U32 | Number of times payload mode has been entered since initial deployment |
 | m_runCounter | U32 | Counter for 1Hz run handler calls |
 
 ### Persistent State
 The component persists the following state to `/mode_state.bin`:
 - Current mode (U8)
 - Safe mode entry count (U32)
-- Payload mode entry count (U32)
 
 This state is loaded on initialization and saved on every mode transition.
 
@@ -229,49 +196,7 @@ sequenceDiagram
     ModeManager->>ModeManager: Validate currently in SAFE_MODE
     ModeManager->>ModeManager: Set m_mode = NORMAL
     ModeManager->>ModeManager: Emit ExitingSafeMode event
-    ModeManager->>LoadSwitches: Turn on face switches (indices 0-5)
-    ModeManager->>ModeManager: Update telemetry
-    ModeManager->>DownstreamComponents: modeChanged_out(NORMAL)
-    ModeManager->>FlashStorage: Save state to /mode_state.bin
-    ModeManager->>Ground: Command response OK
-```
-
-### Payload Mode Entry (Command)
-```mermaid
-sequenceDiagram
-    participant Ground
-    participant ModeManager
-    participant LoadSwitches
-    participant DownstreamComponents
-    participant FlashStorage
-
-    Ground->>ModeManager: ENTER_PAYLOAD_MODE command
-    ModeManager->>ModeManager: Validate currently in NORMAL
-    ModeManager->>ModeManager: Emit ManualPayloadModeEntry event
-    ModeManager->>ModeManager: Set m_mode = PAYLOAD_MODE
-    ModeManager->>ModeManager: Increment m_payloadModeEntryCount
-    ModeManager->>ModeManager: Emit EnteringPayloadMode event
-    ModeManager->>LoadSwitches: Turn on payload switches (6 & 7)
-    ModeManager->>ModeManager: Update telemetry
-    ModeManager->>DownstreamComponents: modeChanged_out(PAYLOAD_MODE)
-    ModeManager->>FlashStorage: Save state to /mode_state.bin
-    ModeManager->>Ground: Command response OK
-```
-
-### Payload Mode Exit (Command)
-```mermaid
-sequenceDiagram
-    participant Ground
-    participant ModeManager
-    participant LoadSwitches
-    participant DownstreamComponents
-    participant FlashStorage
-
-    Ground->>ModeManager: EXIT_PAYLOAD_MODE command
-    ModeManager->>ModeManager: Validate currently in PAYLOAD_MODE
-    ModeManager->>ModeManager: Set m_mode = NORMAL
-    ModeManager->>ModeManager: Emit ExitingPayloadMode event
-    ModeManager->>LoadSwitches: Turn off payload switches (6 & 7)
+    ModeManager->>LoadSwitches: Turn on all 8 switches
     ModeManager->>ModeManager: Update telemetry
     ModeManager->>DownstreamComponents: modeChanged_out(NORMAL)
     ModeManager->>FlashStorage: Save state to /mode_state.bin
@@ -286,7 +211,7 @@ sequenceDiagram
 
     DownstreamComponent->>ModeManager: getMode() port call
     ModeManager->>ModeManager: Read m_mode
-    ModeManager-->>DownstreamComponent: Return current mode (NORMAL, SAFE_MODE, or PAYLOAD_MODE)
+    ModeManager-->>DownstreamComponent: Return current mode (NORMAL or SAFE_MODE)
 ```
 
 ### Periodic Execution (1Hz)
@@ -304,10 +229,8 @@ sequenceDiagram
 
 | Name | Arguments | Description |
 |---|---|---|
-| FORCE_SAFE_MODE | None | Forces the system into safe mode. Only allowed from NORMAL mode (rejects from PAYLOAD_MODE with validation error). Emits ManualSafeModeEntry event. Idempotent when already in safe mode. |
+| FORCE_SAFE_MODE | None | Forces the system into safe mode immediately. Emits ManualSafeModeEntry event. Can be called from any mode (idempotent). |
 | EXIT_SAFE_MODE | None | Exits safe mode and returns to normal operation. Fails with CommandValidationFailed if not currently in safe mode. |
-| ENTER_PAYLOAD_MODE | None | Enters payload mode from NORMAL. Fails with CommandValidationFailed if issued from SAFE_MODE or if already in payload mode (idempotent success when already in payload). Emits ManualPayloadModeEntry event. |
-| EXIT_PAYLOAD_MODE | None | Exits payload mode and returns to normal operation. Fails with CommandValidationFailed if not currently in payload mode. |
 
 ## Events
 
@@ -317,9 +240,6 @@ sequenceDiagram
 | ExitingSafeMode | ACTIVITY_HI | None | Emitted when exiting safe mode and returning to normal operation |
 | ManualSafeModeEntry | ACTIVITY_HI | None | Emitted when safe mode is manually commanded via FORCE_SAFE_MODE |
 | ExternalFaultDetected | WARNING_HI | None | Emitted when an external component triggers safe mode via forceSafeMode port |
-| EnteringPayloadMode | ACTIVITY_HI | reason: string size 100 | Emitted when entering payload mode, includes reason (e.g., "Ground command") |
-| ExitingPayloadMode | ACTIVITY_HI | None | Emitted when exiting payload mode and returning to normal operation |
-| ManualPayloadModeEntry | ACTIVITY_HI | None | Emitted when payload mode is manually commanded via ENTER_PAYLOAD_MODE |
 | CommandValidationFailed | WARNING_LO | cmdName: string size 50<br>reason: string size 100 | Emitted when a command fails validation (e.g., EXIT_SAFE_MODE when not in safe mode) |
 | StatePersistenceFailure | WARNING_LO | operation: string size 20<br>status: I32 | Emitted when state save/load operations fail |
 
@@ -327,41 +247,39 @@ sequenceDiagram
 
 | Name | Type | Update Rate | Description |
 |---|---|---|---|
-| CurrentMode | U8 | 1Hz | Current system mode (1 = SAFE_MODE, 2 = NORMAL, 3 = PAYLOAD_MODE) |
+| CurrentMode | U8 | 1Hz | Current system mode (0 = NORMAL, 1 = SAFE_MODE) |
 | SafeModeEntryCount | U32 | On change | Number of times safe mode has been entered (persists across reboots) |
-| PayloadModeEntryCount | U32 | On change | Number of times payload mode has been entered (persists across reboots) |
 
 ## Load Switch Mapping
 
 The ModeManager controls 8 load switches that power non-critical satellite subsystems:
 
-| Index | Subsystem | NORMAL State | SAFE_MODE State | PAYLOAD_MODE State |
-|---|---|---|---|---|
-| 0 | Satellite Face 0 | ON | OFF | ON |
-| 1 | Satellite Face 1 | ON | OFF | ON |
-| 2 | Satellite Face 2 | ON | OFF | ON |
-| 3 | Satellite Face 3 | ON | OFF | ON |
-| 4 | Satellite Face 4 | ON | OFF | ON |
-| 5 | Satellite Face 5 | ON | OFF | ON |
-| 6 | Payload Power | OFF | OFF | ON |
-| 7 | Payload Battery | OFF | OFF | ON |
+| Index | Subsystem | Safe Mode State |
+|---|---|---|
+| 0 | Satellite Face 0 | OFF |
+| 1 | Satellite Face 1 | OFF |
+| 2 | Satellite Face 2 | OFF |
+| 3 | Satellite Face 3 | OFF |
+| 4 | Satellite Face 4 | OFF |
+| 5 | Satellite Face 5 | OFF |
+| 6 | Payload Power | OFF |
+| 7 | Payload Battery | OFF |
 
-> **Note:** PAYLOAD_MODE can only be entered from NORMAL mode (not from SAFE_MODE). When restoring PAYLOAD_MODE from persistent storage after a reboot, both face switches (0-5) and payload switches (6-7) are explicitly turned ON to ensure consistent state.
 ## Integration Tests
 
-See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrReference/test/int/payload_mode_test.py` for comprehensive integration tests covering:
+See `FprimeZephyrReference/test/int/mode_manager_test.py` for comprehensive integration tests covering:
 
 | Test | Description | Coverage |
 |---|---|---|
 | test_01_initial_telemetry | Verifies initial telemetry can be read | Basic functionality |
 | test_04_force_safe_mode_command | Tests FORCE_SAFE_MODE command enters safe mode | Safe mode entry |
+| test_05_safe_mode_increments_counter | Verifies SafeModeEntryCount increments | State tracking |
 | test_06_safe_mode_turns_off_load_switches | Verifies all load switches turn off in safe mode | Power management |
+| test_07_safe_mode_emits_event | Verifies EnteringSafeMode event with correct reason | Event emission |
+| test_13_exit_safe_mode_fails_not_in_safe_mode | Tests EXIT_SAFE_MODE validation | Error handling |
 | test_14_exit_safe_mode_success | Tests successful safe mode exit | Safe mode exit |
-| test_19_safe_mode_state_persists | Verifies safe mode persistence to flash | State persistence |
-| test_payload_01_enter_exit_payload_mode | Validates payload mode entry/exit, events, telemetry, payload load switches | Payload mode entry/exit |
-| test_payload_02_cannot_enter_from_safe_mode | Ensures ENTER_PAYLOAD_MODE fails from SAFE_MODE | Command validation |
-| test_payload_03_safe_mode_rejected_from_payload | Ensures FORCE_SAFE_MODE is rejected from payload mode (sequential transitions) | Command validation |
-| test_payload_04_state_persists | Verifies payload mode and counters persist | Payload persistence |
+| test_18_force_safe_mode_idempotent | Tests FORCE_SAFE_MODE is idempotent | Edge cases |
+| test_19_safe_mode_state_persists | Verifies mode persistence to flash | State persistence |
 
 ## Design Decisions
 
@@ -388,13 +306,10 @@ Mode state is persisted to `/mode_state.bin` to maintain operational context acr
 
 This ensures the system resumes in the correct mode after recovery.
 
-### Sequential Mode Transitions
-Mode transitions follow a +1/-1 sequential pattern: SAFE_MODE(1) ↔ NORMAL(2) ↔ PAYLOAD_MODE(3). Direct jumps (e.g., PAYLOAD→SAFE) are not allowed - users must exit payload mode first before entering safe mode. FORCE_SAFE_MODE is idempotent when already in safe mode.
+### Idempotent Safe Mode Entry
+The FORCE_SAFE_MODE command can be called from any mode without error. If already in safe mode, it succeeds without re-entering. This simplifies fault handling logic in external components.
 
 ## Change Log
 | Date | Description |
 |---|---|
-| 2025-11-26 | Reordered enum values (SAFE=1, NORMAL=2, PAYLOAD=3) for sequential +1/-1 transitions; FORCE_SAFE_MODE now rejected from payload mode |
-| 2025-11-26 | Removed forcePayloadMode port - payload mode now only entered via ENTER_PAYLOAD_MODE ground command |
-| 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |
 | 2025-11-19 | Added getMode query port and enhanced modeChanged to carry mode value |
