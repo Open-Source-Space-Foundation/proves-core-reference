@@ -274,26 +274,34 @@ module ReferenceDeployment {
     }
 
     connections thermalMonitor {
+      thermalManager.tcaHealthGet -> tcaMonitor.healthGet
+
+      thermalManager.muxChannel0HealthGet -> muxChannel0Monitor.healthGet
       thermalManager.face0LoadSwitchStateGet -> face0LoadSwitch.loadSwitchStateGet
       thermalManager.face0Init -> tmp112Face0Manager.init
       thermalManager.face0TempGet -> tmp112Face0Manager.temperatureGet
 
+      thermalManager.muxChannel1HealthGet -> muxChannel1Monitor.healthGet
       thermalManager.face1LoadSwitchStateGet -> face1LoadSwitch.loadSwitchStateGet
       thermalManager.face1Init -> tmp112Face1Manager.init
       thermalManager.face1TempGet -> tmp112Face1Manager.temperatureGet
 
+      thermalManager.muxChannel2HealthGet -> muxChannel2Monitor.healthGet
       thermalManager.face2LoadSwitchStateGet -> face2LoadSwitch.loadSwitchStateGet
       thermalManager.face2Init -> tmp112Face2Manager.init
       thermalManager.face2TempGet -> tmp112Face2Manager.temperatureGet
 
+      thermalManager.muxChannel3HealthGet -> muxChannel3Monitor.healthGet
       thermalManager.face3LoadSwitchStateGet -> face3LoadSwitch.loadSwitchStateGet
       thermalManager.face3Init -> tmp112Face3Manager.init
       thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
 
+      thermalManager.muxChannel5HealthGet -> muxChannel5Monitor.healthGet
       thermalManager.face5LoadSwitchStateGet -> face5LoadSwitch.loadSwitchStateGet
       thermalManager.face5Init -> tmp112Face5Manager.init
       thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
 
+      thermalManager.muxChannel4HealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell1Init -> tmp112BattCell1Manager.init
       thermalManager.battCell1TempGet -> tmp112BattCell1Manager.temperatureGet
 

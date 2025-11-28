@@ -72,6 +72,10 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Set the load switch state (common implementation for commands and ports)
     void setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
     );
+
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
 };
 
 }  // namespace Components

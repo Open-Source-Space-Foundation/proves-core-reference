@@ -29,6 +29,7 @@ void LoadSwitch ::Reset_handler(FwIndexType portNum) {
 }
 
 Fw::On LoadSwitch ::loadSwitchStateGet_handler(FwIndexType portNum) {
+    // TODO(nateinaction): Delay reporting state change until power has normalized
     Fw::Logic state;
     this->gpioGet_out(0, state);
     return state ? Fw::On::ON : Fw::On::OFF;
