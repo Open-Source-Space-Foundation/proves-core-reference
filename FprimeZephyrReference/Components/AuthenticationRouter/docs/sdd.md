@@ -62,7 +62,7 @@ SVC-ROUTER-011 | `Svc::AuthenticationRouter` shall use the 0/1 setting in `authe
 SVC-ROUTER-012 | `Svc::AuthenticationRouter` shall check a file for OpCodes that do not require authentication | OpCode exemption list | Unit test |
 SVC-ROUTER-013 | `Svc::AuthenticationRouter` shall only pass authenticated commands and files that are not on the list of opcodes to be executed | Authentication filtering | Unit test |
 SVC-ROUTER-014 | `Svc::AuthenticationRouter` shall pass non-authenticated commands and events backwards to `dataOut` | Non-authenticated packet routing | Unit test |
-SVC-ROUTER-015 | `Svc::AuthenticationRouter` shall emit events for authenticated commands and non-authenticated commands | Authentication event reporting | Unit test |
+SVC-ROUTER-015 | `Svc::AuthenticationRouter` shall emit events for authenticated commands and non-authenticated commands and whether they passed through the router | Authentication event reporting | Unit test |
 
 ## Events
 
@@ -70,6 +70,9 @@ SVC-ROUTER-015 | `Svc::AuthenticationRouter` shall emit events for authenticated
 |---|---|---|---|
 | CommandLossTimeExpired | Activity High | safemode: Fw.On | Emitted when command loss time expires. Format: "SafeModeOn: {}" |
 | CurrentLossTime | Activity Low | loss_max_time: U32 | Emitted with current loss time information. Format: "Current Loss Time: {}" |
+| PassedRouter | Activity Low | passed: Fw.Bool | Emitted to indicate whether a packet passed through the router. Format: "PassedRouter: {}" |
+| BypassAuthentification | Activity Low | bypassed: Fw.Bool | Emitted to indicate whether authentication was bypassed. Format: "BypassAuthentification: {}" |
+
 
 ## Telemetry Channels
 
@@ -77,6 +80,9 @@ SVC-ROUTER-015 | `Svc::AuthenticationRouter` shall emit events for authenticated
 |---|---|---|
 | LastCommandPacketTime | U64 | The time of the last command packet |
 | CommandLossSafeOn | bool | The status of the command loss time sending to safe mode |
+| ByPassedRouter | U64 | Number of Packets that have bypassed the router |
+| PassedRouter | U64 | Number of Packets that have passed the router |
+| FailedRouter | U64 | Number of Packets that have not passed the Router |
 
 ## Parameters
 
