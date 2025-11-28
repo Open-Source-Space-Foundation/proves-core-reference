@@ -75,6 +75,7 @@ module ReferenceDeployment {
     instance muxChannel3Monitor
     instance muxChannel4Monitor
     instance muxChannel5Monitor
+    instance muxChannel6Monitor
     instance muxChannel7Monitor
 
     # Face Board Instances
@@ -83,7 +84,7 @@ module ReferenceDeployment {
     instance tmp112Face1Manager
     instance tmp112Face2Manager
     instance tmp112Face3Manager
-    instance tmp112Face4Manager
+    instance tmp112Face5Manager
     instance tmp112BattCell1Manager
     instance tmp112BattCell2Manager
     instance tmp112BattCell3Manager
@@ -302,9 +303,9 @@ module ReferenceDeployment {
       thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
 
       thermalManager.muxChannel5HealthGet -> muxChannel5Monitor.healthGet
-      thermalManager.face4LoadSwitchStateGet -> face4LoadSwitch.loadSwitchStateGet
-      thermalManager.face5Init -> tmp112Face4Manager.init
-      thermalManager.face5TempGet -> tmp112Face4Manager.temperatureGet
+      thermalManager.face5LoadSwitchStateGet -> face5LoadSwitch.loadSwitchStateGet
+      thermalManager.face5Init -> tmp112Face5Manager.init
+      thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
 
       thermalManager.muxChannel4HealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell1Init -> tmp112BattCell1Manager.init

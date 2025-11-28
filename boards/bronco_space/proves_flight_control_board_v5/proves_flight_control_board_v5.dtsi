@@ -323,7 +323,7 @@ zephyr_udc0: &usbd {
 			};
 		};
 
-		// Z- Face
+		// Z- Face x1
 		mux_channel_5: i2c_mux@5 {
 			compatible = "ti,tca9548a-channel";
 			label = "mux_channel_5";
@@ -348,6 +348,44 @@ zephyr_udc0: &usbd {
 			};
 
 			face5_drv2605: drv2605@5a {
+				compatible = "ti,drv2605";
+				status = "okay";
+				reg = <0x5a>;
+				label = "FACE5_DRV2605";
+				zephyr,deferred-init;
+
+				actuator-mode = "LRA";
+				loop-gain = "HIGH";
+				feedback-brake-factor = "2X";
+			};
+
+		};
+
+		// Z- Face x2
+		mux_channel_6: i2c_mux@6 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_6";
+			reg = <6>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			face6_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+				label = "FACE5_TMP112";
+				zephyr,deferred-init;
+			};
+
+			face6_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE5_VEML6031";
+				zephyr,deferred-init;
+			};
+
+			face6_drv2605: drv2605@5a {
 				compatible = "ti,drv2605";
 				status = "okay";
 				reg = <0x5a>;
@@ -428,19 +466,19 @@ zephyr_udc0: &usbd {
 		 *  5: RF2_IO1 (GPA5)
 		 *  6: RF2_IO0 (GPA6)
 		 *  7: RF2_IO3 (GPA7)
-		 *  8: FACE4_ENABLE (GPB0)
+		 *  8: FACE5_ENABLE (GPB5)
 		 *  9: FACE0_ENABLE (GPB1)
 		 * 10: FACE1_ENABLE (GPB2)
 		 * 11: FACE2_ENABLE (GPB3)
 		 * 12: FACE3_ENABLE (GPB4)
-		 * 13: FACE5_ENABLE (GPB5)
+		 * 13: FACE4_ENABLE (GPB0)
 		 * 14: READONLY (GPB6)
 		 * 15: CHARGE (GPB7)
 		 */
 		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
 						  "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
-						  "FACE4_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
-						  "FACE3_ENABLE", "FACE5_ENABLE", "READONLY", "CHARGE";
+						  "FACE5_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+						  "FACE3_ENABLE", "FACE4_ENABLE", "READONLY", "CHARGE";
 
 		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
 
@@ -455,10 +493,10 @@ zephyr_udc0: &usbd {
     gpio_outputs {
         compatible = "gpio-leds";  // Using gpio-leds as a convenient container
 
-        face4_enable: face4-enable {
+        face5_enable: face5-enable {
 
-            gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>;  // GPB0
-            label = "FACE4_ENABLE";
+            gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>;  // GPB5
+            label = "FACE5_ENABLE";
         };
 
         face0_enable: face0-enable {
@@ -485,10 +523,10 @@ zephyr_udc0: &usbd {
             label = "FACE3_ENABLE";
         };
 
-        face5_enable: face5-enable {
+        face4_enable: face4-enable {
 
-            gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;  // GPB5
-            label = "FACE5_ENABLE";
+            gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;  // GPB0
+            label = "FACE4_ENABLE";
         };
 
         enable_heater: enable-heater {

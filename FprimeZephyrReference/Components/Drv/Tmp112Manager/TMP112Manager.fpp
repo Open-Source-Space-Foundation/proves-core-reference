@@ -24,6 +24,18 @@ module Drv {
         @ Event for reporting TMP112 initialization failure
         event DeviceInitFailed(ret: I32) severity warning high format "TMP112 initialization failed with return code: {}" throttle 5
 
+        @ Event for reporting TMP112 nil device error
+        event DeviceNil() severity warning high format "TMP112 device is nil" throttle 5
+
+        @ Event for reporting TMP112 nil state error
+        event DeviceStateNil() severity warning high format "TMP112 device state is nil" throttle 5
+
+        @ Event for reporting TMP112 sensor fetch failure
+        event SensorSampleFetchFailed(ret: I32) severity warning high format "TMP112 sensor fetch failed with return code: {}" throttle 5
+
+        @ Event for reporting TMP112 sensor channel get failure
+        event SensorChannelGetFailed(ret: I32) severity warning high format "TMP112 sensor channel get failed with return code: {}" throttle 5
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

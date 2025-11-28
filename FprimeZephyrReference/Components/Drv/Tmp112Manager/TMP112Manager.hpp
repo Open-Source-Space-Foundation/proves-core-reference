@@ -41,6 +41,7 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
     //! Handler implementation for init
     //!
     //! Port to initialize the TMP112 device
+    //! Must be called and complete successfully at least one time before temperature can be read
     void init_handler(FwIndexType portNum,    //!< The port number
                       Fw::Success& condition  //!< Condition success/failure
                       ) override;

@@ -25,6 +25,7 @@ const struct device* mux_channel_2 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_2));
 const struct device* mux_channel_3 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_3));
 const struct device* mux_channel_4 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_4));
 const struct device* mux_channel_5 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_5));
+const struct device* mux_channel_6 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_6));
 const struct device* mux_channel_7 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_7));
 const struct device* face0_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face0_temp_sens));
 const struct device* face1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face1_temp_sens));
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
     inputs.muxChannel3Device = mux_channel_3;
     inputs.muxChannel4Device = mux_channel_4;
     inputs.muxChannel5Device = mux_channel_5;
+    inputs.muxChannel6Device = mux_channel_6;
     inputs.muxChannel7Device = mux_channel_7;
 
     // Face Board device bindings

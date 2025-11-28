@@ -104,6 +104,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.muxChannel3Monitor.Healthy
     ReferenceDeployment.muxChannel4Monitor.Healthy
     ReferenceDeployment.muxChannel5Monitor.Healthy
+    ReferenceDeployment.muxChannel6Monitor.Healthy
     ReferenceDeployment.muxChannel7Monitor.Healthy
   }
 

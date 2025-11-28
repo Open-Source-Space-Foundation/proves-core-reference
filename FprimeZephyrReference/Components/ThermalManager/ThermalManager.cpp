@@ -63,7 +63,7 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     }
 
     if (this->muxChannel5HealthGet_out(0) == Fw::Health::HEALTHY &&
-        this->face4LoadSwitchStateGet_out(0) == Fw::On::ON) {
+        this->face5LoadSwitchStateGet_out(0) == Fw::On::ON) {
         this->face5Init_out(0, condition);
         if (condition == Fw::Success::SUCCESS) {
             this->face5TempGet_out(0);

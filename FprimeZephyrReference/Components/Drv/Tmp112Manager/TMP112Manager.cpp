@@ -32,18 +32,27 @@ void TMP112Manager::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
-    // TODO(nateinaction): I could check TCA, MUX, LoadSwitch here.
-    // If I don't want to call init over and over again, I can store state in the component.
+    if (!this->m_dev) {
+        condition = Fw::Success::FAILURE;
+        this->log_WARNING_HI_DeviceNil();
+        return;
+    }
+    this->log_WARNING_HI_DeviceNil_ThrottleClear();
+
+    if (!this->m_dev->state) {
+        condition = Fw::Success::FAILURE;
+        this->log_WARNING_HI_DeviceStateNil();
+        return;
+    }
+    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
 
     // Reset the device initialization state to allow device_init to run again.
-    if (this->m_dev && this->m_dev->state) {
-        this->m_dev->state->initialized = false;
-    }
+    this->m_dev->state->initialized = false;
 
-    int ret = device_init(this->m_dev);
-    if (ret < 0) {
+    int rc = device_init(this->m_dev);
+    if (rc < 0) {
         condition = Fw::Success::FAILURE;
-        this->log_WARNING_HI_DeviceInitFailed(ret);
+        this->log_WARNING_HI_DeviceInitFailed(rc);
         return;
     }
     this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
@@ -55,7 +64,6 @@ void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
 F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
-        printk("[TMP112Manager] Device not ready: %s (ptr: %p)\n", this->m_dev->name, this->m_dev);
         return 0;
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
@@ -64,17 +72,17 @@ F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP);
     if (rc != 0) {
-        // Sensor fetch failed - return 0 to indicate error
-        printk("[TMP112Manager] sensor_sample_fetch_chan failed for %s: rc=%d\n", this->m_dev->name, rc);
+        this->log_WARNING_HI_SensorSampleFetchFailed(rc);
         return 0;
     }
+    this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
     if (rc != 0) {
-        // Channel get failed - return 0 to indicate error
-        printk("[TMP112Manager] sensor_channel_get failed for %s: rc=%d\n", this->m_dev->name, rc);
+        this->log_WARNING_HI_SensorChannelGetFailed(rc);
         return 0;
     }
+    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
     this->tlmWrite_Temperature(sensor_value_to_double(&temp));
 
