@@ -18,6 +18,7 @@ module ReferenceDeployment {
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
     import FileHandling.Subtopology
+    import Update.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
