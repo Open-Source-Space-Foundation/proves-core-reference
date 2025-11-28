@@ -27,7 +27,7 @@ const struct device* face0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face0_drv2605));
 const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
 const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
-const struct device* face4_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face4_drv2605));
+const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     inputs.drv2605Devices["X-"] = face1_drv2605;
     inputs.drv2605Devices["Y+"] = face2_drv2605;
     inputs.drv2605Devices["Y-"] = face3_drv2605;
-    inputs.drv2605Devices["Z+"] = face4_drv2605;
+    inputs.drv2605Devices["Z+"] = face5_drv2605;
     inputs.baudRate = 115200;
 
     // Setup, cycle, and teardown topology
