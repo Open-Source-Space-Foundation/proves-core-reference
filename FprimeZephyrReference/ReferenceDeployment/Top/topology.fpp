@@ -217,7 +217,7 @@ module ReferenceDeployment {
       mycomp.resetSend -> gpioSbandNrst.gpioWrite
       mycomp.txEnable -> gpioSbandTxEn.gpioWrite
       mycomp.rxEnable -> gpioSbandRxEn.gpioWrite
-      mycomp.getIRQLine -> gpioSbandRxEn.gpioRead
+      mycomp.getIRQLine -> gpioSbandIRQ.gpioRead
     }
 
     connections ComCcsds_FileHandling {
