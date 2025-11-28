@@ -76,13 +76,28 @@ void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    state = this->m_rlb_radio.startReceive();
+    uint8_t buf[256] = {0};
+
+    // cannot specify timeout greater than 2^16 * 15.625us = 1024 ms as timeout
+    // is internally resolved to 16-bit representation of 15.625us step count
+    state = this->m_rlb_radio.receive(buf, sizeof(buf), RadioLibTime_t(1024 * 1000));
     if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.startReceive() success!\n");
+        Fw::Logger::log("radio.receive() success!\n");
     } else {
-        Fw::Logger::log("radio.startReceive() failed!\n");
+        Fw::Logger::log("radio.receive() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
+
+    Fw::Logger::log("RESULTING BUFFER:\n");
+
+    char msg[sizeof(buf) * 3 + 1];
+
+    for (size_t i = 0; i < sizeof(buf); ++i) {
+        sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
+    }
+    msg[sizeof(buf) * 3] = '\0';
+
+    Fw::Logger::log("%s\n", msg);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
