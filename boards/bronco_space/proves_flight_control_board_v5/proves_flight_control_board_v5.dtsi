@@ -294,34 +294,64 @@ zephyr_udc0: &usbd {
 
 		};
 
+		// Battery
 		mux_channel_4: i2c_mux@4 {
 			compatible = "ti,tca9548a-channel";
 			label = "mux_channel_4";
+			reg = <7>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			batt_cell1_temp_sens: tmp112@48 {
+				compatible = "ti,tmp112";
+				reg = <0x48>;
+				status = "okay";
+			};
+			batt_cell2_temp_sens: tmp112@49 {
+				compatible = "ti,tmp112";
+				reg = <0x49>;
+				status = "okay";
+			};
+			batt_cell3_temp_sens: tmp112@4a {
+				compatible = "ti,tmp112";
+				reg = <0x4a>;
+				status = "okay";
+			};
+			batt_cell4_temp_sens: tmp112@4b {
+				compatible = "ti,tmp112";
+				reg = <0x4b>;
+				status = "okay";
+			};
+		};
+
+		// Z- Face
+		mux_channel_5: i2c_mux@5 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_5";
 			reg = <4>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			face4_temp_sens: tmp112@48 {
+			face5_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
-				label = "FACE4_TMP112";
+				label = "FACE5_TMP112";
 				zephyr,deferred-init;
 			};
 
-			face4_light_sens: light@29 {
+			face5_light_sens: light@29 {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
-				label = "FACE4_VEML6031";
+				label = "FACE5_VEML6031";
 				zephyr,deferred-init;
 			};
 
-			face4_drv2605: drv2605@5a {
+			face5_drv2605: drv2605@5a {
 				compatible = "ti,drv2605";
 				status = "okay";
 				reg = <0x5a>;
-				label = "FACE4_DRV2605";
+				label = "FACE5_DRV2605";
 				zephyr,deferred-init;
 
 				actuator-mode = "LRA";
@@ -331,6 +361,21 @@ zephyr_udc0: &usbd {
 
 		};
 
+		// Top is always powered so no deferred init needed
+		mux_channel_7: i2c_mux@7 {
+			compatible = "ti,tca9548a-channel";
+			label = "mux_channel_7";
+			reg = <7>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			// TODO add top cap temp sensor (it's not a TMP112)
+			face7_light_sens: light@29 {
+				compatible = "vishay,veml6031";
+				reg = <0x29>;
+				status = "okay";
+				label = "FACE7_VEML6031";
+			};
+		};
 	};
 };
 
