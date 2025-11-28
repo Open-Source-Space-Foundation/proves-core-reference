@@ -100,14 +100,18 @@ module Svc {
             format "Current Loss Time: {}"
 
         @ Emitted to indicate whether a packet passed through the router
-        event PassedRouter(passed: Fw.Bool) \
+        event PassedRouter(passed: U8) \
             severity activity low \
             format "PassedRouter: {}"
 
         @ Emitted to indicate whether authentication was bypassed
-        event BypassAuthentification(bypassed: Fw.Bool) \
+        event BypassedAuthentification() \
             severity activity low \
-            format "BypassAuthentification: {}"
+            format "OpCode BypassedAuthentification"
+
+        event FileOpenError(openStatus: U8) \
+            severity warning high \
+            format "File Open Error for BypassOpCodes file. No Opcodes will be Bypassed"
 
         @ Telemetry Channel to commit the time of the last command packet
         telemetry LastCommandPacketTime : U64
@@ -123,9 +127,6 @@ module Svc {
 
         @ Telemetry Channel for Number of Packets that have not passed the Router
         telemetry FailedRouter : U64
-
-
-
 
         @ loss time max parameter: Right now set to 3 days 259200 seconds
         param LOSS_MAX_TIME : U32 default 259200

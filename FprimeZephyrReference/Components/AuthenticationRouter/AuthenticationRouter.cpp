@@ -15,10 +15,15 @@
 #include "Fw/Logger/Logger.hpp"
 #include "Os/File.hpp"
 #include "config/ApidEnumAc.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 constexpr const char LAST_LOSS_TIME_FILE[] = "//loss_max_time.txt";
 constexpr const char LAST_LOSS_TIME_FILE_MONOTONIC[] = "//loss_max_time_monotonic.txt";
 constexpr const char COMMAND_LOSS_EXPIRED_FLAG_FILE[] = "//command_loss_expired_flag.txt";
+constexpr const char BYPASS_AUTHENTICATION_FILE[] = "//bypass_authentification_file.txt";
+constexpr const U8 OP_CODE_LENGTH = 8;  // TO DO: Double check len
+constexpr const U8 OP_CODE_START = 6;   // TO DO: Check if this is the len of the security packet or smth else between
 
 namespace Svc {
 
@@ -85,8 +90,6 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     // Get the LOSS_MAX_TIME parameter
     Fw::ParamValid valid;
     U32 loss_max_time = this->paramGet_LOSS_MAX_TIME(valid);
-
-    U32 time_diff = (current_loss_time >= last_loss_time) ? (current_loss_time - last_loss_time) : 0;
 
     if (current_loss_time >= last_loss_time && (current_loss_time - last_loss_time) > loss_max_time) {
         // Timeout condition is met
@@ -238,10 +241,49 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
     return last_loss_time;
 }
 
+bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
+    // TO DO: Fill this in with reading the file and searching through it (see authenticate)
+    std::string& opCode;
+    std::memcpy(OpCode, packetBuffer.getData() + 6, OP_CODE_LENGTH);
+
+    // Open file
+    Os::File::bypassOpCodesFile;
+    Os::File::Status openStatus = bypassOpCodesFile.open(BYPASS_AUTHENTICATION_FILE, Os::File::OPEN_READ);
+    // if the file does not exist return false; TO DO CHECK WITH ERROR CHECKING
+    if (openStatus != Os::File::OP_OK) {
+        this->log_WARNING_HI_FileOpenError(openStatus);
+        return config;
+    }
+
+    // check if opcode is in file
+
+    return true;
+}
+
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
     // Any packet received resets the flag and updates the last loss time
+    printk("context %d", context.get_authenticated());
+
+    // Check if the OpCodes are in the OpCode list
+    // TODO
+    bool bypasses = this->BypassesAuthentification(packetBuffer);
+
+    // the packet was not authenticated
+    if (context.get_authenticated() == 0 && bypasses == false) {
+        // emit reject packet event
+        this->log_ACTIVITY_LO_PassedRouter(0);
+        // Return ownership of the incoming packetBuffer
+        this->dataReturnOut_out(0, packetBuffer, context);
+        return;
+    }
+
+    if (bypasses == true) {
+        // emit bypass event
+        this->log_ACTIVITY_LO_BypassedAuthentification();
+    }
+
     U32 current_time = this->getTimeFromRTC();
     if (m_TypeTimeFlag == true) {
         this->writeToFile(LAST_LOSS_TIME_FILE_MONOTONIC, current_time);

@@ -88,6 +88,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! Persists the flag value to file
     void writeCommandLossExpiredFlag(bool flag);
 
+    //! Checks whether or not the opcode of the packet is in the list of
+    //! opcodes that bypassauthentification
+    bool BypassesAuthentification(Fw::Buffer& packetBuffer);
+
     Fw::On m_state_rtc = Fw::On::OFF;           // keeps track if the RTC is on or if we are using Zephyr's time
     std::atomic<U32> m_commandLossTimeCounter;  // makes this an atomic variable (so its set only in one command),
 

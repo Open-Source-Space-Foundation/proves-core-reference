@@ -38,6 +38,13 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.CurrBuffs
     ComCcsdsUart.comQueue.buffQueueDepth
     CdhCore.tlmSend.SendLevel
+    ComCcsdsLora.authenticationRouter.ByPassedRouter
+    ComCcsdsLora.authenticationRouter.PassedRouter
+    ComCcsdsLora.authenticationRouter.FailedRouter
+    ComCcsdsUart.authenticationRouter.ByPassedRouter
+    ComCcsdsUart.authenticationRouter.PassedRouter
+    ComCcsdsUart.authenticationRouter.FailedRouter
+
   }
 
   packet Version id 4 group 3 {
