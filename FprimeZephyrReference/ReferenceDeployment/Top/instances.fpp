@@ -173,7 +173,7 @@ module ReferenceDeployment {
 
   instance tmp112Face3Manager: Drv.TMP112Manager base id 0x1004D000
 
-  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x1004E000
+  instance tmp112Face4Manager: Drv.TMP112Manager base id 0x1004E000
 
   instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x1004F000
 

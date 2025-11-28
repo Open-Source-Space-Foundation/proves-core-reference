@@ -63,8 +63,8 @@ module Components {
         @ Port to return the state of mux channel 5
         output port muxChannel5HealthGet: Components.HealthGet
 
-        @ Port for face 5 load switch state
-        output port face5LoadSwitchStateGet: Components.loadSwitchState
+        @ Port for face 4 load switch state
+        output port face4LoadSwitchStateGet: Components.loadSwitchState
 
         @ Port for face 5 temperature sensor initialization
         output port face5Init: Fw.SuccessCondition
