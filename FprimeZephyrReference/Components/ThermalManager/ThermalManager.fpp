@@ -14,7 +14,7 @@ module Components {
         output port muxChannel0HealthGet: Components.HealthGet
 
         @ Port to return the state of the load switch for face 0
-        output port face0LoadSwitchStateGet: Components.loadSwitchState
+        output port face0LoadSwitchStateGet: Components.loadSwitchStateGet
 
         @ Port for face 0 temperature sensor initialization
         output port face0Init: Fw.SuccessCondition
@@ -26,7 +26,7 @@ module Components {
         output port muxChannel1HealthGet: Components.HealthGet
 
         @ Port for face 1 load switch state
-        output port face1LoadSwitchStateGet: Components.loadSwitchState
+        output port face1LoadSwitchStateGet: Components.loadSwitchStateGet
 
         @ Port for face 1 temperature sensor initialization
         output port face1Init: Fw.SuccessCondition
@@ -38,7 +38,7 @@ module Components {
         output port muxChannel2HealthGet: Components.HealthGet
 
         @ Port for face 2 load switch state
-        output port face2LoadSwitchStateGet: Components.loadSwitchState
+        output port face2LoadSwitchStateGet: Components.loadSwitchStateGet
 
         @ Port for face 2 temperature sensor initialization
         output port face2Init: Fw.SuccessCondition
@@ -50,7 +50,7 @@ module Components {
         output port muxChannel3HealthGet: Components.HealthGet
 
         @ Port for face 3 load switch state
-        output port face3LoadSwitchStateGet: Components.loadSwitchState
+        output port face3LoadSwitchStateGet: Components.loadSwitchStateGet
 
         @ Port for face 3 temperature sensor initialization
         output port face3Init: Fw.SuccessCondition
@@ -64,7 +64,7 @@ module Components {
         output port muxChannel5HealthGet: Components.HealthGet
 
         @ Port for face 5 load switch state
-        output port face5LoadSwitchStateGet: Components.loadSwitchState
+        output port face5LoadSwitchStateGet: Components.loadSwitchStateGet
 
         @ Port for face 5 temperature sensor initialization
         output port face5Init: Fw.SuccessCondition
