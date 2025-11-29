@@ -8,6 +8,7 @@ labels: documentation
 Thanks for helping improve our documentation! Please provide details about what needs to be updated.
 
 ## Documentation Type
+
 <!-- What type of documentation needs attention? -->
 <!-- Options: -->
 <!-- - README.md -->
@@ -23,10 +24,12 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - Other (specify in description) -->
 
 ## Documentation Location
+
 <!-- Path or URL to the documentation that needs updating -->
-<!-- Example: docs/main-content/initial-setup.md or FprimeZephyrReference/Components/ImuManager/README.md -->
+<!-- Example: docs/main-content/initial-setup.md or FprimeZephyrReference/Components/MagnetorquerManager/README.md -->
 
 ## Issue Type
+
 <!-- What kind of documentation issue is this? -->
 <!-- Options: -->
 <!-- - Incorrect/Outdated Information -->
@@ -42,15 +45,19 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - Other (specify in description) -->
 
 ## Current Documentation
+
 <!-- Quote or describe the current documentation that needs improvement -->
 
 ## Suggested Improvement
+
 <!-- How should the documentation be improved? -->
 
 ## Context
+
 <!-- Why is this improvement needed? Who would benefit? -->
 
 ## Priority
+
 <!-- How important is this documentation fix? -->
 <!-- Options: -->
 <!-- - Critical (blocks understanding) -->
@@ -59,6 +66,7 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - Low (minor improvement) -->
 
 ## Affects New Users
+
 <!-- Does this particularly affect people new to the project? -->
 <!-- Options: -->
 <!-- - Yes, critical for onboarding -->
@@ -67,9 +75,11 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - No, advanced topic only -->
 
 ## Related Documentation
+
 <!-- Are there other related docs that should be updated? -->
 
 ## Willing to Contribute
+
 <!-- Are you willing to submit a PR with the documentation changes? -->
 <!-- Options: -->
 <!-- - Yes, I can write the documentation -->
@@ -78,4 +88,5 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - No -->
 
 ## Additional Context
+
 <!-- Any other information that would help improve the documentation -->

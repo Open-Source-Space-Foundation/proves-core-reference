@@ -8,9 +8,11 @@ labels: component
 Use this template for issues related to F Prime component design, implementation, or behavior.
 
 ## Component Name
-<!-- Name of the component (e.g., ImuManager, Watchdog, AntennaDeployer) -->
+
+<!-- Name of the component (e.g., MagnetorquerManager, Watchdog, AntennaDeployer) -->
 
 ## Component Type
+
 <!-- What type of F Prime component is this? -->
 <!-- Options: -->
 <!-- - Active Component (has thread) -->
@@ -20,10 +22,12 @@ Use this template for issues related to F Prime component design, implementation
 <!-- - Other (specify in description) -->
 
 ## Component Location
+
 <!-- Path to the component in the repository -->
-<!-- Example: FprimeZephyrReference/Components/ImuManager -->
+<!-- Example: FprimeZephyrReference/Components/MagnetorquerManager -->
 
 ## Issue Type
+
 <!-- What aspect of the component is problematic? (can select multiple) -->
 <!-- Options: -->
 <!-- - Port Connections (input/output ports) -->
@@ -41,6 +45,7 @@ Use this template for issues related to F Prime component design, implementation
 <!-- - Other (specify in description) -->
 
 ## Port Interaction Issues
+
 <!-- If this relates to port interactions, describe the ports involved and the issue -->
 <!-- Example:
 - Port name: sensorDataOut
@@ -50,6 +55,7 @@ Use this template for issues related to F Prime component design, implementation
 -->
 
 ## Thread/Priority Configuration
+
 <!-- If this relates to threading, describe the configuration and issue -->
 <!-- Example:
 - Thread priority: 50
@@ -58,35 +64,46 @@ Use this template for issues related to F Prime component design, implementation
 -->
 
 ## FPP Definition Issues
+
 <!-- If this relates to FPP files, paste relevant FPP code and describe the issue -->
+
 ```fpp
 # From ComponentName.fpp
 # Paste relevant FPP code here
 ```
 
 ## Error Messages
+
 <!-- Paste any relevant error messages, compiler warnings, or runtime errors -->
+
 ```
 Paste error messages here...
 ```
 
 ## Steps to Reproduce
+
 <!-- How can we reproduce this component issue? -->
 
 ## Expected Component Behavior
+
 <!-- How should the component behave? -->
 
 ## Actual Component Behavior
+
 <!-- What is the component actually doing? -->
 
 ## Topology Excerpt
+
 <!-- Paste relevant parts of topology.fpp or instances.fpp if applicable -->
+
 ```fpp
 # Paste topology connections here
 ```
 
 ## Proposed Fix
+
 <!-- If you have ideas on how to fix this, please describe them -->
 
 ## Additional Context
+
 <!-- Any other relevant information about this component issue -->
