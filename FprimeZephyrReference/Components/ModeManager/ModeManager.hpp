@@ -56,6 +56,12 @@ class ModeManager : public ModeManagerComponentBase {
     Components::SystemMode getMode_handler(FwIndexType portNum  //!< The port number
                                            ) override;
 
+    //! Handler implementation for prepareForReboot
+    //!
+    //! Port called before intentional reboot to set clean shutdown flag
+    void prepareForReboot_handler(FwIndexType portNum  //!< The port number
+                                  ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -91,11 +97,15 @@ class ModeManager : public ModeManagerComponentBase {
     //! Save persistent state to file
     void saveState();
 
-    //! Enter safe mode with optional reason override
-    void enterSafeMode(const char* reason = nullptr);
+    //! Enter safe mode with specified reason
+    void enterSafeMode(Components::SafeModeReason reason);
 
-    //! Exit safe mode
+    //! Exit safe mode (manual command)
     void exitSafeMode();
+
+    //! Exit safe mode automatically due to voltage recovery
+    //! Only allowed when safe mode reason is LOW_BATTERY
+    void exitSafeModeAutomatic(F32 voltage);
 
     //! Enter payload mode with optional reason override
     void enterPayloadMode(const char* reason = nullptr);
@@ -132,11 +142,13 @@ class ModeManager : public ModeManagerComponentBase {
     //! System mode enumeration (values ordered for +1/-1 sequential transitions)
     enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2, PAYLOAD_MODE = 3 };
 
-    //! Persistent state structure
+    //! Persistent state structure (v2: includes safe mode reason and clean shutdown flag)
     struct PersistentState {
         U8 mode;                    //!< Current mode (SystemMode)
         U32 safeModeEntryCount;     //!< Number of times safe mode entered
         U32 payloadModeEntryCount;  //!< Number of times payload mode entered
+        U8 safeModeReason;          //!< Reason for current safe mode (SafeModeReason)
+        U8 cleanShutdown;           //!< Flag indicating if last shutdown was intentional (1=clean, 0=unclean)
     };
 
     // ----------------------------------------------------------------------
@@ -147,13 +159,23 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeEntryCount;     //!< Counter for safe mode entries
     U32 m_payloadModeEntryCount;  //!< Counter for payload mode entries
     U32 m_runCounter;             //!< Counter for run handler calls (1Hz)
-    U32 m_lowVoltageCounter;      //!< Counter for consecutive low voltage readings
+    U32 m_lowVoltageCounter;      //!< Counter for consecutive low voltage readings (payload mode exit)
+
+    // Safe mode specific state
+    Components::SafeModeReason m_safeModeReason;  //!< Reason for current safe mode entry
+    U32 m_safeModeVoltageCounter;                 //!< Counter for consecutive low voltage readings (safe mode entry)
+    U32 m_recoveryVoltageCounter;                 //!< Counter for consecutive high voltage readings (safe mode exit)
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 
     // Voltage threshold constants for payload mode protection
-    static constexpr F32 LOW_VOLTAGE_THRESHOLD = 7.2f;       //!< Voltage threshold in volts
+    static constexpr F32 LOW_VOLTAGE_THRESHOLD = 7.2f;       //!< Voltage threshold for payload mode exit
     static constexpr U32 LOW_VOLTAGE_DEBOUNCE_SECONDS = 10;  //!< Consecutive seconds below threshold
+
+    // Voltage threshold constants for safe mode entry/exit (Normal <-> Safe)
+    static constexpr F32 SAFE_MODE_ENTRY_VOLTAGE = 6.7f;     //!< Voltage threshold for safe mode entry
+    static constexpr F32 SAFE_MODE_RECOVERY_VOLTAGE = 8.0f;  //!< Voltage threshold for safe mode auto-recovery
+    static constexpr U32 SAFE_MODE_DEBOUNCE_SECONDS = 10;    //!< Consecutive seconds for safe mode transitions
 
     // Buffer size for reason strings (must match FPP string size definitions)
     static constexpr FwSizeType REASON_STRING_SIZE = 100;  //!< Matches FPP reason: string size 100

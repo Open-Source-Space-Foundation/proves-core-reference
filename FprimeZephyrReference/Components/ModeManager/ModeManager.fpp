@@ -7,6 +7,15 @@ module Components {
         PAYLOAD_MODE = 3 @< Payload mode with payload power and battery enabled
     }
 
+    @ Reason for entering safe mode (used for recovery decision logic)
+    enum SafeModeReason {
+        NONE = 0 @< Not in safe mode or reason cleared
+        LOW_BATTERY = 1 @< Entered due to low voltage condition
+        SYSTEM_FAULT = 2 @< Entered due to unintended reboot/system fault
+        GROUND_COMMAND = 3 @< Entered via ground command
+        EXTERNAL_REQUEST = 4 @< Entered via external component request
+    }
+
     @ Port for notifying about mode changes
     port SystemModeChanged(mode: SystemMode)
 
@@ -29,6 +38,9 @@ module Components {
 
         @ Port to query the current system mode
         sync input port getMode: Components.GetSystemMode
+
+        @ Port called before intentional reboot to set clean shutdown flag
+        sync input port prepareForReboot: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports
@@ -132,6 +144,31 @@ module Components {
             severity warning low \
             format "State persistence {} failed with status {}"
 
+        @ Event emitted when automatically entering safe mode due to low voltage
+        event AutoSafeModeEntry(
+            reason: SafeModeReason @< Reason for entering safe mode
+            voltage: F32 @< Voltage that triggered the entry (0 if N/A)
+        ) \
+            severity warning high \
+            format "AUTO SAFE MODE ENTRY: reason={} voltage={}V"
+
+        @ Event emitted when automatically exiting safe mode due to voltage recovery
+        event AutoSafeModeExit(
+            voltage: F32 @< Voltage that triggered recovery
+        ) \
+            severity activity high \
+            format "AUTO SAFE MODE EXIT: Voltage recovered to {}V"
+
+        @ Event emitted when unintended reboot is detected
+        event UnintendedRebootDetected() \
+            severity warning high \
+            format "UNINTENDED REBOOT DETECTED: Entering safe mode"
+
+        @ Event emitted when preparing for intentional reboot
+        event PreparingForReboot() \
+            severity activity high \
+            format "Preparing for intentional reboot - setting clean shutdown flag"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -144,6 +181,9 @@ module Components {
 
         @ Number of times payload mode has been entered
         telemetry PayloadModeEntryCount: U32
+
+        @ Current safe mode reason (NONE if not in safe mode)
+        telemetry CurrentSafeModeReason: SafeModeReason
 
 
         ###############################################################################

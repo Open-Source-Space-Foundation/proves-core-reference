@@ -23,7 +23,10 @@ ModeManager ::ModeManager(const char* const compName)
       m_safeModeEntryCount(0),
       m_payloadModeEntryCount(0),
       m_runCounter(0),
-      m_lowVoltageCounter(0) {
+      m_lowVoltageCounter(0),
+      m_safeModeReason(Components::SafeModeReason::NONE),
+      m_safeModeVoltageCounter(0),
+      m_recoveryVoltageCounter(0) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     // This prevents silent mismatches when casting between enum types
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
@@ -49,19 +52,18 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
 
-    // Low-voltage protection for payload mode:
-    // - Debounce: Requires 10 consecutive fault readings (at 1Hz) to avoid spurious triggers
-    //   from transient voltage dips during load switching or sensor noise
-    // - Invalid readings: Treated as faults (fail-safe) because sensor failure during payload
-    //   operation could mask a real brownout condition
-    // - Threshold: 7.2V chosen as minimum safe operating voltage for payload components
-    // Check for low voltage fault when in PAYLOAD_MODE
-    if (this->m_mode == SystemMode::PAYLOAD_MODE) {
-        bool valid = false;
-        F32 voltage = this->getCurrentVoltage(valid);
+    // Get current voltage (used by multiple mode checks)
+    bool valid = false;
+    F32 voltage = this->getCurrentVoltage(valid);
 
-        // Treat both low voltage AND invalid readings as fault conditions
-        // Invalid readings (sensor failure/disconnection) should not mask brownout protection
+    // Mode-specific voltage monitoring
+    if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+        // Low-voltage protection for payload mode:
+        // - Debounce: Requires 10 consecutive fault readings (at 1Hz) to avoid spurious triggers
+        //   from transient voltage dips during load switching or sensor noise
+        // - Invalid readings: Treated as faults (fail-safe) because sensor failure during payload
+        //   operation could mask a real brownout condition
+        // - Threshold: 7.2V chosen as minimum safe operating voltage for payload components
         bool isFault = !valid || (voltage < LOW_VOLTAGE_THRESHOLD);
 
         if (isFault) {
@@ -77,13 +79,64 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
             // Voltage OK and valid - reset counter
             this->m_lowVoltageCounter = 0;
         }
-    } else {
-        // Not in payload mode - reset counter
+
+        // Reset other counters when in payload mode
+        this->m_safeModeVoltageCounter = 0;
+        this->m_recoveryVoltageCounter = 0;
+
+    } else if (this->m_mode == SystemMode::NORMAL) {
+        // Low-voltage protection for normal mode -> safe mode entry:
+        // - Threshold: 6.7V triggers safe mode entry
+        // - Debounce: 10 consecutive seconds below threshold
+        bool isFault = !valid || (voltage < SAFE_MODE_ENTRY_VOLTAGE);
+
+        if (isFault) {
+            this->m_safeModeVoltageCounter++;
+
+            if (this->m_safeModeVoltageCounter >= SAFE_MODE_DEBOUNCE_SECONDS) {
+                // Trigger automatic entry into safe mode
+                this->log_WARNING_HI_AutoSafeModeEntry(Components::SafeModeReason::LOW_BATTERY, valid ? voltage : 0.0f);
+                this->enterSafeMode(Components::SafeModeReason::LOW_BATTERY);
+                this->m_safeModeVoltageCounter = 0;  // Reset counter
+            }
+        } else {
+            // Voltage OK and valid - reset counter
+            this->m_safeModeVoltageCounter = 0;
+        }
+
+        // Reset other counters when in normal mode
         this->m_lowVoltageCounter = 0;
+        this->m_recoveryVoltageCounter = 0;
+
+    } else if (this->m_mode == SystemMode::SAFE_MODE) {
+        // Auto-recovery from safe mode (only if reason is LOW_BATTERY):
+        // - Threshold: Voltage > 8.0V triggers auto-recovery
+        // - Debounce: 10 consecutive seconds above threshold
+        // - SYSTEM_FAULT or GROUND_COMMAND require manual EXIT_SAFE_MODE command
+        if (this->m_safeModeReason == Components::SafeModeReason::LOW_BATTERY) {
+            if (valid && voltage > SAFE_MODE_RECOVERY_VOLTAGE) {
+                this->m_recoveryVoltageCounter++;
+
+                if (this->m_recoveryVoltageCounter >= SAFE_MODE_DEBOUNCE_SECONDS) {
+                    // Trigger automatic exit from safe mode
+                    this->exitSafeModeAutomatic(voltage);
+                    this->m_recoveryVoltageCounter = 0;  // Reset counter
+                }
+            } else {
+                // Voltage not recovered yet - reset counter
+                this->m_recoveryVoltageCounter = 0;
+            }
+        }
+        // Note: If reason is SYSTEM_FAULT or GROUND_COMMAND, no auto-recovery - wait for manual command
+
+        // Reset other counters when in safe mode
+        this->m_lowVoltageCounter = 0;
+        this->m_safeModeVoltageCounter = 0;
     }
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+    this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
 }
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
@@ -91,7 +144,7 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     // Only allowed from NORMAL (sequential +1/-1 transitions)
     if (this->m_mode == SystemMode::NORMAL) {
         this->log_WARNING_HI_ExternalFaultDetected();
-        this->enterSafeMode("External component request");
+        this->enterSafeMode(Components::SafeModeReason::EXTERNAL_REQUEST);
     }
     // Note: Request ignored if in PAYLOAD_MODE or already in SAFE_MODE
 }
@@ -100,6 +153,31 @@ Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
     // Return the current system mode
     // Convert internal C++ enum to FPP-generated enum type
     return static_cast<Components::SystemMode::T>(this->m_mode);
+}
+
+void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
+    // Called before intentional reboot to set clean shutdown flag
+    // This allows us to detect unintended reboots on next startup
+    this->log_ACTIVITY_HI_PreparingForReboot();
+
+    // Save state with clean shutdown flag set
+    // We directly write to file here to ensure the flag is persisted
+    Os::File file;
+    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
+
+    if (status == Os::File::OP_OK) {
+        PersistentState state;
+        state.mode = static_cast<U8>(this->m_mode);
+        state.safeModeEntryCount = this->m_safeModeEntryCount;
+        state.payloadModeEntryCount = this->m_payloadModeEntryCount;
+        state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
+        state.cleanShutdown = 1;  // Mark as clean shutdown
+
+        FwSizeType bytesToWrite = sizeof(PersistentState);
+        FwSizeType bytesWritten = bytesToWrite;
+        (void)file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
+        file.close();
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -126,7 +204,7 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
     // Enter safe mode from NORMAL
     this->log_ACTIVITY_HI_ManualSafeModeEntry();
-    this->enterSafeMode("Ground command");
+    this->enterSafeMode(Components::SafeModeReason::GROUND_COMMAND);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -200,6 +278,8 @@ void ModeManager ::loadState() {
     Os::File file;
     Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_READ);
 
+    bool unintendedReboot = false;
+
     if (status == Os::File::OP_OK) {
         PersistentState state;
         FwSizeType size = sizeof(PersistentState);
@@ -214,6 +294,15 @@ void ModeManager ::loadState() {
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
                 this->m_payloadModeEntryCount = state.payloadModeEntryCount;
+                this->m_safeModeReason = static_cast<Components::SafeModeReason::T>(state.safeModeReason);
+
+                // Check for unintended reboot:
+                // If cleanShutdown flag is NOT set (0) and we were in NORMAL or PAYLOAD mode,
+                // this indicates an unintended reboot (crash, watchdog, power loss, etc.)
+                if (state.cleanShutdown == 0 &&
+                    (this->m_mode == SystemMode::NORMAL || this->m_mode == SystemMode::PAYLOAD_MODE)) {
+                    unintendedReboot = true;
+                }
 
                 // Restore physical hardware state to match loaded mode
                 if (this->m_mode == SystemMode::SAFE_MODE) {
@@ -240,6 +329,7 @@ void ModeManager ::loadState() {
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_payloadModeEntryCount = 0;
+                this->m_safeModeReason = Components::SafeModeReason::NONE;
                 this->turnOnComponents();
             }
         }
@@ -250,8 +340,21 @@ void ModeManager ::loadState() {
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
         this->m_payloadModeEntryCount = 0;
+        this->m_safeModeReason = Components::SafeModeReason::NONE;
         this->turnOnComponents();
     }
+
+    // Handle unintended reboot detection AFTER basic state restoration
+    // This ensures we enter safe mode due to system fault
+    if (unintendedReboot) {
+        this->log_WARNING_HI_UnintendedRebootDetected();
+        this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
+    }
+
+    // Clear clean shutdown flag for next boot detection
+    // This ensures that if the system crashes before the next intentional reboot,
+    // we'll detect it as an unintended reboot
+    this->saveState();
 }
 
 void ModeManager ::saveState() {
@@ -269,6 +372,8 @@ void ModeManager ::saveState() {
     state.mode = static_cast<U8>(this->m_mode);
     state.safeModeEntryCount = this->m_safeModeEntryCount;
     state.payloadModeEntryCount = this->m_payloadModeEntryCount;
+    state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
+    state.cleanShutdown = 0;  // Default to unclean - only prepareForReboot sets this to 1
 
     FwSizeType bytesToWrite = sizeof(PersistentState);
     FwSizeType bytesWritten = bytesToWrite;
@@ -285,19 +390,30 @@ void ModeManager ::saveState() {
     file.close();
 }
 
-void ModeManager ::enterSafeMode(const char* reasonOverride) {
+void ModeManager ::enterSafeMode(Components::SafeModeReason reason) {
     // Transition to safe mode
     this->m_mode = SystemMode::SAFE_MODE;
     this->m_safeModeEntryCount++;
+    this->m_safeModeReason = reason;
 
-    // Build reason string
+    // Build reason string for event log
     Fw::LogStringArg reasonStr;
-    char reasonBuf[REASON_STRING_SIZE];
-    if (reasonOverride != nullptr) {
-        reasonStr = reasonOverride;
-    } else {
-        snprintf(reasonBuf, sizeof(reasonBuf), "Unknown");
-        reasonStr = reasonBuf;
+    switch (reason) {
+        case Components::SafeModeReason::LOW_BATTERY:
+            reasonStr = "Low battery voltage";
+            break;
+        case Components::SafeModeReason::SYSTEM_FAULT:
+            reasonStr = "System fault (unintended reboot)";
+            break;
+        case Components::SafeModeReason::GROUND_COMMAND:
+            reasonStr = "Ground command";
+            break;
+        case Components::SafeModeReason::EXTERNAL_REQUEST:
+            reasonStr = "External component request";
+            break;
+        default:
+            reasonStr = "Unknown";
+            break;
     }
 
     this->log_WARNING_HI_EnteringSafeMode(reasonStr);
@@ -308,6 +424,7 @@ void ModeManager ::enterSafeMode(const char* reasonOverride) {
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
+    this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
 
     // Notify other components of mode change with new mode value
     if (this->isConnected_modeChanged_OutputPort(0)) {
@@ -320,8 +437,9 @@ void ModeManager ::enterSafeMode(const char* reasonOverride) {
 }
 
 void ModeManager ::exitSafeMode() {
-    // Transition back to normal mode
+    // Transition back to normal mode (manual command)
     this->m_mode = SystemMode::NORMAL;
+    this->m_safeModeReason = Components::SafeModeReason::NONE;  // Clear reason on exit
 
     this->log_ACTIVITY_HI_ExitingSafeMode();
 
@@ -330,6 +448,32 @@ void ModeManager ::exitSafeMode() {
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+    this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
+
+    // Notify other components of mode change with new mode value
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state
+    this->saveState();
+}
+
+void ModeManager ::exitSafeModeAutomatic(F32 voltage) {
+    // Automatic exit from safe mode due to voltage recovery
+    // Only called when safe mode reason is LOW_BATTERY and voltage > 8.0V
+    this->m_mode = SystemMode::NORMAL;
+    this->m_safeModeReason = Components::SafeModeReason::NONE;  // Clear reason on exit
+
+    this->log_ACTIVITY_HI_AutoSafeModeExit(voltage);
+
+    // Turn on components (restore normal operation)
+    this->turnOnComponents();
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+    this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
 
     // Notify other components of mode change with new mode value
     if (this->isConnected_modeChanged_OutputPort(0)) {
