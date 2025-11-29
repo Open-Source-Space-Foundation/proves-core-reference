@@ -44,7 +44,7 @@ try:
     except RuntimeError as e:
         # If skip_frames times out (common when running standalone), 
         # just continue - the camera will initialize on first actual snapshot()
-        print("WARNING: skip_frames timed out (normal for standalone), camera will init on first capture")
+        print("WARNING: skip_frames timed out (normal for standalone), camera will init on first capture: {}".format(e))
         time.sleep_ms(200)
 except Exception as e:
     print("ERROR: Camera initialization failed:", e)
@@ -226,6 +226,55 @@ def ping_handler():
         print("ERROR in ping_handler():", e)
         return False
 
+def change_framesize(framesize_constant, framesize_name):
+    """
+    Safely change camera framesize.
+    Returns True on success, False on failure.
+    """
+    global state
+    if state != STATE_IDLE:
+        print("WARNING: Cannot change framesize while not idle")
+        return False
+    
+    try:
+        print("Changing framesize to {}...".format(framesize_name))
+        sensor.set_framesize(framesize_constant)
+        
+        # Re-initialize camera with new framesize
+        try:
+            sensor.skip_frames(n=30)
+        except RuntimeError:
+            # Timeout is OK, camera will init on next snapshot
+            print("WARNING: skip_frames timed out, continuing")
+            time.sleep_ms(200)
+        
+        print("SUCCESS: Framesize changed to {}".format(framesize_name))
+        # Flash green LED to indicate success
+        green.on(); time.sleep_ms(100); green.off(); time.sleep_ms(50)
+        green.on(); time.sleep_ms(100); green.off()
+        
+        # Send success response over UART
+        response = b"<FRAME_CHANGE_SUCCESS>\n"
+        if not write_all(uart, response):
+            print("WARNING: Failed to send FRAME_CHANGE_SUCCESS response")
+        
+        return True
+        
+    except Exception as e:
+        print("ERROR: Failed to change framesize to {}: {}".format(framesize_name, e))
+        # Flash red LED to indicate failure
+        red.on(); time.sleep_ms(200); red.off(); time.sleep_ms(100)
+        red.on(); time.sleep_ms(200); red.off()
+        return False
+
+def change_to_qvga_handler():
+    """Change framesize to QVGA (320x240) - good balance"""
+    return change_framesize(sensor.QVGA, "QVGA")
+
+def change_to_hd_handler():
+    """Change framesize to HD (1280x720) - highest resolution"""
+    return change_framesize(sensor.HD, "HD")
+
 def snap_handler():
     """Capture JPEG image in memory and send over UART"""
     global state
@@ -299,7 +348,9 @@ last_hb = time.ticks_ms()
 
 COMMANDS = {
     "snap": snap_handler,
-    "ping": ping_handler
+    "ping": ping_handler,
+    "change_to_qvga": change_to_qvga_handler,
+    "change_to_hd": change_to_hd_handler
 }
 
 DEBUG = False
