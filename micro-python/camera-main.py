@@ -6,7 +6,7 @@
 # - This version is defensive about UART writes/reads and checks ACK contents.
 # - It attempts to be robust to boot timing and power-related issues.
 
-import sensor, time, uos
+import sensor, time
 from pyb import UART, LED
 import struct
 
@@ -32,18 +32,8 @@ state = STATE_IDLE
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 # Keep existing framesize (your original used sensor.HD)
-sensor.set_framesize(sensor.HD)
+sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time=2000)  # allow auto-exposure/whitebalance to settle
-
-# --- Image Folder Setup ---
-IMG_FOLDER = "images"
-MAX_IMAGES = 10
-image_counter = 0
-try:
-    uos.mkdir(IMG_FOLDER)
-except OSError:
-    # probably already exists
-    pass
 
 
 # --- Utility functions ---
@@ -65,22 +55,6 @@ def write_all(uart_obj, data, write_timeout_ms=2000):
         if written == 0 and time.ticks_diff(time.ticks_ms(), start) > write_timeout_ms:
             return False
     return True
-
-def next_filename():
-    """Generate next sequential filename safely."""
-    try:
-        files = uos.listdir(IMG_FOLDER)
-    except OSError:
-        # If folder unexpectedly missing, recreate and start at 1
-        try:
-            uos.mkdir(IMG_FOLDER)
-        except Exception:
-            pass
-        files = []
-
-    global image_counter
-    image_counter = (image_counter % MAX_IMAGES) + 1
-    return "{}/img_{:04d}.jpg".format(IMG_FOLDER, image_counter)
 
 def is_ack(ack_bytes):
     """
@@ -136,21 +110,20 @@ def wait_for_ack(total_timeout_ms=3000):
     # timed out
     return None
 
-def send_image_protocol(filename):
+def send_image_protocol(jpeg_bytes):
     """
-    Send image using protocol with ACK handshake:
+    Send JPEG image bytes using protocol with ACK handshake:
     <IMG_START><SIZE>[4-byte LE uint32]</SIZE>[data chunks with ACK]<IMG_END>
     """
-    # Get file size
-    try:
-        stat = uos.stat(filename)
-        file_size = stat[6]  # st_size in uos.stat tuple
-    except Exception as e:
-        print("ERROR: cannot stat {}: {}".format(filename, e))
+    # Get image size
+    file_size = len(jpeg_bytes)
+    
+    if file_size == 0:
+        print("ERROR: empty JPEG data")
         return False
 
     print("=== Starting image transfer ===")
-    print("File: {}, size: {} bytes".format(filename, file_size))
+    print("JPEG size: {} bytes".format(file_size))
 
     # Build header in one buffer
     try:
@@ -175,27 +148,29 @@ def send_image_protocol(filename):
     # Send image data in chunks with ACK handshake
     chunk_size = 64  # relatively small - adjust if necessary
     bytes_sent = 0
+    offset = 0
 
     try:
-        with open(filename, "rb") as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                # write and ensure all bytes go out
-                if not write_all(uart, chunk):
-                    print("ERROR: chunk write timeout")
-                    red.on(); time.sleep_ms(300); red.off()
-                    return False
-                bytes_sent += len(chunk)
-                # Wait for ACK after each chunk (or at least make sure receiver is ready)
-                ack = wait_for_ack(total_timeout_ms=2000)
-                if not ack:
-                    print("ERROR: No ACK after chunk (bytes_sent={})".format(bytes_sent))
-                    red.on(); time.sleep_ms(300); red.off()
-                    return False
+        while offset < file_size:
+            # Python slicing handles case where end_index exceeds the list length. It just returns the remaining items.
+            chunk = jpeg_bytes[offset:offset + chunk_size]
+            if not chunk:
+                break
+            # write and ensure all bytes go out
+            if not write_all(uart, chunk):
+                print("ERROR: chunk write timeout")
+                red.on(); time.sleep_ms(300); red.off()
+                return False
+            bytes_sent += len(chunk)
+            offset += len(chunk)
+            # Wait for ACK after each chunk (or at least make sure receiver is ready)
+            ack = wait_for_ack(total_timeout_ms=2000)
+            if not ack:
+                print("ERROR: No ACK after chunk (bytes_sent={})".format(bytes_sent))
+                red.on(); time.sleep_ms(300); red.off()
+                return False
     except Exception as e:
-        print("ERROR: reading/sending file:", e)
+        print("ERROR: sending JPEG data:", e)
         red.on(); time.sleep_ms(300); red.off()
         return False
 
@@ -217,7 +192,7 @@ def send_image_protocol(filename):
         return False
 
 def snap_handler():
-    """Capture image, save to storage, and send over UART"""
+    """Capture JPEG image in memory and send over UART"""
     global state
     if state != STATE_IDLE:
         print("WARNING: snap command received while not idle. Ignoring.")
@@ -230,24 +205,31 @@ def snap_handler():
         time.sleep_ms(50)
         img = sensor.snapshot()
 
-        filename = next_filename()
-        # save returns None on success; wrap in try
-        img.save(filename)
-        print("Saved:", filename)
+        # Get JPEG bytes directly from image object
+        # Convert RGB565 image to JPEG format in memory
+        jpeg_params = {
+            'quality': 90,
+            'encode_for_ide': False
+        }
+        jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
+        
+        if not jpeg_bytes or len(jpeg_bytes) == 0:
+            print("ERROR: Failed to get JPEG data from image")
+            red.on(); time.sleep_ms(200); red.off()
+            state = STATE_ERROR
+            return
+
+        print("Captured JPEG: {} bytes".format(len(jpeg_bytes)))
 
         state = STATE_SEND
-        success = send_image_protocol(filename)
+        success = send_image_protocol(jpeg_bytes)
 
         # Log result
         if success:
-            try:
-                sz = uos.stat(filename)[6]
-            except Exception:
-                sz = "?"
-            print("SUCCESS: {} sent ({} bytes)".format(filename, sz))
+            print("SUCCESS: JPEG sent ({} bytes)".format(len(jpeg_bytes)))
             state = STATE_IDLE
         else:
-            print("FAILED: {} - transfer failed".format(filename))
+            print("FAILED: JPEG transfer failed ({} bytes)".format(len(jpeg_bytes)))
             state = STATE_ERROR
 
     except Exception as e:
@@ -302,7 +284,7 @@ while True:
                 # Commands
                 cmd = text.lower()
                 handler = COMMANDS.get(cmd)
-                if handler == None:
+                if handler is None:
                     # Unknown commands
                     pass
                 else:
