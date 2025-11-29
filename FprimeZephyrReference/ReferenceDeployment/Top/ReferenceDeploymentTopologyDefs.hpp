@@ -7,12 +7,14 @@
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 
 // Subtopology PingEntries includes
+#include "FprimeZephyrReference/ComCcsdsSband/PingEntries.hpp"
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
 #include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
 #include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
 #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
+#include "FprimeZephyrReference/ComCcsdsSband/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
@@ -69,18 +71,19 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;                     //!< UART device path for communication
-    const device* loraDevice;                     //!< LoRa device path for communication
-    const device* spi0Device;                     //!< Spi device path for s-band LoRa module
-    U32 baudRate;                                 //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
-    FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
-    const device* ina219SysDevice;                //!< device path for battery board ina219
-    const device* ina219SolDevice;                //!< device path for solar panel ina219
-    const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
-    const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
-    const device* rtcDevice;                      //!< RTC device path
+    const device* uartDevice;                       //!< UART device path for communication
+    const device* loraDevice;                       //!< LoRa device path for communication
+    const device* spi0Device;                       //!< Spi device path for s-band LoRa module
+    U32 baudRate;                                   //!< Baud rate for UART communication
+    CdhCore::SubtopologyState cdhCore;              //!< Subtopology state for CdhCore
+    ComCcsds::SubtopologyState comCcsds;            //!< Subtopology state for ComCcsds
+    FileHandling::SubtopologyState fileHandling;    //!< Subtopology state for FileHandling
+    ComCcsdsSband::SubtopologyState comCcsdsSband;  //!< Subtopology state for ComCcsdsSband
+    const device* ina219SysDevice;                  //!< device path for battery board ina219
+    const device* ina219SolDevice;                  //!< device path for solar panel ina219
+    const device* lsm6dsoDevice;                    //!< LSM6DSO device path for accelerometer/gyroscope
+    const device* lis2mdlDevice;                    //!< LIS2MDL device path for magnetometer
+    const device* rtcDevice;                        //!< RTC device path
 };
 
 namespace PingEntries = ::PingEntries;

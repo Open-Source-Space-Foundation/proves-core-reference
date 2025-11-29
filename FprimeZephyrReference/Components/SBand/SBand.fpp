@@ -11,8 +11,11 @@ module Components {
         @ Port receiving calls from the rate group
         sync input port run: Svc.Sched
 
-        # @ Import Communication Interface
-        # import Svc.Com
+        @ Import Communication Interface
+        import Svc.Com
+
+        @ Import the allocation interface
+        import Svc.BufferAllocation
 
         @ Command to transmit data
         sync command TRANSMIT()

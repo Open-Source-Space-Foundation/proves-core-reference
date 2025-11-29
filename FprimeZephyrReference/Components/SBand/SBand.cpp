@@ -10,6 +10,7 @@
 
 #include <RadioLib.h>
 
+#include <Fw/Buffer/Buffer.hpp>
 #include <Fw/Logger/Logger.hpp>
 
 #include "FprimeHal.hpp"
@@ -45,8 +46,35 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
                 sprintf(msg + i * 3, "%02X ", data[i]);  // NOLINT(runtime/printf)
             msg[len * 3] = '\0';
             Fw::Logger::log("%s\n", msg);
+
+            // Allocate buffer and send received data to F' system
+            // This goes to ComCcsdsSband.frameAccumulator.dataIn, which processes the uplink frames
+            // @ jack may want to check here for any edits for how the s band actually processes it
+            Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
+            if (buffer.isValid()) {
+                (void)::memcpy(buffer.getData(), data, len);
+                ComCfg::FrameContext frameContext;
+                this->dataOut_out(0, buffer, frameContext);
+            }
         }
     }
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for Com interface
+// ----------------------------------------------------------------------
+
+void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // TODO: Implement data transmission
+    // For now, just return the buffer and indicate success
+    Fw::Success returnStatus = Fw::Success::SUCCESS;
+    this->dataReturnOut_out(0, data, context);
+    this->comStatusOut_out(0, returnStatus);
+}
+
+void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Deallocate the buffer
+    this->deallocate_out(0, data);
 }
 
 // ----------------------------------------------------------------------

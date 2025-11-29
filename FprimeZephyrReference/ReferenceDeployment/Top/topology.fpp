@@ -18,6 +18,7 @@ module ReferenceDeployment {
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
     import FileHandling.Subtopology
+    import ComCcsdsSband.FramingSubtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -115,6 +116,31 @@ module ReferenceDeployment {
 
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
+
+
+      # Sband connections
+      comSplitterEvents.comOut-> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+
+      ComCcsdsSband.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsSband.fprimeRouter.cmdResponseIn
+
+    }
+
+
+      connections CommunicationsSBandRadio {
+        sband.allocate      -> ComCcsdsSband.commsBufferManager.bufferGetCallee
+        sband.deallocate    -> ComCcsdsSband.commsBufferManager.bufferSendIn
+
+        # ComDriver <-> ComStub (Uplink)
+        sband.dataOut -> ComCcsdsSband.frameAccumulator.dataIn
+        ComCcsdsSband.frameAccumulator.dataReturnOut -> sband.dataReturnIn
+
+        # ComStub <-> ComDriver (Downlink)
+        ComCcsdsSband.framer.dataOut -> sband.dataIn
+        sband.dataReturnOut -> ComCcsdsSband.framer.dataReturnIn
+        sband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
+
     }
 
     connections CommunicationsRadio {
@@ -160,6 +186,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> ComCcsdsSband.aggregator.timeout
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -177,7 +204,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> sband.run
-
+      rateGroup1Hz.RateGroupMemberOut[14] -> ComCcsdsSband.comQueue.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> ComCcsdsSband.commsBufferManager.schedIn
     }
 
 
@@ -229,7 +257,12 @@ module ReferenceDeployment {
       # Router <-> FileUplink
       ComCcsdsUart.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
       FileHandling.fileUplink.bufferSendOut -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
+
+      # Router <-> FileUplink (S-band input only - file downlink uses UART only)
+      ComCcsdsSband.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
     }
+
+
 
 
     connections sysPowerMonitor {

@@ -41,6 +41,20 @@ class SBand final : public SBandComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    //! Handler implementation for dataIn
+    //!
+    //! Data to be sent on the wire (coming in to the component)
+    void dataIn_handler(FwIndexType portNum,  //!< The port number
+                        Fw::Buffer& data,
+                        const ComCfg::FrameContext& context) override;
+
+    //! Handler implementation for dataReturnIn
+    //!
+    //! Port receiving back ownership of buffer sent out on dataOut
+    void dataReturnIn_handler(FwIndexType portNum,  //!< The port number
+                              Fw::Buffer& data,
+                              const ComCfg::FrameContext& context) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands

@@ -2,7 +2,7 @@
 register_fprime_module(
     EXCLUDE_FROM_ALL
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/ComCcsds.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/ComCcsdsSband.fpp"
     HEADERS
         "${CMAKE_CURRENT_LIST_DIR}/SubtopologyTopologyDefs.hpp"
         "${CMAKE_CURRENT_LIST_DIR}/PingEntries.hpp"
