@@ -117,6 +117,13 @@ module Components {
             severity warning low \
             format "Command {} failed: {}"
 
+        @ Event emitted when automatically exiting payload mode due to low voltage
+        event AutoPayloadModeExit(
+            voltage: F32 @< Voltage that triggered the exit
+        ) \
+            severity warning high \
+            format "AUTO EXIT PAYLOAD MODE: Low voltage detected ({}V)"
+
         @ Event emitted when state persistence fails
         event StatePersistenceFailure(
             operation: string size 20 @< Operation that failed (save/load)

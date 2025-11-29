@@ -100,8 +100,12 @@ class ModeManager : public ModeManagerComponentBase {
     //! Enter payload mode with optional reason override
     void enterPayloadMode(const char* reason = nullptr);
 
-    //! Exit payload mode
+    //! Exit payload mode (manual)
     void exitPayloadMode();
+
+    //! Exit payload mode automatically due to fault condition
+    //! More aggressive than manual exit - turns off all switches
+    void exitPayloadModeAutomatic(F32 voltage);
 
     //! Turn off non-critical components
     void turnOffNonCriticalComponents();
@@ -143,8 +147,13 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeEntryCount;     //!< Counter for safe mode entries
     U32 m_payloadModeEntryCount;  //!< Counter for payload mode entries
     U32 m_runCounter;             //!< Counter for run handler calls (1Hz)
+    U32 m_lowVoltageCounter;      //!< Counter for consecutive low voltage readings
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
+
+    // Voltage threshold constants for payload mode protection
+    static constexpr F32 LOW_VOLTAGE_THRESHOLD = 7.2f;       //!< Voltage threshold in volts
+    static constexpr U32 LOW_VOLTAGE_DEBOUNCE_SECONDS = 10;  //!< Consecutive seconds below threshold
 };
 
 }  // namespace Components

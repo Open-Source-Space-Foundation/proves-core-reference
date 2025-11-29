@@ -21,10 +21,12 @@ Future work: a HIBERNATION mode remains planned; it will follow the same persist
 | MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Unit Testing |
 | MM0013 | The ModeManager shall enter payload mode when commanded via ENTER_PAYLOAD_MODE while in NORMAL and reject entry from SAFE_MODE | Integration Testing |
 | MM0014 | The ModeManager shall exit payload mode only via explicit EXIT_PAYLOAD_MODE command and reject exit when not in payload mode | Integration Testing |
-| MM0016 | The ModeManager shall turn on payload load switches (indices 6 and 7) when entering payload mode and turn them off when exiting payload mode | Integration Testing |
+| MM0016 | The ModeManager shall turn on all load switches (faces 0-5 and payload 6-7) when entering payload mode and turn off payload load switches when exiting payload mode | Integration Testing |
 | MM0017 | The ModeManager shall track and report the number of times payload mode has been entered | Integration Testing |
 | MM0018 | The ModeManager shall persist payload mode state and payload mode entry count to non-volatile storage and restore them on initialization | Integration Testing |
 | MM0019 | The ModeManager shall reject FORCE_SAFE_MODE from payload mode (must exit payload mode first for sequential transitions) | Integration Testing |
+| MM0020 | While in payload mode, the ModeManager shall monitor bus voltage once per second and automatically exit payload mode after 10 consecutive seconds below 7.2V or upon invalid voltage readings | Integration Testing (manual + debounced behavior) |
+| MM0021 | Automatic payload mode exit shall emit AutoPayloadModeExit and turn off all 8 load switches | Integration Testing (manual) |
 
 ## Usage Examples
 
@@ -61,7 +63,7 @@ The ModeManager component operates as an active component that manages system-wi
      - Transitions mode to PAYLOAD_MODE
      - Increments payload mode entry counter
      - Emits `EnteringPayloadMode` event and, for commands, `ManualPayloadModeEntry`
-     - Turns on payload load switches (indices 6 and 7)
+     - Turns on **all load switches** (faces 0-5 and payload 6-7) to ensure consistent power state even after fault exits
      - Notifies downstream components via `modeChanged` port
      - Updates telemetry (CurrentMode, PayloadModeEntryCount)
      - Persists state to flash storage
@@ -73,11 +75,21 @@ The ModeManager component operates as an active component that manages system-wi
      - Transitions mode to NORMAL
      - Emits `ExitingPayloadMode` event
      - Turns off payload load switches (indices 6 and 7)
+     - Ensures face load switches (0-5) are turned ON for NORMAL mode
      - Notifies downstream components via `modeChanged` port
      - Updates telemetry
      - Persists state to flash storage
 
-6. **Safe Mode Exit**
+6. **Automatic Payload Mode Exit (Low Voltage)**
+   - Triggered when in PAYLOAD_MODE and bus voltage is below 7.2V (or invalid) for 10 consecutive 1Hz checks
+   - Actions performed:
+     - Emits `AutoPayloadModeExit` with measured/0.0V value
+     - Transitions mode to NORMAL
+     - Turns off **all 8 load switches** (faces and payload) aggressively
+     - Notifies downstream components via `modeChanged` port
+     - Updates telemetry and persists state
+
+7. **Safe Mode Exit**
    - Triggered only by ground command: `EXIT_SAFE_MODE`
    - Validates currently in safe mode before allowing exit
    - Actions performed:
@@ -122,11 +134,15 @@ classDiagram
             - exitSafeMode()
             - enterPayloadMode(const char* reason)
             - exitPayloadMode()
+            - exitPayloadModeAutomatic(F32 voltage)
             - turnOffNonCriticalComponents()
             - turnOnComponents()
             - turnOnPayload()
             - turnOffPayload()
             - getCurrentVoltage(bool& valid): F32
+            - m_lowVoltageCounter: U32
+            - LOW_VOLTAGE_THRESHOLD: F32
+            - LOW_VOLTAGE_DEBOUNCE_SECONDS: U32
         }
         class SystemMode {
             <<enumeration>>
@@ -144,7 +160,7 @@ classDiagram
 ### Input Ports
 | Name | Type | Kind | Description |
 |---|---|---|---|
-| run | Svc.Sched | sync | Receives periodic calls from rate group (1Hz) for telemetry updates |
+| run | Svc.Sched | sync | Receives periodic calls from rate group (1Hz) for telemetry updates and low-voltage monitoring while in PAYLOAD_MODE |
 | forceSafeMode | Fw.Signal | async | Receives safe mode requests from external components detecting faults |
 | getMode | Components.GetSystemMode | sync | Allows downstream components to query current system mode |
 
@@ -164,6 +180,7 @@ classDiagram
 | m_safeModeEntryCount | U32 | Number of times safe mode has been entered since initial deployment |
 | m_payloadModeEntryCount | U32 | Number of times payload mode has been entered since initial deployment |
 | m_runCounter | U32 | Counter for 1Hz run handler calls |
+| m_lowVoltageCounter | U32 | Debounce counter for consecutive low/invalid voltage readings while in PAYLOAD_MODE |
 
 ### Persistent State
 The component persists the following state to `/mode_state.bin`:
@@ -251,7 +268,7 @@ sequenceDiagram
     ModeManager->>ModeManager: Set m_mode = PAYLOAD_MODE
     ModeManager->>ModeManager: Increment m_payloadModeEntryCount
     ModeManager->>ModeManager: Emit EnteringPayloadMode event
-    ModeManager->>LoadSwitches: Turn on payload switches (6 & 7)
+    ModeManager->>LoadSwitches: Turn on all load switches (faces 0-5 and payload 6 & 7)
     ModeManager->>ModeManager: Update telemetry
     ModeManager->>DownstreamComponents: modeChanged_out(PAYLOAD_MODE)
     ModeManager->>FlashStorage: Save state to /mode_state.bin
@@ -272,10 +289,31 @@ sequenceDiagram
     ModeManager->>ModeManager: Set m_mode = NORMAL
     ModeManager->>ModeManager: Emit ExitingPayloadMode event
     ModeManager->>LoadSwitches: Turn off payload switches (6 & 7)
+    ModeManager->>LoadSwitches: Turn on face switches (0-5) to normalize NORMAL state
     ModeManager->>ModeManager: Update telemetry
     ModeManager->>DownstreamComponents: modeChanged_out(NORMAL)
     ModeManager->>FlashStorage: Save state to /mode_state.bin
     ModeManager->>Ground: Command response OK
+```
+
+### Automatic Payload Mode Exit (Low Voltage)
+```mermaid
+sequenceDiagram
+    participant ModeManager
+    participant INA219
+    participant LoadSwitches
+    participant DownstreamComponents
+    participant FlashStorage
+
+    ModeManager->>INA219: voltageGet()
+    INA219-->>ModeManager: Voltage / invalid
+    ModeManager->>ModeManager: Debounce low-voltage/invalid readings (10 consecutive seconds)
+    ModeManager->>ModeManager: On debounce hit: Emit AutoPayloadModeExit(voltage)
+    ModeManager->>ModeManager: Set m_mode = NORMAL
+    ModeManager->>LoadSwitches: Turn off all 8 switches (faces and payload)
+    ModeManager->>ModeManager: Update telemetry
+    ModeManager->>DownstreamComponents: modeChanged_out(NORMAL)
+    ModeManager->>FlashStorage: Save state to /mode_state.bin
 ```
 
 ### Mode Query
@@ -297,6 +335,8 @@ sequenceDiagram
 
     RateGroup->>ModeManager: run(portNum, context)
     ModeManager->>ModeManager: Increment m_runCounter
+    ModeManager->>ModeManager: If PAYLOAD_MODE: read voltage, debounce low-voltage counter (10s window)
+    ModeManager->>ModeManager: If sustained low/invalid voltage: exitPayloadModeAutomatic()
     ModeManager->>ModeManager: Write CurrentMode telemetry
 ```
 
@@ -320,6 +360,7 @@ sequenceDiagram
 | EnteringPayloadMode | ACTIVITY_HI | reason: string size 100 | Emitted when entering payload mode, includes reason (e.g., "Ground command") |
 | ExitingPayloadMode | ACTIVITY_HI | None | Emitted when exiting payload mode and returning to normal operation |
 | ManualPayloadModeEntry | ACTIVITY_HI | None | Emitted when payload mode is manually commanded via ENTER_PAYLOAD_MODE |
+| AutoPayloadModeExit | WARNING_HI | voltage: F32 | Emitted when automatically exiting payload mode due to low/invalid voltage (voltage value reported; 0.0 if invalid) |
 | CommandValidationFailed | WARNING_LO | cmdName: string size 50<br>reason: string size 100 | Emitted when a command fails validation (e.g., EXIT_SAFE_MODE when not in safe mode) |
 | StatePersistenceFailure | WARNING_LO | operation: string size 20<br>status: I32 | Emitted when state save/load operations fail |
 
@@ -346,7 +387,7 @@ The ModeManager controls 8 load switches that power non-critical satellite subsy
 | 6 | Payload Power | OFF | OFF | ON |
 | 7 | Payload Battery | OFF | OFF | ON |
 
-> **Note:** PAYLOAD_MODE can only be entered from NORMAL mode (not from SAFE_MODE). When restoring PAYLOAD_MODE from persistent storage after a reboot, both face switches (0-5) and payload switches (6-7) are explicitly turned ON to ensure consistent state.
+> **Notes:** PAYLOAD_MODE can only be entered from NORMAL mode (not from SAFE_MODE). When restoring PAYLOAD_MODE from persistent storage after a reboot, both face switches (0-5) and payload switches (6-7) are explicitly turned ON to ensure consistent state. Automatic payload exits (low/invalid voltage) aggressively turn **all** switches OFF; manual payload exits leave faces ON and only shed payload loads.
 ## Integration Tests
 
 See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrReference/test/int/payload_mode_test.py` for comprehensive integration tests covering:
@@ -362,6 +403,9 @@ See `FprimeZephyrReference/test/int/mode_manager_test.py` and `FprimeZephyrRefer
 | test_payload_02_cannot_enter_from_safe_mode | Ensures ENTER_PAYLOAD_MODE fails from SAFE_MODE | Command validation |
 | test_payload_03_safe_mode_rejected_from_payload | Ensures FORCE_SAFE_MODE is rejected from payload mode (sequential transitions) | Command validation |
 | test_payload_04_state_persists | Verifies payload mode and counters persist | Payload persistence |
+| test_payload_05_manual_exit_face_switches_remain_on | Verifies manual payload exit leaves faces ON and payload OFF | Payload exit power behavior |
+| test_payload_06_voltage_monitoring_active | Verifies voltage telemetry is present in payload mode and no false auto-exit when voltage healthy | Low-voltage monitoring sanity |
+| test_payload_07_auto_exit_low_voltage (manual) | Manual test to validate debounced low-voltage auto-exit, AutoPayloadModeExit event, and full load-shed | Low-voltage protection |
 
 ## Design Decisions
 
@@ -388,12 +432,21 @@ Mode state is persisted to `/mode_state.bin` to maintain operational context acr
 
 This ensures the system resumes in the correct mode after recovery.
 
+### Low-Voltage Payload Protection
+Payload mode is protected by a debounced low-voltage monitor:
+- Voltage sampled at 1Hz while in PAYLOAD_MODE via `voltageGet`
+- Threshold: 7.2V; invalid readings are treated as faults to avoid masking brownouts
+- Debounce: 10 consecutive low/invalid readings before acting
+- Action: emit `AutoPayloadModeExit`, set mode to NORMAL, and turn off all 8 load switches
+- Re-entering payload mode re-powers faces and payload switches to restore a consistent state
+
 ### Sequential Mode Transitions
 Mode transitions follow a +1/-1 sequential pattern: SAFE_MODE(1) ↔ NORMAL(2) ↔ PAYLOAD_MODE(3). Direct jumps (e.g., PAYLOAD→SAFE) are not allowed - users must exit payload mode first before entering safe mode. FORCE_SAFE_MODE is idempotent when already in safe mode.
 
 ## Change Log
 | Date | Description |
 |---|---|
+| 2026-11-29 | Added low-voltage monitoring with debounced automatic payload exit, AutoPayloadModeExit event, and documentation/tests for aggressive load shed and manual exit power state |
 | 2025-11-26 | Reordered enum values (SAFE=1, NORMAL=2, PAYLOAD=3) for sequential +1/-1 transitions; FORCE_SAFE_MODE now rejected from payload mode |
 | 2025-11-26 | Removed forcePayloadMode port - payload mode now only entered via ENTER_PAYLOAD_MODE ground command |
 | 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |

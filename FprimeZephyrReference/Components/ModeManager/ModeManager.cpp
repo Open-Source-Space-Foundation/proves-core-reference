@@ -22,7 +22,8 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_payloadModeEntryCount(0),
-      m_runCounter(0) {}
+      m_runCounter(0),
+      m_lowVoltageCounter(0) {}
 
 ModeManager ::~ModeManager() {}
 
@@ -38,6 +39,33 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
+
+    // Check for low voltage fault when in PAYLOAD_MODE
+    if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+        bool valid = false;
+        F32 voltage = this->getCurrentVoltage(valid);
+
+        // Treat both low voltage AND invalid readings as fault conditions
+        // Invalid readings (sensor failure/disconnection) should not mask brownout protection
+        bool isFault = !valid || (voltage < LOW_VOLTAGE_THRESHOLD);
+
+        if (isFault) {
+            this->m_lowVoltageCounter++;
+
+            if (this->m_lowVoltageCounter >= LOW_VOLTAGE_DEBOUNCE_SECONDS) {
+                // Trigger automatic exit from payload mode
+                // Use 0.0 for voltage if reading was invalid
+                this->exitPayloadModeAutomatic(valid ? voltage : 0.0f);
+                this->m_lowVoltageCounter = 0;  // Reset counter
+            }
+        } else {
+            // Voltage OK and valid - reset counter
+            this->m_lowVoltageCounter = 0;
+        }
+    } else {
+        // Not in payload mode - reset counter
+        this->m_lowVoltageCounter = 0;
+    }
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -299,6 +327,7 @@ void ModeManager ::enterPayloadMode(const char* reasonOverride) {
     // Transition to payload mode
     this->m_mode = SystemMode::PAYLOAD_MODE;
     this->m_payloadModeEntryCount++;
+    this->m_lowVoltageCounter = 0;  // Reset low voltage counter on mode entry
 
     // Build reason string
     Fw::LogStringArg reasonStr;
@@ -312,8 +341,10 @@ void ModeManager ::enterPayloadMode(const char* reasonOverride) {
 
     this->log_ACTIVITY_HI_EnteringPayloadMode(reasonStr);
 
-    // Turn on payload switches (6 & 7)
-    this->turnOnPayload();
+    // Turn on ALL load switches (faces 0-5 AND payload 6-7)
+    // This ensures proper state even after automatic fault exit
+    this->turnOnComponents();  // Face switches (0-5)
+    this->turnOnPayload();     // Payload switches (6-7)
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -330,7 +361,7 @@ void ModeManager ::enterPayloadMode(const char* reasonOverride) {
 }
 
 void ModeManager ::exitPayloadMode() {
-    // Transition back to normal mode
+    // Transition back to normal mode (manual exit)
     this->m_mode = SystemMode::NORMAL;
 
     this->log_ACTIVITY_HI_ExitingPayloadMode();
@@ -338,9 +369,32 @@ void ModeManager ::exitPayloadMode() {
     // Turn off payload switches
     this->turnOffPayload();
 
-    // Ensure face switches (0-5) are ON for NORMAL mode
-    // This guarantees consistent state regardless of transition path
+    // Ensure face switches are ON for NORMAL mode
+    // This guarantees consistent state even if faces were turned off during payload mode
     this->turnOnComponents();
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+
+    // Notify other components of mode change with new mode value
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state
+    this->saveState();
+}
+
+void ModeManager ::exitPayloadModeAutomatic(F32 voltage) {
+    // Automatic exit from payload mode due to fault condition (e.g., low voltage)
+    // More aggressive than manual exit - turns off ALL switches
+    this->m_mode = SystemMode::NORMAL;
+
+    this->log_WARNING_HI_AutoPayloadModeExit(voltage);
+
+    // Turn OFF all load switches (aggressive - includes faces 0-5 and payload 6-7)
+    this->turnOffNonCriticalComponents();
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
