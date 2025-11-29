@@ -21,15 +21,17 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
         ("RETRY_DELAY_SEC", 0),
         ("BURN_DURATION_SEC", 1),
         ("MAX_DEPLOY_ATTEMPTS", 1),
-        ("SET_DEPLOYMENT_STATE", "false"),
     ]
+
+    fprime_test_api.send_and_assert_command(
+        f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False], timeout=5
+    )
 
     defaults: list[tuple[str, int]] = [
         ("QUIET_TIME_SEC", 120),
         ("RETRY_DELAY_SEC", 30),
         ("BURN_DURATION_SEC", 8),
         ("MAX_DEPLOY_ATTEMPTS", 3),
-        ("SET_DEPLOYMENT_STATE", "false"),
     ]
 
     # Ensure a clean starting point
