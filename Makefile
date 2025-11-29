@@ -60,7 +60,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> to run a 
 			*.py) TARGET="FprimeZephyrReference/test/int/$(TEST)" ;; \
 			*) TARGET="FprimeZephyrReference/test/int/$(TEST).py" ;; \
 		esac; \
-		[ -e "$$TARGET" ] || { echo "Specified test file $$TARGET not found"; exit 1; }; \
+		[ -e "$$TARGET" ] || { echo "Error: Test file $$TARGET not found" >&2; exit 1; }; \
 	fi; \
 	echo "Running integration tests at $$TARGET"; \
 	$(UV_RUN) pytest $$TARGET --deployment build-artifacts/zephyr/fprime-zephyr-deployment

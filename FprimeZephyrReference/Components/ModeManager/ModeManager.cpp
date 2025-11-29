@@ -23,7 +23,16 @@ ModeManager ::ModeManager(const char* const compName)
       m_safeModeEntryCount(0),
       m_payloadModeEntryCount(0),
       m_runCounter(0),
-      m_lowVoltageCounter(0) {}
+      m_lowVoltageCounter(0) {
+    // Compile-time verification that internal SystemMode enum matches FPP-generated enum
+    // This prevents silent mismatches when casting between enum types
+    static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
+                  "Internal SAFE_MODE value must match FPP enum");
+    static_assert(static_cast<U8>(SystemMode::NORMAL) == static_cast<U8>(Components::SystemMode::NORMAL),
+                  "Internal NORMAL value must match FPP enum");
+    static_assert(static_cast<U8>(SystemMode::PAYLOAD_MODE) == static_cast<U8>(Components::SystemMode::PAYLOAD_MODE),
+                  "Internal PAYLOAD_MODE value must match FPP enum");
+}
 
 ModeManager ::~ModeManager() {}
 
@@ -40,6 +49,12 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
 
+    // Low-voltage protection for payload mode:
+    // - Debounce: Requires 10 consecutive fault readings (at 1Hz) to avoid spurious triggers
+    //   from transient voltage dips during load switching or sensor noise
+    // - Invalid readings: Treated as faults (fail-safe) because sensor failure during payload
+    //   operation could mask a real brownout condition
+    // - Threshold: 7.2V chosen as minimum safe operating voltage for payload components
     // Check for low voltage fault when in PAYLOAD_MODE
     if (this->m_mode == SystemMode::PAYLOAD_MODE) {
         bool valid = false;
@@ -274,7 +289,7 @@ void ModeManager ::enterSafeMode(const char* reasonOverride) {
 
     // Build reason string
     Fw::LogStringArg reasonStr;
-    char reasonBuf[100];
+    char reasonBuf[REASON_STRING_SIZE];
     if (reasonOverride != nullptr) {
         reasonStr = reasonOverride;
     } else {
@@ -331,7 +346,7 @@ void ModeManager ::enterPayloadMode(const char* reasonOverride) {
 
     // Build reason string
     Fw::LogStringArg reasonStr;
-    char reasonBuf[100];
+    char reasonBuf[REASON_STRING_SIZE];
     if (reasonOverride != nullptr) {
         reasonStr = reasonOverride;
     } else {
@@ -363,6 +378,7 @@ void ModeManager ::enterPayloadMode(const char* reasonOverride) {
 void ModeManager ::exitPayloadMode() {
     // Transition back to normal mode (manual exit)
     this->m_mode = SystemMode::NORMAL;
+    this->m_lowVoltageCounter = 0;  // Reset low voltage counter on mode exit
 
     this->log_ACTIVITY_HI_ExitingPayloadMode();
 
@@ -390,6 +406,7 @@ void ModeManager ::exitPayloadModeAutomatic(F32 voltage) {
     // Automatic exit from payload mode due to fault condition (e.g., low voltage)
     // More aggressive than manual exit - turns off ALL switches
     this->m_mode = SystemMode::NORMAL;
+    this->m_lowVoltageCounter = 0;  // Reset low voltage counter on mode exit
 
     this->log_WARNING_HI_AutoPayloadModeExit(voltage);
 

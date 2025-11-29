@@ -48,6 +48,14 @@ all_load_switch_channels = [
     "ReferenceDeployment.payloadBatteryLoadSwitch.IsOn",
 ]
 
+# Telemetry packet IDs for CdhCore.tlmSend.SEND_PKT command
+MODE_TELEMETRY_PACKET_ID = "1"  # ModeManager telemetry (CurrentMode, etc.)
+VOLTAGE_TELEMETRY_PACKET_ID = "2"  # INA219 voltage telemetry
+LOAD_SWITCH_TELEMETRY_PACKET_ID = "9"  # Load switch telemetry (IsOn states)
+
+# Voltage threshold for payload mode auto-exit (must match LOW_VOLTAGE_THRESHOLD in ModeManager.hpp)
+LOW_VOLTAGE_THRESHOLD = 7.2  # Volts
+
 
 @pytest.fixture(autouse=True)
 def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -112,14 +120,18 @@ def test_payload_01_enter_exit_payload_mode(
     time.sleep(2)
 
     # Verify mode is PAYLOAD_MODE (3)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
     assert mode_result.get_val() == 3, "Should be in PAYLOAD_MODE"
 
     # Verify payload load switches are ON
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [LOAD_SWITCH_TELEMETRY_PACKET_ID]
+    )
     for channel in payload_load_switch_channels:
         value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
         if isinstance(value, str):
@@ -137,14 +149,18 @@ def test_payload_01_enter_exit_payload_mode(
     time.sleep(2)
 
     # Verify mode is NORMAL (2)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
     assert mode_result.get_val() == 2, "Should be in NORMAL mode"
 
     # Verify payload load switches are OFF in NORMAL mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [LOAD_SWITCH_TELEMETRY_PACKET_ID]
+    )
     for channel in payload_load_switch_channels:
         value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
         if isinstance(value, str):
@@ -165,7 +181,9 @@ def test_payload_02_cannot_enter_from_safe_mode(
     time.sleep(2)
 
     # Verify in safe mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -182,7 +200,9 @@ def test_payload_02_cannot_enter_from_safe_mode(
     fprime_test_api.assert_event(f"{component}.CommandValidationFailed", timeout=3)
 
     # Verify still in safe mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -205,7 +225,9 @@ def test_payload_03_safe_mode_rejected_from_payload(
     time.sleep(2)
 
     # Verify in payload mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -220,7 +242,9 @@ def test_payload_03_safe_mode_rejected_from_payload(
     fprime_test_api.assert_event(f"{component}.CommandValidationFailed", timeout=3)
 
     # Verify still in payload mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -237,7 +261,9 @@ def test_payload_04_state_persists(fprime_test_api: IntegrationTestAPI, start_gd
     time.sleep(2)
 
     # Verify mode is saved as PAYLOAD_MODE (3)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -265,7 +291,9 @@ def test_payload_05_manual_exit_face_switches_remain_on(
     time.sleep(2)
 
     # Verify all switches are ON in payload mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [LOAD_SWITCH_TELEMETRY_PACKET_ID]
+    )
     for channel in all_load_switch_channels:
         value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
         if isinstance(value, str):
@@ -282,14 +310,18 @@ def test_payload_05_manual_exit_face_switches_remain_on(
     time.sleep(2)
 
     # Verify mode is NORMAL (2)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
     assert mode_result.get_val() == 2, "Should be in NORMAL mode"
 
     # Verify face switches (0-5) are still ON
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [LOAD_SWITCH_TELEMETRY_PACKET_ID]
+    )
     for channel in face_load_switch_channels:
         value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
         if isinstance(value, str):
@@ -327,29 +359,35 @@ def test_payload_06_voltage_monitoring_active(
     time.sleep(2)
 
     # Verify in payload mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
     assert mode_result.get_val() == 3, "Should be in PAYLOAD_MODE"
 
     # Verify system voltage telemetry is available and valid
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["2"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [VOLTAGE_TELEMETRY_PACKET_ID]
+    )
     voltage_result: ChData = fprime_test_api.assert_telemetry(
         "ReferenceDeployment.ina219SysManager.Voltage", timeout=5
     )
     voltage = voltage_result.get_val()
     assert voltage > 0, f"Voltage should be positive, got {voltage}"
 
-    # Note: We don't assert voltage > 7.2V because board supply can fluctuate.
+    # Note: We don't assert voltage > threshold because board supply can fluctuate.
     # If voltage is actually low, auto-exit is correct behavior.
-    print(f"Current system voltage: {voltage}V (threshold: 7.2V)")
+    print(f"Current system voltage: {voltage}V (threshold: {LOW_VOLTAGE_THRESHOLD}V)")
 
-    # Wait 5 seconds
-    time.sleep(5)
+    # Wait 11 seconds
+    time.sleep(11)
 
     # Check final mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -361,7 +399,7 @@ def test_payload_06_voltage_monitoring_active(
         e for e in events if "AutoPayloadModeExit" in str(e.get_template().get_name())
     ]
 
-    if voltage >= 7.2:
+    if voltage >= LOW_VOLTAGE_THRESHOLD:
         # Voltage was healthy - should remain in payload mode
         assert final_mode == 3, "Should still be in PAYLOAD_MODE (no false auto-exit)"
         assert len(auto_exit_events) == 0, (
@@ -401,7 +439,9 @@ def test_payload_07_auto_exit_low_voltage(
     time.sleep(2)
 
     # Verify in payload mode
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
@@ -415,14 +455,18 @@ def test_payload_07_auto_exit_low_voltage(
     fprime_test_api.assert_event(f"{component}.AutoPayloadModeExit", timeout=5)
 
     # Verify mode is NORMAL (2)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", timeout=5
     )
     assert mode_result.get_val() == 2, "Should be in NORMAL mode after auto exit"
 
     # Verify ALL switches are OFF (aggressive behavior)
-    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["9"])
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [LOAD_SWITCH_TELEMETRY_PACKET_ID]
+    )
     for channel in all_load_switch_channels:
         value = fprime_test_api.assert_telemetry(channel, timeout=5).get_val()
         if isinstance(value, str):

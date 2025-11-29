@@ -154,6 +154,9 @@ class ModeManager : public ModeManagerComponentBase {
     // Voltage threshold constants for payload mode protection
     static constexpr F32 LOW_VOLTAGE_THRESHOLD = 7.2f;       //!< Voltage threshold in volts
     static constexpr U32 LOW_VOLTAGE_DEBOUNCE_SECONDS = 10;  //!< Consecutive seconds below threshold
+
+    // Buffer size for reason strings (must match FPP string size definitions)
+    static constexpr FwSizeType REASON_STRING_SIZE = 100;  //!< Matches FPP reason: string size 100
 };
 
 }  // namespace Components
