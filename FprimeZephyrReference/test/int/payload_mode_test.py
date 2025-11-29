@@ -17,12 +17,15 @@ Total: 7 tests (6 automated, 1 manual)
 Mode enum values: SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
 """
 
+import logging
 import time
 
 import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+logger = logging.getLogger(__name__)
 
 component = "ReferenceDeployment.modeManager"
 face_load_switch_channels = [
@@ -65,18 +68,21 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Setup before each test and cleanup after.
     Ensures clean state by exiting any mode back to NORMAL.
+
+    Note: Exit commands fail with VALIDATION_ERROR if not in that mode,
+    which is expected behavior. We log these for debugging but don't fail.
     """
     # Setup: Try to get to a clean NORMAL state
     try:
         proves_send_and_assert_command(fprime_test_api, f"{component}.EXIT_SAFE_MODE")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Setup: EXIT_SAFE_MODE skipped (not in safe mode): {e}")
     try:
         proves_send_and_assert_command(
             fprime_test_api, f"{component}.EXIT_PAYLOAD_MODE"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Setup: EXIT_PAYLOAD_MODE skipped (not in payload mode): {e}")
 
     # Clear event and telemetry history before test
     fprime_test_api.clear_histories()
@@ -86,14 +92,14 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
     # Teardown: Return to clean NORMAL state for next test
     try:
         proves_send_and_assert_command(fprime_test_api, f"{component}.EXIT_SAFE_MODE")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Teardown: EXIT_SAFE_MODE skipped (not in safe mode): {e}")
     try:
         proves_send_and_assert_command(
             fprime_test_api, f"{component}.EXIT_PAYLOAD_MODE"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Teardown: EXIT_PAYLOAD_MODE skipped (not in payload mode): {e}")
 
 
 # ==============================================================================
@@ -351,7 +357,7 @@ def test_payload_06_voltage_monitoring_active(
     Verifies:
     - System voltage telemetry is available
     - Voltage is above threshold (no auto-exit should occur)
-    - Mode remains in PAYLOAD_MODE after 11 seconds (no false triggers)
+    - Mode remains in PAYLOAD_MODE after debounce period + 1 second (11 seconds total, no false triggers)
 
     This test verifies the infrastructure works without requiring
     manual voltage control. The actual low-voltage exit is tested
