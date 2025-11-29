@@ -17,8 +17,9 @@ module ReferenceDeployment {
     import CdhCore.Subtopology
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
-    import TlmLoggerTee.Subtopology
     import FileHandling.Subtopology
+    import TlmLoggerTee.Subtopology
+    import EventLoggerTee.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -48,8 +49,8 @@ module ReferenceDeployment {
     instance comDelay
     instance burnwire
     instance antennaDeployer
-    instance comSplitterEvents
-    instance comSplitterTelemetry
+    #instance comSplitterEvents
+    #instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
 
@@ -94,15 +95,15 @@ module ReferenceDeployment {
 
     connections ComCcsds_CdhCore {
       # Core events and telemetry to communication queue
-      CdhCore.events.PktSend -> comSplitterEvents.comIn
-      comSplitterEvents.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
-      comSplitterEvents.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      CdhCore.events.PktSend -> EventLoggerTee.comSplitter.comIn
+      EventLoggerTee.comSplitter.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      EventLoggerTee.comSplitter.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
       # CdhCore.tlmSend.PktSend -> TlmLoggerTee.comSplitter.comIn
       # TlmLoggerTee.comSplitter.comOut -> comSplitterTelemetry.comIn
-      CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
-      comSplitterTelemetry.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      CdhCore.tlmSend.PktSend -> TlmLoggerTee.comSplitter.comIn
+      TlmLoggerTee.comSplitter.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      TlmLoggerTee.comSplitter.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
       ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff

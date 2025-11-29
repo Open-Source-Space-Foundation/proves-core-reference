@@ -20,3 +20,6 @@ register_fprime_module(
     DEPENDS
         Fw_Logger
 )
+
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/EventLoggerTee/")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/TlmLoggerTee/")

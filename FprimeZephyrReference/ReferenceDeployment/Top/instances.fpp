@@ -88,9 +88,9 @@ module ReferenceDeployment {
 
   instance lora: Zephyr.LoRa base id 0x10026000
 
-  instance comSplitterEvents: Svc.ComSplitter base id 0x10027000
+  #instance comSplitterEvents: Svc.ComSplitter base id 0x10027000
 
-  instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
+  #instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 

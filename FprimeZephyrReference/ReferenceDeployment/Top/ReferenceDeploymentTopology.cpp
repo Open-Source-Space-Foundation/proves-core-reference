@@ -126,7 +126,8 @@ void setupTopology(const TopologyState& state) {
     comDriver.configure(state.uartDevice, state.baudRate);
 
     // printk("initializing log file... \n");
-    // TlmLoggerTee::comLog.init_log_file("/ComLoggerFiles/Tlm", 1024 * 30, true);
+    TlmLoggerTee::comLog.init_log_file("/Tlm", 1024 * 30, true);
+    EventLoggerTee::comLog.init_log_file("/Event", 1024 * 30, true);
     // printk("log file initialized\n");
     
     lsm6dsoManager.configure(state.lsm6dsoDevice);
