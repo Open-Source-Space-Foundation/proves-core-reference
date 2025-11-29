@@ -81,6 +81,7 @@ class MyComponent final : public MyComponentComponentBase {
     FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
     Module m_rlb_module;  //!< RadioLib Module instance
     SX1280 m_rlb_radio;   //!< RadioLib SX1280 radio instance
+    bool wait_for_rx_fin = false;
 };
 
 }  // namespace Components

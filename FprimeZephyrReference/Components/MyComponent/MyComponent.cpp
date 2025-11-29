@@ -33,7 +33,23 @@ MyComponent ::~MyComponent() {}
 // ----------------------------------------------------------------------
 
 void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
-    // TODO
+    if (this->wait_for_rx_fin) {
+        uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
+        if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
+            this->wait_for_rx_fin = false;
+            SX1280* radio = &this->m_rlb_radio;
+            uint8_t data[256] = {0};
+            size_t len = radio->getPacketLength();
+            radio->readData(data, len);
+
+            Fw::Logger::log("MESSAGE RECEIVED:\n");
+            char msg[sizeof(data) * 3 + 1];
+            for (size_t i = 0; i < len; ++i)
+                sprintf(msg + i * 3, "%02X ", data[i]);  // NOLINT(runtime/printf)
+            msg[len * 3] = '\0';
+            Fw::Logger::log("%s\n", msg);
+        }
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -43,6 +59,9 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    this->wait_for_rx_fin = false;
+
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
@@ -62,31 +81,18 @@ void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
-    int state = this->configure_radio();
+    int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    uint8_t buf[256] = {0};
+    SX1280* radio = &this->m_rlb_radio;
 
-    // cannot specify timeout greater than 2^16 * 15.625us = 1024 ms as timeout
-    // is internally resolved to 16-bit representation of 15.625us step count
-    state = this->m_rlb_radio.receive(buf, sizeof(buf), RadioLibTime_t(1024 * 1000));
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.receive() success!\n");
-    } else {
-        Fw::Logger::log("radio.receive() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
+    state = radio->standby();
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+    state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    Fw::Logger::log("RESULTING BUFFER:\n");
+    this->wait_for_rx_fin = true;
 
-    char msg[sizeof(buf) * 3 + 1];
-
-    for (size_t i = 0; i < sizeof(buf); ++i) {
-        sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
-    }
-    msg[sizeof(buf) * 3] = '\0';
-
-    Fw::Logger::log("%s\n", msg);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
