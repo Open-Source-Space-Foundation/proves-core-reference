@@ -123,6 +123,7 @@ void setupTopology(const TopologyState& state) {
     static struct spi_cs_control cs_ctrl = {
         .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 0),
         .delay = 0U, /* us to wait after asserting CS before transfer */
+        .cs_is_gpio = true,
     };
 
     struct spi_config cfg = {
@@ -130,7 +131,7 @@ void setupTopology(const TopologyState& state) {
         .operation = SPI_WORD_SET(8),
         .slave = 0,
         .cs = cs_ctrl,
-
+        .word_delay = 0,
     };
     spiDriver.configure(state.spi0Device, cfg);
     lsm6dsoManager.configure(state.lsm6dsoDevice);
