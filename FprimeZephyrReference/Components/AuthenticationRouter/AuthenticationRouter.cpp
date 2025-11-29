@@ -252,10 +252,10 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
 
 bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // TO DO: Fill this in with reading the file and searching through it (see authenticate)
-    const U8* opCode;
-    // = packetBuffer.getData().substr(OP_CODE_START, OP_CODE_START + OP_CODE_LENGTH);
-
-    std::memcpy(opCode, packetBuffer.getData() + 6, OP_CODE_LENGTH);
+    // Extract opCode from packet buffer
+    std::string opCode;
+    opCode.resize(OP_CODE_LENGTH);
+    std::memcpy(&opCode[0], packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
 
     // TO DO: Add a space to the opcode
 
@@ -290,7 +290,7 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     }
 
     // find a line that contains the opcode
-    size_t pos = fileContents.find(opCode.str());
+    size_t pos = fileContents.find(opCode);
     if (pos != std::string::npos) {
         return true;
     }
