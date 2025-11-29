@@ -54,6 +54,8 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! Handler implementation for loadSwitchStateGet
     //!
     //! Input port to get the state of the load switch (called by other components)
+    //! We need to wait for power to normalize after turning on the load switch
+    //! so we check the current time against a timeout
     Fw::On loadSwitchStateGet_handler(FwIndexType portNum  //!< The port number
                                       ) override;
 

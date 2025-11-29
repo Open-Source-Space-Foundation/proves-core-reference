@@ -36,6 +36,13 @@ const struct device* batt_cell1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(batt_cell
 const struct device* batt_cell2_temp_sens = DEVICE_DT_GET(DT_NODELABEL(batt_cell2_temp_sens));
 const struct device* batt_cell3_temp_sens = DEVICE_DT_GET(DT_NODELABEL(batt_cell3_temp_sens));
 const struct device* batt_cell4_temp_sens = DEVICE_DT_GET(DT_NODELABEL(batt_cell4_temp_sens));
+const struct device* face0_light_sens = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
+const struct device* face1_light_sens = DEVICE_DT_GET(DT_NODELABEL(face1_light_sens));
+const struct device* face2_light_sens = DEVICE_DT_GET(DT_NODELABEL(face2_light_sens));
+const struct device* face3_light_sens = DEVICE_DT_GET(DT_NODELABEL(face3_light_sens));
+const struct device* face5_light_sens = DEVICE_DT_GET(DT_NODELABEL(face5_light_sens));
+const struct device* face6_light_sens = DEVICE_DT_GET(DT_NODELABEL(face6_light_sens));
+const struct device* face7_light_sens = DEVICE_DT_GET(DT_NODELABEL(face7_light_sens));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
@@ -77,6 +84,14 @@ int main(int argc, char* argv[]) {
     inputs.battCell2TempDevice = batt_cell2_temp_sens;
     inputs.battCell3TempDevice = batt_cell3_temp_sens;
     inputs.battCell4TempDevice = batt_cell4_temp_sens;
+    // Light sensor devices
+    inputs.face0LightDevice = face0_light_sens;
+    inputs.face1LightDevice = face1_light_sens;
+    inputs.face2LightDevice = face2_light_sens;
+    inputs.face3LightDevice = face3_light_sens;
+    inputs.face5LightDevice = face5_light_sens;
+    inputs.face6LightDevice = face6_light_sens;
+    inputs.face7LightDevice = face7_light_sens;
 
     inputs.baudRate = 115200;
 
