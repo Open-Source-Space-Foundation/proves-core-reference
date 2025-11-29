@@ -424,7 +424,13 @@ while True:
                     # Unknown commands
                     pass
                 else:
-                    handler()
+                    try: 
+                        handler()
+                    except Exception as e:
+                        print("ERROR in handler:", e)
+                        red.on(); time.sleep_ms(200); red.off()
+                        state = STATE_ERROR
+                        pass
 
     elif state == STATE_ERROR:
         # TODO: How should we handle errors?
