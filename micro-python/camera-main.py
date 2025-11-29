@@ -291,13 +291,13 @@ def snap_handler():
 
         # Get JPEG bytes directly from image object
         # Convert RGB565 image to JPEG format in memory
-        # jpeg_params = {
-        #     'quality': 90,
-        #     'encode_for_ide': False
-        # }
+        jpeg_params = {
+            'quality': 100,
+            'encode_for_ide': False
+        }
         # jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
         try:
-            jpeg_bytes = img.to_jpeg().bytearray()
+            jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
         except Exception as e:
             print("ERROR: Failed to get JPEG data from image", e)
             red.on(); time.sleep_ms(200); red.off()
