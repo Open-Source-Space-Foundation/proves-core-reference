@@ -75,7 +75,7 @@ class MyComponent final : public MyComponentComponentBase {
                           ) override;
 
     // Configure the SX1280 radio (setup and parameter tuning)
-    int configure_radio();
+    int16_t configure_radio();
 
   private:
     FprimeHal m_rlb_hal;  //!< RadioLib HAL instance

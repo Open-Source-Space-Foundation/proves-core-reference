@@ -115,7 +115,7 @@ void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-int MyComponent ::configure_radio() {
+int16_t MyComponent ::configure_radio() {
     int state = this->m_rlb_radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
         return state;
