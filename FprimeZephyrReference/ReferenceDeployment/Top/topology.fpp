@@ -52,7 +52,7 @@ module ReferenceDeployment {
     # For UART sideband communication
     instance comDriver
     instance spiDriver
-    instance mycomp
+    instance sband
     instance gpioSbandNrst
     instance gpioSbandRxEn
     instance gpioSbandTxEn
@@ -176,7 +176,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[13] -> mycomp.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> sband.run
 
     }
 
@@ -214,11 +214,11 @@ module ReferenceDeployment {
     }
 
     connections MyConnectionGraph {
-      mycomp.spiSend -> spiDriver.SpiReadWrite
-      mycomp.resetSend -> gpioSbandNrst.gpioWrite
-      mycomp.txEnable -> gpioSbandTxEn.gpioWrite
-      mycomp.rxEnable -> gpioSbandRxEn.gpioWrite
-      mycomp.getIRQLine -> gpioSbandIRQ.gpioRead
+      sband.spiSend -> spiDriver.SpiReadWrite
+      sband.resetSend -> gpioSbandNrst.gpioWrite
+      sband.txEnable -> gpioSbandTxEn.gpioWrite
+      sband.rxEnable -> gpioSbandRxEn.gpioWrite
+      sband.getIRQLine -> gpioSbandIRQ.gpioRead
     }
 
     connections ComCcsds_FileHandling {
