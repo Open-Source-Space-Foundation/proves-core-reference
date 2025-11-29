@@ -191,6 +191,23 @@ def send_image_protocol(jpeg_bytes):
         red.on(); time.sleep_ms(300); red.off()
         return False
 
+def ping_handler():
+    """Respond to ping command with pong message"""
+    try:
+        # Send pong response over UART
+        response = b"PONG\n"
+        if write_all(uart, response):
+            print("Ping received, sent PONG")
+            # Quick green LED flash to indicate ping response
+            green.on(); time.sleep_ms(50); green.off()
+            return True
+        else:
+            print("ERROR: Failed to send PONG response")
+            return False
+    except Exception as e:
+        print("ERROR in ping_handler():", e)
+        return False
+
 def snap_handler():
     """Capture JPEG image in memory and send over UART"""
     global state
@@ -256,8 +273,8 @@ heartbeat_ms = 1000
 last_hb = time.ticks_ms()
 
 COMMANDS = {
-    "snap" : snap_handler
-    # TODO: Add more commands?
+    "snap": snap_handler,
+    "ping": ping_handler
 }
 
 while True:
