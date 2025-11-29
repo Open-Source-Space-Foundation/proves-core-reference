@@ -6,7 +6,7 @@ module CdhCoreConfig {
         constant cmdDisp     = 10
         constant events      = 25
         constant tlmSend     = 5
-        constant $health     = 10
+        constant $health     = 25  # Must be >= number of pinged components (currently 12+)
     }
 
 

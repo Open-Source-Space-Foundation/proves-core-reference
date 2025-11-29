@@ -11,7 +11,8 @@
 #include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
 #include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
 #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
-#include "FprimeZephyrReference/TlmLoggerTee/PingEntries.hpp"
+#include "EventLoggerTee/PingEntries.hpp"
+#include "TlmLoggerTee/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"

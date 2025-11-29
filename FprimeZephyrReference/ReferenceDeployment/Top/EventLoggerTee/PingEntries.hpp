@@ -1,8 +1,8 @@
-#ifndef TLMLOGGERTEE_PINGENTRIES_HPP
-#define TLMLOGGERTEE_PINGENTRIES_HPP
+#ifndef LOGGERTEE_PINGENTRIES_HPP
+#define EVENTLOGGERTEE_PINGENTRIES_HPP
 
   namespace PingEntries {
-    namespace TlmLoggerTee_comLog       {enum { WARN = 3, FATAL = 5 };}
+    namespace EventLoggerTee_comLog       {enum { WARN = 3, FATAL = 5 };}
   }
 
 #endif

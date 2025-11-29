@@ -6,7 +6,7 @@
 
 register_fprime_module(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/EventLoggerTee.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/TlmLoggerTee.fpp"
     HEADERS
         "${CMAKE_CURRENT_LIST_DIR}/PingEntries.hpp"
     DEPENDS
