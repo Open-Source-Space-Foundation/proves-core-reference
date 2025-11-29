@@ -26,6 +26,9 @@ register_fprime_library(
 
 add_subdirectory("${FPRIME_PROJECT_ROOT}/lib/RadioLib" "${CMAKE_BINARY_DIR}/RadioLib")
 
+# Disable compile warnings for RadioLib as they pollute the log and we can't do anything about them.
+target_compile_options(RadioLib PRIVATE -w)
+
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
