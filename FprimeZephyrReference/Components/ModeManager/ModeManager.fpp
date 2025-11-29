@@ -169,6 +169,12 @@ module Components {
             severity activity high \
             format "Preparing for intentional reboot - setting clean shutdown flag"
 
+        @ Event emitted when external safe mode request is ignored in PAYLOAD_MODE
+        @ The system must transition PAYLOAD_MODE -> NORMAL -> SAFE_MODE sequentially
+        event ExternalFaultIgnoredInPayloadMode() \
+            severity warning low \
+            format "External fault detected but ignored - in PAYLOAD_MODE (must exit to NORMAL first)"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------

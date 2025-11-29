@@ -145,8 +145,12 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum) {
     if (this->m_mode == SystemMode::NORMAL) {
         this->log_WARNING_HI_ExternalFaultDetected();
         this->enterSafeMode(Components::SafeModeReason::EXTERNAL_REQUEST);
+    } else if (this->m_mode == SystemMode::PAYLOAD_MODE) {
+        // Log that external fault was detected but we can't act on it
+        // System must go PAYLOAD_MODE -> NORMAL -> SAFE_MODE sequentially
+        this->log_WARNING_LO_ExternalFaultIgnoredInPayloadMode();
     }
-    // Note: Request ignored if in PAYLOAD_MODE or already in SAFE_MODE
+    // Note: If already in SAFE_MODE, silently ignore (already in safest state)
 }
 
 Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
@@ -165,19 +169,32 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     Os::File file;
     Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
 
-    if (status == Os::File::OP_OK) {
-        PersistentState state;
-        state.mode = static_cast<U8>(this->m_mode);
-        state.safeModeEntryCount = this->m_safeModeEntryCount;
-        state.payloadModeEntryCount = this->m_payloadModeEntryCount;
-        state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
-        state.cleanShutdown = 1;  // Mark as clean shutdown
-
-        FwSizeType bytesToWrite = sizeof(PersistentState);
-        FwSizeType bytesWritten = bytesToWrite;
-        (void)file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
-        file.close();
+    if (status != Os::File::OP_OK) {
+        // Log failure - next boot will be misclassified as unintended reboot
+        Fw::LogStringArg opStr("shutdown-open");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+        return;
     }
+
+    PersistentState state;
+    state.mode = static_cast<U8>(this->m_mode);
+    state.safeModeEntryCount = this->m_safeModeEntryCount;
+    state.payloadModeEntryCount = this->m_payloadModeEntryCount;
+    state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
+    state.cleanShutdown = 1;  // Mark as clean shutdown
+
+    FwSizeType bytesToWrite = sizeof(PersistentState);
+    FwSizeType bytesWritten = bytesToWrite;
+    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
+
+    // Check if write succeeded and correct number of bytes written
+    if (writeStatus != Os::File::OP_OK || bytesWritten != bytesToWrite) {
+        // Log failure - next boot will be misclassified as unintended reboot
+        Fw::LogStringArg opStr("shutdown-write");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(writeStatus));
+    }
+
+    file.close();
 }
 
 // ----------------------------------------------------------------------
@@ -325,18 +342,32 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state - use defaults
+                // Corrupted state (invalid mode value) - use defaults
+                Fw::LogStringArg opStr("load-corrupt");
+                this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_payloadModeEntryCount = 0;
                 this->m_safeModeReason = Components::SafeModeReason::NONE;
                 this->turnOnComponents();
             }
+        } else {
+            // Read failed or file truncated - use defaults
+            Fw::LogStringArg opStr("load-read");
+            this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+            this->m_mode = SystemMode::NORMAL;
+            this->m_safeModeEntryCount = 0;
+            this->m_payloadModeEntryCount = 0;
+            this->m_safeModeReason = Components::SafeModeReason::NONE;
+            this->turnOnComponents();
         }
 
         file.close();
     } else {
         // File doesn't exist or can't be opened - initialize to default state
+        // Note: This is expected on first boot, so we use a different operation string
+        Fw::LogStringArg opStr("load-open");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
         this->m_payloadModeEntryCount = 0;
