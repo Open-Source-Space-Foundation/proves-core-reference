@@ -79,7 +79,7 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
             finalizeImageTransfer();
             
             // If there's extra data after the image (e.g., <IMG_END> or next header),
-            // push it to protocol buffer
+            // push it to protocol buffer for processing
             U32 extraBytes = dataSize - toWrite;
             if (extraBytes > 0) {
                 const U8* extraData = data + toWrite;
@@ -87,6 +87,9 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
                     processProtocolBuffer();
                 }
             }
+            
+            // Transfer is complete - don't try to write anything more
+            return;
         }
         
         // Write chunk to file
