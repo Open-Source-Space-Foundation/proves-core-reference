@@ -206,6 +206,8 @@ void MosaicHandler ::processProtocolBuffer() {
         }
     }
 
+    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(0);  // DEBUG
+
     if (headerStart == -1) {
         // No header found - if buffer is nearly full, discard old data
         // Be aggressive: if buffer is > 50% full and no header, it's probably text responses
@@ -222,6 +224,8 @@ void MosaicHandler ::processProtocolBuffer() {
         return;
     }
 
+    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(1);  // DEBUG
+
     // Found header start! Discard everything before it
     if (headerStart > 0) {
         U32 remaining = m_protocolBufferSize - static_cast<U32>(headerStart);
@@ -232,11 +236,15 @@ void MosaicHandler ::processProtocolBuffer() {
         this->log_ACTIVITY_LO_ProtocolBufferDebug(m_protocolBufferSize, m_protocolBuffer[0]);
     }
 
+    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(2);  // DEBUG
+
     // Now check if we have the complete header (28 bytes minimum)
     if (m_protocolBufferSize < HEADER_SIZE) {
         // Not enough data yet, wait for more
         return;
     }
+
+    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(4);  // DEBUG
 
     // Check if we have the complete header
     if (m_protocolBufferSize >= HEADER_SIZE) {
