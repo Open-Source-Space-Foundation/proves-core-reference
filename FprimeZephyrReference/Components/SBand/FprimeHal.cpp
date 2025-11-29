@@ -6,10 +6,10 @@
 #include <Fw/Time/Time.hpp>
 #include <Os/Task.hpp>
 
-#include "LoRa2.hpp"
+#include "SBand.hpp"
 #include <zephyr/kernel.h>
 
-FprimeHal::FprimeHal(Components::LoRa2* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
+FprimeHal::FprimeHal(Components::SBand* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
 
 void FprimeHal::init() {}
 

@@ -1,4 +1,4 @@
-# FprimeZephyrReference::LoRa2
+# FprimeZephyrReference::SBand
 
 Component for F Prime FSW framework.
 

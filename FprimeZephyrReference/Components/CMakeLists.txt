@@ -1,7 +1,7 @@
 # Include project-wide components here
 
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/AntennaDeployer/")
-add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/LoRa2/")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/SBand/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/BootloaderTrigger/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Burnwire/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ComDelay/")

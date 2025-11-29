@@ -4,14 +4,14 @@
 #include <RadioLib.h>
 
 namespace Components {
-class LoRa2;
+class SBand;
 }  // namespace Components
 
 // the HAL must inherit from the base RadioLibHal class
 // and implement all of its virtual methods
 class FprimeHal : public RadioLibHal {
   public:
-    explicit FprimeHal(Components::LoRa2* component);
+    explicit FprimeHal(Components::SBand* component);
 
     void init() override;
 
@@ -54,7 +54,7 @@ class FprimeHal : public RadioLibHal {
     void spiEnd();
 
   private:
-    Components::LoRa2* m_component;
+    Components::SBand* m_component;
 };
 
 #endif

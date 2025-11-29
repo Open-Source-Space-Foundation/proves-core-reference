@@ -1,12 +1,12 @@
 // ======================================================================
-// \title  LoRa2.cpp
+// \title  SBand.cpp
 // \author jrpear
-// \brief  cpp file for LoRa2 component implementation class
+// \brief  cpp file for SBand component implementation class
 // ======================================================================
 
 #define RADIOLIB_LOW_LEVEL 1
 
-#include "FprimeZephyrReference/Components/LoRa2/LoRa2.hpp"
+#include "FprimeZephyrReference/Components/SBand/SBand.hpp"
 
 #include <RadioLib.h>
 
@@ -20,16 +20,16 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-LoRa2 ::LoRa2(const char* const compName)
-    : LoRa2ComponentBase(compName), m_rlb_hal(this), m_rlb_module(&m_rlb_hal, 0, 5, 0), m_rlb_radio(&m_rlb_module) {}
+SBand ::SBand(const char* const compName)
+    : SBandComponentBase(compName), m_rlb_hal(this), m_rlb_module(&m_rlb_hal, 0, 5, 0), m_rlb_radio(&m_rlb_module) {}
 
-LoRa2 ::~LoRa2() {}
+SBand ::~SBand() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void LoRa2 ::run_handler(FwIndexType portNum, U32 context) {
+void SBand ::run_handler(FwIndexType portNum, U32 context) {
     if (this->wait_for_rx_fin) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
@@ -53,7 +53,7 @@ void LoRa2 ::run_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void LoRa2 ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
@@ -75,7 +75,7 @@ void LoRa2 ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void LoRa2 ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void SBand ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
     int16_t state = this->configure_radio();
@@ -93,7 +93,7 @@ void LoRa2 ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-int16_t LoRa2 ::configure_radio() {
+int16_t SBand ::configure_radio() {
     int state = this->m_rlb_radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
         return state;

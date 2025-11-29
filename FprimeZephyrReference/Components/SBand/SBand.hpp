@@ -1,33 +1,33 @@
 // ======================================================================
-// \title  LoRa2.hpp
+// \title  SBand.hpp
 // \author jrpear
-// \brief  hpp file for LoRa2 component implementation class
+// \brief  hpp file for SBand component implementation class
 // ======================================================================
 
-#ifndef Components_LoRa2_HPP
-#define Components_LoRa2_HPP
+#ifndef Components_SBand_HPP
+#define Components_SBand_HPP
 
 #include "FprimeHal.hpp"
-#include "FprimeZephyrReference/Components/LoRa2/LoRa2ComponentAc.hpp"
+#include "FprimeZephyrReference/Components/SBand/SBandComponentAc.hpp"
 
 namespace Components {
 
-class LoRa2 final : public LoRa2ComponentBase {
+class SBand final : public SBandComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct LoRa2 object
-    LoRa2(const char* const compName  //!< The component name
+    //! Construct SBand object
+    SBand(const char* const compName  //!< The component name
     );
 
-    //! Destroy LoRa2 object
-    ~LoRa2();
+    //! Destroy SBand object
+    ~SBand();
 
-    using LoRa2ComponentBase::getIRQLine_out;
-    using LoRa2ComponentBase::getTime;
-    using LoRa2ComponentBase::spiSend_out;
+    using SBandComponentBase::getIRQLine_out;
+    using SBandComponentBase::getTime;
+    using SBandComponentBase::spiSend_out;
 
   private:
     // ----------------------------------------------------------------------
