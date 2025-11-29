@@ -61,16 +61,20 @@ module ReferenceDeployment {
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
     instance fsSpace
-    instance payload
+    instance payload0
     instance cameraHandler
-    instance peripheralUartDriver
-    instance payloadBufferManager
+    instance peripheral0UartDriver
+    instance peripheral1UartDriver
+    instance payload0BufferManager
     instance cmdSeq
     instance startupManager
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
     instance resetManager
+    instance mosaicHandler
+    instance payload1
+    instance payload1BufferManager
 
 
   # ----------------------------------------------------------------------
@@ -157,9 +161,10 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[3] -> peripheral0UartDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[5] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[6] -> peripheral1UartDriver.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -173,10 +178,11 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[10] -> payload0BufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> payload1BufferManager.schedIn
 
     }
 
@@ -213,21 +219,38 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-    connections PayloadCom {
+    connections Payload0Com {
       # PayloadCom <-> UART Driver
-      payload.uartForward -> peripheralUartDriver.$send
-      peripheralUartDriver.$recv -> payload.uartDataIn
+      payload0.uartForward -> peripheral0UartDriver.$send
+      peripheral0UartDriver.$recv -> payload0.uartDataIn
 
       # Buffer return path (critical! - matches ComStub pattern)
-      payload.bufferReturn -> peripheralUartDriver.recvReturnIn
+      payload0.bufferReturn -> peripheral0UartDriver.recvReturnIn
 
       # PayloadCom <-> CameraHandler data flow
-      payload.uartDataOut -> cameraHandler.dataIn
-      cameraHandler.commandOut -> payload.commandIn
+      payload0.uartDataOut -> cameraHandler.dataIn
+      cameraHandler.commandOut -> payload0.commandIn
 
       # UART driver allocates/deallocates from BufferManager
-      peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
-      peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
+      peripheral0UartDriver.allocate -> payload0BufferManager.bufferGetCallee
+      peripheral0UartDriver.deallocate -> payload0BufferManager.bufferSendIn
+    }
+
+    connections Payload1Com {
+      # PayloadCom <-> UART Driver
+      payload1.uartForward -> peripheral1UartDriver.$send
+      peripheral1UartDriver.$recv -> payload1.uartDataIn
+
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload1.bufferReturn -> peripheral1UartDriver.recvReturnIn
+
+      # PayloadCom <-> MosaicHandler data flow
+      payload1.uartDataOut -> mosaicHandler.dataIn
+      mosaicHandler.commandOut -> payload1.commandIn
+
+      # UART driver allocates/deallocates from BufferManager
+      peripheral1UartDriver.allocate -> payload1BufferManager.bufferGetCallee
+      peripheral1UartDriver.deallocate -> payload1BufferManager.bufferSendIn
     }
 
     connections ComCcsds_FileHandling {

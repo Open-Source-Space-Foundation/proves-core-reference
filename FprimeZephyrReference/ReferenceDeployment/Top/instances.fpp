@@ -47,10 +47,15 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
-  instance payload: Components.PayloadCom base id 0x10005000 \
+  instance payload0: Components.PayloadCom base id 0x10005000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 10
+
+  instance payload1: Components.PayloadCom base id 0x10006000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 11
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -116,29 +121,30 @@ module ReferenceDeployment {
 
   instance cameraHandler: Components.CameraHandler base id 0x1002B000
 
-  instance peripheralUartDriver: Zephyr.ZephyrUartDriver base id 0x1002C000
+  instance peripheral0UartDriver: Zephyr.ZephyrUartDriver base id 0x1002C000
 
-  instance payloadBufferManager: Svc.BufferManager base id 0x1002D000 \
+  instance payload0BufferManager: Svc.BufferManager base id 0x1002D000 \
   {
     phase Fpp.ToCpp.Phases.configObjects """
     Svc::BufferManager::BufferBins bins;
     """
     phase Fpp.ToCpp.Phases.configComponents """
-    memset(&ConfigObjects::ReferenceDeployment_payloadBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payloadBufferManager::bins));
+    memset(&ConfigObjects::ReferenceDeployment_payload0BufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payload0BufferManager::bins));
     // UART RX buffers for camera data streaming (4 KB, 2 buffers for ping-pong)
-    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 4 * 1024;
-    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].numBuffers = 2;
-    ReferenceDeployment::payloadBufferManager.setup(
+    ConfigObjects::ReferenceDeployment_payload0BufferManager::bins.bins[0].bufferSize = 4 * 1024;
+    ConfigObjects::ReferenceDeployment_payload0BufferManager::bins.bins[0].numBuffers = 2;
+    ReferenceDeployment::payload0BufferManager.setup(
         1,  // manager ID
         0,  // store ID
         ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
-        ConfigObjects::ReferenceDeployment_payloadBufferManager::bins
+        ConfigObjects::ReferenceDeployment_payload0BufferManager::bins
     );
     """
     phase Fpp.ToCpp.Phases.tearDownComponents """
-    ReferenceDeployment::payloadBufferManager.cleanup();
+    ReferenceDeployment::payload0BufferManager.cleanup();
     """
   }
+
   instance fsSpace: Components.FsSpace base id 0x1002E000
 
   instance face4LoadSwitch: Components.LoadSwitch base id 0x1002F000
@@ -166,5 +172,31 @@ module ReferenceDeployment {
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003A000
 
   instance startupManager: Components.StartupManager base id 0x1003B000
+
+  instance mosaicHandler: Components.MosaicHandler base id 0x1003C000
+
+  instance peripheral1UartDriver: Zephyr.ZephyrUartDriver base id 0x1003D000
+
+  instance payload1BufferManager: Svc.BufferManager base id 0x1003E000 \
+  {
+    phase Fpp.ToCpp.Phases.configObjects """
+    Svc::BufferManager::BufferBins bins;
+    """
+    phase Fpp.ToCpp.Phases.configComponents """
+    memset(&ConfigObjects::ReferenceDeployment_payload1BufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payload1BufferManager::bins));
+    // UART RX buffers for camera data streaming (4 KB, 2 buffers for ping-pong)
+    ConfigObjects::ReferenceDeployment_payload1BufferManager::bins.bins[0].bufferSize = 4 * 1024;
+    ConfigObjects::ReferenceDeployment_payload1BufferManager::bins.bins[0].numBuffers = 2;
+    ReferenceDeployment::payload1BufferManager.setup(
+        1,  // manager ID
+        0,  // store ID
+        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
+        ConfigObjects::ReferenceDeployment_payload1BufferManager::bins
+    );
+    """
+    phase Fpp.ToCpp.Phases.tearDownComponents """
+    ReferenceDeployment::payload1BufferManager.cleanup();
+    """
+  }
 
 }

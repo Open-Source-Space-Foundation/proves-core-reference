@@ -112,7 +112,9 @@ void setupTopology(const TopologyState& state) {
     comDriver.configure(state.uartDevice, state.baudRate);
 
     // UART from the board to the payload
-    peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
+    peripheral0UartDriver.configure(state.peripheral0Uart, state.peripheral0BaudRate);
+    peripheral1UartDriver.configure(state.peripheral1Uart, state.peripheral1BaudRate);
+
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);

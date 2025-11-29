@@ -74,8 +74,10 @@ struct TopologyState {
     U32 baudRate;                         //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
-    const device* peripheralUart;
-    U32 peripheralBaudRate;
+    const device* peripheral0Uart;
+    U32 peripheral0BaudRate;
+    const device* peripheral1Uart;
+    U32 peripheral1BaudRate;
     FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
     const device* ina219SysDevice;                //!< device path for battery board ina219
     const device* ina219SolDevice;                //!< device path for solar panel ina219

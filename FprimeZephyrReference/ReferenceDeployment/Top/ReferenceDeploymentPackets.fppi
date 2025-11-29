@@ -19,8 +19,10 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsds.commsBufferManager.EmptyBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.EmptyBuffs
-    payloadBufferManager.NoBuffs
-    payloadBufferManager.EmptyBuffs
+    payload0BufferManager.NoBuffs
+    payload0BufferManager.EmptyBuffs
+    payload1BufferManager.NoBuffs
+    payload1BufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }
@@ -33,9 +35,12 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.TotalBuffs
     ComCcsdsUart.commsBufferManager.CurrBuffs
     ComCcsdsUart.comQueue.buffQueueDepth
-    payloadBufferManager.TotalBuffs
-    payloadBufferManager.CurrBuffs
-    payloadBufferManager.HiBuffs
+    payload0BufferManager.TotalBuffs
+    payload0BufferManager.CurrBuffs
+    payload0BufferManager.HiBuffs
+    payload1BufferManager.TotalBuffs
+    payload1BufferManager.CurrBuffs
+    payload1BufferManager.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
