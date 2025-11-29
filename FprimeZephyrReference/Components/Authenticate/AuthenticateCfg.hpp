@@ -17,7 +17,7 @@
 // Set to 1 to enable authentication (default behavior)
 // Set to 0 to disable authentication (pass-through mode)
 #ifndef AUTHENTICATE_ENABLED
-#define AUTHENTICATE_ENABLED 0
+#define AUTHENTICATE_ENABLED 1
 #endif
 
 #endif  // Components_AuthenticateCfg_HPP

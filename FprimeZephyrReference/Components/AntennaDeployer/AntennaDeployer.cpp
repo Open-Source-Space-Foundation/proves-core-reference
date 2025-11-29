@@ -309,11 +309,7 @@ bool AntennaDeployer ::readDeploymentState() {
     auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    Os::File file;
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
-    bool deployed = (status == Os::File::OP_OK);
-    (void)file.close();
-    return deployed;
+    return Os::FileSystem::exists(file_path.toChar());
 }
 
 void AntennaDeployer ::writeDeploymentState() {
