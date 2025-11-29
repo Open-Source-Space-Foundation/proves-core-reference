@@ -13,7 +13,16 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {}
+AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {
+    // Create //antenna directory if it doesn't exist
+    const char* antennaDir = "//antenna";
+    Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(antennaDir, false);
+    if (dirStatus == Os::FileSystem::OP_OK) {
+        printk("[AntennaDeployer] Created directory %s\n", antennaDir);
+    } else {
+        printk("[AntennaDeployer] Failed to create directory %s, status=%d\n", antennaDir, dirStatus);
+    }
+}
 
 AntennaDeployer ::~AntennaDeployer() {}
 
