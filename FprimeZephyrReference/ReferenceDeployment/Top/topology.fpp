@@ -157,6 +157,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -165,7 +166,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
+      # rateGroup1Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
@@ -256,7 +257,7 @@ module ReferenceDeployment {
       magnetorquerManager.loadSwitchTurnOn[1] -> face1LoadSwitch.turnOn
       magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
       magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
-      magnetorquerManager.loadSwitchTurnOn[4] -> face4LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[4] -> face5LoadSwitch.turnOn
     }
 
     connections ImuManager {

@@ -67,8 +67,7 @@ void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
         for (const auto& [key, device] : this->m_devices) {
             if (this->enabled_faces[key]) {
                 if (!device_is_ready(device)) {
-                    this->log_WARNING_HI_DeviceNotReady(Fw::LogStringArg(key.c_str()));
-                    return;
+                    continue;
                 }
                 haptics_start_output(device);
             }
