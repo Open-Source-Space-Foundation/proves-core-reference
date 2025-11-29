@@ -17,7 +17,8 @@ jobs:
           make fmt
 
   build:
-    runs-on: deathstar
+    runs-on: 
+      group: sam
     steps:
       - uses: actions/checkout@v4
 
