@@ -188,7 +188,7 @@ module ReferenceDeployment {
     ConfigObjects::ReferenceDeployment_payload1BufferManager::bins.bins[0].bufferSize = 4 * 1024;
     ConfigObjects::ReferenceDeployment_payload1BufferManager::bins.bins[0].numBuffers = 2;
     ReferenceDeployment::payload1BufferManager.setup(
-        1,  // manager ID
+        2,  // manager ID
         0,  // store ID
         ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
         ConfigObjects::ReferenceDeployment_payload1BufferManager::bins

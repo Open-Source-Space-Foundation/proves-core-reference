@@ -40,6 +40,10 @@ module Components {
         @ Receives data from PayloadCom, handles mosaic protocol parsing and file saving
         sync input port dataIn: Drv.ByteStreamData
 
+        # Telemetry channels
+        @ Telemetry channel for gamma radiation reading in millivolts
+        telemetry GammaRadiationReading: F64
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

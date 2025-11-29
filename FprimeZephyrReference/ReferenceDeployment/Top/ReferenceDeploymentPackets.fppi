@@ -95,6 +95,10 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
+  packet MosaicHandler id 11 group 4 {
+    ReferenceDeployment.mosaicHandler.GammaRadiationReading
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

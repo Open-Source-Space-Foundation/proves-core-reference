@@ -89,7 +89,7 @@ class MosaicHandler final : public MosaicHandlerComponentBase {
     I32 findGammaReadingEndMarker(const U8* data, U32 size);
 
     //! Parse line for image start command
-    //! Returns true if line is "<IMG_START>"
+    //! Returns true if line is "<GAMMA_START>"
     bool isGammaReadingStartCommand(const U8* line, U32 length);
 
     //! Send acknowledgment through PayloadCom to UART
@@ -115,7 +115,7 @@ class MosaicHandler final : public MosaicHandlerComponentBase {
     U32 m_protocolBufferSize = 0;
 
     // Protocol constants for image transfer
-    // Protocol: <GAMMA_START><SIZE>[4-byte uint32]</SIZE>[gamma reading data]<IMG_END>
+    // Protocol: <GAMMA_START><SIZE>[4-byte uint32]</SIZE>[gamma reading data]<GAMMA_END>
     static constexpr U32 GAMMA_START_LEN = 11;    // strlen("<GAMMA_START>")
     static constexpr U32 SIZE_TAG_LEN = 6;        // strlen("<SIZE>")
     static constexpr U32 SIZE_VALUE_LEN = 4;      // 4-byte little-endian uint32

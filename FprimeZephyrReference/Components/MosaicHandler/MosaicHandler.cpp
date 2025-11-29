@@ -72,6 +72,7 @@ void MosaicHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
             this->handleFileError();
             return;
         }
+        this->log_WARNING_HI_CommandError(Fw::LogStringArg("NGAY wuz here"));  // DEBUG
 
         m_bytes_received += toWrite;
 
