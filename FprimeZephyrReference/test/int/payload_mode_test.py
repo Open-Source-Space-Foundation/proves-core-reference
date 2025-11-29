@@ -388,10 +388,22 @@ def test_payload_06_voltage_monitoring_active(
 
     # Note: We don't assert voltage > threshold because board supply can fluctuate.
     # If voltage is actually low, auto-exit is correct behavior.
-    print(f"Current system voltage: {voltage}V (threshold: {LOW_VOLTAGE_THRESHOLD}V)")
+    print(f"Initial system voltage: {voltage}V (threshold: {LOW_VOLTAGE_THRESHOLD}V)")
 
     # Wait for debounce period + 1 second margin to verify no false triggers
     time.sleep(LOW_VOLTAGE_DEBOUNCE_SECONDS + 1)
+
+    # Sample voltage again after the wait - voltage may have changed during the period
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [VOLTAGE_TELEMETRY_PACKET_ID]
+    )
+    voltage_result_post: ChData = fprime_test_api.assert_telemetry(
+        "ReferenceDeployment.ina219SysManager.Voltage", timeout=5
+    )
+    voltage_post = voltage_result_post.get_val()
+    print(
+        f"Post-wait system voltage: {voltage_post}V (threshold: {LOW_VOLTAGE_THRESHOLD}V)"
+    )
 
     # Check final mode
     proves_send_and_assert_command(
@@ -408,14 +420,15 @@ def test_payload_06_voltage_monitoring_active(
         e for e in events if "AutoPayloadModeExit" in str(e.get_template().get_name())
     ]
 
-    if voltage >= LOW_VOLTAGE_THRESHOLD:
-        # Voltage was healthy - should remain in payload mode
+    # Use post-wait voltage for assertion (voltage may have changed during wait)
+    if voltage_post >= LOW_VOLTAGE_THRESHOLD:
+        # Voltage is healthy now - should remain in payload mode
         assert final_mode == 3, "Should still be in PAYLOAD_MODE (no false auto-exit)"
         assert len(auto_exit_events) == 0, (
             "Should not have triggered AutoPayloadModeExit"
         )
     else:
-        # Voltage was low - auto-exit may have triggered (correct behavior)
+        # Voltage is low - auto-exit may have triggered (correct behavior)
         print(
             "Note: Voltage was below threshold. Auto-exit may have occurred (expected)."
         )
