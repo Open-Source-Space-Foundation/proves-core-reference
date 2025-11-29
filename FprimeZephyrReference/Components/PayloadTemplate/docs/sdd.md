@@ -3,7 +3,7 @@
 Template Component for Payload Data Handler
 
 ## Usage Examples
-Add usage examples here
+ 
 
 ### Diagrams
 Add diagrams here
