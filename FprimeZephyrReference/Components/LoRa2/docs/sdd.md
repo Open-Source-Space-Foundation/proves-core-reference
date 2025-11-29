@@ -1,4 +1,4 @@
-# FprimeZephyrReference::MyComponent
+# FprimeZephyrReference::LoRa2
 
 Component for F Prime FSW framework.
 

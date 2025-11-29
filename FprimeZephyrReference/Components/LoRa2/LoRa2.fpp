@@ -2,7 +2,7 @@
 
 module Components {
     @ Component for F Prime FSW framework.
-    passive component MyComponent {
+    passive component LoRa2 {
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####

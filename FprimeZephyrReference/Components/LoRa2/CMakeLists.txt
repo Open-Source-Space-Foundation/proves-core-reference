@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/MyComponent.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/LoRa2.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/MyComponent.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/LoRa2.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/FprimeHal.cpp"
     DEPENDS
         RadioLib
@@ -29,10 +29,10 @@ add_subdirectory("${FPRIME_PROJECT_ROOT}/lib/RadioLib" "${CMAKE_BINARY_DIR}/Radi
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/MyComponent.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/LoRa2.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/MyComponentTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/MyComponentTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/LoRa2TestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/LoRa2Tester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

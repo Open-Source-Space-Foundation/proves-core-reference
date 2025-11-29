@@ -1,12 +1,12 @@
 // ======================================================================
-// \title  MyComponent.cpp
+// \title  LoRa2.cpp
 // \author jrpear
-// \brief  cpp file for MyComponent component implementation class
+// \brief  cpp file for LoRa2 component implementation class
 // ======================================================================
 
 #define RADIOLIB_LOW_LEVEL 1
 
-#include "FprimeZephyrReference/Components/MyComponent/MyComponent.hpp"
+#include "FprimeZephyrReference/Components/LoRa2/LoRa2.hpp"
 
 #include <RadioLib.h>
 
@@ -20,19 +20,16 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-MyComponent ::MyComponent(const char* const compName)
-    : MyComponentComponentBase(compName),
-      m_rlb_hal(this),
-      m_rlb_module(&m_rlb_hal, 0, 5, 0),
-      m_rlb_radio(&m_rlb_module) {}
+LoRa2 ::LoRa2(const char* const compName)
+    : LoRa2ComponentBase(compName), m_rlb_hal(this), m_rlb_module(&m_rlb_hal, 0, 5, 0), m_rlb_radio(&m_rlb_module) {}
 
-MyComponent ::~MyComponent() {}
+LoRa2 ::~LoRa2() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
+void LoRa2 ::run_handler(FwIndexType portNum, U32 context) {
     if (this->wait_for_rx_fin) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
@@ -56,7 +53,7 @@ void MyComponent ::run_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void LoRa2 ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
@@ -78,7 +75,7 @@ void MyComponent ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void LoRa2 ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
     int16_t state = this->configure_radio();
@@ -96,7 +93,7 @@ void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-int16_t MyComponent ::configure_radio() {
+int16_t LoRa2 ::configure_radio() {
     int state = this->m_rlb_radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
         return state;

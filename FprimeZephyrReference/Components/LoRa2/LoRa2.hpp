@@ -1,33 +1,33 @@
 // ======================================================================
-// \title  MyComponent.hpp
+// \title  LoRa2.hpp
 // \author jrpear
-// \brief  hpp file for MyComponent component implementation class
+// \brief  hpp file for LoRa2 component implementation class
 // ======================================================================
 
-#ifndef Components_MyComponent_HPP
-#define Components_MyComponent_HPP
+#ifndef Components_LoRa2_HPP
+#define Components_LoRa2_HPP
 
 #include "FprimeHal.hpp"
-#include "FprimeZephyrReference/Components/MyComponent/MyComponentComponentAc.hpp"
+#include "FprimeZephyrReference/Components/LoRa2/LoRa2ComponentAc.hpp"
 
 namespace Components {
 
-class MyComponent final : public MyComponentComponentBase {
+class LoRa2 final : public LoRa2ComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct MyComponent object
-    MyComponent(const char* const compName  //!< The component name
+    //! Construct LoRa2 object
+    LoRa2(const char* const compName  //!< The component name
     );
 
-    //! Destroy MyComponent object
-    ~MyComponent();
+    //! Destroy LoRa2 object
+    ~LoRa2();
 
-    using MyComponentComponentBase::getIRQLine_out;
-    using MyComponentComponentBase::getTime;
-    using MyComponentComponentBase::spiSend_out;
+    using LoRa2ComponentBase::getIRQLine_out;
+    using LoRa2ComponentBase::getTime;
+    using LoRa2ComponentBase::spiSend_out;
 
   private:
     // ----------------------------------------------------------------------
