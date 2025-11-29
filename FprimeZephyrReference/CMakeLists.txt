@@ -5,5 +5,4 @@
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/project/config")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Components")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ComCcsdsUart/")
-add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/TlmLoggerTee/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ReferenceDeployment/")

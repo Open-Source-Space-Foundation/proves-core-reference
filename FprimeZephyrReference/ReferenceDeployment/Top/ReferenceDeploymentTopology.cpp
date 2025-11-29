@@ -113,9 +113,12 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
-    printk("initializing log file... \n");
-    TlmLoggerTee::comLog.init_log_file("/ComLoggerFiles/Tlm", 1024 * 30, true);
-    printk("log file initialized\n");
+
+    // printk("initializing log file... \n");
+    TlmLoggerTee::comLog.init_log_file("/Tlm", 1024 * 30, true);
+    EventLoggerTee::comLog.init_log_file("/Event", 1024 * 30, true);
+    // printk("log file initialized\n");
+    
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
