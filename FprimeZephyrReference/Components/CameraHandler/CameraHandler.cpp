@@ -156,6 +156,16 @@ void CameraHandler ::TAKE_IMAGE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(takeImageCmd));
 }
 
+void CameraHandler ::PING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    const char* pingCmd = "ping";
+    SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(pingCmd));
+}
+
+void CameraHandler ::SET_IMAGE_QUALITY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    const char* takeImageCmd = "snap";
+    SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(takeImageCmd));
+}
+
 void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
     // Append newline to command to send to PayloadCom
     Fw::CmdStringArg tempCmd = cmd;  

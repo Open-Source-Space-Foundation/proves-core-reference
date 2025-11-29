@@ -7,6 +7,12 @@ module Components {
         @ Type in "snap" to capture an image
         sync command TAKE_IMAGE()
 
+        @ Camera Ping
+        sync command PING()
+
+        @ Set Camera Format
+        sync command SET_IMAGE_QUALITY()
+
         @ Send command to camera via PayloadCom
         sync command SEND_COMMAND(cmd: string)
 

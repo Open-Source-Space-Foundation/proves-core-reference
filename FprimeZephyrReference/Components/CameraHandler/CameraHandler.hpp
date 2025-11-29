@@ -55,6 +55,14 @@ class CameraHandler final : public CameraHandlerComponentBase {
                                  U32 cmdSeq,           //!< The command sequence number
                                  const Fw::CmdStringArg& cmd) override;
 
+    void PING_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                U32 cmdSeq            //!< The command sequence number
+                                ) override;
+    
+    void SET_IMAGE_QUALITY_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                U32 cmdSeq            //!< The command sequence number
+                                ) override;
+
     // ----------------------------------------------------------------------
     // Helper methods for protocol processing
     // ----------------------------------------------------------------------
