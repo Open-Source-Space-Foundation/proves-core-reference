@@ -96,31 +96,6 @@ void MyComponent ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void MyComponent ::READ_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    uint8_t buf[256] = {0};
-
-    int16_t state = this->m_rlb_radio.readData(buf, sizeof(buf));
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.readData() success!\n");
-    } else {
-        Fw::Logger::log("radio.readData() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
-
-    Fw::Logger::log("readData() buffer:\n");
-
-    char msg[sizeof(buf) * 3 + 1];
-
-    for (size_t i = 0; i < sizeof(buf); ++i) {
-        sprintf(msg + i * 3, "%02X ", buf[i]);  // NOLINT(runtime/printf)
-    }
-    msg[sizeof(buf) * 3] = '\0';
-
-    Fw::Logger::log("%s\n", msg);
-
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
 int16_t MyComponent ::configure_radio() {
     int state = this->m_rlb_radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
@@ -151,14 +126,6 @@ int16_t MyComponent ::configure_radio() {
     state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
                                                   RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
     return state;
-}
-
-void MyComponent ::RESET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // BROKEN
-    this->resetSend_out(0, Fw::Logic::HIGH);
-    Os::Task::delay(Fw::TimeInterval(0, 1000));
-    this->resetSend_out(0, Fw::Logic::LOW);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Components

@@ -20,12 +20,6 @@ module Components {
         @ Command to begin receive
         sync command RECEIVE()
 
-        @ Command to read recv data buffer
-        sync command READ_DATA()
-
-        @ Reset Radio Module
-        sync command RESET()
-
         @ SPI Output Port
         output port spiSend: Drv.SpiReadWrite
 

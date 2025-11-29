@@ -60,20 +60,6 @@ class MyComponent final : public MyComponentComponentBase {
                             U32 cmdSeq            //!< The command sequence number
                             ) override;
 
-    //! Handler implementation for command READ_DATA
-    //!
-    //! Command to read recv data buffer
-    void READ_DATA_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                              U32 cmdSeq            //!< The command sequence number
-                              ) override;
-
-    //! Handler implementation for command RESET
-    //!
-    //! Reset Radio Module
-    void RESET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                          U32 cmdSeq            //!< The command sequence number
-                          ) override;
-
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
 
