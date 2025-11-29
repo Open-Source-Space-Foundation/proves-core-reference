@@ -17,10 +17,9 @@ AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerC
     // Create //antenna directory if it doesn't exist
     const char* antennaDir = "//antenna";
     Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(antennaDir, false);
-    if (dirStatus == Os::FileSystem::OP_OK) {
-        printk("[AntennaDeployer] Created directory %s\n", antennaDir);
-    } else {
-        printk("[AntennaDeployer] Failed to create directory %s, status=%d\n", antennaDir, dirStatus);
+    if (dirStatus != Os::FileSystem::OP_OK) {
+        Fw::LogStringArg logStringDirName(antennaDir);
+        this->log_WARNING_HI_AntennaDirectoryCreateError();
     }
 }
 
@@ -79,11 +78,7 @@ void AntennaDeployer ::distanceIn_handler(FwIndexType portNum, F32 distance, boo
 void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Check if antenna has already been deployed
     bool isDeployed = this->readDeploymentState();
-    printk("[AntennaDeployer] DEPLOY_cmdHandler: readDeploymentState() returned %d\n", isDeployed ? 1 : 0);
     if (isDeployed) {
-        printk(
-            "[AntennaDeployer] DEPLOY_cmdHandler: Antenna already deployed, emitting DeploymentAlreadyComplete "
-            "event\n");
         this->log_ACTIVITY_HI_DeploymentAlreadyComplete();
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
         return;
@@ -119,22 +114,15 @@ void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U3
 }
 
 void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
-    printk("[AntennaDeployer] SET_DEPLOYMENT_STATE_cmdHandler: called with deployed=%d\n", deployed ? 1 : 0);
-
     Fw::ParamValid is_valid;
     auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
     const char* path_str = file_path.toChar();
-    printk("[AntennaDeployer] SET_DEPLOYMENT_STATE_cmdHandler: file_path='%s'\n", path_str);
 
     if (deployed) {
-        printk("[AntennaDeployer] SET_DEPLOYMENT_STATE_cmdHandler: calling writeDeploymentState()\n");
         this->writeDeploymentState();
     } else {
-        printk("[AntennaDeployer] SET_DEPLOYMENT_STATE_cmdHandler: removing deployment state file\n");
         (void)Os::FileSystem::removeFile(path_str);
-        bool exists = Os::FileSystem::exists(path_str);
-        printk("[AntennaDeployer] SET_DEPLOYMENT_STATE_cmdHandler: after removeFile, file exists=%d\n", exists ? 1 : 0);
     }
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -337,13 +325,10 @@ bool AntennaDeployer ::readDeploymentState() {
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     const char* path_str = file_path.toChar();
-    printk("[AntennaDeployer] readDeploymentState: file_path='%s'\n", path_str);
 
     Os::File file;
     Os::File::Status status = file.open(path_str, Os::File::OPEN_READ);
     bool deployed = (status == Os::File::OP_OK);
-    printk("[AntennaDeployer] readDeploymentState: file.open(OPEN_READ) returned status=%d, deployed=%d\n", status,
-           deployed ? 1 : 0);
     (void)file.close();
     return deployed;
 }
@@ -354,29 +339,14 @@ void AntennaDeployer ::writeDeploymentState() {
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     const char* path_str = file_path.toChar();
-    printk("[AntennaDeployer] writeDeploymentState: file_path='%s'\n", path_str);
 
     Os::File file;
     Os::File::Status status = file.open(path_str, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
-    printk(
-        "[AntennaDeployer] writeDeploymentState: file.open(OPEN_CREATE, OVERWRITE) returned status=%d (0=OK, "
-        "1=DOESNT_EXIST, 2=NO_SPACE, 3=NO_PERMISSION, 11=OTHER_ERROR)\n",
-        status);
-
-    if (status != Os::File::OP_OK) {
-        printk("[AntennaDeployer] writeDeploymentState: errno=%d (%s)\n", errno, strerror(errno));
-    }
 
     if (status == Os::File::OP_OK) {
         U8 marker = 1;
         FwSizeType size = sizeof(marker);
         Os::File::Status write_status = file.write(&marker, size);
-        printk("[AntennaDeployer] writeDeploymentState: file.write() returned status=%d, size=%u\n", write_status,
-               size);
-
-        if (write_status != Os::File::OP_OK) {
-            printk("[AntennaDeployer] writeDeploymentState: write failed, errno=%d (%s)\n", errno, strerror(errno));
-        }
     }
 
     (void)file.close();

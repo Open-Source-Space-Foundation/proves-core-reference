@@ -87,6 +87,11 @@ module Components {
           severity activity high \
           format "Antenna deployment skipped - antenna already deployed"
 
+        @ Emitted when the antenna directory creation fails during initialization
+        event AntennaDirectoryCreateError() \
+          severity warning high \
+          format "Failed to create antenna directory"
+
         ######################################################################
         # Ports
         ######################################################################
