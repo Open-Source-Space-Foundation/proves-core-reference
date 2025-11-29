@@ -28,6 +28,9 @@ STATE_ERROR = 3
 # Set global state
 state = STATE_IDLE
 
+# Track current framesize
+current_framesize = sensor.QVGA  # Default to QVGA
+
 # --- Camera Setup ---
 # Add delay for hardware to stabilize when running standalone
 time.sleep_ms(500)
@@ -231,7 +234,7 @@ def change_framesize(framesize_constant, framesize_name):
     Safely change camera framesize.
     Returns True on success, False on failure.
     """
-    global state
+    global state, current_framesize
     if state != STATE_IDLE:
         print("WARNING: Cannot change framesize while not idle")
         return False
@@ -239,6 +242,7 @@ def change_framesize(framesize_constant, framesize_name):
     try:
         print("Changing framesize to {}...".format(framesize_name))
         sensor.set_framesize(framesize_constant)
+        current_framesize = framesize_constant  # Update global tracking
         
         # Re-initialize camera with new framesize
         try:
@@ -290,19 +294,44 @@ def snap_handler():
         img = sensor.snapshot()
 
         # Get JPEG bytes directly from image object
-        # Convert RGB565 image to JPEG format in memory
+        # Adjust quality based on framesize to avoid memory issues
+        global current_framesize
+        if current_framesize == sensor.HD:
+            # HD is large, use lower quality to reduce memory usage
+            quality = 95
+        else:
+            # QVGA and smaller can use higher quality
+            quality = 100
+        
         jpeg_params = {
-            'quality': 100,
+            'quality': quality,
             'encode_for_ide': False
         }
-        # jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
+
+        print("Snapping with quality: {}".format(quality))
+        
+        # Try to convert to JPEG, with fallback to lower quality if needed
+        jpeg_bytes = None
         try:
             jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
         except Exception as e:
-            print("ERROR: Failed to get JPEG data from image", e)
-            red.on(); time.sleep_ms(200); red.off()
-            state = STATE_ERROR
-            return
+            error_msg = str(e)
+            # If frame buffer error and we're using high quality, try lower quality
+            if "frame buffer" in error_msg.lower() and quality > 50:
+                print("WARNING: High quality failed, trying lower quality (50)...")
+                try:
+                    jpeg_params['quality'] = 50
+                    jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
+                except Exception as e2:
+                    print("ERROR: Failed to get JPEG data even at lower quality:", e2)
+                    red.on(); time.sleep_ms(200); red.off()
+                    state = STATE_ERROR
+                    return
+            else:
+                print("ERROR: Failed to get JPEG data from image:", e)
+                red.on(); time.sleep_ms(200); red.off()
+                state = STATE_ERROR
+                return
         
         if not jpeg_bytes or len(jpeg_bytes) == 0:
             print("ERROR: Failed to get JPEG data from image")
