@@ -206,7 +206,7 @@ void MosaicHandler ::processProtocolBuffer() {
         }
     }
 
-    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(0);  // DEBUG
+    this->log_ACTIVITY_HI_GammaReadingSizeExtracted(headerStart);  // DEBUG
 
     if (headerStart == -1) {
         // No header found - if buffer is nearly full, discard old data

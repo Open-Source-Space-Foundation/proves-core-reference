@@ -116,11 +116,11 @@ class MosaicHandler final : public MosaicHandlerComponentBase {
 
     // Protocol constants for image transfer
     // Protocol: <GAMMA_START><SIZE>[4-byte uint32]</SIZE>[gamma reading data]<GAMMA_END>
-    static constexpr U32 GAMMA_START_LEN = 11;    // strlen("<GAMMA_START>")
+    static constexpr U32 GAMMA_START_LEN = 13;    // strlen("<GAMMA_START>")
     static constexpr U32 SIZE_TAG_LEN = 6;        // strlen("<SIZE>")
     static constexpr U32 SIZE_VALUE_LEN = 4;      // 4-byte little-endian uint32
     static constexpr U32 SIZE_CLOSE_TAG_LEN = 7;  // strlen("</SIZE>")
-    static constexpr U32 GAMMA_END_LEN = 9;       // strlen("<GAMMA_END>")
+    static constexpr U32 GAMMA_END_LEN = 11;      // strlen("<GAMMA_END>")
 
     // Derived constants
     static constexpr U32 HEADER_SIZE =
