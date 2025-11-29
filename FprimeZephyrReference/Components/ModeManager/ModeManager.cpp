@@ -134,9 +134,6 @@ void ModeManager ::loadState() {
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
         this->turnOnComponents();
-
-        // Create the file with default state if it doesn't exist
-        this->saveState();
     }
 }
 
