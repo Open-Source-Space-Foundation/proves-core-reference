@@ -47,6 +47,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
+  instance modeManager: Components.ModeManager base id 0x10040000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 16
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -93,17 +98,17 @@ module ReferenceDeployment {
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
-  instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10040000
+  instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10050000
 
-  instance sband : Components.SBand base id 0x10041000
+  instance sband : Components.SBand base id 0x10051000
 
-  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10042000
+  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10052000
 
-  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10043000
+  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10053000
 
-  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10044000
+  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10054000
 
-  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10045000
+  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10055000
 
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 

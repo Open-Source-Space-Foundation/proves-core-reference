@@ -25,8 +25,57 @@ rtcManager = "ReferenceDeployment.rtcManager"
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
-    set_time(fprime_test_api)
+    fprime_test_api.send_command(f"{resetManager}.COLD_RESET")
+    # Wait for system to restart after reset
+    fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
+    # Add a small delay to ensure Authenticate component is fully initialized
+    time.sleep(0.5)
+    # Wait for command dispatcher to be ready by sending a NO_OP command
+    fprime_test_api.send_and_assert_command(
+        command=f"{cmdDispatch}.CMD_NO_OP", timeout=10
+    )
+
+    # Try to set the time and check if RTC is ready
+    fprime_test_api.clear_histories()
+
+    # Send TIME_SET command and check for DeviceNotReady event
+    dt = datetime.now(timezone.utc)
+    time_data = dict(
+        Year=dt.year,
+        Month=dt.month,
+        Day=dt.day,
+        Hour=dt.hour,
+        Minute=dt.minute,
+        Second=dt.second,
+    )
+    time_data_str = json.dumps(time_data)
+    fprime_test_api.send_command(f"{rtcManager}.TIME_SET", [time_data_str])
+
+    # Wait a bit for the command to process and check for DeviceNotReady event
+    device_not_ready_event = fprime_test_api.await_event(
+        f"{rtcManager}.DeviceNotReady", timeout=2
+    )
+
+    if device_not_ready_event is not None:
+        # RTC is not ready, perform a soft reset
+        fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+        # Wait for system to restart after reset
+        fprime_test_api.assert_event("CdhCore.version.FrameworkVersion", timeout=10)
+        # Add a small delay to ensure Authenticate component is fully initialized
+        time.sleep(0.5)
+        # Wait for command dispatcher to be ready by sending a NO_OP command
+        fprime_test_api.send_and_assert_command(
+            command=f"{cmdDispatch}.CMD_NO_OP", timeout=10
+        )
+        # Try setting time again after reset
+        fprime_test_api.clear_histories()
+        set_time(fprime_test_api)
+    else:
+        # RTC is ready, verify the command completed successfully
+        # Wait for OpCodeDispatched and OpCodeCompleted events
+        fprime_test_api.assert_event(f"{cmdDispatch}.OpCodeDispatched", timeout=2)
+        fprime_test_api.assert_event(f"{cmdDispatch}.OpCodeCompleted", timeout=2)
+
     fprime_test_api.clear_histories()
 
 
