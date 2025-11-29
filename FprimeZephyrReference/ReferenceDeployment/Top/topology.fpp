@@ -166,15 +166,14 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      # rateGroup1Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> modeManager.run
 
     }
 
