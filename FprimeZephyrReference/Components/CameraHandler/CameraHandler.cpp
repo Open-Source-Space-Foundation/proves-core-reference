@@ -58,14 +58,6 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
     this->tlmWrite_IsReceiving(m_receiving);
     this->tlmWrite_FileOpen(m_fileOpen);
 
-    // DEBUG: Log first 8 bytes ONLY if not receiving (reduces load during transfer)
-    if (!m_receiving && dataSize >= 8) {
-        this->log_ACTIVITY_LO_RawDataDump(
-            data[0], data[1], data[2], data[3],
-            data[4], data[5], data[6], data[7]
-        );
-    }
-
     if (m_receiving && m_fileOpen) {
         // Currently receiving image data - write directly to file
         
@@ -106,9 +98,20 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         this->tlmWrite_BytesReceived(m_bytes_received);
         this->tlmWrite_ExpectedSize(m_expected_size);
         
-        // Log progress less frequently to reduce system load (every 512 bytes)
-        if ((m_bytes_received % 512) < 64) {
-            this->log_ACTIVITY_LO_ImageTransferProgress(m_bytes_received, m_expected_size);
+        // Emit progress events at 25%, 50%, 75% milestones
+        if (m_expected_size > 0) {
+            U8 currentPercent = static_cast<U8>((static_cast<U64>(m_bytes_received) * 100) / m_expected_size);
+            
+            if (currentPercent >= 25 && m_lastMilestone < 25) {
+                this->log_ACTIVITY_HI_ImageTransferProgress(25, m_bytes_received, m_expected_size);
+                m_lastMilestone = 25;
+            } else if (currentPercent >= 50 && m_lastMilestone < 50) {
+                this->log_ACTIVITY_HI_ImageTransferProgress(50, m_bytes_received, m_expected_size);
+                m_lastMilestone = 50;
+            } else if (currentPercent >= 75 && m_lastMilestone < 75) {
+                this->log_ACTIVITY_HI_ImageTransferProgress(75, m_bytes_received, m_expected_size);
+                m_lastMilestone = 75;
+            }
         }
         
     } else {
@@ -134,11 +137,6 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
                 memcpy(m_protocolBuffer, data, canFit);
                 m_protocolBufferSize = canFit;
             }
-        }
-
-        // Log what we have in protocol buffer for debugging
-        if (m_protocolBufferSize > 0) {
-            this->log_ACTIVITY_LO_ProtocolBufferDebug(m_protocolBufferSize, m_protocolBuffer[0]);
         }
 
         // Process protocol buffer to detect image headers/commands
@@ -197,19 +195,6 @@ bool CameraHandler ::accumulateProtocolData(const U8* data, U32 size) {
 void CameraHandler ::processProtocolBuffer() {
     // Protocol: <IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[image data]<IMG_END>
     
-    // Log parse attempt for debugging
-    if (m_protocolBufferSize > 0) {
-        this->log_ACTIVITY_LO_HeaderParseAttempt(m_protocolBufferSize);
-        
-        // Dump first 8 bytes for debugging
-        if (m_protocolBufferSize >= 8) {
-            this->log_ACTIVITY_LO_RawDataDump(
-                m_protocolBuffer[0], m_protocolBuffer[1], m_protocolBuffer[2], m_protocolBuffer[3],
-                m_protocolBuffer[4], m_protocolBuffer[5], m_protocolBuffer[6], m_protocolBuffer[7]
-            );
-        }
-    }
-
     // Search for <IMG_START> anywhere in the buffer (not just at position 0)
     I32 headerStart = -1;
     
@@ -244,9 +229,6 @@ void CameraHandler ::processProtocolBuffer() {
         U32 remaining = m_protocolBufferSize - static_cast<U32>(headerStart);
         memmove(m_protocolBuffer, &m_protocolBuffer[headerStart], remaining);
         m_protocolBufferSize = remaining;
-        
-        // Log that we found and moved the header
-        this->log_ACTIVITY_LO_ProtocolBufferDebug(m_protocolBufferSize, m_protocolBuffer[0]);
     }
     
     // Now check if we have the complete header (28 bytes minimum)
@@ -303,9 +285,7 @@ void CameraHandler ::processProtocolBuffer() {
         m_receiving = true;
         m_bytes_received = 0;
         m_expected_size = imageSize;
-        
-        // Log the extracted size
-        this->log_ACTIVITY_HI_ImageSizeExtracted(imageSize);
+        m_lastMilestone = 0;  // Reset milestone tracking for new transfer
         
         // Generate filename - save to root filesystem
         char filename[64];
@@ -325,7 +305,9 @@ void CameraHandler ::processProtocolBuffer() {
         }
         
         m_fileOpen = true;
-        this->log_ACTIVITY_LO_ImageHeaderReceived();
+        
+        // Log transfer started event
+        this->log_ACTIVITY_HI_ImageTransferStarted(imageSize);
         
         // Emit telemetry after opening file
         this->tlmWrite_BytesReceived(m_bytes_received);
@@ -411,9 +393,9 @@ void CameraHandler ::finalizeImageTransfer() {
     // Increment success counter
     m_images_saved++;
     
-    // Log success
+    // Log transfer complete event with path and size
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
-    this->log_ACTIVITY_HI_DataReceived(m_bytes_received, pathArg);
+    this->log_ACTIVITY_HI_ImageTransferComplete(pathArg, m_bytes_received);
     
     // NOTE: PayloadCom sends ACK automatically - no need to send here
 
@@ -421,6 +403,7 @@ void CameraHandler ::finalizeImageTransfer() {
     m_receiving = false;
     m_bytes_received = 0;
     m_expected_size = 0;
+    m_lastMilestone = 0;
     
     // Emit telemetry after finalizing
     this->tlmWrite_BytesReceived(m_bytes_received);
@@ -447,6 +430,7 @@ void CameraHandler ::handleFileError() {
     m_receiving = false;
     m_bytes_received = 0;
     m_expected_size = 0;
+    m_lastMilestone = 0;
     clearProtocolBuffer();
     
     // Emit telemetry after error handling

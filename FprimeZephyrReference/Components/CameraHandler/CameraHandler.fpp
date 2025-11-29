@@ -10,28 +10,20 @@ module Components {
         @ Send command to camera via PayloadCom
         sync command SEND_COMMAND(cmd: string)
 
-        # Events for protocol processing and file handling
+        # Events for command handling
         event CommandError(cmd: string) severity warning high format "Failed to send {} command"
 
         event CommandSuccess(cmd: string) severity activity high format "Command {} sent successfully"
 
-        event DataReceived(data: U8, path: string) severity activity high format "Stored {} bytes of payload data to {}"
+        # Events for image transfer (clean, minimal output)
+        @ Emitted when image transfer begins
+        event ImageTransferStarted($size: U32) severity activity high format "Image transfer started, expecting {} bytes"
 
-        event ImageHeaderReceived() severity activity low format "Received image header"
+        @ Emitted at 25%, 50%, 75% progress milestones
+        event ImageTransferProgress(percent: U8, received: U32, expected: U32) severity activity high format "Image transfer {}% complete ({}/{} bytes)"
 
-        event ImageSizeExtracted(imageSize: U32) severity activity high format "Image size from header: {} bytes"
-
-        event ImageTransferProgress(received: U32, expected: U32) severity activity low format "Transfer progress: {}/{} bytes"
-
-        event ChunkWritten(chunkSize: U32) severity activity low format "Wrote {} bytes to file"
-
-        event ImageDataOverflow() severity warning high format "Image data overflow - buffer full"
-
-        event ProtocolBufferDebug(bufSize: U32, firstByte: U8) severity activity low format "Protocol buffer: {} bytes, first: 0x{x}"
-
-        event HeaderParseAttempt(bufSize: U32) severity activity low format "Attempting header parse with {} bytes"
-
-        event RawDataDump(byte0: U8, byte1: U8, byte2: U8, byte3: U8, byte4: U8, byte5: U8, byte6: U8, byte7: U8) severity activity low format "Raw: [{x} {x} {x} {x} {x} {x} {x} {x}]"
+        @ Emitted when image transfer completes successfully
+        event ImageTransferComplete(path: string, $size: U32) severity activity high format "Image saved: {} ({} bytes)"
 
         # Telemetry for debugging image transfer state
         @ Number of bytes received so far in current image transfer

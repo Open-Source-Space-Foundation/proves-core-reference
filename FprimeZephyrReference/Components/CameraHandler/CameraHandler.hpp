@@ -123,6 +123,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;  // 21
     
     U32 m_expected_size = 0;  // Expected image size from header
+    U8 m_lastMilestone = 0;   // Last progress milestone emitted (0, 25, 50, 75)
 };
 
 }  // namespace Components
