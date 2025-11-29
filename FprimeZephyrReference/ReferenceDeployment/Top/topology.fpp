@@ -7,6 +7,7 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1_6Hz
   }
 
   topology ReferenceDeployment {
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    # instance rateGroup1_6Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -66,6 +68,27 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance tcaMonitor
+    instance muxChannel0Monitor
+    instance muxChannel1Monitor
+    instance muxChannel2Monitor
+    instance muxChannel3Monitor
+    instance muxChannel4Monitor
+    instance muxChannel5Monitor
+    instance muxChannel6Monitor
+    instance muxChannel7Monitor
+
+    # Face Board Instances
+    instance thermalManager
+    instance tmp112Face0Manager
+    instance tmp112Face1Manager
+    instance tmp112Face2Manager
+    instance tmp112Face3Manager
+    instance tmp112Face5Manager
+    instance tmp112BattCell1Manager
+    instance tmp112BattCell2Manager
+    instance tmp112BattCell3Manager
+    instance tmp112BattCell4Manager
     instance resetManager
     instance modeManager
 
@@ -157,7 +180,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
 
-      # Slow rate (1Hz) rate group
+      # Medium rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
@@ -170,9 +193,21 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
+      # rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run # Causing rate group to slip?
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> muxChannel0Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> muxChannel1Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> muxChannel2Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> muxChannel3Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> muxChannel4Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> muxChannel5Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[21] -> muxChannel7Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
+
+      # Slow rate (1/6 Hz) rate group
+      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
 
     }
 
@@ -183,13 +218,28 @@ module ReferenceDeployment {
 
     connections LoadSwitches {
       face4LoadSwitch.gpioSet -> gpioface4LS.gpioWrite
+      face4LoadSwitch.gpioGet -> gpioface4LS.gpioRead
+
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
+      face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
+      face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
+      face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
+      face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
+      face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
+      payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
+
       payloadBatteryLoadSwitch.gpioSet -> gpioPayloadBatteryLS.gpioWrite
+      payloadBatteryLoadSwitch.gpioGet -> gpioPayloadBatteryLS.gpioRead
     }
 
     connections BurnwireGpio {
@@ -227,6 +277,48 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
+
+    connections thermalMonitor {
+      thermalManager.tcaHealthGet -> tcaMonitor.healthGet
+
+      thermalManager.muxChannel0HealthGet -> muxChannel0Monitor.healthGet
+      thermalManager.face0LoadSwitchStateGet -> face0LoadSwitch.loadSwitchStateGet
+      thermalManager.face0Init -> tmp112Face0Manager.init
+      thermalManager.face0TempGet -> tmp112Face0Manager.temperatureGet
+
+      thermalManager.muxChannel1HealthGet -> muxChannel1Monitor.healthGet
+      thermalManager.face1LoadSwitchStateGet -> face1LoadSwitch.loadSwitchStateGet
+      thermalManager.face1Init -> tmp112Face1Manager.init
+      thermalManager.face1TempGet -> tmp112Face1Manager.temperatureGet
+
+      thermalManager.muxChannel2HealthGet -> muxChannel2Monitor.healthGet
+      thermalManager.face2LoadSwitchStateGet -> face2LoadSwitch.loadSwitchStateGet
+      thermalManager.face2Init -> tmp112Face2Manager.init
+      thermalManager.face2TempGet -> tmp112Face2Manager.temperatureGet
+
+      thermalManager.muxChannel3HealthGet -> muxChannel3Monitor.healthGet
+      thermalManager.face3LoadSwitchStateGet -> face3LoadSwitch.loadSwitchStateGet
+      thermalManager.face3Init -> tmp112Face3Manager.init
+      thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
+
+      thermalManager.muxChannel5HealthGet -> muxChannel5Monitor.healthGet
+      thermalManager.face5LoadSwitchStateGet -> face5LoadSwitch.loadSwitchStateGet
+      thermalManager.face5Init -> tmp112Face5Manager.init
+      thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
+
+      thermalManager.muxChannel4HealthGet -> muxChannel4Monitor.healthGet
+      thermalManager.battCell1Init -> tmp112BattCell1Manager.init
+      thermalManager.battCell1TempGet -> tmp112BattCell1Manager.temperatureGet
+
+      thermalManager.battCell2Init -> tmp112BattCell2Manager.init
+      thermalManager.battCell2TempGet -> tmp112BattCell2Manager.temperatureGet
+
+      thermalManager.battCell3Init -> tmp112BattCell3Manager.init
+      thermalManager.battCell3TempGet -> tmp112BattCell3Manager.temperatureGet
+
+      thermalManager.battCell4Init -> tmp112BattCell4Manager.init
+      thermalManager.battCell4TempGet -> tmp112BattCell4Manager.temperatureGet
     }
 
     connections ModeManager {

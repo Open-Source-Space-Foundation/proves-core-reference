@@ -42,14 +42,16 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
 Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
-    {getRateGroupPeriod(10), 0},  // 10Hz
-    {getRateGroupPeriod(1), 0},   // 1Hz
+    {getRateGroupPeriod(10), 0},  // 10Hz = 100ms
+    {getRateGroupPeriod(1), 0},   // 1Hz = 1s
+    {6000, 0}                     // 1/6 Hz = 6s
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
+U32 rateGroup1_6HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {6000};
 
 /**
  * \brief configure/setup components in project-specific way
@@ -65,12 +67,16 @@ void configureTopology() {
     // Rate groups require context arrays.
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
+    // rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
 
+    cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
+
+    // FC GPIO configuration
     gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 
-    cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
+    // Face load switch GPIO configuration
     gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
@@ -115,6 +121,25 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
+    tcaMonitor.configure(state.tca9548aDevice);
+    muxChannel0Monitor.configure(state.muxChannel0Device);
+    muxChannel1Monitor.configure(state.muxChannel1Device);
+    muxChannel2Monitor.configure(state.muxChannel2Device);
+    muxChannel3Monitor.configure(state.muxChannel3Device);
+    muxChannel4Monitor.configure(state.muxChannel4Device);
+    muxChannel5Monitor.configure(state.muxChannel5Device);
+    muxChannel7Monitor.configure(state.muxChannel7Device);
+
+    // Configure all 11 TMP112 temperature sensor managers
+    tmp112Face0Manager.configure(state.face0TempDevice);
+    tmp112Face1Manager.configure(state.face1TempDevice);
+    tmp112Face2Manager.configure(state.face2TempDevice);
+    tmp112Face3Manager.configure(state.face3TempDevice);
+    tmp112Face5Manager.configure(state.face5TempDevice);
+    tmp112BattCell1Manager.configure(state.battCell1TempDevice);
+    tmp112BattCell2Manager.configure(state.battCell2TempDevice);
+    tmp112BattCell3Manager.configure(state.battCell3TempDevice);
+    tmp112BattCell4Manager.configure(state.battCell4TempDevice);
 }
 
 void startRateGroups() {
