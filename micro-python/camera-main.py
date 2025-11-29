@@ -29,11 +29,29 @@ STATE_ERROR = 3
 state = STATE_IDLE
 
 # --- Camera Setup ---
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-# Keep existing framesize (your original used sensor.HD)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)  # allow auto-exposure/whitebalance to settle
+# Add delay for hardware to stabilize when running standalone
+time.sleep_ms(500)
+
+# Initialize camera with error handling for standalone operation
+try:
+    sensor.reset()
+    time.sleep_ms(100)  # Brief pause after reset
+    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_framesize(sensor.QVGA)
+
+    try:
+        sensor.skip_frames(n=30)  # Skip 30 frames to let auto-exposure settle
+    except RuntimeError as e:
+        # If skip_frames times out (common when running standalone), 
+        # just continue - the camera will initialize on first actual snapshot()
+        print("WARNING: skip_frames timed out (normal for standalone), camera will init on first capture")
+        time.sleep_ms(200)
+except Exception as e:
+    print("ERROR: Camera initialization failed:", e)
+    # Flash red LED to indicate camera init failure
+    for _ in range(5):
+        red.on(); time.sleep_ms(100); red.off(); time.sleep_ms(100)
+    raise  # Re-raise to stop execution if camera can't initialize
 
 
 # --- Utility functions ---
@@ -224,11 +242,18 @@ def snap_handler():
 
         # Get JPEG bytes directly from image object
         # Convert RGB565 image to JPEG format in memory
-        jpeg_params = {
-            'quality': 90,
-            'encode_for_ide': False
-        }
-        jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
+        # jpeg_params = {
+        #     'quality': 90,
+        #     'encode_for_ide': False
+        # }
+        # jpeg_bytes = img.to_jpeg(**jpeg_params).bytearray()
+        try:
+            jpeg_bytes = img.to_jpeg().bytearray()
+        except Exception as e:
+            print("ERROR: Failed to get JPEG data from image", e)
+            red.on(); time.sleep_ms(200); red.off()
+            state = STATE_ERROR
+            return
         
         if not jpeg_bytes or len(jpeg_bytes) == 0:
             print("ERROR: Failed to get JPEG data from image")
@@ -277,11 +302,24 @@ COMMANDS = {
     "ping": ping_handler
 }
 
+DEBUG = False
+
+if DEBUG:
+    from pyb import USB_VCP
+    try:
+        usb = USB_VCP()
+        usb.setinterrupt(-1)
+    except Exception as e:
+        print(f"Error using usb: {e}")
+
+
 while True:
     # Read line (non-blocking-ish due to UART timeout param)
     if state == STATE_IDLE:
         try:
             msg = uart.readline()
+            if DEBUG: 
+                msg = usb.readline()
         except Exception:
             msg = None
 
@@ -301,7 +339,8 @@ while True:
                 # Commands
                 cmd = text.lower()
                 handler = COMMANDS.get(cmd)
-                if handler is None:
+                if handler == None:
+                    print("Unknown command: '{}'".format(text))
                     # Unknown commands
                     pass
                 else:
