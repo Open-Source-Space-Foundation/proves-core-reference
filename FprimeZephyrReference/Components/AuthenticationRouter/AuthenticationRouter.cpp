@@ -6,9 +6,18 @@
 
 #include "FprimeZephyrReference/Components/AuthenticationRouter/AuthenticationRouter.hpp"
 
+#include <Fw/Log/LogString.hpp>
 #include <atomic>
+#include <cctype>
 #include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "Fw/Com/ComPacket.hpp"
 #include "Fw/FPrimeBasicTypes.hpp"
@@ -243,21 +252,50 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
 
 bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // TO DO: Fill this in with reading the file and searching through it (see authenticate)
-    std::string& opCode;
-    std::memcpy(OpCode, packetBuffer.getData() + 6, OP_CODE_LENGTH);
+    const U8* opCode;
+    // = packetBuffer.getData().substr(OP_CODE_START, OP_CODE_START + OP_CODE_LENGTH);
+
+    std::memcpy(opCode, packetBuffer.getData() + 6, OP_CODE_LENGTH);
+
+    // TO DO: Add a space to the opcode
 
     // Open file
-    Os::File::bypassOpCodesFile;
+    Os::File bypassOpCodesFile;
     Os::File::Status openStatus = bypassOpCodesFile.open(BYPASS_AUTHENTICATION_FILE, Os::File::OPEN_READ);
     // if the file does not exist return false; TO DO CHECK WITH ERROR CHECKING
     if (openStatus != Os::File::OP_OK) {
         this->log_WARNING_HI_FileOpenError(openStatus);
-        return config;
+        return false;  // TO DO: Check what we want if the uploaded file isn't there
+    }
+
+    FwSizeType fileSize = 0;
+    Os::File::Status sizeStatus = bypassOpCodesFile.size(fileSize);
+    if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
+        bypassOpCodesFile.close();
+        this->log_WARNING_HI_FileOpenError(sizeStatus);
+        return false;
     }
 
     // check if opcode is in file
+    std::string fileContents;
+    fileContents.resize(static_cast<size_t>(fileSize), '\0');
+    FwSizeType bytesToRead = fileSize;
+    Os::File::Status readStatus =
+        bypassOpCodesFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
+    bypassOpCodesFile.close();
 
-    return true;
+    if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
+        this->log_WARNING_HI_FileOpenError(readStatus);
+        return false;
+    }
+
+    // find a line that contains the opcode
+    size_t pos = fileContents.find(opCode.str());
+    if (pos != std::string::npos) {
+        return true;
+    }
+
+    return false;
 }
 
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,

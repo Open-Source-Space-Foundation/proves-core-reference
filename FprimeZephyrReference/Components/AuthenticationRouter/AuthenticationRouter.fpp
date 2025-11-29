@@ -111,7 +111,7 @@ module Svc {
 
         event FileOpenError(openStatus: U8) \
             severity warning high \
-            format "File Open Error for BypassOpCodes file. No Opcodes will be Bypassed"
+            format "File Open Error {} for BypassOpCodes file. No Opcodes will be Bypassed"
 
         @ Telemetry Channel to commit the time of the last command packet
         telemetry LastCommandPacketTime : U64
