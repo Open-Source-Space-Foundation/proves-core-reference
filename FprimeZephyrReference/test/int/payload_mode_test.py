@@ -53,8 +53,11 @@ MODE_TELEMETRY_PACKET_ID = "1"  # ModeManager telemetry (CurrentMode, etc.)
 VOLTAGE_TELEMETRY_PACKET_ID = "2"  # INA219 voltage telemetry
 LOAD_SWITCH_TELEMETRY_PACKET_ID = "9"  # Load switch telemetry (IsOn states)
 
-# Voltage threshold for payload mode auto-exit (must match LOW_VOLTAGE_THRESHOLD in ModeManager.hpp)
+# Voltage threshold for payload mode auto-exit (must match ModeManager.hpp constants)
 LOW_VOLTAGE_THRESHOLD = 7.2  # Volts
+LOW_VOLTAGE_DEBOUNCE_SECONDS = (
+    10  # Consecutive seconds below threshold before auto-exit
+)
 
 
 @pytest.fixture(autouse=True)
@@ -348,7 +351,7 @@ def test_payload_06_voltage_monitoring_active(
     Verifies:
     - System voltage telemetry is available
     - Voltage is above threshold (no auto-exit should occur)
-    - Mode remains in PAYLOAD_MODE after 5 seconds (no false triggers)
+    - Mode remains in PAYLOAD_MODE after 11 seconds (no false triggers)
 
     This test verifies the infrastructure works without requiring
     manual voltage control. The actual low-voltage exit is tested
@@ -381,8 +384,8 @@ def test_payload_06_voltage_monitoring_active(
     # If voltage is actually low, auto-exit is correct behavior.
     print(f"Current system voltage: {voltage}V (threshold: {LOW_VOLTAGE_THRESHOLD}V)")
 
-    # Wait 11 seconds
-    time.sleep(11)
+    # Wait for debounce period + 1 second margin to verify no false triggers
+    time.sleep(LOW_VOLTAGE_DEBOUNCE_SECONDS + 1)
 
     # Check final mode
     proves_send_and_assert_command(
@@ -422,13 +425,13 @@ def test_payload_07_auto_exit_low_voltage(
 
     MANUAL TEST - requires ability to control battery voltage:
     1. Enter payload mode
-    2. Lower battery voltage below 7.2V for 10+ seconds
+    2. Lower battery voltage below LOW_VOLTAGE_THRESHOLD for LOW_VOLTAGE_DEBOUNCE_SECONDS
     3. Verify AutoPayloadModeExit event is emitted
     4. Verify mode returns to NORMAL (2)
     5. Verify ALL switches (faces 0-5 AND payload 6-7) are OFF
 
     Expected behavior:
-    - Voltage must be below 7.2V for 10 consecutive seconds (1Hz checks)
+    - Voltage must be below threshold for debounce period (1Hz checks)
     - Invalid voltage readings also count as faults
     - AutoPayloadModeExit event emitted with voltage value (0.0V if invalid)
     - Mode changes to NORMAL
@@ -447,9 +450,9 @@ def test_payload_07_auto_exit_low_voltage(
     )
     assert mode_result.get_val() == 3, "Should be in PAYLOAD_MODE"
 
-    # --- MANUAL STEP: Lower voltage below 7.2V for 10+ seconds ---
+    # --- MANUAL STEP: Lower voltage below threshold for debounce period ---
     # Wait for automatic exit (would need voltage control here)
-    time.sleep(15)
+    time.sleep(LOW_VOLTAGE_DEBOUNCE_SECONDS + 5)  # Extra margin for manual test
 
     # Verify AutoPayloadModeExit event
     fprime_test_api.assert_event(f"{component}.AutoPayloadModeExit", timeout=5)

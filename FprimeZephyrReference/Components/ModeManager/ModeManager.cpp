@@ -162,6 +162,9 @@ void ModeManager ::ENTER_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     // Check if already in payload mode
     if (this->m_mode == SystemMode::PAYLOAD_MODE) {
         // Already in payload mode - success (idempotent)
+        // Reset low voltage counter to ensure consistent state (operator may be
+        // re-sending command intentionally to reset any accumulated fault count)
+        this->m_lowVoltageCounter = 0;
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
         return;
     }
