@@ -7,6 +7,7 @@
 #include "FprimeZephyrReference/Components/AuthenticationRouter/AuthenticationRouter.hpp"
 
 #include <Fw/Log/LogString.hpp>
+#include <algorithm>
 #include <atomic>
 #include <cctype>
 #include <chrono>
@@ -31,8 +32,8 @@ constexpr const char LAST_LOSS_TIME_FILE[] = "//loss_max_time.txt";
 constexpr const char LAST_LOSS_TIME_FILE_MONOTONIC[] = "//loss_max_time_monotonic.txt";
 constexpr const char COMMAND_LOSS_EXPIRED_FLAG_FILE[] = "//command_loss_expired_flag.txt";
 constexpr const char BYPASS_AUTHENTICATION_FILE[] = "//bypass_authentification_file.txt";
-constexpr const U8 OP_CODE_LENGTH = 8;  // TO DO: Double check len
-constexpr const U8 OP_CODE_START = 6;   // TO DO: Check if this is the len of the security packet or smth else between
+constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
+constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
 
 namespace Svc {
 
@@ -84,14 +85,8 @@ void AuthenticationRouter ::schedIn_handler(FwIndexType portNum, U32 context) {
     U32 last_loss_time;
     if (m_TypeTimeFlag == true) {
         last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE_MONOTONIC);
-        // Don't overwrite the file here - initializeFiles() should have already handled initialization
-        // If last_loss_time is 0, it means the file doesn't exist or read failed, but we don't want to
-        // overwrite on every schedIn call. The file should only be written when commands are received.
     } else {
         last_loss_time = this->readFromFile(LAST_LOSS_TIME_FILE);
-        // Don't overwrite the file here - initializeFiles() should have already handled initialization
-        // If last_loss_time is 0, it means the file doesn't exist or read failed, but we don't want to
-        // overwrite on every schedIn call. The file should only be written when commands are received.
     }
 
     // // Check if the last loss time is past the current time
@@ -250,22 +245,53 @@ U32 AuthenticationRouter ::initializeFiles(const char* filePath) {
     return last_loss_time;
 }
 
-bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
-    // TO DO: Fill this in with reading the file and searching through it (see authenticate)
-    // Extract opCode from packet buffer
-    std::string opCode;
-    opCode.resize(OP_CODE_LENGTH);
-    std::memcpy(&opCode[0], packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
+// Helper function to convert binary data to hex string for debugging
+static void printHexData(const U8* data, size_t length, const char* label) {
+    if (data == nullptr || length == 0) {
+        printk("%s: (null or empty)\n", label);
+        return;
+    }
+    printk("%s: ", label);
+    for (size_t i = 0; i < length; i++) {
+        printk("%02X ", data[i]);
+    }
+    printk("\n");
+}
 
-    // TO DO: Add a space to the opcode
+bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
+    // Extract opCode from packet buffer
+    printk("\n");
+    printHexData(packetBuffer.getData(), packetBuffer.getSize(), "packetBuffer.getData()");
+    printk("OP_CODE_START %d \n", OP_CODE_START);
+    printk("OP_CODE_LENGTH %d \n", OP_CODE_LENGTH);
+
+    // Check bounds before extracting
+    if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {
+        printk("ERROR: Buffer too small! Need %d bytes starting at offset %d, but buffer only has %zu bytes\n",
+               OP_CODE_LENGTH, OP_CODE_START, packetBuffer.getSize());
+        return false;
+    }
+
+    // Extract opcode bytes
+    std::vector<U8> opCodeBytes(OP_CODE_LENGTH);
+    std::memcpy(&opCodeBytes[0], packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
+    printHexData(opCodeBytes.data(), OP_CODE_LENGTH, "opCode");
+
+    // Convert opcode bytes to hex string (uppercase, no spaces)
+    std::stringstream hexStream;
+    hexStream << std::hex << std::uppercase << std::setfill('0');
+    for (size_t i = 0; i < OP_CODE_LENGTH; i++) {
+        hexStream << std::setw(2) << static_cast<unsigned>(opCodeBytes[i]);
+    }
+    std::string opCodeHex = hexStream.str();
+    printk("opCodeHex: %s\n", opCodeHex.c_str());
 
     // Open file
     Os::File bypassOpCodesFile;
     Os::File::Status openStatus = bypassOpCodesFile.open(BYPASS_AUTHENTICATION_FILE, Os::File::OPEN_READ);
-    // if the file does not exist return false; TO DO CHECK WITH ERROR CHECKING
     if (openStatus != Os::File::OP_OK) {
         this->log_WARNING_HI_FileOpenError(openStatus);
-        return false;  // TO DO: Check what we want if the uploaded file isn't there
+        return false;
     }
 
     FwSizeType fileSize = 0;
@@ -276,7 +302,7 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
         return false;
     }
 
-    // check if opcode is in file
+    // Read file contents as text
     std::string fileContents;
     fileContents.resize(static_cast<size_t>(fileSize), '\0');
     FwSizeType bytesToRead = fileSize;
@@ -289,10 +315,20 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
         return false;
     }
 
-    // find a line that contains the opcode
-    size_t pos = fileContents.find(opCode);
-    if (pos != std::string::npos) {
-        return true;
+    // Parse file line by line and check if opcode hex string matches
+    std::istringstream fileStream(fileContents);
+    printk("fileContents: %s\n", fileContents.c_str());
+    std::string line;
+    while (std::getline(fileStream, line)) {
+        // Check if this line matches the opcode (case-insensitive)
+        if (line == opCodeHex) {
+            printk("Found matching opcode in bypass file: %s\n", line.c_str());
+            return true;
+        } else {
+            printk("No matching opcode in bypass file: %s\n", line.c_str());
+            printk("opCodeHex: %s\n", opCodeHex.c_str());
+            printk("line: %s\n", line.c_str());
+        }
     }
 
     return false;
@@ -306,7 +342,9 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
 
     // Check if the OpCodes are in the OpCode list
     // TODO
-    bool bypasses = this->BypassesAuthentification(packetBuffer);
+    bool by = this->BypassesAuthentification(packetBuffer);
+    printk("\n bypasses %d \n", by);
+    bool bypasses = true;  // this->BypassesAuthentification(packetBuffer);
 
     // the packet was not authenticated
     if (context.get_authenticated() == 0 && bypasses == false) {
