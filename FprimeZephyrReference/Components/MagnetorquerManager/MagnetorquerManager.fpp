@@ -1,4 +1,4 @@
-module Drv {
+module Components {
     # Making the array 10 elements in case of any future expansion
     array InputArray = [10] InputStruct
     struct InputStruct {
@@ -12,7 +12,7 @@ module Drv {
     port SetDisabled()
 }
 
-module Drv {
+module Components {
     @ Component for F Prime FSW framework.
     passive component MagnetorquerManager {
 

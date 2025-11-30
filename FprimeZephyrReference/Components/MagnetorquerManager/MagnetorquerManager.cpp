@@ -4,7 +4,7 @@
 // \brief  cpp file for MagnetorquerManager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/MagnetorquerManager/MagnetorquerManager.hpp"
+#include "FprimeZephyrReference/Components/MagnetorquerManager/MagnetorquerManager.hpp"
 
 #include <errno.h>
 
@@ -16,7 +16,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-namespace Drv {
+namespace Components {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -75,12 +75,12 @@ void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
     }
 }
 
-void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) {
+void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, const Components::InputArray& value) {
     this->enabled = true;
 
     // Loop through 10 times to match InputArray size in fpp type.
     for (int i = 0; i < 10; i++) {
-        const Drv::InputStruct& entry = value[i];
+        const Components::InputStruct& entry = value[i];
         std::string key = entry.get_key().toChar();
         bool enabled = entry.get_value();
 
@@ -107,4 +107,4 @@ void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
     }
 }
 
-}  // namespace Drv
+}  // namespace Components

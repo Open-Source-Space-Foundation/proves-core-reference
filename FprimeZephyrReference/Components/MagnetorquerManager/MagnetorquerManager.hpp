@@ -4,19 +4,19 @@
 // \brief  hpp file for MagnetorquerManager component implementation class
 // ======================================================================
 
-#ifndef Drv_MagnetorquerManager_HPP
-#define Drv_MagnetorquerManager_HPP
+#ifndef Components_MagnetorquerManager_HPP
+#define Components_MagnetorquerManager_HPP
 
 #include <map>
 #include <string>
 
-#include "FprimeZephyrReference/Components/Drv/MagnetorquerManager/MagnetorquerManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/MagnetorquerManager/MagnetorquerManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/haptics/drv2605.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 
-namespace Drv {
+namespace Components {
 
 class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
   public:
@@ -43,13 +43,13 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
     union drv2605_config_data config_data;
 
     // Port handler implementations
-    void SetMagnetorquers_handler(const FwIndexType portNum, const Drv::InputArray& value) override;
+    void SetMagnetorquers_handler(const FwIndexType portNum, const Components::InputArray& value) override;
     void SetDisabled_handler(const FwIndexType portNum) override;
 
     // Local variables
     bool enabled = false;
     std::map<std::string, bool> enabled_faces;
 };
-}  // namespace Drv
+}  // namespace Components
 
 #endif

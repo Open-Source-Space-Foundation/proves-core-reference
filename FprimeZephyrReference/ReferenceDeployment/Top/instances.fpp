@@ -142,6 +142,6 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-  instance magnetorquerManager: Drv.MagnetorquerManager base id 0x10041000
+  instance magnetorquerManager: Components.MagnetorquerManager base id 0x10041000
 
 }
