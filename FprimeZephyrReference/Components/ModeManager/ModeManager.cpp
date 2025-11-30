@@ -249,10 +249,14 @@ void ModeManager ::loadState() {
                 // Restore physical hardware state to match loaded mode
                 if (this->m_mode == SystemMode::HIBERNATION_MODE) {
                     // Woke from dormant sleep - enter wake window
+                    // Note: Hibernation counters (cycleCount, totalSeconds) were already
+                    // incremented in enterDormantSleep() BEFORE the dormant sleep and saved
+                    // to persistent storage. We're restoring those pre-incremented values.
                     // Keep all load switches OFF - we're in minimal power mode
                     this->turnOffNonCriticalComponents();
 
                     // Start wake window (radio is already initializing in Main.cpp)
+                    // startWakeWindow() only logs an event and sets up state, no counter changes
                     this->startWakeWindow();
                 } else if (this->m_mode == SystemMode::SAFE_MODE) {
                     // Turn off non-critical components to match safe mode state
