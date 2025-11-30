@@ -47,7 +47,7 @@ classDiagram
 
 | Name | Type | Description |
 |---|---:|---|
-| IsOn | Fw.On | Current power state; written after commands. |
+| IsOn | Fw.On | Current power state; written after commands. Note: Reports ON only after a stabilization delay (default 1s) following the turn-on command. |
 
 ### Events
 
@@ -65,7 +65,7 @@ The component logs the `StatusChanged` event whenever the switch transitions due
 | gpioGet | output | Drv.GpioRead | Used to read the physical GPIO state. |
 | turnOn | input (sync) | Fw.Signal | Turns on the load switch. |
 | turnOff | input (sync) | Fw.Signal | Turns off the load switch. |
-| loadSwitchStateGet | input (sync) | loadSwitchStateGet | Returns the current state of the load switch (Fw::On). |
+| loadSwitchStateGet | input (sync) | loadSwitchStateGet | Returns the current state of the load switch (Fw::On). Note: Returns ON only after a stabilization delay (default 1s) following the turn-on command. |
 
 ## Requirements
 
@@ -75,7 +75,7 @@ The component logs the `StatusChanged` event whenever the switch transitions due
 | Control via Port | The component shall allow turning the load switch on and off via input ports `turnOn` and `turnOff`. | Verify `turnOn` and `turnOff` port calls change the GPIO state and telemetry. |
 | State Telemetry | The component shall report the current state of the load switch via the `IsOn` telemetry channel. | Integration test |
 | State Event | The component shall emit a `StatusChanged` event when the load switch state changes. | Verify `StatusChanged` event is emitted upon state transitions. |
-| State Query | The component shall provide the current state of the load switch via the `loadSwitchStateGet` port. | Downstream component testing |
+| State Query | The component shall provide the current state of the load switch via the `loadSwitchStateGet` port. The state shall report ON only after a configured stabilization delay. | Downstream component testing |
 | GPIO Control | The component shall control the physical GPIO pin corresponding to the load switch using the `gpioSet` port. | Downstream component testing |
 
 ## Change Log
@@ -84,4 +84,4 @@ The component logs the `StatusChanged` event whenever the switch transitions due
 |---|---|
 | 10-22-2025 | Sarah, Kevin, and MoMata's first commit |
 | 11-07-2025 | Updated SDD to match implementation in `LoadSwitch.cpp/.hpp/.fpp` (commands, telemetry, event, ports, reset behavior). |
-| 11-30-2025 | Added `loadSwitchStateGet` port and updated class diagram. Removed Reset capability. |
+| 11-30-2025 | Added `loadSwitchStateGet` port and updated class diagram. Removed Reset capability. Added note about stabilization delay for state reporting. |
