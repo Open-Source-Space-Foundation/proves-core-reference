@@ -102,6 +102,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
     ComCcsdsUart.authenticate.CurrentSequenceNumber
+    ReferenceDeployment.amateurRadio.count_names
 
   }
 

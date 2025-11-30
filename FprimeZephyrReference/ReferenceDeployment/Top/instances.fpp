@@ -142,4 +142,6 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
+  instance amateurRadio: Components.AmateurRadio base id 0x10041000
+
 }

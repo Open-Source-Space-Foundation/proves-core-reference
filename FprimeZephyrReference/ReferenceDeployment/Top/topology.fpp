@@ -49,6 +49,7 @@ module ReferenceDeployment {
     instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
+    instance amateurRadio
     # For UART sideband communication
     instance comDriver
 
