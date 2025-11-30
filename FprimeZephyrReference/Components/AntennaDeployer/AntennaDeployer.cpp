@@ -1,7 +1,11 @@
 #include "FprimeZephyrReference/Components/AntennaDeployer/AntennaDeployer.hpp"
 
+#include <cerrno>
+#include <cstring>
+
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
+#include <zephyr/kernel.h>
 
 namespace Components {
 
@@ -9,7 +13,15 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {}
+AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {
+    // Create //antenna directory if it doesn't exist
+    const char* antennaDir = "//antenna";
+    Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(antennaDir, false);
+    if (dirStatus != Os::FileSystem::OP_OK) {
+        Fw::LogStringArg logStringDirName(antennaDir);
+        this->log_WARNING_HI_AntennaDirectoryCreateError();
+    }
+}
 
 AntennaDeployer ::~AntennaDeployer() {}
 
@@ -65,7 +77,8 @@ void AntennaDeployer ::distanceIn_handler(FwIndexType portNum, F32 distance, boo
 
 void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Check if antenna has already been deployed
-    if (this->readDeploymentState()) {
+    bool isDeployed = this->readDeploymentState();
+    if (isDeployed) {
         this->log_ACTIVITY_HI_DeploymentAlreadyComplete();
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
         return;
@@ -101,13 +114,15 @@ void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U3
 }
 
 void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
+    Fw::ParamValid is_valid;
+    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    const char* path_str = file_path.toChar();
+
     if (deployed) {
         this->writeDeploymentState();
     } else {
-        Fw::ParamValid is_valid;
-        auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
-        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-        (void)Os::FileSystem::removeFile(file_path.toChar());
+        (void)Os::FileSystem::removeFile(path_str);
     }
 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -309,8 +324,10 @@ bool AntennaDeployer ::readDeploymentState() {
     auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
+    const char* path_str = file_path.toChar();
+
     Os::File file;
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
+    Os::File::Status status = file.open(path_str, Os::File::OPEN_READ);
     bool deployed = (status == Os::File::OP_OK);
     (void)file.close();
     return deployed;
@@ -321,14 +338,28 @@ void AntennaDeployer ::writeDeploymentState() {
     auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
+    const char* path_str = file_path.toChar();
+
     Os::File file;
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    Os::File::Status status = file.open(path_str, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+
     if (status == Os::File::OP_OK) {
         U8 marker = 1;
         FwSizeType size = sizeof(marker);
-        (void)file.write(&marker, size);
+        Os::File::Status write_status = file.write(&marker, size);
     }
+
     (void)file.close();
+
+    // Verify file exists after writing
+    bool exists = Os::FileSystem::exists(path_str);
+    printk("[AntennaDeployer] writeDeploymentState: after close, file exists=%d\n", exists ? 1 : 0);
+
+    if (!exists && status == Os::File::OP_OK) {
+        printk(
+            "[AntennaDeployer] writeDeploymentState: WARNING - file.open() succeeded but file doesn't exist after "
+            "close!\n");
+    }
 }
 
 }  // namespace Components

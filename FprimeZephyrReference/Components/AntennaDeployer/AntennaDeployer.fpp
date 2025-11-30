@@ -87,6 +87,11 @@ module Components {
           severity activity high \
           format "Antenna deployment skipped - antenna already deployed"
 
+        @ Emitted when the antenna directory creation fails during initialization
+        event AntennaDirectoryCreateError() \
+          severity warning high \
+          format "Failed to create antenna directory"
+
         ######################################################################
         # Ports
         ######################################################################
@@ -127,7 +132,7 @@ module Components {
         param INVALID_THRESHOLD_BOTTOM_CM: F32 default 0.1
 
         @ File path for persistent deployment state (file exists = deployed)
-        param DEPLOYED_STATE_FILE: string default "/antenna_deployed.bin"
+        param DEPLOYED_STATE_FILE: string default "//antenna/antenna_deployer.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters
