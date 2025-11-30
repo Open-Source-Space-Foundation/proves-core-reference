@@ -82,9 +82,6 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
 // ----------------------------------------------------------------------
 
 void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    int state = this->configure_radio();
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-
     this->rx_mode = false;
 
     char s[] =
@@ -93,7 +90,7 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         "world!\nHello, world!\nHello, world!\nHello, world!\n";
     this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
-    state = this->m_rlb_radio.transmit(s, sizeof(s));
+    int16_t state = this->m_rlb_radio.transmit(s, sizeof(s));
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
     } else {
@@ -112,12 +109,9 @@ void SBand ::enableRx() {
     this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
-    int16_t state = this->configure_radio();
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-
     SX1280* radio = &this->m_rlb_radio;
 
-    state = radio->standby();
+    int16_t state = radio->standby();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
@@ -155,6 +149,11 @@ int16_t SBand ::configure_radio() {
     state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
                                                   RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
     return state;
+}
+
+void SBand ::start() {
+    int16_t state = this->configure_radio();
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
 }
 
 }  // namespace Components

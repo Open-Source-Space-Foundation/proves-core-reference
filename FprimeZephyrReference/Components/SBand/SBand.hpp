@@ -25,6 +25,8 @@ class SBand final : public SBandComponentBase {
     //! Destroy SBand object
     ~SBand();
 
+    void start();
+
     using SBandComponentBase::getIRQLine_out;
     using SBandComponentBase::getTime;
     using SBandComponentBase::spiSend_out;
