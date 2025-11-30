@@ -91,9 +91,9 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\n";
+    this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
     state = this->m_rlb_radio.transmit(s, sizeof(s));
-    this->txEnable_out(0, Fw::Logic::LOW);
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
     } else {
@@ -104,6 +104,12 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void SBand ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->enableRx();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void SBand ::enableRx() {
+    this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
     int16_t state = this->configure_radio();
@@ -117,8 +123,6 @@ void SBand ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
     this->wait_for_rx_fin = true;
-
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 int16_t SBand ::configure_radio() {

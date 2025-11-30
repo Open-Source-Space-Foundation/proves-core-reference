@@ -76,6 +76,7 @@ class SBand final : public SBandComponentBase {
 
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
+    void enableRx();
 
   private:
     FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
