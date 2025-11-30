@@ -46,6 +46,7 @@ module ReferenceDeployment {
     instance lsm6dsoManager
     instance bootloaderTrigger
     instance comDelay
+    instance comDelaySband
     instance burnwire
     instance antennaDeployer
     instance comSplitterEvents
@@ -139,7 +140,8 @@ module ReferenceDeployment {
         # ComStub <-> ComDriver (Downlink)
         ComCcsdsSband.framer.dataOut -> sband.dataIn
         sband.dataReturnOut -> ComCcsdsSband.framer.dataReturnIn
-        sband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
+        sband.comStatusOut -> comDelaySband.comStatusIn
+        comDelaySband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
 
     }
 
@@ -197,6 +199,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> comDelaySband.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run

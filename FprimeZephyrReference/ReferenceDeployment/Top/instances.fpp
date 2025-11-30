@@ -85,6 +85,8 @@ module ReferenceDeployment {
 
   instance comDelay: Components.ComDelay base id 0x10025000
 
+  instance comDelaySband: Components.ComDelay base id 0x10024000
+
   instance lora: Zephyr.LoRa base id 0x10026000
 
   instance comSplitterEvents: Svc.ComSplitter base id 0x10027000
