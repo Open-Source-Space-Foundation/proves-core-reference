@@ -27,9 +27,6 @@ module Drv {
         @ Event for reporting DRV2605 initialization error
         event DeviceNotInitialized(face: string) severity warning high format "DRV2605 device on face {} not initialized"
 
-        @ Event for reporting that an invalid face was specified
-        event InvalidFace(face: string) severity warning high format "Invalid face specified: {}"
-
         @ Input port to set magnetorquer values
         sync input port SetMagnetorquers: SetMagnetorquers
 
