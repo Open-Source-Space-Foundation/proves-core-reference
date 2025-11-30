@@ -101,11 +101,6 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void SBand ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->enableRx();
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
 void SBand ::enableRx() {
     this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);

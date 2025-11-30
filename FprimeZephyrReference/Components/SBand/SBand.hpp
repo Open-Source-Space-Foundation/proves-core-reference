@@ -69,13 +69,6 @@ class SBand final : public SBandComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
-    //! Handler implementation for command RECEIVE
-    //!
-    //! Command to begin receive
-    void RECEIVE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                            U32 cmdSeq            //!< The command sequence number
-                            ) override;
-
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
     void enableRx();
