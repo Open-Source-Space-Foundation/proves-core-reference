@@ -53,10 +53,12 @@ static void aon_timer_alarm_callback(void) {
 static bool ensureAonTimerRunning(void) {
     // Check if POWMAN timer is already running (e.g., from previous boot)
     // This is the "required operating procedure when you want continuous timing"
+#if defined(POWMAN_TIMER_RUN_BITS) && defined(POWMAN_BASE)
     if (powman_hw->timer & POWMAN_TIMER_RUN_BITS) {
         s_aonTimerInitialized = true;
         return true;
     }
+#endif
 
     // Timer not running, need to initialize it
     // Start the AON timer with current time (0 for simplicity)
