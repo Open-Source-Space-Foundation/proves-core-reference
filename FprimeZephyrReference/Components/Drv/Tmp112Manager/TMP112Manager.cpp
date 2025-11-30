@@ -32,6 +32,8 @@ void TMP112Manager::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
+    // if ()
+
     if (!this->m_dev) {
         condition = Fw::Success::FAILURE;
         this->log_WARNING_HI_DeviceNil();

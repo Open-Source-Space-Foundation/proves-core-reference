@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#include "FprimeZephyrReference/Components/Velm6031Manager/Velm6031ManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Velm6031Manager/Velm6031ManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
@@ -17,7 +17,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys_clock.h>
 
-namespace Components {
+namespace Drv {
 
 class Velm6031Manager final : public Velm6031ManagerComponentBase {
   public:
@@ -65,6 +65,6 @@ class Velm6031Manager final : public Velm6031ManagerComponentBase {
     const struct device* m_dev;
 };
 
-}  // namespace Components
+}  // namespace Drv
 
 #endif

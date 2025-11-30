@@ -120,6 +120,30 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
+  packet LightSensor id 14 group 4 {
+    ReferenceDeployment.velm6031Face0Manager.RawLightData
+    ReferenceDeployment.velm6031Face1Manager.RawLightData
+    ReferenceDeployment.velm6031Face2Manager.RawLightData
+    ReferenceDeployment.velm6031Face3Manager.RawLightData
+    ReferenceDeployment.velm6031Face5Manager.RawLightData
+    ReferenceDeployment.velm6031Face6Manager.RawLightData
+    ReferenceDeployment.velm6031Face7Manager.RawLightData
+    ReferenceDeployment.velm6031Face0Manager.IRLightData
+    ReferenceDeployment.velm6031Face1Manager.IRLightData
+    ReferenceDeployment.velm6031Face2Manager.IRLightData
+    ReferenceDeployment.velm6031Face3Manager.IRLightData
+    ReferenceDeployment.velm6031Face5Manager.IRLightData
+    ReferenceDeployment.velm6031Face6Manager.IRLightData
+    ReferenceDeployment.velm6031Face7Manager.IRLightData
+    ReferenceDeployment.velm6031Face0Manager.ALSLightData
+    ReferenceDeployment.velm6031Face1Manager.ALSLightData
+    ReferenceDeployment.velm6031Face2Manager.ALSLightData
+    ReferenceDeployment.velm6031Face3Manager.ALSLightData
+    ReferenceDeployment.velm6031Face5Manager.ALSLightData
+    ReferenceDeployment.velm6031Face6Manager.ALSLightData
+    ReferenceDeployment.velm6031Face7Manager.ALSLightData
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

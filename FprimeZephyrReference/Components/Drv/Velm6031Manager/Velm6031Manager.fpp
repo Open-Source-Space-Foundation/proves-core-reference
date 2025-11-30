@@ -1,4 +1,4 @@
-module Components {
+module Drv {
     @ Component for reading light sensor data
     port InitPort
 

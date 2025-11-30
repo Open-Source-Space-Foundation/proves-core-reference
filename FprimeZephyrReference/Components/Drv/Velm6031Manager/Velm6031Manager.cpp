@@ -3,14 +3,14 @@
 // \brief  cpp file for Velm6031Manager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Velm6031Manager/Velm6031Manager.hpp"
+#include "FprimeZephyrReference/Components/Drv/Velm6031Manager/Velm6031Manager.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 
-namespace Components {
+namespace Drv {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -45,16 +45,16 @@ void Velm6031Manager ::ReadData() {  // const struct device *dev,
         ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &sen);
         if (ret) {
             Fw::LogStringArg errMsg("Failed to set it attribute");
-            this->log_WARNING_HI_Velm6031ManagerError(errMsg);
+            // this->log_WARNING_HI_Velm6031ManagerError(errMsg);
         }
 
         // Set the sensor attribute for div4
-        sen.val1 = paramGet_DIV4(valid);
+        // sen.val1 = paramGet_DIV4(valid);
 
         ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &sen);
         if (ret) {
             Fw::LogStringArg errMsg("Failed to set div4 attribute");
-            this->log_WARNING_HI_Velm6031ManagerError(errMsg);
+            // this->log_WARNING_HI_Velm6031ManagerError(errMsg);
         }
 
         // Set the sensor attribute for the gain
@@ -62,7 +62,7 @@ void Velm6031Manager ::ReadData() {  // const struct device *dev,
         ret = sensor_attr_set(this->m_dev, SENSOR_CHAN_LIGHT, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &sen);
         if (ret) {
             Fw::LogStringArg errMsg("Failed to set gain attribute ret");
-            this->log_WARNING_HI_Velm6031ManagerError(errMsg);
+            // this->log_WARNING_HI_Velm6031ManagerError(errMsg);
         }
 
         this->m_attributes_set = true;
@@ -72,8 +72,8 @@ void Velm6031Manager ::ReadData() {  // const struct device *dev,
     ret = sensor_sample_fetch(this->m_dev);
     if ((ret < 0) && (ret != -E2BIG)) {
         Fw::LogStringArg errMsg("sample update error");
-        this->log_WARNING_HI_Velm6031ManagerError(errMsg);
-        this->log_WARNING_HI_Velm6031ManagerErrorInt(ret);
+        // this->log_WARNING_HI_Velm6031ManagerError(errMsg);
+        // this->log_WARNING_HI_Velm6031ManagerErrorInt(ret);
     }
 
     // Get the light data
@@ -96,12 +96,12 @@ void Velm6031Manager ::ReadData() {  // const struct device *dev,
 
 void Velm6031Manager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Logic state;
-    this->gpioRead_out(portNum, state);
+    // this->gpioRead_out(portNum, state);
     if (state == Fw::Logic::HIGH) {  // port call to the gpio driver, pass in a specific pin #
         this->ReadData();
-        this->tlmWrite_RawLightData(this->m_RawLightData);
-        this->tlmWrite_IRLightData(this->m_IRLightData);
-        this->tlmWrite_ALSLightData(this->m_ALSLightData);
+        // this->tlmWrite_RawLightData(this->m_RawLightData);
+        // this->tlmWrite_IRLightData(this->m_IRLightData);
+        // this->tlmWrite_ALSLightData(this->m_ALSLightData);
     } else {
         if (this->m_device_init == true) {
             this->m_device_init = false;
@@ -113,44 +113,41 @@ void Velm6031Manager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 void Velm6031Manager::init_handler(FwIndexType portNum) {
-    const struct device* mux = DEVICE_DT_GET(DT_NODELABEL(tca9548a));
-    const struct device* channel = DEVICE_DT_GET(DT_NODELABEL(face0_i2c));
-    const struct device* sensor = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
+    // const struct device* mux = DEVICE_DT_GET(DT_NODELABEL(tca9548a));
+    // const struct device* channel = DEVICE_DT_GET(DT_NODELABEL(face0_i2c));
+    // const struct device* sensor = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
 
-    if (!mux || !channel || !sensor) {
-        this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Device DT_NODELABEL missing"));
-        return;
-    }
+    // if (!mux || !channel || !sensor) {
+    //     // this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Device DT_NODELABEL missing"));
+    //     return;
+    // }
 
-    int ret = device_init(mux);
-    if (ret < 0) {
-        this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("TCA9548A init failed"));
-        return;
-    }
-    k_sleep(K_MSEC(30));
+    // int ret = device_init(mux);
+    // if (ret < 0) {
+    //     // this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("TCA9548A init failed"));
+    //     return;
+    // }
 
-    ret = device_init(channel);
-    if (ret < 0) {
-        this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Mux channel init failed"));
-        return;
-    }
-    k_sleep(K_MSEC(30));
+    // ret = device_init(channel);
+    // if (ret < 0) {
+    //     // this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Mux channel init failed"));
+    //     return;
+    // }
 
-    ret = device_init(sensor);
-    if (ret < 0) {
-        this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Light sensor init failed"));
-        // Continue anyway - might still work
-    }
-    k_sleep(K_MSEC(50));
+    // ret = device_init(sensor);
+    // if (ret < 0) {
+    //     // this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Light sensor init failed"));
+    //     // Continue anyway - might still work
+    // }
 
-    if (!device_is_ready(sensor)) {
-        this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Light sensor not ready after timeout"));
-    }
+    // if (!device_is_ready(sensor)) {
+    //     // this->log_WARNING_HI_Velm6031ManagerError(Fw::LogStringArg("Light sensor not ready after timeout"));
+    // }
 
-    this->m_dev = sensor;
-    this->m_device_init = true;
+    // this->m_dev = sensor;
+    // this->m_device_init = true;
 
-    this->log_ACTIVITY_LO_Velm6031ManagerConfigured();
+    // this->log_ACTIVITY_LO_Velm6031ManagerConfigured();
 }
 
-}  // namespace Components
+}  // namespace Drv

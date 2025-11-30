@@ -1,5 +1,6 @@
 module Drv {
     port temperatureGet -> F64
+    port initialized -> bool
 }
 
 module Drv {
@@ -11,6 +12,15 @@ module Drv {
 
         @ Port to read the temperature in degrees Celsius
         sync input port temperatureGet: temperatureGet
+
+        @ Output port to check device TCA health
+        output port getTCAHealth: Components.HealthGet
+
+        @ Output port to check device MUX health
+        output port getMUXHealth: Components.HealthGet
+
+        @ Output port to get load switch state
+        output port getLoadSwitchState: Components.loadSwitchStateGet
 
         # Telemetry channels
 

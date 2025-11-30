@@ -59,6 +59,15 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
     //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
 
+    //! TCA health state
+    Fw::Health tca_state = Fw::Health::FAILED;
+
+    //! MUX health state
+    Fw::Health mux_state = Fw::Health::FAILED;
+
+    //! Load switch state
+    Fw::On load_switch_state = Fw::On::OFF;
+
     //! Initialization state
     bool m_initialized = false;
 };
