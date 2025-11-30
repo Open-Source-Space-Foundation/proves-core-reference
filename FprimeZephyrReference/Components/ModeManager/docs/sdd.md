@@ -473,7 +473,7 @@ sequenceDiagram
 | ExitingHibernation | ACTIVITY_HI | cycleCount: U32<br>totalSeconds: U32 | Emitted when exiting hibernation, includes total cycles completed and time spent |
 | HibernationWakeWindow | ACTIVITY_LO | cycleNumber: U32 | Emitted at start of each wake window after dormant wake |
 | HibernationSleepCycle | ACTIVITY_LO | cycleNumber: U32 | Emitted before entering each dormant sleep cycle |
-| HibernationEntryFailed | WARNING_HI | reason: string size 100 | **CRITICAL:** Emitted when dormant sleep entry fails AFTER command was ack'd OK. Ground sees OK response but system is actually in SAFE_MODE. Counters rolled back. |
+| HibernationEntryFailed | WARNING_HI | reason: string size 100 | **CRITICAL:** Emitted when dormant sleep entry fails AFTER command was acked OK. Ground sees OK response but system is actually in SAFE_MODE. Counters rolled back. |
 | StateRestorationFailed | WARNING_HI | reason: string size 100 | **CRITICAL:** Emitted when state file cannot be read or is corrupted on boot. System defaults to SAFE_MODE to maintain conservative power profile. |
 
 ## Telemetry
