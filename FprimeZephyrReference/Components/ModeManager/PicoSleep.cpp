@@ -61,10 +61,14 @@ static bool ensureAonTimerRunning(void) {
     // Timer not running, need to initialize it
     // Start the AON timer with current time (0 for simplicity)
     struct timespec ts = {0, 0};
+#ifdef PICO_AON_TIMER_H
     aon_timer_start(&ts);
-
     // Wait a bit for timer to stabilize (per pico-sdk #2148)
     k_busy_wait(100);
+#else
+    // AON timer not available; cannot start timer
+    return false;
+#endif
 
     s_aonTimerInitialized = true;
     return true;
