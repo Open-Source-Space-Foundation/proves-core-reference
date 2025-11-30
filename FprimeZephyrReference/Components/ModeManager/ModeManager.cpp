@@ -274,40 +274,51 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state - use defaults
-                this->m_mode = SystemMode::NORMAL;
-                this->m_safeModeEntryCount = 0;
+                // Corrupted state (invalid mode value) - default to SAFE_MODE
+                // This prevents violating power constraints if system was in hibernation
+                Fw::LogStringArg reasonStr("Corrupted state file (invalid mode value)");
+                this->log_WARNING_HI_StateRestorationFailed(reasonStr);
+
+                this->m_mode = SystemMode::SAFE_MODE;
+                this->m_safeModeEntryCount = 1;  // Count this as a safe mode entry
                 this->m_payloadModeEntryCount = 0;
                 this->m_hibernationCycleCount = 0;
                 this->m_hibernationTotalSeconds = 0;
                 this->m_sleepDurationSec = 3600;
                 this->m_wakeDurationSec = 60;
-                this->turnOnComponents();
+                this->turnOffNonCriticalComponents();
             }
         } else {
             // Read failed or size mismatch (possibly old struct version)
-            // Initialize to safe defaults and configure hardware
-            this->m_mode = SystemMode::NORMAL;
-            this->m_safeModeEntryCount = 0;
+            // Default to SAFE_MODE to maintain conservative power profile
+            Fw::LogStringArg reasonStr("State file read failed or size mismatch");
+            this->log_WARNING_HI_StateRestorationFailed(reasonStr);
+
+            this->m_mode = SystemMode::SAFE_MODE;
+            this->m_safeModeEntryCount = 1;  // Count this as a safe mode entry
             this->m_payloadModeEntryCount = 0;
             this->m_hibernationCycleCount = 0;
             this->m_hibernationTotalSeconds = 0;
             this->m_sleepDurationSec = 3600;
             this->m_wakeDurationSec = 60;
-            this->turnOnComponents();
+            this->turnOffNonCriticalComponents();
         }
 
         file.close();
     } else {
-        // File doesn't exist or can't be opened - initialize to default state
-        this->m_mode = SystemMode::NORMAL;
-        this->m_safeModeEntryCount = 0;
+        // File doesn't exist or can't be opened - default to SAFE_MODE
+        // This is appropriate for first boot and maintains conservative power profile
+        Fw::LogStringArg reasonStr("State file not found or cannot be opened");
+        this->log_WARNING_HI_StateRestorationFailed(reasonStr);
+
+        this->m_mode = SystemMode::SAFE_MODE;
+        this->m_safeModeEntryCount = 1;  // Count this as a safe mode entry
         this->m_payloadModeEntryCount = 0;
         this->m_hibernationCycleCount = 0;
         this->m_hibernationTotalSeconds = 0;
         this->m_sleepDurationSec = 3600;
         this->m_wakeDurationSec = 60;
-        this->turnOnComponents();
+        this->turnOffNonCriticalComponents();
     }
 }
 

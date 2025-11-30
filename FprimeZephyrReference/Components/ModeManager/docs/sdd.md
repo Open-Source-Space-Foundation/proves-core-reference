@@ -474,6 +474,7 @@ sequenceDiagram
 | HibernationWakeWindow | ACTIVITY_LO | cycleNumber: U32 | Emitted at start of each wake window after dormant wake |
 | HibernationSleepCycle | ACTIVITY_LO | cycleNumber: U32 | Emitted before entering each dormant sleep cycle |
 | HibernationEntryFailed | WARNING_HI | reason: string size 100 | **CRITICAL:** Emitted when dormant sleep entry fails AFTER command was ack'd OK. Ground sees OK response but system is actually in SAFE_MODE. Counters rolled back. |
+| StateRestorationFailed | WARNING_HI | reason: string size 100 | **CRITICAL:** Emitted when state file cannot be read or is corrupted on boot. System defaults to SAFE_MODE to maintain conservative power profile. |
 
 ## Telemetry
 
@@ -506,7 +507,8 @@ The ModeManager controls 8 load switches that power non-critical satellite subsy
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NORMAL: Initial boot (no saved state)
+    [*] --> SAFE_MODE: Initial boot (no saved state)
+    [*] --> SAFE_MODE: State file corrupted/unreadable
     [*] --> SAFE_MODE: Restore from flash
     [*] --> NORMAL: Restore from flash
     [*] --> PAYLOAD_MODE: Restore from flash
@@ -590,6 +592,8 @@ Mode state is persisted to `/mode_state.bin` to maintain operational context acr
 
 This ensures the system resumes in the correct mode after recovery. For hibernation, the sleep/wake durations are also persisted to enable automatic continuation of hibernation cycles.
 
+**Default Mode on State Restoration Failure:** If the state file is missing, corrupted, or unreadable on boot, the system defaults to SAFE_MODE (not NORMAL). This conservative approach ensures power constraints are not violated if the system was in hibernation before the state file became corrupted. A WARNING_HI `StateRestorationFailed` event is emitted to alert ground operators of the issue.
+
 ### Sequential Mode Transitions
 Mode transitions follow a sequential pattern: HIBERNATION_MODE(0) ↔ SAFE_MODE(1) ↔ NORMAL(2) ↔ PAYLOAD_MODE(3). Direct jumps (e.g., PAYLOAD→SAFE, NORMAL→HIBERNATION) are not allowed - users must follow the transition paths:
 - To enter hibernation: Must be in SAFE_MODE
@@ -623,6 +627,7 @@ The hibernation mode uses the RP2350's dormant mode with AON (Always-On) Timer a
 ## Change Log
 | Date | Description |
 |---|---|
+| 2025-11-29 | State restoration failure now defaults to SAFE_MODE instead of NORMAL; added StateRestorationFailed (WARNING_HI) event |
 | 2025-11-29 | Fixed FORCE_SAFE_MODE to reject from HIBERNATION_MODE (must use EXIT_HIBERNATION); added test_hibernation_10 |
 | 2025-11-29 | Replaced RTC-based dormant with AON Timer + POWMAN for proper RP2350 dormant mode; added power consumption docs, known issue (pico-sdk #2376), and USE_DORMANT_MODE fallback |
 | 2025-11-29 | Added HibernationEntryFailed (WARNING_HI) event for when dormant entry fails after OK response sent |

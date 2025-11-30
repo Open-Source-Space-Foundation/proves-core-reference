@@ -180,6 +180,15 @@ module Components {
             severity warning high \
             format "HIBERNATION ENTRY FAILED (command ack'd OK but dormant failed): {}"
 
+        @ Event emitted when state restoration fails on boot
+        @ CRITICAL: System defaults to SAFE_MODE to maintain conservative power profile
+        @ This prevents violating power constraints if system was in hibernation
+        event StateRestorationFailed(
+            reason: string size 100 @< Description of the failure
+        ) \
+            severity warning high \
+            format "STATE RESTORATION FAILED - defaulting to SAFE_MODE: {}"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
