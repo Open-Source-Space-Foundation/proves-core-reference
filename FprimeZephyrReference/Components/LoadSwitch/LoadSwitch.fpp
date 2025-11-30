@@ -35,6 +35,12 @@ module Components {
         # (off and on again) of the load switch
         sync input port Reset: Fw.Signal
 
+        @ Input port to turn on the load switch (called by other components)
+        sync input port turnOn: Fw.Signal
+
+        @ Input port to turn off the load switch (called by other components)
+        sync input port turnOff: Fw.Signal
+
         # @ Example parameter
         # param PARAMETER_NAME: U32
 

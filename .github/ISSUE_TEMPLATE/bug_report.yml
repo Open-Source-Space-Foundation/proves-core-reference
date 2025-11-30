@@ -1,0 +1,67 @@
+name: "Bug report"
+description: "Create a report to help us improve the project."
+title: "[BUG] {summary}"
+labels:
+  - "bug"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug report
+        Thank you for taking the time to report a bug. Please fill in the sections below.
+  - type: input
+    id: summary
+    attributes:
+      label: "Short summary"
+      description: "A short, descriptive summary of the bug."
+      placeholder: "e.g. IMU manager crashes on startup"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce"
+      description: "List the exact steps to reproduce the bug."
+      placeholder: |
+        1. Flash firmware X
+        2. Connect board
+        3. Run make gds
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behavior"
+      description: "What you expected to happen"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual behavior"
+      description: "What actually happened"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs / crash output"
+      description: "Any logs, stack traces, or GDS output."
+  - type: dropdown
+    id: board
+    attributes:
+      label: "Target board"
+      description: "Which board are you using?"
+      options:
+        - "RP2350 (Pico 2)"
+        - "STM32"
+        - "Other"
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional information
+        - F Prime version: v4.0.0a1
+        - Zephyr version: v4.2.0
+        - Python: see .python-version

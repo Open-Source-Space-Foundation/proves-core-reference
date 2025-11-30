@@ -20,9 +20,6 @@ module Components {
         @ Command to transmit data
         sync command TRANSMIT()
 
-        @ Command to begin receive
-        sync command RECEIVE()
-
         @ SPI Output Port
         output port spiSend: Drv.SpiReadWrite
 

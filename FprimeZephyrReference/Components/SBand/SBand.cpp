@@ -31,14 +31,14 @@ SBand ::~SBand() {}
 // ----------------------------------------------------------------------
 
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
-    if (this->wait_for_rx_fin) {
+    if (this->rx_mode) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-            this->wait_for_rx_fin = false;
             SX1280* radio = &this->m_rlb_radio;
             uint8_t data[256] = {0};
             size_t len = radio->getPacketLength();
             radio->readData(data, len);
+            radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
 
             Fw::Logger::log("MESSAGE RECEIVED:\n");
             char msg[sizeof(data) * 3 + 1];
@@ -65,8 +65,17 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // TODO: Implement data transmission
-    // For now, just return the buffer and indicate success
+    this->rx_mode = false;  // possible race condition with check in run_handler
+
+    this->rxEnable_out(0, Fw::Logic::LOW);
+    this->txEnable_out(0, Fw::Logic::HIGH);
+
+    int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    Fw::Logger::log("got dataIn_handler\n");
+
+    this->enableRx();
     Fw::Success returnStatus = Fw::Success::SUCCESS;
     this->dataReturnOut_out(0, data, context);
     this->comStatusOut_out(0, returnStatus);
@@ -82,43 +91,37 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
 // ----------------------------------------------------------------------
 
 void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    int state = this->configure_radio();
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-
-    this->wait_for_rx_fin = false;
+    this->rx_mode = false;  // possible race condition with check in run_handler
 
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
         "world!\nHello, world!\nHello, world!\nHello, world!\n";
+    this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
-    state = this->m_rlb_radio.transmit(s, sizeof(s));
-    this->txEnable_out(0, Fw::Logic::LOW);
+    int16_t state = this->m_rlb_radio.transmit(s, sizeof(s));
     if (state == RADIOLIB_ERR_NONE) {
         Fw::Logger::log("radio.transmit() success!\n");
     } else {
         Fw::Logger::log("radio.transmit() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
+    this->enableRx();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void SBand ::RECEIVE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void SBand ::enableRx() {
+    this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
-
-    int16_t state = this->configure_radio();
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
     SX1280* radio = &this->m_rlb_radio;
 
-    state = radio->standby();
+    int16_t state = radio->standby();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    this->wait_for_rx_fin = true;
-
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    this->rx_mode = true;
 }
 
 int16_t SBand ::configure_radio() {
@@ -151,6 +154,13 @@ int16_t SBand ::configure_radio() {
     state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
                                                   RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
     return state;
+}
+
+void SBand ::start() {
+    int16_t state = this->configure_radio();
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    this->enableRx();
 }
 
 }  // namespace Components

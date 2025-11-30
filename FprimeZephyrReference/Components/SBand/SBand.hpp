@@ -25,6 +25,8 @@ class SBand final : public SBandComponentBase {
     //! Destroy SBand object
     ~SBand();
 
+    void start();
+
     using SBandComponentBase::getIRQLine_out;
     using SBandComponentBase::getTime;
     using SBandComponentBase::spiSend_out;
@@ -67,21 +69,15 @@ class SBand final : public SBandComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
-    //! Handler implementation for command RECEIVE
-    //!
-    //! Command to begin receive
-    void RECEIVE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                            U32 cmdSeq            //!< The command sequence number
-                            ) override;
-
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
+    void enableRx();
 
   private:
     FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
     Module m_rlb_module;  //!< RadioLib Module instance
     SX1280 m_rlb_radio;   //!< RadioLib SX1280 radio instance
-    bool wait_for_rx_fin = false;
+    bool rx_mode = false;
 };
 
 }  // namespace Components
