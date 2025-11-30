@@ -178,7 +178,7 @@ module Components {
             reason: string size 100 @< Reason for failure
         ) \
             severity warning high \
-            format "HIBERNATION ENTRY FAILED (command ack'd OK but dormant failed): {}"
+            format "HIBERNATION ENTRY FAILED (command acked OK but dormant failed): {}"
 
         @ Event emitted when state restoration fails on boot
         @ CRITICAL: System defaults to SAFE_MODE to maintain conservative power profile
