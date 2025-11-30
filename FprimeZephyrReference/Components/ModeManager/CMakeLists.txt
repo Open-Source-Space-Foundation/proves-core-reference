@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/ModeManager.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/ModeManager.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PicoSleep.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )

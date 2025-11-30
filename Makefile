@@ -68,8 +68,17 @@ build: submodules zephyr fprime-venv generate-spi-dict generate-if-needed ## Bui
 	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
-test-integration: uv
-	@$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+test-integration: uv ## Run integration tests (set TEST=<name|file.py> to run a single file)
+	@TARGET="FprimeZephyrReference/test/int"; \
+	if [ -n "$(TEST)" ]; then \
+		case "$(TEST)" in \
+			*.py) TARGET="FprimeZephyrReference/test/int/$(TEST)" ;; \
+			*) TARGET="FprimeZephyrReference/test/int/$(TEST).py" ;; \
+		esac; \
+		[ -e "$$TARGET" ] || { echo "Specified test file $$TARGET not found"; exit 1; }; \
+	fi; \
+	echo "Running integration tests at $$TARGET"; \
+	$(UV_RUN) pytest $$TARGET --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: bootloader
 bootloader: uv
