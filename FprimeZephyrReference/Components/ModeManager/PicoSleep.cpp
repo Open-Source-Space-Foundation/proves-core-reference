@@ -26,9 +26,18 @@
 #include <hardware/structs/powman.h>
 #include <hardware/structs/rosc.h>
 #include <hardware/structs/xosc.h>
-#include <hardware/sync.h>
 #include <hardware/xosc.h>
 #include <pico/aon_timer.h>
+
+// Provide a Zephyr-compatible alternative to tight_loop_contents()
+// tight_loop_contents() is a Pico SDK function that acts as a compiler
+// barrier to prevent the compiler from optimizing away busy-wait loops.
+// In Zephyr environment, we use an inline assembly memory barrier instead.
+#ifndef tight_loop_contents
+static inline void tight_loop_contents(void) {
+    __asm__ volatile("" : : : "memory");
+}
+#endif
 #endif
 
 namespace Components {
