@@ -154,6 +154,8 @@ int16_t SBand ::configure_radio() {
 void SBand ::start() {
     int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    this->enableRx();
 }
 
 }  // namespace Components
