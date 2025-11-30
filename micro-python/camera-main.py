@@ -298,10 +298,10 @@ def snap_handler():
         global current_framesize
         if current_framesize == sensor.HD:
             # HD is large, use lower quality to reduce memory usage
-            quality = 95
+            quality = 90
         else:
             # QVGA and smaller can use higher quality
-            quality = 100
+            quality = 95
         
         jpeg_params = {
             'quality': quality,
