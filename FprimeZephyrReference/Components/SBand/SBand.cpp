@@ -65,8 +65,17 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // TODO: Implement data transmission
-    // For now, just return the buffer and indicate success
+    this->rx_mode = false;  // possible race condition with check in run_handler
+
+    this->rxEnable_out(0, Fw::Logic::LOW);
+    this->txEnable_out(0, Fw::Logic::HIGH);
+
+    int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    Fw::Logger::log("got dataIn_handler\n");
+
+    this->enableRx();
     Fw::Success returnStatus = Fw::Success::SUCCESS;
     this->dataReturnOut_out(0, data, context);
     this->comStatusOut_out(0, returnStatus);
