@@ -18,6 +18,11 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/reboot.h>
 
+// CMSIS headers for standard Cortex-M SCB access
+#if defined(CONFIG_CPU_CORTEX_M)
+#include <cmsis_core.h>
+#endif
+
 // RP2350 Pico SDK includes for AON timer and power management
 #if defined(CONFIG_SOC_RP2350) || defined(CONFIG_SOC_SERIES_RP2XXX)
 #include <hardware/clocks.h>
@@ -123,7 +128,8 @@ static void sleep_power_up(void) {
 // Enter dormant mode - processor will halt until AON timer alarm
 static void go_dormant(void) {
     // Enable deep sleep in the processor (Cortex-M33)
-    scb_hw->scr |= M33_SCR_SLEEPDEEP_BITS;
+    // Use standard CMSIS SCB register access instead of SDK-specific scb_hw
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
     // Disable all clocks except those needed for dormant wake
     // On RP2350, CLK_REF_POWMAN needs to stay enabled for AON timer
@@ -139,7 +145,7 @@ static void go_dormant(void) {
     clocks_hw->sleep_en1 = 0xFFFFFFFF;
 
     // Clear deep sleep bit
-    scb_hw->scr &= ~M33_SCR_SLEEPDEEP_BITS;
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 
 #endif  // CONFIG_SOC_RP2350
