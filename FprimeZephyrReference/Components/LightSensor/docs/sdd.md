@@ -1,6 +1,6 @@
-# Components::LightSensor
+# Components::LightSensorManager
 
-Component for reading light sensor data
+Component emitting telemetry read from a VEML 6031 light sensor. This component communicates with the VEML 6031 sensor using a Zephyr driver and provides illuminance data. 
 
 ## Usage Examples
 Add usage examples here
@@ -15,15 +15,17 @@ And the typical usage of the component here
 Add a class diagram here
 
 ## Port Descriptions
-| Name | Description |
-|---|---|
-|---|---|
+| Name       | Description                                                                     |
+|------------|---------------------------------------------------------------------------------|
+| loadSwitch | Input port for receiving signal from load switch to activate the light sensor   |
+| run        | Input port for receiving ticks from rate group to read sensor data periodically |
 
 ## Component States
-Add component states in the chart below
-| Name | Description |
-|---|---|
-|---|---|
+| Name | Description       |
+|------|-------------------|
+| RESET | State where sensor encounters an error and resets (turns off and back on to running) |
+| OFF  | The sensor is off |
+| ON   | The sensor is on  |
 
 ## Sequence Diagrams
 Add sequence diagrams here
@@ -31,34 +33,52 @@ Add sequence diagrams here
 ## Parameters
 | Name | Description |
 |---|---|
-|---|---|
+|GAIN|Controls the sensor’s sensitivity to light|
+|INTEGRATION_TIME|Determines how long the sensor collects line for before taking a measurement|
+|DET_THRESHOLD|Threshold to decide if light is detected|
+|READ_INTERVAL|How many rate group ticks it takes to read the light sensor once|
 
 ## Commands
-| Name | Description |
-|---|---|
-|---|---|
+| Name  | Description             |
+|-------|-------------------------|
+| RESET | Turns sensor off and on |
 
 ## Events
-| Name | Description |
-|---|---|
-|---|---|
+| Name                 | Description                                          |
+|----------------------|------------------------------------------------------|
+| LightDetected        | Emitted when light is detected                       |
+| LightSensorTurnedOn  | Emitted when light sensor is turned on               |
+| LightSensorReset     | Emitted when light sensor resets                     |
+| LightSensorTurnedOff | Emitted when light sensor is turned off              |
+| LightSensorError     | Emitted when light sensor transitions to error state |
 
 ## Telemetry
-| Name | Description |
-|---|---|
-|---|---|
+| Name    | Description                                                    |
+|---------|----------------------------------------------------------------|
+| Reading | VEML6031 sensor data containing ALS and IR sensor values (raw) |
+| Status  | Boolean whether data is valid or not                           |
 
 ## Unit Tests
-Add unit test descriptions in the chart below
-| Name | Description | Output | Coverage |
-|---|---|---|---|
-|---|---|---|---|
+| Name                       | Description                                        | Output                                     | Coverage                      |
+|----------------------------|----------------------------------------------------|--------------------------------------------|-------------------------------|
+| TestInitialState           | Verify component starts in OFF state               | Component initializes properly             | LightSensor initialization(?) |
+| TestSensorReading          | Verify ALS and IR readings                         | accurate sensor values                     | (?)                           |
+| TestZephyrCommunication    | Verify Zephyr operations(?)                        | Successful sensor application              | Zephyr driver                 |
+| TestReadIntervalValidation | Verify read interval is less than integration time | Correct read interval and integration time | Sensor parameters             |
+| TestThreshold              |                                                    |                                            |                               |
+| TestStateTransitions       | Verify proper state machine transitions            | Correct state progression                  | State machine logic           |
+
 
 ## Requirements
 Add requirements in the chart below
 | Name | Description | Validation |
-|---|---|---|
-|---|---|---|
+|------|-------------|-------------|
+| VEML6031-001 | The LightSensorManager shall emit ALS (ambient light sensor) and IR (infrared) sensor values in units of lx (lux) | Unit-Test |
+| VEML6031-002 | The LightSensorManager shall communicate with the VEML6031 using its Zephyr driver | Unit-Test |
+| VEML6031-003 | The LightSensorManager shall validate lux readings | Unit-Test |
+| VEML6031-004 | The LightSensorManager shall report if light is detected above a provided threshold | Unit-Test |
+| VEML6031-005 | The LightSensorManager shall reset | Unit-Test |
+| VEML6031-006 | The LightSensormanager shall check if READ_INTERVAL is less than INTEGRATION_TIME | Unit-Test |
 
 ## Change Log
 | Date | Description |
