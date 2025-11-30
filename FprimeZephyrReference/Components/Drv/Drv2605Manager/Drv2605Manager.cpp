@@ -22,6 +22,18 @@ Drv2605Manager ::~Drv2605Manager() {}
 
 void Drv2605Manager ::configure(const struct device* dev) {
     this->m_dev = dev;
+
+    // Configure DRV2605 config struct
+    static struct drv2605_rom_data rom_data = {
+        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
+        .library = DRV2605_LIBRARY_LRA,
+        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
+        .overdrive_time = 0,
+        .sustain_pos_time = 0,
+        .sustain_neg_time = 0,
+        .brake_time = 0,
+    };
+    this->m_config_data.rom_data = &rom_data;
 }
 
 void Drv2605Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
@@ -50,17 +62,6 @@ void Drv2605Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) 
     }
     this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
 
-    // Configure DRV2605 config struct
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    this->m_config_data.rom_data = &rom_data;
     drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_ROM, &this->m_config_data);
 
     condition = Fw::Success::SUCCESS;
@@ -68,7 +69,7 @@ void Drv2605Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) 
 
 bool Drv2605Manager ::triggerDevice_handler(FwIndexType portNum) {
     int res = haptics_start_output(this->m_dev);
-    return res != 0 ? true : false;
+    return res == 0 ? true : false;
 }
 
 }  // namespace Drv
