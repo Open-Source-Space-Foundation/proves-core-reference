@@ -157,13 +157,13 @@ void CameraHandler ::TAKE_IMAGE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void CameraHandler ::PING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    if (this->m_receiving) {
+        this->log_WARNING_LO_FailedCommandCurrentlyReceiving();
+        return;
+    }
+    this->m_waiting_for_pong = true;
     const char* pingCmd = "ping";
     SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(pingCmd));
-}
-
-void CameraHandler ::SET_IMAGE_QUALITY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    const char* takeImageCmd = "snap";
-    SEND_COMMAND_cmdHandler(opCode, cmdSeq, Fw::CmdStringArg(takeImageCmd));
 }
 
 void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Fw::CmdStringArg& cmd) {
@@ -183,7 +183,6 @@ void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, co
     this->log_ACTIVITY_HI_CommandSuccess(logCmd);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
-
 
 // ----------------------------------------------------------------------
 // Helper method implementations
@@ -219,6 +218,22 @@ void CameraHandler ::processProtocolBuffer() {
     }
     
     if (headerStart == -1) {
+        
+        // Check for PONG response (only if buffer has enough bytes)
+        if (m_protocolBufferSize >= PONG_LEN) {
+            for (U32 i = 0; i <= m_protocolBufferSize - PONG_LEN; ++i) {
+                if (isPong(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
+                    if (this->m_waiting_for_pong){
+                        this->log_ACTIVITY_HI_PongReceived();
+                        this->m_waiting_for_pong = false;
+                    } else {
+                        this->log_WARNING_HI_BadPongReceived();
+                    }
+                    return;
+                }
+            }
+        }
+        
         // No header found - if buffer is nearly full, discard old data
         // Be aggressive: if buffer is > 50% full and no header, it's probably text responses
         if (m_protocolBufferSize > (PROTOCOL_BUFFER_SIZE / 2)) {
@@ -496,4 +511,21 @@ bool CameraHandler ::isImageStartCommand(const U8* line, U32 length) {
     
     return true;
 }
+
+bool CameraHandler ::isPong(const U8* line, U32 length) {
+    const char* command = "PONG";
+    
+    if (length < PONG_LEN) {
+        return false;
+    }
+    
+    for (U32 i = 0; i < PONG_LEN; ++i) {
+        if (line[i] != static_cast<U8>(command[i])) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 }  // namespace Components

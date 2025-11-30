@@ -58,10 +58,6 @@ class CameraHandler final : public CameraHandlerComponentBase {
     void PING_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                 U32 cmdSeq            //!< The command sequence number
                                 ) override;
-    
-    void SET_IMAGE_QUALITY_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                U32 cmdSeq            //!< The command sequence number
-                                ) override;
 
     // ----------------------------------------------------------------------
     // Helper methods for protocol processing
@@ -95,12 +91,16 @@ class CameraHandler final : public CameraHandlerComponentBase {
     //! Returns true if line is "<IMG_START>"
     bool isImageStartCommand(const U8* line, U32 length);
 
+    bool isPong(const U8* line, U32 length);
+
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
     U8 m_data_file_count = 0;
     bool m_receiving = false; 
+    bool m_waiting_for_pong = false;
+
     U32 m_bytes_received = 0;
     U32 m_file_error_count = 0;  // Track total file errors
     U32 m_images_saved = 0;      // Track total images successfully saved
@@ -123,12 +123,17 @@ class CameraHandler final : public CameraHandlerComponentBase {
     static constexpr U32 SIZE_VALUE_LEN = 4;     // 4-byte little-endian uint32
     static constexpr U32 SIZE_CLOSE_TAG_LEN = 7; // strlen("</SIZE>")
     static constexpr U32 IMG_END_LEN = 9;        // strlen("<IMG_END>")
-    
+    static constexpr U32 PONG_LEN = 4;           // strlen("PONG")
+    static constexpr U32 QUAL_SET_HD = 22;         // strlen("<FRAME_CHANGE_SUCCESS>")
+
+
     // Derived constants
     static constexpr U32 HEADER_SIZE = IMG_START_LEN + SIZE_TAG_LEN + SIZE_VALUE_LEN + SIZE_CLOSE_TAG_LEN;  // 28 bytes
     static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                    // 11
     static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;   // 17
     static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;  // 21
+
+
     
     U32 m_expected_size = 0;  // Expected image size from header
     U8 m_lastMilestone = 0;   // Last progress milestone emitted (0, 25, 50, 75)

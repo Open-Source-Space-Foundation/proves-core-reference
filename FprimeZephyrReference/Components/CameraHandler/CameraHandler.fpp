@@ -10,9 +10,6 @@ module Components {
         @ Camera Ping
         sync command PING()
 
-        @ Set Camera Format
-        sync command SET_IMAGE_QUALITY()
-
         @ Send command to camera via PayloadCom
         sync command SEND_COMMAND(cmd: string)
 
@@ -30,6 +27,12 @@ module Components {
 
         @ Emitted when image transfer completes successfully
         event ImageTransferComplete(path: string, $size: U32) severity activity high format "Image saved: {} ({} bytes)"
+
+        event FailedCommandCurrentlyReceiving() severity warning low format "Cannot send command while image is receiving!"
+
+        event PongReceived() severity activity high format "Ping Received"
+
+        event BadPongReceived() severity warning high format "Ping Received when we did not expect it!"
 
         # Telemetry for debugging image transfer state
         @ Number of bytes received so far in current image transfer
