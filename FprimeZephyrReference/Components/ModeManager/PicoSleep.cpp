@@ -212,14 +212,21 @@ bool PicoSleep::sleepForSeconds(U32 seconds) {
 
     // Set AON timer alarm for wakeup
     // The alarm will fire and wake the processor from dormant
+#if defined(aon_timer_enable_alarm)
     aon_timer_enable_alarm(&ts, aon_timer_alarm_callback, true);
+#else
+    // AON timer alarm not available; fall back to reboot
+    sys_reboot(SYS_REBOOT_COLD);
+    return false;
+#endif
 
     // Enter dormant mode - execution stops here until alarm
     go_dormant();
 
     // If we get here, we woke up successfully from dormant!
-    // Disable the alarm now that we're awake
+#if defined(aon_timer_disable_alarm)
     aon_timer_disable_alarm();
+#endif
 
     // Restore clocks (partial - PLLs require full init)
     sleep_power_up();
