@@ -11,6 +11,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
+    ReferenceDeployment.modeManager.CurrentMode
+    ReferenceDeployment.modeManager.SafeModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -83,6 +85,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
+  }
+
+  packet authenticate id 11 group 4 {
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
+
   }
 
 } omit {

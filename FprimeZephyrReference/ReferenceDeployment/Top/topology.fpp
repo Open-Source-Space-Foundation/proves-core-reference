@@ -67,7 +67,9 @@ module ReferenceDeployment {
     instance ina219SysManager
     instance ina219SolManager
     instance resetManager
+    instance modeManager
     instance magnetorquerManager
+    instance imuManager
 
 
   # ----------------------------------------------------------------------
@@ -156,7 +158,8 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> DetumbleManager.run
+      rateGroup10Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
+      rateGroup10Hz.RateGroupMemberOut[6] -> DetumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -165,14 +168,14 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> modeManager.run
 
     }
 
@@ -229,5 +232,47 @@ module ReferenceDeployment {
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
     }
 
+    connections ModeManager {
+      # Voltage monitoring from system power manager
+      modeManager.voltageGet -> ina219SysManager.voltageGet
+
+      # Load switch control connections
+      # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
+      # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.
+      # face4 = index 0, face0 = index 1, face1 = index 2, face2 = index 3
+      # face3 = index 4, face5 = index 5, payloadPower = index 6, payloadBattery = index 7
+      modeManager.loadSwitchTurnOn[0] -> face4LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[1] -> face0LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[2] -> face1LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[3] -> face2LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[4] -> face3LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[5] -> face5LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[6] -> payloadPowerLoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[7] -> payloadBatteryLoadSwitch.turnOn
+
+      modeManager.loadSwitchTurnOff[0] -> face4LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[1] -> face0LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[2] -> face1LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[3] -> face2LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[4] -> face3LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
+    }
+
+    connections MagnetorquerManager {
+      magnetorquerManager.loadSwitchTurnOn[0] -> face0LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[1] -> face1LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[4] -> face5LoadSwitch.turnOn
+    }
+
+    connections ImuManager {
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
   }
 }

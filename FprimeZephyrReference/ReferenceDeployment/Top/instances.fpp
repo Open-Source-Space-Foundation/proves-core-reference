@@ -47,6 +47,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
+  instance modeManager: Components.ModeManager base id 0x10040000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 16
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -69,7 +74,7 @@ module ReferenceDeployment {
 
   instance rtcManager: Drv.RtcManager base id 0x10016000
 
-  instance DetumbleManager: Components.DetumbleManager base id 0x10017000
+  instance imuManager: Components.ImuManager base id 0x10017000
 
   instance lis2mdlManager: Drv.Lis2mdlManager base id 0x10018000
 
@@ -137,5 +142,7 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-  instance magnetorquerManager: Drv.MagnetorquerManager base id 0x10040000
+  instance magnetorquerManager: Drv.MagnetorquerManager base id 0x10041000
+
+  instance DetumbleManager: Components.DetumbleManager base id 0x10042000
 }

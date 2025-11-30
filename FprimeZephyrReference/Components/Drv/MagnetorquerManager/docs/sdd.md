@@ -21,11 +21,13 @@ graph LR
 ### Typical Usage
 
 1. The component is instantiated and initialized during system startup
-2. The detumble service calls the `SetMagnetorquers` input port.
-3. On each call, the component:
-   - Takes in an `InputArray` parameter of 5 I32 for the amps for each face.
-   - Translates the passed in values to a sequence value from the DRV2605 library.
-   - Runs the sequence for each device.
+2. The component is configured with the DRV2605 devices via the `configure()` method
+3. The component is periodically called via the `run` scheduler port
+4. The detumble service calls the `SetMagnetorquers` input port to enable/disable specific faces
+5. On each `run` cycle:
+   - The component checks which faces are enabled
+   - For each enabled face, it starts haptic output on the corresponding device
+6. When magnetorquers need to be disabled, the detumble service calls the `SetDisabled` input port
 
 ## Class Diagram
 
@@ -33,10 +35,13 @@ graph LR
 classDiagram
     class MagnetorquerManager {
         -device* m_devices[5]
+        -drv2605_config_data config_data
+        -bool enabled
+        -bool enabled_faces[5]
         +configure(devices[5])
         +SetMagnetorquers_handler(portNum, value)
-        +START_PLAYBACK_TEST_cmdHandler(opCode, cmdSeq, faceIdx)
-        +START_PLAYBACK_TEST2_cmdHandler(opCode, cmdSeq, faceIdx)
+        +SetDisabled_handler(portNum)
+        +run_handler(portNum, context)
     }
 
     class MagnetorquerManagerComponentBase {
@@ -47,6 +52,8 @@ classDiagram
         <<Zephyr Driver>>
         +device_is_ready()
         +drv2605_haptic_config()
+        +haptics_start_output()
+        +haptics_stop_output()
     }
 
     MagnetorquerManager --|> MagnetorquerManagerComponentBase
@@ -55,9 +62,11 @@ classDiagram
 
 ## Port Descriptions
 
-| Name             | Description                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| SetMagnetorquers | Input port that takes in an array (I32[5]) and applies each value to the corresponding face |
+| Name             | Description                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| SetMagnetorquers | Input port that takes in an array (bool[5]) to enable/disable each face (x1, x2, y1, y2, z1) |
+| SetDisabled      | Input port to disable all magnetorquers and stop haptic output                               |
+| run              | Scheduler port called periodically to start haptic output on enabled faces                   |
 
 ## Sequence Diagrams
 
@@ -67,15 +76,44 @@ classDiagram
 sequenceDiagram
     participant DS as Detumble Service
     participant MM as MagnetorquerManager
+    participant Sched as Scheduler
     participant DRV as DRV2605 Devices
 
-    DS->>MM: SetMagnetorquers([x1, x2, y1, y2, z1])
-    Note over MM: Validate input array
-    Note over MM: Translate amps to sequences
+    DS->>MM: SetMagnetorquers([true, false, true, false, true])
+    Note over MM: Set enabled = true
+    Note over MM: Update enabled_faces array
+    MM-->>DS: Return
+
+    Sched->>MM: run()
+    Note over MM: Check if enabled
+    loop For each enabled face (0-4)
+        alt enabled_faces[i] == true
+            MM->>DRV: Check device_is_ready()
+            alt Device Ready
+                MM->>DRV: haptics_start_output()
+            else Device Not Ready
+                MM->>MM: log_WARNING_HI_DeviceNotReady()
+            end
+        end
+    end
+    MM-->>Sched: Return
+```
+
+### SetDisabled Operation
+
+```mermaid
+sequenceDiagram
+    participant DS as Detumble Service
+    participant MM as MagnetorquerManager
+    participant DRV as DRV2605 Devices
+
+    DS->>MM: SetDisabled()
+    Note over MM: Set enabled = false
     loop For each face (0-4)
         MM->>DRV: Check device_is_ready()
         alt Device Ready
-            MM->>DRV: drv2605_haptic_config(sequence)
+            MM->>DRV: haptics_stop_output()
+            Note over MM: Set enabled_faces[i] = false
         else Device Not Ready
             MM->>MM: log_WARNING_HI_DeviceNotReady()
         end
@@ -83,42 +121,15 @@ sequenceDiagram
     MM-->>DS: Return
 ```
 
-### Test Command Operation
-
-```mermaid
-sequenceDiagram
-    participant GS as Ground Station
-    participant MM as MagnetorquerManager
-    participant DRV as DRV2605 Device
-
-    GS->>MM: START_PLAYBACK_TEST(faceIdx)
-    MM->>MM: Validate faceIdx (0-4)
-    alt Invalid faceIdx
-        MM->>MM: log_WARNING_LO_InvalidFaceIndex()
-    else Valid faceIdx
-        MM->>DRV: device_is_ready()
-        alt Device Ready
-            MM->>DRV: drv2605_haptic_config(effect #47)
-        else Device Not Ready
-            MM->>MM: log_WARNING_HI_DeviceNotReady()
-        end
-    end
-    MM-->>GS: Command Response
-```
-
 ## Commands
 
-| Name                 | Description                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------ |
-| START_PLAYBACK_TEST  | Start DRV2605 playback on a device with effect #47 on a specific face (faceIdx: 0-4). Test only. |
-| START_PLAYBACK_TEST2 | Start DRV2605 playback on a device with effect #50 on a specific face (faceIdx: 0-4). Test only. |
+This component does not define any commands.
 
 ## Events
 
-| Name             | Description                                                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| DeviceNotReady   | Output whenever a magnetorquer is attempted to be used while it is not initialized.                                                         |
-| InvalidFaceIndex | Output whenever one of the manual test comamands are ran with an invalid face index (will be removed if/when the test commands are removed) |
+| Name           | Description                                                                   |
+| -------------- | ----------------------------------------------------------------------------- |
+| DeviceNotReady | Output whenever a magnetorquer is attempted to be used while it is not ready. |
 
 ## Requirements
 
@@ -129,6 +140,6 @@ Add requirements in the chart below
 
 ## Change Log
 
-| Date       | Description   |
-| ---------- | ------------- |
-| 11/11/2025 | Initial Draft |
+| Date       | Description            |
+| ---------- | ---------------------- |
+| 11/25/2025 | Initial implementation |

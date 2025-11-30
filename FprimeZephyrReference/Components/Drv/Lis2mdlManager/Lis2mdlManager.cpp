@@ -25,6 +25,12 @@ Lis2mdlManager ::~Lis2mdlManager() {}
 
 void Lis2mdlManager ::configure(const struct device* dev) {
     this->m_dev = dev;
+
+    struct sensor_value odr = {.val1 = 100, .val2 = 0};  // 100 Hz
+
+    if (sensor_attr_set(this->m_dev, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr) != 0) {
+        this->log_WARNING_HI_MagnetometerSamplingFrequencyNotConfigured();
+    }
 }
 
 // ----------------------------------------------------------------------
