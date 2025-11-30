@@ -82,7 +82,7 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
 // ----------------------------------------------------------------------
 
 void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->rx_mode = false;
+    this->rx_mode = false;  // possible race condition with check in run_handler
 
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
@@ -97,6 +97,7 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         Fw::Logger::log("radio.transmit() failed!\n");
         Fw::Logger::log("state: %i\n", state);
     }
+    this->enableRx();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
