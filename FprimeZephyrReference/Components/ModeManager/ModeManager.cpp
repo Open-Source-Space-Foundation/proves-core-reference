@@ -78,6 +78,16 @@ Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
 void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Force entry into safe mode - only allowed from NORMAL (sequential +1/-1 transitions)
 
+    // Reject if in hibernation mode - must use EXIT_HIBERNATION instead
+    // This ensures proper cleanup of hibernation state (m_inHibernationWakeWindow, counters)
+    if (this->m_mode == SystemMode::HIBERNATION_MODE) {
+        Fw::LogStringArg cmdNameStr("FORCE_SAFE_MODE");
+        Fw::LogStringArg reasonStr("Use EXIT_HIBERNATION to exit hibernation mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
     // Reject if in payload mode - must exit payload mode first
     if (this->m_mode == SystemMode::PAYLOAD_MODE) {
         Fw::LogStringArg cmdNameStr("FORCE_SAFE_MODE");
@@ -589,12 +599,19 @@ void ModeManager ::enterDormantSleep() {
     // Save updated counters
     this->saveState();
 
-    // Use Pico SDK to enter dormant mode with RTC alarm
-    // This function does NOT return - system reboots on wake
+    // Use Pico SDK to enter dormant mode with AON timer alarm
+    // On RP2350:
+    //   - Returns true: Successfully woke from AON timer alarm
+    //   - Returns false: Dormant mode entry failed (native/sim or hardware error)
+    //   - Does not return: sys_reboot fallback was used (loadState handles wake)
     bool success = PicoSleep::sleepForSeconds(this->m_sleepDurationSec);
 
-    // If we get here, dormant mode entry failed
-    if (!success) {
+    if (success) {
+        // Successfully woke from AON timer dormant mode!
+        // Start the wake window - same behavior as reboot-based wake
+        this->startWakeWindow();
+    } else {
+        // Dormant mode entry failed
         // Roll back counters since sleep didn't actually occur
         this->m_hibernationCycleCount--;
         this->m_hibernationTotalSeconds -= this->m_sleepDurationSec;
@@ -605,7 +622,7 @@ void ModeManager ::enterDormantSleep() {
 
         // Log failure with HIGH severity - ground already saw OK response!
         // This is the only way ground knows the command actually failed
-        Fw::LogStringArg reasonStr("Dormant mode entry failed - hardware or RTC error");
+        Fw::LogStringArg reasonStr("Dormant mode entry failed - hardware or AON timer error");
         this->log_WARNING_HI_HibernationEntryFailed(reasonStr);
 
         // Exit hibernation mode since we couldn't enter dormant

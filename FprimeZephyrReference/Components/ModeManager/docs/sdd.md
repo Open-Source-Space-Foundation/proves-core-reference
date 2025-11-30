@@ -560,8 +560,9 @@ See `FprimeZephyrReference/test/int/mode_manager_test.py`, `FprimeZephyrReferenc
 | test_hibernation_07_enter_reboot_success | Verifies successful hibernation entry on real hardware | --run-reboot |
 | test_hibernation_08_exit_during_wake_window | Verifies EXIT_HIBERNATION during wake window | --run-reboot |
 | test_hibernation_09_wake_window_timeout | Verifies automatic re-sleep when wake window expires | --run-reboot |
+| test_hibernation_10_force_safe_mode_rejected | Verifies FORCE_SAFE_MODE is rejected from HIBERNATION_MODE | --run-reboot |
 
-> **Testing Strategy:** On native/simulation builds, `PicoSleep::sleepForSeconds()` returns false (dormant not supported), which exercises the failure handling path in normal CI. This tests the HibernationEntryFailed event emission, counter rollback, and mode reversion to SAFE_MODE. Tests requiring actual reboots (07-09) need the `--run-reboot` flag for hardware testing.
+> **Testing Strategy:** On native/simulation builds, `PicoSleep::sleepForSeconds()` returns false (dormant not supported), which exercises the failure handling path in normal CI. This tests the HibernationEntryFailed event emission, counter rollback, and mode reversion to SAFE_MODE. Tests requiring actual reboots (07-10) need the `--run-reboot` flag for hardware testing.
 
 ## Design Decisions
 
@@ -597,27 +598,35 @@ Mode transitions follow a sequential pattern: HIBERNATION_MODE(0) ↔ SAFE_MODE(
 - To enter safe: Must be in NORMAL (not from PAYLOAD_MODE directly)
 
 ### Hibernation Implementation Strategy
-The hibernation mode uses the RP2350's dormant mode with RTC alarm wake:
+The hibernation mode uses the RP2350's dormant mode with AON (Always-On) Timer and POWMAN (Power Manager):
 
-1. **Sleep Entry**: When entering dormant sleep, the system saves all state to flash (including cycle counts and durations), then calls `PicoSleep::sleepForSeconds()` which puts the RP2350 into ultra-low-power dormant state with an RTC alarm configured.
+1. **Sleep Entry**: When entering dormant sleep, the system saves all state to flash (including cycle counts and durations), then calls `PicoSleep::sleepForSeconds()` which puts the RP2350 into ultra-low-power dormant state with an AON timer alarm configured.
 
-2. **Wake Mechanism**: When the RTC alarm fires, the RP2350 performs a full cold reboot via `sys_reboot()`. This is a hardware limitation - dormant wake triggers a reset.
+2. **AON Timer vs RTC**: Unlike the RP2040 which uses an RTC, the RP2350 uses the AON Timer running from the Low Power Oscillator (LPOSC, ~32kHz). The LPOSC stays active during dormant mode while the main XOSC is powered off. Note: LPOSC is less precise (can drift a few percent) but is suitable for hibernation periods.
 
-3. **State Resumption**: On boot, `loadState()` detects HIBERNATION_MODE and automatically starts the wake window, resuming the hibernation cycle.
+3. **Wake Mechanism**: When the AON timer alarm fires, the processor wakes and execution continues (unlike RP2040 which reboots). If `USE_DORMANT_MODE` is disabled or AON timer is unavailable, falls back to `sys_reboot()` for reliability.
 
-4. **Command Response Timing**: The `ENTER_HIBERNATION` command sends its OK response BEFORE entering dormant sleep. This is critical because the subsequent reboot would prevent the response from ever being sent, causing ground to see a timeout.
+4. **State Resumption**: On successful wake from AON timer, `startWakeWindow()` is called directly. On reboot-based wake (fallback), `loadState()` detects HIBERNATION_MODE and starts the wake window.
 
-5. **Counter Rollback**: If dormant entry fails (e.g., hardware error), the pre-incremented counters are rolled back to maintain accurate statistics.
+5. **Command Response Timing**: The `ENTER_HIBERNATION` command sends its OK response BEFORE entering dormant sleep. This is critical because the subsequent sleep would prevent the response from ever being sent, causing ground to see a timeout.
 
-6. **Dormant Entry Failure Notification**: Because the OK response is sent before attempting dormant entry, ground cannot rely on command response to detect failure. If `PicoSleep::sleepForSeconds()` returns false (hardware/RTC error), a WARNING_HI `HibernationEntryFailed` event is emitted. Ground must monitor for this event after any ENTER_HIBERNATION command - if seen, the command actually failed despite the OK response, and the system has reverted to SAFE_MODE.
+6. **Counter Rollback**: If dormant entry fails (e.g., hardware error), the pre-incremented counters are rolled back to maintain accurate statistics.
 
-7. **Wake Window**: During the wake window, only essential subsystems (LoRa radio) are active. The 1Hz run handler counts down the wake window and automatically re-enters dormant sleep when expired.
+7. **Dormant Entry Failure Notification**: Because the OK response is sent before attempting dormant entry, ground cannot rely on command response to detect failure. If `PicoSleep::sleepForSeconds()` returns false (hardware/AON timer error), a WARNING_HI `HibernationEntryFailed` event is emitted. Ground must monitor for this event after any ENTER_HIBERNATION command - if seen, the command actually failed despite the OK response, and the system has reverted to SAFE_MODE.
+
+8. **Wake Window**: During the wake window, only essential subsystems (LoRa radio) are active. The 1Hz run handler counts down the wake window and automatically re-enters dormant sleep when expired.
+
+9. **Power Consumption**: Dormant mode with AON timer: ~3mA. POWMAN deep sleep: ~0.65-0.85mA. For reference, the Pico 2W datasheet claims ~1.4-1.6mA in dormant mode.
+
+10. **Known Issue**: There's a known issue (pico-sdk #2376) where RP2350 can halt after multiple dormant wake cycles. Set `USE_DORMANT_MODE = false` in PicoSleep.cpp to use the safer `sys_reboot()` fallback if this issue is encountered.
 
 ## Change Log
 | Date | Description |
 |---|---|
+| 2025-11-29 | Fixed FORCE_SAFE_MODE to reject from HIBERNATION_MODE (must use EXIT_HIBERNATION); added test_hibernation_10 |
+| 2025-11-29 | Replaced RTC-based dormant with AON Timer + POWMAN for proper RP2350 dormant mode; added power consumption docs, known issue (pico-sdk #2376), and USE_DORMANT_MODE fallback |
 | 2025-11-29 | Added HibernationEntryFailed (WARNING_HI) event for when dormant entry fails after OK response sent |
-| 2025-11-29 | Added HIBERNATION_MODE with RP2350 dormant mode, RTC alarm wake, configurable sleep/wake durations, cycle tracking, and integration tests |
+| 2025-11-29 | Added HIBERNATION_MODE with RP2350 dormant mode, configurable sleep/wake durations, cycle tracking, and integration tests |
 | 2025-11-26 | Reordered enum values (SAFE=1, NORMAL=2, PAYLOAD=3) for sequential +1/-1 transitions; FORCE_SAFE_MODE now rejected from payload mode |
 | 2025-11-26 | Removed forcePayloadMode port - payload mode now only entered via ENTER_PAYLOAD_MODE ground command |
 | 2025-11-25 | Added PAYLOAD_MODE (commands, events, telemetry, persistence, payload load switch control) and documented payload integration tests |

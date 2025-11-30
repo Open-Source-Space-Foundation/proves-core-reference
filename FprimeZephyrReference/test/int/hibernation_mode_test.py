@@ -11,7 +11,7 @@ Tests cover:
 - Command response ordering (response sent before reboot/dormant attempt)
 - Wake window behavior (reboot tests only)
 
-Total: 9 tests (6 run in normal CI, 3 require --run-reboot for real hardware)
+Total: 10 tests (6 run in normal CI, 4 require --run-reboot for real hardware)
 
 Mode enum values: HIBERNATION_MODE=0, SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
 
@@ -19,7 +19,7 @@ Test 06 (dormant entry failure handling) runs in normal CI on native/sim builds
 where PicoSleep::sleepForSeconds() returns false. This exercises the failure
 path: HibernationEntryFailed event, counter rollback, mode reversion to SAFE_MODE.
 
-Tests 07-09 require the --run-reboot flag and will cause actual system reboots:
+Tests 07-10 require the --run-reboot flag and will cause actual system reboots:
     pytest hibernation_mode_test.py --run-reboot
 """
 
@@ -600,3 +600,56 @@ def test_hibernation_09_wake_window_timeout_causes_resleep(
             "Did not see HibernationSleepCycle event - wake window may not have expired "
             "or wake duration is too long for this test"
         )
+
+
+@pytest.mark.reboot
+def test_hibernation_10_force_safe_mode_rejected_from_hibernation(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that FORCE_SAFE_MODE is rejected from HIBERNATION_MODE.
+
+    PREREQUISITE: System must be in hibernation mode wake window.
+
+    FORCE_SAFE_MODE must be rejected from HIBERNATION_MODE to ensure proper
+    hibernation cleanup. Using FORCE_SAFE_MODE would bypass exitHibernation(),
+    leaving m_inHibernationWakeWindow and counters in inconsistent state.
+
+    The correct way to exit hibernation is via EXIT_HIBERNATION command.
+
+    Verifies:
+    - System is in HIBERNATION_MODE (0) - skips if not
+    - FORCE_SAFE_MODE command is rejected with VALIDATION_ERROR
+    - CommandValidationFailed event is emitted with "Use EXIT_HIBERNATION"
+    - Mode remains HIBERNATION_MODE (not changed to SAFE_MODE)
+    """
+    # Check if we're in HIBERNATION_MODE (0)
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    mode_result: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentMode", timeout=5
+    )
+
+    if mode_result.get_val() != 0:
+        pytest.skip(
+            f"Not in HIBERNATION_MODE (mode={mode_result.get_val()}). "
+            "Run test_hibernation_07 first, wait for reboot, then run this test."
+        )
+
+    # Clear histories before the command
+    fprime_test_api.clear_histories()
+
+    # Try to force safe mode - should be rejected
+    with pytest.raises(Exception):
+        proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
+
+    # Verify CommandValidationFailed event with correct message
+    fprime_test_api.assert_event(f"{component}.CommandValidationFailed", timeout=3)
+
+    # Verify still in HIBERNATION_MODE (0) - mode should NOT have changed
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    mode_result: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentMode", timeout=5
+    )
+    assert mode_result.get_val() == 0, (
+        f"Should still be in HIBERNATION_MODE (0), but got mode={mode_result.get_val()}"
+    )
