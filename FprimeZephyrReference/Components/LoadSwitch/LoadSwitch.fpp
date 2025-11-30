@@ -24,9 +24,6 @@ module Components {
         @ Port sending calls to the GPIO driver to read state
         output port gpioGet: Drv.GpioRead
 
-        @ Input port to reset the load switch (called by other components)
-        sync input port Reset: Fw.Signal
-
         @ Input port to turn on the load switch (called by other components)
         sync input port turnOn: Fw.Signal
 

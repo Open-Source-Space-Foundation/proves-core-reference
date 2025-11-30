@@ -22,12 +22,6 @@ LoadSwitch ::~LoadSwitch() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void LoadSwitch ::Reset_handler(FwIndexType portNum) {
-    this->setLoadSwitchState(Fw::On::OFF);
-    k_sleep(K_MSEC(100));
-    this->setLoadSwitchState(Fw::On::ON);
-}
-
 Fw::On LoadSwitch ::loadSwitchStateGet_handler(FwIndexType portNum) {
     return this->getLoadSwitchState() && this->getTime() > this->m_on_timeout ? Fw::On::ON : Fw::On::OFF;
 }

@@ -43,14 +43,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
-    // ----------------------------------------------------------------------
-    // Handler implementations for typed input ports
-    // ----------------------------------------------------------------------
-
-    //! Handler implementation for Reset
-    void Reset_handler(FwIndexType portNum  //!< The port number
-                       ) override;
-
     //! Handler implementation for loadSwitchStateGet
     //!
     //! Input port to get the state of the load switch (called by other components)
