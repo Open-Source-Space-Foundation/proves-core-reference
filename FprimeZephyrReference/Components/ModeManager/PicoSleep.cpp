@@ -127,16 +127,24 @@ static void go_dormant(void) {
 
     // Disable all clocks except those needed for dormant wake
     // On RP2350, CLK_REF_POWMAN needs to stay enabled for AON timer
+#ifdef PICO_SDK_PRESENT
     clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_REF_POWMAN_BITS;
     clocks_hw->sleep_en1 = 0;
+#else
+    // Zephyr build: clocks_hw not available, skipping direct register access
+#endif
 
     // Wait for interrupt - processor enters dormant mode
     // Will wake when AON timer alarm fires
     __wfi();
 
     // Restore clocks after wakeup
+#ifdef PICO_SDK_PRESENT
     clocks_hw->sleep_en0 = 0xFFFFFFFF;
     clocks_hw->sleep_en1 = 0xFFFFFFFF;
+#else
+    // Zephyr build: clocks_hw not available, skipping direct register access
+#endif
 
     // Clear deep sleep bit
     scb_hw->scr &= ~M33_SCR_SLEEPDEEP_BITS;
