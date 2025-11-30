@@ -179,11 +179,17 @@ bool PicoSleep::sleepForSeconds(U32 seconds) {
 
     // Get current time from AON timer
     struct timespec ts;
+#ifdef PICO_SDK_PRESENT
     if (!aon_timer_get_time(&ts)) {
         // AON timer not working - fall back to reboot
         sys_reboot(SYS_REBOOT_COLD);
         return false;
     }
+#else
+    // Pico SDK not available - cannot get AON timer time, fall back to reboot
+    sys_reboot(SYS_REBOOT_COLD);
+    return false;
+#endif
 
     // Set wakeup time
     ts.tv_sec += seconds;
