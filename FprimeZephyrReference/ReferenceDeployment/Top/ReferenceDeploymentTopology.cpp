@@ -115,6 +115,14 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
+    tcaMonitor.configure(state.tca9548aDevice);
+    muxChannel0Monitor.configure(state.muxChannel0Device);
+    muxChannel1Monitor.configure(state.muxChannel1Device);
+    muxChannel2Monitor.configure(state.muxChannel2Device);
+    muxChannel3Monitor.configure(state.muxChannel3Device);
+    muxChannel4Monitor.configure(state.muxChannel4Device);
+    muxChannel5Monitor.configure(state.muxChannel5Device);
+    muxChannel7Monitor.configure(state.muxChannel7Device);
 }
 
 void startRateGroups() {

@@ -142,4 +142,22 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
+  instance tcaMonitor: Components.GenericDeviceMonitor base id 0x10041000
+
+  instance muxChannel0Monitor: Components.GenericDeviceMonitor base id 0x10042000
+
+  instance muxChannel1Monitor: Components.GenericDeviceMonitor base id 0x10043000
+
+  instance muxChannel2Monitor: Components.GenericDeviceMonitor base id 0x10044000
+
+  instance muxChannel3Monitor: Components.GenericDeviceMonitor base id 0x10045000
+
+  instance muxChannel4Monitor: Components.GenericDeviceMonitor base id 0x10046000
+
+  instance muxChannel5Monitor: Components.GenericDeviceMonitor base id 0x10047000
+
+  instance muxChannel6Monitor: Components.GenericDeviceMonitor base id 0x10048000
+
+  instance muxChannel7Monitor: Components.GenericDeviceMonitor base id 0x10049000
+
 }

@@ -91,7 +91,18 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
     ComCcsdsUart.authenticate.CurrentSequenceNumber
+  }
 
+  packet TcaMonitor id 12 group 4 {
+    ReferenceDeployment.tcaMonitor.Healthy
+    ReferenceDeployment.muxChannel0Monitor.Healthy
+    ReferenceDeployment.muxChannel1Monitor.Healthy
+    ReferenceDeployment.muxChannel2Monitor.Healthy
+    ReferenceDeployment.muxChannel3Monitor.Healthy
+    ReferenceDeployment.muxChannel4Monitor.Healthy
+    ReferenceDeployment.muxChannel5Monitor.Healthy
+    ReferenceDeployment.muxChannel6Monitor.Healthy
+    ReferenceDeployment.muxChannel7Monitor.Healthy
   }
 
 } omit {
