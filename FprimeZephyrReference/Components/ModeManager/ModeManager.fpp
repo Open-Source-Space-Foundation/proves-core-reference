@@ -1,7 +1,8 @@
 module Components {
 
-    @ System mode enumeration (values ordered for +1/-1 sequential transitions)
+    @ System mode enumeration
     enum SystemMode {
+        HIBERNATION_MODE = 0 @< Ultra-low-power hibernation with periodic wake windows
         SAFE_MODE = 1 @< Safe mode with non-critical components powered off
         NORMAL = 2 @< Normal operational mode
         PAYLOAD_MODE = 3 @< Payload mode with payload power and battery enabled
@@ -66,6 +67,20 @@ module Components {
         @ Only succeeds if currently in payload mode
         sync command EXIT_PAYLOAD_MODE()
 
+        @ Command to enter hibernation mode (only from SAFE_MODE)
+        @ Uses RP2350 dormant mode with RTC alarm wake
+        @ sleepDurationSec: Duration of each sleep cycle in seconds (default 3600 = 60 min)
+        @ wakeDurationSec: Duration of each wake window in seconds (default 60 = 1 min)
+        sync command ENTER_HIBERNATION(
+            sleepDurationSec: U32 @< Sleep cycle duration in seconds (0 = default 3600)
+            wakeDurationSec: U32 @< Wake window duration in seconds (0 = default 60)
+        )
+
+        @ Command to exit hibernation mode
+        @ Only succeeds if currently in hibernation mode wake window
+        @ Transitions to SAFE_MODE
+        sync command EXIT_HIBERNATION()
+
         # ----------------------------------------------------------------------
         # Events
         # ----------------------------------------------------------------------
@@ -125,6 +140,46 @@ module Components {
             severity warning low \
             format "State persistence {} failed with status {}"
 
+        @ Event emitted when entering hibernation mode
+        event EnteringHibernation(
+            reason: string size 100 @< Reason for entering hibernation
+            sleepDurationSec: U32 @< Sleep cycle duration in seconds
+            wakeDurationSec: U32 @< Wake window duration in seconds
+        ) \
+            severity warning high \
+            format "ENTERING HIBERNATION: {} (sleep={}s, wake={}s)"
+
+        @ Event emitted when exiting hibernation mode
+        event ExitingHibernation(
+            cycleCount: U32 @< Total hibernation cycles completed
+            totalSeconds: U32 @< Total time spent in hibernation
+        ) \
+            severity activity high \
+            format "Exiting hibernation after {} cycles ({}s total)"
+
+        @ Event emitted when hibernation wake window starts
+        event HibernationWakeWindow(
+            cycleNumber: U32 @< Current wake cycle number
+        ) \
+            severity activity low \
+            format "Hibernation wake window #{}"
+
+        @ Event emitted when starting a new hibernation sleep cycle
+        event HibernationSleepCycle(
+            cycleNumber: U32 @< Sleep cycle number starting
+        ) \
+            severity activity low \
+            format "Hibernation sleep cycle #{} starting"
+
+        @ Event emitted when hibernation dormant sleep entry fails
+        @ CRITICAL: Ground already received OK response before this failure
+        @ Mode reverts to SAFE_MODE, counters are rolled back
+        event HibernationEntryFailed(
+            reason: string size 100 @< Reason for failure
+        ) \
+            severity warning high \
+            format "HIBERNATION ENTRY FAILED (command ack'd OK but dormant failed): {}"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -137,6 +192,12 @@ module Components {
 
         @ Number of times payload mode has been entered
         telemetry PayloadModeEntryCount: U32
+
+        @ Number of hibernation sleep/wake cycles completed
+        telemetry HibernationCycleCount: U32
+
+        @ Total time spent in hibernation (seconds)
+        telemetry HibernationTotalSeconds: U32
 
 
         ###############################################################################

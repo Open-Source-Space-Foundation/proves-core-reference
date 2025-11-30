@@ -14,6 +14,35 @@ from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
+def pytest_addoption(parser):
+    """Add custom command-line options for integration tests."""
+    parser.addoption(
+        "--run-reboot",
+        action="store_true",
+        default=False,
+        help="Run tests that trigger system reboot (hibernation tests)",
+    )
+
+
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers",
+        "reboot: marks tests that trigger system reboot (use --run-reboot to run)",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip reboot tests unless --run-reboot is specified."""
+    if config.getoption("--run-reboot"):
+        # --run-reboot given: do not skip reboot tests
+        return
+    skip_reboot = pytest.mark.skip(reason="need --run-reboot option to run")
+    for item in items:
+        if "reboot" in item.keywords:
+            item.add_marker(skip_reboot)
+
+
 @pytest.fixture(scope="session")
 def start_gds(fprime_test_api_session: IntegrationTestAPI):
     """Fixture to start GDS before tests and stop after tests

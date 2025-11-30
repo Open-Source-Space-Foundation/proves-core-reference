@@ -80,6 +80,18 @@ class ModeManager : public ModeManagerComponentBase {
                                       U32 cmdSeq            //!< The command sequence number
                                       ) override;
 
+    //! Handler implementation for command ENTER_HIBERNATION
+    void ENTER_HIBERNATION_cmdHandler(FwOpcodeType opCode,   //!< The opcode
+                                      U32 cmdSeq,            //!< The command sequence number
+                                      U32 sleepDurationSec,  //!< Sleep cycle duration in seconds
+                                      U32 wakeDurationSec    //!< Wake window duration in seconds
+                                      ) override;
+
+    //! Handler implementation for command EXIT_HIBERNATION
+    void EXIT_HIBERNATION_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                     U32 cmdSeq            //!< The command sequence number
+                                     ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -121,18 +133,45 @@ class ModeManager : public ModeManagerComponentBase {
     //! \return Current voltage (only valid if valid parameter is set to true)
     F32 getCurrentVoltage(bool& valid);
 
+    //! Enter hibernation mode with configurable durations
+    //! \param sleepDurationSec Duration of each sleep cycle in seconds
+    //! \param wakeDurationSec Duration of each wake window in seconds
+    //! \param reason Reason for entering hibernation
+    void enterHibernation(U32 sleepDurationSec, U32 wakeDurationSec, const char* reason = nullptr);
+
+    //! Exit hibernation mode (transitions to SAFE_MODE)
+    void exitHibernation();
+
+    //! Enter dormant sleep (calls PicoSleep, does not return on success)
+    void enterDormantSleep();
+
+    //! Start wake window after dormant wake
+    void startWakeWindow();
+
+    //! Handle wake window tick (called from run_handler at 1Hz)
+    void handleWakeWindowTick();
+
     // ----------------------------------------------------------------------
     // Private enums and types
     // ----------------------------------------------------------------------
 
-    //! System mode enumeration (values ordered for +1/-1 sequential transitions)
-    enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2, PAYLOAD_MODE = 3 };
+    //! System mode enumeration
+    enum class SystemMode : U8 {
+        HIBERNATION_MODE = 0,  //!< Ultra-low-power hibernation with periodic wake windows
+        SAFE_MODE = 1,         //!< Safe mode with non-critical components powered off
+        NORMAL = 2,            //!< Normal operational mode
+        PAYLOAD_MODE = 3       //!< Payload mode with payload power and battery enabled
+    };
 
-    //! Persistent state structure
+    //! Persistent state structure (version 2 with hibernation support)
     struct PersistentState {
-        U8 mode;                    //!< Current mode (SystemMode)
-        U32 safeModeEntryCount;     //!< Number of times safe mode entered
-        U32 payloadModeEntryCount;  //!< Number of times payload mode entered
+        U8 mode;                      //!< Current mode (SystemMode)
+        U32 safeModeEntryCount;       //!< Number of times safe mode entered
+        U32 payloadModeEntryCount;    //!< Number of times payload mode entered
+        U32 hibernationCycleCount;    //!< Number of hibernation sleep/wake cycles
+        U32 hibernationTotalSeconds;  //!< Total time spent in hibernation (seconds)
+        U32 sleepDurationSec;         //!< Configured sleep cycle duration (for resume)
+        U32 wakeDurationSec;          //!< Configured wake window duration (for resume)
     };
 
     // ----------------------------------------------------------------------
@@ -143,6 +182,14 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeEntryCount;     //!< Counter for safe mode entries
     U32 m_payloadModeEntryCount;  //!< Counter for payload mode entries
     U32 m_runCounter;             //!< Counter for run handler calls (1Hz)
+
+    // Hibernation state variables
+    bool m_inHibernationWakeWindow;  //!< True if currently in wake window
+    U32 m_wakeWindowCounter;         //!< Seconds elapsed in current wake window
+    U32 m_hibernationCycleCount;     //!< Total hibernation cycles completed
+    U32 m_hibernationTotalSeconds;   //!< Total seconds spent in hibernation
+    U32 m_sleepDurationSec;          //!< Configured sleep cycle duration
+    U32 m_wakeDurationSec;           //!< Configured wake window duration
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 };

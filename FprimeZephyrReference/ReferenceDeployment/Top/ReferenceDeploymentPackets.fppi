@@ -14,6 +14,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
     ReferenceDeployment.modeManager.PayloadModeEntryCount
+    ReferenceDeployment.modeManager.HibernationCycleCount
+    ReferenceDeployment.modeManager.HibernationTotalSeconds
   }
 
   packet HealthWarnings id 2 group 1 {

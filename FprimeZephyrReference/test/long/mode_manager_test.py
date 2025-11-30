@@ -12,7 +12,7 @@ Tests cover:
 
 Total: 9 tests
 
-Mode enum values: SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
+Mode enum values: HIBERNATION_MODE=0, SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
 """
 
 import time

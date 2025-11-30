@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "FprimeZephyrReference/Components/ModeManager/PicoSleep.hpp"
 #include "Fw/Types/Assert.hpp"
 
 namespace Components {
@@ -22,7 +23,13 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_payloadModeEntryCount(0),
-      m_runCounter(0) {}
+      m_runCounter(0),
+      m_inHibernationWakeWindow(false),
+      m_wakeWindowCounter(0),
+      m_hibernationCycleCount(0),
+      m_hibernationTotalSeconds(0),
+      m_sleepDurationSec(3600),  // Default 60 minutes
+      m_wakeDurationSec(60) {}   // Default 1 minute
 
 ModeManager ::~ModeManager() {}
 
@@ -38,6 +45,11 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
+
+    // Handle hibernation wake window timing
+    if (this->m_mode == SystemMode::HIBERNATION_MODE && this->m_inHibernationWakeWindow) {
+        this->handleWakeWindowTick();
+    }
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -146,6 +158,58 @@ void ModeManager ::EXIT_PAYLOAD_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void ModeManager ::ENTER_HIBERNATION_cmdHandler(FwOpcodeType opCode,
+                                                U32 cmdSeq,
+                                                U32 sleepDurationSec,
+                                                U32 wakeDurationSec) {
+    // Command to enter hibernation mode - only allowed from SAFE_MODE
+
+    // Validate: must be in SAFE_MODE
+    if (this->m_mode != SystemMode::SAFE_MODE) {
+        Fw::LogStringArg cmdNameStr("ENTER_HIBERNATION");
+        Fw::LogStringArg reasonStr("Can only enter hibernation from safe mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Use defaults if zero passed
+    U32 sleepSec = (sleepDurationSec == 0) ? 3600 : sleepDurationSec;  // Default 60 min
+    U32 wakeSec = (wakeDurationSec == 0) ? 60 : wakeDurationSec;       // Default 1 min
+
+    // Send command response BEFORE entering hibernation
+    // enterHibernation -> enterDormantSleep -> sys_reboot() does not return on success
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+
+    // Enter hibernation mode (does not return on success - system reboots)
+    this->enterHibernation(sleepSec, wakeSec, "Ground command");
+}
+
+void ModeManager ::EXIT_HIBERNATION_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Command to exit hibernation mode
+
+    // Validate: must be in HIBERNATION_MODE and in wake window
+    if (this->m_mode != SystemMode::HIBERNATION_MODE) {
+        Fw::LogStringArg cmdNameStr("EXIT_HIBERNATION");
+        Fw::LogStringArg reasonStr("Not currently in hibernation mode");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    if (!this->m_inHibernationWakeWindow) {
+        Fw::LogStringArg cmdNameStr("EXIT_HIBERNATION");
+        Fw::LogStringArg reasonStr("Not in wake window");
+        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
+
+    // Exit hibernation mode
+    this->exitHibernation();
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------
@@ -161,16 +225,26 @@ void ModeManager ::loadState() {
         status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
 
         if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
-            // Validate state data before restoring (valid range: 1-3 for SAFE, NORMAL, PAYLOAD)
-            if (state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
-                state.mode <= static_cast<U8>(SystemMode::PAYLOAD_MODE)) {
+            // Validate state data before restoring (valid range: 0-3 for HIBERNATION, SAFE, NORMAL, PAYLOAD)
+            if (state.mode <= static_cast<U8>(SystemMode::PAYLOAD_MODE)) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
                 this->m_payloadModeEntryCount = state.payloadModeEntryCount;
+                this->m_hibernationCycleCount = state.hibernationCycleCount;
+                this->m_hibernationTotalSeconds = state.hibernationTotalSeconds;
+                this->m_sleepDurationSec = state.sleepDurationSec;
+                this->m_wakeDurationSec = state.wakeDurationSec;
 
                 // Restore physical hardware state to match loaded mode
-                if (this->m_mode == SystemMode::SAFE_MODE) {
+                if (this->m_mode == SystemMode::HIBERNATION_MODE) {
+                    // Woke from dormant sleep - enter wake window
+                    // Keep all load switches OFF - we're in minimal power mode
+                    this->turnOffNonCriticalComponents();
+
+                    // Start wake window (radio is already initializing in Main.cpp)
+                    this->startWakeWindow();
+                } else if (this->m_mode == SystemMode::SAFE_MODE) {
                     // Turn off non-critical components to match safe mode state
                     this->turnOffNonCriticalComponents();
 
@@ -194,8 +268,23 @@ void ModeManager ::loadState() {
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_payloadModeEntryCount = 0;
+                this->m_hibernationCycleCount = 0;
+                this->m_hibernationTotalSeconds = 0;
+                this->m_sleepDurationSec = 3600;
+                this->m_wakeDurationSec = 60;
                 this->turnOnComponents();
             }
+        } else {
+            // Read failed or size mismatch (possibly old struct version)
+            // Initialize to safe defaults and configure hardware
+            this->m_mode = SystemMode::NORMAL;
+            this->m_safeModeEntryCount = 0;
+            this->m_payloadModeEntryCount = 0;
+            this->m_hibernationCycleCount = 0;
+            this->m_hibernationTotalSeconds = 0;
+            this->m_sleepDurationSec = 3600;
+            this->m_wakeDurationSec = 60;
+            this->turnOnComponents();
         }
 
         file.close();
@@ -204,6 +293,10 @@ void ModeManager ::loadState() {
         this->m_mode = SystemMode::NORMAL;
         this->m_safeModeEntryCount = 0;
         this->m_payloadModeEntryCount = 0;
+        this->m_hibernationCycleCount = 0;
+        this->m_hibernationTotalSeconds = 0;
+        this->m_sleepDurationSec = 3600;
+        this->m_wakeDurationSec = 60;
         this->turnOnComponents();
     }
 }
@@ -223,6 +316,10 @@ void ModeManager ::saveState() {
     state.mode = static_cast<U8>(this->m_mode);
     state.safeModeEntryCount = this->m_safeModeEntryCount;
     state.payloadModeEntryCount = this->m_payloadModeEntryCount;
+    state.hibernationCycleCount = this->m_hibernationCycleCount;
+    state.hibernationTotalSeconds = this->m_hibernationTotalSeconds;
+    state.sleepDurationSec = this->m_sleepDurationSec;
+    state.wakeDurationSec = this->m_wakeDurationSec;
 
     FwSizeType bytesToWrite = sizeof(PersistentState);
     FwSizeType bytesWritten = bytesToWrite;
@@ -415,6 +512,131 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
     // Do NOT return a fake value that could mask a real brown-out condition
     valid = false;
     return 0.0f;
+}
+
+void ModeManager ::enterHibernation(U32 sleepDurationSec, U32 wakeDurationSec, const char* reason) {
+    // Transition to hibernation mode
+    this->m_mode = SystemMode::HIBERNATION_MODE;
+    this->m_inHibernationWakeWindow = false;
+    this->m_sleepDurationSec = sleepDurationSec;
+    this->m_wakeDurationSec = wakeDurationSec;
+
+    // Build reason string
+    Fw::LogStringArg reasonStr;
+    if (reason != nullptr) {
+        reasonStr = reason;
+    } else {
+        reasonStr = "Unknown";
+    }
+
+    // Log entering hibernation with parameters
+    this->log_WARNING_HI_EnteringHibernation(reasonStr, sleepDurationSec, wakeDurationSec);
+
+    // Turn off ALL load switches (0-7) - minimal power mode
+    this->turnOffNonCriticalComponents();
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+    this->tlmWrite_HibernationCycleCount(this->m_hibernationCycleCount);
+    this->tlmWrite_HibernationTotalSeconds(this->m_hibernationTotalSeconds);
+
+    // Notify other components of mode change
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state before dormant sleep (includes sleep/wake durations for resume)
+    this->saveState();
+
+    // Enter dormant sleep - this does NOT return on success
+    this->enterDormantSleep();
+}
+
+void ModeManager ::exitHibernation() {
+    // Transition from hibernation to safe mode
+    this->m_mode = SystemMode::SAFE_MODE;
+    this->m_inHibernationWakeWindow = false;
+
+    // Log exit with statistics
+    this->log_ACTIVITY_HI_ExitingHibernation(this->m_hibernationCycleCount, this->m_hibernationTotalSeconds);
+
+    // Update telemetry
+    this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
+
+    // Notify other components of mode change
+    if (this->isConnected_modeChanged_OutputPort(0)) {
+        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+        this->modeChanged_out(0, fppMode);
+    }
+
+    // Save state (now in SAFE_MODE)
+    this->saveState();
+}
+
+void ModeManager ::enterDormantSleep() {
+    // Increment counters BEFORE sleep (in case of unexpected wake)
+    this->m_hibernationCycleCount++;
+    this->m_hibernationTotalSeconds += this->m_sleepDurationSec;
+
+    // Log that we're starting a sleep cycle
+    this->log_ACTIVITY_LO_HibernationSleepCycle(this->m_hibernationCycleCount);
+
+    // Update telemetry before sleep
+    this->tlmWrite_HibernationCycleCount(this->m_hibernationCycleCount);
+    this->tlmWrite_HibernationTotalSeconds(this->m_hibernationTotalSeconds);
+
+    // Save updated counters
+    this->saveState();
+
+    // Use Pico SDK to enter dormant mode with RTC alarm
+    // This function does NOT return - system reboots on wake
+    bool success = PicoSleep::sleepForSeconds(this->m_sleepDurationSec);
+
+    // If we get here, dormant mode entry failed
+    if (!success) {
+        // Roll back counters since sleep didn't actually occur
+        this->m_hibernationCycleCount--;
+        this->m_hibernationTotalSeconds -= this->m_sleepDurationSec;
+
+        // Update telemetry with corrected values
+        this->tlmWrite_HibernationCycleCount(this->m_hibernationCycleCount);
+        this->tlmWrite_HibernationTotalSeconds(this->m_hibernationTotalSeconds);
+
+        // Log failure with HIGH severity - ground already saw OK response!
+        // This is the only way ground knows the command actually failed
+        Fw::LogStringArg reasonStr("Dormant mode entry failed - hardware or RTC error");
+        this->log_WARNING_HI_HibernationEntryFailed(reasonStr);
+
+        // Exit hibernation mode since we couldn't enter dormant
+        // (this will save state with corrected counters)
+        this->exitHibernation();
+    }
+}
+
+void ModeManager ::startWakeWindow() {
+    this->m_inHibernationWakeWindow = true;
+    this->m_wakeWindowCounter = 0;
+
+    // Log that we're in a wake window
+    this->log_ACTIVITY_LO_HibernationWakeWindow(this->m_hibernationCycleCount);
+
+    // Update telemetry
+    this->tlmWrite_HibernationCycleCount(this->m_hibernationCycleCount);
+    this->tlmWrite_HibernationTotalSeconds(this->m_hibernationTotalSeconds);
+}
+
+void ModeManager ::handleWakeWindowTick() {
+    // Called from run_handler at 1Hz when in hibernation wake window
+    this->m_wakeWindowCounter++;
+
+    if (this->m_wakeWindowCounter >= this->m_wakeDurationSec) {
+        // Wake window elapsed, no EXIT_HIBERNATION received
+        // Go back to dormant sleep
+        this->m_inHibernationWakeWindow = false;
+        this->enterDormantSleep();
+    }
+    // Otherwise, continue listening for EXIT_HIBERNATION command
 }
 
 }  // namespace Components
