@@ -34,11 +34,11 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
     if (this->rx_mode) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-            this->rx_mode = false;
             SX1280* radio = &this->m_rlb_radio;
             uint8_t data[256] = {0};
             size_t len = radio->getPacketLength();
             radio->readData(data, len);
+            radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
 
             Fw::Logger::log("MESSAGE RECEIVED:\n");
             char msg[sizeof(data) * 3 + 1];
