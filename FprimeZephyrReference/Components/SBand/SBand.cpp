@@ -31,10 +31,10 @@ SBand ::~SBand() {}
 // ----------------------------------------------------------------------
 
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
-    if (this->wait_for_rx_fin) {
+    if (this->rx_mode) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-            this->wait_for_rx_fin = false;
+            this->rx_mode = false;
             SX1280* radio = &this->m_rlb_radio;
             uint8_t data[256] = {0};
             size_t len = radio->getPacketLength();
@@ -85,7 +85,7 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    this->wait_for_rx_fin = false;
+    this->rx_mode = false;
 
     char s[] =
         "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
@@ -122,7 +122,7 @@ void SBand ::enableRx() {
     state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    this->wait_for_rx_fin = true;
+    this->rx_mode = true;
 }
 
 int16_t SBand ::configure_radio() {
