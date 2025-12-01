@@ -4,7 +4,7 @@ module Components {
     passive component ThermalManager {
         sync input port run: Svc.Sched
 
-        # Output ports to TMP112Manager instances
+        # Output ports to  instances
         @ Port to return the state of the TCA
         output port tcaHealthGet: Components.HealthGet
 

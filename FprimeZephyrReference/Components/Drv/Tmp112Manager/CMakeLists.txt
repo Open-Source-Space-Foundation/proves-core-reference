@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/TMP112Manager.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Tmp112Manager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/TMP112Manager.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Tmp112Manager.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/TMP112Manager.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Tmp112Manager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/TMP112ManagerTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/TMP112ManagerTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Tmp112ManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Tmp112ManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

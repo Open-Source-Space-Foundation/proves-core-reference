@@ -1,29 +1,29 @@
 // ======================================================================
-// \title  TMP112Manager.hpp
-// \brief  hpp file for TMP112Manager component implementation class
+// \title  Tmp112Manager.hpp
+// \brief  hpp file for Tmp112Manager component implementation class
 // ======================================================================
 
-#ifndef Drv_TMP112Manager_HPP
-#define Drv_TMP112Manager_HPP
+#ifndef Drv_Tmp112Manager_HPP
+#define Drv_Tmp112Manager_HPP
 
-#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/TMP112ManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112ManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 namespace Drv {
 
-class TMP112Manager final : public TMP112ManagerComponentBase {
+class Tmp112Manager final : public Tmp112ManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct TMP112Manager object
-    TMP112Manager(const char* const compName  //!< The component name
+    //! Construct Tmp112Manager object
+    Tmp112Manager(const char* const compName  //!< The component name
     );
 
-    //! Destroy TMP112Manager object
-    ~TMP112Manager();
+    //! Destroy Tmp112Manager object
+    ~Tmp112Manager();
 
   public:
     // ----------------------------------------------------------------------

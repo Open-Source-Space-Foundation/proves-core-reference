@@ -167,23 +167,23 @@ module ReferenceDeployment {
 
   instance thermalManager: Components.ThermalManager base id 0x1004A000
 
-  instance tmp112Face0Manager: Drv.TMP112Manager base id 0x1004B000
+  instance tmp112Face0Manager: Drv.Tmp112Manager base id 0x1004B000
 
-  instance tmp112Face1Manager: Drv.TMP112Manager base id 0x1004C000
+  instance tmp112Face1Manager: Drv.Tmp112Manager base id 0x1004C000
 
-  instance tmp112Face2Manager: Drv.TMP112Manager base id 0x1004D000
+  instance tmp112Face2Manager: Drv.Tmp112Manager base id 0x1004D000
 
-  instance tmp112Face3Manager: Drv.TMP112Manager base id 0x1004E000
+  instance tmp112Face3Manager: Drv.Tmp112Manager base id 0x1004E000
 
-  instance tmp112Face5Manager: Drv.TMP112Manager base id 0x1004F000
+  instance tmp112Face5Manager: Drv.Tmp112Manager base id 0x1004F000
 
-  instance tmp112BattCell1Manager: Drv.TMP112Manager base id 0x10050000
+  instance tmp112BattCell1Manager: Drv.Tmp112Manager base id 0x10050000
 
-  instance tmp112BattCell2Manager: Drv.TMP112Manager base id 0x10051000
+  instance tmp112BattCell2Manager: Drv.Tmp112Manager base id 0x10051000
 
-  instance tmp112BattCell3Manager: Drv.TMP112Manager base id 0x10052000
+  instance tmp112BattCell3Manager: Drv.Tmp112Manager base id 0x10052000
 
-  instance tmp112BattCell4Manager: Drv.TMP112Manager base id 0x10053000
+  instance tmp112BattCell4Manager: Drv.Tmp112Manager base id 0x10053000
 
   # instance velm6031Face0Manager: Drv.Velm6031Manager base id 0x10054000
 

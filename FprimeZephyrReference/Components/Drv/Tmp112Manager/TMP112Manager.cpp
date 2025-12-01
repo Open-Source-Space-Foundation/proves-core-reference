@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  TMP112Manager.cpp
-// \brief  cpp file for TMP112Manager component implementation class
+// \title  Tmp112Manager.cpp
+// \brief  cpp file for Tmp112Manager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/TMP112Manager.hpp"
+#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112Manager.hpp"
 
 #include <Fw/Types/Assert.hpp>
 
@@ -15,15 +15,15 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-TMP112Manager ::TMP112Manager(const char* const compName) : TMP112ManagerComponentBase(compName) {}
+Tmp112Manager ::Tmp112Manager(const char* const compName) : Tmp112ManagerComponentBase(compName) {}
 
-TMP112Manager ::~TMP112Manager() {}
+Tmp112Manager ::~Tmp112Manager() {}
 
 // ----------------------------------------------------------------------
 // Helper methods
 // ----------------------------------------------------------------------
 
-void TMP112Manager::configure(const struct device* dev) {
+void Tmp112Manager::configure(const struct device* dev) {
     this->m_dev = dev;
 }
 
@@ -31,7 +31,7 @@ void TMP112Manager::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Fw::Success TMP112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& loadSwitchState) {
+Fw::Success Tmp112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& loadSwitchState) {
     // Store the load switch state
     this->m_load_switch_state = loadSwitchState;
 
@@ -48,7 +48,7 @@ Fw::Success TMP112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, 
     return Fw::Success::SUCCESS;
 }
 
-F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& condition) {
+F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
@@ -79,7 +79,7 @@ F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
     return temp;
 }
 
-bool TMP112Manager ::isDeviceInitialized() {
+bool Tmp112Manager ::isDeviceInitialized() {
     if (!this->m_dev) {
         this->log_WARNING_HI_DeviceNil();
         return false;
@@ -95,7 +95,7 @@ bool TMP112Manager ::isDeviceInitialized() {
     return this->m_dev->state->initialized;
 }
 
-Fw::Success TMP112Manager ::initializeDevice() {
+Fw::Success Tmp112Manager ::initializeDevice() {
     if (this->isDeviceInitialized()) {
         if (!device_is_ready(this->m_dev)) {
             this->log_WARNING_HI_DeviceNotReady();
@@ -133,7 +133,7 @@ Fw::Success TMP112Manager ::initializeDevice() {
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success TMP112Manager ::deinitializeDevice() {
+Fw::Success Tmp112Manager ::deinitializeDevice() {
     if (!this->m_dev) {
         this->log_WARNING_HI_DeviceNil();
         return Fw::Success::FAILURE;
@@ -150,7 +150,7 @@ Fw::Success TMP112Manager ::deinitializeDevice() {
     Fw::Success::SUCCESS;
 }
 
-bool TMP112Manager ::loadSwitchReady() {
+bool Tmp112Manager ::loadSwitchReady() {
     return this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout;
 }
 

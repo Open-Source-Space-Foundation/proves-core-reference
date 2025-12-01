@@ -4,7 +4,7 @@ module Drv {
 
 module Drv {
     @ Manager for TMP112 device
-    passive component TMP112Manager {
+    passive component Tmp112Manager {
         # Ports
         @ Port to read the temperature in degrees Celsius
         sync input port temperatureGet: temperatureGet
