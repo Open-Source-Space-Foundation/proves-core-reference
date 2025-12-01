@@ -1,26 +1,22 @@
 module Drv {
-    port temperatureGet -> F64
-    port initialized -> bool
+    port temperatureGet(ref condition: Fw.Success) -> F64
 }
 
 module Drv {
     @ Manager for TMP112 device
     passive component TMP112Manager {
         # Ports
-        @ Port to initialize the TMP112 device
-        sync input port init: Fw.SuccessCondition
-
         @ Port to read the temperature in degrees Celsius
         sync input port temperatureGet: temperatureGet
 
+        @ Port to initialize and deinitialize the TMP112 device on load switch state change
+        sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
+
         @ Output port to check device TCA health
-        output port getTCAHealth: Components.HealthGet
+        output port tcaHealthGet: Components.HealthGet
 
         @ Output port to check device MUX health
-        output port getMUXHealth: Components.HealthGet
-
-        @ Output port to get load switch state
-        output port getLoadSwitchState: Components.loadSwitchStateGet
+        output port muxHealthGet: Components.HealthGet
 
         # Telemetry channels
 
@@ -39,6 +35,15 @@ module Drv {
 
         @ Event for reporting TMP112 nil state error
         event DeviceStateNil() severity warning high format "TMP112 device state is nil" throttle 5
+
+        @ Event for reporting TCA unhealthy state
+        event TcaUnhealthy() severity warning high format "TMP112 TCA device is unhealthy" throttle 5
+
+        @ Event for reporting MUX unhealthy state
+        event MuxUnhealthy() severity warning high format "TMP112 MUX device is unhealthy" throttle 5
+
+        @ Event for reporting Load Switch not ready state
+        event LoadSwitchNotReady() severity warning high format "TMP112 Load Switch is not ready" throttle 5
 
         @ Event for reporting TMP112 sensor fetch failure
         event SensorSampleFetchFailed(ret: I32) severity warning high format "TMP112 sensor fetch failed with return code: {}" throttle 5

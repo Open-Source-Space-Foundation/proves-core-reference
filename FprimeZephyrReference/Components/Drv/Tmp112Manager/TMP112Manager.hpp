@@ -27,7 +27,7 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
 
   public:
     // ----------------------------------------------------------------------
-    // Helper methods
+    // Public helper methods
     // ----------------------------------------------------------------------
 
     //! Configure the TMP112 device
@@ -38,38 +38,55 @@ class TMP112Manager final : public TMP112ManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for init
+    //! Handler implementation for loadSwitchStateChanged
     //!
-    //! Port to initialize the TMP112 device
-    //! Must be called and complete successfully at least one time before temperature can be read
-    void init_handler(FwIndexType portNum,    //!< The port number
-                      Fw::Success& condition  //!< Condition success/failure
-                      ) override;
+    //! Port to initialize and deinitialize the TMP112 device on load switch state change
+    Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
+                                               const Fw::On& state) override;
 
     //! Handler implementation for temperatureGet
     //!
     //! Port to read the temperature in degrees Celsius
-    F64 temperatureGet_handler(FwIndexType portNum  //!< The port number
-                               ) override;
+    F64 temperatureGet_handler(FwIndexType portNum,  //!< The port number
+                               Fw::Success& condition) override;
 
+  private:
     // ----------------------------------------------------------------------
-    // Member variables
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Initialize the TMP112 device
+    Fw::Success initializeDevice();
+
+    //! Deinitialize the TMP112 device
+    Fw::Success deinitializeDevice();
+
+    //! Check if the TMP112 device is initialized
+    bool isDeviceInitialized();
+
+    //! Check if the load switch is ready (on and timeout passed)
+    bool loadSwitchReady();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
 
     //! TCA health state
-    Fw::Health tca_state = Fw::Health::FAILED;
+    Fw::Health m_tca_state = Fw::Health::FAILED;
 
     //! MUX health state
-    Fw::Health mux_state = Fw::Health::FAILED;
+    Fw::Health m_mux_state = Fw::Health::FAILED;
 
     //! Load switch state
-    Fw::On load_switch_state = Fw::On::OFF;
+    Fw::On m_load_switch_state = Fw::On::OFF;
 
-    //! Initialization state
-    bool m_initialized = false;
+    //! Load switch on timeout
+    //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
+    Fw::Time m_load_switch_on_timeout;
 };
 
 }  // namespace Drv

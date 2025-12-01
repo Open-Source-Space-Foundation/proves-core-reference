@@ -31,46 +31,31 @@ void TMP112Manager::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void TMP112Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) {
-    // if ()
+Fw::Success TMP112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& loadSwitchState) {
+    // Store the load switch state
+    this->m_load_switch_state = loadSwitchState;
 
-    if (!this->m_dev) {
-        condition = Fw::Success::FAILURE;
-        this->log_WARNING_HI_DeviceNil();
-        return;
+    // If the load switch is off, deinitialize the device
+    if (this->m_load_switch_state == Fw::On::OFF) {
+        return this->deinitializeDevice();
     }
-    this->log_WARNING_HI_DeviceNil_ThrottleClear();
 
-    if (!this->m_dev->state) {
-        condition = Fw::Success::FAILURE;
-        this->log_WARNING_HI_DeviceStateNil();
-        return;
-    }
-    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
+    // If the load switch is on, set the timeout
+    // We only consider the load switch to be fully on after a timeout period
+    this->m_load_switch_on_timeout = this->getTime();
+    this->m_load_switch_on_timeout.add(1, 0);
 
-    // Reset the device initialization state to allow device_init to run again.
-    this->m_dev->state->initialized = false;
-
-    int rc = device_init(this->m_dev);
-    if (rc < 0) {
-        condition = Fw::Success::FAILURE;
-        this->log_WARNING_HI_DeviceInitFailed(rc);
-        return;
-    }
-    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
-
-    // this->m_initialized = true; // This cannot be used until it can be set false when the load switch is turned off.
-    condition = Fw::Success::SUCCESS;
+    return Fw::Success::SUCCESS;
 }
 
-F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
-    if (!device_is_ready(this->m_dev)) {
-        this->log_WARNING_HI_DeviceNotReady();
+F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
+    if (!this->initializeDevice()) {
         return 0;
     }
-    this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
-    struct sensor_value temp;
+    struct sensor_value val;
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP);
     if (rc != 0) {
@@ -79,16 +64,94 @@ F64 TMP112Manager ::temperatureGet_handler(FwIndexType portNum) {
     }
     this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
-    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
     if (rc != 0) {
         this->log_WARNING_HI_SensorChannelGetFailed(rc);
         return 0;
     }
     this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
-    this->tlmWrite_Temperature(sensor_value_to_double(&temp));
+    F64 temp = sensor_value_to_double(&val);
+    condition = Fw::Success::SUCCESS;
 
-    return sensor_value_to_double(&temp);
+    this->tlmWrite_Temperature(temp);
+
+    return temp;
+}
+
+bool TMP112Manager ::isDeviceInitialized() {
+    if (!this->m_dev) {
+        this->log_WARNING_HI_DeviceNil();
+        return false;
+    }
+    this->log_WARNING_HI_DeviceNil_ThrottleClear();
+
+    if (!this->m_dev->state) {
+        this->log_WARNING_HI_DeviceStateNil();
+        return false;
+    }
+    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
+
+    return this->m_dev->state->initialized;
+}
+
+Fw::Success TMP112Manager ::initializeDevice() {
+    if (this->isDeviceInitialized()) {
+        if (!device_is_ready(this->m_dev)) {
+            this->log_WARNING_HI_DeviceNotReady();
+            return Fw::Success::FAILURE;
+        }
+        this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
+        return Fw::Success::SUCCESS;
+    }
+
+    if (this->tcaHealthGet_out(0) != Fw::Health::HEALTHY) {
+        this->log_WARNING_HI_TcaUnhealthy();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_TcaUnhealthy_ThrottleClear();
+
+    if (this->muxHealthGet_out(0) != Fw::Health::HEALTHY) {
+        this->log_WARNING_HI_MuxUnhealthy();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_MuxUnhealthy_ThrottleClear();
+
+    if (!this->loadSwitchReady()) {
+        this->log_WARNING_HI_LoadSwitchNotReady();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_LoadSwitchNotReady_ThrottleClear();
+
+    int rc = device_init(this->m_dev);
+    if (rc < 0) {
+        this->log_WARNING_HI_DeviceInitFailed(rc);
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+
+    return Fw::Success::SUCCESS;
+}
+
+Fw::Success TMP112Manager ::deinitializeDevice() {
+    if (!this->m_dev) {
+        this->log_WARNING_HI_DeviceNil();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_DeviceNil_ThrottleClear();
+
+    if (!this->m_dev->state) {
+        this->log_WARNING_HI_DeviceStateNil();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
+
+    this->m_dev->state->initialized = false;
+    Fw::Success::SUCCESS;
+}
+
+bool TMP112Manager ::loadSwitchReady() {
+    return this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout;
 }
 
 }  // namespace Drv

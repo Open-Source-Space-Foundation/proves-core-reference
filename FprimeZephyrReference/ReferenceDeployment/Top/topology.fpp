@@ -229,18 +229,23 @@ module ReferenceDeployment {
 
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
       face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+      face0LoadSwitch.loadSwitchStateChanged -> tmp112Face0Manager.loadSwitchStateChanged
 
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+      face1LoadSwitch.loadSwitchStateChanged -> tmp112Face1Manager.loadSwitchStateChanged
 
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
       face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+      face2LoadSwitch.loadSwitchStateChanged -> tmp112Face2Manager.loadSwitchStateChanged
 
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
       face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+      face3LoadSwitch.loadSwitchStateChanged -> tmp112Face3Manager.loadSwitchStateChanged
 
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
       face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+      face5LoadSwitch.loadSwitchStateChanged -> tmp112Face5Manager.loadSwitchStateChanged
 
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
       payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
@@ -286,45 +291,41 @@ module ReferenceDeployment {
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
     }
 
-    connections thermalMonitor {
-      thermalManager.tcaHealthGet -> tcaMonitor.healthGet
-
-      thermalManager.muxChannel0HealthGet -> muxChannel0Monitor.healthGet
-      thermalManager.face0LoadSwitchStateGet -> face0LoadSwitch.loadSwitchStateGet
-      thermalManager.face0Init -> tmp112Face0Manager.init
+    connections thermalManager {
+      tmp112Face0Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112Face0Manager.muxHealthGet -> muxChannel0Monitor.healthGet
       thermalManager.face0TempGet -> tmp112Face0Manager.temperatureGet
 
-      thermalManager.muxChannel1HealthGet -> muxChannel1Monitor.healthGet
-      thermalManager.face1LoadSwitchStateGet -> face1LoadSwitch.loadSwitchStateGet
-      thermalManager.face1Init -> tmp112Face1Manager.init
+      tmp112Face1Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112Face1Manager.muxHealthGet -> muxChannel1Monitor.healthGet
       thermalManager.face1TempGet -> tmp112Face1Manager.temperatureGet
 
-      thermalManager.muxChannel2HealthGet -> muxChannel2Monitor.healthGet
-      thermalManager.face2LoadSwitchStateGet -> face2LoadSwitch.loadSwitchStateGet
-      thermalManager.face2Init -> tmp112Face2Manager.init
+      tmp112Face2Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112Face2Manager.muxHealthGet -> muxChannel2Monitor.healthGet
       thermalManager.face2TempGet -> tmp112Face2Manager.temperatureGet
 
-      thermalManager.muxChannel3HealthGet -> muxChannel3Monitor.healthGet
-      thermalManager.face3LoadSwitchStateGet -> face3LoadSwitch.loadSwitchStateGet
-      thermalManager.face3Init -> tmp112Face3Manager.init
+      tmp112Face3Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112Face3Manager.muxHealthGet -> muxChannel3Monitor.healthGet
       thermalManager.face3TempGet -> tmp112Face3Manager.temperatureGet
 
-      thermalManager.muxChannel5HealthGet -> muxChannel5Monitor.healthGet
-      thermalManager.face5LoadSwitchStateGet -> face5LoadSwitch.loadSwitchStateGet
-      thermalManager.face5Init -> tmp112Face5Manager.init
+      tmp112Face5Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112Face5Manager.muxHealthGet -> muxChannel5Monitor.healthGet
       thermalManager.face5TempGet -> tmp112Face5Manager.temperatureGet
 
-      thermalManager.muxChannel4HealthGet -> muxChannel4Monitor.healthGet
-      thermalManager.battCell1Init -> tmp112BattCell1Manager.init
+      tmp112BattCell1Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112BattCell1Manager.muxHealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell1TempGet -> tmp112BattCell1Manager.temperatureGet
 
-      thermalManager.battCell2Init -> tmp112BattCell2Manager.init
+      tmp112BattCell2Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112BattCell2Manager.muxHealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell2TempGet -> tmp112BattCell2Manager.temperatureGet
 
-      thermalManager.battCell3Init -> tmp112BattCell3Manager.init
+      tmp112BattCell3Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112BattCell3Manager.muxHealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell3TempGet -> tmp112BattCell3Manager.temperatureGet
 
-      thermalManager.battCell4Init -> tmp112BattCell4Manager.init
+      tmp112BattCell4Manager.tcaHealthGet -> tcaMonitor.healthGet
+      tmp112BattCell4Manager.muxHealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCell4TempGet -> tmp112BattCell4Manager.temperatureGet
     }
 
