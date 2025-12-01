@@ -312,7 +312,7 @@ zephyr_udc0: &usbd {
                 compatible = "ti,tmp112";
                 reg = <0x49>;
                 status = "okay";
-                la bel = "BATT_CELL2_TMP112";
+                label = "BATT_CELL2_TMP112";
                 zephyr,deferred-init;
             };
             batt_cell3_temp_sens: tmp112@4a {
