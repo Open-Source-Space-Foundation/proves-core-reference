@@ -37,37 +37,12 @@ void AntennaDeployer ::schedIn_handler(FwIndexType portNum, U32 context) {
         case DeploymentState::IDLE:
             // Nothing to do
             break;
-        case DeploymentState::QUIET_WAIT:
-            this->handleQuietWaitTick();
-            break;
         case DeploymentState::BURNING:
             this->handleBurningTick();
             break;
         case DeploymentState::RETRY_WAIT:
             this->handleRetryWaitTick();
             break;
-    }
-}
-
-void AntennaDeployer ::distanceIn_handler(FwIndexType portNum, F32 distance, bool valid) {
-    (void)portNum;
-
-    this->m_lastDistance = distance;
-    this->m_lastDistanceValid = valid && this->isDistanceWithinValidRange(distance);
-
-    if (!this->m_lastDistanceValid) {
-        this->log_WARNING_LO_InvalidDistanceMeasurement(distance);
-        return;
-    }
-
-    this->tlmWrite_LastDistance(distance);
-
-    if (this->m_state == DeploymentState::IDLE) {
-        return;
-    }
-
-    if (this->isDistanceDeployed(distance)) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
     }
 }
 
@@ -89,7 +64,11 @@ void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         return;
     }
 
-    this->enterQuietWait();
+    this->resetDeploymentState();
+    this->m_ticksInState = 0;
+    this->m_successDetected = false;
+    this->m_stopRequested = false;
+    this->startNextAttempt();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -132,31 +111,8 @@ void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 
 // Internal helpers
 // ----------------------------------------------------------------------
 
-void AntennaDeployer ::enterQuietWait() {
-    this->resetDeploymentState();
-    this->m_ticksInState = 0;
-    this->m_successDetected = false;
-    this->m_stopRequested = false;
-
-    Fw::ParamValid valid;
-    const U32 quietTime = this->paramGet_QUIET_TIME_SEC(valid);
-    if (quietTime == 0U) {
-        // Skip QUIET_WAIT state entirely when quietTime is 0
-        this->startNextAttempt();
-    } else {
-        // Only enter QUIET_WAIT if we actually need to wait
-        this->m_state = DeploymentState::QUIET_WAIT;
-    }
-}
-
 void AntennaDeployer ::startNextAttempt() {
     this->m_currentAttempt++;
-
-    // Emit quiet time expired event if we're transitioning from QUIET_WAIT state
-    // Do this before resetting m_ticksInState so we capture the actual elapsed time
-    if (this->m_state == DeploymentState::QUIET_WAIT) {
-        this->log_ACTIVITY_HI_QuietTimeExpired(this->m_ticksInState);
-    }
 
     this->m_ticksInState = 0;
     this->m_successDetected = false;
@@ -173,21 +129,6 @@ void AntennaDeployer ::startNextAttempt() {
     }
 
     this->m_state = DeploymentState::BURNING;
-}
-
-void AntennaDeployer ::handleQuietWaitTick() {
-    this->m_ticksInState++;
-
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
-
-    Fw::ParamValid valid;
-    const U32 quietTime = this->paramGet_QUIET_TIME_SEC(valid);
-    if (this->m_ticksInState >= quietTime) {
-        this->startNextAttempt();
-    }
 }
 
 void AntennaDeployer ::handleBurningTick() {
@@ -279,31 +220,7 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_ticksInState = 0;
     this->m_stopRequested = false;
     this->m_successDetected = false;
-    this->m_lastDistanceValid = false;
     this->m_burnTicksThisAttempt = 0;
-}
-
-bool AntennaDeployer ::isDistanceWithinValidRange(F32 distance) {
-    Fw::ParamValid topValid;
-    const F32 top = this->paramGet_INVALID_THRESHOLD_TOP_CM(topValid);
-
-    Fw::ParamValid bottomValid;
-    const F32 bottom = this->paramGet_INVALID_THRESHOLD_BOTTOM_CM(bottomValid);
-
-    return (distance <= top) && (distance >= bottom);
-}
-
-bool AntennaDeployer ::isDistanceDeployed(F32 distance) {
-    Fw::ParamValid valid;
-    const F32 threshold = this->paramGet_DEPLOYED_THRESHOLD_CM(valid);
-
-    if (distance <= threshold) {
-        this->m_successDetected = true;
-        this->logBurnSignalCount();
-        return true;
-    }
-
-    return false;
 }
 
 void AntennaDeployer ::ensureBurnwireStopped() {

@@ -1,6 +1,6 @@
 # Components::AntennaDeployer
 
-Component that deploys the antenna, activates the burnwire, checks the distance sensor
+Component that deploys the antenna and activates the burnwire
 
 
 ## Requirements
@@ -30,7 +30,6 @@ Add a class diagram here
 | Name | Type | Description |
 |------|------| ----------- |
 |schedIn|Svc.Sched|Port receiving calls from the rate group|
-|distanceIn|Components.DistanceUpdate|Port receiving latest distance measurements|
 |burnStart|Fw.Signal|Port signaling the burnwire component to start heating|
 |burnStop|Fw.Signal|Port signaling the burnwire component to stop heating|
 
@@ -64,8 +63,6 @@ Add sequence diagrams here
 |DeployAttempt|Emitted at the start of each deployment attempt|
 |DeploySuccess|Emitted when the antenna deployment is considered successful|
 |DeployFinish|Emitted when the deployment procedure finishes|
-|InvalidDistanceMeasurement|Emitted when a distance reading is ignored because it is invalid|
-|QuietTimeExpired|Emitted when the quiet wait period expires and deployment attempt begins|
 
 
 ## Telemetry
