@@ -1,5 +1,6 @@
 module Components {
     port loadSwitchStateGet -> Fw.On
+    port loadSwitchStateChanged($state: Fw.On) -> Fw.Success
 }
 
 module Components {
@@ -24,14 +25,14 @@ module Components {
         @ Port sending calls to the GPIO driver to read state
         output port gpioGet: Drv.GpioRead
 
+        @ Port to indicate a change in load switch state
+        output port loadSwitchStateChanged: loadSwitchStateChanged
+
         @ Input port to turn on the load switch (called by other components)
         sync input port turnOn: Fw.Signal
 
         @ Input port to turn off the load switch (called by other components)
         sync input port turnOff: Fw.Signal
-
-        @ Input port to get the state of the load switch (called by other components)
-        sync input port loadSwitchStateGet: loadSwitchStateGet
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

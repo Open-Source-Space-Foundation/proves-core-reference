@@ -43,14 +43,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
-    //! Handler implementation for loadSwitchStateGet
-    //!
-    //! Input port to get the state of the load switch (called by other components)
-    //! We need to wait for power to normalize after turning on the load switch
-    //! so we check the current time against a timeout
-    Fw::On loadSwitchStateGet_handler(FwIndexType portNum  //!< The port number
-                                      ) override;
-
     //! Handler implementation for turnOn
     void turnOn_handler(FwIndexType portNum  //!< The port number
                         ) override;
@@ -69,11 +61,6 @@ class LoadSwitch final : public LoadSwitchComponentBase {
 
     //! Get current load switch state
     Fw::On getLoadSwitchState();  //<! Get the current state (ON or OFF)
-
-    // ----------------------------------------------------------------------
-    // Private member variables
-    // ----------------------------------------------------------------------
-    Fw::Time m_on_timeout;  //!< Time when load switch was turned on plus a delay time
 };
 
 }  // namespace Components
