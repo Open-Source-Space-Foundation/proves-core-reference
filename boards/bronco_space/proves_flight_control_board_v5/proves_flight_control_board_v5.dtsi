@@ -306,14 +306,14 @@ zephyr_udc0: &usbd {
 				reg = <0x48>;
 				status = "okay";
 				label = "BATT_CELL1_TMP112";
-				zephyr,deferred-init;
+                zephyr,deferred-init;
 			};
 			batt_cell2_temp_sens: tmp112@49 {
 				compatible = "ti,tmp112";
 				reg = <0x49>;
 				status = "okay";
-				la bel = "BATT_CELL2_TMP112";
-				zephyr,deferred-init;
+				label = "BATT_CELL2_TMP112";
+                zephyr,deferred-init;
 			};
 			batt_cell3_temp_sens: tmp112@4a {
 				compatible = "ti,tmp112";
