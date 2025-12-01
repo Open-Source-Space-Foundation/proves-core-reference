@@ -179,7 +179,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[11] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[12] -> modeManager.run
-
+      rateGroup1Hz.RateGroupMemberOut[13] -> imuManager.run
     }
 
 
