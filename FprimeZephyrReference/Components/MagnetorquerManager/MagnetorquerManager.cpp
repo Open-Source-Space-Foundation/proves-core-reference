@@ -26,36 +26,17 @@ MagnetorquerManager ::MagnetorquerManager(const char* const compName) : Magnetor
 
 MagnetorquerManager ::~MagnetorquerManager() {}
 
-void MagnetorquerManager ::configure(const std::map<std::string, const struct device*>& devices) {
-    // Configure DRV2605 config struct
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    this->config_data.rom_data = &rom_data;
-
+void MagnetorquerManager ::configure() {
     // Manually enable load switches
     for (int i = 0; i < 5; i++) {
         this->loadSwitchTurnOn_out(i);
     }
 
-    // Configure each device
-    for (const auto& [key, device] : devices) {
-        this->m_devices[key] = device;
-        this->enabled_faces[key] = false;
-
-        int ret = device_init(device);
-        if (ret != 0) {
-            this->log_WARNING_HI_DeviceNotInitialized(Fw::LogStringArg(key.c_str()));
-            continue;
-        }
-
-        drv2605_haptic_config(device, DRV2605_HAPTICS_SOURCE_ROM, &this->config_data);
+    Fw::Success condition;
+    // Initialize enabled_faces
+    for (int i = 0; i < 5; i++) {
+        this->initDevice_out(i, condition);
+        this->enabled_faces[this->faces[i]] = false;
     }
 }
 
@@ -64,12 +45,9 @@ void MagnetorquerManager ::configure(const std::map<std::string, const struct de
 // ----------------------------------------------------------------------
 void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
     if (this->enabled) {
-        for (const auto& [key, device] : this->m_devices) {
-            if (this->enabled_faces[key]) {
-                if (!device_is_ready(device)) {
-                    continue;
-                }
-                haptics_start_output(device);
+        for (int i = 0; i < 5; i++) {
+            if (this->enabled_faces[this->faces[i]]) {
+                this->triggerDevice_out(i);
             }
         }
     }
@@ -78,14 +56,14 @@ void MagnetorquerManager ::run_handler(FwIndexType portNum, U32 context) {
 void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, const Components::InputArray& value) {
     this->enabled = true;
 
-    // Loop through 10 times to match InputArray size in fpp type.
-    for (int i = 0; i < 10; i++) {
+    // Loop through 5 times to match InputArray size in fpp type.
+    for (int i = 0; i < 5; i++) {
         const Components::InputStruct& entry = value[i];
         std::string key = entry.get_key().toChar();
         bool enabled = entry.get_value();
 
-        auto it = this->m_devices.find(key);
-        if (it == this->m_devices.end()) {
+        auto it = this->enabled_faces.find(key);
+        if (it == this->enabled_faces.end()) {
             this->log_WARNING_HI_InvalidFace(Fw::LogStringArg(key.c_str()));
             continue;
         }
@@ -96,14 +74,8 @@ void MagnetorquerManager ::SetMagnetorquers_handler(const FwIndexType portNum, c
 void MagnetorquerManager ::SetDisabled_handler(const FwIndexType portNum) {
     this->enabled = false;
 
-    for (const auto& [key, device] : this->m_devices) {
-        if (!device_is_ready(device)) {
-            this->log_WARNING_HI_DeviceNotReady(Fw::LogStringArg(key.c_str()));
-            continue;
-        }
-
-        haptics_stop_output(device);
-        this->enabled_faces[key] = false;
+    for (int i = 0; i < 5; i++) {
+        this->enabled_faces[this->faces[i]] = false;
     }
 }
 

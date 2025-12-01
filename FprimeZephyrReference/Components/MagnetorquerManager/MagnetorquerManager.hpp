@@ -32,23 +32,23 @@ class MagnetorquerManager final : public MagnetorquerManagerComponentBase {
     ~MagnetorquerManager();
 
     //! Configure the DRV2605 device
-    void configure(const std::map<std::string, const struct device*>& devices);
+    void configure();
 
   private:
+    // Port handler implementations
     void run_handler(FwIndexType portNum, U32 context) override;
+    void SetMagnetorquers_handler(const FwIndexType portNum, const Components::InputArray& value) override;
+    void SetDisabled_handler(const FwIndexType portNum) override;
 
     //! Zephyr device to store initialized DRV2605 devices
     std::map<std::string, const struct device*> m_devices;
 
-    union drv2605_config_data config_data;
-
-    // Port handler implementations
-    void SetMagnetorquers_handler(const FwIndexType portNum, const Components::InputArray& value) override;
-    void SetDisabled_handler(const FwIndexType portNum) override;
-
     // Local variables
-    bool enabled = false;
+
+    // NOTE: The order of the faces here matter, their index will map to a specific port
+    std::string faces[5] = {"X+", "X-", "Y+", "Y-", "Z+"};
     std::map<std::string, bool> enabled_faces;
+    bool enabled = false;
 };
 }  // namespace Components
 
