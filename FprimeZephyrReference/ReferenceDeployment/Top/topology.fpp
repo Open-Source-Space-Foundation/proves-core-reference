@@ -91,13 +91,13 @@ module ReferenceDeployment {
     instance tmp112BattCell4Manager
     instance resetManager
     instance modeManager
-    instance velm6031Face0Manager
-    instance velm6031Face1Manager
-    instance velm6031Face2Manager
-    instance velm6031Face3Manager
-    instance velm6031Face5Manager
-    instance velm6031Face6Manager
-    instance velm6031Face7Manager
+    # instance velm6031Face0Manager
+    # instance velm6031Face1Manager
+    # instance velm6031Face2Manager
+    # instance velm6031Face3Manager
+    # instance velm6031Face5Manager
+    # instance velm6031Face6Manager
+    # instance velm6031Face7Manager
 
 
   # ----------------------------------------------------------------------
