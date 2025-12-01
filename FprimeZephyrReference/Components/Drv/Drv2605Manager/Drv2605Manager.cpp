@@ -55,8 +55,8 @@ void Drv2605Manager ::init_handler(FwIndexType portNum, Fw::Success& condition) 
     this->m_dev->state->initialized = false;
 
     int rc = device_init(this->m_dev);
-    this->log_WARNING_HI_DeviceInitFailed(rc);
     if (rc < 0) {
+        this->log_WARNING_HI_DeviceInitFailed(rc);
         condition = Fw::Success::FAILURE;
         return;
     }
