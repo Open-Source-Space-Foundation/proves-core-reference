@@ -25,7 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
-    # instance rateGroup1_6Hz
+    instance rateGroup1_6Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -193,31 +193,30 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
+      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[4] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[8] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[9] -> startupManager.run # doubles (20ms) rate group max time
       # rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run # Causing rate group to slip?
-      rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> muxChannel0Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[16] -> muxChannel1Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[17] -> muxChannel2Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> muxChannel3Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> muxChannel4Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[20] -> muxChannel5Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[21] -> muxChannel7Monitor.run
-      rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> modeManager.run
       # rateGroup1Hz.RateGroupMemberOut[23] -> adcs.run
 
       # Slow rate (1/6 Hz) rate group
-      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
+      rateGroup1_6Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
+      rateGroup1_6Hz.RateGroupMemberOut[1] -> imuManager.run
+      rateGroup1_6Hz.RateGroupMemberOut[2] -> tcaMonitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[3] -> muxChannel0Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[4] -> muxChannel1Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[5] -> muxChannel2Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[6] -> muxChannel3Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[7] -> muxChannel4Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[8] -> muxChannel5Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[9] -> muxChannel7Monitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[10] -> thermalManager.run
     }
 
 

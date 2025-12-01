@@ -67,7 +67,7 @@ void configureTopology() {
     // Rate groups require context arrays.
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
-    // rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
+    rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
 
     cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
 

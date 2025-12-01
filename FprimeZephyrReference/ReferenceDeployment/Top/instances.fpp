@@ -37,10 +37,10 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 3
 
-  # instance rateGroup1_6Hz: Svc.ActiveRateGroup base id 0x10003000 \
-  #   queue size Default.QUEUE_SIZE \
-  #   stack size Default.STACK_SIZE \
-  #   priority 4
+  instance rateGroup1_6Hz: Svc.ActiveRateGroup base id 0x10003000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 4
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
     queue size Default.QUEUE_SIZE * 2 \

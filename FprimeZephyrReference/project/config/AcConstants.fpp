@@ -4,7 +4,7 @@
 # ======================================================================
 
 @ Number of rate group member output ports for ActiveRateGroup
-constant ActiveRateGroupOutputPorts = 24
+constant ActiveRateGroupOutputPorts = 12
 
 @ Number of rate group member output ports for PassiveRateGroup
 constant PassiveRateGroupOutputPorts = 10
