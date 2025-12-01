@@ -73,8 +73,6 @@ void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg:
     int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    Fw::Logger::log("got dataIn_handler\n");
-
     this->enableRx();
     Fw::Success returnStatus = Fw::Success::SUCCESS;
     this->dataReturnOut_out(0, data, context);
@@ -159,6 +157,9 @@ int16_t SBand ::configure_radio() {
 void SBand ::start() {
     int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    Fw::Success status = Fw::Success::SUCCESS;
+    this->comStatusOut_out(0, status);
 
     this->enableRx();
 }
