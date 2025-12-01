@@ -91,6 +91,7 @@ module ReferenceDeployment {
     instance tmp112BattCell4Manager
     instance resetManager
     instance modeManager
+    instance adcs
     instance velm6031Face0Manager
     # instance velm6031Face1Manager
     # instance velm6031Face2Manager
@@ -212,6 +213,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[20] -> muxChannel5Monitor.run
       rateGroup1Hz.RateGroupMemberOut[21] -> muxChannel7Monitor.run
       rateGroup1Hz.RateGroupMemberOut[22] -> thermalManager.run
+      # rateGroup1Hz.RateGroupMemberOut[23] -> adcs.run
 
       # Slow rate (1/6 Hz) rate group
       # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
@@ -328,6 +330,15 @@ module ReferenceDeployment {
       tmp112BattCell4Manager.tcaHealthGet -> tcaMonitor.healthGet
       tmp112BattCell4Manager.muxHealthGet -> muxChannel4Monitor.healthGet
       thermalManager.battCellTempGet[3] -> tmp112BattCell4Manager.temperatureGet
+    }
+
+    connections adcs {
+      adcs.visibleLightGet[0] -> velm6031Face0Manager.visibleLightGet
+      # adcs.visibleLightGet[1] -> velm6031Face1Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[2] -> velm6031Face2Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[3] -> velm6031Face3Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[4] -> velm6031Face5Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[5] -> velm6031Face6Manager.visibleLightGet --- IGNORE
     }
 
     connections ModeManager {
