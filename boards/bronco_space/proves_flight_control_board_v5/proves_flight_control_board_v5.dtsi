@@ -305,24 +305,28 @@ zephyr_udc0: &usbd {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
+				label = "BATT_CELL1_TMP112";
 				zephyr,deferred-init;
 			};
 			batt_cell2_temp_sens: tmp112@49 {
 				compatible = "ti,tmp112";
 				reg = <0x49>;
 				status = "okay";
+				la bel = "BATT_CELL2_TMP112";
 				zephyr,deferred-init;
 			};
 			batt_cell3_temp_sens: tmp112@4a {
 				compatible = "ti,tmp112";
 				reg = <0x4a>;
 				status = "okay";
+				label = "BATT_CELL3_TMP112";
 				zephyr,deferred-init;
 			};
 			batt_cell4_temp_sens: tmp112@4b {
 				compatible = "ti,tmp112";
 				reg = <0x4b>;
 				status = "okay";
+				label = "BATT_CELL4_TMP112";
 				zephyr,deferred-init;
 			};
 		};
@@ -403,7 +407,7 @@ zephyr_udc0: &usbd {
 
 		};
 
-		// Top is always powered so no deferred init needed
+		// Top cap
 		mux_channel_7: i2c_mux@7 {
 			compatible = "ti,tca9548a-channel";
 			label = "mux_channel_7";
