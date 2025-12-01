@@ -1,10 +1,19 @@
 module Components {
 
-    @ System mode enumeration (values ordered for +1/-1 sequential transitions)
+    @ System mode enumeration
     enum SystemMode {
         SAFE_MODE = 1 @< Safe mode with non-critical components powered off
         NORMAL = 2 @< Normal operational mode
-        PAYLOAD_MODE = 3 @< Payload mode with payload power and battery enabled
+    }
+
+    @ Reason for entering safe mode (used for recovery decision logic)
+    enum SafeModeReason {
+        NONE = 0 @< Not in safe mode or reason cleared
+        LOW_BATTERY = 1 @< Entered due to low voltage condition
+        SYSTEM_FAULT = 2 @< Entered due to unintended reboot/system fault
+        GROUND_COMMAND = 3 @< Entered via ground command
+        EXTERNAL_REQUEST = 4 @< Entered via external component request
+        LORA = 5 @< Entered due to LoRa communication timeout or fault
     }
 
     @ Port for notifying about mode changes
@@ -12,6 +21,10 @@ module Components {
 
     @ Port for querying the current system mode
     port GetSystemMode -> SystemMode
+
+    @ Port for forcing safe mode with a reason
+    @ Pass NONE as reason to default to EXTERNAL_REQUEST
+    port ForceSafeModeWithReason(reason: SafeModeReason)
 
     @ Component to manage system modes and orchestrate safe mode transitions
     @ based on voltage, watchdog faults, and communication timeouts
@@ -25,10 +38,14 @@ module Components {
         sync input port run: Svc.Sched
 
         @ Port to force safe mode entry (callable by other components)
-        async input port forceSafeMode: Fw.Signal
+        @ Accepts SafeModeReason - pass NONE to default to EXTERNAL_REQUEST
+        async input port forceSafeMode: Components.ForceSafeModeWithReason
 
         @ Port to query the current system mode
         sync input port getMode: Components.GetSystemMode
+
+        @ Port called before intentional reboot to set clean shutdown flag
+        sync input port prepareForReboot: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports
@@ -37,10 +54,10 @@ module Components {
         @ Port to notify other components of mode changes (with current mode)
         output port modeChanged: Components.SystemModeChanged
 
-        @ Ports to turn on LoadSwitch instances (8 total)
+        @ Ports to turn on LoadSwitch instances (6 face switches + 2 payload switches)
         output port loadSwitchTurnOn: [8] Fw.Signal
 
-        @ Ports to turn off LoadSwitch instances (8 total)
+        @ Ports to turn off LoadSwitch instances (6 face switches + 2 payload switches)
         output port loadSwitchTurnOff: [8] Fw.Signal
 
         @ Port to get system voltage from INA219 manager
@@ -57,14 +74,6 @@ module Components {
         @ Command to manually exit safe mode
         @ Only succeeds if currently in safe mode
         sync command EXIT_SAFE_MODE()
-
-        @ Command to enter payload mode
-        @ Only succeeds if currently in normal mode
-        sync command ENTER_PAYLOAD_MODE()
-
-        @ Command to exit payload mode
-        @ Only succeeds if currently in payload mode
-        sync command EXIT_PAYLOAD_MODE()
 
         # ----------------------------------------------------------------------
         # Events
@@ -92,23 +101,6 @@ module Components {
             severity warning high \
             format "External fault detected - external component forced safe mode"
 
-        @ Event emitted when entering payload mode
-        event EnteringPayloadMode(
-            reason: string size 100 @< Reason for entering payload mode
-        ) \
-            severity activity high \
-            format "ENTERING PAYLOAD MODE: {}"
-
-        @ Event emitted when exiting payload mode
-        event ExitingPayloadMode() \
-            severity activity high \
-            format "Exiting payload mode"
-
-        @ Event emitted when payload mode is manually commanded
-        event ManualPayloadModeEntry() \
-            severity activity high \
-            format "Payload mode entry commanded manually"
-
         @ Event emitted when command validation fails
         event CommandValidationFailed(
             cmdName: string size 50 @< Command that failed validation
@@ -125,6 +117,31 @@ module Components {
             severity warning low \
             format "State persistence {} failed with status {}"
 
+        @ Event emitted when automatically entering safe mode due to low voltage
+        event AutoSafeModeEntry(
+            reason: SafeModeReason @< Reason for entering safe mode
+            voltage: F32 @< Voltage that triggered the entry (0 if N/A)
+        ) \
+            severity warning high \
+            format "AUTO SAFE MODE ENTRY: reason={} voltage={}V"
+
+        @ Event emitted when automatically exiting safe mode due to voltage recovery
+        event AutoSafeModeExit(
+            voltage: F32 @< Voltage that triggered recovery
+        ) \
+            severity activity high \
+            format "AUTO SAFE MODE EXIT: Voltage recovered to {}V"
+
+        @ Event emitted when unintended reboot is detected
+        event UnintendedRebootDetected() \
+            severity warning high \
+            format "UNINTENDED REBOOT DETECTED: Entering safe mode"
+
+        @ Event emitted when preparing for intentional reboot
+        event PreparingForReboot() \
+            severity activity high \
+            format "Preparing for intentional reboot - setting clean shutdown flag"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -135,8 +152,8 @@ module Components {
         @ Number of times safe mode has been entered
         telemetry SafeModeEntryCount: U32
 
-        @ Number of times payload mode has been entered
-        telemetry PayloadModeEntryCount: U32
+        @ Current safe mode reason (NONE if not in safe mode)
+        telemetry CurrentSafeModeReason: SafeModeReason
 
 
         ###############################################################################
