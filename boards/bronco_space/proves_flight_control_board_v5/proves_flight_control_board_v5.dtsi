@@ -6,14 +6,14 @@
 #include "proves_flight_control_board_v5-pinctrl.dtsi"
 
 / {
-	chosen {
-		zephyr,sram = &sram0;
-		zephyr,flash = &flash0;
-		zephyr,console = &cdc_acm_uart0;
-		zephyr,shell-uart = &cdc_acm_uart0;
-	};
+    chosen {
+        zephyr,sram = &sram0;
+        zephyr,flash = &flash0;
+        zephyr,console = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
+    };
 
-	fstab {
+    fstab {
                 compatible = "zephyr,fstab";
                 ffs1: ffs1 {
                         compatible = "zephyr,fstab,fatfs";
@@ -24,36 +24,36 @@
         };
 
 
-	aliases {
-		watchdog0 = &wdt0;
-	};
+    aliases {
+        watchdog0 = &wdt0;
+    };
 
-	leds {
-		compatible = "gpio-leds";
-		led0: led0 {
-			gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
-			label = "Watchdog LED";
-		};
-		burnwire0: burnwire0{
-			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
-			label = "burnwire 0";
-		};
-		burnwire1: burnwire1{
-			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
-			label = "burnwire 1";
-		};
-	};
+    leds {
+        compatible = "gpio-leds";
+        led0: led0 {
+            gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+            label = "Watchdog LED";
+        };
+        burnwire0: burnwire0{
+            gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+            label = "burnwire 0";
+        };
+        burnwire1: burnwire1{
+            gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+            label = "burnwire 1";
+        };
+    };
 };
 
 zephyr_udc0: &usbd {
-	status = "okay";
+    status = "okay";
 };
 
 &zephyr_udc0  {
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-		label = "CDC_ACM_0";
-	};
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+        label = "CDC_ACM_0";
+    };
 };
 
 &flash0 {
@@ -61,23 +61,23 @@ zephyr_udc0: &usbd {
 };
 
 &timer0 {
-	status = "okay";
+    status = "okay";
 };
 
 &wdt0 {
-	status = "okay";
+    status = "okay";
 };
 
 &gpio0 {
-	status = "okay";
+    status = "okay";
 };
 
 &spi0 {
-	status = "okay";
-	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
-	pinctrl-0 = <&spi0_default>;
-	pinctrl-names = "default";
-	sdhc0: sdhc@0 {
+    status = "okay";
+    cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>, <&gpio0 15 GPIO_ACTIVE_LOW>;
+    pinctrl-0 = <&spi0_default>;
+    pinctrl-names = "default";
+    sdhc0: sdhc@0 {
                 compatible = "zephyr,sdhc-spi-slot";
                 reg = <0>;
                 status = "okay";
@@ -91,399 +91,408 @@ zephyr_udc0: &usbd {
 };
 
 &spi1 {
-	status = "okay";
-	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
-	pinctrl-0 = <&spi1_default>;
-	pinctrl-names = "default";
+    status = "okay";
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
+    pinctrl-0 = <&spi1_default>;
+    pinctrl-names = "default";
 
-	lora0: sx1276@0 {
-		compatible = "semtech,sx1276";
-		reg = <0>;
-		spi-max-frequency = <125000>;
-		dio-gpios =  <&gpio0 14 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>,<&gpio0 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-		reset-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
-		power-amplifier-output = "pa-boost";
-		label = "HOPE_RF";
-	};
+    lora0: sx1276@0 {
+        compatible = "semtech,sx1276";
+        reg = <0>;
+        spi-max-frequency = <125000>;
+        dio-gpios =  <&gpio0 14 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>,<&gpio0 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+        reset-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
+        power-amplifier-output = "pa-boost";
+        label = "HOPE_RF";
+    };
 };
 
 &i2c0 {
-	status = "okay";
-	pinctrl-0 = <&i2c0_default>;
-	pinctrl-names = "default";
-	clock-frequency = <100000>;
+    status = "okay";
+    pinctrl-0 = <&i2c0_default>;
+    pinctrl-names = "default";
+    clock-frequency = <100000>;
 
-	ina219_0: ina219_0@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		brng = <0>;
-		pg = <0>;
-		badc = <12>;
-		sadc = <12>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <61>;
-		label = "INA219 sys";
-	};
+    ina219_0: ina219_0@40 {
+        compatible = "ti,ina219";
+        reg = <0x40>;
+        brng = <0>;
+        pg = <0>;
+        badc = <12>;
+        sadc = <12>;
+        shunt-milliohm = <2>;
+        lsb-microamp = <61>;
+        label = "INA219 sys";
+    };
 
-	ina219_1: ina219_1@41 {
-		compatible = "ti,ina219";
-		reg = <0x41>;
-		brng = <0>;
-		pg = <0>;
-		badc = <12>;
-		sadc = <12>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <61>;
-		label = "INA219 sol";
-	};
+    ina219_1: ina219_1@41 {
+        compatible = "ti,ina219";
+        reg = <0x41>;
+        brng = <0>;
+        pg = <0>;
+        badc = <12>;
+        sadc = <12>;
+        shunt-milliohm = <2>;
+        lsb-microamp = <61>;
+        label = "INA219 sol";
+    };
 
-	tca9548a: tca9548a@77 {
-		compatible = "ti,tca9548a";
-		status = "okay";
-		reg = <0x77>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		label = "TCA9548A";
-		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+    tca9548a: tca9548a@77 {
+        compatible = "ti,tca9548a";
+        status = "okay";
+        reg = <0x77>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        label = "TCA9548A";
+        reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
 
-		mux_channel_0: i2c_mux@0 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_0";
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        mux_channel_0: i2c_mux@0 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_0";
+            reg = <0>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face0_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE0_TMP112";
-				zephyr,deferred-init;
-			};
+            face0_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE0_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face0_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE0_VEML6031";
-				zephyr,deferred-init;
-			};
+            face0_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE0_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face0_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE0_DRV2605";
-				zephyr,deferred-init;
+            face0_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE0_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		mux_channel_1: i2c_mux@1 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_1";
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        mux_channel_1: i2c_mux@1 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_1";
+            reg = <1>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face1_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE1_TMP112";
-				zephyr,deferred-init;
-			};
+            face1_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE1_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face1_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE1_VEML6031";
-				zephyr,deferred-init;
-			};
+            face1_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE1_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face1_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE1_DRV2605";
-				zephyr,deferred-init;
+            face1_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE1_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		mux_channel_2: i2c_mux@2 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_2";
-			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        mux_channel_2: i2c_mux@2 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_2";
+            reg = <2>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face2_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE2_TMP112";
-				zephyr,deferred-init;
-			};
+            face2_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE2_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face2_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE2_VEML6031";
-				zephyr,deferred-init;
-			};
+            face2_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE2_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face2_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE2_DRV2605";
-				zephyr,deferred-init;
+            face2_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE2_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		mux_channel_3: i2c_mux@3 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_3";
-			reg = <3>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        mux_channel_3: i2c_mux@3 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_3";
+            reg = <3>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face3_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE3_TMP112";
-				zephyr,deferred-init;
-			};
+            face3_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE3_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face3_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE3_VEML6031";
-				zephyr,deferred-init;
-			};
+            face3_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE3_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face3_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE3_DRV2605";
-				zephyr,deferred-init;
+            face3_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE3_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		// Battery
-		mux_channel_4: i2c_mux@4 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_4";
-			reg = <4>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			batt_cell1_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-			};
-			batt_cell2_temp_sens: tmp112@49 {
-				compatible = "ti,tmp112";
-				reg = <0x49>;
-				status = "okay";
-			};
-			batt_cell3_temp_sens: tmp112@4a {
-				compatible = "ti,tmp112";
-				reg = <0x4a>;
-				status = "okay";
-			};
-			batt_cell4_temp_sens: tmp112@4b {
-				compatible = "ti,tmp112";
-				reg = <0x4b>;
-				status = "okay";
-			};
-		};
+        // Battery
+        mux_channel_4: i2c_mux@4 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_4";
+            reg = <4>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+            batt_cell1_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "BATT_CELL1_TMP112";
+                zephyr,deferred-init;
+            };
+            batt_cell2_temp_sens: tmp112@49 {
+                compatible = "ti,tmp112";
+                reg = <0x49>;
+                status = "okay";
+                la bel = "BATT_CELL2_TMP112";
+                zephyr,deferred-init;
+            };
+            batt_cell3_temp_sens: tmp112@4a {
+                compatible = "ti,tmp112";
+                reg = <0x4a>;
+                status = "okay";
+                label = "BATT_CELL3_TMP112";
+                zephyr,deferred-init;
+            };
+            batt_cell4_temp_sens: tmp112@4b {
+                compatible = "ti,tmp112";
+                reg = <0x4b>;
+                status = "okay";
+                label = "BATT_CELL4_TMP112";
+                zephyr,deferred-init;
+            };
+        };
 
-		// Z- Face x1
-		mux_channel_5: i2c_mux@5 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_5";
-			reg = <5>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        // Z- Face x1
+        mux_channel_5: i2c_mux@5 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_5";
+            reg = <5>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face5_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE5_TMP112";
-				zephyr,deferred-init;
-			};
+            face5_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE5_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face5_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE5_VEML6031";
-				zephyr,deferred-init;
-			};
+            face5_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE5_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face5_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE5_DRV2605";
-				zephyr,deferred-init;
+            face5_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE5_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		// Z- Face x2
-		mux_channel_6: i2c_mux@6 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_6";
-			reg = <6>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+        // Z- Face x2
+        mux_channel_6: i2c_mux@6 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_6";
+            reg = <6>;
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-			face6_temp_sens: tmp112@48 {
-				compatible = "ti,tmp112";
-				reg = <0x48>;
-				status = "okay";
-				label = "FACE5_TMP112";
-				zephyr,deferred-init;
-			};
+            face6_temp_sens: tmp112@48 {
+                compatible = "ti,tmp112";
+                reg = <0x48>;
+                status = "okay";
+                label = "FACE5_TMP112";
+                zephyr,deferred-init;
+            };
 
-			face6_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE5_VEML6031";
-				zephyr,deferred-init;
-			};
+            face6_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE5_VEML6031";
+                zephyr,deferred-init;
+            };
 
-			face6_drv2605: drv2605@5a {
-				compatible = "ti,drv2605";
-				status = "okay";
-				reg = <0x5a>;
-				label = "FACE5_DRV2605";
-				zephyr,deferred-init;
+            face6_drv2605: drv2605@5a {
+                compatible = "ti,drv2605";
+                status = "okay";
+                reg = <0x5a>;
+                label = "FACE5_DRV2605";
+                zephyr,deferred-init;
 
-				actuator-mode = "LRA";
-				loop-gain = "HIGH";
-				feedback-brake-factor = "2X";
-			};
+                actuator-mode = "LRA";
+                loop-gain = "HIGH";
+                feedback-brake-factor = "2X";
+            };
 
-		};
+        };
 
-		// Top is always powered so no deferred init needed
-		mux_channel_7: i2c_mux@7 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_7";
-			reg = <7>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			// TODO add top cap temp sensor (it's not a TMP112)
-			face7_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE7_VEML6031";
-			};
-		};
-	};
+        // Top cap
+        mux_channel_7: i2c_mux@7 {
+            compatible = "ti,tca9548a-channel";
+            label = "mux_channel_7";
+            reg = <7>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+            // TODO add top cap temp sensor (it's not a TMP112)
+            face7_light_sens: light@29 {
+                compatible = "vishay,veml6031";
+                reg = <0x29>;
+                status = "okay";
+                label = "FACE7_VEML6031";
+                zephyr,deferred-init;
+            };
+        };
+    };
 };
 
 
 &i2c1 {
-	status = "okay";
-	pinctrl-0 = <&i2c1_default>;
-	pinctrl-names = "default";
-	clock-frequency = <100000>;
+    status = "okay";
+    pinctrl-0 = <&i2c1_default>;
+    pinctrl-names = "default";
+    clock-frequency = <100000>;
 
-	lsm6dso0: lsm6dso0@6b {
-		compatible = "st,lsm6dso";
-		reg = <0x6b>;
-		label = "LSM6DSO";
-	};
+    lsm6dso0: lsm6dso0@6b {
+        compatible = "st,lsm6dso";
+        reg = <0x6b>;
+        label = "LSM6DSO";
+    };
 
-	lis2mdl0: lis2mdl0@1e {
-		compatible = "st,lis2mdl";
-		reg = <0x1e>;
-		label = "LIS2MDL";
-	};
+    lis2mdl0: lis2mdl0@1e {
+        compatible = "st,lis2mdl";
+        reg = <0x1e>;
+        label = "LIS2MDL";
+    };
 
-	rtc0: rtc0@52 {
-		compatible = "microcrystal,rv3028";
-		reg = <0x52>;
-		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
-		backup-switch-mode = "direct";
-		label = "RV3028";
-	};
-	ina219: ina219@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219";
-	};
-	mcp23017: mcp23017@20 {
-		compatible = "microchip,mcp23017";
-		reg = <0x20>;
-		gpio-controller;
-		#gpio-cells = <2>;
+    rtc0: rtc0@52 {
+        compatible = "microcrystal,rv3028";
+        reg = <0x52>;
+        int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+        backup-switch-mode = "direct";
+        label = "RV3028";
+    };
+    ina219: ina219@40 {
+        compatible = "ti,ina219";
+        reg = <0x40>;
+        shunt-milliohm = <2>;
+        lsb-microamp = <100>;
+        label = "INA219";
+    };
+    mcp23017: mcp23017@20 {
+        compatible = "microchip,mcp23017";
+        reg = <0x20>;
+        gpio-controller;
+        #gpio-cells = <2>;
 
-		/* gpio-line-names must match the numeric indexes used below. The
-		 * topology and gpio nodes expect the following mapping (index : name):
-		 *  0: ENABLE_HEATER (GPA0)
-		 *  1: PAYLOAD_PWR_ENABLE (GPA1)
-		 *  2: FIRE_DEPLOY2_B (GPA2)
-		 *  3: PAYLOAD_BATT_ENABLE (GPA3)
-		 *  4: RF2_IO2 (GPA4)
-		 *  5: RF2_IO1 (GPA5)
-		 *  6: RF2_IO0 (GPA6)
-		 *  7: RF2_IO3 (GPA7)
-		 *  8: FACE5_ENABLE (GPB5)
-		 *  9: FACE0_ENABLE (GPB1)
-		 * 10: FACE1_ENABLE (GPB2)
-		 * 11: FACE2_ENABLE (GPB3)
-		 * 12: FACE3_ENABLE (GPB4)
-		 * 13: FACE4_ENABLE (GPB0)
-		 * 14: READONLY (GPB6)
-		 * 15: CHARGE (GPB7)
-		 */
-		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
-						  "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
-						  "FACE5_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
-						  "FACE3_ENABLE", "FACE4_ENABLE", "READONLY", "CHARGE";
+        /* gpio-line-names must match the numeric indexes used below. The
+         * topology and gpio nodes expect the following mapping (index : name):
+         *  0: ENABLE_HEATER (GPA0)
+         *  1: PAYLOAD_PWR_ENABLE (GPA1)
+         *  2: FIRE_DEPLOY2_B (GPA2)
+         *  3: PAYLOAD_BATT_ENABLE (GPA3)
+         *  4: RF2_IO2 (GPA4)
+         *  5: RF2_IO1 (GPA5)
+         *  6: RF2_IO0 (GPA6)
+         *  7: RF2_IO3 (GPA7)
+         *  8: FACE5_ENABLE (GPB5)
+         *  9: FACE0_ENABLE (GPB1)
+         * 10: FACE1_ENABLE (GPB2)
+         * 11: FACE2_ENABLE (GPB3)
+         * 12: FACE3_ENABLE (GPB4)
+         * 13: FACE4_ENABLE (GPB0)
+         * 14: READONLY (GPB6)
+         * 15: CHARGE (GPB7)
+         */
+        gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+                          "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
+                          "FACE5_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+                          "FACE3_ENABLE", "FACE4_ENABLE", "READONLY", "CHARGE";
 
-		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
+        reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
 
-		ngpios = <16>;
-	};
+        ngpios = <16>;
+    };
 };
 
 // GPIO Expander IO
@@ -494,63 +503,73 @@ zephyr_udc0: &usbd {
         compatible = "gpio-leds";  // Using gpio-leds as a convenient container
 
         face5_enable: face5-enable {
-
             gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>;  // GPB5
             label = "FACE5_ENABLE";
         };
 
         face0_enable: face0-enable {
-
             gpios = <&mcp23017 9 GPIO_ACTIVE_HIGH>;  // GPB1
             label = "FACE0_ENABLE";
         };
 
         face1_enable: face1-enable {
-
             gpios = <&mcp23017 10 GPIO_ACTIVE_HIGH>;  // GPB2
             label = "FACE1_ENABLE";
         };
 
         face2_enable: face2-enable {
-
             gpios = <&mcp23017 11 GPIO_ACTIVE_HIGH>;  // GPB3
             label = "FACE2_ENABLE";
         };
 
         face3_enable: face3-enable {
-
             gpios = <&mcp23017 12 GPIO_ACTIVE_HIGH>;  // GPB4
             label = "FACE3_ENABLE";
         };
 
         face4_enable: face4-enable {
-
             gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>;  // GPB0
             label = "FACE4_ENABLE";
         };
 
         enable_heater: enable-heater {
-
             gpios = <&mcp23017 0 GPIO_ACTIVE_HIGH>;  // GPA0
             label = "ENABLE_Heater";
         };
 
         payload_pwr_enable: payload-pwr-enable {
-
             gpios = <&mcp23017 1 GPIO_ACTIVE_HIGH>;  // GPA1
             label = "PAYLOAD_PWR_ENABLE";
         };
 
         fire_deploy2_b: fire-deploy2-b {
-
             gpios = <&mcp23017 2 GPIO_ACTIVE_HIGH>;  // GPA2
             label = "FIRE_DEPLOY2_B";
         };
 
         payload_batt_enable: payload-batt-enable {
-
             gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
             label = "PAYLOAD_BATT_ENABLE";
+        };
+
+        sband_nrst: sband-nrst {
+                gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+                label = "SBAND_NRST";
+        };
+
+        sband_rx_en: sband-rx-en {
+                gpios = <&gpio0 21 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+                label = "SBAND_RX_EN";
+        };
+
+        sband_tx_en: sband-tx-en {
+                gpios = <&gpio0 22 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                label = "SBAND_TX_EN";
+        };
+
+        sband_cs: sband-cs {
+                gpios = <&gpio0 7 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+                label = "SBAND_CS";
         };
     };
 
@@ -558,38 +577,32 @@ zephyr_udc0: &usbd {
     gpio_inputs {
         compatible = "gpio-keys";
 
-		charge: charge {
-
+        charge: charge {
             gpios = <&mcp23017 15 GPIO_ACTIVE_HIGH>;  // GPB7
             label = "CHARGE";
         };
 
         readonly: readonly {
-
             gpios = <&mcp23017 14 GPIO_ACTIVE_HIGH>;  // GPB6
             label = "READONLY";
         };
 
         rf2_io2: rf2-io2 {
-
             gpios = <&mcp23017 4 GPIO_ACTIVE_HIGH>;  // GPA4
             label = "RF2_IO2";
         };
 
         rf2_io1: rf2-io1 {
-
             gpios = <&mcp23017 5 GPIO_ACTIVE_HIGH>;  // GPA5
             label = "RF2_IO1";
         };
 
         rf2_io0: rf2-io0 {
-
             gpios = <&mcp23017 6 GPIO_ACTIVE_HIGH>;  // GPA6
             label = "RF2_IO0";
         };
 
         rf2_io3: rf2-io3 {
-
             gpios = <&mcp23017 7 GPIO_ACTIVE_HIGH>;  // GPA7
             label = "RF2_IO3";
         };
