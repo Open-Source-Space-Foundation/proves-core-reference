@@ -68,6 +68,15 @@ module ReferenceDeployment {
     instance ina219SolManager
     instance resetManager
     instance modeManager
+    instance tcaMonitor
+    instance muxChannel0Monitor
+    instance muxChannel1Monitor
+    instance muxChannel2Monitor
+    instance muxChannel3Monitor
+    instance muxChannel4Monitor
+    instance muxChannel5Monitor
+    instance muxChannel6Monitor
+    instance muxChannel7Monitor
 
 
   # ----------------------------------------------------------------------
@@ -173,6 +182,14 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> tcaMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> muxChannel0Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> muxChannel1Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> muxChannel2Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> muxChannel3Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> muxChannel4Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> muxChannel5Monitor.run
+      rateGroup1Hz.RateGroupMemberOut[21] -> muxChannel7Monitor.run
 
     }
 

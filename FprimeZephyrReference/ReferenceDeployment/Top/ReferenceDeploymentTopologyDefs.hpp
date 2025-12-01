@@ -80,6 +80,15 @@ struct TopologyState {
     const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
     const device* rtcDevice;                      //!< RTC device path
+    const device* tca9548aDevice;                 //!< TCA9548A I2C multiplexer device
+    const device* muxChannel0Device;              //!< Multiplexer channel 0 device
+    const device* muxChannel1Device;              //!< Multiplexer channel 1 device
+    const device* muxChannel2Device;              //!< Multiplexer channel 2 device
+    const device* muxChannel3Device;              //!< Multiplexer channel 3 device
+    const device* muxChannel4Device;              //!< Multiplexer channel 4 device
+    const device* muxChannel5Device;              //!< Multiplexer channel 5 device
+    const device* muxChannel6Device;              //!< Multiplexer channel 5 device
+    const device* muxChannel7Device;              //!< Multiplexer channel 7 device
 };
 
 namespace PingEntries = ::PingEntries;
