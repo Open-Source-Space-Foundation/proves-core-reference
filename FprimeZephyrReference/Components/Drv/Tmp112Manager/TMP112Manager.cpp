@@ -147,7 +147,7 @@ Fw::Success Tmp112Manager ::deinitializeDevice() {
     this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
 
     this->m_dev->state->initialized = false;
-    Fw::Success::SUCCESS;
+    return Fw::Success::SUCCESS;
 }
 
 bool Tmp112Manager ::loadSwitchReady() {

@@ -22,25 +22,16 @@ ThermalManager::~ThermalManager() {}
 // ----------------------------------------------------------------------
 
 void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
-    // Cube face sensors (5 sensors)
-    Fw::Success condition;  // We're not going to act on this condition for now
+    Fw::Success condition;
 
-    this->face0TempGet_out(0, condition);
-    this->face1TempGet_out(0, condition);
-    this->face2TempGet_out(0, condition);
-    this->face3TempGet_out(0, condition);
-    this->face5TempGet_out(0, condition);
-
-    // // If mux channel 4 is not healthy, skip battery cell sensors
-    // if (this->muxChannel4HealthGet_out(0) != Fw::Health::HEALTHY) {
-    //     return;
-    // }
+    for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
+        this->faceTempGet_out(i, condition);
+    }
 
     // Battery cell sensors (4 sensors)
-    this->battCell1TempGet_out(0, condition);
-    this->battCell2TempGet_out(0, condition);
-    this->battCell3TempGet_out(0, condition);
-    this->battCell4TempGet_out(0, condition);
+    for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
+        this->battCellTempGet_out(i, condition);
+    }
 }
 
 }  // namespace Components
