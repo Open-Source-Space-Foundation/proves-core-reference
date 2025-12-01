@@ -142,7 +142,7 @@ void setupTopology(const TopologyState& state) {
     tmp112BattCell4Manager.configure(state.battCell4TempDevice);
 
     // Configure all 7 VELM6031 light sensor managers
-    // velm6031Face0Manager.configure(state.face0LightDevice);
+    velm6031Face0Manager.configure(state.face0LightDevice);
     // velm6031Face1Manager.configure(state.face1LightDevice);
     // velm6031Face2Manager.configure(state.face2LightDevice);
     // velm6031Face3Manager.configure(state.face3LightDevice);

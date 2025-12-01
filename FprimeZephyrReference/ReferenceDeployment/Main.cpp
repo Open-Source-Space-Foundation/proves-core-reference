@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     inputs.battCell3TempDevice = batt_cell3_temp_sens;
     inputs.battCell4TempDevice = batt_cell4_temp_sens;
     // Light sensor devices
-    // inputs.face0LightDevice = face0_light_sens;
+    inputs.face0LightDevice = face0_light_sens;
     // inputs.face1LightDevice = face1_light_sens;
     // inputs.face2LightDevice = face2_light_sens;
     // inputs.face3LightDevice = face3_light_sens;

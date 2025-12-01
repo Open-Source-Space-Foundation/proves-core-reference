@@ -91,7 +91,7 @@ module ReferenceDeployment {
     instance tmp112BattCell4Manager
     instance resetManager
     instance modeManager
-    # instance velm6031Face0Manager
+    instance velm6031Face0Manager
     # instance velm6031Face1Manager
     # instance velm6031Face2Manager
     # instance velm6031Face3Manager
@@ -229,23 +229,24 @@ module ReferenceDeployment {
 
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
       face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
-      face0LoadSwitch.loadSwitchStateChanged -> tmp112Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[1] -> velm6031Face0Manager.loadSwitchStateChanged
 
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
-      face1LoadSwitch.loadSwitchStateChanged -> tmp112Face1Manager.loadSwitchStateChanged
+      face1LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face1Manager.loadSwitchStateChanged
 
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
       face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
-      face2LoadSwitch.loadSwitchStateChanged -> tmp112Face2Manager.loadSwitchStateChanged
+      face2LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face2Manager.loadSwitchStateChanged
 
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
       face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
-      face3LoadSwitch.loadSwitchStateChanged -> tmp112Face3Manager.loadSwitchStateChanged
+      face3LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face3Manager.loadSwitchStateChanged
 
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
       face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
-      face5LoadSwitch.loadSwitchStateChanged -> tmp112Face5Manager.loadSwitchStateChanged
+      face5LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face5Manager.loadSwitchStateChanged
 
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
       payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead

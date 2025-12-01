@@ -106,7 +106,7 @@ struct TopologyState {
     const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3
     const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
     // - Light sensors
-    // const device* face0LightDevice;  //!< Light sensor device for cube face 0
+    const device* face0LightDevice;  //!< Light sensor device for cube face 0
     // const device* face1LightDevice;  //!< Light sensor device for cube face 1
     // const device* face2LightDevice;  //!< Light sensor device for cube face 2
     // const device* face3LightDevice;  //!< Light sensor device for cube face 3

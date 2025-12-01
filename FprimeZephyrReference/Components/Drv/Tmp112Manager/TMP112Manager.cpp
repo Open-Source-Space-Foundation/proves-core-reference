@@ -31,9 +31,9 @@ void Tmp112Manager::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Fw::Success Tmp112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& loadSwitchState) {
+Fw::Success Tmp112Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& state) {
     // Store the load switch state
-    this->m_load_switch_state = loadSwitchState;
+    this->m_load_switch_state = state;
 
     // If the load switch is off, deinitialize the device
     if (this->m_load_switch_state == Fw::On::OFF) {

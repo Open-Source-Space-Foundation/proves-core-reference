@@ -24,7 +24,6 @@ module Drv {
         telemetry Temperature: F64
 
         @ Event for reporting TMP112 not ready error
-        # event DeviceNotReady() severity warning high format "TMP112 device not ready"
         event DeviceNotReady() severity warning high format "TMP112 device not ready" throttle 5
 
         @ Event for reporting TMP112 initialization failure

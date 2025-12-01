@@ -24,11 +24,12 @@ ThermalManager::~ThermalManager() {}
 void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     Fw::Success condition;
 
+    // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
         this->faceTempGet_out(i, condition);
     }
 
-    // Battery cell sensors (4 sensors)
+    // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
         this->battCellTempGet_out(i, condition);
     }
