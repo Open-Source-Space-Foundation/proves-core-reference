@@ -78,7 +78,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> to run a 
 		[ -e "$$TARGET" ] || { echo "Specified test file $$TARGET not found"; exit 1; }; \
 	fi; \
 	echo "Running integration tests at $$TARGET"; \
-	$(UV_RUN) pytest $$TARGET --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	$(UV_RUN) pytest -- "$$TARGET" --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: bootloader
 bootloader: uv

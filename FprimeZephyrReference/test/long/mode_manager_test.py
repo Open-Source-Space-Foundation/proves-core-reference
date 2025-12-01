@@ -12,7 +12,7 @@ Tests cover:
 
 Total: 9 tests
 
-Mode enum values: SAFE_MODE=1, NORMAL=2, PAYLOAD_MODE=3
+Mode enum values: SAFE_MODE=1, NORMAL=2
 """
 
 import time
@@ -94,7 +94,7 @@ def test_01_initial_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
     current_mode = mode_result.get_val()
-    assert current_mode in [1, 2, 3], f"Invalid mode value: {current_mode}"
+    assert current_mode in [1, 2], f"Invalid mode value: {current_mode}"
 
 
 # ==============================================================================

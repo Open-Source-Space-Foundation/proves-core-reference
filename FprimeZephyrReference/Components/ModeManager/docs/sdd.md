@@ -15,8 +15,8 @@ The ModeManager component manages system operational modes and orchestrates tran
 | MM0008 | The ModeManager shall persist current mode, safe mode entry count, safe mode reason, and clean shutdown flag to non-volatile storage | Integration Testing |
 | MM0009 | The ModeManager shall restore mode state from persistent storage on initialization | Integration Testing |
 | MM0010 | The ModeManager shall track and report the number of times safe mode has been entered | Integration Testing |
-| MM0011 | The ModeManager shall allow downstream components to query the current mode via getMode port | Unit Testing |
-| MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Unit Testing |
+| MM0011 | The ModeManager shall allow downstream components to query the current mode via getMode port | Code Review |
+| MM0012 | The ModeManager shall notify downstream components of mode changes with the new mode value | Code Review |
 | MM0020 | The ModeManager shall automatically enter safe mode when voltage drops below 6.7V for 10 consecutive seconds | Integration Testing |
 | MM0021 | The ModeManager shall automatically exit safe mode when voltage recovers above 8.0V for 10 consecutive seconds (only if reason is LOW_BATTERY) | Integration Testing |
 | MM0022 | The ModeManager shall track safe mode reason (NONE, LOW_BATTERY, SYSTEM_FAULT, GROUND_COMMAND, EXTERNAL_REQUEST, LORA) | Integration Testing |
