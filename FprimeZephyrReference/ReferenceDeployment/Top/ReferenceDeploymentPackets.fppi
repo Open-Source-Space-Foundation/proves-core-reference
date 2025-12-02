@@ -50,12 +50,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.watchdog.WatchdogTransitions
   }
 
-  packet Imu id 6 group 4 {
-    ReferenceDeployment.lsm6dsoManager.Acceleration
-    ReferenceDeployment.lsm6dsoManager.AngularVelocity
-    ReferenceDeployment.lsm6dsoManager.Temperature
-    ReferenceDeployment.lis2mdlManager.MagneticField
-  }
+  # packet Imu id 6 group 4 {
+  #
+  #}
 
   packet LoRa id 7 group 4 {
     lora.LastRssi
@@ -67,75 +64,45 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.antennaDeployer.LastDistance
   }
 
-  packet LoadSwitches id 9 group 4 {
-    ReferenceDeployment.face4LoadSwitch.IsOn
-    ReferenceDeployment.face0LoadSwitch.IsOn
-    ReferenceDeployment.face1LoadSwitch.IsOn
-    ReferenceDeployment.face2LoadSwitch.IsOn
-    ReferenceDeployment.face3LoadSwitch.IsOn
-    ReferenceDeployment.face5LoadSwitch.IsOn
-    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
-    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
-  }
+  #packet LoadSwitches id 9 group 4 {
+  #
+  #}
 
-  packet PowerMonitor id 10 group 4 {
-    ReferenceDeployment.ina219SysManager.Voltage
-    ReferenceDeployment.ina219SysManager.Current
-    ReferenceDeployment.ina219SysManager.Power
-    ReferenceDeployment.ina219SolManager.Voltage
-    ReferenceDeployment.ina219SolManager.Current
-    ReferenceDeployment.ina219SolManager.Power
-    ReferenceDeployment.powerMonitor.TotalPowerConsumption
-    ReferenceDeployment.powerMonitor.TotalPowerGenerated
-  }
+  #packet PowerMonitor id 10 group 4 {
+    #
+  #}
 
-  packet TcaMonitor id 12 group 4 {
-    ReferenceDeployment.tcaMonitor.Healthy
-    ReferenceDeployment.muxChannel0Monitor.Healthy
-    ReferenceDeployment.muxChannel1Monitor.Healthy
-    ReferenceDeployment.muxChannel2Monitor.Healthy
-    ReferenceDeployment.muxChannel3Monitor.Healthy
-    ReferenceDeployment.muxChannel4Monitor.Healthy
-    ReferenceDeployment.muxChannel5Monitor.Healthy
-    ReferenceDeployment.muxChannel6Monitor.Healthy
-    ReferenceDeployment.muxChannel7Monitor.Healthy
-  }
+  # packet TcaMonitor id 12 group 4 {
+  #
+  # }
 
-  packet Thermal id 13 group 4 {
-    ReferenceDeployment.tmp112Face0Manager.Temperature
-    ReferenceDeployment.tmp112Face1Manager.Temperature
-    ReferenceDeployment.tmp112Face2Manager.Temperature
-    ReferenceDeployment.tmp112Face3Manager.Temperature
-    ReferenceDeployment.tmp112Face5Manager.Temperature
-    ReferenceDeployment.tmp112BattCell1Manager.Temperature
-    ReferenceDeployment.tmp112BattCell2Manager.Temperature
-    ReferenceDeployment.tmp112BattCell3Manager.Temperature
-    ReferenceDeployment.tmp112BattCell4Manager.Temperature
-  }
+  #packet Thermal id 13 group 4 {
+  #
+  #}
 
-  packet LightSensor id 14 group 4 {
-    ReferenceDeployment.veml6031Face0Manager.VisibleLight
+  #packet LightSensor id 14 group 4 {
+    #
     # ReferenceDeployment.veml6031Face1Manager.RawLightData
     # ReferenceDeployment.veml6031Face2Manager.RawLightData
     # ReferenceDeployment.veml6031Face3Manager.RawLightData
     # ReferenceDeployment.veml6031Face5Manager.RawLightData
     # ReferenceDeployment.veml6031Face6Manager.RawLightData
     # ReferenceDeployment.veml6031Face7Manager.RawLightData
-    ReferenceDeployment.veml6031Face0Manager.InfraRedLight
+    #
     # ReferenceDeployment.veml6031Face1Manager.IRLightData
     # ReferenceDeployment.veml6031Face2Manager.IRLightData
     # ReferenceDeployment.veml6031Face3Manager.IRLightData
     # ReferenceDeployment.veml6031Face5Manager.IRLightData
     # ReferenceDeployment.veml6031Face6Manager.IRLightData
     # ReferenceDeployment.veml6031Face7Manager.IRLightData
-    ReferenceDeployment.veml6031Face0Manager.AmbientLight
+    #
   #   ReferenceDeployment.veml6031Face1Manager.ALSLightData
   #   ReferenceDeployment.veml6031Face2Manager.ALSLightData
   #   ReferenceDeployment.veml6031Face3Manager.ALSLightData
   #   ReferenceDeployment.veml6031Face5Manager.ALSLightData
   #   ReferenceDeployment.veml6031Face6Manager.ALSLightData
   #   ReferenceDeployment.veml6031Face7Manager.ALSLightData
-  }
+  #}
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
@@ -172,4 +139,52 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
+
+  # Omitting to Save Memory
+  ReferenceDeployment.tcaMonitor.Healthy
+  ReferenceDeployment.muxChannel0Monitor.Healthy
+  ReferenceDeployment.muxChannel1Monitor.Healthy
+  ReferenceDeployment.muxChannel2Monitor.Healthy
+  ReferenceDeployment.muxChannel3Monitor.Healthy
+  ReferenceDeployment.muxChannel4Monitor.Healthy
+  ReferenceDeployment.muxChannel5Monitor.Healthy
+  ReferenceDeployment.muxChannel6Monitor.Healthy
+  ReferenceDeployment.muxChannel7Monitor.Healthy
+
+  ReferenceDeployment.tmp112Face0Manager.Temperature
+  ReferenceDeployment.tmp112Face1Manager.Temperature
+  ReferenceDeployment.tmp112Face2Manager.Temperature
+  ReferenceDeployment.tmp112Face3Manager.Temperature
+  ReferenceDeployment.tmp112Face5Manager.Temperature
+  ReferenceDeployment.tmp112BattCell1Manager.Temperature
+  ReferenceDeployment.tmp112BattCell2Manager.Temperature
+  ReferenceDeployment.tmp112BattCell3Manager.Temperature
+  ReferenceDeployment.tmp112BattCell4Manager.Temperature
+
+  ReferenceDeployment.face4LoadSwitch.IsOn
+  ReferenceDeployment.face0LoadSwitch.IsOn
+  ReferenceDeployment.face1LoadSwitch.IsOn
+  ReferenceDeployment.face2LoadSwitch.IsOn
+  ReferenceDeployment.face3LoadSwitch.IsOn
+  ReferenceDeployment.face5LoadSwitch.IsOn
+  ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+  ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+
+  ReferenceDeployment.lsm6dsoManager.Acceleration
+  ReferenceDeployment.lsm6dsoManager.AngularVelocity
+  ReferenceDeployment.lsm6dsoManager.Temperature
+  ReferenceDeployment.lis2mdlManager.MagneticField
+
+  ReferenceDeployment.ina219SysManager.Voltage
+  ReferenceDeployment.ina219SysManager.Current
+  ReferenceDeployment.ina219SysManager.Power
+  ReferenceDeployment.ina219SolManager.Voltage
+  ReferenceDeployment.ina219SolManager.Current
+  ReferenceDeployment.ina219SolManager.Power
+  ReferenceDeployment.powerMonitor.TotalPowerConsumption
+  ReferenceDeployment.powerMonitor.TotalPowerGenerated
+
+  ReferenceDeployment.veml6031Face0Manager.VisibleLight
+  ReferenceDeployment.veml6031Face0Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face0Manager.AmbientLight
 }
