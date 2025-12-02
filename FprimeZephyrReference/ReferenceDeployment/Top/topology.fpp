@@ -30,6 +30,8 @@ module ReferenceDeployment {
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
+    instance gpio2b
+    instance gpioHeater
     instance gpioface0LS
     instance gpioface1LS
     instance gpioface2LS
@@ -46,6 +48,7 @@ module ReferenceDeployment {
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
+    instance burnwire2
     instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
@@ -173,6 +176,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> burnwire2.schedIn
 
     }
 
@@ -195,6 +199,11 @@ module ReferenceDeployment {
     connections BurnwireGpio {
       burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
       burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
+    connections Burnwire2Gpio {
+      burnwire2.gpioSet[0] -> gpioHeater.gpioWrite
+      burnwire2.gpioSet[1] -> gpio2b.gpioWrite
     }
 
     connections AntennaDeployment {

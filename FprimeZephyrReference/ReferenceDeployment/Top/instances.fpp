@@ -88,6 +88,12 @@ module ReferenceDeployment {
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
 
+  instance gpioHeater: Zephyr.ZephyrGpioDriver base id 0x10044000
+
+  instance gpio2b: Zephyr.ZephyrGpioDriver base id 0x10045000
+
+  instance burnwire2: Components.Burnwire base id 0x10046000
+
   instance comDelay: Components.ComDelay base id 0x10025000
 
   instance lora: Zephyr.LoRa base id 0x10026000
