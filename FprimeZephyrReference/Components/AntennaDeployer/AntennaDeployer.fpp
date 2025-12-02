@@ -65,10 +65,13 @@ module Components {
           severity activity high \
           format "Antenna deployment skipped - antenna already deployed"
 
-        @ Emitted when the antenna directory creation fails during initialization
-        event AntennaDirectoryCreateError() \
+        @ Emitted when a file operation fails
+        event FileOperationError(
+            filePath: string @< The file path that failed
+            operation: string @< The operation that failed (e.g., "read", "write", "open")
+        ) \
           severity warning high \
-          format "Failed to create antenna directory"
+          format "File operation failed: {} on file {}"
 
         ######################################################################
         # Ports
@@ -93,9 +96,6 @@ module Components {
 
         @ Duration (seconds) for which to hold each burn attempt before issuing STOP
         param BURN_DURATION_SEC: U32 default 8
-
-        @ File path for persistent deployment state (file exists = deployed)
-        param DEPLOYED_STATE_FILE: string default "//antenna/antenna_deployer.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters

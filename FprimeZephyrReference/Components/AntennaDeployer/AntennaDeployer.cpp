@@ -10,16 +10,52 @@
 namespace Components {
 
 // ----------------------------------------------------------------------
+// Constants
+// ----------------------------------------------------------------------
+
+static const char* const DEPLOYED_STATE_FILE_PATH = "//antenna/antenna_deployer.bin";
+static const char* const ANTENNA_DIR_PATH = "//antenna";
+
+// ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
 AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {
     // Create //antenna directory if it doesn't exist
-    const char* antennaDir = "//antenna";
-    Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(antennaDir, false);
+    Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(ANTENNA_DIR_PATH, false);
     if (dirStatus != Os::FileSystem::OP_OK) {
-        Fw::LogStringArg logStringDirName(antennaDir);
-        this->log_WARNING_HI_AntennaDirectoryCreateError();
+        Fw::LogStringArg logFilePath(ANTENNA_DIR_PATH);
+        Fw::LogStringArg logOperation("create_directory");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+    }
+
+    // Create deployment state file with 0 (not deployed) if it doesn't exist
+    const char* path_str = DEPLOYED_STATE_FILE_PATH;
+
+    if (!Os::FileSystem::exists(path_str)) {
+        Os::File file;
+        Os::File::Status status = file.open(path_str, Os::File::OPEN_WRITE);
+
+        if (status == Os::File::OP_OK) {
+            // Seek to beginning to ensure we write at the start
+            FwSignedSizeType seek_offset = 0;
+            (void)file.seek(seek_offset, Os::File::SeekType::ABSOLUTE);
+
+            U8 value = 0;
+            FwSizeType size = sizeof(value);
+            Os::File::Status write_status = file.write(&value, size);
+            (void)file.close();
+
+            if (write_status != Os::File::OP_OK) {
+                Fw::LogStringArg logFilePath(path_str);
+                Fw::LogStringArg logOperation("write");
+                this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+            }
+        } else {
+            Fw::LogStringArg logFilePath(path_str);
+            Fw::LogStringArg logOperation("open_write");
+            this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        }
     }
 }
 
@@ -84,26 +120,14 @@ void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    Fw::ParamValid is_valid;
-    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-    (void)Os::FileSystem::removeFile(file_path.toChar());
+    // Write 0 to indicate not deployed
+    this->writeDeploymentState(false);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
-    Fw::ParamValid is_valid;
-    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    const char* path_str = file_path.toChar();
-
-    if (deployed) {
-        this->writeDeploymentState();
-    } else {
-        (void)Os::FileSystem::removeFile(path_str);
-    }
-
+    // Write 1 for deployed, 0 for not deployed
+    this->writeDeploymentState(deployed);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -206,7 +230,7 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
 
         // Mark antenna as deployed by writing state file
-        this->writeDeploymentState();
+        this->writeDeploymentState(true);
     }
 
     this->log_ACTIVITY_HI_DeployFinish(result, this->m_currentAttempt);
@@ -237,45 +261,70 @@ void AntennaDeployer ::logBurnSignalCount() {
 }
 
 bool AntennaDeployer ::readDeploymentState() {
-    Fw::ParamValid is_valid;
-    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-    const char* path_str = file_path.toChar();
+    const char* path_str = DEPLOYED_STATE_FILE_PATH;
 
     Os::File file;
     Os::File::Status status = file.open(path_str, Os::File::OPEN_READ);
-    bool deployed = (status == Os::File::OP_OK);
-    (void)file.close();
-    return deployed;
-}
-
-void AntennaDeployer ::writeDeploymentState() {
-    Fw::ParamValid is_valid;
-    auto file_path = this->paramGet_DEPLOYED_STATE_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-    const char* path_str = file_path.toChar();
-
-    Os::File file;
-    Os::File::Status status = file.open(path_str, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
-
-    if (status == Os::File::OP_OK) {
-        U8 marker = 1;
-        FwSizeType size = sizeof(marker);
-        Os::File::Status write_status = file.write(&marker, size);
+    if (status != Os::File::OP_OK) {
+        // File doesn't exist or can't be read, assume not deployed
+        // Only log error if file exists but can't be opened (not just missing)
+        if (Os::FileSystem::exists(path_str)) {
+            Fw::LogStringArg logFilePath(path_str);
+            Fw::LogStringArg logOperation("open_read");
+            this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        }
+        return false;
     }
 
+    U8 value = 0;
+    FwSizeType size = sizeof(value);
+    Os::File::Status read_status = file.read(&value, size);
     (void)file.close();
 
-    // Verify file exists after writing
-    bool exists = Os::FileSystem::exists(path_str);
-    printk("[AntennaDeployer] writeDeploymentState: after close, file exists=%d\n", exists ? 1 : 0);
+    if (read_status != Os::File::OP_OK) {
+        Fw::LogStringArg logFilePath(path_str);
+        Fw::LogStringArg logOperation("read");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+    }
 
-    if (!exists && status == Os::File::OP_OK) {
-        printk(
-            "[AntennaDeployer] writeDeploymentState: WARNING - file.open() succeeded but file doesn't exist after "
-            "close!\n");
+    // Return true if file contains 1, false otherwise
+    return (read_status == Os::File::OP_OK && value == 1);
+}
+
+void AntennaDeployer ::writeDeploymentState(bool deployed) {
+    const char* path_str = DEPLOYED_STATE_FILE_PATH;
+
+    Os::File file;
+    // Use OPEN_WRITE which creates the file if it doesn't exist
+    Os::File::Status status = file.open(path_str, Os::File::OPEN_WRITE);
+
+    if (status != Os::File::OP_OK) {
+        Fw::LogStringArg logFilePath(path_str);
+        Fw::LogStringArg logOperation("open_write");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        return;
+    }
+
+    // Seek to beginning to overwrite the file
+    FwSignedSizeType seek_offset = 0;
+    Os::File::Status seek_status = file.seek(seek_offset, Os::File::SeekType::ABSOLUTE);
+    if (seek_status != Os::File::OP_OK) {
+        Fw::LogStringArg logFilePath(path_str);
+        Fw::LogStringArg logOperation("seek");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        (void)file.close();
+        return;
+    }
+
+    U8 value = deployed ? 1 : 0;
+    FwSizeType size = sizeof(value);
+    Os::File::Status write_status = file.write(&value, size);
+    (void)file.close();
+
+    if (write_status != Os::File::OP_OK) {
+        Fw::LogStringArg logFilePath(path_str);
+        Fw::LogStringArg logOperation("write");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
     }
 }
 
