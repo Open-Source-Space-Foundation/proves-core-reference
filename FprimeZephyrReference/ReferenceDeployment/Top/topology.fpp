@@ -49,6 +49,7 @@ module ReferenceDeployment {
     instance comDelay
     instance burnwire
     instance burnwire2
+    instance burnwire3
     instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
@@ -202,8 +203,14 @@ module ReferenceDeployment {
     }
 
     connections Burnwire2Gpio {
-      burnwire2.gpioSet[0] -> gpioHeater.gpioWrite
+      burnwire2.gpioSet[0] -> gpioBurnwire0.gpioWrite
       burnwire2.gpioSet[1] -> gpio2b.gpioWrite
+    }
+
+
+   connections Burnwire3Gpio {
+      burnwire3.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire3.gpioSet[1] -> gpioHeater.gpioWrite
     }
 
     connections AntennaDeployment {

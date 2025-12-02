@@ -94,6 +94,8 @@ module ReferenceDeployment {
 
   instance burnwire2: Components.Burnwire base id 0x10046000
 
+  instance burnwire3: Components.Burnwire base id 0x10047000
+
   instance comDelay: Components.ComDelay base id 0x10025000
 
   instance lora: Zephyr.LoRa base id 0x10026000
