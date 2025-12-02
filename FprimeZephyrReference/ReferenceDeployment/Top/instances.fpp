@@ -19,7 +19,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   module Default {
-    constant QUEUE_SIZE = 10
+    constant QUEUE_SIZE = 5
     constant STACK_SIZE = 8 * 1024 # Must match prj.conf thread stack size
   }
 
@@ -147,26 +147,6 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-  instance tcaMonitor: Components.GenericDeviceMonitor base id 0x10041000
-
-  instance muxChannel0Monitor: Components.GenericDeviceMonitor base id 0x10042000
-
-  instance muxChannel1Monitor: Components.GenericDeviceMonitor base id 0x10043000
-
-  instance muxChannel2Monitor: Components.GenericDeviceMonitor base id 0x10044000
-
-  instance muxChannel3Monitor: Components.GenericDeviceMonitor base id 0x10045000
-
-  instance muxChannel4Monitor: Components.GenericDeviceMonitor base id 0x10046000
-
-  instance muxChannel5Monitor: Components.GenericDeviceMonitor base id 0x10047000
-
-  instance muxChannel6Monitor: Components.GenericDeviceMonitor base id 0x10048000
-
-  instance muxChannel7Monitor: Components.GenericDeviceMonitor base id 0x10049000
-
-  instance thermalManager: Components.ThermalManager base id 0x1004A000
-
   instance tmp112Face0Manager: Drv.Tmp112Manager base id 0x1004B000
 
   instance tmp112Face1Manager: Drv.Tmp112Manager base id 0x1004C000
@@ -184,8 +164,6 @@ module ReferenceDeployment {
   instance tmp112BattCell3Manager: Drv.Tmp112Manager base id 0x10052000
 
   instance tmp112BattCell4Manager: Drv.Tmp112Manager base id 0x10053000
-
-  instance adcs: Components.ADCS base id 0x10054000
 
   instance veml6031Face0Manager: Drv.Veml6031Manager base id 0x10055000
 

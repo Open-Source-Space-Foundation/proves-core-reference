@@ -86,12 +86,12 @@ int main(int argc, char* argv[]) {
     inputs.battCell4TempDevice = batt_cell4_temp_sens;
     // Light sensor devices
     inputs.face0LightDevice = face0_light_sens;
-    // inputs.face1LightDevice = face1_light_sens;
-    // inputs.face2LightDevice = face2_light_sens;
-    // inputs.face3LightDevice = face3_light_sens;
-    // inputs.face5LightDevice = face5_light_sens;
-    // inputs.face6LightDevice = face6_light_sens;
-    // inputs.face7LightDevice = face7_light_sens;
+    inputs.face1LightDevice = face1_light_sens;
+    inputs.face2LightDevice = face2_light_sens;
+    inputs.face3LightDevice = face3_light_sens;
+    inputs.face5LightDevice = face5_light_sens;
+    inputs.face6LightDevice = face6_light_sens;
+    inputs.face7LightDevice = face7_light_sens;
 
     inputs.baudRate = 115200;
 

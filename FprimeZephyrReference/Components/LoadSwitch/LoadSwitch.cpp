@@ -63,7 +63,7 @@ void LoadSwitch ::setLoadSwitchState(Fw::On state) {
         this->loadSwitchStateChanged_out(i, state);
     }
     this->log_ACTIVITY_HI_StatusChanged(state);
-    this->tlmWrite_IsOn(state);
+    // this->tlmWrite_IsOn(state);
 }
 
 Fw::On LoadSwitch ::getLoadSwitchState() {

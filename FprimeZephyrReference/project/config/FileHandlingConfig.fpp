@@ -3,10 +3,10 @@ module FileHandlingConfig {
     constant BASE_ID = 0x05000000
 
     module QueueSizes {
-        constant fileUplink    = 10
-        constant fileDownlink  = 10
-        constant fileManager   = 10
-        constant prmDb         = 10
+        constant fileUplink    = 5
+        constant fileDownlink  = 5
+        constant fileManager   = 5
+        constant prmDb         = 5
     }
 
     module StackSizes {
@@ -28,6 +28,6 @@ module FileHandlingConfig {
         constant timeout        = 1000         # File downlink timeout in ms
         constant cooldown       = 1000         # File downlink cooldown in ms
         constant cycleTime      = 1000         # File downlink cycle time in ms
-        constant fileQueueDepth = 3           # File downlink queue depth
+        constant fileQueueDepth = 1            # File downlink queue depth
     }
 }

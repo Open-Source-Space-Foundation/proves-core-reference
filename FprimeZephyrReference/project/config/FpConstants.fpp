@@ -71,7 +71,7 @@ constant FW_FIXED_LENGTH_STRING_SIZE = 256
 constant FW_OBJ_SIMPLE_REG_ENTRIES = 500
 
 @ For the simple queue registry provided with the framework, this specifies how many queues the registry will store.
-constant FW_QUEUE_SIMPLE_QUEUE_ENTRIES = 100
+constant FW_QUEUE_SIMPLE_QUEUE_ENTRIES = 50
 
 @ Maximum number of cascading FW_ASSERT check failures before forcing a system assert
 constant FW_ASSERT_COUNT_MAX = 10

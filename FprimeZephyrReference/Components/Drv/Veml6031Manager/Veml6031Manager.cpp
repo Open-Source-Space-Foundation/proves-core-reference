@@ -24,7 +24,9 @@ Veml6031Manager ::~Veml6031Manager() {}
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void Veml6031Manager ::configure(const struct device* dev) {
+void Veml6031Manager ::configure(const struct device* tca, const struct device* mux, const struct device* dev) {
+    this->m_tca = tca;
+    this->m_mux = mux;
     this->m_dev = dev;
 }
 
@@ -53,7 +55,7 @@ F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     F32 lux = sensor_value_to_double(&val);
 
-    this->tlmWrite_VisibleLight(lux);
+    // this->tlmWrite_VisibleLight(lux);
 
     condition = Fw::Success::SUCCESS;
     return lux;
@@ -80,7 +82,7 @@ F32 Veml6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success&
 
     F32 lux = sensor_value_to_double(&val);
 
-    this->tlmWrite_InfraRedLight(lux);
+    // this->tlmWrite_InfraRedLight(lux);
 
     condition = Fw::Success::SUCCESS;
     return lux;
@@ -124,7 +126,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     F32 lux = sensor_value_to_double(&val);
 
-    this->tlmWrite_VisibleLight(lux);
+    // this->tlmWrite_VisibleLight(lux);
 
     condition = Fw::Success::SUCCESS;
     return lux;
@@ -160,13 +162,13 @@ Fw::Success Veml6031Manager ::initializeDevice() {
         return Fw::Success::SUCCESS;
     }
 
-    if (this->tcaHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_tca)) {
         this->log_WARNING_HI_TcaUnhealthy();
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_HI_TcaUnhealthy_ThrottleClear();
 
-    if (this->muxHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_mux)) {
         this->log_WARNING_HI_MuxUnhealthy();
         return Fw::Success::FAILURE;
     }

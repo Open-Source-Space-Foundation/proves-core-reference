@@ -67,7 +67,7 @@ void configureTopology() {
     // Rate groups require context arrays.
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
-    rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
+    // rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
 
     cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
 
@@ -121,34 +121,26 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
-    tcaMonitor.configure(state.tca9548aDevice);
-    muxChannel0Monitor.configure(state.muxChannel0Device);
-    muxChannel1Monitor.configure(state.muxChannel1Device);
-    muxChannel2Monitor.configure(state.muxChannel2Device);
-    muxChannel3Monitor.configure(state.muxChannel3Device);
-    muxChannel4Monitor.configure(state.muxChannel4Device);
-    muxChannel5Monitor.configure(state.muxChannel5Device);
-    muxChannel7Monitor.configure(state.muxChannel7Device);
 
     // Configure all 11 TMP112 temperature sensor managers
-    tmp112Face0Manager.configure(state.face0TempDevice);
-    tmp112Face1Manager.configure(state.face1TempDevice);
-    tmp112Face2Manager.configure(state.face2TempDevice);
-    tmp112Face3Manager.configure(state.face3TempDevice);
-    tmp112Face5Manager.configure(state.face5TempDevice);
-    tmp112BattCell1Manager.configure(state.battCell1TempDevice);
-    tmp112BattCell2Manager.configure(state.battCell2TempDevice);
-    tmp112BattCell3Manager.configure(state.battCell3TempDevice);
-    tmp112BattCell4Manager.configure(state.battCell4TempDevice);
+    tmp112Face0Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face0TempDevice, true);
+    tmp112Face1Manager.configure(state.tca9548aDevice, state.muxChannel1Device, state.face1TempDevice, true);
+    tmp112Face2Manager.configure(state.tca9548aDevice, state.muxChannel2Device, state.face2TempDevice, true);
+    tmp112Face3Manager.configure(state.tca9548aDevice, state.muxChannel3Device, state.face3TempDevice, true);
+    tmp112Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5TempDevice, true);
+    tmp112BattCell1Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell1TempDevice, false);
+    tmp112BattCell2Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell2TempDevice, false);
+    tmp112BattCell3Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell3TempDevice, false);
+    tmp112BattCell4Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell4TempDevice, false);
 
     // Configure all 7 VEML6031 light sensor managers
-    veml6031Face0Manager.configure(state.face0LightDevice);
-    // veml6031Face1Manager.configure(state.face1LightDevice);
-    // veml6031Face2Manager.configure(state.face2LightDevice);
-    // veml6031Face3Manager.configure(state.face3LightDevice);
-    // veml6031Face5Manager.configure(state.face5LightDevice);
-    // veml6031Face6Manager.configure(state.face6LightDevice);
-    // veml6031Face7Manager.configure(state.face7LightDevice);
+    veml6031Face0Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face0LightDevice);
+    veml6031Face1Manager.configure(state.tca9548aDevice, state.muxChannel1Device, state.face1LightDevice);
+    veml6031Face2Manager.configure(state.tca9548aDevice, state.muxChannel2Device, state.face2LightDevice);
+    veml6031Face3Manager.configure(state.tca9548aDevice, state.muxChannel3Device, state.face3LightDevice);
+    veml6031Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5LightDevice);
+    veml6031Face6Manager.configure(state.tca9548aDevice, state.muxChannel6Device, state.face6LightDevice);
+    veml6031Face7Manager.configure(state.tca9548aDevice, state.muxChannel7Device, state.face7LightDevice);
 }
 
 void startRateGroups() {

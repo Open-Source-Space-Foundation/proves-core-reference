@@ -53,16 +53,6 @@ module Drv {
         @ Parameter for setting the Ambient Light Sensor (ALS) persistence protect number setting (PERS).
         param ALS_PERSISTENCE_PROTECT_NUMBER: ALS_PERS default ALS_PERS.VEML60XX_PERS_1
 
-        #### Telemetry ####
-        @ Telemetry for the illuminance in the visible spectrum, in lux
-        telemetry VisibleLight: F32
-
-        @ Telemetry for the illuminance in the infra-red spectrum, in lux
-        telemetry InfraRedLight: F32
-
-        @ Telemetry for the ambient illuminance in visible spectrum, in lux
-        telemetry AmbientLight: F32
-
         #### Ports ####
 
         @ Port to read the illuminance in visible spectrum, in lux
@@ -79,15 +69,6 @@ module Drv {
 
         @ Port to initialize and deinitialize the VEML6031 device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
-
-        @ Output port to check device TCA health
-        output port tcaHealthGet: Components.HealthGet
-
-        @ Output port to check device MUX health
-        output port muxHealthGet: Components.HealthGet
-
-        @ Port for reading gpio status
-        output port gpioRead: Drv.GpioRead
 
         #### Events ####
 

@@ -25,7 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
-    instance rateGroup1_6Hz
+    # instance rateGroup1_6Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -68,18 +68,8 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
-    instance tcaMonitor
-    instance muxChannel0Monitor
-    instance muxChannel1Monitor
-    instance muxChannel2Monitor
-    instance muxChannel3Monitor
-    instance muxChannel4Monitor
-    instance muxChannel5Monitor
-    instance muxChannel6Monitor
-    instance muxChannel7Monitor
 
     # Face Board Instances
-    instance thermalManager
     instance tmp112Face0Manager
     instance tmp112Face1Manager
     instance tmp112Face2Manager
@@ -91,14 +81,13 @@ module ReferenceDeployment {
     instance tmp112BattCell4Manager
     instance resetManager
     instance modeManager
-    instance adcs
     instance veml6031Face0Manager
-    # instance veml6031Face1Manager
-    # instance veml6031Face2Manager
-    # instance veml6031Face3Manager
-    # instance veml6031Face5Manager
-    # instance veml6031Face6Manager
-    # instance veml6031Face7Manager
+    instance veml6031Face1Manager
+    instance veml6031Face2Manager
+    instance veml6031Face3Manager
+    instance veml6031Face5Manager
+    instance veml6031Face6Manager
+    instance veml6031Face7Manager
 
 
   # ----------------------------------------------------------------------
@@ -200,23 +189,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[8] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[9] -> startupManager.run # doubles (20ms) rate group max time
-      # rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run # Causing rate group to slip?
       rateGroup1Hz.RateGroupMemberOut[10] -> modeManager.run
-      # rateGroup1Hz.RateGroupMemberOut[23] -> adcs.run
-
-      # Slow rate (1/6 Hz) rate group
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-      rateGroup1_6Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
-      rateGroup1_6Hz.RateGroupMemberOut[1] -> imuManager.run
-      rateGroup1_6Hz.RateGroupMemberOut[2] -> tcaMonitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[3] -> muxChannel0Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[4] -> muxChannel1Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[5] -> muxChannel2Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[6] -> muxChannel3Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[7] -> muxChannel4Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[8] -> muxChannel5Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[9] -> muxChannel7Monitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[10] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> CdhCore.tlmSend.Run
+      rateGroup1Hz.RateGroupMemberOut[12] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
     }
 
 
@@ -236,18 +212,22 @@ module ReferenceDeployment {
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
       face1LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face1Manager.loadSwitchStateChanged
+      face1LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face1Manager.loadSwitchStateChanged
 
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
       face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
       face2LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face2Manager.loadSwitchStateChanged
+      face2LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face2Manager.loadSwitchStateChanged
 
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
       face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
       face3LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face3Manager.loadSwitchStateChanged
+      face3LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face3Manager.loadSwitchStateChanged
 
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
       face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
       face5LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face5Manager.loadSwitchStateChanged
+      face5LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face5Manager.loadSwitchStateChanged
 
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
       payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
@@ -291,53 +271,6 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
-    }
-
-    connections thermalManager {
-      tmp112Face0Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112Face0Manager.muxHealthGet -> muxChannel0Monitor.healthGet
-      thermalManager.faceTempGet[0] -> tmp112Face0Manager.temperatureGet
-
-      tmp112Face1Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112Face1Manager.muxHealthGet -> muxChannel1Monitor.healthGet
-      thermalManager.faceTempGet[1] -> tmp112Face1Manager.temperatureGet
-
-      tmp112Face2Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112Face2Manager.muxHealthGet -> muxChannel2Monitor.healthGet
-      thermalManager.faceTempGet[2] -> tmp112Face2Manager.temperatureGet
-
-      tmp112Face3Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112Face3Manager.muxHealthGet -> muxChannel3Monitor.healthGet
-      thermalManager.faceTempGet[3] -> tmp112Face3Manager.temperatureGet
-
-      tmp112Face5Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112Face5Manager.muxHealthGet -> muxChannel5Monitor.healthGet
-      thermalManager.faceTempGet[4] -> tmp112Face5Manager.temperatureGet
-
-      tmp112BattCell1Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112BattCell1Manager.muxHealthGet -> muxChannel4Monitor.healthGet
-      thermalManager.battCellTempGet[0] -> tmp112BattCell1Manager.temperatureGet
-
-      tmp112BattCell2Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112BattCell2Manager.muxHealthGet -> muxChannel4Monitor.healthGet
-      thermalManager.battCellTempGet[1] -> tmp112BattCell2Manager.temperatureGet
-
-      tmp112BattCell3Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112BattCell3Manager.muxHealthGet -> muxChannel4Monitor.healthGet
-      thermalManager.battCellTempGet[2] -> tmp112BattCell3Manager.temperatureGet
-
-      tmp112BattCell4Manager.tcaHealthGet -> tcaMonitor.healthGet
-      tmp112BattCell4Manager.muxHealthGet -> muxChannel4Monitor.healthGet
-      thermalManager.battCellTempGet[3] -> tmp112BattCell4Manager.temperatureGet
-    }
-
-    connections adcs {
-      adcs.visibleLightGet[0] -> veml6031Face0Manager.visibleLightGet
-      # adcs.visibleLightGet[1] -> veml6031Face1Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[2] -> veml6031Face2Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[3] -> veml6031Face3Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[4] -> veml6031Face5Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[5] -> veml6031Face6Manager.visibleLightGet --- IGNORE
     }
 
     connections ModeManager {

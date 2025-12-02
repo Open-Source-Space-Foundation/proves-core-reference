@@ -3,8 +3,8 @@ module CdhCoreConfig {
     constant BASE_ID = 0x01000000
 
     module QueueSizes {
-        constant cmdDisp     = 10
-        constant events      = 25
+        constant cmdDisp     = 5
+        constant events      = 10
         constant tlmSend     = 5
         constant $health     = 10
     }

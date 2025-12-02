@@ -13,8 +13,8 @@ module Components {
         @ Command to turn the load switch off
         sync command TURN_OFF()
 
-        @ Telemetry channel for load switch state
-        telemetry IsOn: Fw.On
+        # @ Telemetry channel for load switch state
+        # telemetry IsOn: Fw.On
 
         @ Event for reporting load switch state change
         event StatusChanged($state: Fw.On) severity activity high id 1 format "Load switch state changed to {}"
