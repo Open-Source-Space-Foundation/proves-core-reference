@@ -89,13 +89,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
-  packet authenticate id 11 group 4 {
-    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
-    ComCcsdsUart.authenticate.RejectedPacketsCount
-    ComCcsdsUart.authenticate.CurrentSequenceNumber
-
-  }
-
   packet TcaMonitor id 12 group 4 {
     ReferenceDeployment.tcaMonitor.Healthy
     ReferenceDeployment.muxChannel0Monitor.Healthy
