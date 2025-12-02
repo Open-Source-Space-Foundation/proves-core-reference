@@ -9,6 +9,7 @@
 
 #include "FprimeHal.hpp"
 #include "FprimeZephyrReference/Components/SBand/SBandComponentAc.hpp"
+#include "Os/Mutex.hpp"
 
 namespace Components {
 
@@ -78,6 +79,7 @@ class SBand final : public SBandComponentBase {
     Module m_rlb_module;  //!< RadioLib Module instance
     SX1280 m_rlb_radio;   //!< RadioLib SX1280 radio instance
     bool rx_mode = false;
+    Os::Mutex m_mutex;  //!< Mutex for thread safety
 };
 
 }  // namespace Components
