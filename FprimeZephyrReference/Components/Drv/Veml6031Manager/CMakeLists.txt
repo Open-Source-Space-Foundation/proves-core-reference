@@ -16,9 +16,9 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Velm6031Manager.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Veml6031Manager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Velm6031Manager.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Veml6031Manager.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
@@ -26,10 +26,10 @@ register_fprime_library(
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Velm6031Manager.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/Veml6031Manager.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Velm6031ManagerTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Velm6031ManagerTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Veml6031ManagerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/Veml6031ManagerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

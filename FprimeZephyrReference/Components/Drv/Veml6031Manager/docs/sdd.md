@@ -1,4 +1,4 @@
-# Components::Velm6031Manager
+# Components::Veml6031Manager
 
 Component for reading light sensor data
 

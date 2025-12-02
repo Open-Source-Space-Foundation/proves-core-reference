@@ -92,13 +92,13 @@ module ReferenceDeployment {
     instance resetManager
     instance modeManager
     instance adcs
-    instance velm6031Face0Manager
-    # instance velm6031Face1Manager
-    # instance velm6031Face2Manager
-    # instance velm6031Face3Manager
-    # instance velm6031Face5Manager
-    # instance velm6031Face6Manager
-    # instance velm6031Face7Manager
+    instance veml6031Face0Manager
+    # instance veml6031Face1Manager
+    # instance veml6031Face2Manager
+    # instance veml6031Face3Manager
+    # instance veml6031Face5Manager
+    # instance veml6031Face6Manager
+    # instance veml6031Face7Manager
 
 
   # ----------------------------------------------------------------------
@@ -231,7 +231,7 @@ module ReferenceDeployment {
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
       face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
       face0LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face0Manager.loadSwitchStateChanged
-      face0LoadSwitch.loadSwitchStateChanged[1] -> velm6031Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face0Manager.loadSwitchStateChanged
 
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
@@ -332,12 +332,12 @@ module ReferenceDeployment {
     }
 
     connections adcs {
-      adcs.visibleLightGet[0] -> velm6031Face0Manager.visibleLightGet
-      # adcs.visibleLightGet[1] -> velm6031Face1Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[2] -> velm6031Face2Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[3] -> velm6031Face3Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[4] -> velm6031Face5Manager.visibleLightGet --- IGNORE ---
-      # adcs.visibleLightGet[5] -> velm6031Face6Manager.visibleLightGet --- IGNORE
+      adcs.visibleLightGet[0] -> veml6031Face0Manager.visibleLightGet
+      # adcs.visibleLightGet[1] -> veml6031Face1Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[2] -> veml6031Face2Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[3] -> veml6031Face3Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[4] -> veml6031Face5Manager.visibleLightGet --- IGNORE ---
+      # adcs.visibleLightGet[5] -> veml6031Face6Manager.visibleLightGet --- IGNORE
     }
 
     connections ModeManager {

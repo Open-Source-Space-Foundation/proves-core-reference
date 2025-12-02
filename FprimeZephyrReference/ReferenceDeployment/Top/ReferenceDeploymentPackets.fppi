@@ -121,27 +121,27 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet LightSensor id 14 group 4 {
-    ReferenceDeployment.velm6031Face0Manager.VisibleLight
-    # ReferenceDeployment.velm6031Face1Manager.RawLightData
-    # ReferenceDeployment.velm6031Face2Manager.RawLightData
-    # ReferenceDeployment.velm6031Face3Manager.RawLightData
-    # ReferenceDeployment.velm6031Face5Manager.RawLightData
-    # ReferenceDeployment.velm6031Face6Manager.RawLightData
-    # ReferenceDeployment.velm6031Face7Manager.RawLightData
-    ReferenceDeployment.velm6031Face0Manager.InfraRedLight
-    # ReferenceDeployment.velm6031Face1Manager.IRLightData
-    # ReferenceDeployment.velm6031Face2Manager.IRLightData
-    # ReferenceDeployment.velm6031Face3Manager.IRLightData
-    # ReferenceDeployment.velm6031Face5Manager.IRLightData
-    # ReferenceDeployment.velm6031Face6Manager.IRLightData
-    # ReferenceDeployment.velm6031Face7Manager.IRLightData
-    ReferenceDeployment.velm6031Face0Manager.AmbientLight
-  #   ReferenceDeployment.velm6031Face1Manager.ALSLightData
-  #   ReferenceDeployment.velm6031Face2Manager.ALSLightData
-  #   ReferenceDeployment.velm6031Face3Manager.ALSLightData
-  #   ReferenceDeployment.velm6031Face5Manager.ALSLightData
-  #   ReferenceDeployment.velm6031Face6Manager.ALSLightData
-  #   ReferenceDeployment.velm6031Face7Manager.ALSLightData
+    ReferenceDeployment.veml6031Face0Manager.VisibleLight
+    # ReferenceDeployment.veml6031Face1Manager.RawLightData
+    # ReferenceDeployment.veml6031Face2Manager.RawLightData
+    # ReferenceDeployment.veml6031Face3Manager.RawLightData
+    # ReferenceDeployment.veml6031Face5Manager.RawLightData
+    # ReferenceDeployment.veml6031Face6Manager.RawLightData
+    # ReferenceDeployment.veml6031Face7Manager.RawLightData
+    ReferenceDeployment.veml6031Face0Manager.InfraRedLight
+    # ReferenceDeployment.veml6031Face1Manager.IRLightData
+    # ReferenceDeployment.veml6031Face2Manager.IRLightData
+    # ReferenceDeployment.veml6031Face3Manager.IRLightData
+    # ReferenceDeployment.veml6031Face5Manager.IRLightData
+    # ReferenceDeployment.veml6031Face6Manager.IRLightData
+    # ReferenceDeployment.veml6031Face7Manager.IRLightData
+    ReferenceDeployment.veml6031Face0Manager.AmbientLight
+  #   ReferenceDeployment.veml6031Face1Manager.ALSLightData
+  #   ReferenceDeployment.veml6031Face2Manager.ALSLightData
+  #   ReferenceDeployment.veml6031Face3Manager.ALSLightData
+  #   ReferenceDeployment.veml6031Face5Manager.ALSLightData
+  #   ReferenceDeployment.veml6031Face6Manager.ALSLightData
+  #   ReferenceDeployment.veml6031Face7Manager.ALSLightData
   }
 
 } omit {

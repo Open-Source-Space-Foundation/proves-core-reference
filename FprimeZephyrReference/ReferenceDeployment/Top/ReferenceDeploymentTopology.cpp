@@ -141,14 +141,14 @@ void setupTopology(const TopologyState& state) {
     tmp112BattCell3Manager.configure(state.battCell3TempDevice);
     tmp112BattCell4Manager.configure(state.battCell4TempDevice);
 
-    // Configure all 7 VELM6031 light sensor managers
-    velm6031Face0Manager.configure(state.face0LightDevice);
-    // velm6031Face1Manager.configure(state.face1LightDevice);
-    // velm6031Face2Manager.configure(state.face2LightDevice);
-    // velm6031Face3Manager.configure(state.face3LightDevice);
-    // velm6031Face5Manager.configure(state.face5LightDevice);
-    // velm6031Face6Manager.configure(state.face6LightDevice);
-    // velm6031Face7Manager.configure(state.face7LightDevice);
+    // Configure all 7 VEML6031 light sensor managers
+    veml6031Face0Manager.configure(state.face0LightDevice);
+    // veml6031Face1Manager.configure(state.face1LightDevice);
+    // veml6031Face2Manager.configure(state.face2LightDevice);
+    // veml6031Face3Manager.configure(state.face3LightDevice);
+    // veml6031Face5Manager.configure(state.face5LightDevice);
+    // veml6031Face6Manager.configure(state.face6LightDevice);
+    // veml6031Face7Manager.configure(state.face7LightDevice);
 }
 
 void startRateGroups() {

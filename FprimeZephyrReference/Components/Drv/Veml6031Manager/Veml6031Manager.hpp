@@ -1,14 +1,14 @@
 // ======================================================================
-// \title  Velm6031Manager.hpp
-// \brief  hpp file for Velm6031Manager component implementation class
+// \title  Veml6031Manager.hpp
+// \brief  hpp file for Veml6031Manager component implementation class
 // ======================================================================
 
-#ifndef Components_Velm6031Manager_HPP
-#define Components_Velm6031Manager_HPP
+#ifndef Components_Veml6031Manager_HPP
+#define Components_Veml6031Manager_HPP
 
 #include <stdio.h>
 
-#include "FprimeZephyrReference/Components/Drv/Velm6031Manager/Velm6031ManagerComponentAc.hpp"
+#include "FprimeZephyrReference/Components/Drv/Veml6031Manager/Veml6031ManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
@@ -19,18 +19,18 @@
 
 namespace Drv {
 
-class Velm6031Manager final : public Velm6031ManagerComponentBase {
+class Veml6031Manager final : public Veml6031ManagerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Velm6031Manager object
-    Velm6031Manager(const char* const compName  //!< The component name
+    //! Construct Veml6031Manager object
+    Veml6031Manager(const char* const compName  //!< The component name
     );
 
-    //! Destroy Velm6031Manager object
-    ~Velm6031Manager();
+    //! Destroy Veml6031Manager object
+    ~Veml6031Manager();
 
   public:
     // ----------------------------------------------------------------------
@@ -59,7 +59,7 @@ class Velm6031Manager final : public Velm6031ManagerComponentBase {
 
     //! Handler implementation for loadSwitchStateChanged
     //!
-    //! Port to initialize and deinitialize the VELM6031 device on load switch state change
+    //! Port to initialize and deinitialize the VEML6031 device on load switch state change
     Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
                                                const Fw::On& state) override;
 
@@ -89,16 +89,16 @@ class Velm6031Manager final : public Velm6031ManagerComponentBase {
     //! Check if the load switch is ready (on and timeout passed)
     bool loadSwitchReady();
 
-    //! Set the integration time attribute for the VELM6031 sensor
+    //! Set the integration time attribute for the VEML6031 sensor
     Fw::Success setIntegrationTimeAttribute(sensor_channel chan);
 
-    //! Set the gain attribute for the VELM6031 sensor
+    //! Set the gain attribute for the VEML6031 sensor
     Fw::Success setGainAttribute(sensor_channel chan);
 
-    //! Set the div4 attribute for the VELM6031 sensor
+    //! Set the div4 attribute for the VEML6031 sensor
     Fw::Success setDiv4Attribute(sensor_channel chan);
 
-    //! Set all sensor attributes for the VELM6031 sensor
+    //! Set all sensor attributes for the VEML6031 sensor
     Fw::Success configureSensorAttributes(sensor_channel chan);
 
   private:

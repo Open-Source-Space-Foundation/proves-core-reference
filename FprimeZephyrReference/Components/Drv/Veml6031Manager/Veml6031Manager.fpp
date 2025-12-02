@@ -1,7 +1,7 @@
 module Drv {
     port lightGet(ref condition: Fw.Success) -> F32
 
-    @ Gain settings for VELM6031 sensor
+    @ Gain settings for VEML6031 sensor
     enum GAIN : U8 {
         VEML6031_GAIN_1 @< Gain of 1
         VEML6031_GAIN_2 @< Gain of 2
@@ -9,7 +9,7 @@ module Drv {
         VEML6031_GAIN_0_5 @< Gain of 0.5
     }
 
-    @ Integration time settings for VELM6031 sensor
+    @ Integration time settings for VEML6031 sensor
     enum IT : U8 {
         VEML6031_IT_3_125 @< 3.25 ms integration time
         VEML6031_IT_6_25 @< 6.25 ms integration time
@@ -22,13 +22,13 @@ module Drv {
         VEML6031_IT_800 @< 800 ms integration time
     }
 
-    @ Effective photodiode size (DIV4) settings for VELM6031 sensor
+    @ Effective photodiode size (DIV4) settings for VEML6031 sensor
     enum DIV4 : U8 {
         VEML6031_SIZE_4_4
         VEML6031_SIZE_1_4
     }
 
-    @ Ambient Light Sensor (ALS) persistence protect number settings for VELM6031 sensor
+    @ Ambient Light Sensor (ALS) persistence protect number settings for VEML6031 sensor
     enum ALS_PERS : U8 {
         VEML60XX_PERS_1 @< Interrupt triggered every ALS reading
         VEML60XX_PERS_2 @< Interrupt triggered after 2 consecutive ALS readings out of threshold
@@ -38,7 +38,7 @@ module Drv {
 }
 
 module Drv {
-    passive component Velm6031Manager {
+    passive component Veml6031Manager {
 
         #### Parameters ####
         @ Parameter for setting the gain of the light senors
@@ -77,7 +77,7 @@ module Drv {
         @ Port to read the ambient illuminance in visible spectrum, in lux
         sync input port ambientLightGet: lightGet
 
-        @ Port to initialize and deinitialize the VELM6031 device on load switch state change
+        @ Port to initialize and deinitialize the VEML6031 device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         @ Output port to check device TCA health
@@ -91,44 +91,44 @@ module Drv {
 
         #### Events ####
 
-        @ Event for reporting VELM6031 not ready error
-        event DeviceNotReady() severity warning high format "VELM6031 device not ready" throttle 5
+        @ Event for reporting VEML6031 not ready error
+        event DeviceNotReady() severity warning high format "VEML6031 device not ready" throttle 5
 
-        @ Event for reporting VELM6031 initialization failure
-        event DeviceInitFailed(ret: I32) severity warning high format "VELM6031 initialization failed with return code: {}" throttle 5
+        @ Event for reporting VEML6031 initialization failure
+        event DeviceInitFailed(ret: I32) severity warning high format "VEML6031 initialization failed with return code: {}" throttle 5
 
-        @ Event for reporting VELM6031 nil device error
-        event DeviceNil() severity warning high format "VELM6031 device is nil" throttle 5
+        @ Event for reporting VEML6031 nil device error
+        event DeviceNil() severity warning high format "VEML6031 device is nil" throttle 5
 
-        @ Event for reporting VELM6031 nil state error
-        event DeviceStateNil() severity warning high format "VELM6031 device state is nil" throttle 5
+        @ Event for reporting VEML6031 nil state error
+        event DeviceStateNil() severity warning high format "VEML6031 device state is nil" throttle 5
 
         @ Event for reporting TCA unhealthy state
-        event TcaUnhealthy() severity warning high format "VELM6031 TCA device is unhealthy" throttle 5
+        event TcaUnhealthy() severity warning high format "VEML6031 TCA device is unhealthy" throttle 5
 
         @ Event for reporting MUX unhealthy state
-        event MuxUnhealthy() severity warning high format "VELM6031 MUX device is unhealthy" throttle 5
+        event MuxUnhealthy() severity warning high format "VEML6031 MUX device is unhealthy" throttle 5
 
         @ Event for reporting Load Switch not ready state
-        event LoadSwitchNotReady() severity warning high format "VELM6031 Load Switch is not ready" throttle 5
+        event LoadSwitchNotReady() severity warning high format "VEML6031 Load Switch is not ready" throttle 5
 
-        @ Event for reporting VELM6031 sensor fetch failure
-        event SensorSampleFetchFailed(ret: I32) severity warning high format "VELM6031 sensor fetch failed with return code: {}" throttle 5
+        @ Event for reporting VEML6031 sensor fetch failure
+        event SensorSampleFetchFailed(ret: I32) severity warning high format "VEML6031 sensor fetch failed with return code: {}" throttle 5
 
-        @ Event for reporting VELM6031 sensor channel get failure
-        event SensorChannelGetFailed(ret: I32) severity warning high format "VELM6031 sensor channel get failed with return code: {}" throttle 5
+        @ Event for reporting VEML6031 sensor channel get failure
+        event SensorChannelGetFailed(ret: I32) severity warning high format "VEML6031 sensor channel get failed with return code: {}" throttle 5
 
         @ Event for reporting invalid gain parameter
-        event InvalidGainParam(gain: U8) severity warning high format "VELM6031 invalid gain parameter: {}" throttle 5
+        event InvalidGainParam(gain: U8) severity warning high format "VEML6031 invalid gain parameter: {}" throttle 5
 
         @ Event for reporting invalid integration time parameter
-        event InvalidIntegrationTimeParam(it: U8) severity warning high format "VELM6031 invalid integration time parameter: {}" throttle 5
+        event InvalidIntegrationTimeParam(it: U8) severity warning high format "VEML6031 invalid integration time parameter: {}" throttle 5
 
         @ Event for reporting invalid effective photodiode size parameter
-        event InvalidDiv4Param(div4: U8) severity warning high format "VELM6031 invalid effective photodiode size parameter: {}" throttle 5
+        event InvalidDiv4Param(div4: U8) severity warning high format "VEML6031 invalid effective photodiode size parameter: {}" throttle 5
 
         @ Event for reporting sensor attribute set failure
-        event SensorAttrSetFailed(attr: U16, val: U8, ret: I32) severity warning high format "VELM6031 sensor attribute {}={} set failed with return code: {}" throttle 5
+        event SensorAttrSetFailed(attr: U16, val: U8, ret: I32) severity warning high format "VEML6031 sensor attribute {}={} set failed with return code: {}" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

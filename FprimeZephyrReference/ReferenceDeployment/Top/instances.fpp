@@ -187,18 +187,18 @@ module ReferenceDeployment {
 
   instance adcs: Components.ADCS base id 0x10054000
 
-  instance velm6031Face0Manager: Drv.Velm6031Manager base id 0x10055000
+  instance veml6031Face0Manager: Drv.Veml6031Manager base id 0x10055000
 
-  instance velm6031Face1Manager: Drv.Velm6031Manager base id 0x10056000
+  instance veml6031Face1Manager: Drv.Veml6031Manager base id 0x10056000
 
-  instance velm6031Face2Manager: Drv.Velm6031Manager base id 0x10057000
+  instance veml6031Face2Manager: Drv.Veml6031Manager base id 0x10057000
 
-  instance velm6031Face3Manager: Drv.Velm6031Manager base id 0x10058000
+  instance veml6031Face3Manager: Drv.Veml6031Manager base id 0x10058000
 
-  instance velm6031Face5Manager: Drv.Velm6031Manager base id 0x10059000
+  instance veml6031Face5Manager: Drv.Veml6031Manager base id 0x10059000
 
-  instance velm6031Face6Manager: Drv.Velm6031Manager base id 0x1005A000
+  instance veml6031Face6Manager: Drv.Veml6031Manager base id 0x1005A000
 
-  instance velm6031Face7Manager: Drv.Velm6031Manager base id 0x1005B000
+  instance veml6031Face7Manager: Drv.Veml6031Manager base id 0x1005B000
 
 }

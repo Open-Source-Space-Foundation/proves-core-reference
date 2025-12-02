@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Velm6031Manager.cpp
-// \brief  cpp file for Velm6031Manager component implementation class
+// \title  Veml6031Manager.cpp
+// \brief  cpp file for Veml6031Manager component implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/Drv/Velm6031Manager/Velm6031Manager.hpp"
+#include "FprimeZephyrReference/Components/Drv/Veml6031Manager/Veml6031Manager.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -16,15 +16,15 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Velm6031Manager ::Velm6031Manager(const char* const compName) : Velm6031ManagerComponentBase(compName) {}
+Veml6031Manager ::Veml6031Manager(const char* const compName) : Veml6031ManagerComponentBase(compName) {}
 
-Velm6031Manager ::~Velm6031Manager() {}
+Veml6031Manager ::~Veml6031Manager() {}
 
 // ----------------------------------------------------------------------
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void Velm6031Manager ::configure(const struct device* dev) {
+void Veml6031Manager ::configure(const struct device* dev) {
     this->m_dev = dev;
 }
 
@@ -32,7 +32,7 @@ void Velm6031Manager ::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-F32 Velm6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
+F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
@@ -59,7 +59,7 @@ F32 Velm6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& 
     return lux;
 }
 
-F32 Velm6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
+F32 Veml6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
@@ -86,7 +86,7 @@ F32 Velm6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success&
     return lux;
 }
 
-Fw::Success Velm6031Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& state) {
+Fw::Success Veml6031Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& state) {
     // Store the load switch state
     this->m_load_switch_state = state;
 
@@ -103,7 +103,7 @@ Fw::Success Velm6031Manager ::loadSwitchStateChanged_handler(FwIndexType portNum
     return Fw::Success::SUCCESS;
 }
 
-F32 Velm6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
+F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
@@ -134,7 +134,7 @@ F32 Velm6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 // Private helper methods
 // ----------------------------------------------------------------------
 
-bool Velm6031Manager ::isDeviceInitialized() {
+bool Veml6031Manager ::isDeviceInitialized() {
     if (!this->m_dev) {
         this->log_WARNING_HI_DeviceNil();
         return false;
@@ -150,7 +150,7 @@ bool Velm6031Manager ::isDeviceInitialized() {
     return this->m_dev->state->initialized;
 }
 
-Fw::Success Velm6031Manager ::initializeDevice() {
+Fw::Success Veml6031Manager ::initializeDevice() {
     if (this->isDeviceInitialized()) {
         if (!device_is_ready(this->m_dev)) {
             this->log_WARNING_HI_DeviceNotReady();
@@ -188,7 +188,7 @@ Fw::Success Velm6031Manager ::initializeDevice() {
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success Velm6031Manager ::deinitializeDevice() {
+Fw::Success Veml6031Manager ::deinitializeDevice() {
     if (!this->m_dev) {
         this->log_WARNING_HI_DeviceNil();
         return Fw::Success::FAILURE;
@@ -205,11 +205,11 @@ Fw::Success Velm6031Manager ::deinitializeDevice() {
     return Fw::Success::SUCCESS;
 }
 
-bool Velm6031Manager ::loadSwitchReady() {
+bool Veml6031Manager ::loadSwitchReady() {
     return this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout;
 }
 
-Fw::Success Velm6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
+Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 it = this->paramGet_INTEGRATION_TIME(valid);
     if (valid != Fw::ParamValid::VALID) {
@@ -230,7 +230,7 @@ Fw::Success Velm6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success Velm6031Manager ::setGainAttribute(sensor_channel chan) {
+Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 gain = this->paramGet_GAIN(valid);
     if (valid != Fw::ParamValid::VALID) {
@@ -251,7 +251,7 @@ Fw::Success Velm6031Manager ::setGainAttribute(sensor_channel chan) {
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success Velm6031Manager ::setDiv4Attribute(sensor_channel chan) {
+Fw::Success Veml6031Manager ::setDiv4Attribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 div4 = this->paramGet_EFFECTIVE_PHOTODIODE_SIZE(valid);
     if (valid != Fw::ParamValid::VALID) {
@@ -272,7 +272,7 @@ Fw::Success Velm6031Manager ::setDiv4Attribute(sensor_channel chan) {
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success Velm6031Manager ::configureSensorAttributes(sensor_channel chan) {
+Fw::Success Veml6031Manager ::configureSensorAttributes(sensor_channel chan) {
     Fw::Success result;
 
     result = this->setIntegrationTimeAttribute(chan);
