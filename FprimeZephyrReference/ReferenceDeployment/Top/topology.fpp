@@ -7,6 +7,7 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1Hz_1
   }
 
   topology ReferenceDeployment {
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    instance rateGroup1Hz_1
     instance rateGroupDriver
     instance timer
     instance lora
@@ -66,7 +68,23 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
-    instance resetManager
+    # instance resetManager
+    # instance resetManager1
+    # instance resetManager2
+    # instance resetManager3
+    # instance resetManager4
+    # instance resetManager5
+    # instance resetManager6
+    # instance resetManager7
+    # instance resetManager8
+    # instance resetManager9
+    # instance resetManager10
+    # instance resetManager11
+    # instance resetManager12 #56 Comp#
+    # instance resetManager13
+    # instance resetManager14
+    # instance resetManager15
+    # instance resetManager16
     instance modeManager
 
 
@@ -174,6 +192,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
 
+
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz_1] -> rateGroup1Hz_1.CycleIn
     }
 
 

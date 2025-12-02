@@ -19,7 +19,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   module Default {
-    constant QUEUE_SIZE = 10
+    constant QUEUE_SIZE = 5
     constant STACK_SIZE = 8 * 1024 # Must match prj.conf thread stack size
   }
 
@@ -36,6 +36,11 @@ module ReferenceDeployment {
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 3
+
+  instance rateGroup1Hz_1: Svc.ActiveRateGroup base id 0x10003000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 4
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
     queue size Default.QUEUE_SIZE * 2 \
@@ -141,5 +146,37 @@ module ReferenceDeployment {
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
 
   instance startupManager: Components.StartupManager base id 0x1003F000
+
+  # instance resetManager1: Components.ResetManager base id 0x10041000
+
+  # instance resetManager2: Components.ResetManager base id 0x10042000
+
+  # instance resetManager3: Components.ResetManager base id 0x10043000
+
+  # instance resetManager4: Components.ResetManager base id 0x10044000
+
+  # instance resetManager5: Components.ResetManager base id 0x10045000
+
+  # instance resetManager6: Components.ResetManager base id 0x10046000
+
+  # instance resetManager7: Components.ResetManager base id 0x10047000
+
+  # instance resetManager8: Components.ResetManager base id 0x10048000
+
+  # instance resetManager9: Components.ResetManager base id 0x10049000
+
+  # instance resetManager10: Components.ResetManager base id 0x1004A000
+
+  # instance resetManager11: Components.ResetManager base id 0x1004B000
+
+  # instance resetManager12: Components.ResetManager base id 0x1004C000
+
+  # instance resetManager13: Components.ResetManager base id 0x1004D000
+
+  # instance resetManager14: Components.ResetManager base id 0x1004E000
+
+  # instance resetManager15: Components.ResetManager base id 0x1004F000
+
+  # instance resetManager16: Components.ResetManager base id 0x10050000
 
 }
