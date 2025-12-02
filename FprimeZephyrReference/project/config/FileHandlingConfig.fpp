@@ -10,10 +10,10 @@ module FileHandlingConfig {
     }
 
     module StackSizes {
-        constant fileUplink    = 8 * 1024
-        constant fileDownlink  = 8 * 1024
-        constant fileManager   = 8 * 1024
-        constant prmDb         = 8 * 1024
+        constant fileUplink    = 7 * 1024
+        constant fileDownlink  = 7 * 1024
+        constant fileManager   = 7 * 1024
+        constant prmDb         = 7 * 1024
     }
 
     module Priorities {
