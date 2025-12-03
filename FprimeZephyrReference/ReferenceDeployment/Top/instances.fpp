@@ -47,11 +47,6 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 14
 
-instance updater: Zephyr.Updater base id 0x1000C000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 15
-
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -142,5 +137,8 @@ instance updater: Zephyr.Updater base id 0x1000C000 \
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
 
   instance startupManager: Components.StartupManager base id 0x1003F000
+
+  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10040000 
+
 
 }

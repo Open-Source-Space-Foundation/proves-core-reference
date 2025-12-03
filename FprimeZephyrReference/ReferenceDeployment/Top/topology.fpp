@@ -68,8 +68,7 @@ module ReferenceDeployment {
     instance ina219SysManager
     instance ina219SolManager
     instance resetManager
-    instance updater
-
+    instance fileUplinkCollector
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -213,10 +212,17 @@ module ReferenceDeployment {
       # File Downlink <-> ComQueue
       FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
       ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+    }
 
+    connections FileUplinkCollecting {
       # Router <-> FileUplink
-      ComCcsdsUart.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
-      FileHandling.fileUplink.bufferSendOut -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
+      fileUplinkCollector.singleOut -> FileHandling.fileUplink.bufferSendIn
+      FileHandling.fileUplink.bufferSendOut -> fileUplinkCollector.singleIn
+
+      ComCcsdsUart.fprimeRouter.fileOut     -> fileUplinkCollector.multiIn[1]
+      fileUplinkCollector.multiOut[1] -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
+      ComCcsds.fprimeRouter.fileOut     -> fileUplinkCollector.multiIn[0]
+      fileUplinkCollector.multiOut[0] -> ComCcsds.fprimeRouter.fileBufferReturnIn
     }
 
 

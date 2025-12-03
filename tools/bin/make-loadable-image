@@ -3,7 +3,7 @@ DIRNAME="$(cd "$(dirname $BASH_SOURCE)"; pwd)"
 ZEPHYR="${ZEPHYR_BASE:-${DIRNAME}/../../lib/zephyr-workspace/zephyr}"
 
 # Check arguments
-if (( $# == 2 ))
+if (( $# != 2 ))
 then
     echo "$0 <input.signed.bin> <output.uf2>"
     exit 0
