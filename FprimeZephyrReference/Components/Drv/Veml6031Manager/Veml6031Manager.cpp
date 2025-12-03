@@ -24,7 +24,9 @@ Veml6031Manager ::~Veml6031Manager() {}
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void Veml6031Manager ::configure(const struct device* dev) {
+void Veml6031Manager ::configure(const struct device* tca, const struct device* mux, const struct device* dev) {
+    this->m_tca = tca;
+    this->m_mux = mux;
     this->m_dev = dev;
 }
 
@@ -160,13 +162,13 @@ Fw::Success Veml6031Manager ::initializeDevice() {
         return Fw::Success::SUCCESS;
     }
 
-    if (this->tcaHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_tca)) {
         this->log_WARNING_HI_TcaUnhealthy();
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_HI_TcaUnhealthy_ThrottleClear();
 
-    if (this->muxHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_mux)) {
         this->log_WARNING_HI_MuxUnhealthy();
         return Fw::Success::FAILURE;
     }

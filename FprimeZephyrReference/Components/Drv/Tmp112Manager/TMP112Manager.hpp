@@ -31,7 +31,7 @@ class Tmp112Manager final : public Tmp112ManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Configure the TMP112 device
-    void configure(const struct device* dev);
+    void configure(const struct device* tca, const struct device* mux, const struct device* dev, bool loadSwitchCheck);
 
   private:
     // ----------------------------------------------------------------------
@@ -75,11 +75,11 @@ class Tmp112Manager final : public Tmp112ManagerComponentBase {
     //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
 
-    //! TCA health state
-    Fw::Health m_tca_state = Fw::Health::FAILED;
+    //! Zephyr device for the TCA
+    const struct device* m_tca;
 
-    //! MUX health state
-    Fw::Health m_mux_state = Fw::Health::FAILED;
+    //! Zephyr device for the mux
+    const struct device* m_mux;
 
     //! Load switch state
     Fw::On m_load_switch_state = Fw::On::OFF;
@@ -87,6 +87,10 @@ class Tmp112Manager final : public Tmp112ManagerComponentBase {
     //! Load switch on timeout
     //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
     Fw::Time m_load_switch_on_timeout;
+
+    //! Load switch check
+    //! Available to disable if the component is not powered by a load switch
+    bool m_load_switch_check = true;
 };
 
 }  // namespace Drv

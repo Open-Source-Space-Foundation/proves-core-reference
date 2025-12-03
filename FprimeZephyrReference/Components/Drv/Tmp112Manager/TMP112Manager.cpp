@@ -23,8 +23,15 @@ Tmp112Manager ::~Tmp112Manager() {}
 // Helper methods
 // ----------------------------------------------------------------------
 
-void Tmp112Manager::configure(const struct device* dev) {
+void Tmp112Manager::configure(const struct device* tca,
+                              const struct device* mux,
+                              const struct device* dev,
+                              bool loadSwitchCheck) {
+    this->m_tca = tca;
+    this->m_mux = mux;
     this->m_dev = dev;
+    // TODO(nateinaction): Abstract load switch check, perhaps wrap this component and only use when needed?
+    this->m_load_switch_check = loadSwitchCheck;
 }
 
 // ----------------------------------------------------------------------
@@ -105,13 +112,13 @@ Fw::Success Tmp112Manager ::initializeDevice() {
         return Fw::Success::SUCCESS;
     }
 
-    if (this->tcaHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_tca)) {
         this->log_WARNING_HI_TcaUnhealthy();
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_HI_TcaUnhealthy_ThrottleClear();
 
-    if (this->muxHealthGet_out(0) != Fw::Health::HEALTHY) {
+    if (!device_is_ready(this->m_mux)) {
         this->log_WARNING_HI_MuxUnhealthy();
         return Fw::Success::FAILURE;
     }
@@ -151,7 +158,8 @@ Fw::Success Tmp112Manager ::deinitializeDevice() {
 }
 
 bool Tmp112Manager ::loadSwitchReady() {
-    return this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout;
+    return (this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout) ||
+           !this->m_load_switch_check;
 }
 
 }  // namespace Drv

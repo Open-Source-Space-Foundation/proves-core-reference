@@ -107,12 +107,12 @@ struct TopologyState {
     const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
     // - Light sensors
     const device* face0LightDevice;  //!< Light sensor device for cube face 0
-    // const device* face1LightDevice;  //!< Light sensor device for cube face 1
-    // const device* face2LightDevice;  //!< Light sensor device for cube face 2
-    // const device* face3LightDevice;  //!< Light sensor device for cube face 3
-    // const device* face5LightDevice;  //!< Light sensor device for cube face 5
-    // const device* face6LightDevice;  //!< Light sensor device for cube face 6
-    // const device* face7LightDevice;  //!< Light sensor device for cube face 7
+    const device* face1LightDevice;  //!< Light sensor device for cube face 1
+    const device* face2LightDevice;  //!< Light sensor device for cube face 2
+    const device* face3LightDevice;  //!< Light sensor device for cube face 3
+    const device* face5LightDevice;  //!< Light sensor device for cube face 5
+    const device* face6LightDevice;  //!< Light sensor device for cube face 6
+    const device* face7LightDevice;  //!< Light sensor device for cube face 7
 };
 
 namespace PingEntries = ::PingEntries;

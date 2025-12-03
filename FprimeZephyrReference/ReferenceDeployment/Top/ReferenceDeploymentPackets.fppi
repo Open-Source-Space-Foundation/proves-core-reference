@@ -9,7 +9,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
@@ -24,7 +23,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
   }
 
 
@@ -89,19 +87,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
-  packet TcaMonitor id 12 group 4 {
-    ReferenceDeployment.tcaMonitor.Healthy
-    ReferenceDeployment.muxChannel0Monitor.Healthy
-    ReferenceDeployment.muxChannel1Monitor.Healthy
-    ReferenceDeployment.muxChannel2Monitor.Healthy
-    ReferenceDeployment.muxChannel3Monitor.Healthy
-    ReferenceDeployment.muxChannel4Monitor.Healthy
-    ReferenceDeployment.muxChannel5Monitor.Healthy
-    ReferenceDeployment.muxChannel6Monitor.Healthy
-    ReferenceDeployment.muxChannel7Monitor.Healthy
-  }
-
-  packet Thermal id 13 group 4 {
+  packet Thermal id 12 group 4 {
     ReferenceDeployment.tmp112Face0Manager.Temperature
     ReferenceDeployment.tmp112Face1Manager.Temperature
     ReferenceDeployment.tmp112Face2Manager.Temperature
@@ -113,28 +99,28 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
-  packet LightSensor id 14 group 4 {
+  packet LightSensor id 13 group 4 {
     ReferenceDeployment.veml6031Face0Manager.VisibleLight
-    # ReferenceDeployment.veml6031Face1Manager.RawLightData
-    # ReferenceDeployment.veml6031Face2Manager.RawLightData
-    # ReferenceDeployment.veml6031Face3Manager.RawLightData
-    # ReferenceDeployment.veml6031Face5Manager.RawLightData
-    # ReferenceDeployment.veml6031Face6Manager.RawLightData
-    # ReferenceDeployment.veml6031Face7Manager.RawLightData
+    ReferenceDeployment.veml6031Face1Manager.VisibleLight
+    ReferenceDeployment.veml6031Face2Manager.VisibleLight
+    ReferenceDeployment.veml6031Face3Manager.VisibleLight
+    ReferenceDeployment.veml6031Face5Manager.VisibleLight
+    ReferenceDeployment.veml6031Face6Manager.VisibleLight
+    ReferenceDeployment.veml6031Face7Manager.VisibleLight
     ReferenceDeployment.veml6031Face0Manager.InfraRedLight
-    # ReferenceDeployment.veml6031Face1Manager.IRLightData
-    # ReferenceDeployment.veml6031Face2Manager.IRLightData
-    # ReferenceDeployment.veml6031Face3Manager.IRLightData
-    # ReferenceDeployment.veml6031Face5Manager.IRLightData
-    # ReferenceDeployment.veml6031Face6Manager.IRLightData
-    # ReferenceDeployment.veml6031Face7Manager.IRLightData
+    ReferenceDeployment.veml6031Face1Manager.InfraRedLight
+    ReferenceDeployment.veml6031Face2Manager.InfraRedLight
+    ReferenceDeployment.veml6031Face3Manager.InfraRedLight
+    ReferenceDeployment.veml6031Face5Manager.InfraRedLight
+    ReferenceDeployment.veml6031Face6Manager.InfraRedLight
+    ReferenceDeployment.veml6031Face7Manager.InfraRedLight
     ReferenceDeployment.veml6031Face0Manager.AmbientLight
-  #   ReferenceDeployment.veml6031Face1Manager.ALSLightData
-  #   ReferenceDeployment.veml6031Face2Manager.ALSLightData
-  #   ReferenceDeployment.veml6031Face3Manager.ALSLightData
-  #   ReferenceDeployment.veml6031Face5Manager.ALSLightData
-  #   ReferenceDeployment.veml6031Face6Manager.ALSLightData
-  #   ReferenceDeployment.veml6031Face7Manager.ALSLightData
+    ReferenceDeployment.veml6031Face1Manager.AmbientLight
+    ReferenceDeployment.veml6031Face2Manager.AmbientLight
+    ReferenceDeployment.veml6031Face3Manager.AmbientLight
+    ReferenceDeployment.veml6031Face5Manager.AmbientLight
+    ReferenceDeployment.veml6031Face6Manager.AmbientLight
+    ReferenceDeployment.veml6031Face7Manager.AmbientLight
   }
 
 } omit {

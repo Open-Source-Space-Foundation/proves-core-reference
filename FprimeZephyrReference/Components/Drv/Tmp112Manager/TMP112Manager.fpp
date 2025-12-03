@@ -12,12 +12,6 @@ module Drv {
         @ Port to initialize and deinitialize the TMP112 device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
-        @ Output port to check device TCA health
-        output port tcaHealthGet: Components.HealthGet
-
-        @ Output port to check device MUX health
-        output port muxHealthGet: Components.HealthGet
-
         # Telemetry channels
 
         @ Telemetry channel for temperature in degrees Celsius
