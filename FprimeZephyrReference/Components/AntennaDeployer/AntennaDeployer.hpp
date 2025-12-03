@@ -58,7 +58,6 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     U32 m_ticksInState = 0;
     U32 m_totalAttempts = 0;
     bool m_stopRequested = false;
-    bool m_successDetected = false;
     U32 m_burnTicksThisAttempt = 0;
 };
 

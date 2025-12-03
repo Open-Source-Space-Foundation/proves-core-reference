@@ -102,7 +102,6 @@ void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
     this->resetDeploymentState();
     this->m_ticksInState = 0;
-    this->m_successDetected = false;
     this->m_stopRequested = false;
     this->startNextAttempt();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -139,7 +138,6 @@ void AntennaDeployer ::startNextAttempt() {
     this->m_currentAttempt++;
 
     this->m_ticksInState = 0;
-    this->m_successDetected = false;
 
     this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
 
@@ -174,11 +172,6 @@ void AntennaDeployer ::handleBurningTick() {
         this->ensureBurnwireStopped();
         this->logBurnSignalCount();
 
-        if (this->m_successDetected) {
-            this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
-            return;
-        }
-
         Fw::ParamValid attemptsValid;
         const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
         if (this->m_currentAttempt >= maxAttempts) {
@@ -196,11 +189,6 @@ void AntennaDeployer ::handleRetryWaitTick() {
 
     if (this->m_stopRequested) {
         this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
-
-    if (this->m_successDetected) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_SUCCESS);
         return;
     }
 
@@ -243,7 +231,6 @@ void AntennaDeployer ::resetDeploymentState() {
     this->m_currentAttempt = 0;
     this->m_ticksInState = 0;
     this->m_stopRequested = false;
-    this->m_successDetected = false;
     this->m_burnTicksThisAttempt = 0;
 }
 
