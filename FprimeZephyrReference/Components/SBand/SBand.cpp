@@ -31,7 +31,6 @@ SBand ::~SBand() {}
 // ----------------------------------------------------------------------
 
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
-    Os::ScopeLock lock(this->m_mutex);
     if (this->rx_mode) {
         uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
         if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
@@ -66,8 +65,7 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    Os::ScopeLock lock(this->m_mutex);
-    this->rx_mode = false;
+    this->rx_mode = false;  // possible race condition with check in run_handler
 
     this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
@@ -110,7 +108,6 @@ void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-// must have mutex held to call this as it touches rx_mode
 void SBand ::enableRx() {
     this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
@@ -158,7 +155,6 @@ int16_t SBand ::configure_radio() {
 }
 
 void SBand ::start() {
-    Os::ScopeLock lock(this->m_mutex);
     int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
