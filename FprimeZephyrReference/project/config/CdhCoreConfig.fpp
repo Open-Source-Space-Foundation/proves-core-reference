@@ -6,14 +6,14 @@ module CdhCoreConfig {
         constant cmdDisp     = 10
         constant events      = 25
         constant tlmSend     = 5
-        constant $health     = 10
+        constant $health     = 20
     }
 
 
     module StackSizes {
-        constant cmdDisp     = 8 * 1024 # Must match prj.conf thread stack size
-        constant events      = 8 * 1024 # Must match prj.conf thread stack size
-        constant tlmSend     = 8 * 1024 # Must match prj.conf thread stack size
+        constant cmdDisp     = 4 * 1024 # Must match prj.conf thread stack size
+        constant events      = 4 * 1024 # Must match prj.conf thread stack size
+        constant tlmSend     = 4 * 1024 # Must match prj.conf thread stack size
     }
 
     module Priorities {
