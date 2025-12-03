@@ -59,7 +59,9 @@ void LoadSwitch ::setLoadSwitchState(Fw::On state) {
     this->gpioSet_out(0, gpioValue);
 
     // Inform downstream components of the state change
-    this->loadSwitchStateChanged_out(0, state);
+    for (FwIndexType i = 0; i < this->getNum_loadSwitchStateChanged_OutputPorts(); i++) {
+        this->loadSwitchStateChanged_out(i, state);
+    }
     this->log_ACTIVITY_HI_StatusChanged(state);
     this->tlmWrite_IsOn(state);
 }
