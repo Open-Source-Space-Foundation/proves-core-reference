@@ -16,10 +16,10 @@
 #include <Fw/FPrimeBasicTypes.hpp>
 
 namespace Svc {
-static const FwChanIdType MAX_PACKETIZER_PACKETS = 8;
+static const FwChanIdType MAX_PACKETIZER_PACKETS = 13;
 static const FwChanIdType TLMPACKETIZER_NUM_TLM_HASH_SLOTS =
-    8;  // !< Number of slots in the hash table.
-        // Works best when set to about twice the number of components producing telemetry
+    15;  // !< Number of slots in the hash table.
+         // Works best when set to about twice the number of components producing telemetry
 static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
     999;  // !< The modulo value of the hashing function.
           // Should be set to a little below the ID gaps to spread the entries around
