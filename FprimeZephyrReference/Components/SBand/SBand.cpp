@@ -41,16 +41,6 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
             radio->readData(data, len);
             radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
 
-            Fw::Logger::log("MESSAGE RECEIVED:\n");
-            char msg[sizeof(data) * 3 + 1];
-            for (size_t i = 0; i < len; ++i)
-                sprintf(msg + i * 3, "%02X ", data[i]);  // NOLINT(runtime/printf)
-            msg[len * 3] = '\0';
-            Fw::Logger::log("%s\n", msg);
-
-            // Allocate buffer and send received data to F' system
-            // This goes to ComCcsdsSband.frameAccumulator.dataIn, which processes the uplink frames
-            // @ jack may want to check here for any edits for how the s band actually processes it
             Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
             if (buffer.isValid()) {
                 (void)::memcpy(buffer.getData(), data, len);
