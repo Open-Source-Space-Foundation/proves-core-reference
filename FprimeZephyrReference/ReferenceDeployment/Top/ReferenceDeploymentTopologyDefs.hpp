@@ -53,9 +53,6 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
-namespace ReferenceDeployment_rateGroup1_6Hz {
-enum { WARN = 3, FATAL = 5 };
-}
 namespace ReferenceDeployment_cmdSeq {
 enum { WARN = 3, FATAL = 5 };
 }
@@ -72,9 +69,8 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;  //!< UART device path for communication
-    const device* loraDevice;  //!< LoRa device path for communication
-
+    const device* uartDevice;                     //!< UART device path for communication
+    const device* loraDevice;                     //!< LoRa device path for communication
     U32 baudRate;                                 //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
     ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds

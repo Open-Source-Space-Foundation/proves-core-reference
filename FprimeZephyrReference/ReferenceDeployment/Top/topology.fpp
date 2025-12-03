@@ -7,7 +7,6 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
-    rateGroup1_6Hz
   }
 
   topology ReferenceDeployment {
@@ -25,7 +24,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
-    # instance rateGroup1_6Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -179,7 +177,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
 
-      # Medium rate (1Hz) rate group
+      # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
@@ -197,9 +195,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[13] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> thermalManager.run
-
-      # Slow rate (1/6 Hz) rate group
-      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
     }
 
 

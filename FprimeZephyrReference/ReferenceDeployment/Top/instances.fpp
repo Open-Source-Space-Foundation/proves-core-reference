@@ -20,7 +20,7 @@ module ReferenceDeployment {
 
   module Default {
     constant QUEUE_SIZE = 10
-    constant STACK_SIZE = 4 * 1024 # Must match prj.conf thread stack size
+    constant STACK_SIZE = 8 * 1024 # Must match prj.conf thread stack size
   }
 
   # ----------------------------------------------------------------------
@@ -37,22 +37,17 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 3
 
-  instance rateGroup1_6Hz: Svc.ActiveRateGroup base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 4
-
-  instance cmdSeq: Svc.CmdSequencer base id 0x10004000 \
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
     queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
     priority 15
 
-  instance prmDb: Svc.PrmDb base id 0x10005000 \
+  instance prmDb: Svc.PrmDb base id 0x1000B000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 14
 
-  instance modeManager: Components.ModeManager base id 0x10006000 \
+  instance modeManager: Components.ModeManager base id 0x10040000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 16
@@ -85,78 +80,90 @@ module ReferenceDeployment {
 
   instance lsm6dsoManager: Drv.Lsm6dsoManager base id 0x10019000
 
-  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x1001A000
+  instance bootloaderTrigger: Components.BootloaderTrigger base id 0x10020000
 
-  instance burnwire: Components.Burnwire base id 0x1001B000
+  instance burnwire: Components.Burnwire base id 0x10021000
 
-  instance comDelay: Components.ComDelay base id 0x1001C000
+  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10022000
 
-  instance comSplitterEvents: Svc.ComSplitter base id 0x1001D000
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10023000
 
-  instance comSplitterTelemetry: Svc.ComSplitter base id 0x1001E000
+  instance comDelay: Components.ComDelay base id 0x10025000
 
-  instance lora: Zephyr.LoRa base id 0x1001F000
+  instance lora: Zephyr.LoRa base id 0x10026000
 
-  instance antennaDeployer: Components.AntennaDeployer base id 0x10020000
+  instance comSplitterEvents: Svc.ComSplitter base id 0x10027000
 
-  instance fsSpace: Components.FsSpace base id 0x10021000
+  instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
 
-  instance resetManager: Components.ResetManager base id 0x10022000
+  instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
 
-  instance powerMonitor: Components.PowerMonitor base id 0x10023000
+  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 
-  instance startupManager: Components.StartupManager base id 0x10024000
+  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
 
-  instance thermalManager: Components.ThermalManager base id 0x10025000
+  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x1002C000
 
-  instance adcs: Components.ADCS base id 0x10026000
+  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x1002D000
 
-  # GPIO Drivers
-  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10027000
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10028000
-  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x10029000
-  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
-  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x1002B000
-  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x1002C000
-  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002D000
-  instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x1002E000
-  instance gpioPayloadPowerLS: Zephyr.ZephyrGpioDriver base id 0x1002F000
-  instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x10030000
+  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x1002E000
 
-  # Load Switches
-  instance face0LoadSwitch: Components.LoadSwitch base id 0x10031000
-  instance face1LoadSwitch: Components.LoadSwitch base id 0x10032000
-  instance face2LoadSwitch: Components.LoadSwitch base id 0x10033000
-  instance face3LoadSwitch: Components.LoadSwitch base id 0x10034000
-  instance face4LoadSwitch: Components.LoadSwitch base id 0x10035000
-  instance face5LoadSwitch: Components.LoadSwitch base id 0x10036000
-  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10037000
-  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x10038000
+  instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x1002F000
 
-  # Power Monitors
-  instance ina219SysManager: Drv.Ina219Manager base id 0x10039000
-  instance ina219SolManager: Drv.Ina219Manager base id 0x1003A000
+  instance gpioPayloadPowerLS: Zephyr.ZephyrGpioDriver base id 0x10030000
 
-  # Temperature Sensors
-  instance tmp112Face0Manager: Drv.Tmp112Manager base id 0x1003B000
-  instance tmp112Face1Manager: Drv.Tmp112Manager base id 0x1003C000
-  instance tmp112Face2Manager: Drv.Tmp112Manager base id 0x1003D000
-  instance tmp112Face3Manager: Drv.Tmp112Manager base id 0x1003E000
-  instance tmp112Face4Manager: Drv.Tmp112Manager base id 0x1003F000
-  instance tmp112Face5Manager: Drv.Tmp112Manager base id 0x10040000
-  instance tmp112BattCell1Manager: Drv.Tmp112Manager base id 0x10041000
-  instance tmp112BattCell2Manager: Drv.Tmp112Manager base id 0x10042000
-  instance tmp112BattCell3Manager: Drv.Tmp112Manager base id 0x10043000
-  instance tmp112BattCell4Manager: Drv.Tmp112Manager base id 0x10044000
+  instance gpioPayloadBatteryLS: Zephyr.ZephyrGpioDriver base id 0x10031000
 
-  # Light Sensors
-  instance veml6031Face0Manager: Drv.Veml6031Manager base id 0x10045000
-  instance veml6031Face1Manager: Drv.Veml6031Manager base id 0x10046000
-  instance veml6031Face2Manager: Drv.Veml6031Manager base id 0x10047000
-  instance veml6031Face3Manager: Drv.Veml6031Manager base id 0x10048000
-  instance veml6031Face4Manager: Drv.Veml6031Manager base id 0x10049000
-  instance veml6031Face5Manager: Drv.Veml6031Manager base id 0x1004A000
-  instance veml6031Face6Manager: Drv.Veml6031Manager base id 0x1004B000
-  instance veml6031Face7Manager: Drv.Veml6031Manager base id 0x1004C000
+  instance fsSpace: Components.FsSpace base id 0x10032000
+
+  instance face4LoadSwitch: Components.LoadSwitch base id 0x10033000
+
+  instance face0LoadSwitch: Components.LoadSwitch base id 0x10034000
+
+  instance face1LoadSwitch: Components.LoadSwitch base id 0x10035000
+
+  instance face2LoadSwitch: Components.LoadSwitch base id 0x10036000
+
+  instance face3LoadSwitch: Components.LoadSwitch base id 0x10037000
+
+  instance face5LoadSwitch: Components.LoadSwitch base id 0x10038000
+
+  instance payloadPowerLoadSwitch: Components.LoadSwitch base id 0x10039000
+
+  instance payloadBatteryLoadSwitch: Components.LoadSwitch base id 0x1003A000
+
+  instance resetManager: Components.ResetManager base id 0x1003B000
+
+  instance powerMonitor: Components.PowerMonitor base id 0x1003C000
+
+  instance ina219SysManager: Drv.Ina219Manager base id 0x1003D000
+
+  instance ina219SolManager: Drv.Ina219Manager base id 0x1003E000
+
+  instance startupManager: Components.StartupManager base id 0x1003F000
+
+  # Thermal Management System
+  instance thermalManager: Components.ThermalManager base id 0x10041000
+  instance tmp112Face0Manager: Drv.Tmp112Manager base id 0x10042000
+  instance tmp112Face1Manager: Drv.Tmp112Manager base id 0x10043000
+  instance tmp112Face2Manager: Drv.Tmp112Manager base id 0x10044000
+  instance tmp112Face3Manager: Drv.Tmp112Manager base id 0x10045000
+  instance tmp112Face4Manager: Drv.Tmp112Manager base id 0x10046000
+  instance tmp112Face5Manager: Drv.Tmp112Manager base id 0x10047000
+  instance tmp112BattCell1Manager: Drv.Tmp112Manager base id 0x10048000
+  instance tmp112BattCell2Manager: Drv.Tmp112Manager base id 0x10049000
+  instance tmp112BattCell3Manager: Drv.Tmp112Manager base id 0x1004A000
+  instance tmp112BattCell4Manager: Drv.Tmp112Manager base id 0x1004B000
+
+  # Attitude Determination and Control System (ADCS)
+  instance adcs: Components.ADCS base id 0x1004C000
+  instance veml6031Face0Manager: Drv.Veml6031Manager base id 0x1004D000
+  instance veml6031Face1Manager: Drv.Veml6031Manager base id 0x1004E000
+  instance veml6031Face2Manager: Drv.Veml6031Manager base id 0x1004F000
+  instance veml6031Face3Manager: Drv.Veml6031Manager base id 0x10050000
+  instance veml6031Face4Manager: Drv.Veml6031Manager base id 0x10051000
+  instance veml6031Face5Manager: Drv.Veml6031Manager base id 0x10052000
+  instance veml6031Face6Manager: Drv.Veml6031Manager base id 0x10053000
+  instance veml6031Face7Manager: Drv.Veml6031Manager base id 0x10054000
 
 }
