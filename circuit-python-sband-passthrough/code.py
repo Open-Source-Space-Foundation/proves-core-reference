@@ -344,6 +344,7 @@ while True:
     if packet != last_packet:
         usb_cdc.data.write(packet)
         packet_count += 1
+        last_packet = packet
     time_delta = time.time() - time_start
     if time_delta > 10:
         print(f"[INFO] Packets received: {packet_count}")
