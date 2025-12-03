@@ -86,30 +86,6 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
     this->deallocate_out(0, data);
 }
 
-// ----------------------------------------------------------------------
-// Handler implementations for commands
-// ----------------------------------------------------------------------
-
-void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->rx_mode = false;  // possible race condition with check in run_handler
-
-    char s[] =
-        "Hello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
-        "world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, world!\nHello, "
-        "world!\nHello, world!\nHello, world!\nHello, world!\n";
-    this->rxEnable_out(0, Fw::Logic::LOW);
-    this->txEnable_out(0, Fw::Logic::HIGH);
-    int16_t state = this->m_rlb_radio.transmit(s, sizeof(s));
-    if (state == RADIOLIB_ERR_NONE) {
-        Fw::Logger::log("radio.transmit() success!\n");
-    } else {
-        Fw::Logger::log("radio.transmit() failed!\n");
-        Fw::Logger::log("state: %i\n", state);
-    }
-    this->enableRx();
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
 // must have mutex held to call this as it touches rx_mode
 void SBand ::enableRx() {
     this->txEnable_out(0, Fw::Logic::LOW);

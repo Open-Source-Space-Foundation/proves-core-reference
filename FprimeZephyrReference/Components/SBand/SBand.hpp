@@ -59,17 +59,6 @@ class SBand final : public SBandComponentBase {
                               const ComCfg::FrameContext& context) override;
 
   private:
-    // ----------------------------------------------------------------------
-    // Handler implementations for commands
-    // ----------------------------------------------------------------------
-
-    //! Handler implementation for command TRANSMIT
-    //!
-    //! Command to transmit data
-    void TRANSMIT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                             U32 cmdSeq            //!< The command sequence number
-                             ) override;
-
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
     void enableRx();

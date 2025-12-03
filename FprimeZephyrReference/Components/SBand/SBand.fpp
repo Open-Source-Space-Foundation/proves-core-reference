@@ -17,9 +17,6 @@ module Components {
         @ Import the allocation interface
         import Svc.BufferAllocation
 
-        @ Command to transmit data
-        sync command TRANSMIT()
-
         @ SPI Output Port
         output port spiSend: Drv.SpiReadWrite
 
