@@ -9,42 +9,10 @@
 
 #include "FprimeHal.hpp"
 #include "FprimeZephyrReference/Components/SBand/SBandComponentAc.hpp"
-#include "Os/Mutex.hpp"
 
 namespace Components {
 
 class SBand final : public SBandComponentBase {
-  private:
-    //! Thread-safe monitor for IRQ pending flag
-    class IrqPendingMonitor {
-      public:
-        IrqPendingMonitor() : m_pending(false) {}
-
-        void setPending() {
-            Os::ScopeLock lock(m_mutex);
-            m_pending = true;
-        }
-
-        void clearPending() {
-            Os::ScopeLock lock(m_mutex);
-            m_pending = false;
-        }
-
-        //! Atomic test-and-set: returns true if flag was clear, false if already set
-        bool trySetPending() {
-            Os::ScopeLock lock(m_mutex);
-            if (m_pending) {
-                return false;
-            }
-            m_pending = true;
-            return true;
-        }
-
-      private:
-        Os::Mutex m_mutex;
-        bool m_pending;
-    };
-
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
@@ -94,18 +62,22 @@ class SBand final : public SBandComponentBase {
     //! Internal async handler for processing received data
     void deferredRxHandler_internalInterfaceHandler() override;
 
+    //! Handler implementation for deferredTxHandler
+    //!
+    //! Internal async handler for processing transmitted data
+    void deferredTxHandler_internalInterfaceHandler() override;
+
   private:
     // Configure the SX1280 radio (setup and parameter tuning)
     int16_t configure_radio();
     void enableRx();
 
   private:
-    FprimeHal m_rlb_hal;  //!< RadioLib HAL instance
-    Module m_rlb_module;  //!< RadioLib Module instance
-    SX1280 m_rlb_radio;   //!< RadioLib SX1280 radio instance
-    bool rx_mode = false;
-    Os::Mutex m_mutex;               //!< Mutex for thread safety
-    IrqPendingMonitor m_irqPending;  //!< Monitor for deferred handler state
+    FprimeHal m_rlb_hal;             //!< RadioLib HAL instance
+    Module m_rlb_module;             //!< RadioLib Module instance
+    SX1280 m_rlb_radio;              //!< RadioLib SX1280 radio instance
+    bool m_configured = false;       //!< Flag indicating radio is configured
+    bool m_rxHandlerQueued = false;  //!< Flag indicating RX handler is queued
 };
 
 }  // namespace Components

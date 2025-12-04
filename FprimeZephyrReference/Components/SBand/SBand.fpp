@@ -14,6 +14,9 @@ module Components {
         @ Internal port for deferred RX processing
         internal port deferredRxHandler() priority 10
 
+        @ Internal port for deferred TX processing
+        internal port deferredTxHandler() priority 10
+
         @ Import Communication Interface
         import Svc.Com
 

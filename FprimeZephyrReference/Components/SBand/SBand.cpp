@@ -31,19 +31,25 @@ SBand ::~SBand() {}
 // ----------------------------------------------------------------------
 
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
-    uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
+    // Only process if radio is configured
+    if (!m_configured) {
+        return;
+    }
 
-    if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-        if (m_irqPending.trySetPending()) {
-            this->deferredRxHandler_internalInterfaceInvoke();
-        }
+    // Queue RX handler only if not already queued
+    if (!m_rxHandlerQueued) {
+        m_rxHandlerQueued = true;
+        this->deferredRxHandler_internalInterfaceInvoke();
     }
 }
 
 void SBand ::deferredRxHandler_internalInterfaceHandler() {
-    Os::ScopeLock lock(this->m_mutex);
+    // Check IRQ status
+    uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
 
-    if (this->rx_mode) {
+    // Only process if RX_DONE
+    if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
+        // Process received data
         SX1280* radio = &this->m_rlb_radio;
         uint8_t data[256] = {0};
         size_t len = radio->getPacketLength();
@@ -58,7 +64,13 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         }
     }
 
-    m_irqPending.clearPending();
+    // Clear the queued flag
+    m_rxHandlerQueued = false;
+}
+
+void SBand ::deferredTxHandler_internalInterfaceHandler() {
+    // Re-enable RX mode after transmission
+    this->enableRx();
 }
 
 // ----------------------------------------------------------------------
@@ -66,19 +78,29 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
 // ----------------------------------------------------------------------
 
 void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    Os::ScopeLock lock(this->m_mutex);
-    this->rx_mode = false;
+    // Only process if radio is configured
+    if (!m_configured) {
+        Fw::Success failureStatus = Fw::Success::FAILURE;
+        this->dataReturnOut_out(0, data, context);
+        this->comStatusOut_out(0, failureStatus);
+        return;
+    }
 
+    // Switch to TX mode
     this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
 
+    // Transmit data
     int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
 
-    this->enableRx();
+    // Return buffer and status
     Fw::Success returnStatus = Fw::Success::SUCCESS;
     this->dataReturnOut_out(0, data, context);
     this->comStatusOut_out(0, returnStatus);
+
+    // Queue deferred handler to re-enable RX
+    this->deferredTxHandler_internalInterfaceInvoke();
 }
 
 void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
@@ -86,7 +108,6 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
     this->deallocate_out(0, data);
 }
 
-// must have mutex held to call this as it touches rx_mode
 void SBand ::enableRx() {
     this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
@@ -97,8 +118,6 @@ void SBand ::enableRx() {
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
     state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
-
-    this->rx_mode = true;
 }
 
 int16_t SBand ::configure_radio() {
@@ -134,9 +153,11 @@ int16_t SBand ::configure_radio() {
 }
 
 void SBand ::configureRadio() {
-    Os::ScopeLock lock(this->m_mutex);
     int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    // Mark as configured
+    m_configured = true;
 
     Fw::Success status = Fw::Success::SUCCESS;
     this->comStatusOut_out(0, status);
