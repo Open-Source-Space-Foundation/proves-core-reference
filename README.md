@@ -115,8 +115,11 @@ You can control the specific command lists of the satellite by writing a sequenc
 First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr.
 
 ```
-cd <zephyr>/samples/sysbuild/with_mcubuild
+
+in proves-core-reference
+cd lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 <proves>/tools/bin/build-with-proves --sysbuild
+(example /home/username/proves-core-reference/tools/bin/build-with-proves --sysbuild)
 ```
 
 Once built, upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
@@ -124,7 +127,10 @@ Once built, upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
 Then build Proves like normal. This will make a UF2, but not for the second flash region.  To build a bootable image, use:
 
 ```
-<proves>/tools/bin/build-bootable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
+<proves>/tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
 ```
 
-Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image
+Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image, by changing the base address so it appears at slot0. Once you boot into it, you can use the FlashWorker component to write to slot 1 at runtime.
+
+
+Now to fileuplink and update other parts. Upload Zephyr.signed.bin and set update.updater.update_image_from and set the next boot to book from _____
