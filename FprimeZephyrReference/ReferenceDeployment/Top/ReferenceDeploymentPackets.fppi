@@ -69,7 +69,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet Antenna id 8 group 4 {
     ReferenceDeployment.antennaDeployer.DeployAttemptCount
-    ReferenceDeployment.antennaDeployer.LastDistance
   }
 
   packet LoadSwitches id 9 group 4 {
@@ -94,13 +93,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
-  packet authenticate id 11 group 4 {
-    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
-    ComCcsdsUart.authenticate.RejectedPacketsCount
-    ComCcsdsUart.authenticate.CurrentSequenceNumber
-  }
-
-  packet SBand id 12 group 4 {
+  packet SBand id 11 group 4 {
     sband.LastRssi
     sband.LastSnr
   }
