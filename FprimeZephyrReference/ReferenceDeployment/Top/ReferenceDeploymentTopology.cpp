@@ -50,6 +50,8 @@ Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
 // reference topology sets each token to zero as these contexts are unused in this project.
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
+U32 rateGroup1_6HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {6000};
+U32 rateGroup1_10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {12000};
 
 /**
  * \brief configure/setup components in project-specific way
@@ -65,6 +67,8 @@ void configureTopology() {
     // Rate groups require context arrays.
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
+    rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
+    rateGroup1_10Hz.configure(rateGroup1_10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_10HzContext));
 
     gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);

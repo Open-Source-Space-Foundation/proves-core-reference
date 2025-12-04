@@ -7,6 +7,8 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1_6Hz
+    rateGroup1_10Hz
   }
 
   topology ReferenceDeployment {
@@ -24,6 +26,8 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    instance rateGroup1_6Hz
+    instance rateGroup1_10Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -184,17 +188,21 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> thermalManager.run
+
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
+      rateGroup1_6Hz.RateGroupMemberOut[0] -> powerMonitor.run
+
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
+      rateGroup1_10Hz.RateGroupMemberOut[0] -> imuManager.run
+      rateGroup1_10Hz.RateGroupMemberOut[1] -> adcs.run
+      rateGroup1_10Hz.RateGroupMemberOut[2] -> thermalManager.run
     }
 
 
