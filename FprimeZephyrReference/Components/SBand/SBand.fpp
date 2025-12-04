@@ -53,7 +53,11 @@ module Components {
         event RadioNotConfigured() severity warning high \
             format "Radio not configured, operation ignored" throttle 3
 
-        # TODO add RSSI and SNR telemetry
+        @ Last received RSSI (if available)
+        telemetry LastRssi: F32 update on change
+
+        @ Last received SNR (if available)
+        telemetry LastSnr: F32 update on change
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

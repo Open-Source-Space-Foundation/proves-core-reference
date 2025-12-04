@@ -98,7 +98,11 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
     ComCcsdsUart.authenticate.CurrentSequenceNumber
+  }
 
+  packet SBand id 12 group 4 {
+    sband.LastRssi
+    sband.LastSnr
   }
 
 } omit {

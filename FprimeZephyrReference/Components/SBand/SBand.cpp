@@ -63,6 +63,13 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
                 (void)::memcpy(buffer.getData(), data, len);
                 ComCfg::FrameContext frameContext;
                 this->dataOut_out(0, buffer, frameContext);
+
+                // Log RSSI and SNR for received packet
+                float rssi = radio->getRSSI();
+                float snr = radio->getSNR();
+                this->tlmWrite_LastRssi(rssi);
+                this->tlmWrite_LastSnr(snr);
+
                 // Clear throttled warnings on success
                 this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
                 this->log_WARNING_HI_AllocationFailed_ThrottleClear();
