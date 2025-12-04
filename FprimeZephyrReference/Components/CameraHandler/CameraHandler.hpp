@@ -28,6 +28,10 @@ class CameraHandler final : public CameraHandlerComponentBase {
     //! Destroy CameraHandler object
     ~CameraHandler();
 
+    void configure(U32 cam_num) {
+        this->cam_number = cam_num;
+    }
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -104,6 +108,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     U32 m_bytes_received = 0;
     U32 m_file_error_count = 0;  // Track total file errors
     U32 m_images_saved = 0;      // Track total images successfully saved
+    U32 cam_number = 0;         // Camera number for filename generation
 
     U8 m_lineBuffer[128];
     size_t m_lineIndex = 0;

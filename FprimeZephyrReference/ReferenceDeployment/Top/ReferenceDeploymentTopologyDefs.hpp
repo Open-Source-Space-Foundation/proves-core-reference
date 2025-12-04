@@ -77,6 +77,8 @@ struct TopologyState {
     ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
     const device* peripheralUart;
     U32 peripheralBaudRate;
+    const device* peripheralUart2;
+    U32 peripheralBaudRate2;
     FileHandling::SubtopologyState fileHandling;  //!< Subtopology state for FileHandling
     const device* ina219SysDevice;                //!< device path for battery board ina219
     const device* ina219SolDevice;                //!< device path for solar panel ina219

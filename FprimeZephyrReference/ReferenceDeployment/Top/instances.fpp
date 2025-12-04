@@ -52,6 +52,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 10
 
+  instance payload2: Components.PayloadCom base id 0x10006000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 10
+
   # ----------------------------------------------------------------------
   # Queued component instances
   # ----------------------------------------------------------------------
@@ -166,5 +171,31 @@ module ReferenceDeployment {
   instance ina219SolManager: Drv.Ina219Manager base id 0x1003A000
 
   instance startupManager: Components.StartupManager base id 0x1003B000
+
+  instance cameraHandler2: Components.CameraHandler base id 0x1003C000
+
+  instance peripheralUartDriver2: Zephyr.ZephyrUartDriver base id 0x1003D000
+
+  instance payloadBufferManager2: Svc.BufferManager base id 0x1003E000 \
+  {
+    phase Fpp.ToCpp.Phases.configObjects """
+    Svc::BufferManager::BufferBins bins;
+    """
+    phase Fpp.ToCpp.Phases.configComponents """
+    memset(&ConfigObjects::ReferenceDeployment_payloadBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payloadBufferManager::bins));
+    // UART RX buffers for camera data streaming (4 KB, 2 buffers for ping-pong)
+    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 4 * 1024;
+    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].numBuffers = 2;
+    ReferenceDeployment::payloadBufferManager.setup(
+        1,  // manager ID
+        0,  // store ID
+        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
+        ConfigObjects::ReferenceDeployment_payloadBufferManager::bins
+    );
+    """
+    phase Fpp.ToCpp.Phases.tearDownComponents """
+    ReferenceDeployment::payloadBufferManager.cleanup();
+    """
+  }
 
 }

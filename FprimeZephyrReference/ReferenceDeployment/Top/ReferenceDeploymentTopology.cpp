@@ -117,6 +117,9 @@ void setupTopology(const TopologyState& state) {
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
+    cameraHandler.configure(0);      // Camera 0
+    cameraHandler2.configure(1);     // Camera 1
+    peripheralUartDriver2.configure(state.peripheralUart2, state.peripheralBaudRate2);
 }
 
 void startRateGroups() {

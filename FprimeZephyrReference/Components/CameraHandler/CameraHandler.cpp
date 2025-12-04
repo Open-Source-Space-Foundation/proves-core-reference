@@ -314,7 +314,9 @@ void CameraHandler ::processProtocolBuffer() {
         
         // Generate filename - save to root filesystem
         char filename[64];
-        snprintf(filename, sizeof(filename), "/img_%03d.jpg", m_data_file_count++);
+        // Get parameter for image number
+        Fw::ParamValid valid = Fw::ParamValid::VALID;
+        snprintf(filename, sizeof(filename), "/cam%03d_img_%03d.jpg", this->cam_number, this->m_images_saved++);
         m_currentFilename = filename;
         
         // Open file for writing

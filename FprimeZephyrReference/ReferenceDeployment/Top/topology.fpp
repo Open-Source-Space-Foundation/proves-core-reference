@@ -62,9 +62,13 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsSpace
     instance payload
+    instance payload2
     instance cameraHandler
     instance peripheralUartDriver
+    instance cameraHandler2
+    instance peripheralUartDriver2
     instance payloadBufferManager
+    instance payloadBufferManager2
     instance cmdSeq
     instance startupManager
     instance powerMonitor
@@ -158,8 +162,10 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
+      
       rateGroup10Hz.RateGroupMemberOut[4] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[5] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[6] -> peripheralUartDriver2.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -177,6 +183,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> payloadBufferManager2.schedIn
 
     }
 
@@ -228,6 +235,23 @@ module ReferenceDeployment {
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
+    }
+
+     connections PayloadCom2 {
+      # PayloadCom <-> UART Driver
+      payload2.uartForward -> peripheralUartDriver2.$send
+      peripheralUartDriver2.$recv -> payload2.uartDataIn
+      
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload2.bufferReturn -> peripheralUartDriver2.recvReturnIn
+      
+      # PayloadCom <-> CameraHandler data flow
+      payload2.uartDataOut -> cameraHandler2.dataIn
+      cameraHandler2.commandOut -> payload2.commandIn
+      
+      # UART driver allocates/deallocates from BufferManager
+      peripheralUartDriver2.allocate -> payloadBufferManager.bufferGetCallee
+      peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
     }
 
     connections ComCcsds_FileHandling {

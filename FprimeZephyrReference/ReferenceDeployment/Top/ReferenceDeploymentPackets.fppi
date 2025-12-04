@@ -21,6 +21,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.EmptyBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager.EmptyBuffs
+    payloadBufferManager2.NoBuffs
+    payloadBufferManager2.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }
@@ -36,6 +38,9 @@ telemetry packets ReferenceDeploymentPackets {
     payloadBufferManager.TotalBuffs
     payloadBufferManager.CurrBuffs
     payloadBufferManager.HiBuffs
+    payloadBufferManager2.TotalBuffs
+    payloadBufferManager2.CurrBuffs
+    payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
@@ -97,6 +102,15 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler.FileOpen
     ReferenceDeployment.cameraHandler.FileErrorCount
     ReferenceDeployment.cameraHandler.ImagesSaved
+  }
+
+    packet CameraDebug2 id 12 group 5 {
+    ReferenceDeployment.cameraHandler2.BytesReceived
+    ReferenceDeployment.cameraHandler2.ExpectedSize
+    ReferenceDeployment.cameraHandler2.IsReceiving
+    ReferenceDeployment.cameraHandler2.FileOpen
+    ReferenceDeployment.cameraHandler2.FileErrorCount
+    ReferenceDeployment.cameraHandler2.ImagesSaved
   }
 
 } omit {
