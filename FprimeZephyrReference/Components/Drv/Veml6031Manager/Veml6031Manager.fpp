@@ -42,13 +42,13 @@ module Drv {
 
         #### Parameters ####
         @ Parameter for setting the gain of the light senors
-        param GAIN: GAIN default GAIN.VEML6031_GAIN_1
+        param GAIN: GAIN default GAIN.VEML6031_GAIN_0_5
 
         @ Parameter for setting the integration time (IT) of the light sensors
-        param INTEGRATION_TIME: IT default IT.VEML6031_IT_100
+        param INTEGRATION_TIME: IT default IT.VEML6031_IT_25
 
         @ Parameter for setting the effective photodiode size (DIV4) mode of the light sensors
-        param EFFECTIVE_PHOTODIODE_SIZE: DIV4 default DIV4.VEML6031_SIZE_4_4
+        param EFFECTIVE_PHOTODIODE_SIZE: DIV4 default DIV4.VEML6031_SIZE_1_4
 
         @ Parameter for setting the Ambient Light Sensor (ALS) persistence protect number setting (PERS).
         param ALS_PERSISTENCE_PROTECT_NUMBER: ALS_PERS default ALS_PERS.VEML60XX_PERS_1

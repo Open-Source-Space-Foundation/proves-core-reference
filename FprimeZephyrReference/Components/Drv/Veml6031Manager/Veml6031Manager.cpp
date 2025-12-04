@@ -55,7 +55,7 @@ F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     F32 lux = sensor_value_to_double(&val);
 
-    this->tlmWrite_VisibleLight(lux);
+    this->tlmWrite_AmbientLight(lux);
 
     condition = Fw::Success::SUCCESS;
     return lux;
