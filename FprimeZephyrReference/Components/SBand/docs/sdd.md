@@ -1,32 +1,24 @@
-# FprimeZephyrReference::SBand
+# Components::SBand
 
-Component for F Prime FSW framework.
-
-## Usage Examples
-Add usage examples here
-
-### Diagrams
-Add diagrams here
+Wrapper for the [RadioLib SX1280 driver](https://github.com/jgromes/RadioLib). This component integrates into the F Prime communication stack.
 
 ### Typical Usage
-And the typical usage of the component here
 
-## Class Diagram
-Add a class diagram here
+The component should be connected in accordance with the [F Prime communication adapter interface](../../../../lib/fprime/docs/reference/communication-adapter-interface.md).
+
 
 ## Port Descriptions
+
 | Name | Description |
 |---|---|
-|---|---|
-
-## Component States
-Add component states in the chart below
-| Name | Description |
-|---|---|
-|---|---|
-
-## Sequence Diagrams
-Add sequence diagrams here
+| run | Scheduler port called by rate group to check for received data |
+| Svc.Com | Standard communication interface (dataIn, dataOut, dataReturnIn, dataReturnOut, comStatusIn, comStatusOut) |
+| Svc.BufferAllocation | Buffer allocation interface (allocate, deallocate) |
+| spiSend | SPI communication with the SX1280 radio |
+| resetSend | GPIO control for radio module reset |
+| txEnable | GPIO control for S-Band TX enable |
+| rxEnable | GPIO control for S-Band RX enable |
+| getIRQLine | GPIO read for S-Band IRQ line status |
 
 ## Parameters
 | Name | Description |
@@ -41,15 +33,19 @@ Add sequence diagrams here
 ## Events
 | Name | Description |
 |---|---|
-|---|---|
+| RadioLibFailed | RadioLib call failed with error code (throttled: 2) |
+| AllocationFailed | Failed to allocate buffer for received data (throttled: 2) |
+| RadioNotConfigured | Radio not configured, operation ignored (throttled: 3) |
 
 ## Telemetry
 | Name | Description |
 |---|---|
-|---|---|
+| LastRssi | RSSI (Received Signal Strength Indicator) of last received packet in dBm |
+| LastSnr | SNR (Signal-to-Noise Ratio) of last received packet in dB |
+
 
 ## Unit Tests
-Add unit test descriptions in the chart below
+
 | Name | Description | Output | Coverage |
 |---|---|---|---|
 |---|---|---|---|
