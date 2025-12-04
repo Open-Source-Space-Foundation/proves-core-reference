@@ -6,6 +6,7 @@
 #include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112Manager.hpp"
 
 #include <Fw/Types/Assert.hpp>
+#include <string>
 
 #include <zephyr/sys/printk.h>
 
@@ -62,8 +63,6 @@ F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
         return 0;
     }
 
-    struct sensor_value val;
-
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP);
     if (rc != 0) {
         this->log_WARNING_HI_SensorSampleFetchFailed(rc);
@@ -71,6 +70,7 @@ F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
     }
     this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
+    struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
     if (rc != 0) {
         this->log_WARNING_HI_SensorChannelGetFailed(rc);
@@ -79,10 +79,10 @@ F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
     this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
     F64 temp = sensor_value_to_double(&val);
-    condition = Fw::Success::SUCCESS;
 
     this->tlmWrite_Temperature(temp);
 
+    condition = Fw::Success::SUCCESS;
     return temp;
 }
 

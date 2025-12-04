@@ -182,18 +182,18 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[4] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[6] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[7] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[8] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[9] -> startupManager.run # doubles (20ms) rate group max time
-      rateGroup1Hz.RateGroupMemberOut[10] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[11] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run # Causing rate group to slip?
-      rateGroup1Hz.RateGroupMemberOut[13] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[14] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
+      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
+      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[15] -> thermalManager.run
     }
 

@@ -51,7 +51,12 @@ F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& 
     this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
-    sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT, &val);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT, &val);
+    if (rc != 0) {
+        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        return 0;
+    }
+    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
@@ -78,7 +83,12 @@ F32 Veml6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success&
     this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
-    sensor_channel_get(this->m_dev, SENSOR_CHAN_IR, &val);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_IR, &val);
+    if (rc != 0) {
+        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        return 0;
+    }
+    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
@@ -122,7 +132,12 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
     this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
-    sensor_channel_get(this->m_dev, SENSOR_CHAN_LIGHT, &val);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_LIGHT, &val);
+    if (rc != 0) {
+        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        return 0;
+    }
+    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
