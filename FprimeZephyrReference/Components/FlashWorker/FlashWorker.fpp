@@ -8,10 +8,10 @@ module Components {
 
         event NextBootSetFailed(mode: Update.NextBootMode, error_number: I32) severity warning low \
             format "Set next boot mode to {} failed (errno: {})"
-        
+
         event ConfirmImageFailed(error_number: I32) severity warning low \
             format "Confirm image failed (errno: {})"
-        
+
         event FlashEraseFailed(error_number: I32) severity warning low \
             format "Flash erase failed (errno: {})"
 

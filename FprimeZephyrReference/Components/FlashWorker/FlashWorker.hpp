@@ -6,20 +6,15 @@
 
 #ifndef Update_FlashWorker_HPP
 #define Update_FlashWorker_HPP
-#include "Os/File.hpp"
-
 #include "FprimeZephyrReference/Components/FlashWorker/FlashWorkerComponentAc.hpp"
+#include "Os/File.hpp"
 #include <zephyr/dfu/flash_img.h>
 namespace Components {
 
 class FlashWorker final : public FlashWorkerComponentBase {
   public:
-    constexpr static U8 REGION_NUMBER = 1; // slot1
-    enum Step {
-        IDLE,
-        PREPARE,
-        UPDATE
-    };
+    constexpr static U8 REGION_NUMBER = 1;  // slot1
+    enum Step { IDLE, PREPARE, UPDATE };
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
@@ -30,6 +25,7 @@ class FlashWorker final : public FlashWorkerComponentBase {
 
     //! Destroy FlashWorker object
     ~FlashWorker();
+
   private:
     Update::UpdateStatus writeImage(const Fw::StringBase& file_name, Os::File& image_file);
 
@@ -52,16 +48,16 @@ class FlashWorker final : public FlashWorkerComponentBase {
 
     //! Handler implementation for prepareImage
     void prepareImage_handler(FwIndexType portNum  //!< The port number
-    ) override;
+                              ) override;
 
     //! Handler implementation for updateImage
     void updateImage_handler(FwIndexType portNum,  //!< The port number
                              const Fw::StringBase& file) override;
+
   private:
-      Step m_last_successful;
-      U8 m_data[CONFIG_IMG_BLOCK_BUF_SIZE];
-      struct flash_img_context m_flash_context;
-  
+    Step m_last_successful;
+    U8 m_data[CONFIG_IMG_BLOCK_BUF_SIZE];
+    struct flash_img_context m_flash_context;
 };
 
 }  // namespace Components

@@ -5,9 +5,10 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/FlashWorker/FlashWorker.hpp"
+
 #include "Os/File.hpp"
-#include <zephyr/dfu/mcuboot.h>
 #include <zephyr/dfu/flash_img.h>
+#include <zephyr/dfu/mcuboot.h>
 
 namespace Components {
 
@@ -25,9 +26,9 @@ FlashWorker ::~FlashWorker() {}
 
 Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, Os::File& file) {
     const FwSizeType CHUNK = static_cast<FwSizeType>(sizeof(this->m_data));
-    FW_ASSERT(file.isOpen()); 
+    FW_ASSERT(file.isOpen());
     FwSizeType size = 0;
-    Update::UpdateStatus return_status =  Update::UpdateStatus::OP_OK;
+    Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
     int status = flash_img_init_id(&this->m_flash_context, FlashWorker::REGION_NUMBER);
     // Read file size, and default to 0 if unavailable
     Os::File::Status file_status = file.size(size);
@@ -44,15 +45,13 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
         }
     }
     if (file_status != Os::File::Status::OP_OK) {
-        this->log_WARNING_LO_ImageFileReadError(file_name,
-            Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
+        this->log_WARNING_LO_ImageFileReadError(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
     }
     if (status != 0) {
-        //TODO image op error
+        // TODO image op error
     }
     return return_status;
 }
-
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -69,7 +68,7 @@ Update::UpdateStatus FlashWorker ::confirmImage_handler(FwIndexType portNum) {
 
 Update::UpdateStatus FlashWorker ::nextBoot_handler(FwIndexType portNum, const Update::NextBootMode& mode) {
     int permanent = (mode == Update::NextBootMode::PERMANENT) ? BOOT_UPGRADE_PERMANENT : BOOT_UPGRADE_TEST;
-    
+
     int status = boot_request_upgrade(permanent);
     if (status != 0) {
         this->log_WARNING_LO_NextBootSetFailed(mode, static_cast<I32>(-1 * status));

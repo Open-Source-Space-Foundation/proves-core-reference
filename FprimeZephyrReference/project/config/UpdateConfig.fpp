@@ -3,18 +3,18 @@
 # Update Subtopology configuration
 #
 # Copyright (c) 2025 Michael Starch
-# 
+#
 # Licensed under the Apache License, Version 2.0. See LICENSE for details.
 #
 module Update {
     # Base ID for instance IDs in this subtopology
     constant BASE_ID = 0xA0000000
-    
+
     module QueueSizes {
-        constant updater = 5 # Updater should process quickly; small queue 
+        constant updater = 5 # Updater should process quickly; small queue
         constant worker  = 1 # Worker only handles one item at a time
     }
-    
+
     module StackSizes {
         constant updater = 8 * 1024 # Minimal stack size, not much processing
         constant worker  = 8 * 1024 # Minimal stack size, not much processing
