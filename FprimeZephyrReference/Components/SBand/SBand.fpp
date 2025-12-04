@@ -41,6 +41,24 @@ module Components {
         @ S-Band IRQ Line
         output port getIRQLine: Drv.GpioRead
 
+        @ Event to indicate RadioLib call failure
+        event RadioLibFailed(error: I16) severity warning high \
+            format "SBand RadioLib call failed, error: {}" throttle 2
+
+        @ Event to indicate allocation failure
+        event AllocationFailed(allocation_size: FwSizeType) severity warning high \
+            format "Failed to allocate buffer of: {} bytes" throttle 2
+
+        @ Event to indicate radio not configured
+        event RadioNotConfigured() severity warning high \
+            format "Radio not configured, operation ignored" throttle 3
+
+        @ Last received RSSI (if available)
+        telemetry LastRssi: I16 update on change
+
+        @ Last received SNR (if available)
+        telemetry LastSnr: I8 update on change
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

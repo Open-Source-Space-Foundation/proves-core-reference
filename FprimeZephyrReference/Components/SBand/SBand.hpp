@@ -14,6 +14,9 @@ namespace Components {
 
 class SBand final : public SBandComponentBase {
   public:
+    // Status returned from various SBand operations
+    enum Status { ERROR, SUCCESS };
+
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
@@ -25,7 +28,8 @@ class SBand final : public SBandComponentBase {
     //! Destroy SBand object
     ~SBand();
 
-    void configureRadio();
+    //! Configure the radio and start operation
+    Status configureRadio();
 
     using SBandComponentBase::getIRQLine_out;
     using SBandComponentBase::getTime;
@@ -70,8 +74,13 @@ class SBand final : public SBandComponentBase {
 
   private:
     // Configure the SX1280 radio (setup and parameter tuning)
-    int16_t configure_radio();
-    void enableRx();
+    Status configure_radio();
+
+    //! Enable receive mode
+    Status enableRx();
+
+    //! Enable transmit mode
+    Status enableTx();
 
   private:
     FprimeHal m_rlb_hal;             //!< RadioLib HAL instance
