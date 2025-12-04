@@ -2,7 +2,7 @@
 
 module Components {
     @ Component for F Prime FSW framework.
-    passive component SBand {
+    active component SBand {
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
@@ -10,6 +10,9 @@ module Components {
 
         @ Port receiving calls from the rate group
         sync input port run: Svc.Sched
+
+        @ Internal port for deferred RX processing
+        internal port deferredRxHandler() priority 10
 
         @ Import Communication Interface
         import Svc.Com

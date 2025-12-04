@@ -102,7 +102,10 @@ module ReferenceDeployment {
 
   instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10050000
 
-  instance sband : Components.SBand base id 0x10051000
+  instance sband : Components.SBand base id 0x10051000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 10
 
   instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10052000
 

@@ -134,7 +134,7 @@ void setupTopology(const TopologyState& state) {
         .word_delay = 0,
     };
     spiDriver.configure(state.spi0Device, cfg);
-    sband.start();
+    sband.configureRadio();
     lsm6dsoManager.configure(state.lsm6dsoDevice);
     lis2mdlManager.configure(state.lis2mdlDevice);
     ina219SysManager.configure(state.ina219SysDevice);

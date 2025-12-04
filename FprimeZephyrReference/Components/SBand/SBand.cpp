@@ -31,24 +31,34 @@ SBand ::~SBand() {}
 // ----------------------------------------------------------------------
 
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
-    Os::ScopeLock lock(this->m_mutex);
-    if (this->rx_mode) {
-        uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
-        if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-            SX1280* radio = &this->m_rlb_radio;
-            uint8_t data[256] = {0};
-            size_t len = radio->getPacketLength();
-            radio->readData(data, len);
-            radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
+    uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
 
-            Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
-            if (buffer.isValid()) {
-                (void)::memcpy(buffer.getData(), data, len);
-                ComCfg::FrameContext frameContext;
-                this->dataOut_out(0, buffer, frameContext);
-            }
+    if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
+        if (m_irqPending.trySetPending()) {
+            this->deferredRxHandler_internalInterfaceInvoke();
         }
     }
+}
+
+void SBand ::deferredRxHandler_internalInterfaceHandler() {
+    Os::ScopeLock lock(this->m_mutex);
+
+    if (this->rx_mode) {
+        SX1280* radio = &this->m_rlb_radio;
+        uint8_t data[256] = {0};
+        size_t len = radio->getPacketLength();
+        radio->readData(data, len);
+        radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
+
+        Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
+        if (buffer.isValid()) {
+            (void)::memcpy(buffer.getData(), data, len);
+            ComCfg::FrameContext frameContext;
+            this->dataOut_out(0, buffer, frameContext);
+        }
+    }
+
+    m_irqPending.clearPending();
 }
 
 // ----------------------------------------------------------------------
@@ -123,7 +133,7 @@ int16_t SBand ::configure_radio() {
     return state;
 }
 
-void SBand ::start() {
+void SBand ::configureRadio() {
     Os::ScopeLock lock(this->m_mutex);
     int16_t state = this->configure_radio();
     FW_ASSERT(state == RADIOLIB_ERR_NONE);
