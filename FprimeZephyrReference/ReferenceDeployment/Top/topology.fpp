@@ -43,6 +43,7 @@ module ReferenceDeployment {
     instance DetumbleManager
     instance lis2mdlManager
     instance lsm6dsoManager
+    instance imuManager
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
@@ -69,7 +70,11 @@ module ReferenceDeployment {
     instance resetManager
     instance modeManager
     instance magnetorquerManager
-    instance imuManager
+    instance drv2605Face0Manager
+    instance drv2605Face1Manager
+    instance drv2605Face2Manager
+    instance drv2605Face3Manager
+    instance drv2605Face5Manager
 
 
   # ----------------------------------------------------------------------
@@ -176,7 +181,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[11] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[12] -> modeManager.run
-
+      rateGroup1Hz.RateGroupMemberOut[13] -> imuManager.run
     }
 
 
@@ -266,6 +271,18 @@ module ReferenceDeployment {
       magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
       magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
       magnetorquerManager.loadSwitchTurnOn[4] -> face5LoadSwitch.turnOn
+
+      magnetorquerManager.initDevice[0] -> drv2605Face0Manager.init
+      magnetorquerManager.initDevice[1] -> drv2605Face1Manager.init
+      magnetorquerManager.initDevice[2] -> drv2605Face2Manager.init
+      magnetorquerManager.initDevice[3] -> drv2605Face3Manager.init
+      magnetorquerManager.initDevice[4] -> drv2605Face5Manager.init
+
+      magnetorquerManager.triggerDevice[0] -> drv2605Face0Manager.triggerDevice
+      magnetorquerManager.triggerDevice[1] -> drv2605Face1Manager.triggerDevice
+      magnetorquerManager.triggerDevice[2] -> drv2605Face2Manager.triggerDevice
+      magnetorquerManager.triggerDevice[3] -> drv2605Face3Manager.triggerDevice
+      magnetorquerManager.triggerDevice[4] -> drv2605Face5Manager.triggerDevice
     }
 
     connections ImuManager {

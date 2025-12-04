@@ -46,11 +46,11 @@ int main(int argc, char* argv[]) {
     inputs.lsm6dsoDevice = lsm6dso;
     inputs.lis2mdlDevice = lis2mdl;
     inputs.rtcDevice = rtc;
-    inputs.drv2605Devices["X+"] = face0_drv2605;
-    inputs.drv2605Devices["X-"] = face1_drv2605;
-    inputs.drv2605Devices["Y+"] = face2_drv2605;
-    inputs.drv2605Devices["Y-"] = face3_drv2605;
-    inputs.drv2605Devices["Z+"] = face5_drv2605;
+    inputs.face0drv2605Device = face0_drv2605;
+    inputs.face1drv2605Device = face1_drv2605;
+    inputs.face2drv2605Device = face2_drv2605;
+    inputs.face3drv2605Device = face3_drv2605;
+    inputs.face5drv2605Device = face5_drv2605;
     inputs.baudRate = 115200;
 
     // Setup, cycle, and teardown topology

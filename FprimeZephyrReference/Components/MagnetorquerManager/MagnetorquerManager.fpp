@@ -1,6 +1,5 @@
-module Drv {
-    # Making the array 10 elements in case of any future expansion
-    array InputArray = [10] InputStruct
+module Components {
+    array InputArray = [5] InputStruct
     struct InputStruct {
         key: string
         value: bool
@@ -12,7 +11,7 @@ module Drv {
     port SetDisabled()
 }
 
-module Drv {
+module Components {
     @ Component for F Prime FSW framework.
     passive component MagnetorquerManager {
 
@@ -21,11 +20,9 @@ module Drv {
         @ Port for turning on LoadSwitch instances (5 total), may be deleted
         output port loadSwitchTurnOn: [5] Fw.Signal
 
-        @ Event for reporting DRV2605 not ready error
-        event DeviceNotReady(face: string) severity warning high format "DRV2605 device on face {} not ready"
+        output port initDevice: [5] Fw.SuccessCondition
 
-        @ Event for reporting DRV2605 initialization error
-        event DeviceNotInitialized(face: string) severity warning high format "DRV2605 device on face {} not initialized"
+        output port triggerDevice: [5] Drv.triggerDevice
 
         @ Event for reporting that an invalid face was specified
         event InvalidFace(face: string) severity warning high format "Invalid face specified: {}"
