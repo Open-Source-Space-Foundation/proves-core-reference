@@ -68,7 +68,21 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
     m_rxHandlerQueued = false;
 }
 
-void SBand ::deferredTxHandler_internalInterfaceHandler() {
+void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Switch to TX mode
+    this->rxEnable_out(0, Fw::Logic::LOW);
+    this->txEnable_out(0, Fw::Logic::HIGH);
+
+    // Transmit data
+    int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
+    FW_ASSERT(state == RADIOLIB_ERR_NONE);
+
+    // Return buffer and status (need mutable copy for dataReturnOut_out)
+    Fw::Buffer mutableData = data;
+    Fw::Success returnStatus = Fw::Success::SUCCESS;
+    this->dataReturnOut_out(0, mutableData, context);
+    this->comStatusOut_out(0, returnStatus);
+
     // Re-enable RX mode after transmission
     this->enableRx();
 }
@@ -86,21 +100,8 @@ void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg:
         return;
     }
 
-    // Switch to TX mode
-    this->rxEnable_out(0, Fw::Logic::LOW);
-    this->txEnable_out(0, Fw::Logic::HIGH);
-
-    // Transmit data
-    int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
-    FW_ASSERT(state == RADIOLIB_ERR_NONE);
-
-    // Return buffer and status
-    Fw::Success returnStatus = Fw::Success::SUCCESS;
-    this->dataReturnOut_out(0, data, context);
-    this->comStatusOut_out(0, returnStatus);
-
-    // Queue deferred handler to re-enable RX
-    this->deferredTxHandler_internalInterfaceInvoke();
+    // Queue deferred handler to perform transmission
+    this->deferredTxHandler_internalInterfaceInvoke(data, context);
 }
 
 void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {

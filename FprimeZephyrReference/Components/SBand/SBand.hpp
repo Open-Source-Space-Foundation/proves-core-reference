@@ -65,7 +65,8 @@ class SBand final : public SBandComponentBase {
     //! Handler implementation for deferredTxHandler
     //!
     //! Internal async handler for processing transmitted data
-    void deferredTxHandler_internalInterfaceHandler() override;
+    void deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data,
+                                                    const ComCfg::FrameContext& context) override;
 
   private:
     // Configure the SX1280 radio (setup and parameter tuning)

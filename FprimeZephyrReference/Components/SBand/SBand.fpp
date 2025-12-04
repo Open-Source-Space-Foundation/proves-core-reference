@@ -15,7 +15,10 @@ module Components {
         internal port deferredRxHandler() priority 10
 
         @ Internal port for deferred TX processing
-        internal port deferredTxHandler() priority 10
+        internal port deferredTxHandler(
+            data: Fw.Buffer
+            context: ComCfg.FrameContext
+        ) priority 10
 
         @ Import Communication Interface
         import Svc.Com
