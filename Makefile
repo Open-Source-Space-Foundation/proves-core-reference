@@ -51,6 +51,7 @@ generate-if-needed:
 .PHONY: build
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
+	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 
 .PHONY: test-integration
 test-integration: uv
