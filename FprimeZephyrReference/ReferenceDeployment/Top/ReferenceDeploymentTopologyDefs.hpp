@@ -6,6 +6,9 @@
 #ifndef REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 
+#include <map>
+#include <string>
+
 // Subtopology PingEntries includes
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
 #include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
@@ -80,6 +83,12 @@ struct TopologyState {
     const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
     const device* rtcDevice;                      //!< RTC device path
+    //! DRV2605 devices
+    const device* face0drv2605Device;
+    const device* face1drv2605Device;
+    const device* face2drv2605Device;
+    const device* face3drv2605Device;
+    const device* face5drv2605Device;
 };
 
 namespace PingEntries = ::PingEntries;
