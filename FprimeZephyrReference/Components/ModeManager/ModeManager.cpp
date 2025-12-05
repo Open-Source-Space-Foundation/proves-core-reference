@@ -51,17 +51,23 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     bool valid = false;
     F32 voltage = this->getCurrentVoltage(valid);
 
+    // Get configurable parameters
+    Fw::ParamValid paramValid;
+    F32 entryVoltage = this->paramGet_SafeModeEntryVoltage(paramValid);
+    F32 recoveryVoltage = this->paramGet_SafeModeRecoveryVoltage(paramValid);
+    U32 debounceSeconds = this->paramGet_SafeModeDebounceSeconds(paramValid);
+
     // Mode-specific voltage monitoring
     if (this->m_mode == SystemMode::NORMAL) {
         // Low-voltage protection for normal mode -> safe mode entry:
-        // - Threshold: 6.7V triggers safe mode entry
-        // - Debounce: 10 consecutive seconds below threshold
-        bool isFault = !valid || (voltage < SAFE_MODE_ENTRY_VOLTAGE);
+        // - Threshold: configurable via SafeModeEntryVoltage parameter (default 6.7V)
+        // - Debounce: configurable via SafeModeDebounceSeconds parameter (default 10s)
+        bool isFault = !valid || (voltage < entryVoltage);
 
         if (isFault) {
             this->m_safeModeVoltageCounter++;
 
-            if (this->m_safeModeVoltageCounter >= SAFE_MODE_DEBOUNCE_SECONDS) {
+            if (this->m_safeModeVoltageCounter >= debounceSeconds) {
                 // Trigger automatic entry into safe mode
                 this->log_WARNING_HI_AutoSafeModeEntry(Components::SafeModeReason::LOW_BATTERY, valid ? voltage : 0.0f);
                 this->enterSafeMode(Components::SafeModeReason::LOW_BATTERY);
@@ -77,14 +83,14 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 
     } else if (this->m_mode == SystemMode::SAFE_MODE) {
         // Auto-recovery from safe mode (only if reason is LOW_BATTERY):
-        // - Threshold: Voltage > 8.0V triggers auto-recovery
-        // - Debounce: 10 consecutive seconds above threshold
+        // - Threshold: configurable via SafeModeRecoveryVoltage parameter (default 8.0V)
+        // - Debounce: configurable via SafeModeDebounceSeconds parameter (default 10s)
         // - SYSTEM_FAULT or GROUND_COMMAND require manual EXIT_SAFE_MODE command
         if (this->m_safeModeReason == Components::SafeModeReason::LOW_BATTERY) {
-            if (valid && voltage > SAFE_MODE_RECOVERY_VOLTAGE) {
+            if (valid && voltage > recoveryVoltage) {
                 this->m_recoveryVoltageCounter++;
 
-                if (this->m_recoveryVoltageCounter >= SAFE_MODE_DEBOUNCE_SECONDS) {
+                if (this->m_recoveryVoltageCounter >= debounceSeconds) {
                     // Trigger automatic exit from safe mode
                     this->exitSafeModeAutomatic(voltage);
                     this->m_recoveryVoltageCounter = 0;  // Reset counter
@@ -103,6 +109,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
+    this->tlmWrite_SafeModeEntryCount(this->m_safeModeEntryCount);
 }
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum, const Components::SafeModeReason& reason) {
@@ -136,7 +143,7 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     // Save state with clean shutdown flag set
     // We directly write to file here to ensure the flag is persisted
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
+    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
 
     if (status != Os::File::OP_OK) {
         // Log failure - next boot will be misclassified as unintended reboot
@@ -295,7 +302,7 @@ void ModeManager ::loadState() {
 
 void ModeManager ::saveState() {
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE);
+    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
 
     if (status != Os::File::OP_OK) {
         // Log failure to open file, but allow component to continue

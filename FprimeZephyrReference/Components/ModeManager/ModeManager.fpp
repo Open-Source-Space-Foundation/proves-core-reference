@@ -155,6 +155,18 @@ module Components {
         @ Current safe mode reason (NONE if not in safe mode)
         telemetry CurrentSafeModeReason: SafeModeReason
 
+        # ----------------------------------------------------------------------
+        # Parameters
+        # ----------------------------------------------------------------------
+
+        @ Voltage threshold for safe mode entry (V)
+        param SafeModeEntryVoltage: F32 default 6.7
+
+        @ Voltage threshold for safe mode recovery (V)
+        param SafeModeRecoveryVoltage: F32 default 8.0
+
+        @ Debounce time for voltage transitions (seconds)
+        param SafeModeDebounceSeconds: U32 default 10
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

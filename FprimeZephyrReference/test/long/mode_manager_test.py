@@ -7,12 +7,14 @@ Tests cover:
 - Basic functionality and telemetry
 - Safe mode entry (via command)
 - Safe mode exit
-- State persistence
+- State persistence (including repeated writes)
+- SafeModeReason tracking
 - Edge cases
 
-Total: 9 tests
+Total: 13 tests
 
 Mode enum values: SAFE_MODE=1, NORMAL=2
+SafeModeReason enum: NONE=0, LOW_BATTERY=1, SYSTEM_FAULT=2, GROUND_COMMAND=3, EXTERNAL_REQUEST=4, LORA=5
 """
 
 import time
@@ -89,7 +91,7 @@ def test_01_initial_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     # Trigger telemetry update by sending Health packet (ID 1)
     proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
 
-    # Read CurrentMode telemetry (1 = SAFE_MODE, 2 = NORMAL, 3 = PAYLOAD_MODE)
+    # Read CurrentMode telemetry (1 = SAFE_MODE, 2 = NORMAL)
     mode_result: ChData = fprime_test_api.assert_telemetry(
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
@@ -285,3 +287,122 @@ def test_19_safe_mode_state_persists(fprime_test_api: IntegrationTestAPI, start_
         f"{component}.CurrentMode", start="NOW", timeout=3
     )
     assert mode_result.get_val() == 1, "Mode should be saved as SAFE_MODE"
+
+
+def test_20_repeated_state_persistence(fprime_test_api: IntegrationTestAPI, start_gds):
+    """
+    Test that repeated mode transitions correctly persist state.
+    This catches bugs like OPEN_CREATE without OVERWRITE flag.
+    Each transition triggers saveState() which must overwrite the existing file.
+    """
+    # Get initial entry count
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    initial_count: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.SafeModeEntryCount", timeout=5
+    )
+    initial_value = initial_count.get_val()
+
+    # Cycle through safe mode multiple times
+    for _ in range(3):
+        # Enter safe mode
+        force_safe_mode_once(fprime_test_api, wait_for_entering=True)
+        time.sleep(2)
+
+        # Exit safe mode
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{component}.EXIT_SAFE_MODE",
+            events=[f"{component}.ExitingSafeMode"],
+        )
+        time.sleep(2)
+
+    # Verify count incremented correctly (3 entries)
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    final_count: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.SafeModeEntryCount", timeout=5
+    )
+    final_value = final_count.get_val()
+
+    assert final_value == initial_value + 3, (
+        f"Count should increment by 3 after 3 cycles (was {initial_value}, now {final_value})"
+    )
+
+
+def test_21_safe_mode_reason_ground_command(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that FORCE_SAFE_MODE sets reason to GROUND_COMMAND (3).
+    """
+    # Enter safe mode via command
+    force_safe_mode_once(fprime_test_api, wait_for_entering=True)
+    time.sleep(2)
+
+    # Check reason telemetry
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    reason_result: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentSafeModeReason", timeout=5
+    )
+    reason_value = reason_result.get_val()
+
+    # GROUND_COMMAND = 3
+    assert reason_value == 3 or str(reason_value) == "GROUND_COMMAND", (
+        f"Safe mode reason should be GROUND_COMMAND (3), got {reason_value}"
+    )
+
+
+def test_22_safe_mode_reason_cleared_on_exit(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that EXIT_SAFE_MODE clears reason to NONE (0).
+    """
+    # Enter safe mode
+    force_safe_mode_once(fprime_test_api, wait_for_entering=True)
+    time.sleep(2)
+
+    # Exit safe mode
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{component}.EXIT_SAFE_MODE",
+        events=[f"{component}.ExitingSafeMode"],
+    )
+    time.sleep(2)
+
+    # Check reason is cleared
+    proves_send_and_assert_command(fprime_test_api, "CdhCore.tlmSend.SEND_PKT", ["1"])
+    reason_result: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentSafeModeReason", timeout=5
+    )
+    reason_value = reason_result.get_val()
+
+    # NONE = 0
+    assert reason_value == 0 or str(reason_value) == "NONE", (
+        f"Safe mode reason should be NONE (0) after exit, got {reason_value}"
+    )
+
+
+def test_23_no_persistence_failure_events(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that state persistence doesn't emit failure events during normal operation.
+    This catches file system issues or bugs like missing OVERWRITE flag.
+    """
+    fprime_test_api.clear_histories()
+
+    # Trigger multiple state saves by cycling modes
+    for _ in range(2):
+        proves_send_and_assert_command(fprime_test_api, f"{component}.FORCE_SAFE_MODE")
+        time.sleep(2)
+        proves_send_and_assert_command(fprime_test_api, f"{component}.EXIT_SAFE_MODE")
+        time.sleep(2)
+
+    # Check no StatePersistenceFailure events were emitted
+    history = fprime_test_api.get_event_test_history()
+    failure_events = [
+        e for e in history if "StatePersistenceFailure" in str(e.get_id())
+    ]
+    assert len(failure_events) == 0, (
+        f"State persistence should not fail, but got {len(failure_events)} failure events"
+    )

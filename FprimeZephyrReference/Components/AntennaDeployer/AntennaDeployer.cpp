@@ -347,6 +347,10 @@ void AntennaDeployer ::writeDeploymentState() {
         U8 marker = 1;
         FwSizeType size = sizeof(marker);
         Os::File::Status write_status = file.write(&marker, size);
+        if (write_status != Os::File::OP_OK) {
+            printk("[AntennaDeployer] writeDeploymentState: write failed with status %d\n",
+                   static_cast<int>(write_status));
+        }
     }
 
     (void)file.close();

@@ -141,9 +141,6 @@ class ModeManager : public ModeManagerComponentBase {
     // ----------------------------------------------------------------------
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
-    static constexpr F32 SAFE_MODE_ENTRY_VOLTAGE = 6.7f;               //!< Voltage threshold for safe mode entry (V)
-    static constexpr F32 SAFE_MODE_RECOVERY_VOLTAGE = 8.0f;            //!< Voltage threshold for safe mode recovery (V)
-    static constexpr U32 SAFE_MODE_DEBOUNCE_SECONDS = 10;              //!< Debounce time for voltage transitions (s)
 };
 
 }  // namespace Components
