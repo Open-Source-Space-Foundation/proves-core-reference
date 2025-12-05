@@ -142,7 +142,7 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003F000
 
-  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10040000
+  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10041000
 
 
 }
