@@ -40,7 +40,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr generate-spi-dict ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -48,37 +48,36 @@ BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
-##@ Authentication Keys
-
-SPI_DICT_NUM_KEYS ?= 10
-SPI_DICT_PATH ?= UploadsFilesystem/AuthenticateFiles/spi_dict.txt
-AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
-
-.PHONY: generate-spi-dict
-generate-spi-dict: ## Generate spi_dict.txt with random HMAC keys
-	@echo "Generating spi_dict.txt with $(SPI_DICT_NUM_KEYS) keys..."
-	@python3 scripts/generate_spi_dict.py --num-keys $(SPI_DICT_NUM_KEYS) --output $(SPI_DICT_PATH)
-	@echo "Extracting first key and generating header..."
-	@FIRST_KEY=$$(python3 scripts/generate_spi_dict.py --output $(SPI_DICT_PATH) --print-first-key --skip-generation); \
-	sed "s|@AUTH_DEFAULT_KEY@|$$FIRST_KEY|g" scripts/generate_auth_default_key.h > $(AUTH_DEFAULT_KEY_HEADER)
-	@echo "Generated $(SPI_DICT_PATH) and $(AUTH_DEFAULT_KEY_HEADER)"
-
 .PHONY: build
-build: submodules zephyr fprime-venv generate-spi-dict generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 
 .PHONY: test-integration
-test-integration: uv ## Run integration tests (set TEST=<name|file.py> to run a single file)
-	@TARGET="FprimeZephyrReference/test/int"; \
+test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
+	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
+	TARGETS=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
-			*.py) TARGET="FprimeZephyrReference/test/int/$(TEST)" ;; \
-			*) TARGET="FprimeZephyrReference/test/int/$(TEST).py" ;; \
+			*.py) TARGETS="FprimeZephyrReference/test/int/$(TEST)" ;; \
+			*) TARGETS="FprimeZephyrReference/test/int/$(TEST).py" ;; \
 		esac; \
-		[ -e "$$TARGET" ] || { echo "Specified test file $$TARGET not found"; exit 1; }; \
+		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
+	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
+			case "$$test" in \
+				*.py) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$$test" ;; \
+				*) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$${test}_test.py" ;; \
+			esac; \
+		done; \
+	else \
+		TARGETS="FprimeZephyrReference/test/int"; \
 	fi; \
-	echo "Running integration tests at $$TARGET"; \
-	$(UV_RUN) pytest -- "$$TARGET" --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	echo "Running integration tests: $$TARGETS"; \
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
+
+# Allow test names to be passed as targets without Make trying to execute them
+%:
+	@:
 
 .PHONY: bootloader
 bootloader: uv
@@ -125,13 +124,3 @@ gds-integration:
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
-
-.PHONY: framer-plugin
-framer-plugin: fprime-venv ## Build framer plugin
-	@echo "Framer plugin built and installed in virtual environment."
-	@ cd Framing && $(UV_RUN) pip install -e .
-
-.PHONY: gds-with-framer
-gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
-	@echo "Running FPrime GDS with framer plugin..."
-	@$(UV_RUN) fprime-gds --framing-selection authenticate-space-data-link

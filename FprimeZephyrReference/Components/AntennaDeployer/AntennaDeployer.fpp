@@ -7,14 +7,7 @@ module Components {
 }
 
 module Components {
-    port DistanceUpdate(
-        distance: F32 @< Latest measured distance in centimeters
-        valid: bool @< Flag indicating the distance value is considered valid
-    )
-}
-
-module Components {
-    @ Component that deploys the antenna, activates the burnwire, checks the distance sensor
+    @ Component that deploys the antenna and activates the burnwire
     passive component AntennaDeployer {
         ######################################################################
         # Commands
@@ -39,9 +32,6 @@ module Components {
         @ Counts the number of deployment attempts
         telemetry DeployAttemptCount: U32
 
-        @ Tracks the last observed distance reading
-        telemetry LastDistance: F32 format "{.2f}cm"
-
         ######################################################################
         # Events
         ######################################################################
@@ -64,18 +54,6 @@ module Components {
         ) severity activity high \
           format "Antenna deployment finished with result {} after {} attempts"
 
-        @ Emitted when a distance reading is ignored because it is invalid
-        event InvalidDistanceMeasurement(
-            distance: F32 @< Distance provided
-        ) severity warning low \
-          format "Ignoring invalid antenna distance measurement: {.2f} cm"
-
-        @ Emitted when the quiet wait period expires and deployment attempt begins
-        event QuietTimeExpired(
-            elapsedTime: U32 @< Time elapsed in seconds during quiet wait
-        ) severity activity high \
-          format "Quiet time expired after {} seconds, starting deployment attempt"
-
         @ Reports how many scheduler ticks the burn signal was held active for the latest attempt
         event AntennaBurnSignalCount(
             ticks: U32 @< Number of scheduler ticks spent in the burn state
@@ -87,19 +65,19 @@ module Components {
           severity activity high \
           format "Antenna deployment skipped - antenna already deployed"
 
-        @ Emitted when the antenna directory creation fails during initialization
-        event AntennaDirectoryCreateError() \
+        @ Emitted when a file operation fails
+        event FileOperationError(
+            filePath: string @< The file path that failed
+            operation: string @< The operation that failed (e.g., "read", "write", "open")
+        ) \
           severity warning high \
-          format "Failed to create antenna directory"
+          format "File operation failed: {} on file {}"
 
         ######################################################################
         # Ports
         ######################################################################
         @ Port receiving calls from the rate group
         sync input port schedIn: Svc.Sched
-
-        @ Port receiving latest distance measurements
-        sync input port distanceIn: Components.DistanceUpdate
 
         @ Port signaling the burnwire component to start heating
         output port burnStart: Fw.Signal
@@ -110,9 +88,6 @@ module Components {
         ######################################################################
         # Parameters
         ######################################################################
-        @ Quiet time (seconds) to wait after DEPLOY before the first burn attempt
-        param QUIET_TIME_SEC: U32 default 120
-
         @ Delay (seconds) between burn attempts
         param RETRY_DELAY_SEC: U32 default 30
 
@@ -121,18 +96,6 @@ module Components {
 
         @ Duration (seconds) for which to hold each burn attempt before issuing STOP
         param BURN_DURATION_SEC: U32 default 8
-
-        @ Distance threshold (cm) under which the antenna is considered deployed
-        param DEPLOYED_THRESHOLD_CM: F32 default 5.0
-
-        @ Distance readings above this value (cm) are considered invalid
-        param INVALID_THRESHOLD_TOP_CM: F32 default 500.0
-
-        @ Distance readings below this value (cm) are considered invalid
-        param INVALID_THRESHOLD_BOTTOM_CM: F32 default 0.1
-
-        @ File path for persistent deployment state (file exists = deployed)
-        param DEPLOYED_STATE_FILE: string default "//antenna/antenna_deployer.bin"
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters
