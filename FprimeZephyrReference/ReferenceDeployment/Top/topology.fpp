@@ -186,14 +186,15 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[4] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[6] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[7] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[8] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[9] -> startupManager.run # doubles (20ms) rate group max time
-      rateGroup1Hz.RateGroupMemberOut[10] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
+      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run # doubles (20ms) rate group max time
+      rateGroup1Hz.RateGroupMemberOut[11] -> modeManager.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
       rateGroup1_6Hz.RateGroupMemberOut[0] -> powerMonitor.run
@@ -202,7 +203,6 @@ module ReferenceDeployment {
       rateGroup1_6Hz.RateGroupMemberOut[3] -> thermalManager.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
-      rateGroup1_10Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
     }
 
 
