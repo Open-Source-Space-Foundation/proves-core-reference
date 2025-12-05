@@ -16,8 +16,8 @@ module Update {
     }
 
     module StackSizes {
-        constant updater = 8 * 1024 # Minimal stack size, not much processing
-        constant worker  = 8 * 1024 # Minimal stack size, not much processing
+        constant updater = 4 * 1024 # Minimal stack size, not much processing
+        constant worker  = 4 * 1024 # Minimal stack size, not much processing
     }
 
     module Priorities {
