@@ -42,8 +42,10 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
 Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
-    {getRateGroupPeriod(10), 0},  // 10Hz
-    {getRateGroupPeriod(1), 0},   // 1Hz
+    {getRateGroupPeriod(10), 0},  // 10Hz = 100ms
+    {getRateGroupPeriod(1), 0},   // 1Hz = 1s
+    {6000, 0},                    // 1/6Hz = 6s
+    {12000, 0}                    // 1/10Hz = 10s
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The

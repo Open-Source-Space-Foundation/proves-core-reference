@@ -60,6 +60,9 @@ void LoadSwitch ::setLoadSwitchState(Fw::On state) {
 
     // Inform downstream components of the state change
     for (FwIndexType i = 0; i < this->getNum_loadSwitchStateChanged_OutputPorts(); i++) {
+        if (!this->isConnected_loadSwitchStateChanged_OutputPort(i)) {
+            continue;
+        }
         this->loadSwitchStateChanged_out(i, state);
     }
     this->log_ACTIVITY_HI_StatusChanged(state);

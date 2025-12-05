@@ -186,23 +186,23 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run # doubles (20ms) rate group max time
-      rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[4] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[8] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[9] -> startupManager.run # doubles (20ms) rate group max time
+      rateGroup1Hz.RateGroupMemberOut[10] -> modeManager.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
       rateGroup1_6Hz.RateGroupMemberOut[0] -> powerMonitor.run
+      rateGroup1_6Hz.RateGroupMemberOut[1] -> imuManager.run
+      rateGroup1_6Hz.RateGroupMemberOut[2] -> adcs.run
+      rateGroup1_6Hz.RateGroupMemberOut[3] -> thermalManager.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
-      rateGroup1_10Hz.RateGroupMemberOut[0] -> imuManager.run
-      rateGroup1_10Hz.RateGroupMemberOut[1] -> adcs.run
-      rateGroup1_10Hz.RateGroupMemberOut[2] -> thermalManager.run
+      rateGroup1_10Hz.RateGroupMemberOut[0] -> CdhCore.tlmSend.Run
     }
 
 
@@ -297,11 +297,28 @@ module ReferenceDeployment {
 
     connections adcs {
       adcs.visibleLightGet[0] -> veml6031Face0Manager.visibleLightGet
+      adcs.infraRedLightGet[0] -> veml6031Face0Manager.infraRedLightGet
+      adcs.ambientLightGet[0] -> veml6031Face0Manager.ambientLightGet
+
       adcs.visibleLightGet[1] -> veml6031Face1Manager.visibleLightGet
+      adcs.infraRedLightGet[1] -> veml6031Face1Manager.infraRedLightGet
+      adcs.ambientLightGet[1] -> veml6031Face1Manager.ambientLightGet
+
       adcs.visibleLightGet[2] -> veml6031Face2Manager.visibleLightGet
+      adcs.infraRedLightGet[2] -> veml6031Face2Manager.infraRedLightGet
+      adcs.ambientLightGet[2] -> veml6031Face2Manager.ambientLightGet
+
       adcs.visibleLightGet[3] -> veml6031Face3Manager.visibleLightGet
+      adcs.infraRedLightGet[3] -> veml6031Face3Manager.infraRedLightGet
+      adcs.ambientLightGet[3] -> veml6031Face3Manager.ambientLightGet
+
       adcs.visibleLightGet[4] -> veml6031Face5Manager.visibleLightGet
+      adcs.infraRedLightGet[4] -> veml6031Face5Manager.infraRedLightGet
+      adcs.ambientLightGet[4] -> veml6031Face5Manager.ambientLightGet
+
       adcs.visibleLightGet[5] -> veml6031Face6Manager.visibleLightGet
+      adcs.infraRedLightGet[5] -> veml6031Face6Manager.infraRedLightGet
+      adcs.ambientLightGet[5] -> veml6031Face6Manager.ambientLightGet
     }
 
     connections ModeManager {

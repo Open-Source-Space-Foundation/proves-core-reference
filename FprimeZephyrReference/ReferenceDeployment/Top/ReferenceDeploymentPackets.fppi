@@ -90,7 +90,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
-  packet Thermal id 12 group 4 {
+  packet Thermal id 11 group 4 {
     ReferenceDeployment.tmp112Face0Manager.Temperature
     ReferenceDeployment.tmp112Face1Manager.Temperature
     ReferenceDeployment.tmp112Face2Manager.Temperature
@@ -110,20 +110,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face5Manager.VisibleLight
     ReferenceDeployment.veml6031Face6Manager.VisibleLight
     ReferenceDeployment.veml6031Face7Manager.VisibleLight
-    ReferenceDeployment.veml6031Face0Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face1Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face2Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face3Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face5Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face6Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face7Manager.InfraRedLight
-    ReferenceDeployment.veml6031Face0Manager.AmbientLight
-    ReferenceDeployment.veml6031Face1Manager.AmbientLight
-    ReferenceDeployment.veml6031Face2Manager.AmbientLight
-    ReferenceDeployment.veml6031Face3Manager.AmbientLight
-    ReferenceDeployment.veml6031Face5Manager.AmbientLight
-    ReferenceDeployment.veml6031Face6Manager.AmbientLight
-    ReferenceDeployment.veml6031Face7Manager.AmbientLight
   }
 
 } omit {
@@ -161,4 +147,18 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
+  ReferenceDeployment.veml6031Face0Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face1Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face2Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face3Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face5Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face6Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face7Manager.InfraRedLight
+  ReferenceDeployment.veml6031Face0Manager.AmbientLight
+  ReferenceDeployment.veml6031Face1Manager.AmbientLight
+  ReferenceDeployment.veml6031Face2Manager.AmbientLight
+  ReferenceDeployment.veml6031Face3Manager.AmbientLight
+  ReferenceDeployment.veml6031Face5Manager.AmbientLight
+  ReferenceDeployment.veml6031Face6Manager.AmbientLight
+  ReferenceDeployment.veml6031Face7Manager.AmbientLight
 }
