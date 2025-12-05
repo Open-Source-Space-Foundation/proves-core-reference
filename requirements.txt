@@ -1,6 +1,8 @@
 pip
 west
-
+patool
+semver
+tqdm
 -r lib/fprime/requirements.txt
 -r lib/zephyr-workspace/zephyr/scripts/requirements.txt
 -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt
