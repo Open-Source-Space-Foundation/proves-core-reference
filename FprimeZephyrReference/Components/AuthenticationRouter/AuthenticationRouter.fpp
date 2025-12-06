@@ -84,7 +84,7 @@ module Svc {
         #################################
 
         @ Emitted to indicate whether a packet passed through the router
-        event PassedRouter(passed: U8) \
+        event PassedRouter(passed: bool) \
             severity activity low \
             format "PassedRouter: {}"
 

@@ -141,15 +141,14 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
 
     // Check if the OpCodes are in the OpCode list
     // TODO
-    bool by = this->BypassesAuthentification(packetBuffer);
-    printk("\n bypasses %d \n", by);
-    bool bypasses = true;  // this->BypassesAuthentification(packetBuffer);
+    bool bypasses = this->BypassesAuthentification(packetBuffer);
 
     // the packet was not authenticated
     if (context.get_authenticated() == 0 && bypasses == false) {
         // emit reject packet event
-        this->log_ACTIVITY_LO_PassedRouter(0);
+        this->log_ACTIVITY_LO_PassedRouter(false);
         // Return ownership of the incoming packetBuffer
+        // for now we want to run all the commands!! Later un comment this
         this->dataReturnOut_out(0, packetBuffer, context);
         return;
     }
@@ -159,6 +158,7 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
         this->log_ACTIVITY_LO_BypassedAuthentification();
     }
 
+    this->log_ACTIVITY_LO_PassedRouter(true);
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
     // Route based on received APID (packet type)
