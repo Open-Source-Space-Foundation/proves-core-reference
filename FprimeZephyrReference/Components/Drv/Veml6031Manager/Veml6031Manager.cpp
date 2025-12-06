@@ -5,11 +5,6 @@
 
 #include "FprimeZephyrReference/Components/Drv/Veml6031Manager/Veml6031Manager.hpp"
 
-#include <zephyr/device.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/i2c.h>
-#include <zephyr/kernel.h>
-
 namespace Drv {
 
 // ----------------------------------------------------------------------
@@ -122,7 +117,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
         return 0;
     }
 
-    // configureSensorAttributes(SENSOR_CHAN_LIGHT);  // ignore return value for now
+    configureSensorAttributes(SENSOR_CHAN_LIGHT);  // ignore return value for now
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_LIGHT);
     if (rc != 0) {
@@ -272,11 +267,14 @@ Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     }
     this->log_WARNING_LO_InvalidIntegrationTimeParam_ThrottleClear();
 
-    struct sensor_value attr;
-    sensor_value_from_double(&attr, it);
-    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &attr);
+    struct sensor_value val;
+    // val.val1 = it;
+    // val.val2 = 0;
+    sensor_value_from_double(&val, it);
+    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &val);
     if (rc) {
-        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_IT, it, rc);
+        Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_IT");
+        this->log_WARNING_LO_SensorAttrSetFailed(attr, it, rc);
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();
@@ -293,11 +291,14 @@ Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
     }
     this->log_WARNING_LO_InvalidGainParam_ThrottleClear();
 
-    struct sensor_value attr;
-    sensor_value_from_double(&attr, gain);
-    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &attr);
+    struct sensor_value val;
+    sensor_value_from_double(&val, gain);
+    // val.val1 = gain;
+    // val.val2 = 0;
+    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &val);
     if (rc) {
-        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_GAIN, gain, rc);
+        Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_GAIN");
+        this->log_WARNING_LO_SensorAttrSetFailed(attr, gain, rc);
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();
@@ -314,11 +315,14 @@ Fw::Success Veml6031Manager ::setDiv4Attribute(sensor_channel chan) {
     }
     this->log_WARNING_LO_InvalidDiv4Param_ThrottleClear();
 
-    struct sensor_value attr;
-    sensor_value_from_double(&attr, div4);
-    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &attr);
+    struct sensor_value val;
+    sensor_value_from_double(&val, div4);
+    // val.val1 = div4;
+    // val.val2 = 0;
+    int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &val);
     if (rc) {
-        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_DIV4, div4, rc);
+        Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_DIV4");
+        this->log_WARNING_LO_SensorAttrSetFailed(attr, div4, rc);
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();

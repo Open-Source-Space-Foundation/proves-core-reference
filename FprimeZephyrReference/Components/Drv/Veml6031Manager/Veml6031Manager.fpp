@@ -19,7 +19,6 @@ module Drv {
         VEML6031_IT_100 @< 100 ms integration time
         VEML6031_IT_200 @< 200 ms integration time
         VEML6031_IT_400 @< 400 ms integration time
-        VEML6031_IT_800 @< 800 ms integration time
     }
 
     @ Effective photodiode size (DIV4) settings for VEML6031 sensor
@@ -130,7 +129,7 @@ module Drv {
         event InvalidDiv4Param(div4: U8) severity warning low format "Invalid effective photodiode size parameter: {}" throttle 5
 
         @ Event for reporting sensor attribute set failure
-        event SensorAttrSetFailed(attr: U16, val: U8, ret: I32) severity warning low format "Sensor attribute {}={} set failed with return code: {}" throttle 5
+        event SensorAttrSetFailed(attr: string, val: U8, ret: I32) severity warning low format "Sensor attribute {}={} set failed with return code: {}" throttle 5
 
         @ Event for reporting visible light lux
         event VisibleLight(lux: F32) severity activity high format "Visible light: {} lux"

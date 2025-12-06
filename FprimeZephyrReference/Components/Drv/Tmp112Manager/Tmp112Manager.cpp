@@ -5,11 +5,6 @@
 
 #include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112Manager.hpp"
 
-#include <Fw/Types/Assert.hpp>
-#include <string>
-
-#include <zephyr/sys/printk.h>
-
 namespace Drv {
 
 // ----------------------------------------------------------------------

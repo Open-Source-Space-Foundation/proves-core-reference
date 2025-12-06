@@ -10,12 +10,9 @@
 
 #include "FprimeZephyrReference/Components/Drv/Veml6031Manager/Veml6031ManagerComponentAc.hpp"
 #include <zephyr/device.h>
-#include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/sensor/veml6031.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
-#include <zephyr/sys_clock.h>
 
 namespace Drv {
 
