@@ -19,9 +19,10 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+bootable.uf2
 
 **/__pycache__/
 **/*.egg-info/
 
-bin/
+/bin/
 _codeql_detected_source_root

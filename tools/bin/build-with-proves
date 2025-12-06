@@ -1,0 +1,11 @@
+#!/bin/bash
+DIRNAME="$(cd "$(dirname $BASH_SOURCE)"; pwd)"
+PROVES_ROOT="$(cd ${DIRNAME}/../..;  pwd)"
+
+which west
+if (( $? != 0 ))
+then
+    echo "[ERROR] 'west' not found. Source your virtual environment/"
+    exit 1
+fi
+west build -p -b proves_flight_control_board_v5d/rp2350a/m33 "$@" -- -DBOARD_ROOT="${PROVES_ROOT}"

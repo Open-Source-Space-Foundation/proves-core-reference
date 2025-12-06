@@ -3,10 +3,13 @@ config SOC_RP2350A_M33
     default y
 
 config USB_SELF_POWERED
+    bool "Enable USB_SELF_POWERED"
 	default n
 
 config USB_CDC_ACM_LOG_LEVEL
+    int "Log level"
 	default 0
 
 config USB_DEVICE_LOG_LEVEL
+    int "Log level"
 	default 1

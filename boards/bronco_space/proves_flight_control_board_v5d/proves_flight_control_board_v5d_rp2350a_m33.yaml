@@ -2,7 +2,7 @@ identifier: proves_flight_control_board_v5d/rp2350a/m33
 name: PROVES Flight Control Board v5d (RP2350, Cortex-M33)
 type: mcu
 arch: arm
-flash: 4096
+flash: 16384
 ram: 520
 toolchain:
   - zephyr

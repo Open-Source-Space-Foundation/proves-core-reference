@@ -109,3 +109,46 @@ Depending on the comdelay, the gds should turn green every time a packet is sent
 ## Sequences
 
 You can control the specific command lists of the satellite by writing a sequence file. Sequence files are contained in /sequences. For details on how to attack the startup sequence check the sdd in Startup Manager.
+
+## MCUBootloader
+
+First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr.
+
+```
+
+in proves-core-reference
+cd lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+<proves>/tools/bin/build-with-proves --sysbuild
+(example /home/username/proves-core-reference/tools/bin/build-with-proves --sysbuild)
+```
+
+Once built, cd upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
+
+Then build Proves like normal. This will make a UF2, but not for the second flash region.  To build a bootable image, use:
+
+```
+<proves>/tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
+```
+
+Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image, by changing the base address so it appears at slot0. Once you boot into it, you can use the FlashWorker component to write to slot 1 at runtime.
+
+
+Before, you currently need to run
+
+``` pip install git+http://github.com/LeStarch/fprime-gds.git@0e23d212  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
+
+Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the file uplink file
+
+set update.updater.update_image_from and set the next boot to book from _____
+
+1. prepare image
+2. update from (pass in the path)
+3. configure_next_boot = test
+
+(either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
+
+Go to components/flashworker
+
+regionnumber = 1 try instead region number=2
+
+(redo all the stuff)
