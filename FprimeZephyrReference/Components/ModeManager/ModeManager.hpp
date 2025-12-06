@@ -47,7 +47,9 @@ class ModeManager : public ModeManagerComponentBase {
     //! Handler implementation for forceSafeMode
     //!
     //! Port to force safe mode entry (callable by other components)
-    void forceSafeMode_handler(FwIndexType portNum  //!< The port number
+    //! @param reason The reason for entering safe mode (NONE defaults to EXTERNAL_REQUEST)
+    void forceSafeMode_handler(FwIndexType portNum,                      //!< The port number
+                               const Components::SafeModeReason& reason  //!< The safe mode reason
                                ) override;
 
     //! Handler implementation for getMode
@@ -55,6 +57,12 @@ class ModeManager : public ModeManagerComponentBase {
     //! Port to query the current system mode
     Components::SystemMode getMode_handler(FwIndexType portNum  //!< The port number
                                            ) override;
+
+    //! Handler implementation for prepareForReboot
+    //!
+    //! Port called before intentional reboot to set clean shutdown flag
+    void prepareForReboot_handler(FwIndexType portNum  //!< The port number
+                                  ) override;
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -81,11 +89,14 @@ class ModeManager : public ModeManagerComponentBase {
     //! Save persistent state to file
     void saveState();
 
-    //! Enter safe mode with optional reason override
-    void enterSafeMode(const char* reason = nullptr);
+    //! Enter safe mode with specified reason
+    void enterSafeMode(Components::SafeModeReason reason);
 
-    //! Exit safe mode
+    //! Exit safe mode (manual command)
     void exitSafeMode();
+
+    //! Exit safe mode automatically due to voltage recovery
+    void exitSafeModeAutomatic(F32 voltage);
 
     //! Turn off non-critical components
     void turnOffNonCriticalComponents();
@@ -104,21 +115,30 @@ class ModeManager : public ModeManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! System mode enumeration
-    enum class SystemMode : U8 { NORMAL = 0, SAFE_MODE = 1 };
+    enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2 };
 
     //! Persistent state structure
     struct PersistentState {
         U8 mode;                 //!< Current mode (SystemMode)
         U32 safeModeEntryCount;  //!< Number of times safe mode entered
+        U8 safeModeReason;       //!< Reason for safe mode entry (SafeModeReason)
+        U8 cleanShutdown;        //!< Clean shutdown flag (1 = clean, 0 = unclean)
     };
 
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
 
-    SystemMode m_mode;         //!< Current system mode
-    U32 m_safeModeEntryCount;  //!< Counter for safe mode entries
-    U32 m_runCounter;          //!< Counter for run handler calls (1Hz)
+    SystemMode m_mode;                            //!< Current system mode
+    U32 m_safeModeEntryCount;                     //!< Counter for safe mode entries
+    U32 m_runCounter;                             //!< Counter for run handler calls (1Hz)
+    Components::SafeModeReason m_safeModeReason;  //!< Current safe mode reason
+    U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
+    U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
+
+    // ----------------------------------------------------------------------
+    // Constants
+    // ----------------------------------------------------------------------
 
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
 };

@@ -56,12 +56,24 @@ void ResetManager ::handleColdReset() {
     // Log the cold reset event
     this->log_ACTIVITY_HI_INITIATE_COLD_RESET();
 
+    // Notify ModeManager to set clean shutdown flag before rebooting
+    // This allows ModeManager to detect unintended reboots on next startup
+    if (this->isConnected_prepareForReboot_OutputPort(0)) {
+        this->prepareForReboot_out(0);
+    }
+
     sys_reboot(SYS_REBOOT_COLD);
 }
 
 void ResetManager ::handleWarmReset() {
     // Log the warm reset event
     this->log_ACTIVITY_HI_INITIATE_WARM_RESET();
+
+    // Notify ModeManager to set clean shutdown flag before rebooting
+    // This allows ModeManager to detect unintended reboots on next startup
+    if (this->isConnected_prepareForReboot_OutputPort(0)) {
+        this->prepareForReboot_out(0);
+    }
 
     sys_reboot(SYS_REBOOT_WARM);
 }

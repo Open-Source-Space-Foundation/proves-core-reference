@@ -248,6 +248,10 @@ module ReferenceDeployment {
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
 
+      # Connection for clean shutdown notification from ResetManager
+      # Allows ModeManager to detect unintended reboots
+      resetManager.prepareForReboot -> modeManager.prepareForReboot
+
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
       # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.

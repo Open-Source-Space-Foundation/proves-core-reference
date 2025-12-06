@@ -73,6 +73,12 @@ Then, in another terminal, run the following command to execute the integration 
 make test-integration
 ```
 
+To run a single integration test file, set `TEST` to the filename (with or without `.py`):
+```sh
+make test-integration TEST=mode_manager_test
+make test-integration TEST=mode_manager_test.py
+```
+
 ## Running The Radio With CircuitPython
 
 To test the radio setup easily, you can use CircuitPython code on one board and fprime-zephyr on another. This provides a simple client/server setup and lets you observe what data is being sent through the radio.
