@@ -1,5 +1,6 @@
 # Include project-wide components here
 
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ADCS/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/AntennaDeployer/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/BootloaderTrigger/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Burnwire/")
@@ -14,4 +15,5 @@ add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/NullPrmDb/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/PowerMonitor/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ResetManager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/StartupManager/")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ThermalManager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Watchdog")
