@@ -37,7 +37,7 @@ module Components {
 
         event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}"
 
-        event FileOpenError(error: U32) severity warning high id 10 format "File Error with Error {}"
+        event FileOpenError(error: U32, filename: string size 64) severity warning high id 10 format "File Error with Error {} for file: {}"
 
         event FoundSPIKey(found: bool) severity activity low id 11 format "Found SPI status: {}"
 

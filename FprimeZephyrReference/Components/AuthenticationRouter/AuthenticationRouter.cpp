@@ -149,8 +149,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
         this->log_ACTIVITY_LO_PassedRouter(false);
         // Return ownership of the incoming packetBuffer
         // for now we want to run all the commands!! Later un comment this
-        // this->dataReturnOut_out(0, packetBuffer, context);
-        // return;
+        this->dataReturnOut_out(0, packetBuffer, context);
+        return;
     }
 
     if (bypasses == true) {

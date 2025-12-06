@@ -531,7 +531,8 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
     if (openStatus != Os::File::OP_OK) {
-        this->log_WARNING_HI_FileOpenError(openStatus);
+        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
+        this->log_WARNING_HI_FileOpenError(openStatus, filenameArg);
         return config;
     }
 
@@ -539,7 +540,8 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     Os::File::Status sizeStatus = spiDictFile.size(fileSize);
     if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
         spiDictFile.close();
-        this->log_WARNING_HI_FileOpenError(sizeStatus);
+        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
+        this->log_WARNING_HI_FileOpenError(sizeStatus, filenameArg);
         return config;
     }
 
@@ -550,7 +552,8 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
     if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
-        this->log_WARNING_HI_FileOpenError(readStatus);
+        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
+        this->log_WARNING_HI_FileOpenError(readStatus, filenameArg);
         return config;
     }
     // find the line that contains the spi hex string
