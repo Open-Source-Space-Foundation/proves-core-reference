@@ -54,7 +54,16 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 
 .PHONY: test-integration
 test-integration: uv
-	@$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	else \
+		TEST_FILES=$$(for test in $(filter-out $@,$(MAKECMDGOALS)); do echo "FprimeZephyrReference/test/int/$${test}_test.py"; done); \
+		$(UV_RUN) pytest $$TEST_FILES --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	fi
+
+# Allow test names to be passed as targets without Make trying to execute them
+%:
+	@:
 
 .PHONY: bootloader
 bootloader: uv
@@ -87,6 +96,12 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
 	@$(GDS_COMMAND)
+
+.PHONY: delete-shadow-gds
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
 gds-integration:

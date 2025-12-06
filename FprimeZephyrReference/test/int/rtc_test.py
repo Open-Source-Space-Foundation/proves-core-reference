@@ -17,6 +17,7 @@ from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 
+resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
 
 
@@ -24,6 +25,7 @@ rtcManager = "ReferenceDeployment.rtcManager"
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
+    fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
     set_time(fprime_test_api)
     fprime_test_api.clear_histories()
 

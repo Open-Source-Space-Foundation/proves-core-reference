@@ -75,6 +75,7 @@ module ReferenceDeployment {
     instance ina219SysManager
     instance ina219SolManager
     instance resetManager
+    instance modeManager
 
 
   # ----------------------------------------------------------------------
@@ -162,7 +163,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
-      
+
       rateGroup10Hz.RateGroupMemberOut[4] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[5] -> cmdSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[6] -> peripheralUartDriver2.schedIn
@@ -180,10 +181,11 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[13] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> modeManager.run
 
     }
 
@@ -224,14 +226,14 @@ module ReferenceDeployment {
       # PayloadCom <-> UART Driver
       payload.uartForward -> peripheralUartDriver.$send
       peripheralUartDriver.$recv -> payload.uartDataIn
-      
+
       # Buffer return path (critical! - matches ComStub pattern)
       payload.bufferReturn -> peripheralUartDriver.recvReturnIn
-      
+
       # PayloadCom <-> CameraHandler data flow
       payload.uartDataOut -> cameraHandler.dataIn
       cameraHandler.commandOut -> payload.commandIn
-      
+
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
@@ -241,14 +243,14 @@ module ReferenceDeployment {
       # PayloadCom <-> UART Driver
       payload2.uartForward -> peripheralUartDriver2.$send
       peripheralUartDriver2.$recv -> payload2.uartDataIn
-      
+
       # Buffer return path (critical! - matches ComStub pattern)
       payload2.bufferReturn -> peripheralUartDriver2.recvReturnIn
-      
+
       # PayloadCom <-> CameraHandler data flow
       payload2.uartDataOut -> cameraHandler2.dataIn
       cameraHandler2.commandOut -> payload2.commandIn
-      
+
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver2.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
@@ -272,6 +274,34 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
+
+    connections ModeManager {
+      # Voltage monitoring from system power manager
+      modeManager.voltageGet -> ina219SysManager.voltageGet
+
+      # Load switch control connections
+      # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
+      # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.
+      # face4 = index 0, face0 = index 1, face1 = index 2, face2 = index 3
+      # face3 = index 4, face5 = index 5, payloadPower = index 6, payloadBattery = index 7
+      modeManager.loadSwitchTurnOn[0] -> face4LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[1] -> face0LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[2] -> face1LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[3] -> face2LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[4] -> face3LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[5] -> face5LoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[6] -> payloadPowerLoadSwitch.turnOn
+      modeManager.loadSwitchTurnOn[7] -> payloadBatteryLoadSwitch.turnOn
+
+      modeManager.loadSwitchTurnOff[0] -> face4LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[1] -> face0LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[2] -> face1LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[3] -> face2LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[4] -> face3LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
+      modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
     }
 
   }

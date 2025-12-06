@@ -20,7 +20,7 @@ module ReferenceDeployment {
 
   module Default {
     constant QUEUE_SIZE = 10
-    constant STACK_SIZE = 8 * 1024 # Must match prj.conf thread stack size
+    constant STACK_SIZE = 4 * 1024 # Must match prj.conf thread stack size
   }
 
   # ----------------------------------------------------------------------
@@ -38,7 +38,7 @@ module ReferenceDeployment {
     priority 3
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
+    queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
     priority 15
 
@@ -55,7 +55,12 @@ module ReferenceDeployment {
   instance payload2: Components.PayloadCom base id 0x10006000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 10
+    priority 11
+
+  instance modeManager: Components.ModeManager base id 0x10007000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 16
 
   # ----------------------------------------------------------------------
   # Queued component instances

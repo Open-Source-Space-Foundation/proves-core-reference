@@ -13,6 +13,9 @@ module Drv {
         @ Event for reporting LSM6DSO not ready error
         event DeviceNotReady() severity warning high format "LIS2MDL device not ready" throttle 5
 
+        @ Event for reporting LIS2MDS frequency not configured
+        event MagnetometerSamplingFrequencyNotConfigured() severity warning high format "LIS2MDL sampling frequency not configured" throttle 5
+
         @ Telemetry channel for magnetic field in gauss
         telemetry MagneticField: MagneticField
 

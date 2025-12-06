@@ -1,110 +1,67 @@
-name: Bug Report
-description: Report a bug in the PROVES Core Reference F Prime Zephyr implementation
-title: "[BUG]: "
-labels: ["bug"]
+name: "Bug report"
+description: "Create a report to help us improve the project."
+title: "[BUG] {summary}"
+labels:
+  - "bug"
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose and fix the issue.
-
-  - type: dropdown
-    id: target-board
+        ## Bug report
+        Thank you for taking the time to report a bug. Please fill in the sections below.
+  - type: input
+    id: summary
     attributes:
-      label: Target Board/Platform
-      description: Which board or platform are you using?
-      options:
-        - proves_flight_control_board_v5c/rp2350a/m33
-        - proves_flight_control_board_v5d/rp2350a/m33
-        - proves_flight_control_board_v5/rp2350a/m33
-        - Raspberry Pi Pico 2
-        - STM32 (specify in description)
-        - Other (specify in description)
+      label: "Short summary"
+      description: "A short, descriptive summary of the bug."
+      placeholder: "e.g. IMU manager crashes on startup"
     validations:
       required: true
-
   - type: textarea
-    id: steps-to-reproduce
+    id: steps
     attributes:
-      label: Steps to Reproduce
-      description: Provide detailed steps to reproduce the bug
+      label: "Steps to reproduce"
+      description: "List the exact steps to reproduce the bug."
       placeholder: |
-        1. Run 'make build'
-        2. Flash firmware to board
-        3. Connect GDS with 'make gds'
-        4. Send command XYZ
-        5. Observe error...
+        1. Flash firmware X
+        2. Connect board
+        3. Run make gds
     validations:
       required: true
-
   - type: textarea
-    id: expected-behavior
+    id: expected
     attributes:
-      label: Expected Behavior
-      description: What did you expect to happen?
-      placeholder: The command should execute successfully and return telemetry data...
+      label: "Expected behavior"
+      description: "What you expected to happen"
     validations:
       required: true
-
   - type: textarea
-    id: actual-behavior
+    id: actual
     attributes:
-      label: Actual Behavior
-      description: What actually happened?
-      placeholder: The command failed with error code 5, and the board reset...
+      label: "Actual behavior"
+      description: "What actually happened"
     validations:
       required: true
-
   - type: textarea
     id: logs
     attributes:
-      label: Relevant Logs
-      description: Please paste any relevant logs, error messages, or console output
-      placeholder: |
-        ```
-        Paste logs here...
-        ```
-      render: shell
-
+      label: "Logs / crash output"
+      description: "Any logs, stack traces, or GDS output."
   - type: dropdown
-    id: component-affected
+    id: board
     attributes:
-      label: Component Affected
-      description: Which part of the system is affected by this bug?
-      multiple: true
+      label: "Target board"
+      description: "Which board are you using?"
       options:
-        - Deployment (ReferenceDeployment)
-        - Topology (component connections)
-        - Active Component (AntennaDeployer, BootloaderTrigger, etc.)
-        - Passive Component
-        - Driver Component (Drv/)
-        - Build System (CMakeLists.txt, Makefile)
-        - Integration/Testing (GDS, pytest)
-        - Zephyr Configuration (prj.conf, Kconfig)
-        - FPP Definition Files
-        - Hardware/Board Configuration
-        - Documentation
-        - Other (specify in description)
+        - "RP2350 (Pico 2)"
+        - "STM32"
+        - "Other"
     validations:
       required: true
-
-  - type: input
-    id: fprime-version
+  - type: markdown
     attributes:
-      label: F Prime Version
-      description: Which version of F Prime are you using? (check lib/fprime/)
-      placeholder: v4.0.0a1
-
-  - type: input
-    id: zephyr-version
-    attributes:
-      label: Zephyr Version
-      description: Which version of Zephyr are you using? (check west.yml)
-      placeholder: v4.2.0
-
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other context about the problem here (environment, configuration changes, etc.)
-      placeholder: This issue started after updating to the latest main branch...
+      value: |
+        ## Additional information
+        - F Prime version: v4.0.0a1
+        - Zephyr version: v4.2.0
+        - Python: see .python-version
