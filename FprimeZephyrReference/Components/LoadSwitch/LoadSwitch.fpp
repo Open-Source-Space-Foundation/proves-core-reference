@@ -1,48 +1,38 @@
 module Components {
+    port loadSwitchStateGet -> Fw.On
+    port loadSwitchStateChanged($state: Fw.On) -> Fw.Success
+}
+
+module Components {
     @ A generic load switch for controlling power to components
     passive component LoadSwitch {
 
-        # One async command/port is required for active components
-        # This should be overridden by the developers with a useful command/port
-
-        ##############################################################################
-        #### Uncomment the following examples to start customizing your component ####
-        ##############################################################################
-
-        # @ Example async command
-        # async command COMMAND_NAME(param_name: U32)
+        @ Command to turn the load switch on
         sync command TURN_ON()
+
+        @ Command to turn the load switch off
         sync command TURN_OFF()
 
-        # @ Example telemetry counter
-        # telemetry ExampleCounter: U64
+        @ Telemetry channel for load switch state
         telemetry IsOn: Fw.On
 
-        # @ Example event
-        # event ExampleStateEvent(example_state: Fw.On) severity activity high id 0 format "State set to {}"
+        @ Event for reporting load switch state change
         event StatusChanged($state: Fw.On) severity activity high id 1 format "Load switch state changed to {}"
-
-        # @ Example port: receiving calls from the rate group
-        # sync input port run: Svc.Sched
-        #output port Status: Drv.GpioRead
-        #We will not be putting a Drv.GpioRead port here, we are using the Gpio Driver component which has this already!
 
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 
+        @ Port sending calls to the GPIO driver to read state
+        output port gpioGet: Drv.GpioRead
 
-        # Input that will be used by other components if they want to force a reset
-        # (off and on again) of the load switch
-        sync input port Reset: Fw.Signal
+        @ Port to indicate a change in load switch state
+        output port loadSwitchStateChanged: [2] loadSwitchStateChanged
 
         @ Input port to turn on the load switch (called by other components)
         sync input port turnOn: Fw.Signal
 
         @ Input port to turn off the load switch (called by other components)
         sync input port turnOff: Fw.Signal
-
-        # @ Example parameter
-        # param PARAMETER_NAME: U32
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
