@@ -207,6 +207,17 @@ def test_safe_02_ground_command_sets_reason(
     )
     time.sleep(2)
 
+    # Verify EnteringSafeMode event mentions ground command
+    # (Must check BEFORE calling proves_send_and_assert_command again, as it clears histories)
+    events = fprime_test_api.get_event_test_history()
+    entering_events = [
+        e for e in events if "EnteringSafeMode" in str(e.get_template().get_name())
+    ]
+    assert len(entering_events) > 0, "Should have EnteringSafeMode event"
+    assert "Ground command" in entering_events[-1].get_display_text(), (
+        "EnteringSafeMode reason should mention Ground command"
+    )
+
     # Verify safe mode reason is GROUND_COMMAND
     proves_send_and_assert_command(
         fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
@@ -224,16 +235,6 @@ def test_safe_02_ground_command_sets_reason(
         assert reason_val == SAFE_MODE_REASON_GROUND_COMMAND, (
             f"Safe mode reason should be GROUND_COMMAND (3), got {reason_val}"
         )
-
-    # Verify EnteringSafeMode event mentions ground command
-    events = fprime_test_api.get_event_test_history()
-    entering_events = [
-        e for e in events if "EnteringSafeMode" in str(e.get_template().get_name())
-    ]
-    assert len(entering_events) > 0, "Should have EnteringSafeMode event"
-    assert "Ground command" in entering_events[-1].get_display_text(), (
-        "EnteringSafeMode reason should mention Ground command"
-    )
 
 
 def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_gds):
