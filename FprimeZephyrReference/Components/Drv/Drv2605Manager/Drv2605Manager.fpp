@@ -1,35 +1,64 @@
 module Drv {
-    port triggerDevice -> bool
+    port trigger -> Fw.Success
 }
 
 module Drv {
-    @ Component for F Prime FSW framework.
+    @ Manager for the DRV2605 device
     passive component Drv2605Manager {
 
-        @ Port to initialize the DRV2605 device
-        sync input port init: Fw.SuccessCondition
+        #### Ports ####
+        @ Port to trigger the magnetorquer
+        sync input port trigger: trigger
 
-        @ Port to trigger the DRV2605 device
-        sync input port triggerDevice: triggerDevice
+        @ Port to initialize and deinitialize the device on load switch state change
+        sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
-        @ Event for reporting DRV2605 not ready error
-        # event DeviceNotReady() severity warning high format "DRV2605 device not ready"
-        event DeviceNotReady() severity warning high format "DRV2605 device not ready" throttle 5
+        #### Commands ####
+        @ Command to trigger the magnetorquer
+        sync command TRIGGER()
 
-        @ Event for reporting DRV2605 initialization failure
-        event DeviceInitFailed(ret: I32) severity warning high format "DRV2605 initialization failed with return code: {}" throttle 5
+        #### Events ####
+        @ Event for reporting not ready error
+        event DeviceNotReady() severity warning low format "Device not ready" throttle 5
 
-        @ Event for reporting DRV2605 nil device error
-        event DeviceNil() severity warning high format "DRV2605 device is nil" throttle 5
+        @ Event for reporting initialization failure
+        event DeviceInitFailed(ret: I32) severity warning low format "Initialization failed with return code: {}" throttle 5
 
-        @ Event for reporting DRV2605 nil state error
-        event DeviceStateNil() severity warning high format "DRV2605 device state is nil" throttle 5
+        @ Event for reporting nil device error
+        event DeviceNil() severity warning low format "Device is nil" throttle 5
+
+        @ Event for reporting nil state error
+        event DeviceStateNil() severity warning low format "Device state is nil" throttle 5
+
+        @ Event for reporting error setting hatpic config
+        event DeviceHapticConfigSetFailed(ret: I32) severity warning low format "Setting haptic config failed with return code: {}" throttle 5
+
+        @ Event for reporting TCA unhealthy state
+        event TcaUnhealthy() severity warning low format "TCA device is unhealthy" throttle 5
+
+        @ Event for reporting MUX unhealthy state
+        event MuxUnhealthy() severity warning low format "MUX device is unhealthy" throttle 5
+
+        @ Event for reporting Load Switch not ready state
+        event LoadSwitchNotReady() severity warning low format "Load Switch is not ready" throttle 5
+
+        @ Event for reporting failure to trigger the magnetorquer
+        event TriggerFailed(ret: I32) severity warning low format "Trigger failed with return code: {}"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending command registrations
+        command reg port cmdRegOut
+
+        @ Port for receiving commands
+        command recv port cmdIn
+
+        @ Port for sending command responses
+        command resp port cmdResponseOut
 
         @ Port for sending textual representation of events
         text event port logTextOut

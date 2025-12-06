@@ -92,7 +92,6 @@ module ReferenceDeployment {
     instance veml6031Face5Manager
     instance veml6031Face6Manager
     instance veml6031Face7Manager
-    instance magnetorquerManager
     instance drv2605Face0Manager
     instance drv2605Face1Manager
     instance drv2605Face2Manager
@@ -186,7 +185,6 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -200,14 +198,14 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run # doubles (20ms) rate group max time
+      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[11] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-      rateGroup1_6Hz.RateGroupMemberOut[0] -> powerMonitor.run
-      rateGroup1_6Hz.RateGroupMemberOut[1] -> imuManager.run
-      rateGroup1_6Hz.RateGroupMemberOut[2] -> adcs.run
-      rateGroup1_6Hz.RateGroupMemberOut[3] -> thermalManager.run
+      rateGroup1_6Hz.RateGroupMemberOut[0] -> imuManager.run
+      rateGroup1_6Hz.RateGroupMemberOut[1] -> adcs.run
+      rateGroup1_6Hz.RateGroupMemberOut[2] -> thermalManager.run
 
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
     }
@@ -225,26 +223,31 @@ module ReferenceDeployment {
       face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
       face0LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face0Manager.loadSwitchStateChanged
       face0LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face0Manager.loadSwitchStateChanged
 
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
       face1LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face1Manager.loadSwitchStateChanged
       face1LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face1Manager.loadSwitchStateChanged
+      face1LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face1Manager.loadSwitchStateChanged
 
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
       face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
       face2LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face2Manager.loadSwitchStateChanged
       face2LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face2Manager.loadSwitchStateChanged
+      face2LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face2Manager.loadSwitchStateChanged
 
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
       face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
       face3LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face3Manager.loadSwitchStateChanged
       face3LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face3Manager.loadSwitchStateChanged
+      face3LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face3Manager.loadSwitchStateChanged
 
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
       face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
       face5LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face5Manager.loadSwitchStateChanged
       face5LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face5Manager.loadSwitchStateChanged
+      face5LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face5Manager.loadSwitchStateChanged
 
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
       payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
@@ -347,26 +350,6 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
-    }
-
-    connections MagnetorquerManager {
-      magnetorquerManager.loadSwitchTurnOn[0] -> face0LoadSwitch.turnOn
-      magnetorquerManager.loadSwitchTurnOn[1] -> face1LoadSwitch.turnOn
-      magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
-      magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
-      magnetorquerManager.loadSwitchTurnOn[4] -> face5LoadSwitch.turnOn
-
-      magnetorquerManager.initDevice[0] -> drv2605Face0Manager.init
-      magnetorquerManager.initDevice[1] -> drv2605Face1Manager.init
-      magnetorquerManager.initDevice[2] -> drv2605Face2Manager.init
-      magnetorquerManager.initDevice[3] -> drv2605Face3Manager.init
-      magnetorquerManager.initDevice[4] -> drv2605Face5Manager.init
-
-      magnetorquerManager.triggerDevice[0] -> drv2605Face0Manager.triggerDevice
-      magnetorquerManager.triggerDevice[1] -> drv2605Face1Manager.triggerDevice
-      magnetorquerManager.triggerDevice[2] -> drv2605Face2Manager.triggerDevice
-      magnetorquerManager.triggerDevice[3] -> drv2605Face3Manager.triggerDevice
-      magnetorquerManager.triggerDevice[4] -> drv2605Face5Manager.triggerDevice
     }
 
     connections ImuManager {

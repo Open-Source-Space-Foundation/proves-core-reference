@@ -181,6 +181,4 @@ module ReferenceDeployment {
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
 
-  instance magnetorquerManager: Components.MagnetorquerManager base id 0x1005A000
-
 }

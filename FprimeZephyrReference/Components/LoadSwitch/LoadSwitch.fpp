@@ -26,7 +26,7 @@ module Components {
         output port gpioGet: Drv.GpioRead
 
         @ Port to indicate a change in load switch state
-        output port loadSwitchStateChanged: [2] loadSwitchStateChanged
+        output port loadSwitchStateChanged: [3] loadSwitchStateChanged
 
         @ Input port to turn on the load switch (called by other components)
         sync input port turnOn: Fw.Signal

@@ -27,26 +27,84 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Destroy Drv2605Manager object
     ~Drv2605Manager();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Public helper methods
+    // ----------------------------------------------------------------------
+
     //! Configure the DRV2605 device
-    void configure(const struct device* dev);
+    void configure(const struct device* tca, const struct device* mux, const struct device* dev);
 
   private:
-    //! Port to initialize the DRV2605 device
-    //! Must be called and complete successfully at least one time before temperature can be read
-    void init_handler(FwIndexType portNum,    //!< The port number
-                      Fw::Success& condition  //!< Condition success/failure
-                      ) override;
-
-    //! Port to trigger the DRV2605 device to run the defined handler
-    bool triggerDevice_handler(FwIndexType portNum  //!< The port number
-                               ) override;
-
     // ----------------------------------------------------------------------
-    // Member variables
+    // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
+    //! Handler implementation for loadSwitchStateChanged
+    //!
+    //! Port to initialize and deinitialize the device on load switch state change
+    Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
+                                               const Fw::On& state) override;
+
+    //! Handler implementation for trigger
+    //!
+    //! Port to trigger the DRV2605 device
+    Fw::Success trigger_handler(FwIndexType portNum  //!< The port number
+                                ) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command TRIGGER
+    //!
+    //! Command to trigger the magnetorquer
+    void TRIGGER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                            U32 cmdSeq            //!< The command sequence number
+                            ) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Initialize the TMP112 device
+    Fw::Success initializeDevice();
+
+    //! Deinitialize the TMP112 device
+    Fw::Success deinitializeDevice();
+
+    //! Check if the TMP112 device is initialized
+    bool isDeviceInitialized();
+
+    //! Check if the load switch is ready (on and timeout passed)
+    bool loadSwitchReady();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
+
+    //! Zephyr device stores the initialized TMP112 sensor
     const struct device* m_dev;
-    union drv2605_config_data m_config_data;
+
+    //! Zephyr device for the TCA
+    const struct device* m_tca;
+
+    //! Zephyr device for the mux
+    const struct device* m_mux;
+
+    //! Load switch state
+    Fw::On m_load_switch_state = Fw::On::OFF;
+
+    //! Load switch on timeout
+    //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
+    Fw::Time m_load_switch_on_timeout;
+
+    //! Load switch check
+    //! Available to disable if the component is not powered by a load switch
+    bool m_load_switch_check = true;
 };
 
 }  // namespace Drv

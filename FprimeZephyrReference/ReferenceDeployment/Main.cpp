@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
     inputs.face5LightDevice = face5_light_sens;
     inputs.face6LightDevice = face6_light_sens;
     inputs.face7LightDevice = face7_light_sens;
-
+    // Magnetorquer devices
     inputs.face0drv2605Device = face0_drv2605;
     inputs.face1drv2605Device = face1_drv2605;
     inputs.face2drv2605Device = face2_drv2605;

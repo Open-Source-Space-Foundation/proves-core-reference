@@ -16,7 +16,7 @@ Tmp112Manager ::Tmp112Manager(const char* const compName) : Tmp112ManagerCompone
 Tmp112Manager ::~Tmp112Manager() {}
 
 // ----------------------------------------------------------------------
-// Helper methods
+// Public helper methods
 // ----------------------------------------------------------------------
 
 void Tmp112Manager::configure(const struct device* tca,
