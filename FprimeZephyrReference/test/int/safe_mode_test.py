@@ -79,7 +79,7 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # If in SAFE_MODE, exit to NORMAL
     if current_mode == 1:  # SAFE_MODE
-        logger.info(f"Setup: Component in SAFE_MODE, exiting to NORMAL...")
+        logger.info("Setup: Component in SAFE_MODE, exiting to NORMAL...")
 
         # Get safe mode reason for diagnostics
         reason_result: ChData = fprime_test_api.assert_telemetry(
@@ -91,7 +91,7 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
             proves_send_and_assert_command(
                 fprime_test_api,
                 f"{component}.EXIT_SAFE_MODE",
-                events=[f"{component}.ExitingSafeMode"]
+                events=[f"{component}.ExitingSafeMode"],
             )
             logger.info("Setup: Successfully exited safe mode")
         except Exception as e:
@@ -129,7 +129,7 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
             proves_send_and_assert_command(
                 fprime_test_api,
                 f"{component}.EXIT_SAFE_MODE",
-                events=[f"{component}.ExitingSafeMode"]
+                events=[f"{component}.ExitingSafeMode"],
             )
             logger.info("Teardown: Exited safe mode")
     except Exception as e:
