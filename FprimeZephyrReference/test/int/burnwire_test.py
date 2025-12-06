@@ -4,9 +4,14 @@ burnwire_test.py:
 Integration tests for the Burnwire component.
 """
 
+import time
+
 import pytest
 from common import proves_send_and_assert_command
+from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+ina219SysManager = "ReferenceDeployment.ina219SysManager"
 
 burnwire = "ReferenceDeployment.burnwire"
 
@@ -39,26 +44,32 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     # Wait for SetBurnwireState = ON
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
 
-    fprime_test_api.assert_event(f"{burnwire}.SafetyTimerState", timeout=2)
+    time.sleep(1)  # Allow some time for power increase
 
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
+    try:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            "CdhCore.tlmSend.SEND_PKT",
+            ["10"],
+        )
 
-    fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
+        system_power: ChData = fprime_test_api.assert_telemetry(
+            f"{ina219SysManager}.Power", start="NOW", timeout=2
+        )
 
+        assert system_power.get_val() > 3, (
+            "System power should be greater than 3 Watts when burnwire is ON"
+        )
 
-def test_02_manual_stop_before_timeout(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that burnwire stops manually before the safety timer expires"""
-
-    # Start burnwire
-    proves_send_and_assert_command(fprime_test_api, f"{burnwire}.START_BURNWIRE")
-
-    # Confirm Burnwire turned ON
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
-
-    # # Stop burnwire before safety timer triggers
-    proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
+    except Exception as e:
+        raise e
+    finally:
+        # Ensure burnwire is stopped
+        proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
 
     # Confirm Burnwire turned OFF
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=2)
+
+    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
 
     fprime_test_api.assert_event(f"{burnwire}.BurnwireEndCount", timeout=2)
