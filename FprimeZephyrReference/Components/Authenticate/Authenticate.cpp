@@ -148,6 +148,14 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     std::vector<U8> keyBytes;
     std::string hexKey = key;
 
+    printk("[DEBUG] computeHMAC: Input key string='%s', length=%zu\n", key.c_str(), key.length());
+
+    // Strip "0x" or "0X" prefix if present
+    if (hexKey.length() >= 2 && (hexKey.substr(0, 2) == "0x" || hexKey.substr(0, 2) == "0X")) {
+        hexKey = hexKey.substr(2);
+        printk("[DEBUG] computeHMAC: Stripped 0x prefix, remaining='%s'\n", hexKey.c_str());
+    }
+
     // Check if all characters are hex digits
     bool isHexString = true;
     for (char c : hexKey) {
@@ -159,22 +167,50 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     // Parse as hex string if valid, otherwise use as raw bytes
     if (isHexString && hexKey.length() > 0 && hexKey.length() % 2 == 0) {
+        printk("[DEBUG] computeHMAC: Parsing key as hex string\n");
         for (size_t i = 0; i < hexKey.length(); i += 2) {
             std::string byteStr = hexKey.substr(i, 2);
             keyBytes.push_back(static_cast<U8>(std::stoul(byteStr, nullptr, 16)));
         }
     } else {
+        printk("[DEBUG] computeHMAC: Parsing key as raw bytes (not hex string), isHexString=%d, hexKey.length()=%zu\n",
+               isHexString ? 1 : 0, hexKey.length());
         keyBytes.assign(key.begin(), key.end());
     }
 
+    printk("[DEBUG] computeHMAC: Parsed key bytes (length=%zu): ", keyBytes.size());
+    for (size_t i = 0; i < keyBytes.size() && i < 16; i++) {
+        printk("%02X ", keyBytes[i]);
+    }
+    printk("\n");
+
     // Check the length of the key bytes
     if (keyBytes.size() != 16) {
+        printk("[DEBUG] computeHMAC: ERROR - Key length is %zu, expected 16 bytes\n", keyBytes.size());
         this->log_WARNING_HI_InvalidSPI(-1);
         return Fw::Buffer();
     }
 
     // Combine security header and command payload into a single input buffer
     const size_t totalInputLength = static_cast<size_t>(securityHeaderLength + commandPayloadLength);
+    printk(
+        "[DEBUG] computeHMAC: Input data - securityHeaderLength=%llu, commandPayloadLength=%llu, "
+        "totalInputLength=%zu\n",
+        static_cast<unsigned long long>(securityHeaderLength), static_cast<unsigned long long>(commandPayloadLength),
+        totalInputLength);
+
+    printk("[DEBUG] computeHMAC: Security header bytes: ");
+    for (FwSizeType i = 0; i < securityHeaderLength && i < 6; i++) {
+        printk("%02X ", securityHeader[i]);
+    }
+    printk("\n");
+
+    printk("[DEBUG] computeHMAC: Command payload (first 16 bytes): ");
+    for (FwSizeType i = 0; i < commandPayloadLength && i < 16; i++) {
+        printk("%02X ", commandPayload[i]);
+    }
+    printk("\n");
+
     std::vector<U8> inputBuffer;
     inputBuffer.reserve(totalInputLength);
     inputBuffer.insert(inputBuffer.end(), securityHeader, securityHeader + securityHeaderLength);
@@ -268,9 +304,16 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     const size_t hmacOutputLength = 16;  // CCSDS 355.0-B-2 specifies 16 bytes
     U8* hmacData = new U8[hmacOutputLength];
     if (hmacData == nullptr) {
+        printk("[DEBUG] computeHMAC: ERROR - Failed to allocate memory for HMAC result\n");
         return Fw::Buffer();
     }
     std::memcpy(hmacData, macOutput, hmacOutputLength);
+
+    printk("[DEBUG] computeHMAC: Computed HMAC result (16 bytes): ");
+    for (size_t i = 0; i < hmacOutputLength; i++) {
+        printk("%02X ", hmacData[i]);
+    }
+    printk("\n");
 
     // Create Fw::Buffer with the HMAC data (context 0 for now)
     return Fw::Buffer(hmacData, static_cast<FwSizeType>(hmacOutputLength), 0);
@@ -310,6 +353,10 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
                                 FwSizeType dataLength,
                                 const std::string& key,
                                 const U8* securityTrailer) {
+    printk("[DEBUG] validateHMAC: Computing HMAC with key='%s', securityHeaderLength=%llu, dataLength=%llu\n",
+           key.c_str(), static_cast<unsigned long long>(securityHeaderLength),
+           static_cast<unsigned long long>(dataLength));
+
     // Compute HMAC (allocates memory)
     Fw::Buffer computedHmac = this->computeHMAC(securityHeader, securityHeaderLength, data, dataLength, key);
     const U8* computedHmacData = computedHmac.getData();
@@ -320,13 +367,33 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
     U8* hmacDataToDelete = const_cast<U8*>(computedHmacData);
 
     if (computedHmacData == nullptr || computedHmacLength < 8) {
+        printk("[DEBUG] validateHMAC: ERROR - computedHmacData is null or too short (length=%llu)\n",
+               static_cast<unsigned long long>(computedHmacLength));
         // Clean up memory before returning (delete[] nullptr is safe)
         delete[] hmacDataToDelete;
         return false;
     }
 
+    printk("[DEBUG] validateHMAC: Computed HMAC (first 16 bytes): ");
+    for (FwSizeType i = 0; i < (computedHmacLength < 16 ? computedHmacLength : 16); i++) {
+        printk("%02X ", computedHmacData[i]);
+    }
+    printk("\n");
+
+    printk("[DEBUG] validateHMAC: Expected HMAC from securityTrailer (16 bytes): ");
+    for (FwSizeType i = 0; i < 16; i++) {
+        printk("%02X ", securityTrailer[i]);
+    }
+    printk("\n");
+
     // Compare computed HMAC with expected HMAC from security trailer
     bool hmacValid = this->compareHMAC(computedHmacData, securityTrailer, computedHmacLength);
+
+    if (!hmacValid) {
+        printk("[DEBUG] validateHMAC: HMAC comparison FAILED - computed and expected do not match\n");
+    } else {
+        printk("[DEBUG] validateHMAC: HMAC comparison PASSED\n");
+    }
 
     delete[] hmacDataToDelete;
 
@@ -393,23 +460,36 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     const std::string type_authn = authConfig.type;
     const std::string& key_authn = authConfig.key;
 
+    printk("[DEBUG] Authentication: APID=%u, SPI=0x%04X (%u), SeqNum=%u\n", contextOut.get_apid(), spi, spi,
+           sequenceNumber);
+    printk("[DEBUG] Authentication: Using auth type='%s', key='%s'\n", type_authn.c_str(), key_authn.c_str());
+
     // check the sequence number is valid
-    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, this->get_SequenceNumber());
+    U32 expectedSeqNum = this->get_SequenceNumber();
+    printk("[DEBUG] Authentication: Expected seqNum=%u, received seqNum=%u\n", expectedSeqNum, sequenceNumber);
+    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
     if (!sequenceNumberValid) {
+        printk("[DEBUG] Authentication: Sequence number validation FAILED\n");
         this->rejectPacket(data, contextOut);
         return;
     }
+    printk("[DEBUG] Authentication: Sequence number validation PASSED\n");
 
     // Validate HMAC - all memory management is handled inside validateHMAC()
     // The raw pointer hmacDataToDelete is scoped to validateHMAC() and cannot be
     // accidentally referenced after this call
+    printk("[DEBUG] Authentication: Starting HMAC validation, dataLength=%llu\n",
+           static_cast<unsigned long long>(data.getSize()));
     bool hmacValid = this->validateHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn, securityTrailer);
 
     if (!hmacValid) {
+        printk("[DEBUG] Authentication: HMAC validation FAILED for APID=%u, SPI=0x%04X (%u), SeqNum=%u\n",
+               contextOut.get_apid(), spi, spi, sequenceNumber);
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         this->rejectPacket(data, contextOut);
         return;
     }
+    printk("[DEBUG] Authentication: HMAC validation PASSED\n");
 
     // increment the stored sequence number and persist it to the file system
     U32 newSequenceNumber = sequenceNumber + 1;
