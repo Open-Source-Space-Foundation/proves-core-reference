@@ -13,10 +13,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
-    ComCcsdsLora.authenticationRouter.LastCommandPacketTime
-    ComCcsdsLora.authenticationRouter.CommandLossSafeOn
-    ComCcsdsUart.authenticationRouter.LastCommandPacketTime
-    ComCcsdsUart.authenticationRouter.CommandLossSafeOn
   }
 
   packet HealthWarnings id 2 group 1 {

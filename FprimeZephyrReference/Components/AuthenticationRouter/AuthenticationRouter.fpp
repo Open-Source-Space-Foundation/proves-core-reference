@@ -1,15 +1,12 @@
 module Svc {
     @ Routes packets deframed by the Deframer to the rest of the system
-    active component AuthenticationRouter {
+    passive component AuthenticationRouter {
 
         # ----------------------------------------------------------------------
-        # Router interface (ports defined explicitly for active component)
+        # Router interface (ports defined explicitly for passive component)
         # ----------------------------------------------------------------------
-        # Port receiving calls from the rate group
-        async input port schedIn: Svc.Sched
-
         # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
-        async input port dataIn: Svc.ComDataWithContext
+        sync input port dataIn: Svc.ComDataWithContext
 
         # Port for returning ownership of data (includes Fw.Buffer) received on dataIn
         output port dataReturnOut: Svc.ComDataWithContext
@@ -86,19 +83,6 @@ module Svc {
         # Custom For This Router
         #################################
 
-        @ Port for sending signal to safemode
-        output port SafeModeOn: Fw.Signal
-
-        @ event to emit when command loss time expires
-        event CommandLossTimeExpired(safemode: Fw.On) \
-            severity activity high \
-            format "SafeModeOn: {}"
-
-        @ Emits Current Loss Time
-        event CurrentLossTime(loss_max_time: U32) \
-            severity activity low \
-            format "Current Loss Time: {}"
-
         @ Emitted to indicate whether a packet passed through the router
         event PassedRouter(passed: U8) \
             severity activity low \
@@ -113,12 +97,6 @@ module Svc {
             severity warning high \
             format "File Open Error {} for BypassOpCodes file. No Opcodes will be Bypassed"
 
-        @ Telemetry Channel to commit the time of the last command packet
-        telemetry LastCommandPacketTime : U64
-
-        @ Telemetry Channel for the status of the command loss time sending to safe mode
-        telemetry CommandLossSafeOn : bool
-
         @ Telemetry Channel for Number of Packets that have bypassed the router
         telemetry ByPassedRouter : U64
 
@@ -127,10 +105,6 @@ module Svc {
 
         @ Telemetry Channel for Number of Packets that have not passed the Router
         telemetry FailedRouter : U64
-
-        @ loss time max parameter: Right now set to 3 days 259200 seconds
-        param LOSS_MAX_TIME : U32 default 259200
-
 
     }
 }
