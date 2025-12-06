@@ -36,9 +36,9 @@ classDiagram
 
 ### Commands
 
-| Name | Description | Implementation notes |
-|---|---|---|
-| TURN_ON | Turn on the associated power rail | `TURN_ON_cmdHandler` sets the gpio via `gpioSet_out(0, Fw::Logic::HIGH)`, emits `StatusChanged` (ON), updates `IsOn` telemetry, replies OK. |
+| Name     | Description                        | Implementation notes                                                                                                                         |
+| -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| TURN_ON  | Turn on the associated power rail  | `TURN_ON_cmdHandler` sets the gpio via `gpioSet_out(0, Fw::Logic::HIGH)`, emits `StatusChanged` (ON), updates `IsOn` telemetry, replies OK.  |
 | TURN_OFF | Turn off the associated power rail | `TURN_OFF_cmdHandler` sets the gpio via `gpioSet_out(0, Fw::Logic::LOW)`, emits `StatusChanged` (OFF), updates `IsOn` telemetry, replies OK. |
 
 ### Telemetry
@@ -49,9 +49,9 @@ classDiagram
 
 ### Events
 
-| Name | Severity | ID | Format |
-|---|---|---:|---|
-| StatusChanged | activity high | 1 | "Load switch state changed to {}" |
+| Name          | Severity      |  ID | Format                            |
+| ------------- | ------------- | --: | --------------------------------- |
+| StatusChanged | activity high |   1 | "Load switch state changed to {}" |
 
 The component logs the `StatusChanged` event whenever the switch transitions due to a command.
 
@@ -78,8 +78,8 @@ The component logs the `StatusChanged` event whenever the switch transitions due
 
 ## Change Log
 
-| Date | Description |
-|---|---|
-| 10-22-2025 | Sarah, Kevin, and MoMata's first commit |
+| Date       | Description                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 10-22-2025 | Sarah, Kevin, and MoMata's first commit                                                                                |
 | 11-07-2025 | Updated SDD to match implementation in `LoadSwitch.cpp/.hpp/.fpp` (commands, telemetry, event, ports, reset behavior). |
 | 11-30-2025 | Removed Reset capability. Added `loadSwitchStateChanged` output port for state notifications. |
