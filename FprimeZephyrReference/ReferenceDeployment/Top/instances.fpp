@@ -90,6 +90,8 @@ module ReferenceDeployment {
 
   instance comDelay: Components.ComDelay base id 0x10025000
 
+  instance comDelaySband: Components.ComDelay base id 0x10024000
+
   instance lora: Zephyr.LoRa base id 0x10026000
 
   instance comSplitterEvents: Svc.ComSplitter base id 0x10027000
@@ -97,6 +99,21 @@ module ReferenceDeployment {
   instance comSplitterTelemetry: Svc.ComSplitter base id 0x10028000
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10029000
+
+  instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10050000
+
+  instance sband : Components.SBand base id 0x10051000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 10
+
+  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10052000
+
+  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10053000
+
+  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10054000
+
+  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10055000
 
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 

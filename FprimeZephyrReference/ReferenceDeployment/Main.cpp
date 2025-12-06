@@ -14,6 +14,7 @@ const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
+const struct device* spi0 = DEVICE_DT_GET(DT_NODELABEL(spi0));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
 const struct device* rtc = DEVICE_DT_GET(DT_NODELABEL(rtc0));
@@ -27,6 +28,7 @@ int main(int argc, char* argv[]) {
     Os::init();
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
+    inputs.spi0Device = spi0;
     inputs.ina219SysDevice = ina219Sys;
     inputs.ina219SolDevice = ina219Sol;
     inputs.loraDevice = lora;

@@ -5,6 +5,8 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.cmdDisp.CommandsDropped
     ComCcsds.comQueue.comQueueDepth
     ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsSband.comQueue.comQueueDepth
+    ComCcsdsSband.commsBufferManager.HiBuffs
     ComCcsdsUart.comQueue.comQueueDepth
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
@@ -23,6 +25,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
+    ComCcsdsSband.commsBufferManager.NoBuffs
+    ComCcsdsSband.commsBufferManager.EmptyBuffs
   }
 
 
@@ -34,6 +38,9 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.CurrBuffs
     ComCcsdsUart.comQueue.buffQueueDepth
     CdhCore.tlmSend.SendLevel
+    ComCcsdsSband.commsBufferManager.TotalBuffs
+    ComCcsdsSband.commsBufferManager.CurrBuffs
+    ComCcsdsSband.comQueue.buffQueueDepth
   }
 
   packet Version id 4 group 3 {
@@ -84,6 +91,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
+  }
+
+  packet SBand id 11 group 4 {
+    sband.LastRssi
+    sband.LastSnr
   }
 
 } omit {

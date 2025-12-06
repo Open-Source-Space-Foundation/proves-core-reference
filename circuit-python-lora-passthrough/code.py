@@ -7,7 +7,7 @@ to indicate packet reception.
 
 import time
 
-import adafruit_rfm9x
+import adafruit_rfm.rfm9x
 import board
 import digitalio
 import usb_cdc
@@ -17,7 +17,7 @@ RADIO_FREQ_MHZ = 437.4
 CS = digitalio.DigitalInOut(board.SPI0_CS0)
 RESET = digitalio.DigitalInOut(board.RF1_RST)
 
-rfm95 = adafruit_rfm9x.RFM9x(board.SPI(), CS, RESET, RADIO_FREQ_MHZ)
+rfm95 = adafruit_rfm.rfm9x.RFM9x(board.SPI(), CS, RESET, RADIO_FREQ_MHZ)
 rfm95.spreading_factor = 8
 rfm95.signal_bandwidth = 125000
 rfm95.coding_rate = 5

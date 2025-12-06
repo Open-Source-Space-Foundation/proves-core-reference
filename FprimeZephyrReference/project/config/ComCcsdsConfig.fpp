@@ -2,6 +2,7 @@ module ComCcsdsConfig {
     #Base ID for the ComCcsds Subtopology, all components are offsets from this base ID
     constant BASE_ID = 0x02000000
     constant BASE_ID_UART = 0x21000000
+    constant BASE_ID_SBAND = 0x23000000
 
     module QueueSizes {
         constant comQueue   = 5
