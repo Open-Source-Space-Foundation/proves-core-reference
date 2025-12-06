@@ -14,6 +14,8 @@ const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
+const struct device* peripheral_uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
+const struct device* peripheral_uart1 = DEVICE_DT_GET(DT_NODELABEL(uart1));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
 const struct device* lis2mdl = DEVICE_DT_GET(DT_NODELABEL(lis2mdl0));
 const struct device* rtc = DEVICE_DT_GET(DT_NODELABEL(rtc0));
@@ -35,6 +37,12 @@ int main(int argc, char* argv[]) {
     inputs.lis2mdlDevice = lis2mdl;
     inputs.rtcDevice = rtc;
     inputs.baudRate = 115200;
+
+    // For the uart peripheral config
+    inputs.peripheralBaudRate = 115200; // Minimum is 19200
+    inputs.peripheralUart = peripheral_uart;
+    inputs.peripheralBaudRate2 = 115200; // Minimum is 19200
+    inputs.peripheralUart2 = peripheral_uart1;
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);
