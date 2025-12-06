@@ -66,24 +66,74 @@ SAFE_MODE_REASON_LORA = 5
 def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Setup before each test and cleanup after.
-    Ensures clean state by exiting safe mode if needed.
+    Ensures clean NORMAL state with explicit verification.
     """
-    # Setup: Try to get to a clean NORMAL state
-    try:
-        proves_send_and_assert_command(fprime_test_api, f"{component}.EXIT_SAFE_MODE")
-    except Exception as e:
-        logger.debug(f"Setup: EXIT_SAFE_MODE skipped (not in safe mode): {e}")
+    # Check current mode before setup
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
+    mode_result: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentMode", timeout=5
+    )
+    current_mode = mode_result.get_val()
 
-    # Clear event and telemetry history before test
+    # If in SAFE_MODE, exit to NORMAL
+    if current_mode == 1:  # SAFE_MODE
+        logger.info(f"Setup: Component in SAFE_MODE, exiting to NORMAL...")
+
+        # Get safe mode reason for diagnostics
+        reason_result: ChData = fprime_test_api.assert_telemetry(
+            f"{component}.CurrentSafeModeReason", timeout=5
+        )
+        logger.info(f"Setup: Safe mode reason = {reason_result.get_val()}")
+
+        try:
+            proves_send_and_assert_command(
+                fprime_test_api,
+                f"{component}.EXIT_SAFE_MODE",
+                events=[f"{component}.ExitingSafeMode"]
+            )
+            logger.info("Setup: Successfully exited safe mode")
+        except Exception as e:
+            pytest.fail(
+                f"Setup failed: Cannot exit safe mode (reason: {reason_result.get_val()}). "
+                f"Error: {e}"
+            )
+
+    # Clear histories AFTER state initialization
     fprime_test_api.clear_histories()
+
+    # Verify we're in NORMAL mode before test starts
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
+    final_mode: ChData = fprime_test_api.assert_telemetry(
+        f"{component}.CurrentMode", timeout=5
+    )
+    if final_mode.get_val() != 2:  # Not NORMAL
+        pytest.fail(
+            f"Setup failed: Expected NORMAL mode (2), got {final_mode.get_val()}"
+        )
 
     yield
 
-    # Teardown: Return to clean NORMAL state for next test
+    # Teardown: Return to NORMAL state for next test
     try:
-        proves_send_and_assert_command(fprime_test_api, f"{component}.EXIT_SAFE_MODE")
+        proves_send_and_assert_command(
+            fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+        )
+        mode_result: ChData = fprime_test_api.assert_telemetry(
+            f"{component}.CurrentMode", timeout=5
+        )
+        if mode_result.get_val() == 1:  # In SAFE_MODE
+            proves_send_and_assert_command(
+                fprime_test_api,
+                f"{component}.EXIT_SAFE_MODE",
+                events=[f"{component}.ExitingSafeMode"]
+            )
+            logger.info("Teardown: Exited safe mode")
     except Exception as e:
-        logger.debug(f"Teardown: EXIT_SAFE_MODE skipped (not in safe mode): {e}")
+        logger.warning(f"Teardown: Could not return to NORMAL state: {e}")
 
 
 # ==============================================================================
@@ -134,7 +184,20 @@ def test_safe_02_ground_command_sets_reason(
     Verifies:
     - CurrentSafeModeReason = GROUND_COMMAND after command
     - EnteringSafeMode event contains "Ground command"
+
+    Precondition: Must start in NORMAL mode
     """
+    # Verify precondition (defense in depth)
+    proves_send_and_assert_command(
+        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
+    )
+    mode = fprime_test_api.assert_telemetry(f"{component}.CurrentMode", timeout=5)
+    if mode.get_val() != 2:
+        pytest.fail(
+            f"Test precondition failed: Must start in NORMAL mode (2), "
+            f"currently in mode {mode.get_val()}"
+        )
+
     # Enter safe mode via ground command
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(
