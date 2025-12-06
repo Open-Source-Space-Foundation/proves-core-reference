@@ -45,18 +45,18 @@ F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorSampleFetchFailed(rc);
+        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT, &val);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
@@ -77,18 +77,18 @@ F32 Veml6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success&
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_IR);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorSampleFetchFailed(rc);
+        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_IR, &val);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
@@ -126,18 +126,18 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_LIGHT);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorSampleFetchFailed(rc);
+        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorSampleFetchFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_LIGHT, &val);
     if (rc != 0) {
-        this->log_WARNING_HI_SensorChannelGetFailed(rc);
+        this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0;
     }
-    this->log_WARNING_HI_SensorChannelGetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
 
     F32 lux = sensor_value_to_double(&val);
 
@@ -190,16 +190,16 @@ void Veml6031Manager ::GetAmbientLight_cmdHandler(FwOpcodeType opCode, U32 cmdSe
 
 bool Veml6031Manager ::isDeviceInitialized() {
     if (!this->m_dev) {
-        this->log_WARNING_HI_DeviceNil();
+        this->log_WARNING_LO_DeviceNil();
         return false;
     }
-    this->log_WARNING_HI_DeviceNil_ThrottleClear();
+    this->log_WARNING_LO_DeviceNil_ThrottleClear();
 
     if (!this->m_dev->state) {
-        this->log_WARNING_HI_DeviceStateNil();
+        this->log_WARNING_LO_DeviceStateNil();
         return false;
     }
-    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
+    this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
 
     return this->m_dev->state->initialized;
 }
@@ -207,53 +207,53 @@ bool Veml6031Manager ::isDeviceInitialized() {
 Fw::Success Veml6031Manager ::initializeDevice() {
     if (this->isDeviceInitialized()) {
         if (!device_is_ready(this->m_dev)) {
-            this->log_WARNING_HI_DeviceNotReady();
+            this->log_WARNING_LO_DeviceNotReady();
             return Fw::Success::FAILURE;
         }
-        this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
+        this->log_WARNING_LO_DeviceNotReady_ThrottleClear();
         return Fw::Success::SUCCESS;
     }
 
     if (!device_is_ready(this->m_tca)) {
-        this->log_WARNING_HI_TcaUnhealthy();
+        this->log_WARNING_LO_TcaUnhealthy();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_TcaUnhealthy_ThrottleClear();
+    this->log_WARNING_LO_TcaUnhealthy_ThrottleClear();
 
     if (!device_is_ready(this->m_mux)) {
-        this->log_WARNING_HI_MuxUnhealthy();
+        this->log_WARNING_LO_MuxUnhealthy();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_MuxUnhealthy_ThrottleClear();
+    this->log_WARNING_LO_MuxUnhealthy_ThrottleClear();
 
     if (!this->loadSwitchReady()) {
-        this->log_WARNING_HI_LoadSwitchNotReady();
+        this->log_WARNING_LO_LoadSwitchNotReady();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_LoadSwitchNotReady_ThrottleClear();
+    this->log_WARNING_LO_LoadSwitchNotReady_ThrottleClear();
 
     int rc = device_init(this->m_dev);
     if (rc < 0) {
-        this->log_WARNING_HI_DeviceInitFailed(rc);
+        this->log_WARNING_LO_DeviceInitFailed(rc);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_DeviceInitFailed_ThrottleClear();
+    this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
 
     return Fw::Success::SUCCESS;
 }
 
 Fw::Success Veml6031Manager ::deinitializeDevice() {
     if (!this->m_dev) {
-        this->log_WARNING_HI_DeviceNil();
+        this->log_WARNING_LO_DeviceNil();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_DeviceNil_ThrottleClear();
+    this->log_WARNING_LO_DeviceNil_ThrottleClear();
 
     if (!this->m_dev->state) {
-        this->log_WARNING_HI_DeviceStateNil();
+        this->log_WARNING_LO_DeviceStateNil();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_DeviceStateNil_ThrottleClear();
+    this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
 
     this->m_dev->state->initialized = false;
     return Fw::Success::SUCCESS;
@@ -267,19 +267,19 @@ Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 it = this->paramGet_INTEGRATION_TIME(valid);
     if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_HI_InvalidIntegrationTimeParam(it);
+        this->log_WARNING_LO_InvalidIntegrationTimeParam(it);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_InvalidIntegrationTimeParam_ThrottleClear();
+    this->log_WARNING_LO_InvalidIntegrationTimeParam_ThrottleClear();
 
     struct sensor_value attr;
     sensor_value_from_double(&attr, it);
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &attr);
     if (rc) {
-        this->log_WARNING_HI_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_IT, it, rc);
+        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_IT, it, rc);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_SensorAttrSetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();
 
     return Fw::Success::SUCCESS;
 }
@@ -288,19 +288,19 @@ Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 gain = this->paramGet_GAIN(valid);
     if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_HI_InvalidGainParam(gain);
+        this->log_WARNING_LO_InvalidGainParam(gain);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_InvalidGainParam_ThrottleClear();
+    this->log_WARNING_LO_InvalidGainParam_ThrottleClear();
 
     struct sensor_value attr;
     sensor_value_from_double(&attr, gain);
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &attr);
     if (rc) {
-        this->log_WARNING_HI_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_GAIN, gain, rc);
+        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_GAIN, gain, rc);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_SensorAttrSetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();
 
     return Fw::Success::SUCCESS;
 }
@@ -309,19 +309,19 @@ Fw::Success Veml6031Manager ::setDiv4Attribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 div4 = this->paramGet_EFFECTIVE_PHOTODIODE_SIZE(valid);
     if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_HI_InvalidDiv4Param(div4);
+        this->log_WARNING_LO_InvalidDiv4Param(div4);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_InvalidDiv4Param_ThrottleClear();
+    this->log_WARNING_LO_InvalidDiv4Param_ThrottleClear();
 
     struct sensor_value attr;
     sensor_value_from_double(&attr, div4);
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &attr);
     if (rc) {
-        this->log_WARNING_HI_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_DIV4, div4, rc);
+        this->log_WARNING_LO_SensorAttrSetFailed(SENSOR_ATTR_VEML6031_DIV4, div4, rc);
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_HI_SensorAttrSetFailed_ThrottleClear();
+    this->log_WARNING_LO_SensorAttrSetFailed_ThrottleClear();
 
     return Fw::Success::SUCCESS;
 }

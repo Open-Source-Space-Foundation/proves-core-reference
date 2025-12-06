@@ -68,6 +68,11 @@ sequenceDiagram
     Tmp112Manager-->>Manager: Return temperature (F64)
 ```
 
+## Commands
+| Name | Description |
+|---|---|
+| GetTemperature | Command to get the temperature in degrees Celsius |
+
 ## Events
 | Name | Description |
 |---|---|
@@ -80,6 +85,7 @@ sequenceDiagram
 | LoadSwitchNotReady | TMP112 Load Switch is not ready |
 | SensorSampleFetchFailed | TMP112 sensor fetch failed |
 | SensorChannelGetFailed | TMP112 sensor channel get failed |
+| Temperature | Temperature reading in celsius |
 
 ## Telemetry
 | Name | Description |

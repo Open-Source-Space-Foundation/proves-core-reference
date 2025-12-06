@@ -86,7 +86,7 @@ module Drv {
         sync input port infraRedLightGet: lightGet
 
         @ Port to read the ambient illuminance in visible spectrum, in lux
-        sync input port ambientLightGet: Fw.CompletionStatus
+        sync input port ambientLightGet: lightGet
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged

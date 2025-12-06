@@ -52,6 +52,18 @@ class Tmp112Manager final : public Tmp112ManagerComponentBase {
 
   private:
     // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command GetTemperature
+    //!
+    //! Command to get the temperature in degrees Celsius
+    void GetTemperature_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                   U32 cmdSeq            //!< The command sequence number
+                                   ) override;
+
+  private:
+    // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
 

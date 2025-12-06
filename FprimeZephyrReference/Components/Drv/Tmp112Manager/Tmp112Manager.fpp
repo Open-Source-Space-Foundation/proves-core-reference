@@ -5,19 +5,19 @@ module Drv {
 module Drv {
     @ Manager for TMP112 device
     passive component Tmp112Manager {
-        # Ports
+
+        #### Ports ####
         @ Port to read the temperature in degrees Celsius
         sync input port temperatureGet: temperatureGet
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
-        # Commands
+        #### Commands ####
         @ Command to get the temperature in degrees Celsius
         sync command GetTemperature()
 
-        # Telemetry channels
-
+        #### Telemetry ####
         @ Telemetry channel for temperature in degrees Celsius
         telemetry Temperature: F64
 

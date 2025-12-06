@@ -104,9 +104,9 @@ sequenceDiagram
 | InvalidIntegrationTimeParam | VEML6031 invalid integration time parameter |
 | InvalidDiv4Param | VEML6031 invalid effective photodiode size parameter |
 | SensorAttrSetFailed | VEML6031 sensor attribute set failed |
-| VisibleLightLux | VEML6031 visible light measured in lux |
-| InfraRedLightLux | VEML6031 infra-red light measured in lux |
-| AmbientLightLux | VEML6031 ambient light measured in lux |
+| VisibleLight | VEML6031 visible light measured in lux |
+| InfraRedLight | VEML6031 infra-red light measured in lux |
+| AmbientLight | VEML6031 ambient light measured in lux |
 
 ## Telemetry
 | Name | Description |
