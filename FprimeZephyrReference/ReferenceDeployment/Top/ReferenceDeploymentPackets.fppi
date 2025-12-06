@@ -11,6 +11,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
+    ReferenceDeployment.modeManager.CurrentMode
+    ReferenceDeployment.modeManager.SafeModeEntryCount
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -65,7 +67,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet Antenna id 8 group 4 {
     ReferenceDeployment.antennaDeployer.DeployAttemptCount
-    ReferenceDeployment.antennaDeployer.LastDistance
   }
 
   packet LoadSwitches id 9 group 4 {

@@ -54,7 +54,16 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 
 .PHONY: test-integration
 test-integration: uv
-	@$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	else \
+		TEST_FILES=$$(for test in $(filter-out $@,$(MAKECMDGOALS)); do echo "FprimeZephyrReference/test/int/$${test}_test.py"; done); \
+		$(UV_RUN) pytest $$TEST_FILES --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+	fi
+
+# Allow test names to be passed as targets without Make trying to execute them
+%:
+	@:
 
 .PHONY: bootloader
 bootloader: uv
