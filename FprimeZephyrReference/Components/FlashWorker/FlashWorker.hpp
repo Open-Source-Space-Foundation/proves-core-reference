@@ -13,7 +13,7 @@ namespace Components {
 
 class FlashWorker final : public FlashWorkerComponentBase {
   public:
-    constexpr static U8 REGION_NUMBER = 1;  // 0: bootloader, 1: slot0, **2: slot1**
+    constexpr static U8 REGION_NUMBER = 2;  // 0: bootloader, 1: slot0, **2: slot1**
     enum Step { IDLE, PREPARE, UPDATE };
     // ----------------------------------------------------------------------
     // Component construction and destruction

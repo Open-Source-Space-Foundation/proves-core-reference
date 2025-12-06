@@ -21,7 +21,7 @@ module Update {
     }
 
     module Priorities {
-        constant updater = 5 # Updater does real-time tasks; higher priority
+        constant updater = 14 # Updater does real-time tasks; higher priority
         constant worker  = 15 # Worker does slow-running tasks; lower priority
     }
 

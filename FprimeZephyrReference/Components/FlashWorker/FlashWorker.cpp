@@ -7,8 +7,10 @@
 #include "FprimeZephyrReference/Components/FlashWorker/FlashWorker.hpp"
 
 #include "Os/File.hpp"
+#include "Os/Task.hpp"
 #include <zephyr/dfu/flash_img.h>
 #include <zephyr/dfu/mcuboot.h>
+
 
 namespace Components {
 
@@ -33,7 +35,8 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
     // Read file size, and default to 0 if unavailable
     Os::File::Status file_status = file.size(size);
     // Loop through file chunk by chunk
-    for (FwSizeType i = 0; i < size && status == 0 && file_status == Os::File::Status::OP_OK; i += CHUNK) {
+    FwSizeType i = 0;
+    for (i = 0; i < size && status == 0 && file_status == Os::File::Status::OP_OK; i += CHUNK) {
         FwSizeType read_size = CHUNK;
         file_status = file.read(this->m_data, read_size);
         if (file_status != Os::File::Status::OP_OK) {
@@ -43,12 +46,14 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
         if (status != 0) {
             break;
         }
+        // Give 5ms for flash to process data and allow data to be loaded off the flash
+        Os::Task::delay(Fw::TimeInterval(0, 5000));
     }
     if (file_status != Os::File::Status::OP_OK) {
         this->log_WARNING_LO_ImageFileReadError(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
     }
     if (status != 0) {
-        // TODO image op error
+        this->log_WARNING_LO_FlashWriteFailed(static_cast<I32>(-1 * status), i);
     }
     return return_status;
 }

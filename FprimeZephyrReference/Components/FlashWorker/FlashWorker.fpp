@@ -14,6 +14,9 @@ module Components {
 
         event FlashEraseFailed(error_number: I32) severity warning low \
             format "Flash erase failed (errno: {})"
+        
+        event FlashWriteFailed(error_number: I32, bytes: FwSizeType) severity warning low \
+            format "Flash write failed (errno: {}) at {}"
 
         event ImageFileReadError(file_name: string, error: Os.FileStatus) severity warning low \
             format "Failed to read {} with error {}"
