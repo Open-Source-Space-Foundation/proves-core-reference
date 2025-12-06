@@ -17,7 +17,6 @@ burnwire = "ReferenceDeployment.burnwire"
 def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     """Reduce deployment timing constants for tests and restore defaults afterwards"""
     overrides: list[tuple[str, int]] = [
-        ("QUIET_TIME_SEC", 0),
         ("RETRY_DELAY_SEC", 0),
         ("BURN_DURATION_SEC", 1),
         ("MAX_DEPLOY_ATTEMPTS", 1),
@@ -28,7 +27,6 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
     defaults: list[tuple[str, int]] = [
-        ("QUIET_TIME_SEC", 120),
         ("RETRY_DELAY_SEC", 30),
         ("BURN_DURATION_SEC", 8),
         ("MAX_DEPLOY_ATTEMPTS", 3),
@@ -81,47 +79,6 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
 
 
-def test_change_quiet_time_sec(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Changes the quiet_time_sec parameter and makes sure the antenna will wait for it to run"""
-
-    # Set a specific quiet time (5 seconds) to test the parameter
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [5]
-    )
-
-    # Start deployment
-    proves_send_and_assert_command(fprime_test_api, f"{antenna_deployer}.DEPLOY")
-
-    # Wait for quiet time to expire and verify the elapsed time
-    quiet_time_expired_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.QuietTimeExpired", timeout=10
-    )
-    assert quiet_time_expired_event.args[0].val == 5, (
-        "Quiet time should have elapsed for exactly 5 seconds"
-    )
-
-    # Verify deployment attempt starts after quiet time expires
-    attempt_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployAttempt", timeout=2
-    )
-    assert attempt_event.args[0].val == 1, (
-        "First deployment attempt should be attempt #1"
-    )
-
-    # Verify burnwire starts after quiet time
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
-
-    # Verify burnwire stops after burn duration
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=15)
-
-    # Verify deployment finishes with failure (no distance sensor)
-    finish_event: EventData = fprime_test_api.assert_event(
-        f"{antenna_deployer}.DeployFinish", timeout=10
-    )
-    assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
-    assert finish_event.args[1].val == 1
-
-
 def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 
@@ -131,9 +88,6 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     )
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [1]
-    )
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
     )
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [1]
@@ -192,9 +146,6 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     # Set parameters after fixture has run to override fixture values
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.BURN_DURATION_SEC_PRM_SET", [3]
-    )
-    proves_send_and_assert_command(
-        fprime_test_api, f"{antenna_deployer}.QUIET_TIME_SEC_PRM_SET", [0]
     )
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.RETRY_DELAY_SEC_PRM_SET", [0]
