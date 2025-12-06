@@ -171,7 +171,6 @@ void Veml6031Manager ::GetInfraRedLight_cmdHandler(FwOpcodeType opCode, U32 cmdS
     }
     this->log_ACTIVITY_HI_InfraRedLight(lux);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void Veml6031Manager ::GetAmbientLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {

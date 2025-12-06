@@ -3,10 +3,11 @@
 // \brief  cpp file for Tmp112Manager component implementation class
 // ======================================================================
 
+#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112Manager.hpp"
+
 #include <Fw/Types/Assert.hpp>
 #include <string>
 
-#include "FprimeZephyrReference/Components/Drv/Tmp112Manager/Tmp112Manager.hpp"
 #include <zephyr/sys/printk.h>
 
 namespace Drv {
