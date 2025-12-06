@@ -74,6 +74,32 @@ class Veml6031Manager final : public Veml6031ManagerComponentBase {
 
   private:
     // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command GetVisibleLight
+    //!
+    //! Command to get the visible light measurement in lux
+    void GetVisibleLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq            //!< The command sequence number
+                                    ) override;
+
+    //! Handler implementation for command GetInfraRedLight
+    //!
+    //! Command to get the infra-red light measurement in lux
+    void GetInfraRedLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                     U32 cmdSeq            //!< The command sequence number
+                                     ) override;
+
+    //! Handler implementation for command GetAmbientLight
+    //!
+    //! Command to get the ambient light measurement in lux
+    void GetAmbientLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq            //!< The command sequence number
+                                    ) override;
+
+  private:
+    // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
 

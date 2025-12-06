@@ -81,6 +81,13 @@ sequenceDiagram
 | EFFECTIVE_PHOTODIODE_SIZE | Effective photodiode size (DIV4) |
 | ALS_PERSISTENCE_PROTECT_NUMBER | Ambient Light Sensor (ALS) persistence protect number (PERS) |
 
+## Commands
+| Name | Description |
+|---|---|
+| GetVisibleLight | Command to get the visible light measurement in lux |
+| GetInfraRedLight | Command to get the infra-red light measurement in lux |
+| GetAmbientLight | Command to get the ambient light measurement in lux |
+
 ## Events
 | Name | Description |
 |---|---|
@@ -97,6 +104,9 @@ sequenceDiagram
 | InvalidIntegrationTimeParam | VEML6031 invalid integration time parameter |
 | InvalidDiv4Param | VEML6031 invalid effective photodiode size parameter |
 | SensorAttrSetFailed | VEML6031 sensor attribute set failed |
+| VisibleLightLux | VEML6031 visible light measured in lux |
+| InfraRedLightLux | VEML6031 infra-red light measured in lux |
+| AmbientLightLux | VEML6031 ambient light measured in lux |
 
 ## Telemetry
 | Name | Description |

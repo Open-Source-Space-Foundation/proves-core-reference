@@ -122,7 +122,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
         return 0;
     }
 
-    configureSensorAttributes(SENSOR_CHAN_LIGHT);  // ignore return value for now
+    // configureSensorAttributes(SENSOR_CHAN_LIGHT);  // ignore return value for now
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_LIGHT);
     if (rc != 0) {
@@ -145,6 +145,44 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     condition = Fw::Success::SUCCESS;
     return lux;
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void Veml6031Manager ::GetVisibleLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    F32 lux = this->visibleLightGet_handler(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+    this->log_ACTIVITY_HI_VisibleLight(lux);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Veml6031Manager ::GetInfraRedLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    F32 lux = this->infraRedLightGet_handler(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+    this->log_ACTIVITY_HI_InfraRedLight(lux);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Veml6031Manager ::GetAmbientLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    F32 lux = this->ambientLightGet_handler(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+    this->log_ACTIVITY_HI_AmbientLight(lux);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 // ----------------------------------------------------------------------

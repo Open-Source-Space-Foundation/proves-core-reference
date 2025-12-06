@@ -38,6 +38,7 @@ module Drv {
 }
 
 module Drv {
+    @ Manager for VEML6031 device
     passive component Veml6031Manager {
 
         #### Parameters ####
@@ -52,6 +53,16 @@ module Drv {
 
         @ Parameter for setting the Ambient Light Sensor (ALS) persistence protect number setting (PERS).
         param ALS_PERSISTENCE_PROTECT_NUMBER: ALS_PERS default ALS_PERS.VEML60XX_PERS_1
+
+        #### Commands ####
+        @ Command to get the visible light measurement in lux
+        sync command GetVisibleLight()
+
+        @ Command to get the infra-red light measurement in lux
+        sync command GetInfraRedLight()
+
+        @ Command to get the ambient light measurement in lux
+        sync command GetAmbientLight()
 
         #### Telemetry ####
         @ Telemetry for the illuminance in the visible spectrum, in lux
@@ -75,51 +86,60 @@ module Drv {
         sync input port infraRedLightGet: lightGet
 
         @ Port to read the ambient illuminance in visible spectrum, in lux
-        sync input port ambientLightGet: lightGet
+        sync input port ambientLightGet: Fw.CompletionStatus
 
-        @ Port to initialize and deinitialize the VEML6031 device on load switch state change
+        @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         #### Events ####
 
-        @ Event for reporting VEML6031 not ready error
-        event DeviceNotReady() severity warning high format "VEML6031 device not ready" throttle 5
+        @ Event for reporting not ready error
+        event DeviceNotReady() severity warning low format "Device not ready" throttle 5
 
-        @ Event for reporting VEML6031 initialization failure
-        event DeviceInitFailed(ret: I32) severity warning high format "VEML6031 initialization failed with return code: {}" throttle 5
+        @ Event for reporting initialization failure
+        event DeviceInitFailed(ret: I32) severity warning low format "Initialization failed with return code: {}" throttle 5
 
-        @ Event for reporting VEML6031 nil device error
-        event DeviceNil() severity warning high format "VEML6031 device is nil" throttle 5
+        @ Event for reporting nil device error
+        event DeviceNil() severity warning low format "Device is nil" throttle 5
 
-        @ Event for reporting VEML6031 nil state error
-        event DeviceStateNil() severity warning high format "VEML6031 device state is nil" throttle 5
+        @ Event for reporting nil state error
+        event DeviceStateNil() severity warning low format "Device state is nil" throttle 5
 
         @ Event for reporting TCA unhealthy state
-        event TcaUnhealthy() severity warning high format "VEML6031 TCA device is unhealthy" throttle 5
+        event TcaUnhealthy() severity warning low format "TCA device is unhealthy" throttle 5
 
         @ Event for reporting MUX unhealthy state
-        event MuxUnhealthy() severity warning high format "VEML6031 MUX device is unhealthy" throttle 5
+        event MuxUnhealthy() severity warning low format "MUX device is unhealthy" throttle 5
 
         @ Event for reporting Load Switch not ready state
-        event LoadSwitchNotReady() severity warning high format "VEML6031 Load Switch is not ready" throttle 5
+        event LoadSwitchNotReady() severity warning low format "Load Switch is not ready" throttle 5
 
-        @ Event for reporting VEML6031 sensor fetch failure
-        event SensorSampleFetchFailed(ret: I32) severity warning high format "VEML6031 sensor fetch failed with return code: {}" throttle 5
+        @ Event for reporting sensor fetch failure
+        event SensorSampleFetchFailed(ret: I32) severity warning low format "Sensor fetch failed with return code: {}" throttle 5
 
-        @ Event for reporting VEML6031 sensor channel get failure
-        event SensorChannelGetFailed(ret: I32) severity warning high format "VEML6031 sensor channel get failed with return code: {}" throttle 5
+        @ Event for reporting sensor channel get failure
+        event SensorChannelGetFailed(ret: I32) severity warning low format "Sensor channel get failed with return code: {}" throttle 5
 
         @ Event for reporting invalid gain parameter
-        event InvalidGainParam(gain: U8) severity warning high format "VEML6031 invalid gain parameter: {}" throttle 5
+        event InvalidGainParam(gain: U8) severity warning low format "Invalid gain parameter: {}" throttle 5
 
         @ Event for reporting invalid integration time parameter
-        event InvalidIntegrationTimeParam(it: U8) severity warning high format "VEML6031 invalid integration time parameter: {}" throttle 5
+        event InvalidIntegrationTimeParam(it: U8) severity warning low format "Invalid integration time parameter: {}" throttle 5
 
         @ Event for reporting invalid effective photodiode size parameter
-        event InvalidDiv4Param(div4: U8) severity warning high format "VEML6031 invalid effective photodiode size parameter: {}" throttle 5
+        event InvalidDiv4Param(div4: U8) severity warning low format "Invalid effective photodiode size parameter: {}" throttle 5
 
         @ Event for reporting sensor attribute set failure
-        event SensorAttrSetFailed(attr: U16, val: U8, ret: I32) severity warning high format "VEML6031 sensor attribute {}={} set failed with return code: {}" throttle 5
+        event SensorAttrSetFailed(attr: U16, val: U8, ret: I32) severity warning low format "Sensor attribute {}={} set failed with return code: {}" throttle 5
+
+        @ Event for reporting visible light lux
+        event VisibleLight(lux: F32) severity activity high format "Visible light: {} lux"
+
+        @ Event for reporting infra-red light lux
+        event InfraRedLight(lux: F32) severity activity high format "Infra-red light: {} lux"
+
+        @ Event for reporting ambient light lux
+        event AmbientLight(lux: F32) severity activity high format "Ambient light: {} lux"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
