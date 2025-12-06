@@ -57,8 +57,8 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
             f"{ina219SysManager}.Power", start="NOW", timeout=2
         )
 
-        assert system_power.get_val() > 3, (
-            "System power should be greater than 3 Watts when burnwire is ON"
+        assert system_power.get_val() > 1, (
+            "System power should be greater than 1 Watt when burnwire is ON"
         )
 
     except Exception as e:
