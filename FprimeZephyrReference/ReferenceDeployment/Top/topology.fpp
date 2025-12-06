@@ -191,13 +191,28 @@ module ReferenceDeployment {
 
     connections LoadSwitches {
       face4LoadSwitch.gpioSet -> gpioface4LS.gpioWrite
+      face4LoadSwitch.gpioGet -> gpioface4LS.gpioRead
+
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
+      face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
+      face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
+      face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
+      face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
+      face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
+      payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
+
       payloadBatteryLoadSwitch.gpioSet -> gpioPayloadBatteryLS.gpioWrite
+      payloadBatteryLoadSwitch.gpioGet -> gpioPayloadBatteryLS.gpioRead
     }
 
     connections BurnwireGpio {

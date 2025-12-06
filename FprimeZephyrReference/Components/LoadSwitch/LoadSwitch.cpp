@@ -22,12 +22,6 @@ LoadSwitch ::~LoadSwitch() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void LoadSwitch ::Reset_handler(FwIndexType portNum) {
-    this->setLoadSwitchState(Fw::On::OFF);
-    k_sleep(K_MSEC(100));
-    this->setLoadSwitchState(Fw::On::ON);
-}
-
 void LoadSwitch ::turnOn_handler(FwIndexType portNum) {
     this->setLoadSwitchState(Fw::On::ON);
 }
@@ -55,10 +49,30 @@ void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 // ----------------------------------------------------------------------
 
 void LoadSwitch ::setLoadSwitchState(Fw::On state) {
-    Fw::Logic gpioValue = (state == Fw::On::ON) ? Fw::Logic::HIGH : Fw::Logic::LOW;
+    // Check if the state is changing
+    if (this->getLoadSwitchState() == state) {
+        return;
+    }
+
+    // Set the load switch state
+    Fw::Logic gpioValue = state ? Fw::Logic::HIGH : Fw::Logic::LOW;
     this->gpioSet_out(0, gpioValue);
+
+    // Inform downstream components of the state change
+    for (FwIndexType i = 0; i < this->getNum_loadSwitchStateChanged_OutputPorts(); i++) {
+        if (!this->isConnected_loadSwitchStateChanged_OutputPort(i)) {
+            continue;
+        }
+        this->loadSwitchStateChanged_out(i, state);
+    }
     this->log_ACTIVITY_HI_StatusChanged(state);
     this->tlmWrite_IsOn(state);
+}
+
+Fw::On LoadSwitch ::getLoadSwitchState() {
+    Fw::Logic state;
+    this->gpioGet_out(0, state);
+    return state ? Fw::On::ON : Fw::On::OFF;
 }
 
 }  // namespace Components

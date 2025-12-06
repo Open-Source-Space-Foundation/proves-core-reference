@@ -1,18 +1,17 @@
 # Components::AntennaDeployer
 
-Component that deploys the antenna, activates the burnwire, checks the distance sensor
+Component that deploys the antenna and activates the burnwire
 
 
 ## Requirements
 Add requirements in the chart below
 | Name | Description | Validation |
 |---|---|---|
-|AD0001|The Antenna Deployer shall have a wait period attached to the rate group to deploy antenna after quiet time following satellite deployment | Unit Testing|
-|AD0002|The Antenna Deployer shall attempt to redeploy the burnwire if the distance sensor senses the antenna is not deployed from a port| Unit Testing|
-|AD0003|The Antenna Deployer shall attempt to deploy if the distance sensor provides nonsensical data |Unit Testing|
-|AD0004|The Antenna Deployer shall broadcast an event every time it tries to deploy | Unit Testing|
-|AD0005|The Antenna Deployer shall broadcast an event when it successfully deploys | Unit Testing|
-|AD0006|The Antenna Deployer shall carry a count of the amount of times it has tried to deploy attached to the Telemetry | Unit Testing|
+|AD0001|The Antenna Deployer shall attempt to redeploy the burnwire if the armed parameter is set| Unit Testing|
+|AD0002|The antenna deployer shall attempt to deploy
+|AD0003|The Antenna Deployer shall broadcast an event every time it tries to deploy | Unit Testing|
+|AD0004|The Antenna Deployer shall broadcast an event when it successfully deploys | Unit Testing|
+|AD0005|The Antenna Deployer shall carry a count of the amount of times it has tried to deploy attached to the Telemetry | Unit Testing|
 
 
 ## Usage Examples
@@ -30,8 +29,9 @@ Add a class diagram here
 ## Port Descriptions
 | Name | Type | Description |
 |------|------| ----------- |
-|distVal|F32|Port gets the distance from the distance component |
-|startDepl|Fw::Signal|Get command to start deployment|
+|schedIn|Svc.Sched|Port receiving calls from the rate group|
+|burnStart|Fw.Signal|Port signaling the burnwire component to start heating|
+|burnStop|Fw.Signal|Port signaling the burnwire component to stop heating|
 
 ## Component States
 Add component states in the chart below
@@ -42,10 +42,12 @@ Add component states in the chart below
 Add sequence diagrams here
 
 ## Parameters
-| Name | Description |
-|deployed_threshold|---|
-|invalid_threshold_top|---|
-|invalid_threshold_bottom|---|
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+|RETRY_DELAY_SEC|U32|30|Delay (seconds) between burn attempts|
+|MAX_DEPLOY_ATTEMPTS|U32|3|Maximum number of burn attempts before giving up|
+|BURN_DURATION_SEC|U32|8|Duration (seconds) for which to hold each burn attempt before issuing STOP|
+|DEPLOYED_STATE_FILE|string|"//antenna/antenna_deployer.bin"|File path for persistent deployment state (file exists = deployed)|
 
 
 ## Commands
@@ -61,8 +63,6 @@ Add sequence diagrams here
 |DeployAttempt|Emitted at the start of each deployment attempt|
 |DeploySuccess|Emitted when the antenna deployment is considered successful|
 |DeployFinish|Emitted when the deployment procedure finishes|
-|InvalidDistanceMeasurement|Emitted when a distance reading is ignored because it is invalid|
-|QuietTimeExpired|Emitted when the quiet wait period expires and deployment attempt begins|
 
 
 ## Telemetry
