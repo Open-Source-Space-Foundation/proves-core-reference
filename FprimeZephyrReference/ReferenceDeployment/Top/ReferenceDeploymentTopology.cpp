@@ -141,6 +141,14 @@ void setupTopology(const TopologyState& state) {
     veml6031Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5LightDevice);
     veml6031Face6Manager.configure(state.tca9548aDevice, state.muxChannel6Device, state.face6LightDevice);
     veml6031Face7Manager.configure(state.tca9548aDevice, state.muxChannel7Device, state.face7LightDevice);
+
+    // Configure DRV2605 magnetorquer managers
+    drv2605Face0Manager.configure(state.face0drv2605Device);
+    drv2605Face1Manager.configure(state.face1drv2605Device);
+    drv2605Face2Manager.configure(state.face2drv2605Device);
+    drv2605Face3Manager.configure(state.face3drv2605Device);
+    drv2605Face5Manager.configure(state.face5drv2605Device);
+    magnetorquerManager.configure();
 }
 
 void startRateGroups() {

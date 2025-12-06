@@ -44,9 +44,9 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
+    instance imuManager
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
@@ -70,6 +70,9 @@ module ReferenceDeployment {
     instance powerMonitor
     instance ina219SysManager
     instance ina219SolManager
+    instance resetManager
+    instance modeManager
+    instance adcs
 
     # Face Board Instances
     instance thermalManager
@@ -82,9 +85,6 @@ module ReferenceDeployment {
     instance tmp112BattCell2Manager
     instance tmp112BattCell3Manager
     instance tmp112BattCell4Manager
-    instance resetManager
-    instance modeManager
-    instance adcs
     instance veml6031Face0Manager
     instance veml6031Face1Manager
     instance veml6031Face2Manager
@@ -92,6 +92,12 @@ module ReferenceDeployment {
     instance veml6031Face5Manager
     instance veml6031Face6Manager
     instance veml6031Face7Manager
+    instance magnetorquerManager
+    instance drv2605Face0Manager
+    instance drv2605Face1Manager
+    instance drv2605Face2Manager
+    instance drv2605Face3Manager
+    instance drv2605Face5Manager
 
 
   # ----------------------------------------------------------------------
@@ -180,6 +186,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> magnetorquerManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -254,13 +261,6 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
-    }
-
-    connections imuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
     connections ComCcsds_FileHandling {
@@ -349,5 +349,31 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
     }
 
+    connections MagnetorquerManager {
+      magnetorquerManager.loadSwitchTurnOn[0] -> face0LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[1] -> face1LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[2] -> face2LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[3] -> face3LoadSwitch.turnOn
+      magnetorquerManager.loadSwitchTurnOn[4] -> face5LoadSwitch.turnOn
+
+      magnetorquerManager.initDevice[0] -> drv2605Face0Manager.init
+      magnetorquerManager.initDevice[1] -> drv2605Face1Manager.init
+      magnetorquerManager.initDevice[2] -> drv2605Face2Manager.init
+      magnetorquerManager.initDevice[3] -> drv2605Face3Manager.init
+      magnetorquerManager.initDevice[4] -> drv2605Face5Manager.init
+
+      magnetorquerManager.triggerDevice[0] -> drv2605Face0Manager.triggerDevice
+      magnetorquerManager.triggerDevice[1] -> drv2605Face1Manager.triggerDevice
+      magnetorquerManager.triggerDevice[2] -> drv2605Face2Manager.triggerDevice
+      magnetorquerManager.triggerDevice[3] -> drv2605Face3Manager.triggerDevice
+      magnetorquerManager.triggerDevice[4] -> drv2605Face5Manager.triggerDevice
+    }
+
+    connections ImuManager {
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
   }
 }

@@ -7,10 +7,15 @@
 
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/haptics.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-// Device bindings
+// Devices
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
@@ -43,13 +48,18 @@ const struct device* face3_light_sens = DEVICE_DT_GET(DT_NODELABEL(face3_light_s
 const struct device* face5_light_sens = DEVICE_DT_GET(DT_NODELABEL(face5_light_sens));
 const struct device* face6_light_sens = DEVICE_DT_GET(DT_NODELABEL(face6_light_sens));
 const struct device* face7_light_sens = DEVICE_DT_GET(DT_NODELABEL(face7_light_sens));
+const struct device* face0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face0_drv2605));
+const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
+const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
+const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
+const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 
 int main(int argc, char* argv[]) {
-    // ** DO NOT REMOVE **//
     //
     // This sleep is necessary to allow the USB CDC ACM interface to initialize before
     // the application starts writing to it.
     k_sleep(K_MSEC(3000));
+
     Os::init();
 
     // Object for communicating state to the topology
@@ -93,6 +103,11 @@ int main(int argc, char* argv[]) {
     inputs.face6LightDevice = face6_light_sens;
     inputs.face7LightDevice = face7_light_sens;
 
+    inputs.face0drv2605Device = face0_drv2605;
+    inputs.face1drv2605Device = face1_drv2605;
+    inputs.face2drv2605Device = face2_drv2605;
+    inputs.face3drv2605Device = face3_drv2605;
+    inputs.face5drv2605Device = face5_drv2605;
     inputs.baudRate = 115200;
 
     // Setup, cycle, and teardown topology

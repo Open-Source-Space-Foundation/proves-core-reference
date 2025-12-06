@@ -175,5 +175,12 @@ module ReferenceDeployment {
   instance veml6031Face5Manager: Drv.Veml6031Manager base id 0x10052000
   instance veml6031Face6Manager: Drv.Veml6031Manager base id 0x10053000
   instance veml6031Face7Manager: Drv.Veml6031Manager base id 0x10054000
+  instance drv2605Face0Manager: Drv.Drv2605Manager base id 0x10055000
+  instance drv2605Face1Manager: Drv.Drv2605Manager base id 0x10056000
+  instance drv2605Face2Manager: Drv.Drv2605Manager base id 0x10057000
+  instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
+  instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
+
+  instance magnetorquerManager: Components.MagnetorquerManager base id 0x1005A000
 
 }

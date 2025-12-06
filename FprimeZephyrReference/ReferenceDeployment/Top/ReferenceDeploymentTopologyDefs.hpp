@@ -6,6 +6,9 @@
 #ifndef REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 
+#include <map>
+#include <string>
+
 // Subtopology PingEntries includes
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
 #include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
@@ -97,7 +100,7 @@ struct TopologyState {
     const device* muxChannel7Device;              //!< Multiplexer channel 7 device
 
     // Face devices
-    // - Temperature sensors
+    //! Temperature sensors
     const device* face0TempDevice;      //!< TMP112 device for cube face 0
     const device* face1TempDevice;      //!< TMP112 device for cube face 1
     const device* face2TempDevice;      //!< TMP112 device for cube face 2
@@ -107,7 +110,7 @@ struct TopologyState {
     const device* battCell2TempDevice;  //!< TMP112 device for battery cell 2
     const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3
     const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
-    // - Light sensors
+    //! Light sensors
     const device* face0LightDevice;  //!< Light sensor device for cube face 0
     const device* face1LightDevice;  //!< Light sensor device for cube face 1
     const device* face2LightDevice;  //!< Light sensor device for cube face 2
@@ -115,6 +118,12 @@ struct TopologyState {
     const device* face5LightDevice;  //!< Light sensor device for cube face 5
     const device* face6LightDevice;  //!< Light sensor device for cube face 6
     const device* face7LightDevice;  //!< Light sensor device for cube face 7
+    //! Magnetorquers
+    const device* face0drv2605Device;
+    const device* face1drv2605Device;
+    const device* face2drv2605Device;
+    const device* face3drv2605Device;
+    const device* face5drv2605Device;
 };
 
 namespace PingEntries = ::PingEntries;
