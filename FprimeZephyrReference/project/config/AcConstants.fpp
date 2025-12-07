@@ -13,7 +13,7 @@ constant PassiveRateGroupOutputPorts = 10
 constant RateGroupDriverRateGroupPorts = 4
 
 @ Used for command and registration ports
-constant CmdDispatcherComponentCommandPorts = 49
+constant CmdDispatcherComponentCommandPorts = 60
 
 @ Used for uplink/sequencer buffer/response ports
 constant CmdDispatcherSequencePorts = 5

@@ -10,7 +10,6 @@ from datetime import datetime
 import pytest
 from common import proves_send_and_assert_command
 from fprime.common.models.serialize.time_type import TimeType
-from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
@@ -36,13 +35,12 @@ def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     start: TimeType = TimeType().set_datetime(datetime.now())
     proves_send_and_assert_command(
         fprime_test_api,
-        "CdhCore.tlmSend.SEND_PKT",
-        ["10"],
+        f"{ina219SysManager}.GetPower",
     )
-    system_power: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Power", start=start, timeout=3
+    power_event = fprime_test_api.assert_event(
+        f"{ina219SysManager}.PowerReading", start=start, timeout=3
     )
-    return system_power.get_val()
+    return power_event.args[0].val
 
 
 def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -56,17 +54,17 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
     time.sleep(1)  # Allow some time for power increase
 
     try:
+        start: TimeType = TimeType().set_datetime(datetime.now())
         proves_send_and_assert_command(
             fprime_test_api,
-            "CdhCore.tlmSend.SEND_PKT",
-            ["10"],
+            f"{ina219SysManager}.GetPower",
         )
 
-        system_power: ChData = fprime_test_api.assert_telemetry(
-            f"{ina219SysManager}.Power", start="NOW", timeout=2
+        power_event = fprime_test_api.assert_event(
+            f"{ina219SysManager}.PowerReading", start=start, timeout=2
         )
 
-        during_trigger_power = system_power.get_val()
+        during_trigger_power = power_event.args[0].val
         assert during_trigger_power > baseline_power + 0.3, (
             f"Power during magnetorquer trigger ({during_trigger_power} W) "
             f"not sufficiently above baseline power ({baseline_power} W)"
