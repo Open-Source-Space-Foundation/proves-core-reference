@@ -49,7 +49,6 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
         proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.TRIGGER")
         power_during_trigger.append(get_system_power(fprime_test_api))
 
-    # average_power = sum(power_during_trigger) / len(power_during_trigger)
     maximum_power = max(power_during_trigger)
     assert maximum_power > baseline_power + 0.5, (
         f"Max power during magnetorquer trigger ({maximum_power} W) "
