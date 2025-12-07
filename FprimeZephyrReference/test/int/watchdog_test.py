@@ -12,6 +12,7 @@ from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 watchdog = "ReferenceDeployment.watchdog"
+startup_manager = "ReferenceDeployment.startupManager"
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +40,19 @@ def get_watchdog_transitions(fprime_test_api: IntegrationTestAPI) -> int:
     )
     result: ChData = fprime_test_api.assert_telemetry(
         f"{watchdog}.WatchdogTransitions", start="NOW", timeout=3
+    )
+    return result.get_val()
+
+
+def get_boot_count(fprime_test_api: IntegrationTestAPI) -> int:
+    """Helper function to request packet and get fresh BootCount telemetry"""
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "CdhCore.tlmSend.SEND_PKT",
+        ["5"],
+    )
+    result: ChData = fprime_test_api.assert_telemetry(
+        f"{startup_manager}.BootCount", start="NOW", timeout=3
     )
     return result.get_val()
 
@@ -85,4 +99,57 @@ def test_03_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds
 
     assert final_value == initial_value, (
         f"Watchdog should remain stopped. Initial: {initial_value}, Final: {final_value}"
+    )
+
+
+def test_04_system_stays_running_with_watchdog(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that the system stays running for 30+ seconds when watchdog is active.
+    Boot count should remain the same.
+    """
+    # Get initial boot count
+    initial_boot_count = get_boot_count(fprime_test_api)
+
+    # Wait for 30 seconds with watchdog running
+    time.sleep(30.0)
+
+    # Check boot count hasn't changed (no reboot occurred)
+    final_boot_count = get_boot_count(fprime_test_api)
+
+    assert final_boot_count == initial_boot_count, (
+        f"System should not have rebooted with watchdog active. "
+        f"Initial boot count: {initial_boot_count}, Final boot count: {final_boot_count}"
+    )
+
+
+def test_05_system_reboots_without_watchdog(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that when the watchdog is stopped, the system reboots after ~30 seconds.
+    Boot count should increment by 1.
+    """
+    # Get initial boot count
+    initial_boot_count = get_boot_count(fprime_test_api)
+
+    # Stop the watchdog
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{watchdog}.STOP_WATCHDOG",
+    )
+
+    # Check for watchdog stop event
+    fprime_test_api.assert_event(f"{watchdog}.WatchdogStop", timeout=2)
+
+    # Wait for system to reboot 
+    time.sleep(25.0)
+
+    # Check boot count has incremented by 1
+    final_boot_count = get_boot_count(fprime_test_api)
+
+    assert final_boot_count == initial_boot_count + 1, (
+        f"System should have rebooted once after watchdog stopped. "
+        f"Initial boot count: {initial_boot_count}, Final boot count: {final_boot_count}"
     )
