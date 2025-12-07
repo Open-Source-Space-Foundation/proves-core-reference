@@ -126,4 +126,4 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          make test-integration FILTER="slow and flaky"
+          make test-integration FILTER="slow or flaky"
