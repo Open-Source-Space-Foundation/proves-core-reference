@@ -268,9 +268,7 @@ Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     this->log_WARNING_LO_InvalidIntegrationTimeParam_ThrottleClear();
 
     struct sensor_value val;
-    // val.val1 = it;
-    // val.val2 = 0;
-    sensor_value_from_double(&val, it);
+    val.val1 = it;
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_IT, &val);
     if (rc) {
         Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_IT");
@@ -292,9 +290,7 @@ Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
     this->log_WARNING_LO_InvalidGainParam_ThrottleClear();
 
     struct sensor_value val;
-    sensor_value_from_double(&val, gain);
-    // val.val1 = gain;
-    // val.val2 = 0;
+    val.val1 = gain;
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_GAIN, &val);
     if (rc) {
         Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_GAIN");
@@ -316,9 +312,7 @@ Fw::Success Veml6031Manager ::setDiv4Attribute(sensor_channel chan) {
     this->log_WARNING_LO_InvalidDiv4Param_ThrottleClear();
 
     struct sensor_value val;
-    sensor_value_from_double(&val, div4);
-    // val.val1 = div4;
-    // val.val2 = 0;
+    val.val1 = div4;
     int rc = sensor_attr_set(this->m_dev, chan, (enum sensor_attribute)SENSOR_ATTR_VEML6031_DIV4, &val);
     if (rc) {
         Fw::LogStringArg attr("SENSOR_ATTR_VEML6031_DIV4");
