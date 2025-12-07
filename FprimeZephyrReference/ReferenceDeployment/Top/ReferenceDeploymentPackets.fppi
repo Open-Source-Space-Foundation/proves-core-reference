@@ -15,6 +15,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
+    ReferenceDeployment.modeManager.CurrentSafeModeReason
   }
 
   packet HealthWarnings id 2 group 1 {
@@ -59,7 +60,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lis2mdlManager.MagneticField
   }
 
-  packet LoRa id 7 group 4 {
+  packet LoRa id 7 group 3 {
     lora.LastRssi
     lora.LastSnr
   }
@@ -79,7 +80,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
   }
 
-  packet PowerMonitor id 10 group 4 {
+  packet PowerMonitor id 10 group 3 {
     ReferenceDeployment.ina219SysManager.Voltage
     ReferenceDeployment.ina219SysManager.Current
     ReferenceDeployment.ina219SysManager.Power
