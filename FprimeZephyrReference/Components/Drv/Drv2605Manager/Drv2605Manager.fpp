@@ -7,6 +7,9 @@ module Drv {
     passive component Drv2605Manager {
 
         #### Ports ####
+        @ Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
+        sync input port run: Svc.Sched
+
         @ Port to trigger the magnetorquer
         sync input port trigger: trigger
 
@@ -16,6 +19,12 @@ module Drv {
         #### Commands ####
         @ Command to trigger the magnetorquer
         sync command TRIGGER()
+
+        @ Command to start continuous mode
+        sync command START_CONTINUOUS_MODE()
+
+        @ Command to stop continuous mode
+        sync command STOP_CONTINUOUS_MODE()
 
         #### Events ####
         @ Event for reporting not ready error

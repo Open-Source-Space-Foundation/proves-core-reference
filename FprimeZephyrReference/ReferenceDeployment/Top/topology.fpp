@@ -185,6 +185,11 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> drv2605Face0Manager.run
+      rateGroup10Hz.RateGroupMemberOut[6] -> drv2605Face1Manager.run
+      rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face2Manager.run
+      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face3Manager.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face5Manager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn

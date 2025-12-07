@@ -45,6 +45,12 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Port to initialize and deinitialize the device on load switch state change
     Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
                                                const Fw::On& state) override;
+    //! Handler implementation for run
+    //!
+    //! Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
 
     //! Handler implementation for trigger
     //!
@@ -63,6 +69,20 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     void TRIGGER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                             U32 cmdSeq            //!< The command sequence number
                             ) override;
+
+    //! Handler implementation for command START_CONTINUOUS_MODE
+    //!
+    //! Command to start continuous mode
+    void START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                          U32 cmdSeq            //!< The command sequence number
+                                          ) override;
+
+    //! Handler implementation for command STOP_CONTINUOUS_MODE
+    //!
+    //! Command to stop continuous mode
+    void STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                         U32 cmdSeq            //!< The command sequence number
+                                         ) override;
 
   private:
     // ----------------------------------------------------------------------
@@ -105,6 +125,10 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Load switch check
     //! Available to disable if the component is not powered by a load switch
     bool m_load_switch_check = true;
+
+    //! Continuous mode
+    //! If true, the magnetorquer will be triggered on every run port call
+    bool m_continuous_mode = false;
 };
 
 }  // namespace Drv

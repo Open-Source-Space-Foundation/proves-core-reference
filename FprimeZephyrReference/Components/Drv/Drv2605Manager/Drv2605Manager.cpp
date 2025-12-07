@@ -51,6 +51,13 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
     return Fw::Success::SUCCESS;
 }
 
+void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
+    // If continuous mode is enabled, trigger the magnetorquer
+    if (this->m_continuous_mode) {
+        this->trigger_handler(0);
+    }
+}
+
 Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
     int res = haptics_start_output(this->m_dev);
     if (res != 0) {
@@ -71,6 +78,16 @@ void Drv2605Manager ::TRIGGER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Drv2605Manager ::START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->m_continuous_mode = true;
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Drv2605Manager ::STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->m_continuous_mode = false;
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
