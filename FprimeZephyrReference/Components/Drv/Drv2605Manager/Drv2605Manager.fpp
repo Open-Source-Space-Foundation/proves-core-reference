@@ -52,7 +52,10 @@ module Drv {
         event LoadSwitchNotReady() severity warning low format "Load Switch is not ready" throttle 5
 
         @ Event for reporting failure to trigger the magnetorquer
-        event TriggerFailed(ret: I32) severity warning low format "Trigger failed with return code: {}"
+        event TriggerFailed(ret: I32) severity warning low format "Trigger failed with return code: {}" throttle 5
+
+        @ Event for reporting when the DRV2605 has successfully initialized
+        event DeviceInitialized() severity activity low format "DRV2605 device initialized."
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

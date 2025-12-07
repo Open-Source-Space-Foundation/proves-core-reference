@@ -59,6 +59,10 @@ void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
+    if (!this->initializeDevice()) {
+        return Fw::Success::FAILURE;
+    }
+
     int rc = haptics_start_output(this->m_dev);
     if (rc != 0) {
         this->log_WARNING_LO_TriggerFailed(rc);
@@ -170,6 +174,7 @@ Fw::Success Drv2605Manager ::initializeDevice() {
         return Fw::Success::FAILURE;
     }
 
+    this->log_ACTIVITY_LO_DeviceInitialized();
     return Fw::Success::SUCCESS;
 }
 
