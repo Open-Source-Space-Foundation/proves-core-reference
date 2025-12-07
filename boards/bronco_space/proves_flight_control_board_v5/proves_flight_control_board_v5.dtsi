@@ -466,13 +466,6 @@ zephyr_udc0: &usbd {
 		backup-switch-mode = "direct";
 		label = "RV3028";
 	};
-	ina219: ina219@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219";
-	};
 	mcp23017: mcp23017@20 {
 		compatible = "microchip,mcp23017";
 		reg = <0x20>;

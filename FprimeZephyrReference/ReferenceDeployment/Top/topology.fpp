@@ -196,13 +196,28 @@ module ReferenceDeployment {
 
     connections LoadSwitches {
       face4LoadSwitch.gpioSet -> gpioface4LS.gpioWrite
+      face4LoadSwitch.gpioGet -> gpioface4LS.gpioRead
+
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
+      face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
+      face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
+      face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
+      face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
+      face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
+      payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
+
       payloadBatteryLoadSwitch.gpioSet -> gpioPayloadBatteryLS.gpioWrite
+      payloadBatteryLoadSwitch.gpioGet -> gpioPayloadBatteryLS.gpioRead
     }
 
     connections BurnwireGpio {
@@ -279,6 +294,10 @@ module ReferenceDeployment {
     connections ModeManager {
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
+
+      # Connection for clean shutdown notification from ResetManager
+      # Allows ModeManager to detect unintended reboots
+      resetManager.prepareForReboot -> modeManager.prepareForReboot
 
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
