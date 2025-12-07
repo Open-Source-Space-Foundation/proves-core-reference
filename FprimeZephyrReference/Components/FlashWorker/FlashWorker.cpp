@@ -26,15 +26,26 @@ FlashWorker ::~FlashWorker() {}
 // Flash helpers
 // ----------------------------------------------------------------------
 
-Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, Os::File& file) {
+Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, Os::File& file, U32 expected_crc32) {
     const FwSizeType CHUNK = static_cast<FwSizeType>(sizeof(this->m_data));
     FW_ASSERT(file.isOpen());
     FwSizeType size = 0;
+    U32 file_crc = 0;
     Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
     int status = flash_img_init_id(&this->m_flash_context, FlashWorker::REGION_NUMBER);
     // Read file size, and default to 0 if unavailable
     Os::File::Status file_status = file.size(size);
-    // Loop through file chunk by chunk
+    if (file_status == Os::File::Status::OP_OK) {
+        // Loop through file chunk by chunk
+        file_status = file.calculateCrc(file_crc);
+        if (file_status != Os::File::Status::OP_OK || file_crc != expected_crc32) {
+            this->log_WARNING_LO_ImageFileCrcMismatch(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)),
+                                                    expected_crc32, file_crc);
+            return_status = Update::UpdateStatus::IMAGE_CRC_MISMATCH;
+        } else {
+            file_status = file.seek(0, Os::File::SeekType::ABSOLUTE);
+        }
+    }
     FwSizeType i = 0;
     for (i = 0; i < size && status == 0 && file_status == Os::File::Status::OP_OK; i += CHUNK) {
         FwSizeType read_size = CHUNK;
@@ -94,7 +105,7 @@ void FlashWorker ::prepareImage_handler(FwIndexType portNum) {
     this->prepareImageDone_out(0, return_status);
 }
 
-void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase& file) {
+void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase& file, U32 crc32) {
     Os::File image_file;
     Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
 
@@ -105,7 +116,7 @@ void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase
     } else {
         Os::File::Status file_status = image_file.open(file.toChar(), Os::File::Mode::OPEN_READ);
         if (file_status == Os::File::Status::OP_OK) {
-            return_status = this->writeImage(file, image_file);
+            return_status = this->writeImage(file, image_file, crc32);
             this->m_last_successful = UPDATE;
         } else {
             return_status = Update::UpdateStatus::IMAGE_FILE_READ_ERROR;

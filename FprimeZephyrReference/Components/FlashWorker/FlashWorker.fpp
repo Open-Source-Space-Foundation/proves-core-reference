@@ -20,6 +20,10 @@ module Components {
 
         event ImageFileReadError(file_name: string, error: Os.FileStatus) severity warning low \
             format "Failed to read {} with error {}"
+        
+        event ImageFileCrcMismatch(file_name: string, error: Os.FileStatus, expected: U32, actual: U32) \
+            severity warning low \
+            format "Failed CRC validation of {} with status {} expected 0x{x} and actual 0x{x}"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

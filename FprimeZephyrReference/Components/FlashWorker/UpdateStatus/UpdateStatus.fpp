@@ -15,6 +15,7 @@ module Update {
         UNPREPARED, @< Preparation step was not completed and not optional
         PREPARATION_ERROR, @< An error occurred during the preparation step
         IMAGE_FILE_READ_ERROR, @< An error occurred reading the image file
+        IMAGE_CRC_MISMATCH, @< The image file failed CRC validation
         NEXT_BOOT_ERROR @< An error occurred setting the next boot image
     }
 }
