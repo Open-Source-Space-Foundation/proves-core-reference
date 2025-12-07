@@ -26,6 +26,7 @@ static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODEL
 static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
 static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
     GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
+static const struct gpio_dt_spec sbandCsGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_cs), gpios);
 static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_nrst), gpios);
 static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
 static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
@@ -121,7 +122,7 @@ void setupTopology(const TopologyState& state) {
     comDriver.configure(state.uartDevice, state.baudRate);
 
     static struct spi_cs_control cs_ctrl = {
-        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),
+        .gpio = sbandCsGpio,
         .delay = 0U, /* us to wait after asserting CS before transfer */
         .cs_is_gpio = true,
     };
