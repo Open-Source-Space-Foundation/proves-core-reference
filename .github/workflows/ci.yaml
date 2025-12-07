@@ -97,4 +97,33 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          make test-integration
+          make test-integration FILTER="not slow and not flaky"
+
+  integration-slow-flaky:
+    runs-on:
+      - integration
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v5
+
+      - name: Set up dependencies
+        run: |
+          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
+            && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
+          make submodules fprime-venv
+
+      - name: Trigger Bootloader
+        run: |
+          make bootloader
+          sleep 10
+
+      - name: Copy Firmware
+        run: |
+          picotool load ./zephyr.uf2
+          picotool reboot
+
+      - name: Run Integration Tests
+        run: |
+          make test-integration FILTER="slow and flaky"
