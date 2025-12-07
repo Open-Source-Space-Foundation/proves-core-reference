@@ -8,6 +8,7 @@
 #define Components_FileReadWrite_HPP
 
 #include "FprimeZephyrReference/Components/FileReadWrite/FileReadWriteComponentAc.hpp"
+#include "Os/Mutex.hpp"
 
 namespace Components {
 
@@ -77,11 +78,20 @@ class FileReadWrite final : public FileReadWriteComponentBase {
     //! Writes file data to the specified file path, overwriting existing content
     //! Returns true if the file was written successfully, false otherwise
     bool writeFile(const Fw::StringBase& fileName, const Fw::StringBase& dataString);
-    bool readFile(const Fw::StringBase& fileName, Fw::Buffer& dataBuffer);
+
+    //! Helper function to read file data (assumes mutex is already locked)
+    //!
+    //! Reads file data into m_data and sets the buffer to point to it
+    //! Caller must hold m_readMutex lock before calling this function
+    //! Returns true if the file was read successfully, false otherwise
+    bool readFileUnlocked(const Fw::StringBase& fileName, Fw::Buffer& dataBuffer);
 
     static constexpr U32 CONFIG_MAX_READ_FILE_SIZE =
         256;  // ToDO maybe make this variable for the file.. right now were mostlu writing ints so its okay?
-    U8 m_data[CONFIG_MAX_READ_FILE_SIZE];
+    static constexpr FwSizeType kMaxContentBufferSize =
+        CONFIG_MAX_READ_FILE_SIZE + 1;     // Max size for content buffer (+1 for null terminator)
+    U8 m_data[CONFIG_MAX_READ_FILE_SIZE];  // Shared buffer for file reads - protected by m_readMutex
+    Os::Mutex m_readMutex;                 // Mutex to protect m_data from concurrent access
 };
 
 }  // namespace Components
