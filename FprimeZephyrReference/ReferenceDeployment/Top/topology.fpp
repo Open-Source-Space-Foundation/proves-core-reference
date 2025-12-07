@@ -230,6 +230,7 @@ module ReferenceDeployment {
       DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
+      DetumbleManager.magnetorquersSet -> magnetorquerManager.SetMagnetorquers
     }
 
     connections ComCcsds_FileHandling {
