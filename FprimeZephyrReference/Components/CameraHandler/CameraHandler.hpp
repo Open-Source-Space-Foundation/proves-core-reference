@@ -8,8 +8,9 @@
 #ifndef Components_CameraHandler_HPP
 #define Components_CameraHandler_HPP
 
-#include <string>
 #include <cstddef>
+#include <string>
+
 #include "FprimeZephyrReference/Components/CameraHandler/CameraHandlerComponentAc.hpp"
 #include "Os/File.hpp"
 
@@ -28,9 +29,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     //! Destroy CameraHandler object
     ~CameraHandler();
 
-    void configure(U32 cam_num) {
-        this->cam_number = cam_num;
-    }
+    void configure(U32 cam_num) { this->cam_number = cam_num; }
 
   private:
     // ----------------------------------------------------------------------
@@ -60,8 +59,8 @@ class CameraHandler final : public CameraHandlerComponentBase {
                                  const Fw::CmdStringArg& cmd) override;
 
     void PING_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                U32 cmdSeq            //!< The command sequence number
-                                ) override;
+                         U32 cmdSeq            //!< The command sequence number
+                         ) override;
 
     // ----------------------------------------------------------------------
     // Helper methods for protocol processing
@@ -102,13 +101,13 @@ class CameraHandler final : public CameraHandlerComponentBase {
     // ----------------------------------------------------------------------
 
     U8 m_data_file_count = 0;
-    bool m_receiving = false; 
+    bool m_receiving = false;
     bool m_waiting_for_pong = false;
 
     U32 m_bytes_received = 0;
     U32 m_file_error_count = 0;  // Track total file errors
     U32 m_images_saved = 0;      // Track total images successfully saved
-    U32 cam_number = 0;         // Camera number for filename generation
+    U32 cam_number = 0;          // Camera number for filename generation
 
     U8 m_lineBuffer[128];
     size_t m_lineIndex = 0;
@@ -120,26 +119,23 @@ class CameraHandler final : public CameraHandlerComponentBase {
     static constexpr U32 PROTOCOL_BUFFER_SIZE = 128;  // Just enough for header
     U8 m_protocolBuffer[PROTOCOL_BUFFER_SIZE];
     U32 m_protocolBufferSize = 0;
-    
+
     // Protocol constants for image transfer
     // Protocol: <IMG_START><SIZE>[4-byte uint32]</SIZE>[image data]<IMG_END>
-    static constexpr U32 IMG_START_LEN = 11;     // strlen("<IMG_START>")
-    static constexpr U32 SIZE_TAG_LEN = 6;       // strlen("<SIZE>")
-    static constexpr U32 SIZE_VALUE_LEN = 4;     // 4-byte little-endian uint32
-    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7; // strlen("</SIZE>")
-    static constexpr U32 IMG_END_LEN = 9;        // strlen("<IMG_END>")
-    static constexpr U32 PONG_LEN = 4;           // strlen("PONG")
-    static constexpr U32 QUAL_SET_HD = 22;         // strlen("<FRAME_CHANGE_SUCCESS>")
-
+    static constexpr U32 IMG_START_LEN = 11;      // strlen("<IMG_START>")
+    static constexpr U32 SIZE_TAG_LEN = 6;        // strlen("<SIZE>")
+    static constexpr U32 SIZE_VALUE_LEN = 4;      // 4-byte little-endian uint32
+    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7;  // strlen("</SIZE>")
+    static constexpr U32 IMG_END_LEN = 9;         // strlen("<IMG_END>")
+    static constexpr U32 PONG_LEN = 4;            // strlen("PONG")
+    static constexpr U32 QUAL_SET_HD = 22;        // strlen("<FRAME_CHANGE_SUCCESS>")
 
     // Derived constants
     static constexpr U32 HEADER_SIZE = IMG_START_LEN + SIZE_TAG_LEN + SIZE_VALUE_LEN + SIZE_CLOSE_TAG_LEN;  // 28 bytes
-    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                    // 11
-    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;   // 17
-    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;  // 21
+    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                                                   // 11
+    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;                                  // 17
+    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;                        // 21
 
-
-    
     U32 m_expected_size = 0;  // Expected image size from header
     U8 m_lastMilestone = 0;   // Last progress milestone emitted (0, 25, 50, 75)
 };

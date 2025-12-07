@@ -39,9 +39,9 @@ int main(int argc, char* argv[]) {
     inputs.baudRate = 115200;
 
     // For the uart peripheral config
-    inputs.peripheralBaudRate = 115200; // Minimum is 19200
+    inputs.peripheralBaudRate = 115200;  // Minimum is 19200
     inputs.peripheralUart = peripheral_uart;
-    inputs.peripheralBaudRate2 = 115200; // Minimum is 19200
+    inputs.peripheralBaudRate2 = 115200;  // Minimum is 19200
     inputs.peripheralUart2 = peripheral_uart1;
 
     // Setup, cycle, and teardown topology

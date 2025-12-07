@@ -8,7 +8,7 @@ Passive component that handles camera specific payload capabilities.
 The camera handler can be commanded to take an image, after which it will forward a command to the PayloadCom component. It will then read in data from the PayloadCom until the image has finished sending.
 
 ### Typical Usage
-Prior to taking a picture, the payload power loadswitch must be activated. Then "PING" the camera with the ping command. If the PING command returns successfully, then the camera is ready to take an image. 
+Prior to taking a picture, the payload power loadswitch must be activated. Then "PING" the camera with the ping command. If the PING command returns successfully, then the camera is ready to take an image.
 
 ## Port Descriptions
 | Name       | Description                                             |
@@ -17,7 +17,7 @@ Prior to taking a picture, the payload power loadswitch must be activated. Then 
 | dataIn     | Data received from the PayloadCom component             |
 
 ## Component States
-Add component states in the chart below  
+Add component states in the chart below
 | Name        | Description                                           |
 |-------------|-------------------------------------------------------|
 | m_receiving | True when the camera is currently receiving image data |

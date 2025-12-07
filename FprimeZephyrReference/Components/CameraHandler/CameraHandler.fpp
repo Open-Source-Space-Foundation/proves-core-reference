@@ -37,19 +37,19 @@ module Components {
         # Telemetry for debugging image transfer state
         @ Number of bytes received so far in current image transfer
         telemetry BytesReceived: U32
-        
+
         @ Expected total size of image being received
         telemetry ExpectedSize: U32
-        
+
         @ Whether currently receiving image data
         telemetry IsReceiving: bool
-        
+
         @ Whether file is currently open for writing
         telemetry FileOpen: bool
-        
+
         @ Total number of file errors encountered
         telemetry FileErrorCount: U32
-        
+
         @ Total number of images successfully saved
         telemetry ImagesSaved: U32
 

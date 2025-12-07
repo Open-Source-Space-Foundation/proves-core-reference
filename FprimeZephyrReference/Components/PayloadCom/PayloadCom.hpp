@@ -24,7 +24,6 @@ class PayloadCom final : public PayloadComComponentBase {
     //! Destroy PayloadCom object
     ~PayloadCom();
 
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports

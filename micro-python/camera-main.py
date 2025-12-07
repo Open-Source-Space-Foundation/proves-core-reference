@@ -261,8 +261,8 @@ def ping_handler() -> bool:
 
 
 def snap_handler() -> None:
+    """Capture JPEG image in memory and send over UART."""
     blue.off()
-    """Capture JPEG image in memory and send over UART"""
     global state
     if state != STATE_IDLE:
         print("WARNING: snap command received while not idle. Ignoring.")

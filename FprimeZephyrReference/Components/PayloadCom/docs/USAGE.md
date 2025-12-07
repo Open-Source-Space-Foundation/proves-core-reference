@@ -74,7 +74,7 @@ Counter increments each time a valid `<IMG_START><SIZE>...` header is received.
 
 **Event:** `BufferAllocationFailed` - "Failed to allocate buffer of size 262144"
 
-**Cause:** 
+**Cause:**
 - BufferManager pool exhausted (both 256 KB buffers in use)
 - Previous image reception didn't complete/cleanup
 
@@ -86,7 +86,7 @@ Counter increments each time a valid `<IMG_START><SIZE>...` header is received.
 
 **Event:** `ImageDataOverflow` - "Image data overflow - buffer full"
 
-**Cause:** 
+**Cause:**
 - Image larger than 256 KB
 - Camera sent more data than buffer can hold
 
@@ -316,4 +316,3 @@ bins[1].numBuffers = 2;
 ```
 
 BufferManager will automatically select the appropriate bin.
-
