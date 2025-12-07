@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Semtech SX1280 2.4GHz LoRa transceiver
+
+compatible: "semtech,sx1280"
+
+include: [spi-device.yaml, pinctrl-device.yaml]
+
+properties:
+  reset-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      GPIO connected to the RESET pin (active low).
+      This pin is used to reset the radio module.
+
+  busy-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the BUSY pin.
+      This pin indicates when the radio is busy processing.
+
+  dio1-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      GPIO connected to the DIO1 interrupt pin.
+      This pin signals various radio events (RX done, TX done, etc.).
+
+  dio2-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the DIO2 interrupt pin.
+      Optional secondary interrupt pin.
+
+  dio3-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the DIO3 interrupt pin.
+      Optional tertiary interrupt pin.
+
+  tcxo-power-startup-delay-ms:
+    type: int
+    default: 10
+    description: |
+      Delay in milliseconds to wait for TCXO to stabilize after power-up.
+
+  tx-enable-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO to enable TX path (for external PA control).
+
+  rx-enable-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO to enable RX path (for external LNA control).

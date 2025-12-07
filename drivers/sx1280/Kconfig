@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config SX1280
+	bool "Semtech SX1280 2.4GHz LoRa transceiver"
+	default y
+	depends on DT_HAS_SEMTECH_SX1280_ENABLED
+	depends on SPI
+	select GPIO
+	help
+	  Enable driver for Semtech SX1280 2.4GHz LoRa transceiver.
+
+if SX1280
+
+config SX1280_INIT_PRIORITY
+	int "SX1280 driver initialization priority"
+	default 80
+	help
+	  Initialization priority for the SX1280 driver. Must be greater
+	  than SPI and GPIO initialization priorities.
+
+module = SX1280
+module-str = sx1280
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # SX1280
