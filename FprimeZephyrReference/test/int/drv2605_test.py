@@ -4,6 +4,7 @@ drv2605_test.py:
 Integration tests for the DRV2605 component.
 """
 
+import time
 from datetime import datetime
 
 import pytest
@@ -22,7 +23,11 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     proves_send_and_assert_command(
         fprime_test_api,
         "ReferenceDeployment.face0LoadSwitch.TURN_ON",
-        [],
+    )
+    yield
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "ReferenceDeployment.face0LoadSwitch.TURN_OFF",
     )
 
 
@@ -44,13 +49,33 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
     """Test that magnetorquer powers on by asserting higher power draw"""
 
     baseline_power = get_system_power(fprime_test_api)
-    power_during_trigger: list[float] = []
-    for _ in range(3):
-        proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.TRIGGER")
-        power_during_trigger.append(get_system_power(fprime_test_api))
-
-    maximum_power = max(power_during_trigger)
-    assert maximum_power > baseline_power + 0.5, (
-        f"Max power during magnetorquer trigger ({maximum_power} W) "
-        f"not sufficiently above baseline power ({baseline_power} W)"
+    proves_send_and_assert_command(
+        fprime_test_api, f"{drv2605Manager}.START_CONTINUOUS_MODE"
     )
+
+    time.sleep(1)  # Allow some time for power increase
+
+    try:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            "CdhCore.tlmSend.SEND_PKT",
+            ["10"],
+        )
+
+        system_power: ChData = fprime_test_api.assert_telemetry(
+            f"{ina219SysManager}.Power", start="NOW", timeout=2
+        )
+
+        during_trigger_power = system_power.get_val()
+        assert during_trigger_power > baseline_power + 0.5, (
+            f"Power during magnetorquer trigger ({during_trigger_power} W) "
+            f"not sufficiently above baseline power ({baseline_power} W)"
+        )
+
+    except Exception as e:
+        raise e
+    finally:
+        # Ensure burnwire is stopped
+        proves_send_and_assert_command(
+            fprime_test_api, f"{drv2605Manager}.STOP_CONTINUOUS_MODE"
+        )
