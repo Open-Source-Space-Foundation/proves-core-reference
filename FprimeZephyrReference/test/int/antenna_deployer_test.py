@@ -53,6 +53,7 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.clear_histories()
 
 
+@pytest.mark.slow
 def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, start_gds):
     """Verify the antenna deployer drives the burnwire and reports failure without distance data"""
 
@@ -79,6 +80,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
 
 
+@pytest.mark.slow
 def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 
@@ -140,6 +142,7 @@ def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds
     assert finish_event.args[1].val == 3, "Should have completed 3 attempts"
 
 
+@pytest.mark.slow
 def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the burn duration sec parameter and ensures the burnwire burns for that long based on the burnwire events"""
 
@@ -187,6 +190,7 @@ def test_burn_duration_sec(fprime_test_api: IntegrationTestAPI, start_gds):
     assert finish_event.args[0].val == "DEPLOY_RESULT_FAILED"
 
 
+@pytest.mark.slow
 def test_deployment_prevention_after_success(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):

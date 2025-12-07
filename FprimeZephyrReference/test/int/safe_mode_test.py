@@ -141,6 +141,7 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
 # ==============================================================================
 
 
+@pytest.mark.slow
 def test_safe_01_initial_safe_mode_reason_is_none(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -176,6 +177,7 @@ def test_safe_01_initial_safe_mode_reason_is_none(
         )
 
 
+@pytest.mark.slow
 def test_safe_02_ground_command_sets_reason(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -237,6 +239,7 @@ def test_safe_02_ground_command_sets_reason(
         )
 
 
+@pytest.mark.slow
 def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Test that EXIT_SAFE_MODE clears the safe mode reason to NONE.
@@ -281,6 +284,7 @@ def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_g
         )
 
 
+@pytest.mark.slow
 def test_safe_04_no_auto_recovery_for_ground_command(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
