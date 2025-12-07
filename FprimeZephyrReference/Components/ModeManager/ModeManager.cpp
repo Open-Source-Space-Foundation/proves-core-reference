@@ -431,29 +431,20 @@ void ModeManager ::exitSafeModeAutomatic(F32 voltage) {
 }
 
 void ModeManager ::turnOffNonCriticalComponents() {
-    // Turn OFF all load switches:
-    // - Satellite faces 0-5 (LoadSwitch instances 0-5)
-    // - Payload power (LoadSwitch instance 6)
-    // - Payload battery (LoadSwitch instance 7)
-
-    // Send turn off signal to all 8 load switches
-    for (FwIndexType i = 0; i < 8; i++) {
-        if (this->isConnected_loadSwitchTurnOff_OutputPort(i)) {
-            this->loadSwitchTurnOff_out(i);
+    for (FwIndexType i = 0; i < this->getNum_loadSwitchTurnOff_OutputPorts(); i++) {
+        if (!this->isConnected_loadSwitchTurnOff_OutputPort(i)) {
+            continue;
         }
+        this->loadSwitchTurnOff_out(i);
     }
-
-    // Note: IMU and antenna deployer control can be added when needed
 }
 
 void ModeManager ::turnOnComponents() {
-    // Turn ON face load switches (0-5) to restore normal operation
-
-    // Send turn on signal to face load switches (indices 0-5)
-    for (FwIndexType i = 0; i < 6; i++) {
-        if (this->isConnected_loadSwitchTurnOn_OutputPort(i)) {
-            this->loadSwitchTurnOn_out(i);
+    for (FwIndexType i = 0; i < this->getNum_loadSwitchTurnOn_OutputPorts(); i++) {
+        if (!this->isConnected_loadSwitchTurnOn_OutputPort(i)) {
+            continue;
         }
+        this->loadSwitchTurnOn_out(i);
     }
 }
 
