@@ -33,7 +33,7 @@ module Components {
         output port dipoleMomentGet: Drv.DipoleMomentGet
 
         @ Port for sending SetMagnetorquers calls to the MagnetorquerManager Component
-        output port magnetorquersSet: Drv.SetMagnetorquers
+        output port magnetorquersSet: Components.SetMagnetorquers
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

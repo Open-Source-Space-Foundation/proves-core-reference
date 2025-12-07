@@ -154,5 +154,5 @@ module ReferenceDeployment {
 
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10046000
 
-  instance DetumbleManager: Components.DetumbleManager base id 0x10042000
+  instance DetumbleManager: Components.DetumbleManager base id 0x10047000
 }

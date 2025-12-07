@@ -6,6 +6,7 @@
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
+#include <Fw/Types/String.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -30,13 +31,12 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid isValid;
 
     if (this->bDotRunning) {
-        U32 currTime = this->getTime().getSeconds();
+        U32 currTime = this->getTime();
         if (currTime - this->bDotStartTime >= 20) {
             bool stepSuccess = this->executeControlStep();
-            // TODO: Re-enable magnetorquers
 
-            if (!stepSuccess) {
-                // Log error/failure somewhere
+            if (stepSuccess) {
+				
             }
 
             this->bDotRunning = false;
@@ -47,14 +47,18 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0));
     if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
-        // Disable magnetorquers
+		// Magnetude below threshold, disable magnetorquers
+		bool values[5] = {false, false, false, false, false};
+		this->magnetorquersSet_out(0, this->generateInputArray(values));
     } else {
         this->bDotRunning = true;
 
         U32 currTime = this->getTime().getSeconds();
         this->bDotStartTime = currTime;
 
-        // TODO: Disable the magnetorquers so magnetic reading can take place
+        // Disable the magnetorquers so magnetic reading can take place
+		bool values[5] = {false, false, false, false, false};
+		this->magnetorquersSet_out(0, this->generateInputArray(values));
     }
 }
 
@@ -92,7 +96,9 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 y2 = -limited_y;
     F64 z1 = limited_z;
 
-    this->magnetorquersSet_out(0, {x1, x2, y1, y2, z1});
+	// All true for now until we figure out how to determine what should be on or off
+	bool values[5] = {true, true, true, true, true};
+    this->magnetorquersSet_out(0, this->generateInputArray(values));
 }
 
 F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -102,6 +108,17 @@ F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& ang
 
     // Convert rad/s to deg/s
     return magRadPerSec * 180.0 / this->PI;
+}
+
+Components::InputArray DetumbleManager::generateInputArray(bool val[5]) {
+    Components::InputArray inputArray({
+        Components::InputStruct(Fw::String("X+"), val[0]),
+        Components::InputStruct(Fw::String("X-"), val[1]),
+        Components::InputStruct(Fw::String("Y+"), val[2]),
+        Components::InputStruct(Fw::String("Y-"), val[3]),
+        Components::InputStruct(Fw::String("Z+"), val[4])
+    });
+	return inputArray;
 }
 
 }  // namespace Components

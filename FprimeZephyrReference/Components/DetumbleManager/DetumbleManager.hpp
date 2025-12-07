@@ -67,6 +67,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     bool executeControlStep();
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
     F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
+	Components::InputArray generateInputArray(bool val[5]);
 };
 
 }  // namespace Components
