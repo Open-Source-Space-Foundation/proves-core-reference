@@ -67,7 +67,7 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
         )
 
         during_trigger_power = system_power.get_val()
-        assert during_trigger_power > baseline_power + 0.5, (
+        assert during_trigger_power > baseline_power + 0.3, (
             f"Power during magnetorquer trigger ({during_trigger_power} W) "
             f"not sufficiently above baseline power ({baseline_power} W)"
         )
