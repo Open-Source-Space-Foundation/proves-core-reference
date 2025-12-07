@@ -59,9 +59,9 @@ void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
-    int res = haptics_start_output(this->m_dev);
-    if (res != 0) {
-        this->log_WARNING_LO_TriggerFailed(res);
+    int rc = haptics_start_output(this->m_dev);
+    if (rc != 0) {
+        this->log_WARNING_LO_TriggerFailed(rc);
         return Fw::Success::FAILURE;
     }
     return Fw::Success::SUCCESS;
@@ -88,6 +88,12 @@ void Drv2605Manager ::START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 
 
 void Drv2605Manager ::STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->m_continuous_mode = false;
+    int rc = haptics_stop_output(this->m_dev);
+    if (rc != 0) {
+        this->log_WARNING_LO_TriggerFailed(rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
