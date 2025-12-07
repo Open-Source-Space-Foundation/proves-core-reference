@@ -56,6 +56,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
+	FILTER=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="FprimeZephyrReference/test/int/$(TEST)" ;; \
@@ -73,7 +74,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="FprimeZephyrReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)"
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
