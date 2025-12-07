@@ -9,6 +9,7 @@
 #include <Fw/Types/String.hpp>
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace Components {
 
@@ -31,15 +32,19 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid isValid;
 
     if (this->bDotRunning) {
-        U32 currTime = this->getTime();
-        if (currTime - this->bDotStartTime >= 20) {
-            bool stepSuccess = this->executeControlStep();
+        // Give two iterations for the magnetorquers to fully turn off for magnetic reading
+        if (this->m_itrCount > 2) {
+            std::string reason = "";
+            bool stepSuccess = this->executeControlStep(reason);
 
-            if (stepSuccess) {
-				
+            if (!stepSuccess) {
+                this->log_WARNING_HI_ControlStepFailed(Fw::String(reason.c_str()));
             }
 
             this->bDotRunning = false;
+            this->m_itrCount = 0;
+        } else {
+            this->m_itrCount++;
         }
 
         return;
@@ -47,22 +52,19 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0));
     if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
-		// Magnetude below threshold, disable magnetorquers
-		bool values[5] = {false, false, false, false, false};
-		this->magnetorquersSet_out(0, this->generateInputArray(values));
+        // Magnetude below threshold, disable magnetorquers
+        bool values[5] = {false, false, false, false, false};
+        this->magnetorquersSet_out(0, this->generateInputArray(values));
     } else {
         this->bDotRunning = true;
 
-        U32 currTime = this->getTime().getSeconds();
-        this->bDotStartTime = currTime;
-
         // Disable the magnetorquers so magnetic reading can take place
-		bool values[5] = {false, false, false, false, false};
-		this->magnetorquersSet_out(0, this->generateInputArray(values));
+        bool values[5] = {false, false, false, false, false};
+        this->magnetorquersSet_out(0, this->generateInputArray(values));
     }
 }
 
-bool DetumbleManager::executeControlStep() {
+bool DetumbleManager::executeControlStep(std::string& reason) {
     Drv::MagneticField mgField = this->magneticFieldGet_out(0);
     if (this->prevMgField == this->EMPTY_MG_FIELD) {
         this->prevMgField = mgField;
@@ -70,7 +72,7 @@ bool DetumbleManager::executeControlStep() {
 
     Drv::DipoleMoment dpMoment = this->dipoleMomentGet_out(0, mgField, this->prevMgField);
     if (dpMoment == this->EMPTY_DP_MOMENT) {
-        // Log some kinda error
+        reason = "Dipole moment failed to calculate";
         return false;
     }
 
@@ -96,8 +98,8 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 y2 = -limited_y;
     F64 z1 = limited_z;
 
-	// All true for now until we figure out how to determine what should be on or off
-	bool values[5] = {true, true, true, true, true};
+    // All true for now until we figure out how to determine what should be on or off
+    bool values[5] = {true, true, true, true, true};
     this->magnetorquersSet_out(0, this->generateInputArray(values));
 }
 
@@ -111,14 +113,11 @@ F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& ang
 }
 
 Components::InputArray DetumbleManager::generateInputArray(bool val[5]) {
-    Components::InputArray inputArray({
-        Components::InputStruct(Fw::String("X+"), val[0]),
-        Components::InputStruct(Fw::String("X-"), val[1]),
-        Components::InputStruct(Fw::String("Y+"), val[2]),
-        Components::InputStruct(Fw::String("Y-"), val[3]),
-        Components::InputStruct(Fw::String("Z+"), val[4])
-    });
-	return inputArray;
+    Components::InputArray inputArray(
+        {Components::InputStruct(Fw::String("X+"), val[0]), Components::InputStruct(Fw::String("X-"), val[1]),
+         Components::InputStruct(Fw::String("Y+"), val[2]), Components::InputStruct(Fw::String("Y-"), val[3]),
+         Components::InputStruct(Fw::String("Z+"), val[4])});
+    return inputArray;
 }
 
 }  // namespace Components

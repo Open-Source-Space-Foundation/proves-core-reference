@@ -7,6 +7,7 @@
 #define Components_DetumbleManager_HPP
 
 #include <cmath>
+#include <string>
 
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
 
@@ -59,15 +60,16 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     U32 startTime = 0;
     U32 lastCompleted = 0;
     bool detumbleRunning = true;
+    int m_itrCount = 0;
 
     bool bDotRunning = false;
     U32 bDotStartTime = -1;
 
     // Functions
-    bool executeControlStep();
+    bool executeControlStep(std::string& reason);
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
     F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
-	Components::InputArray generateInputArray(bool val[5]);
+    Components::InputArray generateInputArray(bool val[5]);
 };
 
 }  // namespace Components

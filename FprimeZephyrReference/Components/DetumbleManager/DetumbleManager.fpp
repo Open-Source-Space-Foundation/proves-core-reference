@@ -35,11 +35,20 @@ module Components {
         @ Port for sending SetMagnetorquers calls to the MagnetorquerManager Component
         output port magnetorquersSet: Components.SetMagnetorquers
 
+        @ Event for reporting that a detumble control step run failed
+        event ControlStepFailed(reason: string) severity warning high format "Control step failed for reason: {}"
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending textual representation of events
+        text event port logTextOut
+
+        @ Port for sending events to downlink
+        event port logOut
 
         @ Port for getting parameters
         param get port prmGetOut
