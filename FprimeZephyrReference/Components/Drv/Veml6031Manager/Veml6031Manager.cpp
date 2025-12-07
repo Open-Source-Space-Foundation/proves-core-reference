@@ -3,6 +3,10 @@
 // \brief  cpp file for Veml6031Manager component implementation class
 // ======================================================================
 
+// TODO: The parameters currently fail to fetch but they use the default parameter.
+// Just going to use the default parameter for now, but in the future it should be
+// investigated how to properly access the set parameter
+
 #include "FprimeZephyrReference/Components/Drv/Veml6031Manager/Veml6031Manager.hpp"
 
 namespace Drv {
@@ -28,70 +32,6 @@ void Veml6031Manager ::configure(const struct device* tca, const struct device* 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
-
-F32 Veml6031Manager ::ambientLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
-    condition = Fw::Success::FAILURE;
-
-    if (!this->initializeDevice()) {
-        return 0;
-    }
-
-    configureSensorAttributes(SENSOR_CHAN_AMBIENT_LIGHT);  // ignore return value for now
-
-    int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT);
-    if (rc != 0) {
-        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
-        return 0;
-    }
-    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
-
-    struct sensor_value val;
-    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_LIGHT, &val);
-    if (rc != 0) {
-        this->log_WARNING_LO_SensorChannelGetFailed(rc);
-        return 0;
-    }
-    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
-
-    F32 lux = sensor_value_to_double(&val);
-
-    this->tlmWrite_AmbientLight(lux);
-
-    condition = Fw::Success::SUCCESS;
-    return lux;
-}
-
-F32 Veml6031Manager ::infraRedLightGet_handler(FwIndexType portNum, Fw::Success& condition) {
-    condition = Fw::Success::FAILURE;
-
-    if (!this->initializeDevice()) {
-        return 0;
-    }
-
-    configureSensorAttributes(SENSOR_CHAN_IR);  // ignore return value for now
-
-    int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_IR);
-    if (rc != 0) {
-        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
-        return 0;
-    }
-    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
-
-    struct sensor_value val;
-    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_IR, &val);
-    if (rc != 0) {
-        this->log_WARNING_LO_SensorChannelGetFailed(rc);
-        return 0;
-    }
-    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
-
-    F32 lux = sensor_value_to_double(&val);
-
-    this->tlmWrite_InfraRedLight(lux);
-
-    condition = Fw::Success::SUCCESS;
-    return lux;
-}
 
 Fw::Success Veml6031Manager ::loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& state) {
     // Store the load switch state
@@ -154,28 +94,6 @@ void Veml6031Manager ::GetVisibleLight_cmdHandler(FwOpcodeType opCode, U32 cmdSe
         return;
     }
     this->log_ACTIVITY_HI_VisibleLight(lux);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Veml6031Manager ::GetInfraRedLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    Fw::Success condition;
-    F32 lux = this->infraRedLightGet_handler(0, condition);
-    if (condition != Fw::Success::SUCCESS) {
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
-    this->log_ACTIVITY_HI_InfraRedLight(lux);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Veml6031Manager ::GetAmbientLight_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    Fw::Success condition;
-    F32 lux = this->ambientLightGet_handler(0, condition);
-    if (condition != Fw::Success::SUCCESS) {
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
-    this->log_ACTIVITY_HI_AmbientLight(lux);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -261,11 +179,6 @@ bool Veml6031Manager ::loadSwitchReady() {
 Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 it = this->paramGet_INTEGRATION_TIME(valid);
-    if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_LO_InvalidIntegrationTimeParam(it);
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_InvalidIntegrationTimeParam_ThrottleClear();
 
     struct sensor_value val;
     val.val1 = it;
@@ -283,11 +196,6 @@ Fw::Success Veml6031Manager ::setIntegrationTimeAttribute(sensor_channel chan) {
 Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 gain = this->paramGet_GAIN(valid);
-    if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_LO_InvalidGainParam(gain);
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_InvalidGainParam_ThrottleClear();
 
     struct sensor_value val;
     val.val1 = gain;
@@ -305,11 +213,6 @@ Fw::Success Veml6031Manager ::setGainAttribute(sensor_channel chan) {
 Fw::Success Veml6031Manager ::setDiv4Attribute(sensor_channel chan) {
     Fw::ParamValid valid;
     U8 div4 = this->paramGet_EFFECTIVE_PHOTODIODE_SIZE(valid);
-    if (valid != Fw::ParamValid::VALID) {
-        this->log_WARNING_LO_InvalidDiv4Param(div4);
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_InvalidDiv4Param_ThrottleClear();
 
     struct sensor_value val;
     val.val1 = div4;

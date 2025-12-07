@@ -28,16 +28,6 @@ void ADCS::run_handler(FwIndexType portNum, U32 context) {
     for (FwIndexType i = 0; i < this->getNum_visibleLightGet_OutputPorts(); i++) {
         this->visibleLightGet_out(i, condition);
     }
-
-    // Infra-red light
-    for (FwIndexType i = 0; i < this->getNum_infraRedLightGet_OutputPorts(); i++) {
-        this->infraRedLightGet_out(i, condition);
-    }
-
-    // Ambient light
-    for (FwIndexType i = 0; i < this->getNum_ambientLightGet_OutputPorts(); i++) {
-        this->ambientLightGet_out(i, condition);
-    }
 }
 
 }  // namespace Components

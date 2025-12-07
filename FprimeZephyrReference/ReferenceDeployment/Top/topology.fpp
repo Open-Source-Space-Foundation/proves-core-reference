@@ -305,28 +305,11 @@ module ReferenceDeployment {
 
     connections adcs {
       adcs.visibleLightGet[0] -> veml6031Face0Manager.visibleLightGet
-      adcs.infraRedLightGet[0] -> veml6031Face0Manager.infraRedLightGet
-      adcs.ambientLightGet[0] -> veml6031Face0Manager.ambientLightGet
-
       adcs.visibleLightGet[1] -> veml6031Face1Manager.visibleLightGet
-      adcs.infraRedLightGet[1] -> veml6031Face1Manager.infraRedLightGet
-      adcs.ambientLightGet[1] -> veml6031Face1Manager.ambientLightGet
-
       adcs.visibleLightGet[2] -> veml6031Face2Manager.visibleLightGet
-      adcs.infraRedLightGet[2] -> veml6031Face2Manager.infraRedLightGet
-      adcs.ambientLightGet[2] -> veml6031Face2Manager.ambientLightGet
-
       adcs.visibleLightGet[3] -> veml6031Face3Manager.visibleLightGet
-      adcs.infraRedLightGet[3] -> veml6031Face3Manager.infraRedLightGet
-      adcs.ambientLightGet[3] -> veml6031Face3Manager.ambientLightGet
-
       adcs.visibleLightGet[4] -> veml6031Face5Manager.visibleLightGet
-      adcs.infraRedLightGet[4] -> veml6031Face5Manager.infraRedLightGet
-      adcs.ambientLightGet[4] -> veml6031Face5Manager.ambientLightGet
-
       adcs.visibleLightGet[5] -> veml6031Face6Manager.visibleLightGet
-      adcs.infraRedLightGet[5] -> veml6031Face6Manager.infraRedLightGet
-      adcs.ambientLightGet[5] -> veml6031Face6Manager.ambientLightGet
     }
 
     connections ModeManager {

@@ -6,12 +6,6 @@ module Components {
         @ Port for visible light from the light sensors
         output port visibleLightGet: [6] Drv.lightGet
 
-        @Port for infra-red light from the light sensors
-        output port infraRedLightGet: [6] Drv.lightGet
-
-        @Port for ambient light from the light sensors
-        output port ambientLightGet: [6] Drv.lightGet
-
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

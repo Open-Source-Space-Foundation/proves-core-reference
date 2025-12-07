@@ -42,18 +42,6 @@ class Veml6031Manager final : public Veml6031ManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for ambientLightGet
-    //!
-    //! Port to read the ambient illuminance in visible spectrum, in lux
-    F32 ambientLightGet_handler(FwIndexType portNum,  //!< The port number
-                                Fw::Success& condition) override;
-
-    //! Handler implementation for infraRedLightGet
-    //!
-    //! Port to read the illuminance in infra-red spectrum, in lux
-    F32 infraRedLightGet_handler(FwIndexType portNum,  //!< The port number
-                                 Fw::Success& condition) override;
-
     //! Handler implementation for loadSwitchStateChanged
     //!
     //! Port to initialize and deinitialize the VEML6031 device on load switch state change
@@ -78,20 +66,6 @@ class Veml6031Manager final : public Veml6031ManagerComponentBase {
     //!
     //! Command to get the visible light measurement in lux
     void GetVisibleLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                    U32 cmdSeq            //!< The command sequence number
-                                    ) override;
-
-    //! Handler implementation for command GetInfraRedLight
-    //!
-    //! Command to get the infra-red light measurement in lux
-    void GetInfraRedLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                     U32 cmdSeq            //!< The command sequence number
-                                     ) override;
-
-    //! Handler implementation for command GetAmbientLight
-    //!
-    //! Command to get the ambient light measurement in lux
-    void GetAmbientLight_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                     U32 cmdSeq            //!< The command sequence number
                                     ) override;
 

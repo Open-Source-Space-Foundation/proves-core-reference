@@ -147,18 +147,4 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
-  ReferenceDeployment.veml6031Face0Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face1Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face2Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face3Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face5Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face6Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face7Manager.InfraRedLight
-  ReferenceDeployment.veml6031Face0Manager.AmbientLight
-  ReferenceDeployment.veml6031Face1Manager.AmbientLight
-  ReferenceDeployment.veml6031Face2Manager.AmbientLight
-  ReferenceDeployment.veml6031Face3Manager.AmbientLight
-  ReferenceDeployment.veml6031Face5Manager.AmbientLight
-  ReferenceDeployment.veml6031Face6Manager.AmbientLight
-  ReferenceDeployment.veml6031Face7Manager.AmbientLight
 }

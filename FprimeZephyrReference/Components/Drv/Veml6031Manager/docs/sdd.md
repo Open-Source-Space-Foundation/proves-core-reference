@@ -1,6 +1,6 @@
 # Drv::Veml6031Manager
 
-The VEML6031 Manager component interfaces with the VEML6031 sensor to provide visible light, infrared light, and ambient light measurements.
+The VEML6031 Manager component interfaces with the VEML6031 sensor to provide visible light measurements.
 
 ## Usage Examples
 
@@ -9,7 +9,7 @@ The VEML6031 Manager component is designed to be called periodically or on deman
 ### Typical Usage
 
 1. The component is instantiated and initialized during system startup.
-2. A manager calls any of the input ports: `visibleLightGet`, `infraRedLightGet`, or `ambientLightGet`.
+2. A manager calls the input port: `visibleLightGet`.
 3. On each call, the component:
    - Checks if the device is initialized and ready.
    - Configures sensor attributes (Gain, Integration Time, etc.) based on parameters.
@@ -33,8 +33,6 @@ classDiagram
             + Veml6031Manager(const char* compName)
             + ~Veml6031Manager()
             + configure(const struct device* tca, const struct device* mux, const struct device* dev)
-            - ambientLightGet_handler(FwIndexType portNum, Fw::Success& condition): F32
-            - infraRedLightGet_handler(FwIndexType portNum, Fw::Success& condition): F32
             - visibleLightGet_handler(FwIndexType portNum, Fw::Success& condition): F32
             - loadSwitchStateChanged_handler(FwIndexType portNum, const Fw::On& state): Fw::Success
         }
@@ -46,8 +44,6 @@ classDiagram
 | Name | Type | Description |
 |---|---|---|
 | visibleLightGet | sync input | Reads the illuminance in visible spectrum, in lux. |
-| infraRedLightGet | sync input | Reads the illuminance in infra-red spectrum, in lux. |
-| ambientLightGet | sync input | Reads the ambient illuminance in visible spectrum, in lux. |
 | loadSwitchStateChanged | sync input | Initializes and deinitializes the VEML6031 device on load switch state change. |
 
 ## Sequence Diagrams
@@ -79,14 +75,11 @@ sequenceDiagram
 | GAIN | Gain settings for VEML6031 sensor |
 | INTEGRATION_TIME | Integration time settings (IT) |
 | EFFECTIVE_PHOTODIODE_SIZE | Effective photodiode size (DIV4) |
-| ALS_PERSISTENCE_PROTECT_NUMBER | Ambient Light Sensor (ALS) persistence protect number (PERS) |
 
 ## Commands
 | Name | Description |
 |---|---|
 | GetVisibleLight | Command to get the visible light measurement in lux |
-| GetInfraRedLight | Command to get the infra-red light measurement in lux |
-| GetAmbientLight | Command to get the ambient light measurement in lux |
 
 ## Events
 | Name | Description |
@@ -105,22 +98,16 @@ sequenceDiagram
 | InvalidDiv4Param | VEML6031 invalid effective photodiode size parameter |
 | SensorAttrSetFailed | VEML6031 sensor attribute set failed |
 | VisibleLight | VEML6031 visible light measured in lux |
-| InfraRedLight | VEML6031 infra-red light measured in lux |
-| AmbientLight | VEML6031 ambient light measured in lux |
 
 ## Telemetry
 | Name | Description |
 |---|---|
 | VisibleLight | Illuminance in the visible spectrum, in lux |
-| InfraRedLight | Illuminance in the infra-red spectrum, in lux |
-| AmbientLight | Ambient illuminance in visible spectrum, in lux |
 
 ## Requirements
 | Name | Description | Validation |
 |---|---|---|
 | VisibleLightGet Port | The component shall provide access to visible light sensor data and return in lux | Verify output matches expected values from sensor datasheet |
-| InfraRedLightGet Port | The component shall provide access to infra-red light sensor data and return in lux | Verify output matches expected values from sensor datasheet |
-| AmbientLightGet Port | The component shall provide access to ambient light sensor data and return in lux | Verify output matches expected values from sensor datasheet |
 | LoadSwitchStateChanged Port | The component shall manage device initialization based on load switch state | Verify device initializes when switch is ON and deinitializes when OFF |
 
 ## Change Log

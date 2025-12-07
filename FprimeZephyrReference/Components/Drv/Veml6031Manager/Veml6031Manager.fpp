@@ -26,14 +26,6 @@ module Drv {
         VEML6031_SIZE_4_4
         VEML6031_SIZE_1_4
     }
-
-    @ Ambient Light Sensor (ALS) persistence protect number settings for VEML6031 sensor
-    enum ALS_PERS : U8 {
-        VEML60XX_PERS_1 @< Interrupt triggered every ALS reading
-        VEML60XX_PERS_2 @< Interrupt triggered after 2 consecutive ALS readings out of threshold
-        VEML60XX_PERS_4 @< Interrupt triggered after 4 consecutive ALS readings out of threshold
-        VEML60XX_PERS_8 @< Interrupt triggered after 8 consecutive ALS readings out of threshold
-    }
 }
 
 module Drv {
@@ -50,28 +42,13 @@ module Drv {
         @ Parameter for setting the effective photodiode size (DIV4) mode of the light sensors
         param EFFECTIVE_PHOTODIODE_SIZE: DIV4 default DIV4.VEML6031_SIZE_1_4
 
-        @ Parameter for setting the Ambient Light Sensor (ALS) persistence protect number setting (PERS).
-        param ALS_PERSISTENCE_PROTECT_NUMBER: ALS_PERS default ALS_PERS.VEML60XX_PERS_1
-
         #### Commands ####
         @ Command to get the visible light measurement in lux
         sync command GetVisibleLight()
 
-        @ Command to get the infra-red light measurement in lux
-        sync command GetInfraRedLight()
-
-        @ Command to get the ambient light measurement in lux
-        sync command GetAmbientLight()
-
         #### Telemetry ####
         @ Telemetry for the illuminance in the visible spectrum, in lux
         telemetry VisibleLight: F32
-
-        @ Telemetry for the illuminance in the infra-red spectrum, in lux
-        telemetry InfraRedLight: F32
-
-        @ Telemetry for the ambient illuminance in visible spectrum, in lux
-        telemetry AmbientLight: F32
 
         #### Ports ####
 
@@ -80,12 +57,6 @@ module Drv {
         @ It is useful for estimating good values for integration time, effective photodiode size
         @ and gain attributes in fetch and get mode.
         sync input port visibleLightGet: lightGet
-
-        @ Port to read the illuminance in infra-red spectrum, in lux
-        sync input port infraRedLightGet: lightGet
-
-        @ Port to read the ambient illuminance in visible spectrum, in lux
-        sync input port ambientLightGet: lightGet
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
@@ -133,12 +104,6 @@ module Drv {
 
         @ Event for reporting visible light lux
         event VisibleLight(lux: F32) severity activity high format "Visible light: {} lux"
-
-        @ Event for reporting infra-red light lux
-        event InfraRedLight(lux: F32) severity activity high format "Infra-red light: {} lux"
-
-        @ Event for reporting ambient light lux
-        event AmbientLight(lux: F32) severity activity high format "Ambient light: {} lux"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
