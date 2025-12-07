@@ -79,7 +79,7 @@ zephyr_udc0: &usbd {
 	pinctrl-names = "default";
 	sdhc0: sdhc@0 {
                 compatible = "zephyr,sdhc-spi-slot";
-                reg = <0>;
+                reg = <1>;
                 status = "okay";
                 mmc {
                     compatible = "zephyr,sdmmc-disk";
