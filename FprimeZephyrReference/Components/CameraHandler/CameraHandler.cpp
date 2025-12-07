@@ -586,11 +586,12 @@ bool CameraHandler ::writeImageCount(U32 count) {
     Fw::SerializeStatus serialize_status = serializer.serializeFrom(count);
     FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK);
 
-    // Openn the file for reading, and continue only if successful
+    // Open the file for reading, and continue only if successful
     Os::File::Status status = 
     file.open(IMAGE_COUNT_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
     if (status != Os::File::OP_OK) {
         this->log_WARNING_HI_FileWriteError();
+        file.close();
         return false;
     }
 
