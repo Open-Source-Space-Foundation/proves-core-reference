@@ -143,7 +143,7 @@ def test_05_system_reboots_without_watchdog(
     # Check for watchdog stop event
     fprime_test_api.assert_event(f"{watchdog}.WatchdogStop", timeout=2)
 
-    # Wait for system to reboot 
+    # Wait for system to reboot
     time.sleep(25.0)
 
     # Check boot count has incremented by 1
