@@ -34,6 +34,10 @@ module Components {
 
         event BadPongReceived() severity warning high format "Ping Received when we did not expect it!"
 
+        event FileWriteError() severity warning high format "File write error occurred during image transfer"
+
+        event FileReadError() severity warning high format "File read error occurred during image transfer"
+
         # Telemetry for debugging image transfer state
         @ Number of bytes received so far in current image transfer
         telemetry BytesReceived: U32

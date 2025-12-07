@@ -28,6 +28,12 @@ CameraHandler ::~CameraHandler() {
         m_file.close();
         m_fileOpen = false;
     }
+
+    U32 count = 0;
+    if (!readImageCount(count)) {
+        count = 0;
+        writeImageCount(count);
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -310,13 +316,28 @@ void CameraHandler ::processProtocolBuffer() {
         m_expected_size = imageSize;
         m_lastMilestone = 0;  // Reset milestone tracking for new transfer
 
+<<<<<<< HEAD
+=======
+        U32 count = 0;
+
+        // Read image count from file
+        if (!readImageCount(count)) {
+            count = 0; // If read fails, start from 0
+            writeImageCount(count);
+        }
+        
+>>>>>>> c4ac790 (Add file for saving image count)
         // Generate filename - save to root filesystem
         char filename[64];
         // Get parameter for image number
-        Fw::ParamValid valid = Fw::ParamValid::VALID;
-        snprintf(filename, sizeof(filename), "/cam%03d_img_%03d.jpg", this->cam_number, this->m_images_saved++);
+        snprintf(filename, sizeof(filename), "/cam%03d_img_%03d.jpg", this->cam_number, count + 1);
         m_currentFilename = filename;
 
+<<<<<<< HEAD
+=======
+        writeImageCount(count+1);
+        
+>>>>>>> c4ac790 (Add file for saving image count)
         // Open file for writing
         Os::File::Status status = m_file.open(m_currentFilename.c_str(), Os::File::OPEN_WRITE);
 
@@ -524,6 +545,59 @@ bool CameraHandler ::isPong(const U8* line, U32 length) {
     }
 
     return true;
+}
+
+bool CameraHandler ::readImageCount(U32& count) {
+    Os::File file;
+    U8 buffer[sizeof(U32)];
+    Fw::ExternalSerializeBuffer deserializer(buffer, sizeof(buffer));
+
+    // Open the file for reading
+    Os::File::Status status = file.open(IMAGE_COUNT_PATH, Os::File::OPEN_READ);
+    if (status != Os::File::OP_OK) {
+        file.close();
+        this->log_WARNING_HI_FileReadError();
+        return false;
+    }
+
+    FwSizeType size = sizeof(buffer);
+    status = file.read(buffer, size);
+    file.close();
+
+    if (status != Os::File::OP_OK || size != sizeof(buffer)) {
+        this->log_WARNING_HI_FileReadError();
+        return false;
+    }
+
+    deserializer.setBuffLen(size);
+    Fw::SerializeStatus serialize_status = deserializer.deserializeTo(count);
+    if (serialize_status != Fw::SerializeStatus::FW_SERIALIZE_OK) {
+        this->log_WARNING_HI_FileReadError();
+        return false;
+    }
+    return true;
+}
+
+bool CameraHandler ::writeImageCount(U32 count) {
+    Os::File file;
+    U8 buffer[sizeof(U32)];
+    Fw::ExternalSerializeBuffer serializer(buffer, sizeof(buffer));
+
+    Fw::SerializeStatus serialize_status = serializer.serializeFrom(count);
+    FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK);
+
+    // Openn the file for reading, and continue only if successful
+    Os::File::Status status = 
+    file.open(IMAGE_COUNT_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    if (status != Os::File::OP_OK) {
+        this->log_WARNING_HI_FileWriteError();
+        return false;
+    }
+
+    FwSizeType size = sizeof(buffer);
+    status = file.write(buffer, size);
+    file.close();
+    return (status == Os::File::OP_OK && size == sizeof(buffer));
 }
 
 }  // namespace Components

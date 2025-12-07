@@ -86,6 +86,9 @@ class CameraHandler final : public CameraHandlerComponentBase {
     //! Handle file write error
     void handleFileError();
 
+    bool writeImageCount(U32 count);
+    bool readImageCount(U32& count);
+
     //! Check if buffer contains image end marker
     //! Returns position of marker start, or -1 if not found
     I32 findImageEndMarker(const U8* data, U32 size);
@@ -114,6 +117,7 @@ class CameraHandler final : public CameraHandlerComponentBase {
     Os::File m_file;
     std::string m_currentFilename;
     bool m_fileOpen = false;  // Track if file is currently open for writing
+    const char* IMAGE_COUNT_PATH = "/image_count.bin";
 
     // Small protocol buffer for commands/headers (static allocation)
     static constexpr U32 PROTOCOL_BUFFER_SIZE = 128;  // Just enough for header
