@@ -4,25 +4,26 @@
 // \brief  cpp file for SBand component implementation class
 // ======================================================================
 
-#define RADIOLIB_LOW_LEVEL 1
-
 #include "FprimeZephyrReference/Components/SBand/SBand.hpp"
-
-#include <RadioLib.h>
 
 #include <Fw/Buffer/Buffer.hpp>
 #include <Fw/Logger/Logger.hpp>
 
-#include "FprimeHal.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/radio/sx1280.h>
 
 namespace Components {
+
+// Device tree reference
+#define SBAND_NODE DT_NODELABEL(sband0)
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
 SBand ::SBand(const char* const compName)
-    : SBandComponentBase(compName), m_rlb_hal(this), m_rlb_module(&m_rlb_hal, 0, 5, 0), m_rlb_radio(&m_rlb_module) {}
+    : SBandComponentBase(compName), m_device(DEVICE_DT_GET(SBAND_NODE)) {}
 
 SBand ::~SBand() {}
 
@@ -30,33 +31,43 @@ SBand ::~SBand() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
+// IRQ callback for SX1280 driver
+static void sband_irq_callback(const struct device *dev, uint16_t irq_status) {
+    // This will be called from interrupt context
+    // We need to defer processing to the run handler
+}
+
 void SBand ::run_handler(FwIndexType portNum, U32 context) {
     // Only process if radio is configured
     if (!m_configured) {
         return;
     }
 
-    // Queue RX handler only if not already queued
-    if (!m_rxHandlerQueued) {
-        m_rxHandlerQueued = true;
-        this->deferredRxHandler_internalInterfaceInvoke();
-    }
-}
-
-void SBand ::deferredRxHandler_internalInterfaceHandler() {
     // Check IRQ status
-    uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
+    uint16_t irq_status;
+    if (sx1280_get_irq_status(m_device, &irq_status) != 0) {
+        return;
+    }
 
     // Only process if RX_DONE
-    if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-        // Process received data
-        SX1280* radio = &this->m_rlb_radio;
-        uint8_t data[256] = {0};
-        size_t len = radio->getPacketLength();
-        int16_t state = radio->readData(data, len);
+    if (irq_status & SX1280_IRQ_RX_DONE) {
+        // Clear the IRQ
+        sx1280_clear_irq_status(m_device, SX1280_IRQ_RX_DONE);
 
-        if (state != RADIOLIB_ERR_NONE) {
-            this->log_WARNING_HI_RadioLibFailed(state);
+        // Process received data
+        uint8_t data[256] = {0};
+        size_t len = 0;
+        uint8_t packet_len;
+
+        int ret = sx1280_get_packet_length(m_device, &packet_len);
+        if (ret != 0) {
+            this->log_WARNING_HI_RadioLibFailed(ret);
+            return;
+        }
+
+        ret = sx1280_read_buffer(m_device, data, sizeof(data), &len);
+        if (ret != 0) {
+            this->log_WARNING_HI_RadioLibFailed(ret);
         } else {
             Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
             if (buffer.isValid()) {
@@ -65,10 +76,11 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
                 this->dataOut_out(0, buffer, frameContext);
 
                 // Log RSSI and SNR for received packet
-                float rssi = radio->getRSSI();
-                float snr = radio->getSNR();
-                this->tlmWrite_LastRssi(rssi);
-                this->tlmWrite_LastSnr(snr);
+                struct sx1280_packet_status pkt_status;
+                if (sx1280_get_packet_status(m_device, &pkt_status) == 0) {
+                    this->tlmWrite_LastRssi(static_cast<float>(pkt_status.rssi));
+                    this->tlmWrite_LastSnr(static_cast<float>(pkt_status.snr));
+                }
 
                 // Clear throttled warnings on success
                 this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
@@ -79,14 +91,15 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         }
 
         // Re-enable receive mode
-        state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
-        if (state != RADIOLIB_ERR_NONE) {
-            this->log_WARNING_HI_RadioLibFailed(state);
+        ret = sx1280_set_rx(m_device, 0xFFFF); // Continuous RX
+        if (ret != 0) {
+            this->log_WARNING_HI_RadioLibFailed(ret);
         }
     }
+}
 
-    // Clear the queued flag
-    m_rxHandlerQueued = false;
+void SBand ::deferredRxHandler_internalInterfaceHandler() {
+    // No longer used with Zephyr driver
 }
 
 void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, const ComCfg::FrameContext& context) {
@@ -95,15 +108,39 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
     // Enable transmit mode
     Status status = this->enableTx();
     if (status == Status::SUCCESS) {
-        // Transmit data
-        int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
-        if (state != RADIOLIB_ERR_NONE) {
-            this->log_WARNING_HI_RadioLibFailed(state);
+        // Write data to buffer
+        int ret = sx1280_write_buffer(m_device, data.getData(), data.getSize());
+        if (ret != 0) {
+            this->log_WARNING_HI_RadioLibFailed(ret);
             returnStatus = Fw::Success::FAILURE;
         } else {
-            returnStatus = Fw::Success::SUCCESS;
-            // Clear throttled warnings on success
-            this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
+            // Start transmission
+            ret = sx1280_set_tx(m_device, 100); // 100ms timeout
+            if (ret != 0) {
+                this->log_WARNING_HI_RadioLibFailed(ret);
+                returnStatus = Fw::Success::FAILURE;
+            } else {
+                // Wait for TX done (polling for now)
+                uint16_t irq_status;
+                int timeout = 1000; // 1 second
+                while (timeout > 0) {
+                    if (sx1280_get_irq_status(m_device, &irq_status) == 0) {
+                        if (irq_status & SX1280_IRQ_TX_DONE) {
+                            sx1280_clear_irq_status(m_device, SX1280_IRQ_TX_DONE);
+                            returnStatus = Fw::Success::SUCCESS;
+                            this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
+                            break;
+                        }
+                    }
+                    k_msleep(1);
+                    timeout--;
+                }
+                
+                if (timeout == 0) {
+                    this->log_WARNING_HI_RadioLibFailed(-ETIMEDOUT);
+                    returnStatus = Fw::Success::FAILURE;
+                }
+            }
         }
     }
 
@@ -141,75 +178,61 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
 }
 
 SBand::Status SBand ::enableRx() {
-    this->txEnable_out(0, Fw::Logic::LOW);
-    this->rxEnable_out(0, Fw::Logic::HIGH);
-
-    SX1280* radio = &this->m_rlb_radio;
-
-    int16_t state = radio->standby();
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Set standby first
+    int ret = sx1280_set_standby(m_device);
+    if (ret != 0) {
+        this->log_WARNING_HI_RadioLibFailed(ret);
         return Status::ERROR;
     }
 
-    state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Start receive mode
+    ret = sx1280_set_rx(m_device, 0xFFFF); // Continuous RX
+    if (ret != 0) {
+        this->log_WARNING_HI_RadioLibFailed(ret);
         return Status::ERROR;
     }
     return Status::SUCCESS;
 }
 
 SBand::Status SBand ::enableTx() {
-    this->rxEnable_out(0, Fw::Logic::LOW);
-    this->txEnable_out(0, Fw::Logic::HIGH);
-
-    SX1280* radio = &this->m_rlb_radio;
-
-    int16_t state = radio->standby();
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Set standby first
+    int ret = sx1280_set_standby(m_device);
+    if (ret != 0) {
+        this->log_WARNING_HI_RadioLibFailed(ret);
         return Status::ERROR;
     }
     return Status::SUCCESS;
 }
 
 SBand::Status SBand ::configure_radio() {
-    int16_t state = this->m_rlb_radio.begin();
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Initialize the driver (already done in driver init, but ensure it's ready)
+    if (!device_is_ready(m_device)) {
+        this->log_WARNING_HI_RadioLibFailed(-ENODEV);
         return Status::ERROR;
     }
 
-    state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Configure radio parameters matching CircuitPython defaults
+    struct sx1280_config config;
+    config.frequency_hz = 2400000000; // 2.4 GHz
+    config.spreading_factor = SX1280_LORA_SF7;
+    config.bandwidth = SX1280_LORA_BW_406;
+    config.coding_rate = SX1280_LORA_CR_4_5;
+    config.tx_power_dbm = 13; // Max power
+    config.preamble_length = 12;
+    config.payload_length = 255;
+    config.crc_on = true;
+    config.implicit_header = false;
+
+    int ret = sx1280_configure(m_device, &config);
+    if (ret != 0) {
+        this->log_WARNING_HI_RadioLibFailed(ret);
         return Status::ERROR;
     }
 
-    // Match modulation parameters to CircuitPython defaults
-    state = this->m_rlb_radio.setSpreadingFactor(7);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setBandwidth(406.25);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setCodingRate(5);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
-                                                  RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
+    // Register IRQ callback
+    ret = sx1280_register_irq_callback(m_device, sband_irq_callback);
+    if (ret != 0) {
+        this->log_WARNING_HI_RadioLibFailed(ret);
         return Status::ERROR;
     }
 

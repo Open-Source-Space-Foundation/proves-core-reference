@@ -11,7 +11,7 @@ module Components {
         @ Port receiving calls from the rate group
         sync input port run: Svc.Sched
 
-        @ Internal port for deferred RX processing
+        @ Internal port for deferred RX processing (no longer used with Zephyr driver)
         internal port deferredRxHandler() priority 10
 
         @ Internal port for deferred TX processing
@@ -25,21 +25,6 @@ module Components {
 
         @ Import the allocation interface
         import Svc.BufferAllocation
-
-        @ SPI Output Port
-        output port spiSend: Drv.SpiReadWrite
-
-        @ Radio Module Reset GPIO
-        output port resetSend: Drv.GpioWrite
-
-        @ S-Band TX Enable GPIO (separate from reset)
-        output port txEnable: Drv.GpioWrite
-
-        @ S-Band RX Enable GPIO
-        output port rxEnable: Drv.GpioWrite
-
-        @ S-Band IRQ Line
-        output port getIRQLine: Drv.GpioRead
 
         @ Event to indicate RadioLib call failure
         event RadioLibFailed(error: I16) severity warning high \

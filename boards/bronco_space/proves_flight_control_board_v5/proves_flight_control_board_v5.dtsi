@@ -88,6 +88,19 @@ zephyr_udc0: &usbd {
                 };
                 spi-max-frequency = <24000000>;
         };
+
+	sband0: sx1280@1 {
+		compatible = "semtech,sx1280";
+		reg = <1>;
+		status = "okay";
+		spi-max-frequency = <8000000>;
+		reset-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
+		dio1-gpios = <&gpio0 5 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+		/* TX/RX enable pins - adjust according to your hardware */
+		tx-enable-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+		rx-enable-gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+		label = "SBAND_RADIO";
+	};
 };
 
 &spi1 {

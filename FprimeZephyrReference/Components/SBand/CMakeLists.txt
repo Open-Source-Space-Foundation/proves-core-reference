@@ -19,15 +19,16 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/SBand.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/SBand.cpp"
-        "${CMAKE_CURRENT_LIST_DIR}/FprimeHal.cpp"
-    DEPENDS
-        RadioLib
 )
 
-add_subdirectory("${FPRIME_PROJECT_ROOT}/lib/RadioLib" "${CMAKE_BINARY_DIR}/RadioLib")
+# Add include path for out-of-tree Zephyr driver
+target_include_directories(FprimeZephyrReference_Components_SBand PUBLIC
+    "${CMAKE_CURRENT_LIST_DIR}/../../../include"
+)
 
-# Disable compile warnings for RadioLib as they pollute the log and we can't do anything about them.
-target_compile_options(RadioLib PRIVATE -w)
+# RadioLib no longer needed - using Zephyr driver
+# add_subdirectory("${FPRIME_PROJECT_ROOT}/lib/RadioLib" "${CMAKE_BINARY_DIR}/RadioLib")
+# target_compile_options(RadioLib PRIVATE -w)
 
 ### Unit Tests ###
 # register_fprime_ut(

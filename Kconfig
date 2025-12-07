@@ -10,6 +10,9 @@ menu "Zephyr"
 source "Kconfig.zephyr"
 endmenu
 
+# Out-of-tree drivers
+rsource "drivers/Kconfig"
+
 module = APP
 module-str = APP
 

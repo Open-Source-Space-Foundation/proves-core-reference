@@ -7,8 +7,10 @@
 #ifndef Components_SBand_HPP
 #define Components_SBand_HPP
 
-#include "FprimeHal.hpp"
 #include "FprimeZephyrReference/Components/SBand/SBandComponentAc.hpp"
+
+// Forward declare Zephyr device structure
+struct device;
 
 namespace Components {
 
@@ -30,10 +32,6 @@ class SBand final : public SBandComponentBase {
 
     //! Configure the radio and start operation
     Status configureRadio();
-
-    using SBandComponentBase::getIRQLine_out;
-    using SBandComponentBase::getTime;
-    using SBandComponentBase::spiSend_out;
 
   private:
     // ----------------------------------------------------------------------
@@ -83,11 +81,8 @@ class SBand final : public SBandComponentBase {
     Status enableTx();
 
   private:
-    FprimeHal m_rlb_hal;             //!< RadioLib HAL instance
-    Module m_rlb_module;             //!< RadioLib Module instance
-    SX1280 m_rlb_radio;              //!< RadioLib SX1280 radio instance
+    const struct device* m_device;   //!< Zephyr device pointer
     bool m_configured = false;       //!< Flag indicating radio is configured
-    bool m_rxHandlerQueued = false;  //!< Flag indicating RX handler is queued
 };
 
 }  // namespace Components

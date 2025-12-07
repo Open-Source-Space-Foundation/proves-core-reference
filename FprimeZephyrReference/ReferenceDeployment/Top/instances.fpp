@@ -107,13 +107,11 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 10
 
-  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10052000
-
-  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10053000
-
-  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10054000
-
-  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10055000
+  # SBand GPIO instances removed - now handled by Zephyr driver via device tree
+  # instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10052000
+  # instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10053000
+  # instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10054000
+  # instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10055000
 
   instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x1002A000
 

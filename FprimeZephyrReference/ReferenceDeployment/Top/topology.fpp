@@ -55,10 +55,11 @@ module ReferenceDeployment {
     instance comDriver
     instance spiDriver
     instance sband
-    instance gpioSbandNrst
-    instance gpioSbandRxEn
-    instance gpioSbandTxEn
-    instance gpioSbandIRQ
+    # SBand GPIO instances removed - handled by Zephyr driver
+    # instance gpioSbandNrst
+    # instance gpioSbandRxEn
+    # instance gpioSbandTxEn
+    # instance gpioSbandIRQ
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch
@@ -246,13 +247,7 @@ module ReferenceDeployment {
       imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
-    connections MyConnectionGraph {
-      sband.spiSend -> spiDriver.SpiReadWrite
-      sband.resetSend -> gpioSbandNrst.gpioWrite
-      sband.txEnable -> gpioSbandTxEn.gpioWrite
-      sband.rxEnable -> gpioSbandRxEn.gpioWrite
-      sband.getIRQLine -> gpioSbandIRQ.gpioRead
-    }
+    # SBand connections removed - now handled by Zephyr driver via device tree
 
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue

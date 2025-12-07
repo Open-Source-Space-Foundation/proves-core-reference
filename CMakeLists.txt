@@ -10,12 +10,21 @@ add_compile_definitions(_POSIX_C_SOURCE=200809L)
 # The structure is BOARD_ROOT/boards/vendor/board
 list(APPEND BOARD_ROOT "${CMAKE_CURRENT_LIST_DIR}")
 
+# Add custom DTS root for device tree bindings
+list(APPEND DTS_ROOT "${CMAKE_CURRENT_LIST_DIR}")
+
 # Patch in std-atomic implementations
 if (BOARD STREQUAL "rpi_pico" OR FPRIME_ZEPHYR_USE_STD_ATOMIC_FIX)
     include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/lib/fprime-zephyr/fprime-zephyr/Os/StdAtomic")
 endif()
 find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
 project(fprime-zephyr-reference C CXX)
+
+# Add out-of-tree SX1280 driver
+if(CONFIG_SX1280)
+    target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/drivers/sx1280/sx1280.c)
+    message(STATUS "Adding SX1280 driver: ${CMAKE_CURRENT_LIST_DIR}/drivers/sx1280/sx1280.c")
+endif()
 
 # Put in an option to force the device back into programmable state for automated testing
 option(FPRIME_CI_FAILSAFE_ENABLED "Cycle count before a forced reset to programmable state" OFF)
