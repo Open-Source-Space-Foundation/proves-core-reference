@@ -32,16 +32,18 @@ classDiagram
 ```
 
 ## Port Descriptions
-| Name | Type | Description |
-|---|---|---|
-| run | sync input | Scheduler port that triggers sensor data collection |
-| accelerationGet | output | Port for calling accelerationGet on the LSM6DSO Manager |
-| angularVelocityGet | output | Port for calling angularVelocityGet on the LSM6DSO Manager |
-| magneticFieldGet | output | Port for calling magneticFieldGet on the LIS2MDL Manager |
-| temperatureGet | output | Port for calling temperatureGet on the LSM6DSO Manager |
-| timeCaller | time get | Port for requesting current system time |
+
+| Name               | Type       | Description                                                |
+| ------------------ | ---------- | ---------------------------------------------------------- |
+| run                | sync input | Scheduler port that triggers sensor data collection        |
+| accelerationGet    | output     | Port for calling accelerationGet on the LSM6DSO Manager    |
+| angularVelocityGet | output     | Port for calling angularVelocityGet on the LSM6DSO Manager |
+| magneticFieldGet   | output     | Port for calling magneticFieldGet on the LIS2MDL Manager   |
+| temperatureGet     | output     | Port for calling temperatureGet on the LSM6DSO Manager     |
+| timeCaller         | time get   | Port for requesting current system time                    |
 
 ## Sequence Diagrams
+
 ```mermaid
 sequenceDiagram
     participant Scheduler
@@ -57,13 +59,15 @@ sequenceDiagram
 ```
 
 ## Requirements
-| Name | Description | Validation |
-|---|---|---|
-| Sensor Data Collection | The component shall trigger data collection from both LSM6DSO and LIS2MDL sensors when run is called | Verify all sensor manager output ports are called |
-| Periodic Operation | The component shall operate as a scheduled component responding to scheduler calls | Verify component responds correctly to scheduler input |
+
+| Name                   | Description                                                                                          | Validation                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Sensor Data Collection | The component shall trigger data collection from both LSM6DSO and LIS2MDL sensors when run is called | Verify all sensor manager output ports are called      |
+| Periodic Operation     | The component shall operate as a scheduled component responding to scheduler calls                   | Verify component responds correctly to scheduler input |
 
 ## Change Log
-| Date | Description |
-|---|---|
-| 2025-9-9 | Initial IMU Manager component |
+
+| Date      | Description                                                           |
+| --------- | --------------------------------------------------------------------- |
+| 2025-9-9  | Initial IMU Manager component                                         |
 | 2025-9-18 | Extracted Zephyr calls to discrete LIS2MDL Manager and LSM6DSO Driver |

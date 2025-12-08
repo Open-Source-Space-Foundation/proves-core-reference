@@ -12,7 +12,7 @@ Use this template for issues related to building, compiling, linking, or integra
 <!-- Options: -->
 <!-- - Submodule initialization (make submodules) -->
 <!-- - Python environment setup (make fprime-venv) -->
-<!-- - Zephyr setup (make zephyr-setup) -->
+<!-- - Zephyr setup (make zephyr) -->
 <!-- - F Prime generation (make generate) -->
 <!-- - Build/Compilation (make build) -->
 <!-- - Linking -->
@@ -70,7 +70,7 @@ Use this template for issues related to building, compiling, linking, or integra
 1. Fresh clone: `git clone https://github.com/Open-Source-Space-Foundation/proves-core-reference`
 2. Run: `make submodules`
 3. Run: `make fprime-venv`
-4. Run: `make zephyr-setup`
+4. Run: `make zephyr`
 5. Run: `make generate`
 6. Run: `make build`
 7. Error occurs at step 6...
