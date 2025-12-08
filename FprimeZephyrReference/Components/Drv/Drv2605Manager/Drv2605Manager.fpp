@@ -1,5 +1,6 @@
 module Drv {
     port trigger -> Fw.Success
+    port MagnetorquerToggle(value: bool)
 }
 
 module Drv {
@@ -12,6 +13,9 @@ module Drv {
 
         @ Port to trigger the magnetorquer
         sync input port trigger: trigger
+
+        @ Port to toggle if continuous mode is on or off
+        sync input port toggleContinuous: MagnetorquerToggle
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
