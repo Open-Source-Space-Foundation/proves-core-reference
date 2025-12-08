@@ -52,22 +52,22 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 15
 
-  instance prmDb: Svc.PrmDb base id 0x10004000 \
+  instance prmDb: Svc.PrmDb base id 0x10007000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 14
 
-  instance payload: Components.PayloadCom base id 0x10005000 \
+  instance payload: Components.PayloadCom base id 0x10008000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 10
 
-  instance payload2: Components.PayloadCom base id 0x10006000 \
+  instance payload2: Components.PayloadCom base id 0x10009000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 11
 
-  instance modeManager: Components.ModeManager base id 0x10007000 \
+  instance modeManager: Components.ModeManager base id 0x1000A000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 16
