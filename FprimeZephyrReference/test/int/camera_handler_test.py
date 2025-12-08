@@ -22,10 +22,10 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
         fprime_test_api,
         "ReferenceDeployment.face4LoadSwitch.TURN_ON",
     )
-    time.sleep(1)
+    time.sleep(5)  # Wait for the camera to power on
 
 
-def test_01_take_imae(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_01_take_image(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can take an image"""
     start: TimeType = TimeType().set_datetime(datetime.now())
 
