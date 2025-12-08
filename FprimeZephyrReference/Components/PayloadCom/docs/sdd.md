@@ -42,5 +42,6 @@ Add requirements in the chart below
 
 ## Change Log
 | Date | Description |
+|---| --- |
 |Dec 7 2025 |Finalized Version|
 |---| Initial Draft |
