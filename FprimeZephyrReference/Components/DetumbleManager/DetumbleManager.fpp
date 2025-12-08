@@ -32,8 +32,8 @@ module Components {
         @ Port for sending dipoleMomentGet calls to the BDotDetumble Component
         output port dipoleMomentGet: Drv.DipoleMomentGet
 
-        @ Port for sending SetMagnetorquers calls to the MagnetorquerManager Component
-        output port magnetorquersSet: Components.SetMagnetorquers
+        @ Port for triggering the DRV2605 devices
+        output port drv2605Toggle: [5] Drv.MagnetorquerToggle
 
         @ Event for reporting that a detumble control step run failed
         event ControlStepFailed(reason: string) severity warning high format "Control step failed for reason: {}"

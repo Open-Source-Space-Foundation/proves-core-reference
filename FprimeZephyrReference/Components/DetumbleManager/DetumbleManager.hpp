@@ -56,8 +56,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
     // Variables
     Drv::MagneticField prevMgField = Drv::MagneticField(0.0, 0.0, 0.0, -1);
-    int iterations = 0;
-    U32 startTime = 0;
     U32 lastCompleted = 0;
     bool detumbleRunning = true;
     int m_itrCount = 0;
@@ -69,7 +67,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     bool executeControlStep(std::string& reason);
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
     F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
-    Components::InputArray generateInputArray(bool val[5]);
+    void setMagnetorquers(bool val[5]);
 };
 
 }  // namespace Components

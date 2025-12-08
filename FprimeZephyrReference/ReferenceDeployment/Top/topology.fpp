@@ -277,7 +277,12 @@ module ReferenceDeployment {
       DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
       DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
       DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
-      DetumbleManager.magnetorquersSet -> magnetorquerManager.SetMagnetorquers
+
+      DetumbleManager.drv2605Toggle[0] -> drv2605Face0Manager.toggleContinuous
+      DetumbleManager.drv2605Toggle[1] -> drv2605Face1Manager.toggleContinuous
+      DetumbleManager.drv2605Toggle[2] -> drv2605Face2Manager.toggleContinuous
+      DetumbleManager.drv2605Toggle[3] -> drv2605Face3Manager.toggleContinuous
+      DetumbleManager.drv2605Toggle[4] -> drv2605Face5Manager.toggleContinuous
     }
 
     connections ComCcsds_FileHandling {

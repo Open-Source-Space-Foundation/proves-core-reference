@@ -54,13 +54,13 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
         // Magnetude below threshold, disable magnetorquers
         bool values[5] = {false, false, false, false, false};
-        this->magnetorquersSet_out(0, this->generateInputArray(values));
+        this->setMagnetorquers(values);
     } else {
         this->bDotRunning = true;
 
         // Disable the magnetorquers so magnetic reading can take place
         bool values[5] = {false, false, false, false, false};
-        this->magnetorquersSet_out(0, this->generateInputArray(values));
+        this->setMagnetorquers(values);
     }
 }
 
@@ -100,7 +100,7 @@ void DetumbleManager::setDipoleMoment(Drv::DipoleMoment dpMoment) {
 
     // All true for now until we figure out how to determine what should be on or off
     bool values[5] = {true, true, true, true, true};
-    this->magnetorquersSet_out(0, this->generateInputArray(values));
+    this->setMagnetorquers(values);
 }
 
 F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -112,12 +112,10 @@ F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& ang
     return magRadPerSec * 180.0 / this->PI;
 }
 
-Components::InputArray DetumbleManager::generateInputArray(bool val[5]) {
-    Components::InputArray inputArray(
-        {Components::InputStruct(Fw::String("X+"), val[0]), Components::InputStruct(Fw::String("X-"), val[1]),
-         Components::InputStruct(Fw::String("Y+"), val[2]), Components::InputStruct(Fw::String("Y-"), val[3]),
-         Components::InputStruct(Fw::String("Z+"), val[4])});
-    return inputArray;
+void DetumbleManager::setMagnetorquers(bool val[5]) {
+    for (int i = 0; i < 5; i++) {
+        this->drv2605Toggle_out(i, val[i]);
+    }
 }
 
 }  // namespace Components
