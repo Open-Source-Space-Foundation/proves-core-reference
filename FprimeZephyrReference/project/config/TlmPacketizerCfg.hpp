@@ -16,7 +16,7 @@
 #include <Fw/FPrimeBasicTypes.hpp>
 
 namespace Svc {
-static const FwChanIdType MAX_PACKETIZER_PACKETS = 10;
+static const FwChanIdType MAX_PACKETIZER_PACKETS = 13;
 static const FwChanIdType TLMPACKETIZER_NUM_TLM_HASH_SLOTS =
     15;  // !< Number of slots in the hash table.
          // Works best when set to about twice the number of components producing telemetry
@@ -24,13 +24,9 @@ static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
     999;  // !< The modulo value of the hashing function.
           // Should be set to a little below the ID gaps to spread the entries around
 
-// Increased from 90 to 512 buckets to accommodate anticipated future growth in telemetry channels,
-// and to minimize hash collisions for improved performance. While currently only a few new channels
-// are added (e.g., ModeManager: CurrentMode, SafeModeEntryCount), this sizing is
-// intentionally over-provisioned to support planned expansion and to ensure efficient hash table usage.
 static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS =
-    512;  // !< Buckets assignable to a hash slot.
-          // Buckets must be >= number of telemetry channels in system
+    130;  // !< Buckets assignable to a hash slot.
+          // Buckets must be >= number of telemetry channels + collision overhead
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks
 

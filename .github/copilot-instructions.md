@@ -41,7 +41,7 @@ make submodules
 make fprime-venv
 
 # Step 3: Set up Zephyr workspace and SDK (~3-5 minutes)
-make zephyr-setup
+make zephyr
 
 # Step 4: Generate F Prime build cache (~1 minute)
 make generate
@@ -55,7 +55,7 @@ make build
 **Alternative Zephyr Setup**: The new Makefile structure provides more granular Zephyr control:
 
 ```bash
-# Complete Zephyr setup (equivalent to zephyr-setup)
+# Complete Zephyr setup (equivalent to zephyr)
 make zephyr
 
 # Or step-by-step Zephyr setup
@@ -166,7 +166,6 @@ FprimeZephyrReference/
 │   ├── BootloaderTrigger/
 │   ├── Drv/          # Driver components (IMU, RTC, sensor managers)
 │   ├── FatalHandler/
-│   ├── MagnetorquerManager/
 │   ├── DetumbleManager/
 │   └── Watchdog/
 ├── ReferenceDeployment/
@@ -276,7 +275,7 @@ build-artifacts/
 make help              # Show all available targets
 make submodules        # Initialize git submodules
 make fprime-venv       # Create Python virtual environment
-make zephyr-setup      # Set up Zephyr workspace and ARM toolchain
+make zephyr      # Set up Zephyr workspace and ARM toolchain
 make generate          # Generate F Prime build cache (force)
 make generate-if-needed # Generate only if build directory missing
 make build             # Build firmware (runs generate-if-needed)
@@ -315,7 +314,7 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 1. **Lint**: Runs `make fmt` (pre-commit checks)
 2. **Build**: Full build with caching
    - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr-setup`, `make generate-ci build-ci`
+   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
    - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
 
 **Critical for CI Success**:
@@ -328,7 +327,7 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 
 ### Issue: Build Fails with "west not found"
 
-**Solution**: Run `make zephyr-setup` to install west and Zephyr SDK.
+**Solution**: Run `make zephyr` to install west and Zephyr SDK.
 
 ### Issue: "No such file or directory: fprime-util"
 
