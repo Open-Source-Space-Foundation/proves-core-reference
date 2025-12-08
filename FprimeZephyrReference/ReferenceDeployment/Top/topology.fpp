@@ -7,6 +7,8 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
+    rateGroup1_6Hz
+    rateGroup1_10Hz
   }
 
   topology ReferenceDeployment {
@@ -24,6 +26,8 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
+    instance rateGroup1_6Hz
+    instance rateGroup1_10Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -40,9 +44,9 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance imuManager
     instance lis2mdlManager
     instance lsm6dsoManager
+    instance imuManager
     instance bootloaderTrigger
     instance comDelay
     instance burnwire
@@ -68,6 +72,31 @@ module ReferenceDeployment {
     instance ina219SolManager
     instance resetManager
     instance modeManager
+    instance adcs
+
+    # Face Board Instances
+    instance thermalManager
+    instance tmp112Face0Manager
+    instance tmp112Face1Manager
+    instance tmp112Face2Manager
+    instance tmp112Face3Manager
+    instance tmp112Face5Manager
+    instance tmp112BattCell1Manager
+    instance tmp112BattCell2Manager
+    instance tmp112BattCell3Manager
+    instance tmp112BattCell4Manager
+    instance veml6031Face0Manager
+    instance veml6031Face1Manager
+    instance veml6031Face2Manager
+    instance veml6031Face3Manager
+    instance veml6031Face5Manager
+    instance veml6031Face6Manager
+    instance veml6031Face7Manager
+    instance drv2605Face0Manager
+    instance drv2605Face1Manager
+    instance drv2605Face2Manager
+    instance drv2605Face3Manager
+    instance drv2605Face5Manager
 
 
   # ----------------------------------------------------------------------
@@ -156,6 +185,11 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> drv2605Face0Manager.run
+      rateGroup10Hz.RateGroupMemberOut[6] -> drv2605Face1Manager.run
+      rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face2Manager.run
+      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face3Manager.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face5Manager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -164,16 +198,21 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[11] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[13] -> modeManager.run
 
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
+      rateGroup1_6Hz.RateGroupMemberOut[0] -> imuManager.run
+      rateGroup1_6Hz.RateGroupMemberOut[1] -> adcs.run
+      rateGroup1_6Hz.RateGroupMemberOut[2] -> thermalManager.run
+
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
     }
 
 
@@ -187,18 +226,33 @@ module ReferenceDeployment {
 
       face0LoadSwitch.gpioSet -> gpioface0LS.gpioWrite
       face0LoadSwitch.gpioGet -> gpioface0LS.gpioRead
+      face0LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face0Manager.loadSwitchStateChanged
+      face0LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face0Manager.loadSwitchStateChanged
 
       face1LoadSwitch.gpioSet -> gpioface1LS.gpioWrite
       face1LoadSwitch.gpioGet -> gpioface1LS.gpioRead
+      face1LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face1Manager.loadSwitchStateChanged
+      face1LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face1Manager.loadSwitchStateChanged
+      face1LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face1Manager.loadSwitchStateChanged
 
       face2LoadSwitch.gpioSet -> gpioface2LS.gpioWrite
       face2LoadSwitch.gpioGet -> gpioface2LS.gpioRead
+      face2LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face2Manager.loadSwitchStateChanged
+      face2LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face2Manager.loadSwitchStateChanged
+      face2LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face2Manager.loadSwitchStateChanged
 
       face3LoadSwitch.gpioSet -> gpioface3LS.gpioWrite
       face3LoadSwitch.gpioGet -> gpioface3LS.gpioRead
+      face3LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face3Manager.loadSwitchStateChanged
+      face3LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face3Manager.loadSwitchStateChanged
+      face3LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face3Manager.loadSwitchStateChanged
 
       face5LoadSwitch.gpioSet -> gpioface5LS.gpioWrite
       face5LoadSwitch.gpioGet -> gpioface5LS.gpioRead
+      face5LoadSwitch.loadSwitchStateChanged[0] -> tmp112Face5Manager.loadSwitchStateChanged
+      face5LoadSwitch.loadSwitchStateChanged[1] -> veml6031Face5Manager.loadSwitchStateChanged
+      face5LoadSwitch.loadSwitchStateChanged[2] -> drv2605Face5Manager.loadSwitchStateChanged
 
       payloadPowerLoadSwitch.gpioSet -> gpioPayloadPowerLS.gpioWrite
       payloadPowerLoadSwitch.gpioGet -> gpioPayloadPowerLS.gpioRead
@@ -215,13 +269,6 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
-    }
-
-    connections imuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
     connections ComCcsds_FileHandling {
@@ -242,6 +289,27 @@ module ReferenceDeployment {
       powerMonitor.solVoltageGet -> ina219SolManager.voltageGet
       powerMonitor.solCurrentGet -> ina219SolManager.currentGet
       powerMonitor.solPowerGet -> ina219SolManager.powerGet
+    }
+
+    connections thermalManager {
+      thermalManager.faceTempGet[0] -> tmp112Face0Manager.temperatureGet
+      thermalManager.faceTempGet[1] -> tmp112Face1Manager.temperatureGet
+      thermalManager.faceTempGet[2] -> tmp112Face2Manager.temperatureGet
+      thermalManager.faceTempGet[3] -> tmp112Face3Manager.temperatureGet
+      thermalManager.faceTempGet[4] -> tmp112Face5Manager.temperatureGet
+      thermalManager.battCellTempGet[0] -> tmp112BattCell1Manager.temperatureGet
+      thermalManager.battCellTempGet[1] -> tmp112BattCell2Manager.temperatureGet
+      thermalManager.battCellTempGet[2] -> tmp112BattCell3Manager.temperatureGet
+      thermalManager.battCellTempGet[3] -> tmp112BattCell4Manager.temperatureGet
+    }
+
+    connections adcs {
+      adcs.visibleLightGet[0] -> veml6031Face0Manager.visibleLightGet
+      adcs.visibleLightGet[1] -> veml6031Face1Manager.visibleLightGet
+      adcs.visibleLightGet[2] -> veml6031Face2Manager.visibleLightGet
+      adcs.visibleLightGet[3] -> veml6031Face3Manager.visibleLightGet
+      adcs.visibleLightGet[4] -> veml6031Face5Manager.visibleLightGet
+      adcs.visibleLightGet[5] -> veml6031Face6Manager.visibleLightGet
     }
 
     connections ModeManager {
@@ -277,5 +345,11 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
     }
 
+    connections ImuManager {
+      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    }
   }
 }
