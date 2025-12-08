@@ -6,6 +6,9 @@
 #ifndef REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 #define REFERENCEDEPLOYMENT_REFERENCEDEPLOYMENTTOPOLOGYDEFS_HPP
 
+#include <map>
+#include <string>
+
 // Subtopology PingEntries includes
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
 #include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
@@ -53,6 +56,12 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
+namespace ReferenceDeployment_rateGroup1_6Hz {
+enum { WARN = 3, FATAL = 5 };
+}
+namespace ReferenceDeployment_rateGroup1_10Hz {
+enum { WARN = 3, FATAL = 5 };
+}
 namespace ReferenceDeployment_cmdSeq {
 enum { WARN = 3, FATAL = 5 };
 }
@@ -84,6 +93,41 @@ struct TopologyState {
     const device* lsm6dsoDevice;                  //!< LSM6DSO device path for accelerometer/gyroscope
     const device* lis2mdlDevice;                  //!< LIS2MDL device path for magnetometer
     const device* rtcDevice;                      //!< RTC device path
+    const device* tca9548aDevice;                 //!< TCA9548A I2C multiplexer device
+    const device* muxChannel0Device;              //!< Multiplexer channel 0 device
+    const device* muxChannel1Device;              //!< Multiplexer channel 1 device
+    const device* muxChannel2Device;              //!< Multiplexer channel 2 device
+    const device* muxChannel3Device;              //!< Multiplexer channel 3 device
+    const device* muxChannel4Device;              //!< Multiplexer channel 4 device
+    const device* muxChannel5Device;              //!< Multiplexer channel 5 device
+    const device* muxChannel6Device;              //!< Multiplexer channel 5 device
+    const device* muxChannel7Device;              //!< Multiplexer channel 7 device
+
+    // Face devices
+    //! Temperature sensors
+    const device* face0TempDevice;      //!< TMP112 device for cube face 0
+    const device* face1TempDevice;      //!< TMP112 device for cube face 1
+    const device* face2TempDevice;      //!< TMP112 device for cube face 2
+    const device* face3TempDevice;      //!< TMP112 device for cube face 3
+    const device* face5TempDevice;      //!< TMP112 device for cube face 5
+    const device* battCell1TempDevice;  //!< TMP112 device for battery cell 1
+    const device* battCell2TempDevice;  //!< TMP112 device for battery cell 2
+    const device* battCell3TempDevice;  //!< TMP112 device for battery cell 3
+    const device* battCell4TempDevice;  //!< TMP112 device for battery cell 4
+    //! Light sensors
+    const device* face0LightDevice;  //!< Light sensor device for cube face 0
+    const device* face1LightDevice;  //!< Light sensor device for cube face 1
+    const device* face2LightDevice;  //!< Light sensor device for cube face 2
+    const device* face3LightDevice;  //!< Light sensor device for cube face 3
+    const device* face5LightDevice;  //!< Light sensor device for cube face 5
+    const device* face6LightDevice;  //!< Light sensor device for cube face 6
+    const device* face7LightDevice;  //!< Light sensor device for cube face 7
+    //! Magnetorquers
+    const device* face0drv2605Device;
+    const device* face1drv2605Device;
+    const device* face2drv2605Device;
+    const device* face3drv2605Device;
+    const device* face5drv2605Device;
 };
 
 namespace PingEntries = ::PingEntries;

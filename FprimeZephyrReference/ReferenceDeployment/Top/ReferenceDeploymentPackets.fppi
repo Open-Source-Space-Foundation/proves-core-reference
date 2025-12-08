@@ -9,6 +9,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
@@ -28,6 +30,8 @@ telemetry packets ReferenceDeploymentPackets {
     payloadBufferManager2.EmptyBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1_10Hz.RgCycleSlips
   }
 
 
@@ -97,7 +101,29 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
-  packet CameraDebug id 11 group 5 {
+  packet Thermal id 11 group 4 {
+    ReferenceDeployment.tmp112Face0Manager.Temperature
+    ReferenceDeployment.tmp112Face1Manager.Temperature
+    ReferenceDeployment.tmp112Face2Manager.Temperature
+    ReferenceDeployment.tmp112Face3Manager.Temperature
+    ReferenceDeployment.tmp112Face5Manager.Temperature
+    ReferenceDeployment.tmp112BattCell1Manager.Temperature
+    ReferenceDeployment.tmp112BattCell2Manager.Temperature
+    ReferenceDeployment.tmp112BattCell3Manager.Temperature
+    ReferenceDeployment.tmp112BattCell4Manager.Temperature
+  }
+
+  packet LightSensor id 12 group 4 {
+    ReferenceDeployment.veml6031Face0Manager.VisibleLight
+    ReferenceDeployment.veml6031Face1Manager.VisibleLight
+    ReferenceDeployment.veml6031Face2Manager.VisibleLight
+    ReferenceDeployment.veml6031Face3Manager.VisibleLight
+    ReferenceDeployment.veml6031Face5Manager.VisibleLight
+    ReferenceDeployment.veml6031Face6Manager.VisibleLight
+    ReferenceDeployment.veml6031Face7Manager.VisibleLight
+  }
+
+  packet CameraDebug id 13 group 5 {
     ReferenceDeployment.cameraHandler.BytesReceived
     ReferenceDeployment.cameraHandler.ExpectedSize
     ReferenceDeployment.cameraHandler.IsReceiving
@@ -106,7 +132,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler.ImagesSaved
   }
 
-    packet CameraDebug2 id 12 group 5 {
+  packet CameraDebug2 id 14 group 5 {
     ReferenceDeployment.cameraHandler2.BytesReceived
     ReferenceDeployment.cameraHandler2.ExpectedSize
     ReferenceDeployment.cameraHandler2.IsReceiving
