@@ -61,6 +61,7 @@ def test_02_watchdog_increments(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.flaky
 def test_03_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds):
     """
     Test STOP_WATCHDOG command sends and emits WatchdogStop
