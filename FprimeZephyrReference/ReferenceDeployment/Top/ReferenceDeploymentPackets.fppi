@@ -142,7 +142,7 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Parameters id 15 group 6 {
-    ReferenceDeployment.BDotDetumble.Gain
+    ReferenceDeployment.bDotDetumble.Gain
   }
 
 } omit {

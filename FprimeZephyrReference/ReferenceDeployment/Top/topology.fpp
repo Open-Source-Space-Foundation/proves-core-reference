@@ -44,8 +44,8 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance DetumbleManager
-    instance BDotDetumble
+    instance detumbleManager
+    instance bDotDetumble
     instance lis2mdlManager
     instance lsm6dsoManager
     instance imuManager
@@ -202,6 +202,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -288,15 +289,15 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      DetumbleManager.dipoleMomentGet -> BDotDetumble.dipoleMomentGet
-      DetumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
-      DetumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
-      DetumbleManager.yPlusToggle -> drv2605Face2Manager.toggleContinuous
-      DetumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
-      DetumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
+      detumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
+      detumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
+      detumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
+      detumbleManager.yPlusToggle -> drv2605Face2Manager.toggleContinuous
+      detumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
+      detumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
 
-      BDotDetumble.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      bDotDetumble.magneticFieldGet -> lis2mdlManager.magneticFieldGet
     }
 
     connections PayloadCom {

@@ -65,18 +65,14 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 bool DetumbleManager::executeControlStep(std::string& reason) {
-    Drv::MagneticField mgField = this->magneticFieldGet_out(0);
-    if (this->prevMgField == this->EMPTY_MG_FIELD) {
-        this->prevMgField = mgField;
-    }
+    Fw::Success condition;
 
-    Drv::DipoleMoment dpMoment = this->dipoleMomentGet_out(0, mgField, this->prevMgField);
-    if (dpMoment == this->EMPTY_DP_MOMENT) {
-        reason = "Dipole moment failed to calculate";
+    Drv::DipoleMoment dpMoment = this->dipoleMomentGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        reason = "Dipole moment retrieval failed";
         return false;
     }
 
-    this->prevMgField = mgField;
     this->setDipoleMoment(dpMoment);
 
     return true;
