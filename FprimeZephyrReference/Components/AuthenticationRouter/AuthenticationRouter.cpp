@@ -7,6 +7,7 @@
 #include "FprimeZephyrReference/Components/AuthenticationRouter/AuthenticationRouter.hpp"
 
 #include <Fw/Log/LogString.hpp>
+#include <Fw/Types/String.hpp>
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -17,7 +18,6 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <string>
 #include <vector>
 
 #include "Fw/Com/ComPacket.hpp"
@@ -78,13 +78,15 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     printHexData(opCodeBytes.data(), OP_CODE_LENGTH, "opCode");
 
     // Convert opcode bytes to hex string (uppercase, no spaces)
-    std::stringstream hexStream;
-    hexStream << std::hex << std::uppercase << std::setfill('0');
+    Fw::String opCodeHex;
+    char hexStr[OP_CODE_LENGTH * 2 + 1];
     for (size_t i = 0; i < OP_CODE_LENGTH; i++) {
-        hexStream << std::setw(2) << static_cast<unsigned>(opCodeBytes[i]);
+        size_t remaining = sizeof(hexStr) - (i * 2);
+        std::snprintf(hexStr + i * 2, remaining, "%02X", static_cast<unsigned>(opCodeBytes[i]));
     }
-    std::string opCodeHex = hexStream.str();
-    printk("opCodeHex: %s\n", opCodeHex.c_str());
+    hexStr[OP_CODE_LENGTH * 2] = '\0';
+    opCodeHex = hexStr;
+    printk("opCodeHex: %s\n", opCodeHex.toChar());
 
     // Open file
     Os::File bypassOpCodesFile;
@@ -103,11 +105,10 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     }
 
     // Read file contents as text
-    std::string fileContents;
-    fileContents.resize(static_cast<size_t>(fileSize), '\0');
+    std::vector<U8> fileContentsBuffer(static_cast<size_t>(fileSize));
     FwSizeType bytesToRead = fileSize;
     Os::File::Status readStatus =
-        bypassOpCodesFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
+        bypassOpCodesFile.read(fileContentsBuffer.data(), bytesToRead, Os::File::WaitType::WAIT);
     bypassOpCodesFile.close();
 
     if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
@@ -115,19 +116,49 @@ bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
         return false;
     }
 
+    // Null-terminate for string operations
+    fileContentsBuffer.push_back('\0');
+    const char* fileContents = reinterpret_cast<const char*>(fileContentsBuffer.data());
+    printk("fileContents: %s\n", fileContents);
+
     // Parse file line by line and check if opcode hex string matches
-    std::istringstream fileStream(fileContents);
-    printk("fileContents: %s\n", fileContents.c_str());
-    std::string line;
-    while (std::getline(fileStream, line)) {
-        // Check if this line matches the opcode (case-insensitive)
-        if (line == opCodeHex) {
-            printk("Found matching opcode in bypass file: %s\n", line.c_str());
-            return true;
-        } else {
-            printk("No matching opcode in bypass file: %s\n", line.c_str());
-            printk("opCodeHex: %s\n", opCodeHex.c_str());
-            printk("line: %s\n", line.c_str());
+    const char* opCodeHexStr = opCodeHex.toChar();
+    const char* lineStart = fileContents;
+    while (*lineStart != '\0') {
+        // Find end of line
+        const char* lineEnd = lineStart;
+        while (*lineEnd != '\0' && *lineEnd != '\n' && *lineEnd != '\r') {
+            lineEnd++;
+        }
+
+        // Extract line (without newline)
+        FwSizeType lineLen = static_cast<FwSizeType>(lineEnd - lineStart);
+        if (lineLen > 0) {
+            Fw::String line;
+            char* lineBuf = new char[lineLen + 1];
+            std::strncpy(lineBuf, lineStart, static_cast<size_t>(lineLen));
+            lineBuf[lineLen] = '\0';
+            line = lineBuf;
+            delete[] lineBuf;
+
+            // Check if this line matches the opcode
+            if (line == opCodeHex) {
+                printk("Found matching opcode in bypass file: %s\n", line.toChar());
+                return true;
+            } else {
+                printk("No matching opcode in bypass file: %s\n", line.toChar());
+                printk("opCodeHex: %s\n", opCodeHexStr);
+                printk("line: %s\n", line.toChar());
+            }
+        }
+
+        // Move to next line
+        lineStart = lineEnd;
+        if (*lineStart == '\r') {
+            lineStart++;
+        }
+        if (*lineStart == '\n') {
+            lineStart++;
         }
     }
 

@@ -4,10 +4,10 @@
 // \brief  hpp file for Authenticate component implementation class
 // ======================================================================
 
+#include <Fw/Types/String.hpp>
 #include <Os/File.hpp>
 #include <atomic>
 #include <cassert>
-#include <string>
 
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 
@@ -47,8 +47,8 @@ class Authenticate final : public AuthenticateComponentBase {
 
   private:
     struct AuthenticationConfig {
-        std::string type;
-        std::string key;
+        Fw::String type;
+        Fw::String key;
     };
 
     AuthenticationConfig lookupAuthenticationConfig(U32 spi);
@@ -59,7 +59,7 @@ class Authenticate final : public AuthenticateComponentBase {
                            const FwSizeType securityHeaderLength,
                            const U8* commandPayload,
                            const FwSizeType commandPayloadLength,
-                           const std::string& key);
+                           const Fw::String& key);
 
     bool validateSequenceNumber(U32 received, U32 expected);
 
@@ -69,7 +69,7 @@ class Authenticate final : public AuthenticateComponentBase {
                       FwSizeType securityHeaderLength,
                       const U8* data,
                       FwSizeType dataLength,
-                      const std::string& key,
+                      const Fw::String& key,
                       const U8* securityTrailer);
 
     //! Validate and extract security header information

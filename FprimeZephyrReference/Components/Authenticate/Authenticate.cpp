@@ -124,7 +124,7 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
                                      const FwSizeType securityHeaderLength,
                                      const U8* commandPayload,
                                      const FwSizeType commandPayloadLength,
-                                     const std::string& key) {
+                                     const Fw::String& key) {
     // Initialize PSA crypto (idempotent, safe to call multiple times)
     psa_status_t status = psa_crypto_init();
     if (status != PSA_SUCCESS) {
@@ -135,36 +135,45 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     // Parse key from hex string (with or without "0x" prefix) or use as raw bytes
     std::vector<U8> keyBytes;
-    std::string hexKey = key;
+    Fw::String hexKey = key;
+    const char* keyStr = key.toChar();
 
-    printk("[DEBUG] computeHMAC: Input key string='%s', length=%zu\n", key.c_str(), key.length());
+    printk("[DEBUG] computeHMAC: Input key string='%s', length=%llu\n", keyStr,
+           static_cast<unsigned long long>(key.length()));
 
     // Strip "0x" or "0X" prefix if present
-    if (hexKey.length() >= 2 && (hexKey.substr(0, 2) == "0x" || hexKey.substr(0, 2) == "0X")) {
-        hexKey = hexKey.substr(2);
-        printk("[DEBUG] computeHMAC: Stripped 0x prefix, remaining='%s'\n", hexKey.c_str());
+    FwSizeType keyLen = key.length();
+    if (keyLen >= 2 && (std::strncmp(keyStr, "0x", 2) == 0 || std::strncmp(keyStr, "0X", 2) == 0)) {
+        hexKey = keyStr + 2;
+        printk("[DEBUG] computeHMAC: Stripped 0x prefix, remaining='%s'\n", hexKey.toChar());
     }
+
+    const char* hexKeyStr = hexKey.toChar();
+    FwSizeType hexKeyLen = hexKey.length();
 
     // Check if all characters are hex digits
     bool isHexString = true;
-    for (char c : hexKey) {
-        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+    for (FwSizeType i = 0; i < hexKeyLen; i++) {
+        if (!std::isxdigit(static_cast<unsigned char>(hexKeyStr[i]))) {
             isHexString = false;
             break;
         }
     }
 
     // Parse as hex string if valid, otherwise use as raw bytes
-    if (isHexString && hexKey.length() > 0 && hexKey.length() % 2 == 0) {
+    if (isHexString && hexKeyLen > 0 && hexKeyLen % 2 == 0) {
         printk("[DEBUG] computeHMAC: Parsing key as hex string\n");
-        for (size_t i = 0; i < hexKey.length(); i += 2) {
-            std::string byteStr = hexKey.substr(i, 2);
-            keyBytes.push_back(static_cast<U8>(std::stoul(byteStr, nullptr, 16)));
+        for (FwSizeType i = 0; i < hexKeyLen; i += 2) {
+            char byteStr[3] = {hexKeyStr[i], hexKeyStr[i + 1], '\0'};
+            keyBytes.push_back(static_cast<U8>(std::strtoul(byteStr, nullptr, 16)));
         }
     } else {
-        printk("[DEBUG] computeHMAC: Parsing key as raw bytes (not hex string), isHexString=%d, hexKey.length()=%zu\n",
-               isHexString ? 1 : 0, hexKey.length());
-        keyBytes.assign(key.begin(), key.end());
+        printk("[DEBUG] computeHMAC: Parsing key as raw bytes (not hex string), isHexString=%d, hexKey.length()=%llu\n",
+               isHexString ? 1 : 0, static_cast<unsigned long long>(hexKeyLen));
+        const char* rawKey = key.toChar();
+        for (FwSizeType i = 0; i < keyLen; i++) {
+            keyBytes.push_back(static_cast<U8>(rawKey[i]));
+        }
     }
 
     printk("[DEBUG] computeHMAC: Parsed key bytes (length=%zu): ", keyBytes.size());
@@ -338,10 +347,10 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
                                 FwSizeType securityHeaderLength,
                                 const U8* data,
                                 FwSizeType dataLength,
-                                const std::string& key,
+                                const Fw::String& key,
                                 const U8* securityTrailer) {
     printk("[DEBUG] validateHMAC: Computing HMAC with key='%s', securityHeaderLength=%llu, dataLength=%llu\n",
-           key.c_str(), static_cast<unsigned long long>(securityHeaderLength),
+           key.toChar(), static_cast<unsigned long long>(securityHeaderLength),
            static_cast<unsigned long long>(dataLength));
 
     // Compute HMAC (allocates memory)
@@ -440,12 +449,12 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     }
 
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-    const std::string type_authn = authConfig.type;
-    const std::string& key_authn = authConfig.key;
+    const Fw::String& type_authn = authConfig.type;
+    const Fw::String& key_authn = authConfig.key;
 
     printk("[DEBUG] Authentication: APID=%u, SPI=0x%04X (%u), SeqNum=%u\n", contextOut.get_apid(), spi, spi,
            sequenceNumber);
-    printk("[DEBUG] Authentication: Using auth type='%s', key='%s'\n", type_authn.c_str(), key_authn.c_str());
+    printk("[DEBUG] Authentication: Using auth type='%s', key='%s'\n", type_authn.toChar(), key_authn.toChar());
 
     // check the sequence number is valid
     U32 expectedSeqNum = this->get_SequenceNumber();
@@ -495,13 +504,12 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
     config.key = DEFAULT_AUTHENTICATION_KEY;
 
     // convert the spi from a decimal number to a hex string
-    std::stringstream ss;
-    ss << std::hex << spi;
-    std::string spiHex = ss.str();
-    // pad the spi hex string with 0s to make it 4 characters long
-    spiHex = std::string(4 - spiHex.length(), '0') + spiHex;
+    Fw::String spiHex;
+    spiHex.format("%04x", spi);  // lowercase hex to match original std::hex behavior
     // add a space at the end and before the first character an enter
-    spiHex = "_" + spiHex + " ";
+    Fw::String spiHexFormatted;
+    spiHexFormatted.format("_%s ", spiHex.toChar());
+    spiHex = spiHexFormatted;
 
     Os::File spiDictFile;
     Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
@@ -520,28 +528,60 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
         return config;
     }
 
-    std::string fileContents;
-    fileContents.resize(static_cast<size_t>(fileSize), '\0');
+    // Allocate buffer for file contents
+    std::vector<U8> fileContentsBuffer(static_cast<size_t>(fileSize));
     FwSizeType bytesToRead = fileSize;
-    Os::File::Status readStatus =
-        spiDictFile.read(reinterpret_cast<U8*>(&fileContents[0]), bytesToRead, Os::File::WaitType::WAIT);
+    Os::File::Status readStatus = spiDictFile.read(fileContentsBuffer.data(), bytesToRead, Os::File::WaitType::WAIT);
     spiDictFile.close();
     if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
         Fw::LogStringArg filenameArg(SPI_DICT_PATH);
         this->log_WARNING_HI_FileOpenError(readStatus, filenameArg);
         return config;
     }
+    // Null-terminate the buffer for string operations
+    fileContentsBuffer.push_back('\0');
+    const char* fileContents = reinterpret_cast<const char*>(fileContentsBuffer.data());
+    const char* spiHexStr = spiHex.toChar();
+
     // find the line that contains the spi hex string
-    size_t pos = fileContents.find(spiHex);
-    if (pos != std::string::npos) {
+    const char* pos = std::strstr(fileContents, spiHexStr);
+    if (pos != nullptr) {
         // get everything in the line after the spi hex string
-        std::string line = fileContents.substr(pos);
-        // get all the words in the line
-        std::vector<std::string> words;
-        std::istringstream iss(line);
-        std::string word;
-        while (iss >> word) {
-            words.push_back(word);
+        // Find the end of the line (newline or end of string)
+        const char* lineEnd = pos;
+        while (*lineEnd != '\0' && *lineEnd != '\n' && *lineEnd != '\r') {
+            lineEnd++;
+        }
+
+        // Parse words from the line
+        std::vector<Fw::String> words;
+        const char* wordStart = pos;
+        while (wordStart < lineEnd) {
+            // Skip whitespace
+            while (wordStart < lineEnd && std::isspace(static_cast<unsigned char>(*wordStart))) {
+                wordStart++;
+            }
+            if (wordStart >= lineEnd) {
+                break;
+            }
+            // Find end of word
+            const char* wordEnd = wordStart;
+            while (wordEnd < lineEnd && !std::isspace(static_cast<unsigned char>(*wordEnd))) {
+                wordEnd++;
+            }
+            // Extract word
+            FwSizeType wordLen = static_cast<FwSizeType>(wordEnd - wordStart);
+            if (wordLen > 0) {
+                Fw::String word;
+                // Copy word to Fw::String (need to null-terminate)
+                char* wordBuf = new char[wordLen + 1];
+                std::strncpy(wordBuf, wordStart, static_cast<size_t>(wordLen));
+                wordBuf[wordLen] = '\0';
+                word = wordBuf;
+                delete[] wordBuf;
+                words.push_back(word);
+            }
+            wordStart = wordEnd;
         }
         this->log_ACTIVITY_LO_FoundSPIKey(true);
         if (words.size() < 3) {
@@ -602,8 +642,8 @@ void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void Authenticate ::GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) {
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-    Fw::LogStringArg keyArg(authConfig.key.c_str());
-    Fw::LogStringArg typeArg(authConfig.type.c_str());
+    Fw::LogStringArg keyArg(authConfig.key.toChar());
+    Fw::LogStringArg typeArg(authConfig.type.toChar());
     this->log_ACTIVITY_HI_EmitSpiKey(keyArg, typeArg);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
