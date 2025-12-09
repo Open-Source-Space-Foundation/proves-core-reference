@@ -6,10 +6,6 @@
 
 #include "FprimeZephyrReference/Components/Authenticate/Authenticate.hpp"
 
-// Include configuration header to check if authentication is enabled
-#include "AuthenticateCfg.hpp"
-
-#if AUTHENTICATE_ENABLED
 #include <psa/crypto.h>
 
 #include <Fw/Log/LogString.hpp>
@@ -35,7 +31,6 @@ constexpr const char REJECTED_PACKETS_COUNT_PATH[] = "//rejected_packets_count.t
 constexpr const char AUTHENTICATED_PACKETS_COUNT_PATH[] = "//authenticated_packets_count.txt";
 constexpr const int SECURITY_HEADER_LENGTH = 6;
 constexpr const int SECURITY_TRAILER_LENGTH = 16;
-#endif
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
 // TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
@@ -46,7 +41,6 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {
-#if AUTHENTICATE_ENABLED
     U32 fileSequenceNumber = this->initializeFiles(SEQUENCE_NUMBER_PATH);
     this->sequenceNumber.store(fileSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
@@ -58,7 +52,6 @@ Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentB
     U32 fileAuthenticatedPacketsCount = this->initializeFiles(AUTHENTICATED_PACKETS_COUNT_PATH);
     this->m_authenticatedPacketsCount.store(fileAuthenticatedPacketsCount);
     this->tlmWrite_AuthenticatedPacketsCount(fileAuthenticatedPacketsCount);
-#else
     // Authentication disabled - initialize with defaults
     this->sequenceNumber.store(0);
     this->tlmWrite_CurrentSequenceNumber(0);
@@ -66,7 +59,6 @@ Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentB
     this->tlmWrite_RejectedPacketsCount(0);
     this->m_authenticatedPacketsCount.store(0);
     this->tlmWrite_AuthenticatedPacketsCount(0);
-#endif
 }
 
 U32 Authenticate::initializeFiles(const char* filePath) {
@@ -113,7 +105,6 @@ void Authenticate::persistToFile(const char* filePath, U32 value) {
     }
 }
 
-#if AUTHENTICATE_ENABLED
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
     U32 newCount = this->m_rejectedPacketsCount.load() + 1;
     this->m_rejectedPacketsCount.store(newCount);
@@ -122,7 +113,6 @@ void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextO
     contextOut.set_authenticated(0);
     this->dataOut_out(0, data, contextOut);
 }
-#endif
 
 Authenticate ::~Authenticate() {}
 
@@ -130,7 +120,6 @@ Authenticate ::~Authenticate() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-#if AUTHENTICATE_ENABLED
 Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
                                      const FwSizeType securityHeaderLength,
                                      const U8* commandPayload,
@@ -318,7 +307,6 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     // Create Fw::Buffer with the HMAC data (context 0 for now)
     return Fw::Buffer(hmacData, static_cast<FwSizeType>(hmacOutputLength), 0);
 }
-#endif
 
 bool Authenticate::validateSequenceNumber(U32 received, U32 expected) {
     // validate the sequence number by checking if it is within the window of the expected sequence number
@@ -346,7 +334,6 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
     return std::memcmp(expected, actual, static_cast<size_t>(length)) == 0;
 }
 
-#if AUTHENTICATE_ENABLED
 bool Authenticate::validateHMAC(const U8* securityHeader,
                                 FwSizeType securityHeaderLength,
                                 const U8* data,
@@ -399,9 +386,7 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
 
     return hmacValid;
 }
-#endif
 
-#if AUTHENTICATE_ENABLED
 bool Authenticate::validateHeader(Fw::Buffer& data,
                                   ComCfg::FrameContext& contextOut,
                                   U8* securityHeader,
@@ -434,12 +419,10 @@ bool Authenticate::validateHeader(Fw::Buffer& data,
 
     return true;
 }
-#endif
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
 
-#if AUTHENTICATE_ENABLED
     // Authentication is enabled - perform full authentication checks
     // right now we pass everything that is not noop with the header and trailer, until we fix the integration tests to
     // all run on plugins.
@@ -503,17 +486,9 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
     this->persistToFile(AUTHENTICATED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(1);
-#else
-    // Authentication is disabled - pass data through unchanged
-    // Mark as authenticated (or leave context unchanged) and pass through
-    contextOut.set_authenticated(
-        1);  // Pass through as authenticated, or use context.authenticated if you want to preserve
-#endif
-
     this->dataOut_out(0, data, contextOut);
 }
 
-#if AUTHENTICATE_ENABLED
 Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32 spi) {
     AuthenticationConfig config{};
     config.type = DEFAULT_AUTHENTICATION_TYPE;
@@ -581,13 +556,11 @@ Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32
 
     return config;
 }
-#endif
 
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     this->dataReturnOut_out(0, data, context);
 }
 
-#if AUTHENTICATE_ENABLED
 U32 Authenticate ::get_SequenceNumber() {
     bool loadedFromFile = true;
     U32 fileSequenceNumber = 0;
@@ -615,29 +588,18 @@ U32 Authenticate ::get_SequenceNumber() {
         return fileSequenceNumber;
     }
 }
-#endif
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-#if AUTHENTICATE_ENABLED
 void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     U32 fileSequenceNumber = this->get_SequenceNumber();
 
     this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
-#else
-void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Authentication disabled - return current sequence number from memory
-    U32 currentSeq = this->sequenceNumber.load();
-    this->log_ACTIVITY_HI_EmitSequenceNumber(currentSeq);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-#endif
 
-#if AUTHENTICATE_ENABLED
 void Authenticate ::GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) {
     const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
     Fw::LogStringArg keyArg(authConfig.key.c_str());
@@ -645,14 +607,7 @@ void Authenticate ::GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
     this->log_ACTIVITY_HI_EmitSpiKey(keyArg, typeArg);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
-#else
-void Authenticate ::GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) {
-    // Authentication disabled - command not supported
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::INVALID_OPCODE);
-}
-#endif
 
-#if AUTHENTICATE_ENABLED
 void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     // Writes the sequence number to the file system
     this->sequenceNumber.store(seq_num);
@@ -677,13 +632,5 @@ void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 
     this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, persistSuccess);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
-#else
-void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
-    // Authentication disabled - just store in memory, don't persist
-    this->sequenceNumber.store(seq_num);
-    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, false);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-#endif
 
 }  // namespace Components

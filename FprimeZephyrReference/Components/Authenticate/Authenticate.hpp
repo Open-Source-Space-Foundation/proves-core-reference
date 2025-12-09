@@ -4,9 +4,6 @@
 // \brief  hpp file for Authenticate component implementation class
 // ======================================================================
 
-#ifndef Components_Authenticate_HPP
-#define Components_Authenticate_HPP
-
 #include <Os/File.hpp>
 #include <atomic>
 #include <cassert>
@@ -129,5 +126,3 @@ class Authenticate final : public AuthenticateComponentBase {
 };
 
 }  // namespace Components
-
-#endif
