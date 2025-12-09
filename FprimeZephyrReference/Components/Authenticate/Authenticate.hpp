@@ -51,8 +51,6 @@ class Authenticate final : public AuthenticateComponentBase {
         Fw::String key;
     };
 
-    AuthenticationConfig lookupAuthenticationConfig(U32 spi);
-
     bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
 
     Fw::Buffer computeHMAC(const U8* securityHeader,
@@ -113,14 +111,8 @@ class Authenticate final : public AuthenticateComponentBase {
                                 U32 cmdSeq,           //!< The command sequence number
                                 U32 seq_num) override;
 
-    //! Handler implementation for command GET_KEY_FROM_SPI
-    void GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) override;
-
     std::atomic<U32> sequenceNumber;
     Os::File m_sequenceNumberFile;
-    Os::File m_rejectedPacketsCountFile;
-    Os::File m_authenticatedPacketsCountFile;
-    Os::File m_spiDictFile;
     std::atomic<U32> m_rejectedPacketsCount;
     std::atomic<U32> m_authenticatedPacketsCount;
 };

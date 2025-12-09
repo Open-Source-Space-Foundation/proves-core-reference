@@ -26,10 +26,9 @@
 constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
 constexpr const char DEFAULT_AUTHENTICATION_KEY[] = AUTH_DEFAULT_KEY;
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
-constexpr const char REJECTED_PACKETS_COUNT_PATH[] = "//rejected_packets_count.txt";
-constexpr const char AUTHENTICATED_PACKETS_COUNT_PATH[] = "//authenticated_packets_count.txt";
 constexpr const int SECURITY_HEADER_LENGTH = 6;
 constexpr const int SECURITY_TRAILER_LENGTH = 16;
+constexpr const int SPI_DEFAULT = 0;
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
 // TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
@@ -44,16 +43,7 @@ Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentB
     this->sequenceNumber.store(fileSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
 
-    U32 fileRejectedPacketsCount = this->initializeFiles(REJECTED_PACKETS_COUNT_PATH);
-    this->m_rejectedPacketsCount.store(fileRejectedPacketsCount);
-    this->tlmWrite_RejectedPacketsCount(fileRejectedPacketsCount);
-
-    U32 fileAuthenticatedPacketsCount = this->initializeFiles(AUTHENTICATED_PACKETS_COUNT_PATH);
-    this->m_authenticatedPacketsCount.store(fileAuthenticatedPacketsCount);
-    this->tlmWrite_AuthenticatedPacketsCount(fileAuthenticatedPacketsCount);
-    // Authentication disabled - initialize with defaults
-    this->sequenceNumber.store(0);
-    this->tlmWrite_CurrentSequenceNumber(0);
+    // re init the packet counts
     this->m_rejectedPacketsCount.store(0);
     this->tlmWrite_RejectedPacketsCount(0);
     this->m_authenticatedPacketsCount.store(0);
@@ -108,7 +98,6 @@ void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextO
     U32 newCount = this->m_rejectedPacketsCount.load() + 1;
     this->m_rejectedPacketsCount.store(newCount);
     this->tlmWrite_RejectedPacketsCount(newCount);
-    this->persistToFile(REJECTED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(0);
     this->dataOut_out(0, data, contextOut);
 }
@@ -341,9 +330,9 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
                                 FwSizeType dataLength,
                                 const Fw::String& key,
                                 const U8* securityTrailer) {
-    printk("[DEBUG] validateHMAC: Computing HMAC with key='%s', securityHeaderLength=%llu, dataLength=%llu\n",
-           key.toChar(), static_cast<unsigned long long>(securityHeaderLength),
-           static_cast<unsigned long long>(dataLength));
+    // printk("[DEBUG] validateHMAC: Computing HMAC with key='%s', securityHeaderLength=%llu, dataLength=%llu\n",
+    //        key.toChar(), static_cast<unsigned long long>(securityHeaderLength),
+    //        static_cast<unsigned long long>(dataLength));
 
     // Compute HMAC (allocates memory)
     Fw::Buffer computedHmac = this->computeHMAC(securityHeader, securityHeaderLength, data, dataLength, key);
@@ -355,8 +344,6 @@ bool Authenticate::validateHMAC(const U8* securityHeader,
     U8* hmacDataToDelete = const_cast<U8*>(computedHmacData);
 
     if (computedHmacData == nullptr || computedHmacLength < 8) {
-        printk("[DEBUG] validateHMAC: ERROR - computedHmacData is null or too short (length=%llu)\n",
-               static_cast<unsigned long long>(computedHmacLength));
         // Clean up memory before returning (delete[] nullptr is safe)
         delete[] hmacDataToDelete;
         return false;
@@ -424,10 +411,6 @@ bool Authenticate::validateHeader(Fw::Buffer& data,
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
 
-    // Authentication is enabled - perform full authentication checks
-    // right now we pass everything that is not noop with the header and trailer, until we fix the integration tests to
-    // all run on plugins.
-
     // Extract security header information
     U8 securityHeader[SECURITY_HEADER_LENGTH];
     U8 securityTrailer[SECURITY_TRAILER_LENGTH];
@@ -440,9 +423,16 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         return;
     }
 
-    const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-    const Fw::String& type_authn = authConfig.type;
-    const Fw::String& key_authn = authConfig.key;
+    // Assuming SPI 0 as default (no longer reading from spi_dict.txt)
+    // Any other SPI value is invalid and should be rejected
+    if (spi != SPI_DEFAULT) {
+        this->log_WARNING_HI_InvalidSPI(spi);
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    const Fw::String& type_authn = DEFAULT_AUTHENTICATION_TYPE;
+    const Fw::String& key_authn = DEFAULT_AUTHENTICATION_KEY;
 
     printk("[DEBUG] Authentication: APID=%u, SPI=0x%04X (%u), SeqNum=%u\n", contextOut.get_apid(), spi, spi,
            sequenceNumber);
@@ -482,111 +472,12 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
 
     this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
+
     U32 newCount = this->m_authenticatedPacketsCount.load() + 1;
     this->m_authenticatedPacketsCount.store(newCount);
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
-    this->persistToFile(AUTHENTICATED_PACKETS_COUNT_PATH, newCount);
     contextOut.set_authenticated(1);
     this->dataOut_out(0, data, contextOut);
-}
-
-Authenticate::AuthenticationConfig Authenticate ::lookupAuthenticationConfig(U32 spi) {
-    AuthenticationConfig config{};
-    config.type = DEFAULT_AUTHENTICATION_TYPE;
-    config.key = DEFAULT_AUTHENTICATION_KEY;
-
-    // convert the spi from a decimal number to a hex string
-    Fw::String spiHex;
-    spiHex.format("%04x", spi);  // lowercase hex to match original std::hex behavior
-    // add a space at the end and before the first character an enter
-    Fw::String spiHexFormatted;
-    spiHexFormatted.format("_%s ", spiHex.toChar());
-    spiHex = spiHexFormatted;
-
-    Os::File spiDictFile;
-    Os::File::Status openStatus = spiDictFile.open(SPI_DICT_PATH, Os::File::OPEN_READ);
-    if (openStatus != Os::File::OP_OK) {
-        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
-        this->log_WARNING_HI_FileOpenError(openStatus, filenameArg);
-        return config;
-    }
-
-    FwSizeType fileSize = 0;
-    Os::File::Status sizeStatus = spiDictFile.size(fileSize);
-    if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
-        spiDictFile.close();
-        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
-        this->log_WARNING_HI_FileOpenError(sizeStatus, filenameArg);
-        return config;
-    }
-
-    // Allocate buffer for file contents
-    std::vector<U8> fileContentsBuffer(static_cast<size_t>(fileSize));
-    FwSizeType bytesToRead = fileSize;
-    Os::File::Status readStatus = spiDictFile.read(fileContentsBuffer.data(), bytesToRead, Os::File::WaitType::WAIT);
-    spiDictFile.close();
-    if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
-        Fw::LogStringArg filenameArg(SPI_DICT_PATH);
-        this->log_WARNING_HI_FileOpenError(readStatus, filenameArg);
-        return config;
-    }
-    // Null-terminate the buffer for string operations
-    fileContentsBuffer.push_back('\0');
-    const char* fileContents = reinterpret_cast<const char*>(fileContentsBuffer.data());
-    const char* spiHexStr = spiHex.toChar();
-
-    // find the line that contains the spi hex string
-    const char* pos = std::strstr(fileContents, spiHexStr);
-    if (pos != nullptr) {
-        // get everything in the line after the spi hex string
-        // Find the end of the line (newline or end of string)
-        const char* lineEnd = pos;
-        while (*lineEnd != '\0' && *lineEnd != '\n' && *lineEnd != '\r') {
-            lineEnd++;
-        }
-
-        // Parse words from the line
-        std::vector<Fw::String> words;
-        const char* wordStart = pos;
-        while (wordStart < lineEnd) {
-            // Skip whitespace
-            while (wordStart < lineEnd && std::isspace(static_cast<unsigned char>(*wordStart))) {
-                wordStart++;
-            }
-            if (wordStart >= lineEnd) {
-                break;
-            }
-            // Find end of word
-            const char* wordEnd = wordStart;
-            while (wordEnd < lineEnd && !std::isspace(static_cast<unsigned char>(*wordEnd))) {
-                wordEnd++;
-            }
-            // Extract word
-            FwSizeType wordLen = static_cast<FwSizeType>(wordEnd - wordStart);
-            if (wordLen > 0) {
-                Fw::String word;
-                // Copy word to Fw::String (need to null-terminate)
-                char* wordBuf = new char[wordLen + 1];
-                std::strncpy(wordBuf, wordStart, static_cast<size_t>(wordLen));
-                wordBuf[wordLen] = '\0';
-                word = wordBuf;
-                delete[] wordBuf;
-                words.push_back(word);
-            }
-            wordStart = wordEnd;
-        }
-        this->log_ACTIVITY_LO_FoundSPIKey(true);
-        if (words.size() < 3) {
-            this->log_WARNING_HI_InvalidSPI(spi);
-            return config;
-        }
-        config.type = words[1];
-        config.key = words[2];
-    } else {
-        this->log_ACTIVITY_LO_FoundSPIKey(false);
-    }
-
-    return config;
 }
 
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
@@ -629,14 +520,6 @@ void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     U32 fileSequenceNumber = this->get_SequenceNumber();
 
     this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Authenticate ::GET_KEY_FROM_SPI_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 spi) {
-    const AuthenticationConfig authConfig = this->lookupAuthenticationConfig(spi);
-    Fw::LogStringArg keyArg(authConfig.key.toChar());
-    Fw::LogStringArg typeArg(authConfig.type.toChar());
-    this->log_ACTIVITY_HI_EmitSpiKey(keyArg, typeArg);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

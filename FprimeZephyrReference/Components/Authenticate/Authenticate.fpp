@@ -13,8 +13,6 @@ module Components {
 
         sync command SET_SEQ_NUM(seq_num: U32)
 
-        sync command GET_KEY_FROM_SPI(spi: U32)
-
         telemetry AuthenticatedPacketsCount : U64
 
         telemetry RejectedPacketsCount : U64
