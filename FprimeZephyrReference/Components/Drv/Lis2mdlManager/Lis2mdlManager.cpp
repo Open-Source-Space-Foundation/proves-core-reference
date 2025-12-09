@@ -40,7 +40,7 @@ void Lis2mdlManager ::configure(const struct device* dev) {
 Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum) {
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0, -1);
+        return Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue(TimeBase::TB_NONE, 0, 0, 0));
     }
     this->log_WARNING_HI_DeviceNotReady_ThrottleClear();
 
@@ -53,9 +53,11 @@ Drv::MagneticField Lis2mdlManager ::magneticFieldGet_handler(FwIndexType portNum
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_X, &x);
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Y, &y);
     sensor_channel_get(this->m_dev, SENSOR_CHAN_MAGN_Z, &z);
+    Fw::Time t = this->getTime();
 
-    Drv::MagneticField magnetic_readings = Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y),
-                                                              sensor_value_to_double(&z), k_uptime_get());
+    Drv::MagneticField magnetic_readings =
+        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z),
+                           Fw::TimeValue(t.getTimeBase(), t.getContext(), t.getSeconds(), t.getUSeconds()));
 
     this->tlmWrite_MagneticField(magnetic_readings);
 

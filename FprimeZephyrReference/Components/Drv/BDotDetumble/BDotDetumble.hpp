@@ -7,8 +7,9 @@
 #ifndef Drv_BDotDetumble_HPP
 #define Drv_BDotDetumble_HPP
 
-#include "FprimeZephyrReference/Components/Drv/BDotDetumble/BDotDetumbleComponentAc.hpp"
+#include <array>
 
+#include "FprimeZephyrReference/Components/Drv/BDotDetumble/BDotDetumbleComponentAc.hpp"
 namespace Drv {
 
 class BDotDetumble final : public BDotDetumbleComponentBase {
@@ -24,19 +25,33 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     //! Destroy BDotDetumble object
     ~BDotDetumble();
 
+  public:
+    // ----------------------------------------------------------------------
+    // Handler implementations for typed input ports
+    // ----------------------------------------------------------------------
     // Get the current dipole moment
     Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
                                               const Drv::MagneticField& currMagField,
                                               const Drv::MagneticField& prevMagField) override;
 
   private:
-    F64 gain = 1.0;
-
+    // ----------------------------------------------------------------------
+    //  Private helper methods
+    // ----------------------------------------------------------------------
     // Get magnitude
     F64 getMagnitude(Drv::MagneticField magField);
 
     // Get the time derivative of the magnetic field
-    F64* dB_dt(Drv::MagneticField currMagField, Drv::MagneticField prevMagField);
+    std::array<F64, 3> dB_dt(Drv::MagneticField currMagField, Drv::MagneticField prevMagField);
+
+    // Get the time of the magnetic field reading
+    Fw::Time magneticFieldReadingTime(const Drv::MagneticField magField);
+
+    // ----------------------------------------------------------------------
+    //  Private member variables
+    // ----------------------------------------------------------------------
+  private:
+    F64 m_gain = 1.0;  //!< Gain for B-Dot controller
 };
 }  // namespace Drv
 #endif
