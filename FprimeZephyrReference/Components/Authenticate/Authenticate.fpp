@@ -23,29 +23,29 @@ module Components {
 
         # @ Events for packet authentication
 
-        event ValidHash(apid: U32, spi: U32, seqNum: U32) severity activity high id 0 format "Authenticated packet: APID={}, SPI={}, SeqNum={}"
+        event ValidHash(apid: U32, spi: U32, seqNum: U32) severity activity high id 0 format "Authenticated packet: APID={}, SPI={}, SeqNum={}" throttle 2
 
-        event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}"
+        event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}" throttle 2
 
-        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: seq_num={}, Expected={}, Window={}"
+        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: seq_num={}, Expected={}, Window={}" throttle 2
 
-        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, defaulting to default key"
+        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, defaulting to default key" throttle 2
 
-        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}"
+        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}" throttle 2
 
-        event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}"
+        event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}" throttle 2
 
-        event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}"
+        event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}" throttle 2
 
-        event FileOpenError(error: U32, filename: string size 64) severity warning high id 10 format "File Error with Error {} for file: {}"
+        event FileOpenError(error: U32, filename: string size 64) severity warning high id 10 format "File Error with Error {} for file: {}" throttle 2
 
-        event FoundSPIKey(found: bool) severity activity low id 11 format "Found SPI status: {}"
+        event FoundSPIKey(found: bool) severity activity low id 11 format "Found SPI status: {}" throttle 2
 
-        event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication"
+        event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication" throttle 2
 
-        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 14 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}"
+        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 14 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}" throttle 2
 
-        event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}"
+        event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}" throttle 2
 
         # @ Ports for packet authentication
 
