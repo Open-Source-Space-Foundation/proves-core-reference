@@ -21,8 +21,6 @@ BDotDetumble ::~BDotDetumble() {}
 Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNum,
                                                         const Drv::MagneticField& currMagField,
                                                         const Drv::MagneticField& prevMagField) {
-    this->log_WARNING_LO_BruhMoment();
-
     F64 magnitude = this->getMagnitude(currMagField);
     if (magnitude < 1e-6) {
         return Drv::DipoleMoment();

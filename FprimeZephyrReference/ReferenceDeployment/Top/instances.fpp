@@ -242,6 +242,7 @@ module ReferenceDeployment {
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
 
-  instance DetumbleManager: Components.DetumbleManager base id 0x1005A000
+  instance detumbleManager: Components.DetumbleManager base id 0x1005A000
+  instance bDotDetumble: Drv.BDotDetumble base id 0x1005B000
 
 }

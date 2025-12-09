@@ -75,7 +75,6 @@ bool DetumbleManager::executeControlStep(std::string& reason) {
         reason = "Dipole moment failed to calculate";
         return false;
     }
-    this->log_WARNING_LO_AngVelAmt(0.0);
 
     this->prevMgField = mgField;
     this->setDipoleMoment(dpMoment);

@@ -44,7 +44,8 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance DetumbleManager
+    instance detumbleManager
+    instance bDotDetumble
     instance lis2mdlManager
     instance lsm6dsoManager
     instance imuManager
@@ -201,7 +202,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> DetumbleManager.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -287,17 +288,18 @@ module ReferenceDeployment {
       antennaDeployer.burnStop -> burnwire.burnStop
     }
 
-    connections DetumbleManager {
-      DetumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
+    connections detumbleManager {
+      detumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
+      detumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      detumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      detumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
+      detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
 
-      DetumbleManager.drv2605Toggle[0] -> drv2605Face0Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[1] -> drv2605Face1Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[2] -> drv2605Face2Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[3] -> drv2605Face3Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[4] -> drv2605Face5Manager.toggleContinuous
+      detumbleManager.drv2605Toggle[0] -> drv2605Face0Manager.toggleContinuous
+      detumbleManager.drv2605Toggle[1] -> drv2605Face1Manager.toggleContinuous
+      detumbleManager.drv2605Toggle[2] -> drv2605Face2Manager.toggleContinuous
+      detumbleManager.drv2605Toggle[3] -> drv2605Face3Manager.toggleContinuous
+      detumbleManager.drv2605Toggle[4] -> drv2605Face5Manager.toggleContinuous
     }
 
     connections PayloadCom {

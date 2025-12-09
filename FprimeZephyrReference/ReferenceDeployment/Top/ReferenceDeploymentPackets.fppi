@@ -176,4 +176,7 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
+
+  # For Now
+  ReferenceDeployment.bDotDetumble.DipoleMoment
 }

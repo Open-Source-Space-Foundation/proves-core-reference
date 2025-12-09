@@ -14,7 +14,6 @@ module Drv {
         telemetry DipoleMoment: DipoleMoment
 
         event DipoleThing(x: F64, y: F64, z: F64) severity warning low format "X: {}, Y: {}, Z: {}"
-        event BruhMoment severity warning low format "BRUH MOMENT"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
