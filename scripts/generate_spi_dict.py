@@ -110,8 +110,8 @@ def main():
         # Just extract from existing file
         if args.print_first_key:
             try:
-                _, first_key_with_prefix = extract_first_key_from_file(args.output)
-                print(first_key_with_prefix)
+                first_key, _ = extract_first_key_from_file(args.output)
+                print(first_key)
             except (FileNotFoundError, ValueError) as e:
                 print(f"Error: {e}", file=sys.stderr)
                 sys.exit(1)
@@ -127,7 +127,7 @@ def main():
                 args.num_keys, args.output
             )
             if args.print_first_key:
-                print(first_key_with_prefix)
+                print(first_key)
             else:
                 print(f"Generated {args.num_keys} keys in {args.output}")
                 print(f"First key: {first_key_with_prefix}")

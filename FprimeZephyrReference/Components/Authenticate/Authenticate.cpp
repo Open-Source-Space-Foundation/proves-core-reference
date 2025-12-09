@@ -25,7 +25,6 @@
 // Hardcoded Dictionary of Authentication Types
 constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
 constexpr const char DEFAULT_AUTHENTICATION_KEY[] = AUTH_DEFAULT_KEY;
-constexpr const char SPI_DICT_PATH[] = "//spi_dict.txt";
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 constexpr const char REJECTED_PACKETS_COUNT_PATH[] = "//rejected_packets_count.txt";
 constexpr const char AUTHENTICATED_PACKETS_COUNT_PATH[] = "//authenticated_packets_count.txt";
@@ -133,23 +132,16 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         return Fw::Buffer();
     }
 
-    // Parse key from hex string (with or without "0x" prefix) or use as raw bytes
+    // Parse key from hex string or use as raw bytes
     std::vector<U8> keyBytes;
-    Fw::String hexKey = key;
     const char* keyStr = key.toChar();
+    FwSizeType keyLen = key.length();
 
     printk("[DEBUG] computeHMAC: Input key string='%s', length=%llu\n", keyStr,
-           static_cast<unsigned long long>(key.length()));
+           static_cast<unsigned long long>(keyLen));
 
-    // Strip "0x" or "0X" prefix if present
-    FwSizeType keyLen = key.length();
-    if (keyLen >= 2 && (std::strncmp(keyStr, "0x", 2) == 0 || std::strncmp(keyStr, "0X", 2) == 0)) {
-        hexKey = keyStr + 2;
-        printk("[DEBUG] computeHMAC: Stripped 0x prefix, remaining='%s'\n", hexKey.toChar());
-    }
-
-    const char* hexKeyStr = hexKey.toChar();
-    FwSizeType hexKeyLen = hexKey.length();
+    const char* hexKeyStr = keyStr;
+    FwSizeType hexKeyLen = keyLen;
 
     // Check if all characters are hex digits
     bool isHexString = true;

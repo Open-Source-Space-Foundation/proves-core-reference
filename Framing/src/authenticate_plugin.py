@@ -19,7 +19,7 @@ def get_default_auth_key_from_spi_dict() -> str:
     Read the first key from spi_dict.txt file.
 
     Returns:
-        Default authentication key with 0x prefix from first entry in spi_dict.txt
+        Default authentication key (without 0x prefix) from first entry in spi_dict.txt
 
     Raises:
         FileNotFoundError: If spi_dict.txt file is not found
@@ -43,9 +43,9 @@ def get_default_auth_key_from_spi_dict() -> str:
                     parts = line.split()
                     if len(parts) >= 3:
                         key = parts[2]
-                        # Ensure key has 0x prefix
-                        if not key.startswith("0x") and not key.startswith("0X"):
-                            key = f"0x{key}"
+                        # Remove 0x prefix if present (keys in spi_dict.txt should not have prefix)
+                        if key.startswith("0x") or key.startswith("0X"):
+                            key = key[2:]
                         return key
     except (IOError, OSError) as e:
         raise IOError(
@@ -80,7 +80,7 @@ class AuthenticateFramer(FramerDeframer):
             spi: Security Parameter Index (default: 1)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
-            authentication_key: Authentication key as hex string with 0x prefix (default: reads from spi_dict.txt)
+            authentication_key: Authentication key as hex string without 0x prefix (default: reads from spi_dict.txt)
             **kwargs: Additional keyword arguments (ignored for now)
         """
         super().__init__()
@@ -127,7 +127,7 @@ class AuthenticateFramer(FramerDeframer):
         # Security Trailer of 16 octets in length (TM Baseline)
         # the output MAC is 2*128 bits in total length. (32 bytes)
         # Convert hex string to bytes (16 bytes)
-        # Remove '0x' prefix if present
+        # Keys are stored without 0x prefix, but handle it if present for backward compatibility
         key_hex = self.authentication_key
         if key_hex.startswith("0x") or key_hex.startswith("0X"):
             key_hex = key_hex[2:]
@@ -175,7 +175,7 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--authentication-key",): {
                 "type": str,
-                "help": f"Authentication key as hex string with 0x prefix (default: {default_key} from spi_dict.txt)",
+                "help": f"Authentication key as hex string without 0x prefix (default: {default_key} from spi_dict.txt)",
                 "default": None,  # Will be set to first key from spi_dict.txt in __init__
             },
         }
