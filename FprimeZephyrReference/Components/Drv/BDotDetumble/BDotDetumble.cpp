@@ -18,6 +18,10 @@ BDotDetumble ::BDotDetumble(const char* const compName) : BDotDetumbleComponentB
 
 BDotDetumble ::~BDotDetumble() {}
 
+// ----------------------------------------------------------------------
+//  Private helper methods
+// ----------------------------------------------------------------------
+
 Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNum,
                                                         const Drv::MagneticField& currMagField,
                                                         const Drv::MagneticField& prevMagField) {
@@ -30,14 +34,22 @@ Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNu
         return Drv::DipoleMoment();
     }
 
-    std::array<F64, 3> dB_dtArr = this->dB_dt(currMagField, prevMagField);
+    std::array<F64, 3> dB_dt = this->dB_dt(currMagField, prevMagField);
 
-    F64 moment_x = this->m_gain * dB_dtArr[0] / magnitude;
-    F64 moment_y = this->m_gain * dB_dtArr[1] / magnitude;
-    F64 moment_z = this->m_gain * dB_dtArr[2] / magnitude;
+    Fw::ParamValid valid;
+    F64 gain = this->paramGet_Gain(valid);  // not checking valid for now
+    this->tlmWrite_Gain(gain);
+
+    F64 moment_x = gain * dB_dt[0] / magnitude;
+    F64 moment_y = gain * dB_dt[1] / magnitude;
+    F64 moment_z = gain * dB_dt[2] / magnitude;
 
     return Drv::DipoleMoment(moment_x, moment_y, moment_z);
 }
+
+// ----------------------------------------------------------------------
+//  Private helper methods
+// ----------------------------------------------------------------------
 
 F64 BDotDetumble::getMagnitude(const Drv::MagneticField magField) {
     return sqrt((magField.get_x() * magField.get_x()) + (magField.get_y() * magField.get_y()) +

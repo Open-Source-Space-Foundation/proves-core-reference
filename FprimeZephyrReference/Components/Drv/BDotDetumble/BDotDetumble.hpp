@@ -29,7 +29,15 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
-    // Get the current dipole moment
+
+    // Compute the required dipole moment to detumble the satellite.
+    //
+    // m = -k * (dB/dt) / |B|
+    //
+    // m is the dipole moment in A⋅m²
+    // k is a gain constant
+    // dB/dt is the time derivative of the magnetic field reading in micro-Tesla per second (uT/s)
+    // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
     Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
                                               const Drv::MagneticField& currMagField,
                                               const Drv::MagneticField& prevMagField) override;
@@ -38,20 +46,15 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     // ----------------------------------------------------------------------
     //  Private helper methods
     // ----------------------------------------------------------------------
-    // Get magnitude
+
+    //! Computes the magnitude of the magnetic field vector.
     F64 getMagnitude(Drv::MagneticField magField);
 
-    // Get the time derivative of the magnetic field
+    //! Compute the derivative of the magnetic field vector.
     std::array<F64, 3> dB_dt(Drv::MagneticField currMagField, Drv::MagneticField prevMagField);
 
-    // Get the time of the magnetic field reading
+    //! Get the time of the magnetic field reading
     Fw::Time magneticFieldReadingTime(const Drv::MagneticField magField);
-
-    // ----------------------------------------------------------------------
-    //  Private member variables
-    // ----------------------------------------------------------------------
-  private:
-    F64 m_gain = 1.0;  //!< Gain for B-Dot controller
 };
 }  // namespace Drv
 #endif
