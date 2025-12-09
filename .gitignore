@@ -19,6 +19,8 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+Framing/uv.lock
+bootable.uf2
 
 **/__pycache__/
 **/*.egg-info/
