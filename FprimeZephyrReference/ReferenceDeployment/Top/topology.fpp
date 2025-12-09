@@ -191,6 +191,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[10] -> DetumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
