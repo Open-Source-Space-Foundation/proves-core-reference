@@ -38,6 +38,7 @@ module Components {
         @ Event for reporting that a detumble control step run failed
         event ControlStepFailed(reason: string) severity warning high format "Control step failed for reason: {}"
 
+        event AngVelAmt(val: F64) severity warning low format "Angular velocity: {}"
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

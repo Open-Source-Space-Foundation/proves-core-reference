@@ -60,7 +60,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     bool detumbleRunning = true;
     int m_itrCount = 0;
 
-    bool bDotRunning = false;
+    bool m_bDotRunning = false;
     U32 bDotStartTime = -1;
 
     // Functions

@@ -66,6 +66,14 @@ module ReferenceDeployment {
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
     instance fsSpace
+    instance payload
+    instance payload2
+    instance cameraHandler
+    instance peripheralUartDriver
+    instance cameraHandler2
+    instance peripheralUartDriver2
+    instance payloadBufferManager
+    instance payloadBufferManager2
     instance cmdSeq
     instance startupManager
     instance powerMonitor
@@ -184,14 +192,16 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[3] -> FileHandling.fileManager.schedIn
-      rateGroup10Hz.RateGroupMemberOut[4] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[6] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> DetumbleManager.run
+      rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver2.schedIn
+      rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[6] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face0Manager.run
+      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face1Manager.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face2Manager.run
+      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face3Manager.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> DetumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -200,15 +210,19 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[9] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[10] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[11] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[12] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[13] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> modeManager.run
 
+      # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
       rateGroup1_6Hz.RateGroupMemberOut[0] -> imuManager.run
       rateGroup1_6Hz.RateGroupMemberOut[1] -> adcs.run
@@ -284,6 +298,40 @@ module ReferenceDeployment {
       DetumbleManager.drv2605Toggle[2] -> drv2605Face2Manager.toggleContinuous
       DetumbleManager.drv2605Toggle[3] -> drv2605Face3Manager.toggleContinuous
       DetumbleManager.drv2605Toggle[4] -> drv2605Face5Manager.toggleContinuous
+    }
+
+    connections PayloadCom {
+      # PayloadCom <-> UART Driver
+      payload.uartForward -> peripheralUartDriver.$send
+      peripheralUartDriver.$recv -> payload.uartDataIn
+
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload.bufferReturn -> peripheralUartDriver.recvReturnIn
+
+      # PayloadCom <-> CameraHandler data flow
+      payload.uartDataOut -> cameraHandler.dataIn
+      cameraHandler.commandOut -> payload.commandIn
+
+      # UART driver allocates/deallocates from BufferManager
+      peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
+      peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
+    }
+
+     connections PayloadCom2 {
+      # PayloadCom <-> UART Driver
+      payload2.uartForward -> peripheralUartDriver2.$send
+      peripheralUartDriver2.$recv -> payload2.uartDataIn
+
+      # Buffer return path (critical! - matches ComStub pattern)
+      payload2.bufferReturn -> peripheralUartDriver2.recvReturnIn
+
+      # PayloadCom <-> CameraHandler data flow
+      payload2.uartDataOut -> cameraHandler2.dataIn
+      cameraHandler2.commandOut -> payload2.commandIn
+
+      # UART driver allocates/deallocates from BufferManager
+      peripheralUartDriver2.allocate -> payloadBufferManager.bufferGetCallee
+      peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
     }
 
     connections ComCcsds_FileHandling {
