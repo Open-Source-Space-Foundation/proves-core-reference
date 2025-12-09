@@ -77,7 +77,7 @@ class AuthenticateFramer(FramerDeframer):
 
         Args:
             initial_sequence_number: Initial sequence number (default: 0)
-            spi: Security Parameter Index (default: 1)
+            spi: Security Parameter Index (default: 0)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
             authentication_key: Authentication key as hex string without 0x prefix (default: reads from spi_dict.txt)
@@ -160,8 +160,8 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--spi",): {
                 "type": int,
-                "help": "Security Parameter Index (default: 1)",
-                "default": 1,
+                "help": "Security Parameter Index (default: 0)",
+                "default": 0,
             },
             ("--window-size",): {
                 "type": int,

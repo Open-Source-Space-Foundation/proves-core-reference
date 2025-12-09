@@ -27,7 +27,7 @@ module Components {
 
         event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: seq_num={}, Expected={}, Window={}" throttle 2
 
-        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, defaulting to default key" throttle 2
+        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, packet rejected" throttle 2
 
         event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}" throttle 2
 
