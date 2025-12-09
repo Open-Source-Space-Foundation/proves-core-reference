@@ -2,6 +2,8 @@ module Components {
     @ Detumble Manager Component for F Prime FSW framework.
     passive component DetumbleManager {
 
+        ### Parameters ###
+
         @ Parameter for storing the rotational threshold for detumble to be enabled (default 12 deg/s)
         param ROTATIONAL_THRESHOLD: F32 default 12.0 \
             id 1
@@ -14,11 +16,10 @@ module Components {
         param COOLDOWN: U32 default 600 \
             id 3
 
+        ### Ports ###
+
         @ Run loop
         sync input port run: Svc.Sched
-
-        @ Port for sending accelerationGet calls to the LSM6DSO Driver
-        output port accelerationGet: Drv.AccelerationGet
 
         @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
         output port angularVelocityGet: Drv.AngularVelocityGet
@@ -26,14 +27,25 @@ module Components {
         @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
         output port magneticFieldGet: Drv.MagneticFieldGet
 
-        @ Port for sending temperatureGet calls to the LSM6DSO Driver
-        output port temperatureGet: Drv.TemperatureGet
-
         @ Port for sending dipoleMomentGet calls to the BDotDetumble Component
         output port dipoleMomentGet: Drv.DipoleMomentGet
 
-        @ Port for triggering the DRV2605 devices
-        output port drv2605Toggle: [5] Drv.MagnetorquerToggle
+        @ Port for triggering the X+ magnetorquer
+        output port xPlusToggle: Drv.MagnetorquerToggle
+
+        @ Port for triggering the X- magnetorquer
+        output port xMinusToggle: Drv.MagnetorquerToggle
+
+        @ Port for triggering the Y+ magnetorquer
+        output port yPlusToggle: Drv.MagnetorquerToggle
+
+        @ Port for triggering the Y- magnetorquer
+        output port yMinusToggle: Drv.MagnetorquerToggle
+
+        @ Port for triggering the Z- magnetorquer
+        output port zMinusToggle: Drv.MagnetorquerToggle
+
+        ### Events ###
 
         @ Event for reporting that a detumble control step run failed
         event ControlStepFailed(reason: string) severity warning high format "Control step failed for reason: {}"
@@ -64,8 +76,6 @@ module Components {
 
         @ Port for sending command responses
         command resp port cmdResponseOut
-
-
 
     }
 }

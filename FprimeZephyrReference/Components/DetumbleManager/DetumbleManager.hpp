@@ -36,8 +36,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
                      ) override;
 
     // Constants
-    Drv::MagneticField EMPTY_MG_FIELD = Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue(TimeBase::TB_NONE, 0, 0, 0));
-    Drv::DipoleMoment EMPTY_DP_MOMENT = Drv::DipoleMoment(0.0, 0.0, 0.0);
     const double PI = 3.14159265358979323846;
 
     // Proves V3 Magnetorquer Information
@@ -55,12 +53,11 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     F64 COIL_MAX_CURRENT_Z = this->COIL_VOLTAGE / this->COIL_RESISTANCE_Z;
 
     // Variables
-    Drv::MagneticField prevMgField = Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue(TimeBase::TB_NONE, 0, 0, 0));
     U32 lastCompleted = 0;
     bool detumbleRunning = true;
     int m_itrCount = 0;
 
-    bool bDotRunning = false;
+    bool m_bDotRunning = false;
     U32 bDotStartTime = -1;
 
     // Functions

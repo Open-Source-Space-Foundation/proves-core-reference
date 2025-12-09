@@ -45,6 +45,7 @@ module ReferenceDeployment {
     instance watchdog
     instance rtcManager
     instance DetumbleManager
+    instance BDotDetumble
     instance lis2mdlManager
     instance lsm6dsoManager
     instance imuManager
@@ -287,16 +288,15 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      DetumbleManager.accelerationGet -> lsm6dsoManager.accelerationGet
       DetumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      DetumbleManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      DetumbleManager.temperatureGet -> lsm6dsoManager.temperatureGet
+      DetumbleManager.dipoleMomentGet -> BDotDetumble.dipoleMomentGet
+      DetumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
+      DetumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
+      DetumbleManager.yPlusToggle -> drv2605Face2Manager.toggleContinuous
+      DetumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
+      DetumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
 
-      DetumbleManager.drv2605Toggle[0] -> drv2605Face0Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[1] -> drv2605Face1Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[2] -> drv2605Face2Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[3] -> drv2605Face3Manager.toggleContinuous
-      DetumbleManager.drv2605Toggle[4] -> drv2605Face5Manager.toggleContinuous
+      BDotDetumble.magneticFieldGet -> lis2mdlManager.magneticFieldGet
     }
 
     connections PayloadCom {

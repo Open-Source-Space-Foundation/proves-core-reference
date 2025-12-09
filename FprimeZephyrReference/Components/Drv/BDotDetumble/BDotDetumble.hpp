@@ -38,9 +38,8 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     // k is a gain constant
     // dB/dt is the time derivative of the magnetic field reading in micro-Tesla per second (uT/s)
     // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
-    Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,
-                                              const Drv::MagneticField& currMagField,
-                                              const Drv::MagneticField& prevMagField) override;
+    Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,  //!< The port number
+                                              Fw::Success& condition) override;
 
   private:
     // ----------------------------------------------------------------------
@@ -55,6 +54,12 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
 
     //! Get the time of the magnetic field reading
     Fw::Time magneticFieldReadingTime(const Drv::MagneticField magField);
+
+  private:
+    // ----------------------------------------------------------------------
+    //  Private member variables
+    // ----------------------------------------------------------------------
+    Drv::MagneticField m_previousMagField;  //!< Previous magnetic field reading
 };
 }  // namespace Drv
 #endif

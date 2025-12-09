@@ -5,10 +5,10 @@
 
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManager.hpp"
 
-#include <Fw/Types/Assert.hpp>
 #include <Fw/Types/String.hpp>
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <string>
 
 namespace Components {
@@ -31,7 +31,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     // was used and retrieval failed.
     Fw::ParamValid isValid;
 
-    if (this->bDotRunning) {
+    if (this->m_bDotRunning) {
         // Give two iterations for the magnetorquers to fully turn off for magnetic reading
         if (this->m_itrCount > 2) {
             std::string reason = "";
@@ -41,7 +41,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
                 this->log_WARNING_HI_ControlStepFailed(Fw::String(reason.c_str()));
             }
 
-            this->bDotRunning = false;
+            this->m_bDotRunning = false;
             this->m_itrCount = 0;
         } else {
             this->m_itrCount++;
@@ -56,7 +56,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
         bool values[5] = {false, false, false, false, false};
         this->setMagnetorquers(values);
     } else {
-        this->bDotRunning = true;
+        this->m_bDotRunning = true;
 
         // Disable the magnetorquers so magnetic reading can take place
         bool values[5] = {false, false, false, false, false};
@@ -108,7 +108,6 @@ F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& ang
     F64 magRadPerSec =
         std::sqrt(angVel.get_x() * angVel.get_x() + angVel.get_y() * angVel.get_y() + angVel.get_z() * angVel.get_z());
 
-    // Convert rad/s to deg/s
     return magRadPerSec * 180.0 / this->PI;
 }
 

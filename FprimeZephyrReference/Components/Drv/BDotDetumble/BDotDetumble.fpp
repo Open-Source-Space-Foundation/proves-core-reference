@@ -1,8 +1,5 @@
 module Drv {
-    port DipoleMomentGet(
-        currMagField: MagneticField
-        prevMagField: MagneticField
-    ) -> DipoleMoment
+    port DipoleMomentGet(ref condition: Fw.Success) -> DipoleMoment
 }
 
 module Drv {
@@ -14,10 +11,10 @@ module Drv {
         @ Input port to get the current dipole moment
         sync input port dipoleMomentGet: DipoleMomentGet
 
-        ### Telemetry ###
+        @ Port for reading the magnetic field from the magnetometer
+        output port magneticFieldGet: Drv.MagneticFieldGet
 
-        @ Telemetry for the calculated dipole moment
-        telemetry DipoleMoment: DipoleMoment
+        ### Telemetry ###
 
         @ Telemetry for the gain used in B-Dot algorithm
         telemetry Gain: F64

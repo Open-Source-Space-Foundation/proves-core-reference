@@ -141,6 +141,10 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler2.ImagesSaved
   }
 
+  packet Parameters id 15 group 6 {
+    ReferenceDeployment.BDotDetumble.Gain
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
