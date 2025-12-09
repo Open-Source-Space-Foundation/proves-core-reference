@@ -108,9 +108,11 @@ F64 DetumbleManager::getAngularVelocityMagnitude(const Drv::AngularVelocity& ang
 }
 
 void DetumbleManager::setMagnetorquers(bool val[5]) {
-    for (int i = 0; i < 5; i++) {
-        this->drv2605Toggle_out(i, val[i]);
-    }
+    this->xPlusToggle_out(0, val[0]);
+    this->xMinusToggle_out(0, val[1]);
+    this->yPlusToggle_out(0, val[2]);
+    this->yMinusToggle_out(0, val[3]);
+    this->zMinusToggle_out(0, val[4]);
 }
 
 }  // namespace Components
