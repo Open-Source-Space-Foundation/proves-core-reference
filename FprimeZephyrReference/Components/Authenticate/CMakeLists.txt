@@ -21,6 +21,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Authenticate.cpp"
     DEPENDS
         kernel
+        FprimeExtras_Utilities_FileHelper
 )
 
 # Add mbedTLS include directories for PSA crypto headers
