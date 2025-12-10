@@ -63,19 +63,23 @@ U32 Authenticate::readSequenceNumber(const char* filepath) {
         // Copy the data from buffer to U32
         std::memcpy(&value, buffer.getData(), sizeof(U32));
     } else {
-        Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(reinterpret_cast<U8*>(&value), sizeof(U32), 0));
+        // Copy value to buffer (to) avoid reinterpret_cast)
+        std::memcpy(bufferData, &value, sizeof(U32));
+        Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(bufferData, sizeof(U32), 0));
     }
     return value;
 }
 
 U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
-    Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(reinterpret_cast<U8*>(&value), sizeof(U32), 0));
+    // Copy value to buffer to avoid type punning
+    U8 bufferData[sizeof(U32)];
+    std::memcpy(bufferData, &value, sizeof(U32));
+    Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(bufferData, sizeof(U32), 0));
     return value;
 }
 
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
-    U32 newCount = this->m_rejectedPacketsCount.load() + 1;
-    this->m_rejectedPacketsCount.store(newCount);
+    U32 newCount = this->m_rejectedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_RejectedPacketsCount(newCount);
     contextOut.set_authenticated(0);
     this->dataOut_out(0, data, contextOut);
@@ -451,8 +455,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
 
-    U32 newCount = this->m_authenticatedPacketsCount.load() + 1;
-    this->m_authenticatedPacketsCount.store(newCount);
+    U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
     contextOut.set_authenticated(1);
     this->dataOut_out(0, data, contextOut);
