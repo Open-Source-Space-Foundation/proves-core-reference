@@ -11,8 +11,10 @@
 #include <zephyr/dfu/flash_img.h>
 #include <zephyr/dfu/mcuboot.h>
 
-
 namespace Components {
+//static_assert(FlashWorker::REGION_NUMBER == UPLOAD_FLASH_AREA_LABEL,
+//    "FlashWorker REGION_NUMBER must match zephyr mcuboot image for upload area");
+
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -32,7 +34,6 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
     FwSizeType size = 0;
     U32 file_crc = 0;
     Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
-    int status = flash_img_init_id(&this->m_flash_context, FlashWorker::REGION_NUMBER);
     // Read file size, and default to 0 if unavailable
     Os::File::Status file_status = file.size(size);
     if (file_status == Os::File::Status::OP_OK) {
@@ -46,6 +47,7 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
             file_status = file.seek(0, Os::File::SeekType::ABSOLUTE);
         }
     }
+    int status = flash_img_init_id(&this->m_flash_context, FlashWorker::REGION_NUMBER);
     FwSizeType i = 0;
     for (i = 0; i < size && status == 0 && file_status == Os::File::Status::OP_OK; i += CHUNK) {
         FwSizeType read_size = CHUNK;
