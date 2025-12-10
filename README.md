@@ -112,12 +112,22 @@ You can control the specific command lists of the satellite by writing a sequenc
 
 ## MCUBootloader
 
-First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr.
+First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr. Change into the following directory.
 
 ```
-
 in proves-core-reference
 cd lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+```
+
+You **must** then set the following in `sysbuild.conf`:
+
+```
++SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n
++SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y
+```
+
+And then build the mcuboot loader
+```
 <proves>/tools/bin/build-with-proves --sysbuild
 (example /home/username/proves-core-reference/tools/bin/build-with-proves --sysbuild)
 ```
