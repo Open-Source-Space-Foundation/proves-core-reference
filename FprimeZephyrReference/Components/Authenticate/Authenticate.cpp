@@ -39,8 +39,13 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {
-    //
+Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {}
+
+void Authenticate::init(FwEnumStoreType instance) {
+    // call init from the base class
+    AuthenticateComponentBase::init(instance);
+
+    // init the sequence number
     U32 sequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
 
     this->sequenceNumber.store(sequenceNumber);

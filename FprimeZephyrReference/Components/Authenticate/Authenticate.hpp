@@ -27,6 +27,9 @@ class Authenticate final : public AuthenticateComponentBase {
     //! Destroy Authenticate object
     ~Authenticate();
 
+    //! Initialize component
+    void init(FwEnumStoreType instance);
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
