@@ -45,6 +45,7 @@ module Components {
 
         event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}" throttle 2
 
+
         # @ Ports for packet authentication
 
         @ Port receiving Space Packets from TcDeframer

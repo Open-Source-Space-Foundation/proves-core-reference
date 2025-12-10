@@ -14,6 +14,7 @@
 #include <cstring>
 #include <functional>
 #include <iomanip>
+#include <lib/fprime-extras/FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <sstream>
 #include <vector>
 
@@ -39,59 +40,32 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {
-    U32 fileSequenceNumber = this->initializeFiles(SEQUENCE_NUMBER_PATH);
-    this->sequenceNumber.store(fileSequenceNumber);
-    this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
+    //
+    U32 sequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
 
-    // re init the packet counts
-    this->m_rejectedPacketsCount.store(0);
-    this->tlmWrite_RejectedPacketsCount(0);
-    this->m_authenticatedPacketsCount.store(0);
-    this->tlmWrite_AuthenticatedPacketsCount(0);
+    this->sequenceNumber.store(sequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
 }
 
-U32 Authenticate::initializeFiles(const char* filePath) {
-    U32 count = 0;
-    bool loadedFromFile = false;
+// Reading a U32 from a file
+U32 Authenticate::readSequenceNumber(const char* filepath) {
+    U32 value = 0;
+    U8 bufferData[sizeof(U32)];
+    Fw::Buffer buffer(bufferData, sizeof(U32), 0);
 
-    // Use a local file object instead of a member variable
-    Os::File file;
-
-    // Try to open and read from the file
-    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_READ);
-    if (openStatus == Os::File::OP_OK) {
-        FwSizeType size = static_cast<FwSizeType>(sizeof(count));
-        FwSizeType expectedSize = size;
-        Os::File::Status readStatus = file.read(reinterpret_cast<U8*>(&count), size, Os::File::WaitType::WAIT);
-        file.close();
-        loadedFromFile = (readStatus == Os::File::OP_OK) && (size == expectedSize);
+    Os::File::Status status = Utilities::FileHelper::readFromFile(filepath, buffer);
+    if (status == Os::File::Status::OP_OK) {
+        // Copy the data from buffer to U32
+        std::memcpy(&value, buffer.getData(), sizeof(U32));
+    } else {
+        Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(reinterpret_cast<U8*>(&value), sizeof(U32), 0));
     }
-
-    // If file doesn't exist or read failed, create it with value 0
-    if (!loadedFromFile) {
-        count = 0;
-        Os::File::Status createStatus =
-            file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::NO_OVERWRITE);
-        if (createStatus == Os::File::OP_OK) {
-            const U8* buffer = reinterpret_cast<const U8*>(&count);
-            FwSizeType size = static_cast<FwSizeType>(sizeof(count));
-            (void)file.write(buffer, size, Os::File::WaitType::WAIT);
-            file.close();
-        }
-    }
-
-    return count;
+    return value;
 }
 
-void Authenticate::persistToFile(const char* filePath, U32 value) {
-    Os::File file;
-    Os::File::Status openStatus = file.open(filePath, Os::File::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
-    if (openStatus == Os::File::OP_OK) {
-        const U8* buffer = reinterpret_cast<const U8*>(&value);
-        FwSizeType size = static_cast<FwSizeType>(sizeof(value));
-        (void)file.write(buffer, size, Os::File::WaitType::WAIT);
-        file.close();
-    }
+U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
+    Utilities::FileHelper::writeToFile(filepath, Fw::Buffer(reinterpret_cast<U8*>(&value), sizeof(U32), 0));
+    return value;
 }
 
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
@@ -465,11 +439,10 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     }
     printk("[DEBUG] Authentication: HMAC validation PASSED\n");
 
-    // increment the stored sequence number and persist it to the file system
+    // increment the stored sequence number
     U32 newSequenceNumber = sequenceNumber + 1;
     this->sequenceNumber.store(newSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
-    this->persistToFile(SEQUENCE_NUMBER_PATH, newSequenceNumber);
 
     this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
 
@@ -485,31 +458,8 @@ void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 }
 
 U32 Authenticate ::get_SequenceNumber() {
-    bool loadedFromFile = true;
-    U32 fileSequenceNumber = 0;
-    Os::File::Status openStatus = this->m_sequenceNumberFile.open(SEQUENCE_NUMBER_PATH, Os::File::OPEN_READ);
-
-    if (openStatus == Os::File::OP_OK) {
-        FwSizeType size = static_cast<FwSizeType>(sizeof(fileSequenceNumber));
-        FwSizeType expectedSize = size;
-        Os::File::Status readStatus =
-            this->m_sequenceNumberFile.read(reinterpret_cast<U8*>(&fileSequenceNumber), size, Os::File::WaitType::WAIT);
-        this->m_sequenceNumberFile.close();
-        if ((readStatus != Os::File::OP_OK) || (size != expectedSize)) {
-            loadedFromFile = false;
-        }
-    } else {
-        loadedFromFile = false;
-    }
-
-    if (loadedFromFile) {
-        this->sequenceNumber.store(fileSequenceNumber);
-        this->tlmWrite_CurrentSequenceNumber(fileSequenceNumber);
-        return fileSequenceNumber;
-    } else {
-        fileSequenceNumber = this->sequenceNumber.load();
-        return fileSequenceNumber;
-    }
+    U32 fileSequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
+    return fileSequenceNumber;
 }
 
 // ----------------------------------------------------------------------
@@ -525,26 +475,9 @@ void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     // Writes the sequence number to the file system
-    this->sequenceNumber.store(seq_num);
+    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, seq_num);
 
-    bool persistSuccess = true;
-
-    Os::File::Status openStatus = this->m_sequenceNumberFile.open(SEQUENCE_NUMBER_PATH, Os::File::OPEN_CREATE,
-                                                                  Os::File::OverwriteType::OVERWRITE);
-    if (openStatus == Os::File::OP_OK) {
-        const U8* buffer = reinterpret_cast<const U8*>(&seq_num);
-        FwSizeType size = static_cast<FwSizeType>(sizeof(seq_num));
-        FwSizeType expectedSize = size;
-        Os::File::Status writeStatus = this->m_sequenceNumberFile.write(buffer, size, Os::File::WaitType::WAIT);
-        this->m_sequenceNumberFile.close();
-        if ((writeStatus != Os::File::OP_OK) || (size != expectedSize)) {
-            persistSuccess = false;
-        }
-    } else {
-        persistSuccess = false;
-    }
-
-    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, persistSuccess);
+    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, true);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

@@ -8,6 +8,7 @@
 #include <Os/File.hpp>
 #include <atomic>
 #include <cassert>
+#include <lib/fprime-extras/FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 
@@ -46,6 +47,12 @@ class Authenticate final : public AuthenticateComponentBase {
                               const ComCfg::FrameContext& context) override;
 
   private:
+    // function to read a U32 from a file
+    U32 readSequenceNumber(const char* filepath);
+
+    // function to write a U32 to a file
+    U32 writeSequenceNumber(const char* filepath, U32 value);
+
     struct AuthenticationConfig {
         Fw::String type;
         Fw::String key;
@@ -87,12 +94,6 @@ class Authenticate final : public AuthenticateComponentBase {
 
     // function to get the current sequence number
     U32 get_SequenceNumber();
-
-    // function to make sure files exist and are initialized
-    U32 initializeFiles(const char* filePath);
-
-    // function to read a U32 value from a file
-    void persistToFile(const char* filePath, U32 value);
 
     // function to reject packets that fail authentication
     void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
