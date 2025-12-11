@@ -26,7 +26,8 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \
-		$(UV) run west sdk install --toolchains arm-zephyr-eabi; \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi && \
+		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
 	}
 
 ##@ Development
@@ -52,6 +53,17 @@ generate-if-needed:
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
+
+SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+.PHONY: build-mcuboot
+build-mcuboot: submodules zephyr fprime-venv
+	@> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_BOOTLOADER_MCUBOOT=y" >> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n" >> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y" >> $(SYSBUILD_PATH)/sysbuild.conf
+
+	$(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
+	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
 .PHONY: test-integration
 test-integration: uv

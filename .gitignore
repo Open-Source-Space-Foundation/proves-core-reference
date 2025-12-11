@@ -20,6 +20,7 @@ lib/zephyr-workspace/*
 build
 settings.ini
 bootable.uf2
+mcuboot.uf2
 
 **/__pycache__/
 **/*.egg-info/

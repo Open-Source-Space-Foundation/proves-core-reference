@@ -112,35 +112,14 @@ You can control the specific command lists of the satellite by writing a sequenc
 
 ## MCUBootloader
 
-First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr. Change into the following directory.
-
-```
-in proves-core-reference
-cd lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+To build the bootloader, ensure you have sourced fprime-venv, and then run:
+```sh
+make build-mcuboot
 ```
 
-You **must** then set the following in `sysbuild.conf`:
+Once built, upload `mcuboot.uf2` like normally done.
 
-```
-+SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n
-+SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y
-```
-
-And then build the mcuboot loader
-```
-<proves>/tools/bin/build-with-proves --sysbuild
-(example /home/username/proves-core-reference/tools/bin/build-with-proves --sysbuild)
-```
-
-Once built, cd upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
-
-Then build Proves like normal. This will make a UF2, but not for the second flash region.  To build a bootable image, use:
-
-```
-<proves>/tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
-```
-
-Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image, by changing the base address so it appears at slot0. Once you boot into it, you can use the FlashWorker component to write to slot 1 at runtime.
+Then build proves-core-reference like normal. This will put `bootable.uf2` inside of the current directory. Ensure you upload this file to the board instead of `build-artifacts/zephyr.uf2`.
 
 
 Before, you currently need to run
