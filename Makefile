@@ -54,6 +54,17 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 
+SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+.PHONY: build-mcuboot
+build-mcuboot: submodules zephyr fprime-venv
+	@> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_BOOTLOADER_MCUBOOT=y" >> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n" >> $(SYSBUILD_PATH)/sysbuild.conf
+	@echo "SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y" >> $(SYSBUILD_PATH)/sysbuild.conf
+
+	$(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
+	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
+
 .PHONY: test-integration
 test-integration: uv
 	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
