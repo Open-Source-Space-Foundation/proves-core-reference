@@ -145,15 +145,21 @@ Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable softw
 
 Before, you currently need to run
 
-``` pip install git+http://github.com/LeStarch/fprime-gds.git@0e23d212  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
+``` pip install git+https://github.com/LeStarch/fprime-gds@5b02709  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
+
+
+When you run the gds,
+
+``` fprime-gds --file-uplink-cooldown 0.8```
 
 Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the file uplink file
 
-set update.updater.update_image_from and set the next boot to book from _____
 
 1. prepare image
 2. update from (pass in the path)
 3. configure_next_boot = test
+
+to find the crc ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
 
 (either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
 

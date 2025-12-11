@@ -2,6 +2,7 @@
 """
 Calculate CRC32 checksum of a file using zlib.
 """
+
 import argparse
 import sys
 import zlib
@@ -9,18 +10,18 @@ from pathlib import Path
 
 
 def calculate_crc(file_path: Path) -> int:
-    """ Calculate CRC32 checksum of a file
+    """Calculate CRC32 checksum of a file
 
     This will calculate the CRC32 of a file in chunks to handle large files. It uses zlib's crc32 function.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         CRC32 checksum as an integer
     """
     crc = 0
-    with open(file_path, 'rb') as file_handle:
+    with open(file_path, "rb") as file_handle:
         while chunk := file_handle.read(8192):
             crc = zlib.crc32(chunk, crc)
     # Ensure CRC is in unsigned 32-bit format
@@ -28,26 +29,22 @@ def calculate_crc(file_path: Path) -> int:
 
 
 def main():
-    """Main entry point. Hi Lewis!!! """
+    """Main entry point. Hi Lewis!!!"""
     parser = argparse.ArgumentParser(
-        description='Calculate CRC32 checksum of a file using zlib'
+        description="Calculate CRC32 checksum of a file using zlib"
     )
-    parser.add_argument(
-        'file',
-        type=Path,
-        help='Path to the file to calculate CRC for'
-    )
-    
+    parser.add_argument("file", type=Path, help="Path to the file to calculate CRC for")
+
     args = parser.parse_args()
-    
+
     if not args.file.exists():
         print(f"[ERROR] File '{args.file}' does not exist", file=sys.stderr)
         sys.exit(1)
-        
+
     if not args.file.is_file():
         print(f"[ERROR] '{args.file}' is not a file", file=sys.stderr)
         sys.exit(2)
-    
+
     try:
         crc = calculate_crc(args.file)
         print(f"0x{crc:08x}")
@@ -56,5 +53,5 @@ def main():
         sys.exit(3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
