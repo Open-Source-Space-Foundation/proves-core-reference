@@ -104,54 +104,33 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         return Fw::Buffer();
     }
 
-    // Parse key from hex string or use as raw bytes
-    std::vector<U8> keyBytes;
+    // Parse key from hex string (32 hex characters = 16 bytes)
     const char* keyStr = key.toChar();
     FwSizeType keyLen = key.length();
 
     printk("[DEBUG] computeHMAC: Input key string='%s', length=%llu\n", keyStr,
            static_cast<unsigned long long>(keyLen));
 
-    const char* hexKeyStr = keyStr;
-    FwSizeType hexKeyLen = keyLen;
-
-    // Check if all characters are hex digits
-    bool isHexString = true;
-    for (FwSizeType i = 0; i < hexKeyLen; i++) {
-        if (!std::isxdigit(static_cast<unsigned char>(hexKeyStr[i]))) {
-            isHexString = false;
-            break;
-        }
-    }
-
-    // Parse as hex string if valid, otherwise use as raw bytes
-    if (isHexString && hexKeyLen > 0 && hexKeyLen % 2 == 0) {
-        printk("[DEBUG] computeHMAC: Parsing key as hex string\n");
-        for (FwSizeType i = 0; i < hexKeyLen; i += 2) {
-            char byteStr[3] = {hexKeyStr[i], hexKeyStr[i + 1], '\0'};
-            keyBytes.push_back(static_cast<U8>(std::strtoul(byteStr, nullptr, 16)));
-        }
-    } else {
-        printk("[DEBUG] computeHMAC: Parsing key as raw bytes (not hex string), isHexString=%d, hexKey.length()=%llu\n",
-               isHexString ? 1 : 0, static_cast<unsigned long long>(hexKeyLen));
-        const char* rawKey = key.toChar();
-        for (FwSizeType i = 0; i < keyLen; i++) {
-            keyBytes.push_back(static_cast<U8>(rawKey[i]));
-        }
-    }
-
-    printk("[DEBUG] computeHMAC: Parsed key bytes (length=%zu): ", keyBytes.size());
-    for (size_t i = 0; i < keyBytes.size() && i < 16; i++) {
-        printk("%02X ", keyBytes[i]);
-    }
-    printk("\n");
-
-    // Check the length of the key bytes
-    if (keyBytes.size() != 16) {
-        printk("[DEBUG] computeHMAC: ERROR - Key length is %zu, expected 16 bytes\n", keyBytes.size());
+    // Key must be 32 hex characters (16 bytes)
+    if (keyLen != 32) {
+        printk("[DEBUG] computeHMAC: ERROR - Key length is %llu, expected 32 hex characters (16 bytes)\n",
+               static_cast<unsigned long long>(keyLen));
         this->log_WARNING_HI_InvalidSPI(-1);
         return Fw::Buffer();
     }
+
+    // Parse hex string to bytes (stack-allocated array)
+    U8 keyBytes[16];
+    for (FwSizeType i = 0; i < 32; i += 2) {
+        char byteStr[3] = {keyStr[i], keyStr[i + 1], '\0'};
+        keyBytes[i / 2] = static_cast<U8>(std::strtoul(byteStr, nullptr, 16));
+    }
+
+    printk("[DEBUG] computeHMAC: Parsed key bytes: ");
+    for (size_t i = 0; i < 16; i++) {
+        printk("%02X ", keyBytes[i]);
+    }
+    printk("\n");
 
     // Combine security header and command payload into a single input buffer
     const size_t totalInputLength = static_cast<size_t>(securityHeaderLength + commandPayloadLength);
@@ -188,8 +167,9 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
 
     // Prepare key: pad with zeros or hash if longer than block size
     std::vector<U8> preparedKey(blockSize, 0);
-    if (keyBytes.size() <= blockSize) {
-        std::memcpy(preparedKey.data(), keyBytes.data(), keyBytes.size());
+    constexpr size_t keySize = 16;  // HMAC key is always 16 bytes
+    if (keySize <= blockSize) {
+        std::memcpy(preparedKey.data(), keyBytes, keySize);
     } else {
         // Hash key if longer than block size
         psa_hash_operation_t hashOp = PSA_HASH_OPERATION_INIT;
@@ -199,7 +179,7 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
             this->log_WARNING_HI_CryptoComputationError(statusU32);
             return Fw::Buffer();
         }
-        status = psa_hash_update(&hashOp, keyBytes.data(), keyBytes.size());
+        status = psa_hash_update(&hashOp, keyBytes, keySize);
         if (status == PSA_SUCCESS) {
             size_t hashLen = 0;
             status = psa_hash_finish(&hashOp, preparedKey.data(), blockSize, &hashLen);
