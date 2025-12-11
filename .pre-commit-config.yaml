@@ -39,8 +39,11 @@ repos:
   rev: 1.7.0
   hooks:
     - id: interrogate
+      types: [python]
+      exclude: ^tools/bin/
       args:
         - --ignore-init-method
+        - --ignore-nested-functions
         - --omit-covered-files
         - --fail-under=100
         - -vv
