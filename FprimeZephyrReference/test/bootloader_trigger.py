@@ -12,7 +12,6 @@ import time
 
 import pytest
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from int.common import cmdDispatch
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -28,7 +27,7 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     while time.time() < timeout_time:
         try:
             fprime_test_api_session.send_and_assert_command(
-                command=f"{cmdDispatch}.CMD_NO_OP"
+                command="16777216"  # NO_OP opcode
             )
             gds_working = True
             break
@@ -45,4 +44,4 @@ def test_bootloader(fprime_test_api: IntegrationTestAPI):
     # Don't use proves_send_and_assert_command here because we don't expect
     # a response from the bootloader trigger command. The device will reboot
     # into bootloader mode and may not send a command completion event.
-    fprime_test_api.send_command(268541952)  # TRIGGER_BOOTLOADER opcode
+    fprime_test_api.send_command("268541952")  # TRIGGER_BOOTLOADER opcode
