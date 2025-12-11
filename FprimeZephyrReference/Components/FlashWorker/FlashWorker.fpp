@@ -14,13 +14,13 @@ module Components {
 
         event FlashEraseFailed(error_number: I32) severity warning low \
             format "Flash erase failed (errno: {})"
-        
+
         event FlashWriteFailed(error_number: I32, bytes: FwSizeType) severity warning low \
             format "Flash write failed (errno: {}) at {}"
 
         event ImageFileReadError(file_name: string, error: Os.FileStatus) severity warning low \
             format "Failed to read {} with error {}"
-        
+
         event ImageFileCrcMismatch(file_name: string, error: Os.FileStatus, expected: U32, actual: U32) \
             severity warning low \
             format "Failed CRC validation of {} with status {} expected 0x{x} and actual 0x{x}"

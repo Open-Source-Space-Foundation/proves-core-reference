@@ -12,9 +12,8 @@
 #include <zephyr/dfu/mcuboot.h>
 
 namespace Components {
-//static_assert(FlashWorker::REGION_NUMBER == UPLOAD_FLASH_AREA_LABEL,
-//    "FlashWorker REGION_NUMBER must match zephyr mcuboot image for upload area");
-
+// static_assert(FlashWorker::REGION_NUMBER == UPLOAD_FLASH_AREA_LABEL,
+//     "FlashWorker REGION_NUMBER must match zephyr mcuboot image for upload area");
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -40,8 +39,8 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
         // Loop through file chunk by chunk
         file_status = file.calculateCrc(file_crc);
         if (file_status != Os::File::Status::OP_OK || file_crc != expected_crc32) {
-            this->log_WARNING_LO_ImageFileCrcMismatch(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)),
-                                                    expected_crc32, file_crc);
+            this->log_WARNING_LO_ImageFileCrcMismatch(
+                file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)), expected_crc32, file_crc);
             return_status = Update::UpdateStatus::IMAGE_CRC_MISMATCH;
         } else {
             file_status = file.seek(0, Os::File::SeekType::ABSOLUTE);
