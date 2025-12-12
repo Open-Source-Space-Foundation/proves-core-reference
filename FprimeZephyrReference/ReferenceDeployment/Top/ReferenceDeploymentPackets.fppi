@@ -122,7 +122,7 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
 
-  packet HealthAuxillary id 4 group 5 {
+  packet HealthAuxiliary id 4 group 5 {
     ComCcsds.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     payloadBufferManager2.HiBuffs
