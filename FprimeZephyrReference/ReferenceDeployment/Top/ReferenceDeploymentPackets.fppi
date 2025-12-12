@@ -46,18 +46,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
   }
 
-  packet Thermal id 12 group 2 {
-    ReferenceDeployment.tmp112Face0Manager.Temperature
-    ReferenceDeployment.tmp112Face1Manager.Temperature
-    ReferenceDeployment.tmp112Face2Manager.Temperature
-    ReferenceDeployment.tmp112Face3Manager.Temperature
-    ReferenceDeployment.tmp112Face5Manager.Temperature
-    ReferenceDeployment.tmp112BattCell1Manager.Temperature
-    ReferenceDeployment.tmp112BattCell2Manager.Temperature
-    ReferenceDeployment.tmp112BattCell3Manager.Temperature
-    ReferenceDeployment.tmp112BattCell4Manager.Temperature
-  }
-
   packet LightSensor id 13 group 2 {
     ReferenceDeployment.veml6031Face0Manager.VisibleLight
     ReferenceDeployment.veml6031Face1Manager.VisibleLight
@@ -80,6 +68,18 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.payloadPowerLoadSwitch.IsOn
     ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
     ReferenceDeployment.antennaDeployer.DeployAttemptCount
+  }
+
+  packet Thermal id 12 group 3 {
+    ReferenceDeployment.tmp112Face0Manager.Temperature
+    ReferenceDeployment.tmp112Face1Manager.Temperature
+    ReferenceDeployment.tmp112Face2Manager.Temperature
+    ReferenceDeployment.tmp112Face3Manager.Temperature
+    ReferenceDeployment.tmp112Face5Manager.Temperature
+    ReferenceDeployment.tmp112BattCell1Manager.Temperature
+    ReferenceDeployment.tmp112BattCell2Manager.Temperature
+    ReferenceDeployment.tmp112BattCell3Manager.Temperature
+    ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
   ### Payload Meta Data Packets ###
@@ -129,7 +129,7 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.tlmSend.SendLevel
   }
 
-  packet Version id 5 group 5 {
+  packet FileSystem id 5 group 5 {
     fsSpace.FreeSpace
     fsSpace.TotalSpace
   }
