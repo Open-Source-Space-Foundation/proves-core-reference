@@ -419,8 +419,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     this->sequenceNumber.store(newSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
 
-    this->log_ACTIVITY_HI_ValidHash(contextOut.get_apid(), spi, sequenceNumber);
-
     U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
     contextOut.set_authenticated(1);
