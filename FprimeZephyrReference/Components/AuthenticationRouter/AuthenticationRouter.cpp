@@ -28,9 +28,17 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-constexpr const char BYPASS_AUTHENTICATION_FILE[] = "//bypass_authentification_file.txt";
 constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
 constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
+
+// List of opcodes (as hex strings) that bypass authentication
+// Format: 8 hex characters (4 bytes = 32-bit opcode)
+// Example: "00000001" for opcode 0x00000001
+static constexpr const char* kBypassOpCodes[] = {
+    // Add opcodes here as hex strings (uppercase, no spaces, no 0x prefix)
+    "01000000",  // no op
+    nullptr      // Sentinel to mark end of list
+};
 
 namespace Svc {
 
@@ -58,107 +66,30 @@ static void printHexData(const U8* data, size_t length, const char* label) {
     printk("\n");
 }
 
-bool AuthenticationRouter ::BypassesAuthentification(Fw::Buffer& packetBuffer) {
-    // Extract opCode from packet buffer
-    printk("\n");
-    printHexData(packetBuffer.getData(), packetBuffer.getSize(), "packetBuffer.getData()");
-    printk("OP_CODE_START %d \n", OP_CODE_START);
-    printk("OP_CODE_LENGTH %d \n", OP_CODE_LENGTH);
-
+bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // Check bounds before extracting
     if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {
-        printk("ERROR: Buffer too small! Need %d bytes starting at offset %d, but buffer only has %llu bytes\n",
-               OP_CODE_LENGTH, OP_CODE_START, static_cast<unsigned long long>(packetBuffer.getSize()));
         return false;
     }
 
-    // Extract opcode bytes
-    std::vector<U8> opCodeBytes(OP_CODE_LENGTH);
-    std::memcpy(&opCodeBytes[0], packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
-    printHexData(opCodeBytes.data(), OP_CODE_LENGTH, "opCode");
+    // Extract opcode bytes (stack-allocated)
+    U8 opCodeBytes[OP_CODE_LENGTH];
+    std::memcpy(opCodeBytes, packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
 
-    // Convert opcode bytes to hex string (uppercase, no spaces)
-    Fw::String opCodeHex;
-    char hexStr[OP_CODE_LENGTH * 2 + 1];
+    // TO DO: See if I can save the opcode in hex form instead of converting it every time
+    constexpr size_t kHexStrSize = OP_CODE_LENGTH * 2 + 1;
+    char opCodeHex[kHexStrSize];
     for (size_t i = 0; i < OP_CODE_LENGTH; i++) {
-        size_t remaining = sizeof(hexStr) - (i * 2);
-        std::snprintf(hexStr + i * 2, remaining, "%02X", static_cast<unsigned>(opCodeBytes[i]));
+        const size_t remainingSize = kHexStrSize - (i * 2);
+        std::snprintf(opCodeHex + (i * 2), remainingSize, "%02X", static_cast<unsigned>(opCodeBytes[i]));
     }
-    hexStr[OP_CODE_LENGTH * 2] = '\0';
-    opCodeHex = hexStr;
-    printk("opCodeHex: %s\n", opCodeHex.toChar());
+    opCodeHex[OP_CODE_LENGTH * 2] = '\0';
 
-    // Open file
-    Os::File bypassOpCodesFile;
-    Os::File::Status openStatus = bypassOpCodesFile.open(BYPASS_AUTHENTICATION_FILE, Os::File::OPEN_READ);
-    if (openStatus != Os::File::OP_OK) {
-        this->log_WARNING_HI_FileOpenError(openStatus);
-        return false;
-    }
-
-    FwSizeType fileSize = 0;
-    Os::File::Status sizeStatus = bypassOpCodesFile.size(fileSize);
-    if (sizeStatus != Os::File::OP_OK || fileSize == 0) {
-        bypassOpCodesFile.close();
-        this->log_WARNING_HI_FileOpenError(sizeStatus);
-        return false;
-    }
-
-    // Read file contents as text
-    std::vector<U8> fileContentsBuffer(static_cast<size_t>(fileSize));
-    FwSizeType bytesToRead = fileSize;
-    Os::File::Status readStatus =
-        bypassOpCodesFile.read(fileContentsBuffer.data(), bytesToRead, Os::File::WaitType::WAIT);
-    bypassOpCodesFile.close();
-
-    if (readStatus != Os::File::OP_OK || bytesToRead != fileSize) {
-        this->log_WARNING_HI_FileOpenError(readStatus);
-        return false;
-    }
-
-    // Null-terminate for string operations
-    fileContentsBuffer.push_back('\0');
-    const char* fileContents = reinterpret_cast<const char*>(fileContentsBuffer.data());
-    printk("fileContents: %s\n", fileContents);
-
-    // Parse file line by line and check if opcode hex string matches
-    const char* opCodeHexStr = opCodeHex.toChar();
-    const char* lineStart = fileContents;
-    while (*lineStart != '\0') {
-        // Find end of line
-        const char* lineEnd = lineStart;
-        while (*lineEnd != '\0' && *lineEnd != '\n' && *lineEnd != '\r') {
-            lineEnd++;
-        }
-
-        // Extract line (without newline)
-        FwSizeType lineLen = static_cast<FwSizeType>(lineEnd - lineStart);
-        if (lineLen > 0) {
-            Fw::String line;
-            char* lineBuf = new char[lineLen + 1];
-            std::strncpy(lineBuf, lineStart, static_cast<size_t>(lineLen));
-            lineBuf[lineLen] = '\0';
-            line = lineBuf;
-            delete[] lineBuf;
-
-            // Check if this line matches the opcode
-            if (line == opCodeHex) {
-                printk("Found matching opcode in bypass file: %s\n", line.toChar());
-                return true;
-            } else {
-                printk("No matching opcode in bypass file: %s\n", line.toChar());
-                printk("opCodeHex: %s\n", opCodeHexStr);
-                printk("line: %s\n", line.toChar());
-            }
-        }
-
-        // Move to next line
-        lineStart = lineEnd;
-        if (*lineStart == '\r') {
-            lineStart++;
-        }
-        if (*lineStart == '\n') {
-            lineStart++;
+    // Check if opcode matches any in the bypass list
+    for (size_t i = 0; kBypassOpCodes[i] != nullptr; i++) {
+        if (std::strcmp(opCodeHex, kBypassOpCodes[i]) == 0) {
+            printk("[DEBUG] BypassesAuthentification: Found matching opcode: %s\n", opCodeHex);
+            return true;
         }
     }
 
