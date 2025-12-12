@@ -16,7 +16,6 @@
 #include <iomanip>
 #include <lib/fprime-extras/FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <sstream>
-#include <vector>
 
 #include <zephyr/kernel.h>
 
@@ -138,17 +137,17 @@ Fw::Buffer Authenticate::computeHMAC(const U8* data, const FwSizeType dataLength
 
     // Implement HMAC-SHA-256 manually using PSA hash API (RFC 2104)
     // HMAC(k, m) = H(k XOR opad || H(k XOR ipad || m))
-    const size_t blockSize = 64;  // SHA-256 block size
+    constexpr size_t kBlockSize = 64;  // SHA-256 block size
     const U8 ipad = 0x36;
     const U8 opad = 0x5C;
     U8 macOutput[32];
     size_t macOutputLength = 0;
 
     // Prepare key: pad with zeros or hash if longer than block size
-    std::vector<U8> preparedKey(blockSize, 0);
+    U8 preparedKey[kBlockSize] = {0};
     constexpr size_t keySize = 16;  // HMAC key is always 16 bytes
-    if (keySize <= blockSize) {
-        std::memcpy(preparedKey.data(), keyBytes, keySize);
+    if (keySize <= kBlockSize) {
+        std::memcpy(preparedKey, keyBytes, keySize);
     } else {
         // Hash key if longer than block size
         psa_hash_operation_t hashOp = PSA_HASH_OPERATION_INIT;
@@ -161,7 +160,7 @@ Fw::Buffer Authenticate::computeHMAC(const U8* data, const FwSizeType dataLength
         status = psa_hash_update(&hashOp, keyBytes, keySize);
         if (status == PSA_SUCCESS) {
             size_t hashLen = 0;
-            status = psa_hash_finish(&hashOp, preparedKey.data(), blockSize, &hashLen);
+            status = psa_hash_finish(&hashOp, preparedKey, kBlockSize, &hashLen);
         }
         if (status != PSA_SUCCESS) {
             U32 statusU32 = static_cast<U32>(status);
@@ -171,15 +170,15 @@ Fw::Buffer Authenticate::computeHMAC(const U8* data, const FwSizeType dataLength
     }
 
     // Compute inner hash: H(k XOR ipad || m)
-    std::vector<U8> innerKey(blockSize);
-    for (size_t i = 0; i < blockSize; i++) {
+    U8 innerKey[kBlockSize];
+    for (size_t i = 0; i < kBlockSize; i++) {
         innerKey[i] = preparedKey[i] ^ ipad;
     }
 
     psa_hash_operation_t innerHash = PSA_HASH_OPERATION_INIT;
     status = psa_hash_setup(&innerHash, PSA_ALG_SHA_256);
     if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&innerHash, innerKey.data(), blockSize);
+        status = psa_hash_update(&innerHash, innerKey, kBlockSize);
     }
     if (status == PSA_SUCCESS) {
         status = psa_hash_update(&innerHash, data, dataLength);
@@ -197,15 +196,15 @@ Fw::Buffer Authenticate::computeHMAC(const U8* data, const FwSizeType dataLength
     }
 
     // Compute outer hash: H(k XOR opad || innerHash)
-    std::vector<U8> outerKey(blockSize);
-    for (size_t i = 0; i < blockSize; i++) {
+    U8 outerKey[kBlockSize];
+    for (size_t i = 0; i < kBlockSize; i++) {
         outerKey[i] = preparedKey[i] ^ opad;
     }
 
     psa_hash_operation_t outerHash = PSA_HASH_OPERATION_INIT;
     status = psa_hash_setup(&outerHash, PSA_ALG_SHA_256);
     if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&outerHash, outerKey.data(), blockSize);
+        status = psa_hash_update(&outerHash, outerKey, kBlockSize);
     }
     if (status == PSA_SUCCESS) {
         status = psa_hash_update(&outerHash, innerHashOutput, innerHashLen);
