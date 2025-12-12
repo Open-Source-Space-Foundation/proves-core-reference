@@ -25,6 +25,11 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
         "CdhCore.tlmSend.SEND_PKT",
         ["11"],
     )
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "CdhCore.tlmSend.SEND_PKT",
+        ["1"],
+    )
 
 
 def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):

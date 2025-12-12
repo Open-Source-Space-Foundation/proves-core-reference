@@ -46,7 +46,7 @@ component = "ReferenceDeployment.modeManager"
 MODE_TELEMETRY_PACKET_ID = (
     "2"  # ModeManager telemetry (CurrentMode, SafeModeReason, etc.)
 )
-VOLTAGE_TELEMETRY_PACKET_ID = "11"  # PowerMonitor telemetry (includes INA219 voltage)
+VOLTAGE_TELEMETRY_PACKET_ID = "1"  # PowerMonitor telemetry (includes INA219 voltage)
 
 # Voltage thresholds (must match ModeManager.hpp constants)
 SAFE_MODE_ENTRY_VOLTAGE = 6.7  # Volts - threshold for entering safe mode from NORMAL
