@@ -63,22 +63,13 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
 
-    Fw::Buffer computeHMAC(const U8* securityHeader,
-                           const FwSizeType securityHeaderLength,
-                           const U8* commandPayload,
-                           const FwSizeType commandPayloadLength,
-                           const Fw::String& key);
+    Fw::Buffer computeHMAC(const U8* data, const FwSizeType dataLength, const Fw::String& key);
 
     bool validateSequenceNumber(U32 received, U32 expected);
 
     bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
 
-    bool validateHMAC(const U8* securityHeader,
-                      FwSizeType securityHeaderLength,
-                      const U8* data,
-                      FwSizeType dataLength,
-                      const Fw::String& key,
-                      const U8* securityTrailer);
+    bool validateHMAC(const U8* data, FwSizeType dataLength, const Fw::String& key, const U8* securityTrailer);
 
     //! Validate and extract security header information
     //! \param data: Input buffer containing security header + data + security trailer

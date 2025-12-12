@@ -91,11 +91,7 @@ Authenticate ::~Authenticate() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
-                                     const FwSizeType securityHeaderLength,
-                                     const U8* commandPayload,
-                                     const FwSizeType commandPayloadLength,
-                                     const Fw::String& key) {
+Fw::Buffer Authenticate::computeHMAC(const U8* data, const FwSizeType dataLength, const Fw::String& key) {
     // Initialize PSA crypto (idempotent, safe to call multiple times)
     psa_status_t status = psa_crypto_init();
     if (status != PSA_SUCCESS) {
@@ -132,30 +128,13 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
     }
     printk("\n");
 
-    // Combine security header and command payload into a single input buffer
-    const size_t totalInputLength = static_cast<size_t>(securityHeaderLength + commandPayloadLength);
-    printk(
-        "[DEBUG] computeHMAC: Input data - securityHeaderLength=%llu, commandPayloadLength=%llu, "
-        "totalInputLength=%zu\n",
-        static_cast<unsigned long long>(securityHeaderLength), static_cast<unsigned long long>(commandPayloadLength),
-        totalInputLength);
+    printk("[DEBUG] computeHMAC: Input data length=%llu\n", static_cast<unsigned long long>(dataLength));
 
-    printk("[DEBUG] computeHMAC: Security header bytes: ");
-    for (FwSizeType i = 0; i < securityHeaderLength && i < 6; i++) {
-        printk("%02X ", securityHeader[i]);
+    printk("[DEBUG] computeHMAC: Data (first 22 bytes): ");
+    for (FwSizeType i = 0; i < dataLength && i < 22; i++) {
+        printk("%02X ", data[i]);
     }
     printk("\n");
-
-    printk("[DEBUG] computeHMAC: Command payload (first 16 bytes): ");
-    for (FwSizeType i = 0; i < commandPayloadLength && i < 16; i++) {
-        printk("%02X ", commandPayload[i]);
-    }
-    printk("\n");
-
-    std::vector<U8> inputBuffer;
-    inputBuffer.reserve(totalInputLength);
-    inputBuffer.insert(inputBuffer.end(), securityHeader, securityHeader + securityHeaderLength);
-    inputBuffer.insert(inputBuffer.end(), commandPayload, commandPayload + commandPayloadLength);
 
     // Implement HMAC-SHA-256 manually using PSA hash API (RFC 2104)
     // HMAC(k, m) = H(k XOR opad || H(k XOR ipad || m))
@@ -203,7 +182,7 @@ Fw::Buffer Authenticate::computeHMAC(const U8* securityHeader,
         status = psa_hash_update(&innerHash, innerKey.data(), blockSize);
     }
     if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&innerHash, inputBuffer.data(), inputBuffer.size());
+        status = psa_hash_update(&innerHash, data, dataLength);
     }
     U8 innerHashOutput[32];
     size_t innerHashLen = 0;
@@ -287,18 +266,13 @@ bool Authenticate::compareHMAC(const U8* expected, const U8* actual, FwSizeType 
     return std::memcmp(expected, actual, static_cast<size_t>(length)) == 0;
 }
 
-bool Authenticate::validateHMAC(const U8* securityHeader,
-                                FwSizeType securityHeaderLength,
-                                const U8* data,
+bool Authenticate::validateHMAC(const U8* data,
                                 FwSizeType dataLength,
                                 const Fw::String& key,
                                 const U8* securityTrailer) {
-    // printk("[DEBUG] validateHMAC: Computing HMAC with key='%s', securityHeaderLength=%llu, dataLength=%llu\n",
-    //        key.toChar(), static_cast<unsigned long long>(securityHeaderLength),
-    //        static_cast<unsigned long long>(dataLength));
-
     // Compute HMAC (allocates memory)
-    Fw::Buffer computedHmac = this->computeHMAC(securityHeader, securityHeaderLength, data, dataLength, key);
+    // data already contains security header + payload (matching Python's hmac.new(key, header + data, ...))
+    Fw::Buffer computedHmac = this->computeHMAC(data, dataLength, key);
     const U8* computedHmacData = computedHmac.getData();
     const FwSizeType computedHmacLength = computedHmac.getSize();
 
@@ -373,51 +347,43 @@ bool Authenticate::validateHeader(Fw::Buffer& data,
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
+    const Fw::String& type_authn = DEFAULT_AUTHENTICATION_TYPE;
+    const Fw::String& key_authn = DEFAULT_AUTHENTICATION_KEY;
 
-    // Extract security header information
+    // Validate buffer size before processing
+    if (data.getSize() < SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
+        printk(
+            "[DEBUG] dataIn_handler: Buffer too small! Need at least %d bytes (header=%d + trailer=%d), but buffer has "
+            "%llu bytes\n",
+            SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH, SECURITY_HEADER_LENGTH, SECURITY_TRAILER_LENGTH,
+            static_cast<unsigned long long>(data.getSize()));
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    // Extract security header and trailer (without modifying the buffer yet)
     U8 securityHeader[SECURITY_HEADER_LENGTH];
     U8 securityTrailer[SECURITY_TRAILER_LENGTH];
     U32 spi = 0;
     U32 sequenceNumber = 0;
 
-    if (!this->validateHeader(data, contextOut, securityHeader, securityTrailer, spi, sequenceNumber)) {
-        // Packet was rejected in validateHeader (already logged and output)
-        this->rejectPacket(data, contextOut);
-        return;
-    }
+    // Extract security header (first 6 bytes)
+    std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
 
-    // Assuming SPI 0 as default (no longer reading from spi_dict.txt)
-    // Any other SPI value is invalid and should be rejected
-    if (spi != SPI_DEFAULT) {
-        this->log_WARNING_HI_InvalidSPI(spi);
-        this->rejectPacket(data, contextOut);
-        return;
-    }
+    // Extract security trailer (last 16 bytes)
+    std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
 
-    const Fw::String& type_authn = DEFAULT_AUTHENTICATION_TYPE;
-    const Fw::String& key_authn = DEFAULT_AUTHENTICATION_KEY;
+    // Extract SPI and sequence number from security header
+    spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
+    sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
+                     (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
 
-    printk("[DEBUG] Authentication: APID=%u, SPI=0x%04X (%u), SeqNum=%u\n", contextOut.get_apid(), spi, spi,
-           sequenceNumber);
-    printk("[DEBUG] Authentication: Using auth type='%s', key='%s'\n", type_authn.toChar(), key_authn.toChar());
+    // The data to authenticate is header + payload (everything except the trailer)
+    const U8* dataToAuthenticate = data.getData();
+    const FwSizeType dataToAuthenticateLength = data.getSize() - SECURITY_TRAILER_LENGTH;
 
-    // check the sequence number is valid
-    U32 expectedSeqNum = this->get_SequenceNumber();
-    printk("[DEBUG] Authentication: Expected seqNum=%u, received seqNum=%u\n", expectedSeqNum, sequenceNumber);
-    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
-    if (!sequenceNumberValid) {
-        printk("[DEBUG] Authentication: Sequence number validation FAILED\n");
-        this->rejectPacket(data, contextOut);
-        return;
-    }
-    printk("[DEBUG] Authentication: Sequence number validation PASSED\n");
-
-    // Validate HMAC - all memory management is handled inside validateHMAC()
-    // The raw pointer hmacDataToDelete is scoped to validateHMAC() and cannot be
-    // accidentally referenced after this call
-    printk("[DEBUG] Authentication: Starting HMAC validation, dataLength=%llu\n",
-           static_cast<unsigned long long>(data.getSize()));
-    bool hmacValid = this->validateHMAC(securityHeader, 6, data.getData(), data.getSize(), key_authn, securityTrailer);
+    // Validate HMAC - compute over security header + payload, compare with trailer
+    bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
 
     if (!hmacValid) {
         printk("[DEBUG] Authentication: HMAC validation FAILED for APID=%u, SPI=0x%04X (%u), SeqNum=%u\n",
@@ -427,6 +393,27 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         return;
     }
     printk("[DEBUG] Authentication: HMAC validation PASSED\n");
+
+    // Now strip header and trailer from the buffer for forwarding
+    data.setData(data.getData() + SECURITY_HEADER_LENGTH);
+    data.setSize(data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
+
+    // Assuming SPI 0 as default (no longer reading from spi_dict.txt)
+    // Any other SPI value is invalid and should be rejected
+    if (spi != SPI_DEFAULT) {
+        this->log_WARNING_HI_InvalidSPI(spi);
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    // check the sequence number is valid
+    U32 expectedSeqNum = this->get_SequenceNumber();
+
+    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
+    if (!sequenceNumberValid) {
+        this->rejectPacket(data, contextOut);
+        return;
+    }
 
     // increment the stored sequence number
     U32 newSequenceNumber = sequenceNumber + 1;
