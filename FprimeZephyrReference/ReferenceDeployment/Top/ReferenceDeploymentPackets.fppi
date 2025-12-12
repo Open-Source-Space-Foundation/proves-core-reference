@@ -12,8 +12,6 @@ telemetry packets ReferenceDeploymentPackets {
     # Satellite Meta Data
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.modeManager.CurrentMode
-    CdhCore.cmdDisp.CommandsDispatched
-    CdhCore.cmdDisp.CommandsDropped
 
     # Essential Sensor Data
     ReferenceDeployment.lsm6dsoManager.AngularVelocity
@@ -24,65 +22,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
-
-    # Radio Health Data
-    lora.LastRssi
   }
 
-  packet Health id 2 group 5 {
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
-    ReferenceDeployment.rateGroup10Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
-    ReferenceDeployment.startupManager.QuiescenceEndTime
-    ReferenceDeployment.modeManager.CurrentMode
-    ReferenceDeployment.modeManager.SafeModeEntryCount
-    ReferenceDeployment.modeManager.CurrentSafeModeReason
-  }
-
-  packet HealthWarnings id 3 group 5 {
-    CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
-    ComCcsds.commsBufferManager.EmptyBuffs
-    ComCcsdsUart.commsBufferManager.NoBuffs
-    ComCcsdsUart.commsBufferManager.EmptyBuffs
-    payloadBufferManager.NoBuffs
-    payloadBufferManager.EmptyBuffs
-    payloadBufferManager2.NoBuffs
-    payloadBufferManager2.EmptyBuffs
-    ReferenceDeployment.rateGroup10Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_10Hz.RgCycleSlips
-  }
-
-
-  packet HealthAuxillary id 4 group 5 {
-    ComCcsds.commsBufferManager.TotalBuffs
-    ComCcsds.commsBufferManager.CurrBuffs
-    ComCcsds.comQueue.buffQueueDepth
-    payloadBufferManager.TotalBuffs
-    payloadBufferManager.CurrBuffs
-    payloadBufferManager.HiBuffs
-    payloadBufferManager2.TotalBuffs
-    payloadBufferManager2.CurrBuffs
-    payloadBufferManager2.HiBuffs
-    CdhCore.tlmSend.SendLevel
-  }
-
-  packet Version id 5 group 5 {
-    CdhCore.version.FrameworkVersion
-    CdhCore.version.ProjectVersion
-    CdhCore.version.LibraryVersion01
-    fsSpace.FreeSpace
-    fsSpace.TotalSpace
-  }
-
-  packet Watchdog id 6 group 5 {
-    ReferenceDeployment.watchdog.WatchdogTransitions
-  }
+  ### Live Satellite Sensor Data Packets ###
 
   packet Imu id 7 group 2 {
     ReferenceDeployment.lsm6dsoManager.Acceleration
@@ -96,30 +38,12 @@ telemetry packets ReferenceDeploymentPackets {
     lora.LastSnr
   }
 
-  packet Antenna id 9 group 5 {
-    ReferenceDeployment.antennaDeployer.DeployAttemptCount
-  }
-
-  packet LoadSwitches id 10 group 3 {
-    ReferenceDeployment.face4LoadSwitch.IsOn
-    ReferenceDeployment.face0LoadSwitch.IsOn
-    ReferenceDeployment.face1LoadSwitch.IsOn
-    ReferenceDeployment.face2LoadSwitch.IsOn
-    ReferenceDeployment.face3LoadSwitch.IsOn
-    ReferenceDeployment.face5LoadSwitch.IsOn
-    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
-    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
-  }
-
   packet PowerMonitor id 11 group 2 {
-    ReferenceDeployment.ina219SysManager.Voltage
     ReferenceDeployment.ina219SysManager.Current
     ReferenceDeployment.ina219SysManager.Power
     ReferenceDeployment.ina219SolManager.Voltage
     ReferenceDeployment.ina219SolManager.Current
     ReferenceDeployment.ina219SolManager.Power
-    ReferenceDeployment.powerMonitor.TotalPowerConsumption
-    ReferenceDeployment.powerMonitor.TotalPowerGenerated
   }
 
   packet Thermal id 12 group 2 {
@@ -144,6 +68,22 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face7Manager.VisibleLight
   }
 
+  ### Satellite Meta Data Packets ###
+
+  packet LoadSwitches id 10 group 3 {
+    ReferenceDeployment.face4LoadSwitch.IsOn
+    ReferenceDeployment.face0LoadSwitch.IsOn
+    ReferenceDeployment.face1LoadSwitch.IsOn
+    ReferenceDeployment.face2LoadSwitch.IsOn
+    ReferenceDeployment.face3LoadSwitch.IsOn
+    ReferenceDeployment.face5LoadSwitch.IsOn
+    ReferenceDeployment.payloadPowerLoadSwitch.IsOn
+    ReferenceDeployment.payloadBatteryLoadSwitch.IsOn
+    ReferenceDeployment.antennaDeployer.DeployAttemptCount
+  }
+
+  ### Payload Meta Data Packets ###
+
   packet CameraDebug id 14 group 4 {
     ReferenceDeployment.cameraHandler.BytesReceived
     ReferenceDeployment.cameraHandler.ExpectedSize
@@ -151,6 +91,47 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler.FileOpen
     ReferenceDeployment.cameraHandler.FileErrorCount
     ReferenceDeployment.cameraHandler.ImagesSaved
+  }
+
+  ### Health and Status Packets ###
+  packet Health id 2 group 5 {
+    ComCcsds.comQueue.comQueueDepth
+    ComCcsds.commsBufferManager.HiBuffs
+    CdhCore.cmdDisp.CommandsDispatched
+    CdhCore.cmdDisp.CommandsDropped
+    ReferenceDeployment.rateGroup10Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
+    ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
+    ReferenceDeployment.startupManager.QuiescenceEndTime
+    ReferenceDeployment.modeManager.CurrentMode
+    ReferenceDeployment.modeManager.SafeModeEntryCount
+    ReferenceDeployment.modeManager.CurrentSafeModeReason
+  }
+
+  packet HealthWarnings id 3 group 5 {
+    CdhCore.$health.PingLateWarnings
+    ComCcsds.commsBufferManager.NoBuffs
+    ComCcsdsUart.commsBufferManager.NoBuffs
+    payloadBufferManager.NoBuffs
+    payloadBufferManager2.NoBuffs
+    ReferenceDeployment.rateGroup10Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
+    ReferenceDeployment.rateGroup1_10Hz.RgCycleSlips
+  }
+
+
+  packet HealthAuxillary id 4 group 5 {
+    ComCcsds.comQueue.buffQueueDepth
+    payloadBufferManager.HiBuffs
+    payloadBufferManager2.HiBuffs
+    CdhCore.tlmSend.SendLevel
+  }
+
+  packet Version id 5 group 5 {
+    fsSpace.FreeSpace
+    fsSpace.TotalSpace
   }
 
 } omit {
@@ -195,6 +176,25 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.commsBufferManager.TotalBuffs
   ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
+
+  ComCcsds.commsBufferManager.EmptyBuffs
+  ComCcsdsUart.commsBufferManager.EmptyBuffs
+  payloadBufferManager.EmptyBuffs
+  payloadBufferManager.EmptyBuffs
+
+  ComCcsds.commsBufferManager.TotalBuffs
+  ComCcsds.commsBufferManager.CurrBuffs
+  payloadBufferManager.TotalBuffs
+  payloadBufferManager.CurrBuffs
+  payloadBufferManager2.TotalBuffs
+  payloadBufferManager2.CurrBuffs
+
+  CdhCore.version.FrameworkVersion
+  CdhCore.version.ProjectVersion
+  CdhCore.version.LibraryVersion01
+
+  ReferenceDeployment.watchdog.WatchdogTransitions
+
 
   # Moved to omit as this is specific to Alcyone Build
   ReferenceDeployment.cameraHandler2.BytesReceived
