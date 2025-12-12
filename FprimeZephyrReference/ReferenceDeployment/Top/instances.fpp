@@ -70,7 +70,7 @@ module ReferenceDeployment {
   instance modeManager: Components.ModeManager base id 0x1000A000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 16
+    priority 4
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -108,7 +108,7 @@ module ReferenceDeployment {
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x1001D000
 
-  instance comDelay: Components.ComDelay base id 0x1001E000
+  instance downlinkDelay: Components.ComDelay base id 0x1001E000
 
   instance lora: Zephyr.LoRa base id 0x1001F000
 
@@ -241,8 +241,8 @@ module ReferenceDeployment {
   instance drv2605Face2Manager: Drv.Drv2605Manager base id 0x10057000
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
-
   instance detumbleManager: Components.DetumbleManager base id 0x1005A000
   instance bDotDetumble: Drv.BDotDetumble base id 0x1005B000
-
+  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
+  instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 }

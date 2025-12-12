@@ -44,9 +44,9 @@ component = "ReferenceDeployment.modeManager"
 
 # Telemetry packet IDs for CdhCore.tlmSend.SEND_PKT command
 MODE_TELEMETRY_PACKET_ID = (
-    "1"  # ModeManager telemetry (CurrentMode, SafeModeReason, etc.)
+    "2"  # ModeManager telemetry (CurrentMode, SafeModeReason, etc.)
 )
-VOLTAGE_TELEMETRY_PACKET_ID = "10"  # PowerMonitor telemetry (includes INA219 voltage)
+VOLTAGE_TELEMETRY_PACKET_ID = "1"  # PowerMonitor telemetry (includes INA219 voltage)
 
 # Voltage thresholds (must match ModeManager.hpp constants)
 SAFE_MODE_ENTRY_VOLTAGE = 6.7  # Volts - threshold for entering safe mode from NORMAL
