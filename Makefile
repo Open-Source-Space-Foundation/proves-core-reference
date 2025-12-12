@@ -58,7 +58,7 @@ SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_
 build-mcuboot: submodules zephyr fprime-venv
 	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
 
-	$(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
+	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
 .PHONY: test-integration
