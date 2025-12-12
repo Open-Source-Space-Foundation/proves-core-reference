@@ -92,6 +92,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
+@pytest.mark.slow
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
@@ -123,6 +124,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.slow
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 

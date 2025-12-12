@@ -43,7 +43,7 @@ def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     return power_event.args[0].val
 
 
-@pytest.mark.skip("Flaky")
+@pytest.mark.flaky
 def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that magnetorquer powers on by asserting higher power draw"""
 
