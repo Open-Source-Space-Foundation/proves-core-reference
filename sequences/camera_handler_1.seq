@@ -1,0 +1,5 @@
+R00:00:00 FileHandling.fileManager.RemoveFile, "//image_count.bin", true
+R00:00:00 FileHandling.fileManager.RemoveFile, "//cam000_img_000.jpg", true
+R00:00:00 ReferenceDeployment.face5LoadSwitch.TURN_ON
+R00:00:05 ReferenceDeployment.cameraHandler.TAKE_IMAGE
+R00:01:00 FileHandling.fileDownlink.SendFile, "//cam000_img_000.jpg", "test_file.jpg"
