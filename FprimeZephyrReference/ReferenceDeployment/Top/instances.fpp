@@ -108,7 +108,7 @@ module ReferenceDeployment {
 
   instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x1001D000
 
-  instance comDelay: Components.ComDelay base id 0x1001E000
+  instance downlinkDelay: Components.ComDelay base id 0x1001E000
 
   instance lora: Zephyr.LoRa base id 0x1001F000
 
@@ -242,7 +242,7 @@ module ReferenceDeployment {
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
 
-  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10041000
-
+  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
+  instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 
 }
