@@ -39,19 +39,20 @@ class Lsm6dsoManager final : public Lsm6dsoManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Get the acceleration reading from the LSM6DSO sensor
-    Drv::Acceleration accelerationGet_handler(const FwIndexType portNum  //!< The port number
-                                              ) override;
+    Drv::Acceleration accelerationGet_handler(const FwIndexType portNum,  //!< The port number
+                                              Fw::Success& condition) override;
 
     //! Get the angular velocity reading from the LSM6DSO sensor
-    Drv::AngularVelocity angularVelocityGet_handler(const FwIndexType portNum  //!< The port number
-                                                    ) override;
+    Drv::AngularVelocity angularVelocityGet_handler(const FwIndexType portNum,  //!< The port number
+                                                    Fw::Success& condition) override;
 
     //! Get the temperature reading from the LSM6DSO sensor
-    F64 temperatureGet_handler(const FwIndexType portNum  //!< The port number
-                               ) override;
+    F64 temperatureGet_handler(const FwIndexType portNum,  //!< The port number
+                               Fw::Success& condition) override;
 
+  private:
     // ----------------------------------------------------------------------
-    // Member variables
+    // Private member variables
     // ----------------------------------------------------------------------
 
     //! Zephyr device stores the initialized LSM6DSO sensor

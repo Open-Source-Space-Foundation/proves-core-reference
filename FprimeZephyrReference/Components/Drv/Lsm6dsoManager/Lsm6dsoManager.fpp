@@ -1,15 +1,16 @@
 # Port definition
 module Drv {
-    port AccelerationGet -> Acceleration
-    port AngularVelocityGet -> AngularVelocity
-    port TemperatureGet -> F64
+    port AccelerationGet(ref condition: Fw.Success) -> Acceleration
+    port AngularVelocityGet(ref condition: Fw.Success)-> AngularVelocity
+    port TemperatureGet(ref condition: Fw.Success) -> F64
 }
 
 # Component definition
 module Drv {
     @ LSM6DSO Driver Component for F Prime FSW framework.
     passive component Lsm6dsoManager {
-        # Ports
+        ### Ports ###
+
         @ Port to read the current acceleration in m/s^2.
         sync input port accelerationGet: AccelerationGet
 
@@ -19,7 +20,8 @@ module Drv {
         @ Port to read the current temperature in degrees celsius.
         sync input port temperatureGet: TemperatureGet
 
-        # Telemetry channels
+        ### Telemetry channels ###
+
         @ Telemetry channel for current acceleration in m/s^2.
         telemetry Acceleration: Acceleration
 
@@ -28,6 +30,8 @@ module Drv {
 
         @ Telemetry channel for current temperature in degrees celsius.
         telemetry Temperature: F64
+
+        ### Events ###
 
         @ Event for reporting LSM6DSO not ready error
         event DeviceNotReady() severity warning high format "LSM6DSO device not ready" throttle 5

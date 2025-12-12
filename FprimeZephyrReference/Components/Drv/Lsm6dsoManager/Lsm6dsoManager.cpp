@@ -40,7 +40,9 @@ void Lsm6dsoManager ::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Drv::Acceleration Lsm6dsoManager ::accelerationGet_handler(FwIndexType portNum) {
+Drv::Acceleration Lsm6dsoManager ::accelerationGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return Drv::Acceleration(0.0, 0.0, 0.0);
@@ -61,10 +63,14 @@ Drv::Acceleration Lsm6dsoManager ::accelerationGet_handler(FwIndexType portNum) 
         Drv::Acceleration(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_Acceleration(acceleration);
+
+    condition = Fw::Success::SUCCESS;
     return acceleration;
 }
 
-Drv::AngularVelocity Lsm6dsoManager ::angularVelocityGet_handler(FwIndexType portNum) {
+Drv::AngularVelocity Lsm6dsoManager ::angularVelocityGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return Drv::AngularVelocity(0.0, 0.0, 0.0);
@@ -85,10 +91,14 @@ Drv::AngularVelocity Lsm6dsoManager ::angularVelocityGet_handler(FwIndexType por
         Drv::AngularVelocity(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
 
     this->tlmWrite_AngularVelocity(angular_velocity);
+
+    condition = Fw::Success::SUCCESS;
     return angular_velocity;
 }
 
-F64 Lsm6dsoManager ::temperatureGet_handler(FwIndexType portNum) {
+F64 Lsm6dsoManager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
     if (!device_is_ready(this->m_dev)) {
         this->log_WARNING_HI_DeviceNotReady();
         return 0;
@@ -103,6 +113,7 @@ F64 Lsm6dsoManager ::temperatureGet_handler(FwIndexType portNum) {
 
     this->tlmWrite_Temperature(sensor_value_to_double(&temp));
 
+    condition = Fw::Success::SUCCESS;
     return sensor_value_to_double(&temp);
 }
 

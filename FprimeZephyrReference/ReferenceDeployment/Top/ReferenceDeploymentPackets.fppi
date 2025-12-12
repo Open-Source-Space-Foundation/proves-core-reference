@@ -64,10 +64,14 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Imu id 6 group 4 {
+    ReferenceDeployment.imuManager.AxisOrientation
+    ReferenceDeployment.imuManager.Acceleration
+    ReferenceDeployment.imuManager.AngularVelocity
+    ReferenceDeployment.imuManager.MagneticField
     ReferenceDeployment.lsm6dsoManager.Acceleration
     ReferenceDeployment.lsm6dsoManager.AngularVelocity
-    ReferenceDeployment.lsm6dsoManager.Temperature
     ReferenceDeployment.lis2mdlManager.MagneticField
+    ReferenceDeployment.lis2mdlManager.SamplingFrequency
   }
 
   packet LoRa id 7 group 3 {
@@ -176,4 +180,5 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
+  ReferenceDeployment.lsm6dsoManager.Temperature
 }

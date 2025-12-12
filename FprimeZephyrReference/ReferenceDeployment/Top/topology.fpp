@@ -394,10 +394,9 @@ module ReferenceDeployment {
     }
 
     connections ImuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
+      imuManager.acceleration -> lsm6dsoManager.accelerationGet
+      imuManager.angularVelocity -> lsm6dsoManager.angularVelocityGet
+      imuManager.magneticField -> lis2mdlManager.magneticFieldGet
     }
   }
 }
