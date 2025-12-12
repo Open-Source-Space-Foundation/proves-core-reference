@@ -49,7 +49,8 @@ module ReferenceDeployment {
     instance lsm6dsoManager
     instance imuManager
     instance bootloaderTrigger
-    instance comDelay
+    instance downlinkDelay
+    instance telemetryDelay
     instance burnwire
     instance antennaDeployer
     instance comSplitterEvents
@@ -149,6 +150,8 @@ module ReferenceDeployment {
 
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
+
+      telemetryDelay.runOut -> CdhCore.tlmSend.Run
     }
 
     connections CommunicationsRadio {
@@ -162,8 +165,8 @@ module ReferenceDeployment {
       # ComStub <-> ComDriver (Downlink)
       ComCcsds.framer.dataOut -> lora.dataIn
       lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
-      lora.comStatusOut -> comDelay.comStatusIn
-      comDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+      lora.comStatusOut -> downlinkDelay.comStatusIn
+      downlinkDelay.comStatusOut ->ComCcsds.framer.comStatusIn
 
 
       startupManager.runSequence -> cmdSeq.seqRunIn
@@ -208,10 +211,10 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
+      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> downlinkDelay.run
       rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
