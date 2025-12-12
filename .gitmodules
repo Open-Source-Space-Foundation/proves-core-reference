@@ -7,3 +7,6 @@
 [submodule "lib/fprime-zephyr"]
 	path = lib/fprime-zephyr
 	url = https://github.com/fprime-community/fprime-zephyr.git
+[submodule "lib/fprime-extras"]
+	path = lib/fprime-extras
+	url = https://github.com/LeStarch/fprime-extras

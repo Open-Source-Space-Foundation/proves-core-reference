@@ -70,7 +70,7 @@ module ReferenceDeployment {
   instance modeManager: Components.ModeManager base id 0x1000A000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 16
+    priority 4
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -241,5 +241,8 @@ module ReferenceDeployment {
   instance drv2605Face2Manager: Drv.Drv2605Manager base id 0x10057000
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
+
+  instance fileUplinkCollector: Utilities.BufferCollector base id 0x10041000
+
 
 }
