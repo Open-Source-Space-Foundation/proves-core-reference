@@ -22,8 +22,6 @@ fprime-venv: uv ## Create a virtual environment
 zephyr-setup: fprime-venv ## Set up Zephyr environment
 	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
 		echo "Setting up Zephyr environment..."; \
-		rm -rf ../.west/ && \
-		$(UVX) west init --local . && \
 		$(UVX) west update && \
 		$(UVX) west zephyr-export && \
 		$(UV) run west packages pip --install && \
@@ -58,10 +56,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot
 build-mcuboot: submodules zephyr fprime-venv
-	@> $(SYSBUILD_PATH)/sysbuild.conf
-	@echo "SB_CONFIG_BOOTLOADER_MCUBOOT=y" >> $(SYSBUILD_PATH)/sysbuild.conf
-	@echo "SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n" >> $(SYSBUILD_PATH)/sysbuild.conf
-	@echo "SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y" >> $(SYSBUILD_PATH)/sysbuild.conf
+	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
 
 	$(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
