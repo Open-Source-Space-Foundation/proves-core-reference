@@ -175,7 +175,7 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     bool bypasses = this->BypassesAuthentification(packetBuffer);
 
     // the packet was not authenticated
-    if (context.get_authenticated() == 0 && bypasses == false) {
+    if (context.get_authenticated() == 0 && !bypasses) {
         // emit reject packet event
         this->log_ACTIVITY_LO_PassedRouter(false);
         // Return ownership of the incoming packetBuffer
@@ -184,12 +184,11 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
         return;
     }
 
-    if (bypasses == true) {
+    if (bypasses) {
         // emit bypass event
         this->log_ACTIVITY_LO_BypassedAuthentification();
     }
 
-    this->log_ACTIVITY_LO_PassedRouter(true);
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
     // Route based on received APID (packet type)

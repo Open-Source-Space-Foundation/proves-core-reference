@@ -87,15 +87,21 @@ module Svc {
         event PassedRouter(passed: bool) \
             severity activity low \
             format "PassedRouter: {}"
+            throttle 2
+
 
         @ Emitted to indicate whether authentication was bypassed
         event BypassedAuthentification() \
             severity activity low \
             format "OpCode BypassedAuthentification"
+            throttle 2
+
 
         event FileOpenError(openStatus: U8) \
             severity warning high \
             format "File Open Error {} for BypassOpCodes file. No Opcodes will be Bypassed"
+            throttle 2
+
 
         @ Telemetry Channel for Number of Packets that have bypassed the router
         telemetry ByPassedRouter : U64
