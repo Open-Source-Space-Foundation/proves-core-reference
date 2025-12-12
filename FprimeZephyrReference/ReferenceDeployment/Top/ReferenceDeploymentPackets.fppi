@@ -37,6 +37,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
     ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
     ReferenceDeployment.startupManager.QuiescenceEndTime
+    ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
     ReferenceDeployment.modeManager.CurrentSafeModeReason
   }
