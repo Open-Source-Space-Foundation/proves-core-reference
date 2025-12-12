@@ -180,7 +180,7 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsds.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
-  payloadBufferManager.EmptyBuffs
+  payloadBufferManager2.EmptyBuffs
 
   ComCcsds.commsBufferManager.TotalBuffs
   ComCcsds.commsBufferManager.CurrBuffs
