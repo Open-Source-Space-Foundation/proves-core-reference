@@ -4,7 +4,7 @@ module ComCcsdsConfig {
     constant BASE_ID_UART = 0x21000000
 
     module QueueSizes {
-        constant comQueue   = 5
+        constant comQueue   = 20
         constant aggregator = 15
     }
 

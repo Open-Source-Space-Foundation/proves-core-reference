@@ -17,6 +17,7 @@ fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
+
 .PHONY: zephyr-setup
 zephyr-setup: fprime-venv ## Set up Zephyr environment
 	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
@@ -66,13 +67,27 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
 .PHONY: test-integration
-test-integration: uv
-	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
-		$(UV_RUN) pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
+	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
+	TARGETS=""; \
+	if [ -n "$(TEST)" ]; then \
+		case "$(TEST)" in \
+			*.py) TARGETS="FprimeZephyrReference/test/int/$(TEST)" ;; \
+			*) TARGETS="FprimeZephyrReference/test/int/$(TEST).py" ;; \
+		esac; \
+		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
+	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
+			case "$$test" in \
+				*.py) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$$test" ;; \
+				*) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$${test}_test.py" ;; \
+			esac; \
+		done; \
 	else \
-		TEST_FILES=$$(for test in $(filter-out $@,$(MAKECMDGOALS)); do echo "FprimeZephyrReference/test/int/$${test}_test.py"; done); \
-		$(UV_RUN) pytest $$TEST_FILES --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
-	fi
+		TARGETS="FprimeZephyrReference/test/int"; \
+	fi; \
+	echo "Running integration tests: $$TARGETS"; \
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
