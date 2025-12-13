@@ -76,6 +76,7 @@ module ReferenceDeployment {
     instance payloadBufferManager
     instance payloadBufferManager2
     instance cmdSeq
+    instance payloadSeq
     instance startupManager
     instance powerMonitor
     instance ina219SysManager
@@ -151,6 +152,9 @@ module ReferenceDeployment {
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
 
+      payloadSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> payloadSeq.cmdResponseIn
+
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
     }
 
@@ -200,12 +204,12 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver2.schedIn
       rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[6] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[7] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face5Manager.run
-
+      rateGroup10Hz.RateGroupMemberOut[7] -> payloadSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face0Manager.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face1Manager.run
+      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
