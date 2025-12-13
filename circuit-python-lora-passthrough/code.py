@@ -21,6 +21,7 @@ rfm95.signal_bandwidth = 125000
 rfm95.coding_rate = 5
 rfm95.preamble_length = 8
 packet_count = 0
+usb_cdc.console.timeout = 0.01
 print("[INFO] LoRa Receiver receiving packets")
 while True:
     # Look for a new packet - wait up to 2 seconds:
@@ -29,7 +30,7 @@ while True:
     if packet is not None:
         usb_cdc.data.write(packet)
         packet_count += 1
-    data = usb_cdc.console.read(usb_cdc.data.in_waiting)
+    data = usb_cdc.console.read(3)
     try:
         rate = int(data)
         if rate < 7 or rate > 9:
