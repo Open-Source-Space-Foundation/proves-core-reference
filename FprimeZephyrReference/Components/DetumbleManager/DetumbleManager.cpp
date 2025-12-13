@@ -132,19 +132,33 @@ bool DetumbleManager ::executeControlStep(std::string& reason) {
 
 void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     // Convert dipole moment to (unlimited) current
-    F64 unlimited_x = dpMoment.get_x() / (this->COIL_NUM_TURNS_X_Y * this->COIL_AREA_X_Y);
-    F64 unlimited_y = dpMoment.get_y() / (this->COIL_NUM_TURNS_X_Y * this->COIL_AREA_X_Y);
-    F64 unlimited_z = dpMoment.get_z() / (this->COIL_NUM_TURNS_Z * this->COIL_AREA_Z);
+    F64 unlimited_x1 =
+        dpMoment.get_x() / (this->m_xPlusMagnetorquer.numTurns * this->getCoilArea(this->m_xPlusMagnetorquer));
+    F64 unlimited_x2 =
+        dpMoment.get_x() / (this->m_xMinusMagnetorquer.numTurns * this->getCoilArea(this->m_xMinusMagnetorquer));
+    F64 unlimited_y1 =
+        dpMoment.get_y() / (this->m_yPlusMagnetorquer.numTurns * this->getCoilArea(this->m_yPlusMagnetorquer));
+    F64 unlimited_y2 =
+        dpMoment.get_y() / (this->m_yMinusMagnetorquer.numTurns * this->getCoilArea(this->m_yMinusMagnetorquer));
+    F64 unlimited_z =
+        dpMoment.get_z() / (this->m_zMinusMagnetorquer.numTurns * this->getCoilArea(this->m_zMinusMagnetorquer));
 
     // Limit current for each axis to max coil current
-    F64 limited_x = std::fmin(std::fabs(unlimited_x), this->COIL_MAX_CURRENT_X_Y) * (unlimited_x >= 0 ? 1.0 : -1.0);
-    F64 limited_y = std::fmin(std::fabs(unlimited_y), this->COIL_MAX_CURRENT_X_Y) * (unlimited_y >= 0 ? 1.0 : -1.0);
-    F64 limited_z = std::fmin(std::fabs(unlimited_z), this->COIL_MAX_CURRENT_Z) * (unlimited_z >= 0 ? 1.0 : -1.0);
+    F64 limited_x1 = std::fmin(std::fabs(unlimited_x1), this->getMaxCoilCurrent(this->m_xPlusMagnetorquer)) *
+                     (unlimited_x1 >= 0 ? 1.0 : -1.0);
+    F64 limited_x2 = std::fmin(std::fabs(unlimited_x2), this->getMaxCoilCurrent(this->m_xMinusMagnetorquer)) *
+                     (unlimited_x2 >= 0 ? 1.0 : -1.0);
+    F64 limited_y1 = std::fmin(std::fabs(unlimited_y1), this->getMaxCoilCurrent(this->m_yPlusMagnetorquer)) *
+                     (unlimited_y1 >= 0 ? 1.0 : -1.0);
+    F64 limited_y2 = std::fmin(std::fabs(unlimited_y2), this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
+                     (unlimited_y2 >= 0 ? 1.0 : -1.0);
+    F64 limited_z = std::fmin(std::fabs(unlimited_z), this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
+                    (unlimited_z >= 0 ? 1.0 : -1.0);
 
-    F64 x1 = limited_x;
-    F64 x2 = -limited_x;
-    F64 y1 = limited_y;
-    F64 y2 = -limited_y;
+    F64 x1 = limited_x1;
+    F64 x2 = -limited_x2;
+    F64 y1 = limited_y1;
+    F64 y2 = -limited_y2;
     F64 z1 = limited_z;
 
     // All true for now until we figure out how to determine what should be on or off
