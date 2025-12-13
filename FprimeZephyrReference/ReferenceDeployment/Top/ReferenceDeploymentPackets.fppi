@@ -37,9 +37,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
-  packet LoRa id 8 group 2 {
+  packet Radio id 8 group 2 {
     lora.LastRssi
     lora.LastSnr
+    sband.LastRssi
+    sband.LastSnr
   }
 
   packet PowerMonitor id 11 group 2 {
@@ -101,6 +103,7 @@ telemetry packets ReferenceDeploymentPackets {
   packet Health id 2 group 5 {
     ComCcsds.comQueue.comQueueDepth
     ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsSband.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
@@ -116,7 +119,7 @@ telemetry packets ReferenceDeploymentPackets {
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
     ComCcsds.commsBufferManager.NoBuffs
-    ComCcsdsUart.commsBufferManager.NoBuffs
+    ComCcsdsSband.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager2.NoBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
@@ -136,11 +139,6 @@ telemetry packets ReferenceDeploymentPackets {
   packet FileSystem id 5 group 5 {
     fsSpace.FreeSpace
     fsSpace.TotalSpace
-  }
-
-  packet SBand id 11 group 4 {
-    sband.LastRssi
-    sband.LastSnr
   }
 
 } omit {
@@ -190,6 +188,7 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.commsBufferManager.TotalBuffs
   ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
+  ComCcsdsUart.commsBufferManager.NoBuffs
 
   ComCcsds.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
@@ -208,6 +207,12 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
+
+  ComCcsdsSband.commsBufferManager.EmptyBuffs
+  ComCcsdsSband.commsBufferManager.TotalBuffs
+  ComCcsdsSband.commsBufferManager.CurrBuffs
+  ComCcsdsSband.comQueue.comQueueDepth
+  ComCcsdsSband.comQueue.buffQueueDepth
 
 
   # Moved to omit as this is specific to Alcyone Build

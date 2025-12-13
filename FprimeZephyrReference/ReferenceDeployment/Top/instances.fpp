@@ -112,8 +112,6 @@ module ReferenceDeployment {
 
   instance comDelaySband: Components.ComDelay base id 0x10076000
 
-  instance lora: Zephyr.LoRa base id 0x10023000
-
   instance comSplitterTelemetry: Svc.ComSplitter base id 0x10021000
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10022000

@@ -48,7 +48,6 @@ module ReferenceDeployment {
     instance rtcManager
     instance imuManager
     instance bootloaderTrigger
-    instance comDelay
     instance comDelaySband
     instance downlinkDelay
     instance telemetryDelay

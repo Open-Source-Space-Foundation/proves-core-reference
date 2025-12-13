@@ -143,10 +143,6 @@ void setupTopology(const TopologyState& state) {
     spiDriver.configure(state.spi0Device, cfg);
     sband.configureRadio();
 
-    // Configure IMU Drivers
-    lsm6dsoManager.configure(state.lsm6dsoDevice);
-    lis2mdlManager.configure(state.lis2mdlDevice);
-
     // Configure IMU managers
     imuManager.configure(state.lis2mdlDevice, state.lsm6dsoDevice);
 
