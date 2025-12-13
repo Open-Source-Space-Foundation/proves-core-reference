@@ -4,6 +4,7 @@ This file contains tests for the day-in-the-life functionality of the Proves sys
 """
 
 import subprocess
+import time
 from pathlib import Path
 
 import serial
@@ -51,10 +52,11 @@ def test_02_run_radio_sequences(fprime_test_api):
     fprime_test_api.send_command(
         "ReferenceDeployment.cmdSeq.CS_RUN", ["/seq/radio-fast.bin", "BLOCK"]
     )
+    time.sleep(1)
     if pass_through_serial is not None:
         pass_through_serial.write(b"7\r\n")
     fprime_test_api.assert_event(
-        "ReferenceDeployment.downlinkDelay.DividerSet", [0], timeout=10
+        "ReferenceDeployment.downlinkDelay.DividerSet", [0], timeout=20
     )
 
 
