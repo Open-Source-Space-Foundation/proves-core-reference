@@ -81,9 +81,7 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
-            && mv build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
-          make submodules fprime-venv
+         make submodules fprime-venv
 
       - name: Trigger Bootloader
         run: |
