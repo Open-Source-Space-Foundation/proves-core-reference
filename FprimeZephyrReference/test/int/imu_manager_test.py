@@ -9,8 +9,7 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
-lsm6dsoManager = "ReferenceDeployment.lsm6dsoManager"
-lis2mdlManager = "ReferenceDeployment.lis2mdlManager"
+imuManager = "ReferenceDeployment.imuManager"
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +25,7 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Acceleration telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.Acceleration", start="NOW", timeout=3
+        f"{imuManager}.Acceleration", start="NOW", timeout=3
     )
 
     reading: dict[float] = result.get_val()
@@ -38,7 +37,7 @@ def test_01_acceleration_telemetry(fprime_test_api: IntegrationTestAPI, start_gd
 def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get AngularVelocity telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.AngularVelocity", start="NOW", timeout=3
+        f"{imuManager}.AngularVelocity", start="NOW", timeout=3
     )
 
     reading: dict[float] = result.get_val()
@@ -50,7 +49,7 @@ def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, star
 def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get Temperature telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lsm6dsoManager}.Temperature", start="NOW", timeout=3
+        f"{imuManager}.Temperature", start="NOW", timeout=3
     )
 
     reading: int = result.get_val()
@@ -60,7 +59,7 @@ def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds
 def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get MagneticField telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{lis2mdlManager}.MagneticField", start="NOW", timeout=3
+        f"{imuManager}.MagneticField", start="NOW", timeout=3
     )
 
     reading: dict[float] = result.get_val()
