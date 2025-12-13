@@ -1,2 +1,0 @@
-01000000 // no op
-2100B000 // get sequence number
