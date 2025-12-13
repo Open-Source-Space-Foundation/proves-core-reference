@@ -4,7 +4,7 @@ module ComCcsdsConfig {
     constant BASE_ID_UART = 0x21000000
 
     module QueueSizes {
-        constant comQueue   = 5
+        constant comQueue   = 20
         constant aggregator = 15
     }
 
@@ -35,9 +35,9 @@ module ComCcsdsConfig {
     module BuffMgr {
         constant frameAccumulatorSize  = 1024 # Must be at least as large as the comm buffer size
         constant commsBuffSize         = 1024 # Size of ring buffer
-        constant commsFileBuffSize     = 1
+        constant commsFileBuffSize     = 1024
         constant commsBuffCount        = 5
-        constant commsFileBuffCount    = 1
+        constant commsFileBuffCount    = 5
         constant commsBuffMgrId        = 200
     }
 }
