@@ -99,6 +99,8 @@ module ComCcsdsLora {
 
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_LORA + 0x09000
 
+    instance authenticatelora: Components.Authenticate base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000
+
     topology Subtopology {
         # Usage Note:
         #
@@ -128,6 +130,7 @@ module ComCcsdsLora {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
+        instance authenticatelora
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -159,9 +162,12 @@ module ComCcsdsLora {
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # TcDeframer <-> SpacePacketDeframer
-            tcDeframer.dataOut                -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+            # Authenticate <-> SpacePacketDeframer
+            authenticatelora.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> authenticatelora.dataReturnIn
+            # TcDeframer <-> Authenticate
+            tcDeframer.dataOut                -> authenticatelora.dataIn
+            authenticatelora.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
             # SpacePacketDeframer <-> AuthenticationRouter (routes both commands and files)
