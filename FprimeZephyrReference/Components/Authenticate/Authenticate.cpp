@@ -8,13 +8,13 @@
 
 #include <psa/crypto.h>
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
 #include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iomanip>
-#include <lib/fprime-extras/FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <sstream>
 
 #include <zephyr/kernel.h>
