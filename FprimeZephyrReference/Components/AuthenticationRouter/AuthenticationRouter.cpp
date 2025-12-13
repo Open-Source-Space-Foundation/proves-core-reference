@@ -72,7 +72,7 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
         return false;
     }
 
-    // Extract opcode bytes (stack-allocated)
+    // Extract opcode bytes
     U8 opCodeBytes[OP_CODE_LENGTH];
     std::memcpy(opCodeBytes, packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
 
@@ -83,6 +83,7 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
         const size_t remainingSize = kHexStrSize - (i * 2);
         std::snprintf(opCodeHex + (i * 2), remainingSize, "%02X", static_cast<unsigned>(opCodeBytes[i]));
     }
+    // Null-terminate string
     opCodeHex[OP_CODE_LENGTH * 2] = '\0';
 
     // Check if opcode matches any in the bypass list
@@ -153,6 +154,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                 FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
                 // Send the copied buffer out. It will come back on fileBufferReturnIn once the receiver is done with it
                 this->fileOut_out(0, packetBufferCopy);
+            } else {
+                this->log_WARNING_HI_AllocationError(FprimeRouter_AllocationReason::FILE_UPLINK);
             }
             break;
         }
