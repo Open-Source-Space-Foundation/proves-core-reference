@@ -19,6 +19,7 @@ from fprime_gds.common.testing_fw.predicates import event_predicate
 
 resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
+ina219SysManager = "ReferenceDeployment.ina219SysManager"
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +98,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch initial time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=3
+        f"{ina219SysManager}.Voltage", timeout = 3
     )
 
     # Convert FPrime time to datetime
@@ -110,7 +111,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch updated time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=3
+        f"{ina219SysManager}.Voltage", timeout = 3
     )
 
     # Convert FPrime time to datetime
