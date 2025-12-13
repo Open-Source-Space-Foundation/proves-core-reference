@@ -145,17 +145,20 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
             // If the file uplink output port is connected, send the file packet. Otherwise take no action.
             if (this->isConnected_fileOut_OutputPort(0)) {
                 // Copy buffer into a new allocated buffer. This lets us return the original buffer with dataReturnOut,
-                // and AuthenticationRouter can handle the deallocation of the file buffer when it returns on
-                // fileBufferReturnIn
+                // and FprimeRouter can handle the deallocation of the file buffer when it returns on fileBufferReturnIn
                 Fw::Buffer packetBufferCopy = this->bufferAllocate_out(0, packetBuffer.getSize());
-                auto copySerializer = packetBufferCopy.getSerializer();
-                status = copySerializer.serializeFrom(packetBuffer.getData(), packetBuffer.getSize(),
-                                                      Fw::Serialization::OMIT_LENGTH);
-                FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
-                // Send the copied buffer out. It will come back on fileBufferReturnIn once the receiver is done with it
-                this->fileOut_out(0, packetBufferCopy);
-            } else {
-                this->log_WARNING_HI_AllocationError(FprimeRouter_AllocationReason::FILE_UPLINK);
+                // Confirm we got a valid buffer before using it
+                if (packetBufferCopy.isValid()) {
+                    auto copySerializer = packetBufferCopy.getSerializer();
+                    status = copySerializer.serializeFrom(packetBuffer.getData(), packetBuffer.getSize(),
+                                                          Fw::Serialization::OMIT_LENGTH);
+                    FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
+                    // Send the copied buffer out. It will come back on fileBufferReturnIn once the receiver is done
+                    // with it
+                    this->fileOut_out(0, packetBufferCopy);
+                } else {
+                    this->log_WARNING_HI_AllocationError(AuthenticationRouter_AllocationReason::FILE_UPLINK);
+                }
             }
             break;
         }
@@ -164,16 +167,22 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
             // connected, forward packet and context for further processing
             if (this->isConnected_unknownDataOut_OutputPort(0)) {
                 // Copy buffer into a new allocated buffer. This lets us return the original buffer with dataReturnOut,
-                // and AuthenticationRouter can handle the deallocation of the unknown buffer when it returns on
-                // bufferReturnIn
+                // and FprimeRouter can handle the deallocation of the unknown buffer when it returns on bufferReturnIn
                 Fw::Buffer packetBufferCopy = this->bufferAllocate_out(0, packetBuffer.getSize());
-                auto copySerializer = packetBufferCopy.getSerializer();
-                status = copySerializer.serializeFrom(packetBuffer.getData(), packetBuffer.getSize(),
-                                                      Fw::Serialization::OMIT_LENGTH);
-                FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
-                // Send the copied buffer out. It will come back on fileBufferReturnIn once the receiver is done with it
-                this->unknownDataOut_out(0, packetBufferCopy, context);
+                // Confirm we got a valid buffer before using it
+                if (packetBufferCopy.isValid()) {
+                    auto copySerializer = packetBufferCopy.getSerializer();
+                    status = copySerializer.serializeFrom(packetBuffer.getData(), packetBuffer.getSize(),
+                                                          Fw::Serialization::OMIT_LENGTH);
+                    FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
+                    // Send the copied buffer out. It will come back on fileBufferReturnIn once the receiver is done
+                    // with it
+                    this->unknownDataOut_out(0, packetBufferCopy, context);
+                } else {
+                    this->log_WARNING_HI_AllocationError(AuthenticationRouter_AllocationReason::USER_BUFFER);
+                }
             }
+            break;
         }
     }
 
@@ -185,12 +194,7 @@ void AuthenticationRouter ::cmdResponseIn_handler(FwIndexType portNum,
                                                   FwOpcodeType opcode,
                                                   U32 cmdSeq,
                                                   const Fw::CmdResponse& response) {
-    (void)portNum;
-    (void)opcode;
-    (void)cmdSeq;
-    (void)response;
-    // This is a no-op because AuthenticationRouter does not need to handle command responses
-    // but the port must be connected
+    // Nothing to do
 }
 
 void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::Buffer& fwBuffer) {

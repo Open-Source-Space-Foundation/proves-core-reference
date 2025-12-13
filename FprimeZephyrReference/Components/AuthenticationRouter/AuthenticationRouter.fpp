@@ -2,6 +2,11 @@ module Svc {
     @ Routes packets deframed by the Deframer to the rest of the system
     passive component AuthenticationRouter {
 
+        enum AllocationReason : U8{
+            FILE_UPLINK,  @< Buffer allocation for file uplink
+            USER_BUFFER   @< Buffer allocation for user handled buffer
+        }
+
         # ----------------------------------------------------------------------
         # Router interface (ports defined explicitly for passive component)
         # ----------------------------------------------------------------------
@@ -48,6 +53,10 @@ module Svc {
             severity warning high \
             format "Deserializing packet type failed with status {}"
 
+
+        @ An allocation error occurred
+        event AllocationError(reason: AllocationReason) severity warning high \
+            format "Buffer allocation for {} failed"
 
         ###############################################################################
         # Standard AC Ports for Events
