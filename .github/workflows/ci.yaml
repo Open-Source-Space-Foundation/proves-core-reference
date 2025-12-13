@@ -92,6 +92,7 @@ jobs:
         run: |
           picotool load ./bootable.uf2
           picotool reboot
+          sleep 5
 
       - name: Run Integration Tests
         run: |
