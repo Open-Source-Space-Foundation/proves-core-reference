@@ -140,10 +140,8 @@ Fw::Success Veml6031Manager ::initializeDevice() {
     this->log_WARNING_LO_MuxUnhealthy_ThrottleClear();
 
     if (!this->loadSwitchReady()) {
-        this->log_WARNING_LO_LoadSwitchNotReady();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_LO_LoadSwitchNotReady_ThrottleClear();
 
     int rc = device_init(this->m_dev);
     if (rc < 0) {
