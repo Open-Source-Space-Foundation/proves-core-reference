@@ -20,6 +20,7 @@ module ReferenceDeployment {
     import ComCcsds.FramingSubtopology
     import ComCcsdsUart.Subtopology
     import FileHandling.Subtopology
+    import ComCcsdsSband.FramingSubtopology
     import Update.Subtopology
 
   # ----------------------------------------------------------------------
@@ -47,6 +48,7 @@ module ReferenceDeployment {
     instance rtcManager
     instance imuManager
     instance bootloaderTrigger
+    instance comDelaySband
     instance downlinkDelay
     instance telemetryDelay
     instance burnwire
@@ -55,7 +57,12 @@ module ReferenceDeployment {
     instance comSplitterTelemetry
     # For UART sideband communication
     instance comDriver
-
+    instance spiDriver
+    instance sband
+    instance gpioSbandNrst
+    instance gpioSbandRxEn
+    instance gpioSbandTxEn
+    instance gpioSbandIRQ
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch
@@ -150,10 +157,38 @@ module ReferenceDeployment {
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
 
+      # Payload Command Sequencer
       payloadSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> payloadSeq.cmdResponseIn
 
+      # Telemetry delay
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
+
+
+      # Sband connections
+      comSplitterEvents.comOut-> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+
+      ComCcsdsSband.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsSband.fprimeRouter.cmdResponseIn
+
+    }
+
+
+    connections CommunicationsSBandRadio {
+      sband.allocate      -> ComCcsdsSband.commsBufferManager.bufferGetCallee
+      sband.deallocate    -> ComCcsdsSband.commsBufferManager.bufferSendIn
+
+      # ComDriver <-> ComStub (Uplink)
+      sband.dataOut -> ComCcsdsSband.frameAccumulator.dataIn
+      ComCcsdsSband.frameAccumulator.dataReturnOut -> sband.dataReturnIn
+
+      # ComStub <-> ComDriver (Downlink)
+      ComCcsdsSband.framer.dataOut -> sband.dataIn
+      sband.dataReturnOut -> ComCcsdsSband.framer.dataReturnIn
+      sband.comStatusOut -> comDelaySband.comStatusIn
+      comDelaySband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
+
     }
 
     connections CommunicationsRadio {
@@ -208,6 +243,9 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> ComCcsdsSband.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[14] -> sband.run
+
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
@@ -226,6 +264,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[13] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[14] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[15] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> comDelaySband.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> ComCcsdsSband.comQueue.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> ComCcsdsSband.commsBufferManager.schedIn
 
       # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
@@ -326,6 +367,14 @@ module ReferenceDeployment {
       peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
     }
 
+    connections MyConnectionGraph {
+      sband.spiSend -> spiDriver.SpiReadWrite
+      sband.resetSend -> gpioSbandNrst.gpioWrite
+      sband.txEnable -> gpioSbandTxEn.gpioWrite
+      sband.rxEnable -> gpioSbandRxEn.gpioWrite
+      sband.getIRQLine -> gpioSbandIRQ.gpioRead
+    }
+
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
       FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
@@ -333,6 +382,10 @@ module ReferenceDeployment {
     }
 
     connections FileUplinkCollecting {
+
+      # Router <-> FileUplink (S-band input only - file downlink uses UART only)
+      ComCcsdsSband.fprimeRouter.fileOut     -> FileHandling.fileUplink.bufferSendIn
+
       # Router <-> FileUplink
       fileUplinkCollector.singleOut -> FileHandling.fileUplink.bufferSendIn
       FileHandling.fileUplink.bufferSendOut -> fileUplinkCollector.singleIn
@@ -342,6 +395,8 @@ module ReferenceDeployment {
       ComCcsds.fprimeRouter.fileOut     -> fileUplinkCollector.multiIn[0]
       fileUplinkCollector.multiOut[0] -> ComCcsds.fprimeRouter.fileBufferReturnIn
     }
+
+
 
 
     connections sysPowerMonitor {
