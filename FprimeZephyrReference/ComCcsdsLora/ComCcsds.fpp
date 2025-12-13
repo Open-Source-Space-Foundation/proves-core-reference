@@ -122,7 +122,6 @@ module ComCcsdsLora {
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance fprimeRouter
         instance authenticationRouter
         instance tcDeframer
         instance spacePacketDeframer

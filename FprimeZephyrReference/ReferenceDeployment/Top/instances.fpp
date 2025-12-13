@@ -183,7 +183,7 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003B000
 
-  instance amateurRadio: Components.AmateurRadio base id 0x10041000
+  instance amateurRadio: Components.AmateurRadio base id 0x10063000
 
   instance cameraHandler2: Components.CameraHandler base id 0x1003C000
 

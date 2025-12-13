@@ -168,8 +168,8 @@ module ReferenceDeployment {
       # Framer <-> ComDriver (Downlink)
       ComCcsdsLora.framer.dataOut -> lora.dataIn
       lora.dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
-      lora.comStatusOut -> comDelay.comStatusIn
-      comDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
+      lora.comStatusOut -> downlinkDelay.comStatusIn
+      downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqDone -> startupManager.completeSequence
@@ -216,21 +216,20 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> comDelay.run
-      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
-      rateGroup1Hz.RateGroupMemberOut[6] -> downlinkDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager2.schedIn
-      rateGroup1Hz.RateGroupMemberOut[12] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[13] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> ComCcsdsUart.commsBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[8] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> telemetryDelay.runIn
+      rateGroup1Hz.RateGroupMemberOut[10] -> downlinkDelay.run
+      rateGroup1Hz.RateGroupMemberOut[11] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[13] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[15] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[16] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[17] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> modeManager.run
 
       # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
@@ -344,8 +343,8 @@ module ReferenceDeployment {
 
       ComCcsdsUart.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[1]
       fileUplinkCollector.multiOut[1] -> ComCcsdsUart.authenticationRouter.fileBufferReturnIn
-      ComCcsds.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[0]
-      fileUplinkCollector.multiOut[0] -> ComCcsds.authenticationRouter.fileBufferReturnIn
+      ComCcsdsLora.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[0]
+      fileUplinkCollector.multiOut[0] -> ComCcsdsLora.authenticationRouter.fileBufferReturnIn
     }
 
 

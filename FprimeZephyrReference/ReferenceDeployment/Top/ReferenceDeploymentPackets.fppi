@@ -1,15 +1,5 @@
 telemetry packets ReferenceDeploymentPackets {
 
-  packet Health id 1 group 1 {
-    CdhCore.cmdDisp.CommandsDispatched
-    CdhCore.cmdDisp.CommandsDropped
-    ComCcsdsLora.comQueue.comQueueDepth
-    ComCcsdsLora.commsBufferManager.HiBuffs
-    ComCcsdsUart.comQueue.comQueueDepth
-    ComCcsdsUart.commsBufferManager.HiBuffs
-    ReferenceDeployment.rateGroup10Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1Hz.RgMaxTime
-  }
   ########### Packet Group Key ###########
   # 1 - Beacon
   # 2 - Live Satellite Sensor Data
@@ -33,58 +23,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
 
-    #Authentication
-    ComCcsdsUart.authenticate.CurrentSequenceNumber
+    # Communications Data
     ComCcsdsLora.authenticatelora.CurrentSequenceNumber
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
 
   }
 
-  packet HealthWarnings id 2 group 1 {
-    CdhCore.$health.PingLateWarnings
-    ComCcsdsLora.commsBufferManager.NoBuffs
-    ComCcsdsLora.commsBufferManager.EmptyBuffs
-    ComCcsdsUart.commsBufferManager.NoBuffs
-    ComCcsdsUart.commsBufferManager.EmptyBuffs
-    ReferenceDeployment.rateGroup10Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1Hz.RgCycleSlips
-  }
-
-
-  packet HealthAuxillary id 3 group 2 {
-    ComCcsdsLora.commsBufferManager.TotalBuffs
-    ComCcsdsLora.commsBufferManager.CurrBuffs
-    ComCcsdsLora.comQueue.buffQueueDepth
-    ComCcsdsUart.commsBufferManager.TotalBuffs
-    ComCcsdsUart.commsBufferManager.CurrBuffs
-    ComCcsdsUart.comQueue.buffQueueDepth
-    CdhCore.tlmSend.SendLevel
-    ComCcsdsLora.authenticationRouter.ByPassedRouter
-    ComCcsdsLora.authenticationRouter.PassedRouter
-    ComCcsdsLora.authenticationRouter.FailedRouter
-    ComCcsdsUart.authenticationRouter.ByPassedRouter
-    ComCcsdsUart.authenticationRouter.PassedRouter
-    ComCcsdsUart.authenticationRouter.FailedRouter
-
-  }
-
-  packet Version id 4 group 3 {
-    CdhCore.version.FrameworkVersion
-    CdhCore.version.ProjectVersion
-    CdhCore.version.LibraryVersion01
-    fsSpace.FreeSpace
-    fsSpace.TotalSpace
-  }
-
-  packet Led id 5 group 4 {
-    ReferenceDeployment.watchdog.WatchdogTransitions
-  }
-
-  packet Imu id 6 group 4 {
-    ReferenceDeployment.lsm6dsoManager.Acceleration
-    ReferenceDeployment.lsm6dsoManager.AngularVelocity
-    ReferenceDeployment.lsm6dsoManager.Temperature
-    ReferenceDeployment.lis2mdlManager.MagneticField
-  }
+  ### Live Satellite Sensor Data Packets ###
 
   packet Imu id 7 group 2 {
     ReferenceDeployment.imuManager.AxisOrientation
@@ -147,6 +92,7 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   ### Payload Meta Data Packets ###
+
   packet CameraDebug id 14 group 4 {
     ReferenceDeployment.cameraHandler.BytesReceived
     ReferenceDeployment.cameraHandler.ExpectedSize
@@ -158,8 +104,8 @@ telemetry packets ReferenceDeploymentPackets {
 
   ### Health and Status Packets ###
   packet Health id 2 group 5 {
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsLora.comQueue.comQueueDepth
+    ComCcsdsLora.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
@@ -174,7 +120,7 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
+    ComCcsdsLora.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager2.NoBuffs
@@ -186,7 +132,7 @@ telemetry packets ReferenceDeploymentPackets {
 
 
   packet HealthAuxiliary id 4 group 5 {
-    ComCcsds.comQueue.buffQueueDepth
+    ComCcsdsLora.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
@@ -197,12 +143,24 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
-  packet authenticate id 6 group 5 {
-    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
-    ComCcsdsUart.authenticate.RejectedPacketsCount
+  packet Authenticate id 6 group 5 {
     ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+
     ComCcsdsLora.authenticatelora.RejectedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+
+    ComCcsdsLora.authenticationRouter.ByPassedRouter
+    ComCcsdsUart.authenticationRouter.ByPassedRouter
+
+    ComCcsdsLora.authenticationRouter.PassedRouter
+    ComCcsdsUart.authenticationRouter.PassedRouter
+
+    ComCcsdsLora.authenticationRouter.FailedRouter
+    ComCcsdsUart.authenticationRouter.FailedRouter
+
     ReferenceDeployment.amateurRadio.count_names
+
   }
 
 } omit {
@@ -253,13 +211,13 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
 
-  ComCcsds.commsBufferManager.EmptyBuffs
+  ComCcsdsLora.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
   payloadBufferManager2.EmptyBuffs
 
-  ComCcsds.commsBufferManager.TotalBuffs
-  ComCcsds.commsBufferManager.CurrBuffs
+  ComCcsdsLora.commsBufferManager.TotalBuffs
+  ComCcsdsLora.commsBufferManager.CurrBuffs
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
   payloadBufferManager2.TotalBuffs
@@ -279,5 +237,7 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.cameraHandler2.FileOpen
   ReferenceDeployment.cameraHandler2.FileErrorCount
   ReferenceDeployment.cameraHandler2.ImagesSaved
+
+
 
 }
