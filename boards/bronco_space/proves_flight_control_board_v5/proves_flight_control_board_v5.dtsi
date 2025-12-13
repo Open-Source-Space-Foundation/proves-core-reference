@@ -127,6 +127,7 @@ zephyr_udc0: &usbd {
 	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
+
 	sdhc0: sdhc@0 {
                 compatible = "zephyr,sdhc-spi-slot";
                 reg = <0>;
@@ -138,6 +139,13 @@ zephyr_udc0: &usbd {
                 };
                 spi-max-frequency = <24000000>;
         };
+
+	sband: generic_device@1 {
+        compatible = "zephyr,spi-generic";
+        reg = <1>;
+        spi-max-frequency = <20000000>;
+        status = "okay";
+    };
 };
 
 &spi1 {
