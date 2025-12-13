@@ -1,0 +1,15 @@
+#!/bin/bash
+DIR="$(cd $(dirname $BASH_SOURCE); pwd)"
+ROOT="$(cd "$DIR/../.."; pwd)"
+DICTIONARY="${ROOT}/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json"
+# Check for dictionary files
+if [ ! -f "${DICTIONARY}" ]
+then
+    echo "Dictionary files not found, please build"
+    exit 1
+fi
+# Build all sequences
+for sequence in ${ROOT}/sequences/*.seq
+do
+    fprime-seqgen --dictionary "${DICTIONARY}" "${sequence}" || exit 1
+done
