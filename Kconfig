@@ -23,3 +23,11 @@ config APP_WIPE_STORAGE
 	bool "Option to clear the flash area before mounting"
 	help
 	  Use this to force an existing file system to be created.
+
+config RADIOLIB_SX1280_TEST
+	bool "Enable RadioLib SX1280 test code in Main.cpp"
+	default n
+	help
+	  This option enables RadioLib SX1280 test code in Main.cpp.
+	  This will test RadioLib integration at Zephyr level before F Prime initialization.
+	  Only enable this for Phase 1 testing to verify the hardware setup.

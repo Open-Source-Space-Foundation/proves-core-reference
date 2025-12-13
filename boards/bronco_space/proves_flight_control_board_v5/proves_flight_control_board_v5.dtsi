@@ -124,7 +124,7 @@ zephyr_udc0: &usbd {
 
 &spi0 {
 	status = "okay";
-	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
 	sdhc0: sdhc@0 {
@@ -138,11 +138,25 @@ zephyr_udc0: &usbd {
                 };
                 spi-max-frequency = <24000000>;
         };
+
+	/* SX1280 radio using RadioLib (generic SPI device) */
+	/* GPIO pin assignments:
+	 *       - CS: GPIO 7 (second CS on spi0, different from SD card's CS on GPIO 15)
+	 *       - RESET: GPIO 17 (configured in Main.cpp)
+	 *       - BUSY: GPIO 14 on MCP23017 (configured in Main.cpp)
+	 *       - DIO1: GPIO 13 on MCP23017 (configured in Main.cpp)
+	 */
+	sx1280: sx1280@1 {
+		compatible = "generic,spi-device";
+		reg = <1>;
+		spi-max-frequency = <8000000>;
+		label = "SX1280";
+	};
 };
 
 &spi1 {
 	status = "okay";
-	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi1_default>;
 	pinctrl-names = "default";
 
@@ -155,6 +169,7 @@ zephyr_udc0: &usbd {
 		power-amplifier-output = "pa-boost";
 		label = "HOPE_RF";
 	};
+
 };
 
 &i2c0 {
