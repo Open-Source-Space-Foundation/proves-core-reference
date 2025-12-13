@@ -25,7 +25,7 @@ module FileHandlingConfig {
 
     # File downlink configuration constants
     module DownlinkConfig {
-        constant timeout        = 1000         # File downlink timeout in ms
+        constant timeout        = 5000         # File downlink timeout in ms
         constant cooldown       = 1000         # File downlink cooldown in ms
         constant cycleTime      = 1000         # File downlink cycle time in ms
         constant fileQueueDepth = 3           # File downlink queue depth

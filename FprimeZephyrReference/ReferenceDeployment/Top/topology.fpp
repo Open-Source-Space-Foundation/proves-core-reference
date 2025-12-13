@@ -32,6 +32,7 @@ module ReferenceDeployment {
     instance rateGroupDriver
     instance timer
     instance lora
+    instance loraRetry
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
@@ -107,6 +108,7 @@ module ReferenceDeployment {
     instance drv2605Face2Manager
     instance drv2605Face3Manager
     instance drv2605Face5Manager
+    instance downlinkRepeater
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -165,9 +167,14 @@ module ReferenceDeployment {
       ComCcsds.frameAccumulator.dataReturnOut -> lora.dataReturnIn
 
       # ComStub <-> ComDriver (Downlink)
-      ComCcsds.framer.dataOut -> lora.dataIn
-      lora.dataReturnOut -> ComCcsds.framer.dataReturnIn
-      lora.comStatusOut -> downlinkDelay.comStatusIn
+      ComCcsds.framer.dataOut -> loraRetry.dataIn
+      loraRetry.dataOut -> lora.dataIn
+
+      lora.dataReturnOut -> loraRetry.dataReturnIn
+      loraRetry.dataReturnOut -> ComCcsds.framer.dataReturnIn
+
+      lora.comStatusOut -> loraRetry.comStatusIn
+      loraRetry.comStatusOut -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut ->ComCcsds.framer.comStatusIn
 
 
@@ -328,8 +335,15 @@ module ReferenceDeployment {
 
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
-      FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
-      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+      FileHandling.fileDownlink.bufferSendOut -> downlinkRepeater.singleIn
+      downlinkRepeater.singleOut -> FileHandling.fileDownlink.bufferReturn
+
+      downlinkRepeater.multiOut[0] -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      downlinkRepeater.multiOut[1] -> ComCcsds.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+
+      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[0]
+      ComCcsds.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[1]
+
     }
 
     connections FileUplinkCollecting {
