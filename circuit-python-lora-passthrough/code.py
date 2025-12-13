@@ -12,8 +12,8 @@ import usb_cdc
 
 # Radio constants
 RADIO_FREQ_MHZ = 437.4
-CS = digitalio.DigitalInOut(board.RFM9X_CS)
-RESET = digitalio.DigitalInOut(board.RFM9X_RST)
+CS = digitalio.DigitalInOut(board.SPI0_CS0)
+RESET = digitalio.DigitalInOut(board.RF1_RST)
 
 rfm95 = adafruit_rfm9x.RFM9x(board.SPI(), CS, RESET, RADIO_FREQ_MHZ)
 rfm95.spreading_factor = 8
