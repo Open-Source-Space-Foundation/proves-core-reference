@@ -66,7 +66,7 @@ jobs:
         with:
           name: artifacts
           path: |
-            build-artifacts/zephyr.uf2
+            bootable.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
@@ -92,7 +92,7 @@ jobs:
 
       - name: Copy Firmware
         run: |
-          picotool load ./zephyr.uf2
+          picotool load ./bootable.uf2
           picotool reboot
 
       - name: Run Integration Tests
