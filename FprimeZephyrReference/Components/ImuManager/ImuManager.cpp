@@ -24,23 +24,10 @@ void ImuManager ::configure(const struct device* lis2mdl, const struct device* l
     this->m_lis2mdl = lis2mdl;
     this->m_lsm6dso = lsm6dso;
 
-    // Configure the lis2mdl
-    struct sensor_value magn_odr = this->getMagnetometerSamplingFrequency();
-
-    if (sensor_attr_set(this->m_lis2mdl, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &magn_odr) != 0) {
-        this->log_WARNING_HI_MagnetometerSamplingFrequencyNotConfigured();
-    }
-
-    // Configure the lsm6dso
-    struct sensor_value accel_odr = this->getAccelerometerSamplingFrequency();
-    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &accel_odr) != 0) {
-        this->log_WARNING_HI_AccelerometerSamplingFrequencyNotConfigured();
-    }
-
-    struct sensor_value gyro_odr = this->getGyroscopeSamplingFrequency();
-    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &gyro_odr) != 0) {
-        this->log_WARNING_HI_GyroscopeSamplingFrequencyNotConfigured();
-    }
+	struct sensor_value magn_odr = this->getMagnetometerSamplingFrequency();
+	struct sensor_value accel_odr = this->getAccelerometerSamplingFrequency();
+	struct sensor_value gyro_odr = this->getGyroscopeSamplingFrequency();
+	this->configureSensors(magn_odr, accel_odr, gyro_odr);
 }
 
 // ----------------------------------------------------------------------
@@ -52,6 +39,15 @@ void ImuManager ::run_handler(FwIndexType portNum, U32 context) {
     Drv::Acceleration acceleration = this->accelerationGet_handler(0, condition);
     Drv::AngularVelocity angular_velocity = this->angularVelocityGet_handler(0, condition);
     Drv::MagneticField magnetic_field = this->magneticFieldGet_handler(0, condition);
+
+	// Check if parameters have changed, and reconfigure sensors if they have
+	struct sensor_value magn_odr = this->getMagnetometerSamplingFrequency();
+	struct sensor_value accel_odr = this->getAccelerometerSamplingFrequency();
+	struct sensor_value gyro_odr = this->getGyroscopeSamplingFrequency();
+	if (!this->sensorValuesEqual(&magn_odr, &this->m_curr_magn_odr) || !this->sensorValuesEqual(&accel_odr, &this->m_curr_accel_odr) || !this->sensorValuesEqual(&gyro_odr, &this->m_curr_gyro_odr)) {
+		this->configureSensors(magn_odr, accel_odr, gyro_odr);
+	}
+	
 }
 
 Drv::Acceleration ImuManager ::accelerationGet_handler(FwIndexType portNum, Fw::Success& condition) {
@@ -138,6 +134,27 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
+
+void ImuManager ::configureSensors(struct sensor_value& magn, struct sensor_value& accel, struct sensor_value& gyro) {
+    // Configure the lis2mdl
+    if (sensor_attr_set(this->m_lis2mdl, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &magn) != 0) {
+        this->log_WARNING_HI_MagnetometerSamplingFrequencyNotConfigured();
+    } else {
+		this->m_curr_magn_odr = magn;
+	}
+
+    // Configure the lsm6dso
+    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &accel) != 0) {
+        this->log_WARNING_HI_AccelerometerSamplingFrequencyNotConfigured();
+    } else {
+		this->m_curr_accel_odr = accel;
+	}
+    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &gyro) != 0) {
+        this->log_WARNING_HI_GyroscopeSamplingFrequencyNotConfigured();
+    } else {
+		this->m_curr_gyro_odr = gyro;
+	}
+}
 
 void ImuManager ::applyAxisOrientation(struct sensor_value& x, struct sensor_value& y, struct sensor_value& z) {
     Fw::ParamValid valid;
@@ -236,6 +253,10 @@ struct sensor_value ImuManager::getMagnetometerSamplingFrequency() {
     FW_ASSERT(0, static_cast<I32>(freqParam));
 
     return sensor_value{0, 0};
+}
+
+bool ImuManager ::sensorValuesEqual(struct sensor_value *sv1, struct sensor_value *sv2) {
+    return (sv1->val1 == sv2->val1) && (sv1->val2 == sv2->val2);
 }
 
 }  // namespace Components

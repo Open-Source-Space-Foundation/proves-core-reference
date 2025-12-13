@@ -66,6 +66,8 @@ class ImuManager final : public ImuManagerComponentBase {
     // ----------------------------------------------------------------------
     //  Private helper methods
     // ----------------------------------------------------------------------
+	//! Configure imu sensors
+	void configureSensors(struct sensor_value& magn, struct sensor_value& accel, struct sensor_value& gyro);
 
     //! Apply axis orientation parameter to sensor readings
     void applyAxisOrientation(struct sensor_value& x_val, struct sensor_value& y_val, struct sensor_value& z_val);
@@ -81,6 +83,8 @@ class ImuManager final : public ImuManagerComponentBase {
 
     //! Get magnetometer sampling frequency from parameter
     struct sensor_value getMagnetometerSamplingFrequency();
+	
+	bool sensorValuesEqual(struct sensor_value *sv1, struct sensor_value *sv2);
 
   private:
     // ----------------------------------------------------------------------
@@ -92,6 +96,11 @@ class ImuManager final : public ImuManagerComponentBase {
 
     //! Zephyr device storing the initialized LSM6DSO sensor
     const struct device* m_lsm6dso;
+
+	//! Current odr values for sensors
+	struct sensor_value m_curr_magn_odr;
+	struct sensor_value m_curr_gyro_odr;
+	struct sensor_value m_curr_accel_odr;
 };
 
 }  // namespace Components
