@@ -4,11 +4,11 @@
 // \brief  hpp file for Authenticate component implementation class
 // ======================================================================
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Types/String.hpp>
 #include <Os/File.hpp>
 #include <atomic>
 #include <cassert>
-#include <lib/fprime-extras/FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 
 #include "FprimeZephyrReference/Components/Authenticate/AuthenticateComponentAc.hpp"
 

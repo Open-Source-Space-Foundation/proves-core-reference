@@ -8,25 +8,12 @@
 
 #include <Fw/Log/LogString.hpp>
 #include <Fw/Types/String.hpp>
-#include <algorithm>
-#include <atomic>
-#include <cctype>
-#include <chrono>
-#include <cstdint>
-#include <cstring>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <vector>
 
 #include "Fw/Com/ComPacket.hpp"
 #include "Fw/FPrimeBasicTypes.hpp"
 #include "Fw/Logger/Logger.hpp"
 #include "Os/File.hpp"
 #include "config/ApidEnumAc.hpp"
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
 constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
@@ -53,19 +40,6 @@ AuthenticationRouter ::~AuthenticationRouter() {}
 // Handler implementations for user-defined typed input ports
 // ----------------------------------------------------------------------
 
-// Helper function to convert binary data to hex string for debugging
-static void printHexData(const U8* data, size_t length, const char* label) {
-    if (data == nullptr || length == 0) {
-        printk("%s: (null or empty)\n", label);
-        return;
-    }
-    printk("%s: ", label);
-    for (size_t i = 0; i < length; i++) {
-        printk("%02X ", data[i]);
-    }
-    printk("\n");
-}
-
 bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // Check bounds before extracting
     if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {
@@ -89,7 +63,6 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // Check if opcode matches any in the bypass list
     for (size_t i = 0; kBypassOpCodes[i] != nullptr; i++) {
         if (std::strcmp(opCodeHex, kBypassOpCodes[i]) == 0) {
-            printk("[DEBUG] BypassesAuthentification: Found matching opcode: %s\n", opCodeHex);
             return true;
         }
     }
@@ -100,8 +73,6 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
-    printk("context %d", context.get_authenticated());
-
     // Check if the OpCodes are in the OpCode list
     // TODO
     bool bypasses = this->BypassesAuthentification(packetBuffer);
