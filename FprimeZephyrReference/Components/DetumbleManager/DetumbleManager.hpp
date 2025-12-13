@@ -14,6 +14,26 @@
 namespace Components {
 
 class DetumbleManager final : public DetumbleManagerComponentBase {
+    // ----------------------------------------------------------------------
+    //  Private helper types
+    // ----------------------------------------------------------------------
+
+    //! Structure to hold magnetorquer coil parameters
+    struct magnetorquerCoil {
+        enum Shape { RECTANGULAR, CIRCULAR } shape;
+
+        bool enabled;
+        F64 maxCurrent;
+        F64 numTurns;
+        F64 voltage;
+        F64 resistance;
+
+        // Dimensions
+        F64 width;     // For Rectangular
+        F64 length;    // For Rectangular
+        F64 diameter;  // For Circular
+    };
+
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
@@ -35,36 +55,57 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    // Constants
+  private:
+    // ----------------------------------------------------------------------
+    //  Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Perform a single B-Dot control step.
+    bool executeControlStep(std::string& reason);
+
+    //! Compute the angular velocity magnitude in degrees per second.
+    F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
+
+    //! Compute the coil area based on its shape and dimensions.
+    F64 getCoilArea(const magnetorquerCoil& coil);
+
+    //! Compute the maximum coil current based on its voltage and resistance.
+    F64 getMaxCoilCurrent(const magnetorquerCoil& coil);
+
+    //! Set the dipole moment by toggling the magnetorquers
+    void setDipoleMoment(Drv::DipoleMoment dpMoment);
+
+    //! Set the magnetorquers on or off based on the provided values
+    void setMagnetorquers(bool val[5]);
+
+  private:
+    // ----------------------------------------------------------------------
+    //  Private member variables
+    // ----------------------------------------------------------------------
+
+    //! Mathematical constant pi
     const double PI = 3.14159265358979323846;
 
-    // Proves V3 Magnetorquer Information
-    F64 COIL_VOLTAGE = 3.3;
-    F64 COIL_NUM_TURNS_X_Y = 48;
-    F64 COIL_LENGTH_X_Y = 0.053;
-    F64 COIL_WIDTH_X_Y = 0.045;
-    F64 COIL_AREA_X_Y = this->COIL_LENGTH_X_Y * this->COIL_WIDTH_X_Y;
-    F64 COIL_RESISTANCE_X_Y = 57.2;
-    F64 COIL_MAX_CURRENT_X_Y = this->COIL_VOLTAGE / this->COIL_RESISTANCE_X_Y;
-    I64 COIL_NUM_TURNS_Z = 153;
-    F64 COIL_DIAMETER_Z = 0.05755;
-    F64 COIL_AREA_Z = this->PI * pow(this->COIL_DIAMETER_Z / 2, 2.0);
-    F64 COIL_RESISTANCE_Z = 248.8;
-    F64 COIL_MAX_CURRENT_Z = this->COIL_VOLTAGE / this->COIL_RESISTANCE_Z;
+    //! X+ Coil parameters
+    magnetorquerCoil m_xPlusMagnetorquer;
 
-    // Variables
-    U32 lastCompleted = 0;
-    bool detumbleRunning = true;
+    //! X- Coil parameters
+    magnetorquerCoil m_xMinusMagnetorquer;
+
+    //! Y+ Coil parameters
+    magnetorquerCoil m_yPlusMagnetorquer;
+
+    //! Y- Coil parameters
+    magnetorquerCoil m_yMinusMagnetorquer;
+
+    //! Z- Coil parameters
+    magnetorquerCoil m_zMinusMagnetorquer;
+
+    U32 m_lastCompleted = 0;
+    bool m_detumbleRunning = true;
     int m_itrCount = 0;
-
     bool m_bDotRunning = false;
-    U32 bDotStartTime = -1;
-
-    // Functions
-    bool executeControlStep(std::string& reason);
-    void setDipoleMoment(Drv::DipoleMoment dpMoment);
-    F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
-    void setMagnetorquers(bool val[5]);
+    U32 m_bDotStartTime = -1;
 };
 
 }  // namespace Components
