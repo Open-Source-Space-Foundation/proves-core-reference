@@ -90,7 +90,6 @@ sequenceDiagram
 | DeviceStateNil | VEML6031 device state is nil |
 | TcaUnhealthy | VEML6031 TCA device is unhealthy |
 | MuxUnhealthy | VEML6031 MUX device is unhealthy |
-| LoadSwitchNotReady | VEML6031 Load Switch is not ready |
 | SensorSampleFetchFailed | VEML6031 sensor fetch failed |
 | SensorChannelGetFailed | VEML6031 sensor channel get failed |
 | InvalidGainParam | VEML6031 invalid gain parameter |
