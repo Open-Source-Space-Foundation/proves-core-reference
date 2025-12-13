@@ -12,7 +12,7 @@ module Drv {
         sync input port dipoleMomentGet: DipoleMomentGet
 
         @ Port for reading the magnetic field from the magnetometer
-        output port magneticFieldGet: Drv.MagneticFieldGet
+        output port magneticFieldGet: Components.MagneticFieldGet
 
         ### Telemetry ###
 

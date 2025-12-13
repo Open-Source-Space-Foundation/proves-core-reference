@@ -22,10 +22,10 @@ module Components {
         sync input port run: Svc.Sched
 
         @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
-        output port angularVelocityGet: Drv.AngularVelocityGet
+        output port angularVelocityGet: AngularVelocityGet
 
         @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
-        output port magneticFieldGet: Drv.MagneticFieldGet
+        output port magneticFieldGet: MagneticFieldGet
 
         @ Port for sending dipoleMomentGet calls to the BDotDetumble Component
         output port dipoleMomentGet: Drv.DipoleMomentGet

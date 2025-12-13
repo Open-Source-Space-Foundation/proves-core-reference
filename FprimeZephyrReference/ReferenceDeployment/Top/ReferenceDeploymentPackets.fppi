@@ -14,7 +14,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
 
     # Essential Sensor Data
-    ReferenceDeployment.lsm6dsoManager.AngularVelocity
+    ReferenceDeployment.imuManager.AngularVelocity
 
     # Power Data
     ReferenceDeployment.ina219SysManager.Voltage
@@ -27,10 +27,14 @@ telemetry packets ReferenceDeploymentPackets {
   ### Live Satellite Sensor Data Packets ###
 
   packet Imu id 7 group 2 {
-    ReferenceDeployment.lsm6dsoManager.Acceleration
-    ReferenceDeployment.lsm6dsoManager.AngularVelocity
-    ReferenceDeployment.lsm6dsoManager.Temperature
-    ReferenceDeployment.lis2mdlManager.MagneticField
+    ReferenceDeployment.imuManager.AxisOrientation
+    ReferenceDeployment.imuManager.Acceleration
+    ReferenceDeployment.imuManager.AngularVelocity
+    ReferenceDeployment.imuManager.MagneticField
+    ReferenceDeployment.imuManager.Temperature
+    ReferenceDeployment.imuManager.AccelerometerSamplingFrequency
+    ReferenceDeployment.imuManager.GyroscopeSamplingFrequency
+    ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
   packet LoRa id 8 group 2 {

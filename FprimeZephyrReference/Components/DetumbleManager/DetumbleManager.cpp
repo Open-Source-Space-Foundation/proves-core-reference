@@ -50,7 +50,8 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0));
+    Fw::Success condition;
+    F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0, condition));
     if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
         // Magnetude below threshold, disable magnetorquers
         bool values[5] = {false, false, false, false, false};

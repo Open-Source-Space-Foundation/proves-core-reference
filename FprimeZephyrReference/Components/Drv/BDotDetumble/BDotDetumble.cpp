@@ -27,12 +27,14 @@ Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNu
 
     // Set previous magnetic field if uninitialized
     if (this->magneticFieldReadingTime(this->m_previousMagField) == Fw::Time()) {
-        this->m_previousMagField = this->magneticFieldGet_out(0);
+        Fw::Success magFieldGetCondition;
+        this->m_previousMagField = this->magneticFieldGet_out(0, magFieldGetCondition);
         return Drv::DipoleMoment();
     }
 
     // Get the current magnetic field reading from the magnetometer
-    Drv::MagneticField currMagField = this->magneticFieldGet_out(0);
+    Fw::Success magFieldGetCondition;
+    Drv::MagneticField currMagField = this->magneticFieldGet_out(0, magFieldGetCondition);
 
     // Compute magnitude of magnetic field
     F64 magnitude = this->getMagnitude(currMagField);

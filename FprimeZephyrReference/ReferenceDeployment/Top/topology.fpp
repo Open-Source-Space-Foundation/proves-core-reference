@@ -47,8 +47,6 @@ module ReferenceDeployment {
     instance rtcManager
     instance detumbleManager
     instance bDotDetumble
-    instance lis2mdlManager
-    instance lsm6dsoManager
     instance imuManager
     instance bootloaderTrigger
     instance downlinkDelay
@@ -294,7 +292,7 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      detumbleManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
+      detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
       detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
       detumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
       detumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
@@ -302,7 +300,7 @@ module ReferenceDeployment {
       detumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
       detumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
 
-      bDotDetumble.magneticFieldGet -> lis2mdlManager.magneticFieldGet
+      bDotDetumble.magneticFieldGet -> imuManager.magneticFieldGet
     }
 
     connections PayloadCom {
@@ -418,13 +416,6 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
-    }
-
-    connections ImuManager {
-      imuManager.accelerationGet -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocityGet -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticFieldGet -> lis2mdlManager.magneticFieldGet
-      imuManager.temperatureGet -> lsm6dsoManager.temperatureGet
     }
 
   }
