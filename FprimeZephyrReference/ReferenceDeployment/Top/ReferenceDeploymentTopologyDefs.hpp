@@ -17,6 +17,7 @@
 
 // SubtopologyTopologyDefs includes
 #include "FprimeZephyrReference/ComCcsdsLora/SubtopologyTopologyDefs.hpp"
+#include "FprimeZephyrReference/ComCcsdsUart/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
@@ -89,7 +90,7 @@ struct TopologyState {
     ComCcsdsLora::SubtopologyState comCcsdsLora;  //!< Subtopology state for ComCcsdsLora
     U32 baudRate;                                 //!< Baud rate for UART communication
     CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;          //!< Subtopology state for ComCcsds
+    ComCcsdsUart::SubtopologyState comCcsdsUart;  //!< Subtopology state for ComCcsds
     const device* peripheralUart;
     U32 peripheralBaudRate;
     const device* peripheralUart2;
