@@ -57,6 +57,25 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
                            ) override;
 
     // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for GetVoltage command
+    void GetVoltage_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
+    //! Handler implementation for GetCurrent command
+    void GetCurrent_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
+    //! Handler implementation for GetPower command
+    void GetPower_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq            //!< The command sequence number
+                             ) override;
+
+    // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 

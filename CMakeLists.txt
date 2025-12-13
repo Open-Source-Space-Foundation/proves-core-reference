@@ -14,7 +14,9 @@ list(APPEND BOARD_ROOT "${CMAKE_CURRENT_LIST_DIR}")
 if (BOARD STREQUAL "rpi_pico" OR FPRIME_ZEPHYR_USE_STD_ATOMIC_FIX)
     include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/lib/fprime-zephyr/fprime-zephyr/Os/StdAtomic")
 endif()
-find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
+if (NOT BUILD_TESTING)
+    find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
+endif()
 project(fprime-zephyr-reference C CXX)
 
 # Put in an option to force the device back into programmable state for automated testing

@@ -66,7 +66,7 @@ jobs:
         with:
           name: artifacts
           path: |
-            build-artifacts/zephyr.uf2
+            bootable.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
@@ -81,9 +81,7 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
-            && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
-          make submodules fprime-venv
+         make submodules fprime-venv
 
       - name: Trigger Bootloader
         run: |
@@ -92,8 +90,9 @@ jobs:
 
       - name: Copy Firmware
         run: |
-          picotool load ./zephyr.uf2
+          picotool load ./bootable.uf2
           picotool reboot
+          sleep 5
 
       - name: Run Integration Tests
         run: |

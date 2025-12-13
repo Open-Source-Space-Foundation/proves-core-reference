@@ -10,4 +10,3 @@
 [submodule "lib/fprime-extras"]
 	path = lib/fprime-extras
 	url = https://github.com/LeStarch/fprime-extras
-	branch = main
