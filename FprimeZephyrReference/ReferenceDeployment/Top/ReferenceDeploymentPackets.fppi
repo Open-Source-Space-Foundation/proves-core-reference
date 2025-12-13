@@ -86,9 +86,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.lis2mdlManager.MagneticField
   }
 
-  packet LoRa id 7 group 4 {
-  ### Live Satellite Sensor Data Packets ###
-
   packet Imu id 7 group 2 {
     ReferenceDeployment.imuManager.AxisOrientation
     ReferenceDeployment.imuManager.Acceleration
