@@ -10,3 +10,6 @@
 [submodule "lib/RadioLib"]
 	path = lib/RadioLib
 	url = https://github.com/jgromes/RadioLib
+[submodule "lib/fprime-extras"]
+	path = lib/fprime-extras
+	url = https://github.com/LeStarch/fprime-extras

@@ -5,8 +5,6 @@ This code will forward any received LoRa packets to the serial console (sys.stdo
 to indicate packet reception.
 """
 
-import time
-
 import adafruit_rfm.rfm9x
 import board
 import digitalio
@@ -22,8 +20,8 @@ rfm95.spreading_factor = 8
 rfm95.signal_bandwidth = 125000
 rfm95.coding_rate = 5
 rfm95.preamble_length = 8
-time_start = time.time()
 packet_count = 0
+usb_cdc.console.timeout = 0.01
 print("[INFO] LoRa Receiver receiving packets")
 while True:
     # Look for a new packet - wait up to 2 seconds:
@@ -32,10 +30,15 @@ while True:
     if packet is not None:
         usb_cdc.data.write(packet)
         packet_count += 1
-    time_delta = time.time() - time_start
-    if time_delta > 10:
-        print(f"[INFO] Packets received: {packet_count}")
-        time_start = time.time()
+    data = usb_cdc.console.read(3)
+    try:
+        rate = int(data)
+        if rate < 7 or rate > 9:
+            raise ValueError("Spreading factor must be between 7 and 9")
+        print(f"[INFO] Setting spreading factor to {rate}")
+        rfm95.spreading_factor = rate
+    except (ValueError, TypeError):
+        pass
     data = usb_cdc.data.read(usb_cdc.data.in_waiting)
     if len(data) > 0:
         rfm95.send(data)

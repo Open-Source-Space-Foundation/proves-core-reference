@@ -31,6 +31,26 @@ module Drv {
         @ Event for reporting INA219 not ready error
         event DeviceNotReady() severity warning high format "INA219 device not ready" throttle 5
 
+        @ Event for reporting voltage reading
+        event VoltageReading(voltage: F64) severity activity low format "Voltage: {} V"
+
+        @ Event for reporting current reading
+        event CurrentReading(current: F64) severity activity low format "Current: {} A"
+
+        @ Event for reporting power reading
+        event PowerReading(power: F64) severity activity low format "Power: {} W"
+
+        # Commands
+
+        @ Command to get voltage reading
+        sync command GetVoltage
+
+        @ Command to get current reading
+        sync command GetCurrent
+
+        @ Command to get power reading
+        sync command GetPower
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
@@ -45,6 +65,15 @@ module Drv {
 
         @ Port for sending telemetry channels to downlink
         telemetry port tlmOut
+
+        @ Port for receiving commands
+        command recv port cmdIn
+
+        @ Port for sending command responses
+        command resp port cmdResponseOut
+
+        @ Port for sending command registration requests
+        command reg port cmdRegOut
 
     }
 }

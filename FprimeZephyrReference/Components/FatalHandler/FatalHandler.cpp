@@ -27,23 +27,14 @@ FatalHandler ::FatalHandler(const char* const compName) : FatalHandlerComponentB
 FatalHandler ::~FatalHandler() {}
 
 void FatalHandler::reboot() {
-// When running in CI failsafe mode and the board is a teensy,
-// then we should invoke bkpt #251 to trigger the soft reboot enabling a
-// flash of new software
-#if defined(FPRIME_CI_FAILSAFE_CYCLE_COUNT)
-    // Magic bootloader breakpoint, provided by PRJC
-    if (strncmp(CONFIG_BOARD, "teensy", 6) == 0) {
-        asm("bkpt #251");
-    }
-#endif
     // Otherwise, use Zephyr to reboot the system
     sys_reboot(SYS_REBOOT_COLD);
 }
 
 void FatalHandler::FatalReceive_handler(const FwIndexType portNum, FwEventIdType Id) {
-    Fw::Logger::log("FATAL %" PRI_FwEventIdType "handled.\n", Id);
-    Os::Task::delay(Fw::TimeInterval(0, 1000));  // Delay to allow log to be processed
-    this->reboot();                              // Reboot the system
+    Fw::Logger::log("FATAL %" PRI_FwEventIdType " handled.\n", Id);
+    Os::Task::delay(Fw::TimeInterval(1, 0));  // Delay to allow log to be processed
+    this->reboot();                           // Reboot the system
 }
 
 }  // namespace Components

@@ -9,8 +9,10 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,flash-controller = &qmi;
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
+		zephyr,code-partition = &slot0_partition;
 	};
 
 	fstab {
@@ -56,8 +58,42 @@ zephyr_udc0: &usbd {
 	};
 };
 
+&qmi {
+	status = "okay";
+};
+
 &flash0 {
-       reg = <0x10000000 DT_SIZE_M(4)>;
+    reg = <0x10000000 DT_SIZE_M(4)>;
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+
+        boot_partition: partition@0 {
+            label = "mcuboot";
+            reg = <0x0 0x100000>;
+        };
+
+        slot0_partition: partition@100000 {
+            label = "current";
+            reg = <0x100000 0x100000>;
+        };
+
+        slot1_partition: partition@200000 {
+            label = "golden";
+            reg = <0x200000 0x100000>;
+        };
+
+        slot2_partition: partition@300000 {
+            label = "test";
+            reg = <0x300000 0x100000>;
+        };
+
+        storage_partition: partition@400000 {
+            label = "storage";
+            reg = <0x400000 0xC00000>;
+        };
+    };
 };
 
 &timer0 {
@@ -70,6 +106,20 @@ zephyr_udc0: &usbd {
 
 &gpio0 {
 	status = "okay";
+};
+
+&uart0 {
+    status = "okay";
+    pinctrl-0 = <&uart0_default>;
+	current-speed = <115200>;
+    pinctrl-names = "default";
+};
+
+&uart1 {
+    status = "okay";
+    pinctrl-0 = <&uart1_default>;
+	current-speed = <115200>;
+    pinctrl-names = "default";
 };
 
 &spi0 {
@@ -451,13 +501,6 @@ zephyr_udc0: &usbd {
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
 		backup-switch-mode = "direct";
 		label = "RV3028";
-	};
-	ina219: ina219@40 {
-		compatible = "ti,ina219";
-		reg = <0x40>;
-		shunt-milliohm = <2>;
-		lsb-microamp = <100>;
-		label = "INA219";
 	};
 	mcp23017: mcp23017@20 {
 		compatible = "microchip,mcp23017";
