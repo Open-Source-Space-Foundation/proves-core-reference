@@ -45,6 +45,8 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
+    instance detumbleManager
+    instance bDotDetumble
     instance imuManager
     instance bootloaderTrigger
     instance downlinkDelay
@@ -208,6 +210,8 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> detumbleManager.run
+
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
@@ -290,6 +294,18 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
+    }
+
+    connections DetumbleManager {
+      detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
+      detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
+      detumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
+      detumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
+      detumbleManager.yPlusToggle -> drv2605Face2Manager.toggleContinuous
+      detumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
+      detumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
+
+      bDotDetumble.magneticFieldGet -> imuManager.magneticFieldGet
     }
 
     connections PayloadCom {

@@ -71,6 +71,9 @@ Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
     return Fw::Success::SUCCESS;
 }
 
+void Drv2605Manager ::toggleContinuous_handler(FwIndexType portNum, bool value) {
+    this->m_continuous_mode = value;
+}
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------

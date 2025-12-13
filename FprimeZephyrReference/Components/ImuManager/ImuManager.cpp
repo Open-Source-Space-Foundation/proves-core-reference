@@ -110,7 +110,7 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 
     if (!device_is_ready(this->m_lis2mdl)) {
         this->log_WARNING_HI_Lis2mdlDeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0);
+        return Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue(TimeBase::TB_NONE, 0, 0, 0));
     }
     this->log_WARNING_HI_Lis2mdlDeviceNotReady_ThrottleClear();
 
@@ -123,8 +123,11 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 
     this->applyAxisOrientation(x, y, z);
 
-    Drv::MagneticField magnetic_field =
-        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+    Fw::Time t = this->getTime();
+    Fw::TimeValue timestamp = Fw::TimeValue(t.getTimeBase(), t.getContext(), t.getSeconds(), t.getUSeconds());
+
+    Drv::MagneticField magnetic_field = Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y),
+                                                           sensor_value_to_double(&z), timestamp);
 
     this->tlmWrite_MagneticField(magnetic_field);
 

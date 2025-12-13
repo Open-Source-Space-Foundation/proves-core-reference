@@ -138,6 +138,10 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
+  packet Parameters id 15 group 6 {
+    ReferenceDeployment.bDotDetumble.Gain
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

@@ -58,6 +58,8 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     Fw::Success trigger_handler(FwIndexType portNum  //!< The port number
                                 ) override;
 
+    void toggleContinuous_handler(FwIndexType portNum, bool value) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
