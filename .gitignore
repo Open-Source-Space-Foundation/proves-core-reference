@@ -21,6 +21,8 @@ build
 settings.ini
 bootable.uf2
 mcuboot.uf2
+startup.bin
+camera_handler_1.bin
 
 **/__pycache__/
 **/*.egg-info/
