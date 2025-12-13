@@ -82,7 +82,6 @@ sequenceDiagram
 | DeviceStateNil | TMP112 device state is nil |
 | TcaUnhealthy | TMP112 TCA device is unhealthy |
 | MuxUnhealthy | TMP112 MUX device is unhealthy |
-| LoadSwitchNotReady | TMP112 Load Switch is not ready |
 | SensorSampleFetchFailed | TMP112 sensor fetch failed |
 | SensorChannelGetFailed | TMP112 sensor channel get failed |
 | Temperature | Temperature reading in celsius |
