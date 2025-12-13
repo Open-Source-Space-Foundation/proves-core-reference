@@ -45,8 +45,6 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
-    instance lis2mdlManager
-    instance lsm6dsoManager
     instance imuManager
     instance bootloaderTrigger
     instance comDelay
@@ -402,10 +400,5 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
     }
 
-    connections ImuManager {
-      imuManager.acceleration -> lsm6dsoManager.accelerationGet
-      imuManager.angularVelocity -> lsm6dsoManager.angularVelocityGet
-      imuManager.magneticField -> lis2mdlManager.magneticFieldGet
-    }
   }
 }

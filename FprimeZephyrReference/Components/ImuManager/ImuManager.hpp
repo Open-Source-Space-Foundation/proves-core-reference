@@ -7,6 +7,8 @@
 #define Components_ImuManager_HPP
 
 #include "FprimeZephyrReference/Components/ImuManager/ImuManagerComponentAc.hpp"
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
 
 namespace Components {
 
@@ -21,6 +23,14 @@ class ImuManager final : public ImuManagerComponentBase {
 
     //! Destroy ImuManager object
     ~ImuManager();
+
+  public:
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Configure the IMU devices
+    void configure(const struct device* lis2mdl, const struct device* lsm6dso);
 
   private:
     // ----------------------------------------------------------------------
@@ -58,7 +68,30 @@ class ImuManager final : public ImuManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Apply axis orientation parameter to sensor readings
-    void applyAxisOrientation(double* x, double* y, double* z);
+    void applyAxisOrientation(struct sensor_value& x_val, struct sensor_value& y_val, struct sensor_value& z_val);
+
+    //! Get accelerometer sampling frequency from parameter
+    struct sensor_value getAccelerometerSamplingFrequency();
+
+    //! Get gyroscope sampling frequency from parameter
+    struct sensor_value getGyroscopeSamplingFrequency();
+
+    //! Get LSM6DSO sampling frequency from parameter
+    struct sensor_value getLsm6dsoSamplingFrequency(Components::Lsm6dsoSamplingFrequency freqParam);
+
+    //! Get magnetometer sampling frequency from parameter
+    struct sensor_value getMagnetometerSamplingFrequency();
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
+
+    //! Zephyr device storing the initialized LIS2MDL sensor
+    const struct device* m_lis2mdl;
+
+    //! Zephyr device storing the initialized LSM6DSO sensor
+    const struct device* m_lsm6dso;
 };
 
 }  // namespace Components

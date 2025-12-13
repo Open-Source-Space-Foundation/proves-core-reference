@@ -14,7 +14,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
 
     # Essential Sensor Data
-    ReferenceDeployment.lsm6dsoManager.AngularVelocity
+    ReferenceDeployment.imuManager.AngularVelocity
 
     # Power Data
     ReferenceDeployment.ina219SysManager.Voltage
@@ -31,7 +31,10 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.Acceleration
     ReferenceDeployment.imuManager.AngularVelocity
     ReferenceDeployment.imuManager.MagneticField
-    ReferenceDeployment.lis2mdlManager.SamplingFrequency
+    ReferenceDeployment.imuManager.Temperature
+    ReferenceDeployment.imuManager.AccelerometerSamplingFrequency
+    ReferenceDeployment.imuManager.GyroscopeSamplingFrequency
+    ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
   packet LoRa id 8 group 2 {
@@ -170,9 +173,6 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileManager.Errors
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
-<<<<<<< HEAD
-  ReferenceDeployment.lsm6dsoManager.Temperature
-=======
 
   # Moved to omit as they are not useful in normal ops
   ComCcsdsUart.comQueue.comQueueDepth
@@ -208,5 +208,4 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.cameraHandler2.FileErrorCount
   ReferenceDeployment.cameraHandler2.ImagesSaved
 
->>>>>>> c051475004664a3f448ee03d54ba40b8fc705e47
 }

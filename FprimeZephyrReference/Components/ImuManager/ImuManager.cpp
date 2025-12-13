@@ -18,79 +18,120 @@ ImuManager ::ImuManager(const char* const compName) : ImuManagerComponentBase(co
 ImuManager ::~ImuManager() {}
 
 // ----------------------------------------------------------------------
+// Public helper methods
+// ----------------------------------------------------------------------
+void ImuManager ::configure(const struct device* lis2mdl, const struct device* lsm6dso) {
+    this->m_lis2mdl = lis2mdl;
+    this->m_lsm6dso = lsm6dso;
+
+    // Configure the lis2mdl
+    struct sensor_value magn_odr = this->getMagnetometerSamplingFrequency();
+
+    if (sensor_attr_set(this->m_lis2mdl, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &magn_odr) != 0) {
+        this->log_WARNING_HI_MagnetometerSamplingFrequencyNotConfigured();
+    }
+
+    // Configure the lsm6dso
+    struct sensor_value accel_odr = this->getAccelerometerSamplingFrequency();
+    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &accel_odr) != 0) {
+        this->log_WARNING_HI_AccelerometerSamplingFrequencyNotConfigured();
+    }
+
+    struct sensor_value gyro_odr = this->getGyroscopeSamplingFrequency();
+    if (sensor_attr_set(this->m_lsm6dso, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &gyro_odr) != 0) {
+        this->log_WARNING_HI_GyroscopeSamplingFrequencyNotConfigured();
+    }
+}
+
+// ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
 void ImuManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Success condition;  // Ignoring for now
-
     Drv::Acceleration acceleration = this->accelerationGet_handler(0, condition);
-    this->tlmWrite_Acceleration(acceleration);
-
     Drv::AngularVelocity angular_velocity = this->angularVelocityGet_handler(0, condition);
-    this->tlmWrite_AngularVelocity(angular_velocity);
-
     Drv::MagneticField magnetic_field = this->magneticFieldGet_handler(0, condition);
-    this->tlmWrite_MagneticField(magnetic_field);
 }
 
 Drv::Acceleration ImuManager ::accelerationGet_handler(FwIndexType portNum, Fw::Success& condition) {
-    Drv::Acceleration acceleration = this->acceleration_out(portNum, condition);
+    condition = Fw::Success::FAILURE;
 
-    if (condition != Fw::Success::SUCCESS) {
-        return acceleration;
+    if (!device_is_ready(this->m_lsm6dso)) {
+        this->log_WARNING_HI_Lsm6dsoDeviceNotReady();
+        return Drv::Acceleration(0.0, 0.0, 0.0);
     }
+    this->log_WARNING_HI_Lsm6dsoDeviceNotReady_ThrottleClear();
 
-    double x = acceleration.get_x();
-    double y = acceleration.get_y();
-    double z = acceleration.get_z();
+    sensor_sample_fetch_chan(this->m_lsm6dso, SENSOR_CHAN_ACCEL_XYZ);
 
-    this->applyAxisOrientation(&x, &y, &z);
+    struct sensor_value x, y, z;
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_ACCEL_X, &x);
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_ACCEL_Y, &y);
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_ACCEL_Z, &z);
 
-    acceleration.set_x(x);
-    acceleration.set_y(y);
-    acceleration.set_z(z);
+    this->applyAxisOrientation(x, y, z);
 
+    Drv::Acceleration acceleration =
+        Drv::Acceleration(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+
+    this->tlmWrite_Acceleration(acceleration);
+
+    condition = Fw::Success::SUCCESS;
     return acceleration;
 }
 
 Drv::AngularVelocity ImuManager ::angularVelocityGet_handler(FwIndexType portNum, Fw::Success& condition) {
-    Drv::AngularVelocity angular_velocity = this->angularVelocity_out(portNum, condition);
+    condition = Fw::Success::FAILURE;
 
-    if (condition != Fw::Success::SUCCESS) {
-        return angular_velocity;
+    if (!device_is_ready(this->m_lsm6dso)) {
+        this->log_WARNING_HI_Lsm6dsoDeviceNotReady();
+        return Drv::AngularVelocity(0.0, 0.0, 0.0);
     }
+    this->log_WARNING_HI_Lsm6dsoDeviceNotReady_ThrottleClear();
 
-    double x = angular_velocity.get_x();
-    double y = angular_velocity.get_y();
-    double z = angular_velocity.get_z();
+    sensor_sample_fetch_chan(this->m_lsm6dso, SENSOR_CHAN_GYRO_XYZ);
 
-    this->applyAxisOrientation(&x, &y, &z);
+    struct sensor_value x, y, z;
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_GYRO_X, &x);
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_GYRO_Y, &y);
+    sensor_channel_get(this->m_lsm6dso, SENSOR_CHAN_GYRO_Z, &z);
 
-    angular_velocity.set_x(x);
-    angular_velocity.set_y(y);
-    angular_velocity.set_z(z);
+    this->applyAxisOrientation(x, y, z);
 
+    Drv::AngularVelocity angular_velocity =
+        Drv::AngularVelocity(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+
+    this->tlmWrite_AngularVelocity(angular_velocity);
+
+    condition = Fw::Success::SUCCESS;
     return angular_velocity;
 }
 
 Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw::Success& condition) {
-    Drv::MagneticField magnetic_field = this->magneticField_out(portNum, condition);
+    condition = Fw::Success::FAILURE;
 
-    if (condition != Fw::Success::SUCCESS) {
-        return magnetic_field;
+    if (!device_is_ready(this->m_lis2mdl)) {
+        this->log_WARNING_HI_Lis2mdlDeviceNotReady();
+        return Drv::MagneticField(0.0, 0.0, 0.0);
     }
+    this->log_WARNING_HI_Lis2mdlDeviceNotReady_ThrottleClear();
 
-    double x = magnetic_field.get_x();
-    double y = magnetic_field.get_y();
-    double z = magnetic_field.get_z();
+    sensor_sample_fetch_chan(this->m_lis2mdl, SENSOR_CHAN_MAGN_XYZ);
 
-    this->applyAxisOrientation(&x, &y, &z);
+    struct sensor_value x, y, z;
+    sensor_channel_get(this->m_lis2mdl, SENSOR_CHAN_MAGN_X, &x);
+    sensor_channel_get(this->m_lis2mdl, SENSOR_CHAN_MAGN_Y, &y);
+    sensor_channel_get(this->m_lis2mdl, SENSOR_CHAN_MAGN_Z, &z);
 
-    magnetic_field.set_x(x);
-    magnetic_field.set_y(y);
-    magnetic_field.set_z(z);
+    this->applyAxisOrientation(x, y, z);
 
+    Drv::MagneticField magnetic_field =
+        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+
+    this->tlmWrite_MagneticField(magnetic_field);
+
+    condition = Fw::Success::SUCCESS;
     return magnetic_field;
 }
 
@@ -98,7 +139,7 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-void ImuManager ::applyAxisOrientation(double* x, double* y, double* z) {
+void ImuManager ::applyAxisOrientation(struct sensor_value& x, struct sensor_value& y, struct sensor_value& z) {
     Fw::ParamValid valid;
     Components::AxisOrientation::T orientation = this->paramGet_AXIS_ORIENTATION(valid);
 
@@ -106,26 +147,95 @@ void ImuManager ::applyAxisOrientation(double* x, double* y, double* z) {
 
     switch (orientation) {
         case Components::AxisOrientation::ROTATED_90_DEG_CW: {
-            double temp_x = *x;
-            *x = *y;
-            *y = -temp_x;
+            const struct sensor_value temp_x = x;
+            x = y;
+            sensor_value_from_double(&y, -sensor_value_to_double(&temp_x));
             return;
         }
         case Components::AxisOrientation::ROTATED_90_DEG_CCW: {
-            double temp_x = *x;
-            *x = -*y;
-            *y = temp_x;
+            const struct sensor_value temp_x = x;
+            sensor_value_from_double(&x, -sensor_value_to_double(&y));
+            y = temp_x;
             return;
         }
-        case Components::AxisOrientation::ROTATED_180_DEG:
-            *x = -*x;
-            *y = -*y;
+        case Components::AxisOrientation::ROTATED_180_DEG: {
+            sensor_value_from_double(&x, -sensor_value_to_double(&x));
+            sensor_value_from_double(&y, -sensor_value_to_double(&y));
             return;
-        default:
+        }
+        case Components::AxisOrientation::STANDARD: {
             return;
+        }
+    }
+}
+
+struct sensor_value ImuManager ::getAccelerometerSamplingFrequency() {
+    Fw::ParamValid valid;
+    Components::Lsm6dsoSamplingFrequency freqParam = this->paramGet_ACCELEROMETER_SAMPLING_FREQUENCY(valid);
+
+    this->tlmWrite_AccelerometerSamplingFrequency(freqParam);
+
+    return this->getLsm6dsoSamplingFrequency(freqParam);
+}
+
+struct sensor_value ImuManager ::getGyroscopeSamplingFrequency() {
+    Fw::ParamValid valid;
+    Components::Lsm6dsoSamplingFrequency freqParam = this->paramGet_GYROSCOPE_SAMPLING_FREQUENCY(valid);
+
+    this->tlmWrite_GyroscopeSamplingFrequency(freqParam);
+
+    return this->getLsm6dsoSamplingFrequency(freqParam);
+}
+
+struct sensor_value ImuManager ::getLsm6dsoSamplingFrequency(Components::Lsm6dsoSamplingFrequency freqParam) {
+    switch (freqParam) {
+        case Components::Lsm6dsoSamplingFrequency::SF_12_5Hz:
+            return sensor_value{12, 500000};
+        case Components::Lsm6dsoSamplingFrequency::SF_26Hz:
+            return sensor_value{26, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_52Hz:
+            return sensor_value{52, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_104Hz:
+            return sensor_value{104, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_208Hz:
+            return sensor_value{208, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_416Hz:
+            return sensor_value{416, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_833Hz:
+            return sensor_value{833, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_1_66kHz:
+            return sensor_value{1666, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_3_33kHz:
+            return sensor_value{3333, 0};
+        case Components::Lsm6dsoSamplingFrequency::SF_6_66kHz:
+            return sensor_value{6666, 0};
     }
 
-    FW_ASSERT(0, static_cast<I32>(orientation));
+    FW_ASSERT(0, static_cast<I32>(freqParam));
+
+    return sensor_value{0, 0};
+}
+
+struct sensor_value ImuManager::getMagnetometerSamplingFrequency() {
+    Fw::ParamValid valid;
+    Components::Lis2mdlSamplingFrequency freqParam = this->paramGet_MAGNETOMETER_SAMPLING_FREQUENCY(valid);
+
+    this->tlmWrite_MagnetometerSamplingFrequency(freqParam);
+
+    switch (freqParam) {
+        case Components::Lis2mdlSamplingFrequency::SF_10Hz:
+            return sensor_value{10, 0};
+        case Components::Lis2mdlSamplingFrequency::SF_20Hz:
+            return sensor_value{20, 0};
+        case Components::Lis2mdlSamplingFrequency::SF_50Hz:
+            return sensor_value{50, 0};
+        case Components::Lis2mdlSamplingFrequency::SF_100Hz:
+            return sensor_value{100, 0};
+    }
+
+    FW_ASSERT(0, static_cast<I32>(freqParam));
+
+    return sensor_value{0, 0};
 }
 
 }  // namespace Components
