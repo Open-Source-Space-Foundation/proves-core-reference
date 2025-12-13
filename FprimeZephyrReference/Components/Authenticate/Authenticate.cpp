@@ -10,14 +10,7 @@
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
-#include <cctype>
-#include <cstdint>
-#include <cstring>
-#include <functional>
 #include <iomanip>
-#include <sstream>
-
-#include <zephyr/kernel.h>
 
 // Include generated header with default key (generated at build time)
 #include "AuthDefaultKey.h"
@@ -101,8 +94,6 @@ bool Authenticate::computeHMAC(const U8* data,
     // Parse key from hex string (32 hex characters = 16 bytes)
     const char* keyStr = key.toChar();
     if (key.length() != 32) {
-        printk("[DEBUG] computeHMAC: ERROR - Key length is %llu, expected 32 hex characters\n",
-               static_cast<unsigned long long>(key.length()));
         this->log_WARNING_HI_InvalidSPI(-1);
         return false;
     }
@@ -217,26 +208,8 @@ bool Authenticate::validateHMAC(const U8* data,
         return false;
     }
 
-    printk("[DEBUG] validateHMAC: Computed HMAC (16 bytes): ");
-    for (FwSizeType i = 0; i < kHmacOutputLength; i++) {
-        printk("%02X ", computedHmac[i]);
-    }
-    printk("\n");
-
-    printk("[DEBUG] validateHMAC: Expected HMAC from securityTrailer (16 bytes): ");
-    for (FwSizeType i = 0; i < 16; i++) {
-        printk("%02X ", securityTrailer[i]);
-    }
-    printk("\n");
-
     // Compare computed HMAC with expected HMAC from security trailer
     bool hmacValid = this->compareHMAC(computedHmac, securityTrailer, kHmacOutputLength);
-
-    if (!hmacValid) {
-        printk("[DEBUG] validateHMAC: HMAC comparison FAILED - computed and expected do not match\n");
-    } else {
-        printk("[DEBUG] validateHMAC: HMAC comparison PASSED\n");
-    }
 
     return hmacValid;
 }
@@ -281,11 +254,6 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     // Validate buffer size before processing
     if (data.getSize() < SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
-        printk(
-            "[DEBUG] dataIn_handler: Buffer too small! Need at least %d bytes (header=%d + trailer=%d), but buffer has "
-            "%llu bytes\n",
-            SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH, SECURITY_HEADER_LENGTH, SECURITY_TRAILER_LENGTH,
-            static_cast<unsigned long long>(data.getSize()));
         this->rejectPacket(data, contextOut);
         return;
     }
@@ -315,13 +283,10 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
 
     if (!hmacValid) {
-        printk("[DEBUG] Authentication: HMAC validation FAILED for APID=%u, SPI=0x%04X (%u), SeqNum=%u\n",
-               contextOut.get_apid(), spi, spi, sequenceNumber);
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         this->rejectPacket(data, contextOut);
         return;
     }
-    printk("[DEBUG] Authentication: HMAC validation PASSED\n");
 
     // Now strip header and trailer from the buffer for forwarding
     data.setData(data.getData() + SECURITY_HEADER_LENGTH);
