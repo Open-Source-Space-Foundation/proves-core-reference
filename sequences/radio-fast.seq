@@ -1,6 +1,8 @@
 ; Increase data bandwidth and drop dividers to 1-second intervals
 R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING "Spreading factor to 7"
-R00:00:00 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_7
+R00:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
+R00:00:01 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_7
+R00:00:01 ReferenceDeployment.lora.TRANSMIT, ENABLED
 R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 0
 R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 0
 
@@ -11,4 +13,6 @@ R00:15:00 CdhCore.cmdDisp.CMD_NO_OP_STRING "Resetting communications"
 ; Reset the comm stack
 R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 39
 R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET,39
-R00:00:00 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_8
+R00:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
+R00:00:01 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_8
+R00:00:01 ReferenceDeployment.lora.TRANSMIT, ENABLED

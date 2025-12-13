@@ -245,4 +245,8 @@ module ReferenceDeployment {
   instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
   instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 
+  instance payloadSeq: Svc.CmdSequencer base id 0x10062000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 15
 }

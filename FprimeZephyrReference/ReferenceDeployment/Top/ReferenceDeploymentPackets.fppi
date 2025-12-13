@@ -161,6 +161,11 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.cmdSeq.CS_CommandsExecuted
   ReferenceDeployment.cmdSeq.CS_SequencesCompleted
   ReferenceDeployment.cmdSeq.CS_Errors
+  ReferenceDeployment.payloadSeq.CS_LoadCommands
+  ReferenceDeployment.payloadSeq.CS_CancelCommands
+  ReferenceDeployment.payloadSeq.CS_CommandsExecuted
+  ReferenceDeployment.payloadSeq.CS_SequencesCompleted
+  ReferenceDeployment.payloadSeq.CS_Errors
   FileHandling.fileUplink.FilesReceived
   FileHandling.fileUplink.PacketsReceived
   FileHandling.fileDownlink.FilesSent
