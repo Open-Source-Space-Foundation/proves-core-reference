@@ -14,7 +14,7 @@ module Components {
         sync command WAIT_FOR_QUIESCENCE()
 
         @ Telemetry for boot count
-        telemetry BootCount: FwSizeType update on change
+        telemetry BootCount: FwSizeType
 
         @ Telemetry for quiescence end time
         telemetry QuiescenceEndTime: Fw.TimeValue update on change
