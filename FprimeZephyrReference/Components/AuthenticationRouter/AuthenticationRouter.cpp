@@ -24,6 +24,7 @@ constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the
 static constexpr const char* kBypassOpCodes[] = {
     // Add opcodes here as hex strings (uppercase, no spaces, no 0x prefix)
     "01000000",  // no op
+    "2200B000",  // get sequence number
     nullptr      // Sentinel to mark end of list
 };
 
