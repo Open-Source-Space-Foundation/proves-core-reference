@@ -53,6 +53,22 @@ build: submodules zephyr fprime-venv generate-if-needed framer-plugin ## Build F
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 
+##@ Authentication Keys
+
+AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
+
+.PHONY: generate-auth-key
+generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
+	@if [ -f "$(AUTH_DEFAULT_KEY_HEADER)" ]; then \
+		echo "$(AUTH_DEFAULT_KEY_HEADER) already exists. Skipping generation."; \
+	else \
+		echo "Generating $(AUTH_DEFAULT_KEY_HEADER) with random key..."; \
+		$(UV_RUN) python3 scripts/generate_auth_key_header.py --output $(AUTH_DEFAULT_KEY_HEADER) --template $(AUTH_KEY_TEMPLATE); \
+	fi
+	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
+
+
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot
 build-mcuboot: submodules zephyr fprime-venv

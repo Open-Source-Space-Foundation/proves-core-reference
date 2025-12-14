@@ -14,49 +14,51 @@ from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
 
-def get_default_auth_key_from_spi_dict() -> str:
+def get_default_auth_key_from_header() -> str:
     """
-    Read the first key from spi_dict.txt file.
+    Read the authentication key from AuthDefaultKey.h file.
 
     Returns:
-        Default authentication key (without 0x prefix) from first entry in spi_dict.txt
+        Default authentication key (without 0x prefix) from AuthDefaultKey.h
 
     Raises:
-        FileNotFoundError: If spi_dict.txt file is not found
-        ValueError: If spi_dict.txt is empty or contains no valid keys
+        FileNotFoundError: If AuthDefaultKey.h file is not found
+        ValueError: If AuthDefaultKey.h does not contain a valid key
         IOError: If there is an error reading the file
     """
-    path = "UploadsFilesystem/AuthenticateFiles/spi_dict.txt"
+    path = "FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h"
 
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"spi_dict.txt not found at {path}. "
-            "Authentication plugin requires spi_dict.txt to be present. "
-            "Ensure the file exists or run 'make generate-spi-dict' to create it."
+            f"AuthDefaultKey.h not found at {path}. "
+            "Authentication plugin requires AuthDefaultKey.h to be present. "
+            "Ensure the file exists or run 'make generate-auth-key' to create it."
         )
 
     try:
         with open(path, "r") as f:
             for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        key = parts[2]
-                        # Remove 0x prefix if present (keys in spi_dict.txt should not have prefix)
+                # Look for line like: #define AUTH_DEFAULT_KEY "4916d208d40612daad6edbc7333c4c13"
+                if "AUTH_DEFAULT_KEY" in line and '"' in line:
+                    # Extract key from between quotes
+                    start = line.find('"') + 1
+                    end = line.find('"', start)
+                    if start > 0 and end > start:
+                        key = line[start:end]
+                        # Remove 0x prefix if present (shouldn't be, but handle it)
                         if key.startswith("0x") or key.startswith("0X"):
                             key = key[2:]
                         return key
     except (IOError, OSError) as e:
         raise IOError(
-            f"Error reading spi_dict.txt from {path}: {e}. "
-            "Authentication plugin cannot proceed without a valid spi_dict.txt file."
+            f"Error reading AuthDefaultKey.h from {path}: {e}. "
+            "Authentication plugin cannot proceed without a valid AuthDefaultKey.h file."
         ) from e
 
-    # If we get here, file exists but contains no valid keys
+    # If we get here, file exists but contains no valid key
     raise ValueError(
-        f"No valid keys found in {path}. "
-        "spi_dict.txt must contain at least one entry with format: '_XXXX HMAC <key>'"
+        f"No valid key found in {path}. "
+        'AuthDefaultKey.h must contain a line with: #define AUTH_DEFAULT_KEY "<key>"'
     )
 
 
@@ -93,9 +95,9 @@ class AuthenticateFramer(FramerDeframer):
         self.sequence_number = initial_sequence_number
         self.window_size = window_size
         self.authentication_type = authentication_type
-        # Use provided key or read from spi_dict.txt
+        # Use provided key or read from AuthDefaultKey.h
         if authentication_key is None:
-            authentication_key = get_default_auth_key_from_spi_dict()
+            authentication_key = get_default_auth_key_from_header()
         print(f"Using authentication key: {authentication_key}")
         self.authentication_key = authentication_key
 
@@ -150,8 +152,11 @@ class AuthenticateFramer(FramerDeframer):
     @classmethod
     def get_arguments(cls) -> dict:
         """Return CLI argument definitions for this plugin"""
-        # Get default key from spi_dict.txt for help text
-        default_key = get_default_auth_key_from_spi_dict()
+        # Get default key from AuthDefaultKey.h for help text
+        try:
+            default_key = get_default_auth_key_from_header()
+        except (FileNotFoundError, ValueError, IOError):
+            default_key = "<not found - run 'make generate-auth-key'>"
         return {
             ("--initial-sequence-number",): {
                 "type": int,
@@ -175,8 +180,8 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--authentication-key",): {
                 "type": str,
-                "help": f"Authentication key as hex string without 0x prefix (default: {default_key} from spi_dict.txt)",
-                "default": None,  # Will be set to first key from spi_dict.txt in __init__
+                "help": f"Authentication key as hex string without 0x prefix (default: {default_key} from AuthDefaultKey.h)",
+                "default": None,  # Will be set to key from AuthDefaultKey.h in __init__
             },
         }
 
