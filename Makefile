@@ -49,7 +49,7 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: submodules zephyr fprime-venv generate-if-needed framer-plugin ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 
@@ -144,7 +144,7 @@ delete-shadow-gds:
 	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
-gds-integration:
+gds-integration: framer-plugin
 	@$(GDS_COMMAND) --gui=none
 
 .PHONY: DoL_test
