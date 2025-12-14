@@ -13,7 +13,10 @@ from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramer
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
-SEQUENCE_NUMBER_FILE = "Framing/src/sequence_number.bin"
+# Get absolute path to sequence number file relative to this file's location
+_SEQUENCE_NUMBER_FILENAME = "sequence_number.bin"
+_SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
+SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
 
 
 def get_default_auth_key_from_header() -> str:
@@ -120,12 +123,15 @@ class AuthenticateFramer(FramerDeframer):
                 with open(filename, "w") as f:
                     f.write(str(file_number))
         except FileNotFoundError:
+            # Ensure directory exists before creating file
+            dirname = os.path.dirname(filename)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
             print(
                 f"Error reading sequence number from file {filename}: will write 0 to file"
             )
             with open(filename, "w") as f:
                 f.write(str(file_number))
-                f.close()
 
         return file_number
 
