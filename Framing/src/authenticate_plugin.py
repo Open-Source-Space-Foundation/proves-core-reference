@@ -13,6 +13,8 @@ from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramer
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
+SEQUENCE_NUMBER_FILE = "Framing/src/sequence_number.bin"
+
 
 def get_default_auth_key_from_header() -> str:
     """
@@ -68,7 +70,6 @@ class AuthenticateFramer(FramerDeframer):
 
     def __init__(
         self,
-        initial_sequence_number=0,
         spi=0,
         window_size=50,
         authentication_type="HMAC",
@@ -78,7 +79,6 @@ class AuthenticateFramer(FramerDeframer):
         """Constructor
 
         Args:
-            initial_sequence_number: Initial sequence number (default: 0)
             spi: Security Parameter Index (default: 0)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
@@ -86,13 +86,14 @@ class AuthenticateFramer(FramerDeframer):
             **kwargs: Additional keyword arguments (ignored for now)
         """
         super().__init__()
+
         # Initialize sequence number from CLI argument or default to 0
-        self.bytes_seq_num = initial_sequence_number.to_bytes(
-            4, byteorder="big", signed=False
+        seq_num = self.get_sequence_number_from_file(
+            SEQUENCE_NUMBER_FILE, addition=False
         )
+        self.bytes_seq_num = seq_num.to_bytes(4, byteorder="big", signed=False)
         # Store values from CLI arguments or defaults
         self.spi = spi
-        self.sequence_number = initial_sequence_number
         self.window_size = window_size
         self.authentication_type = authentication_type
         # Use provided key or read from AuthDefaultKey.h
@@ -100,6 +101,33 @@ class AuthenticateFramer(FramerDeframer):
             authentication_key = get_default_auth_key_from_header()
         print(f"Using authentication key: {authentication_key}")
         self.authentication_key = authentication_key
+
+    @classmethod
+    def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
+        """Read the sequence number from a file
+        If the file does not exist, create it with 0
+        If addition is True, increment the sequence number and write back to file
+        Otherwise just return what is on there
+
+        """
+        file_number = 0
+        try:
+            with open(filename, "r") as f:
+                file_number = int(f.read())
+            if addition:
+                file_number += 1
+                # Write the incremented value back to file
+                with open(filename, "w") as f:
+                    f.write(str(file_number))
+        except FileNotFoundError:
+            print(
+                f"Error reading sequence number from file {filename}: will write 0 to file"
+            )
+            with open(filename, "w") as f:
+                f.write(str(file_number))
+                f.close()
+
+        return file_number
 
     def frame(self, data: bytes) -> bytes:
         """Frame data by adding authentication header and trailer"""
@@ -112,14 +140,12 @@ class AuthenticateFramer(FramerDeframer):
         header += bytes_spi
         # Sequence Number (32 bits/4 bytes, starts at 0x00000000):
         header += self.bytes_seq_num
-        sequence_number = int.from_bytes(
-            self.bytes_seq_num, byteorder="big", signed=False
-        )
-        sequence_number += 1
 
-        self.bytes_seq_num = sequence_number.to_bytes(
-            len(self.bytes_seq_num), byteorder="big", signed=False
+        sequence_number = self.get_sequence_number_from_file(
+            SEQUENCE_NUMBER_FILE, addition=True
         )
+
+        self.bytes_seq_num = sequence_number.to_bytes(4, byteorder="big", signed=False)
 
         data = header + data
 
@@ -158,11 +184,6 @@ class AuthenticateFramer(FramerDeframer):
         except (FileNotFoundError, ValueError, IOError):
             default_key = "<not found - run 'make generate-auth-key'>"
         return {
-            ("--initial-sequence-number",): {
-                "type": int,
-                "help": "Initial sequence number for authentication (default: 0)",
-                "default": 0,
-            },
             ("--spi",): {
                 "type": int,
                 "help": "Security Parameter Index (default: 0)",

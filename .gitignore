@@ -36,5 +36,6 @@ FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
 spi
 # Generated spi_dict.txt
 UploadsFilesystem/AuthenticateFiles/spi_dict.txt
+Framing/src/sequence_number.bin
 
 lib/fprime-extras/
