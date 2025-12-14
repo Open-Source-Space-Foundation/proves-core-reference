@@ -135,6 +135,16 @@ DoL_test:
 	@echo "make sure passthrough GDS is running"
 	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
+.PHONY: framer-plugin
+framer-plugin: fprime-venv ## Build framer plugin
+	@echo "Framer plugin built and installed in virtual environment."
+	@ cd Framing && $(UV_RUN) pip install -e .
+
+.PHONY: gds-with-framer
+gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
+	@echo "Running FPrime GDS with framer plugin..."
+	@$(UV_RUN) fprime-gds --framing-selection authenticate-space-data-link
+
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
