@@ -53,9 +53,17 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
 
 void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
     // If continuous mode is enabled, trigger the magnetorquer
-    if (this->m_continuous_mode) {
-        this->trigger_handler(0);
+    // if (this->m_continuous_mode) {
+    //     this->trigger_handler(0);
+    // }
+
+    if (this->loadSwitchReady() && !this->m_has_initialized && this->m_count > 50) {
+        this->m_has_initialized = true;
+        this->initializeDevice();
+    } else {
+        this->m_count++;
     }
+    return;
 }
 
 Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
@@ -158,24 +166,25 @@ Fw::Success Drv2605Manager ::initializeDevice() {
     this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
 
     // Configure DRV2605 config struct
-    union drv2605_config_data config_data;
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
+    uint32_t rtp_hold_us[8] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
+    uint8_t rtp_input[8] = {100, 255, 100, 255, 100, 255, 100, 255};
+    static struct drv2605_rtp_data rtp_data = {
+        .size = 8,
+        .rtp_hold_us = rtp_hold_us,
+        .rtp_input = rtp_input,
     };
-    config_data.rom_data = &rom_data;
 
-    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data) != 0) {
+    union drv2605_config_data config_data;
+    config_data.rtp_data = &rtp_data;
+
+    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data) != 0) {
         this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
         return Fw::Success::FAILURE;
     }
 
     this->log_ACTIVITY_LO_DeviceInitialized();
+    haptics_start_output(this->m_dev);
+
     return Fw::Success::SUCCESS;
 }
 

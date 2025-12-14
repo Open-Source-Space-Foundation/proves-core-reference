@@ -131,6 +131,8 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Continuous mode
     //! If true, the magnetorquer will be triggered on every run port call
     bool m_continuous_mode = false;
+    bool m_has_initialized = false;
+    int m_count = 0;
 };
 
 }  // namespace Drv
