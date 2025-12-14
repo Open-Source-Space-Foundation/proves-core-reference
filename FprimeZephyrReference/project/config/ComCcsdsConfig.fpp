@@ -21,8 +21,8 @@ module ComCcsdsConfig {
 
     # Queue configuration constants
     module QueueDepths {
-        constant events      = 10
-        constant tlm         = 5
+        constant events      = 50
+        constant tlm         = 1
         constant file        = 1
     }
 

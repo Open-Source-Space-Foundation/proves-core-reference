@@ -183,7 +183,7 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003B000
 
-  instance amateurRadio: Components.AmateurRadio base id 0x10063000
+  instance amateurRadio: Components.AmateurRadio base id 0x10065000
 
   instance cameraHandler2: Components.CameraHandler base id 0x1003C000
 
@@ -247,4 +247,8 @@ module ReferenceDeployment {
     queue size Default.QUEUE_SIZE * 2 \
     stack size Default.STACK_SIZE \
     priority 15
+
+  instance loraRetry: Svc.ComRetry base id 0x10063000
+
+  instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
 }

@@ -32,6 +32,7 @@ module ReferenceDeployment {
     instance rateGroupDriver
     instance timer
     instance lora
+    instance loraRetry
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
@@ -108,6 +109,7 @@ module ReferenceDeployment {
     instance drv2605Face2Manager
     instance drv2605Face3Manager
     instance drv2605Face5Manager
+    instance downlinkRepeater
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -165,11 +167,17 @@ module ReferenceDeployment {
       lora.dataOut -> ComCcsdsLora.frameAccumulator.dataIn
       ComCcsdsLora.frameAccumulator.dataReturnOut -> lora.dataReturnIn
 
-      # Framer <-> ComDriver (Downlink)
-      ComCcsdsLora.framer.dataOut -> lora.dataIn
-      lora.dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
-      lora.comStatusOut -> downlinkDelay.comStatusIn
+      # ComStub <-> ComDriver (Downlink)
+      ComCcsdsLora.framer.dataOut -> loraRetry.dataIn
+      loraRetry.dataOut -> lora.dataIn
+
+      lora.dataReturnOut -> loraRetry.dataReturnIn
+      loraRetry.dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
+
+      lora.comStatusOut -> loraRetry.comStatusIn
+      loraRetry.comStatusOut -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
+
 
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqDone -> startupManager.completeSequence
@@ -208,28 +216,25 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> downlinkDelay.run
+
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsdsLora.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsdsLora.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[5] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[6] -> ComCcsdsUart.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[7] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[8] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[9] -> telemetryDelay.runIn
-      rateGroup1Hz.RateGroupMemberOut[10] -> downlinkDelay.run
-      rateGroup1Hz.RateGroupMemberOut[11] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[12] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[13] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[15] -> payloadBufferManager2.schedIn
-      rateGroup1Hz.RateGroupMemberOut[16] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[17] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
+      rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
 
       # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
@@ -332,8 +337,15 @@ module ReferenceDeployment {
 
     connections ComCcsds_FileHandling {
       # File Downlink <-> ComQueue
-      FileHandling.fileDownlink.bufferSendOut -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
-      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> FileHandling.fileDownlink.bufferReturn
+      FileHandling.fileDownlink.bufferSendOut -> downlinkRepeater.singleIn
+      downlinkRepeater.singleOut -> FileHandling.fileDownlink.bufferReturn
+
+      downlinkRepeater.multiOut[0] -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      downlinkRepeater.multiOut[1] -> ComCcsdsLora.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+
+      ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[0]
+      ComCcsdsLora.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[1]
+
     }
 
     connections FileUplinkCollecting {
