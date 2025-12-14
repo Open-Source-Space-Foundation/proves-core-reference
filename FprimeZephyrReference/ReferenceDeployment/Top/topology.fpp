@@ -215,6 +215,8 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
       rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
       rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> downlinkDelay.run
+
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
@@ -223,16 +225,15 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
-      rateGroup1Hz.RateGroupMemberOut[6] -> downlinkDelay.run
-      rateGroup1Hz.RateGroupMemberOut[7] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[8] -> antennaDeployer.schedIn
-      rateGroup1Hz.RateGroupMemberOut[9] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager2.schedIn
-      rateGroup1Hz.RateGroupMemberOut[12] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[13] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
+      rateGroup1Hz.RateGroupMemberOut[9] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
+      rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
+      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
 
       # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
