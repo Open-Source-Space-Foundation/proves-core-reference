@@ -49,7 +49,7 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed framer-plugin ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 
@@ -103,7 +103,8 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
+
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
 .PHONY: sequence
@@ -139,11 +140,6 @@ DoL_test:
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
 	@ cd Framing && $(UV_RUN) pip install -e .
-
-.PHONY: gds-with-framer
-gds-with-framer: fprime-venv ## Run FPrime GDS with framer plugin
-	@echo "Running FPrime GDS with framer plugin..."
-	@$(UV_RUN) fprime-gds --framing-selection authenticate-space-data-link
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
