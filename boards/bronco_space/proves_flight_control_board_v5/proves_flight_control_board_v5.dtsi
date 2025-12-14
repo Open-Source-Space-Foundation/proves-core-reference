@@ -77,9 +77,9 @@ zephyr_udc0: &usbd {
 	cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>, <&gpio0 15 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
-	sdhc0: sdhc@0 {
+	sdhc0: sdhc@1 {
                 compatible = "zephyr,sdhc-spi-slot";
-                reg = <0>;
+                reg = <1>;
                 status = "okay";
                 mmc {
                     compatible = "zephyr,sdmmc-disk";
