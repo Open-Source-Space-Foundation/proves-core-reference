@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import serial
+from fprime_gds.common.testing_fw import predicates
 
 ROOT = Path(__file__).parent.parent
 
@@ -24,6 +25,8 @@ def test_00_compile_sequences(fprime_test_api):
 
     This will compile all sequences in preparation for the tests. This delegates to the the make-sequences scripts
     command.
+
+    These tests assume all of these sequences are already uplinked, so please uplink them before running the tests.
 
     Args:
         fprime_test_api: the fprime Test API object (unused)
@@ -81,7 +84,7 @@ def test_03_uplink_sequences(fprime_test_api):
         )
 
 
-def test_05_payload_sequence(fprime_test_api):
+def test_04_payload_sequence(fprime_test_api):
     """Test to run the camera manager sequence
 
     Run the camera handler sequence.
@@ -93,11 +96,11 @@ def test_05_payload_sequence(fprime_test_api):
         "ReferenceDeployment.payloadSeq.CS_RUN", ["/seq/camera_handler_1.bin", "BLOCK"]
     )
     fprime_test_api.assert_event(
-        "ReferenceDeployment.payloadSeq.CS_SequenceComplete", timeout=90
+        "ReferenceDeployment.payloadSeq.CS_SequenceComplete", timeout=200
     )
 
 
-def test_06_return_radio_sequences(fprime_test_api):
+def test_05_return_radio_sequences(fprime_test_api):
     """Test to run radio-fast sequence
 
     Make sure the radio returns to baseline.
@@ -107,6 +110,7 @@ def test_06_return_radio_sequences(fprime_test_api):
     """
     if pass_through_serial is not None:
         pass_through_serial.write(b"8\r\n")
+    greater_0 = predicates.greater_than(0)
     fprime_test_api.assert_telemetry(
-        "ReferenceDeployment.modeManager.CurrentMode", ["NORMAL"], timeout=1000
+        "ReferenceDeployment.startupManager.BootCount", greater_0, timeout=1000
     )

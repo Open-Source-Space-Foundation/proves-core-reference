@@ -130,6 +130,11 @@ delete-shadow-gds:
 gds-integration:
 	@$(GDS_COMMAND) --gui=none
 
+.PHONY: DoL_test
+DoL_test:
+	@echo "make sure passthrough GDS is running"
+	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
