@@ -105,7 +105,6 @@ class AuthenticateFramer(FramerDeframer):
         print(f"Using authentication key: {authentication_key}")
         self.authentication_key = authentication_key
 
-    @classmethod
     def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
         """Read the sequence number from a file
         If the file does not exist, create it with 0
