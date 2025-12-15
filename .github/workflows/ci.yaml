@@ -74,6 +74,8 @@ jobs:
     runs-on:
       - integration
     needs: build
+    env:
+      UART_DEVICE: /dev/ttyACM0
     steps:
       - uses: actions/checkout@v4
 

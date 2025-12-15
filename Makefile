@@ -136,6 +136,7 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
+	@echo "Using UART_DEVICE=$(UART_DEVICE)"
 	@$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
@@ -146,6 +147,7 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
+	@echo "Using UART_DEVICE=$(UART_DEVICE)"
 	@$(GDS_COMMAND) --gui=none
 
 .PHONY: DoL_test
