@@ -79,26 +79,6 @@ jobs:
 
       - uses: actions/download-artifact@v5
 
-      - name: Restore sequence number cache
-        uses: actions/cache/restore@v4
-        id: cache-seq-num
-        with:
-          path: Framing/src/sequence_number.bin
-          key: sequence-number-${{ github.ref }}
-          restore-keys: |
-            sequence-number-${{ github.ref }}
-            sequence-number-
-
-      - name: Initialize sequence number file if missing
-        run: |
-          mkdir -p Framing/src
-          if [ ! -f Framing/src/sequence_number.bin ]; then
-            echo "0" > Framing/src/sequence_number.bin
-            echo "Initialized sequence_number.bin with 0"
-          else
-            echo "Restored sequence number: $(cat Framing/src/sequence_number.bin)"
-          fi
-
       - name: Set up dependencies
         run: |
          make submodules fprime-venv
@@ -117,10 +97,3 @@ jobs:
       - name: Run Integration Tests
         run: |
           make test-integration
-
-      - name: Save sequence number cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: Framing/src/sequence_number.bin
-          key: sequence-number-${{ github.ref }}

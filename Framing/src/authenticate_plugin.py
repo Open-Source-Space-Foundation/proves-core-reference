@@ -122,14 +122,6 @@ class AuthenticateFramer(FramerDeframer):
                 with open(filename, "w") as f:
                     f.write(str(file_number))
         except FileNotFoundError:
-            # Ensure directory exists before creating file
-            dirname = os.path.dirname(filename)
-            if dirname:
-                os.makedirs(dirname, exist_ok=True)
-            print(
-                f"Error reading sequence number from file {filename}: will write 0 to file"
-            )
-
             with open(filename, "w") as f:
                 f.write(str(file_number))
 
