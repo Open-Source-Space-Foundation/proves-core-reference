@@ -120,7 +120,7 @@ clean: ## Remove all gitignored files
 ##@ Operations
 
 GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
-GDS_COMMAND_CI ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link --uart-device /dev/ttyACM0
+GDS_COMMAND_CI ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
 
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
