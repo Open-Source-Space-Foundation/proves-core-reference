@@ -121,7 +121,7 @@ void setupTopology(const TopologyState& state) {
     comDriver.configure(state.uartDevice, state.baudRate);
 
     static struct spi_cs_control cs_ctrl = {
-        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 0),
+        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),
         .delay = 0U, /* us to wait after asserting CS before transfer */
         .cs_is_gpio = true,
     };

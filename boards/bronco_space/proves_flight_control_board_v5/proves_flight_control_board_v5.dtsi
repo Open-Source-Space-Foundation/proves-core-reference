@@ -74,7 +74,7 @@ zephyr_udc0: &usbd {
 
 &spi0 {
 	status = "okay";
-	cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>, <&gpio0 15 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
 
