@@ -129,6 +129,7 @@ class AuthenticateFramer(FramerDeframer):
             print(
                 f"Error reading sequence number from file {filename}: will write 0 to file"
             )
+
             with open(filename, "w") as f:
                 f.write(str(file_number))
 
