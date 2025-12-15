@@ -73,17 +73,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
 
     // the packet was not authenticated
     if (context.get_authenticated() == 0 && !bypasses) {
-        // emit reject packet event
-        this->log_ACTIVITY_LO_PassedRouter(false);
-        // Return ownership of the incoming packetBuffer
-        // for now we want to run all the commands!! Later un comment this
         this->dataReturnOut_out(0, packetBuffer, context);
         return;
-    }
-
-    if (bypasses) {
-        // emit bypass event
-        this->log_ACTIVITY_LO_BypassedAuthentification();
     }
 
     Fw::SerializeStatus status;
