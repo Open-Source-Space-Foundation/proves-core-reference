@@ -21,12 +21,11 @@ constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the
 // List of opcodes (as hex strings) that bypass authentication
 // Format: 8 hex characters (4 bytes = 32-bit opcode)
 // Example: "00000001" for opcode 0x00000001
-static constexpr const char* kBypassOpCodes[] = {
-    // Add opcodes here as hex strings (uppercase, no spaces, no 0x prefix)
-    "01000000",  // no op
-    "2200B000",  // get sequence number
-    nullptr      // Sentinel to mark end of list
+static constexpr U32 kBypassOpCodes[] = {
+    0x01000000,  // no op
+    0x2200B000   // get sequence number
 };
+constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
 namespace Svc {
 
@@ -51,19 +50,13 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     U8 opCodeBytes[OP_CODE_LENGTH];
     std::memcpy(opCodeBytes, packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
 
-    // TO DO: See if I can save the opcode in hex form instead of converting it every time
-    constexpr size_t kHexStrSize = OP_CODE_LENGTH * 2 + 1;
-    char opCodeHex[kHexStrSize];
-    for (size_t i = 0; i < OP_CODE_LENGTH; i++) {
-        const size_t remainingSize = kHexStrSize - (i * 2);
-        std::snprintf(opCodeHex + (i * 2), remainingSize, "%02X", static_cast<unsigned>(opCodeBytes[i]));
-    }
-    // Null-terminate string
-    opCodeHex[OP_CODE_LENGTH * 2] = '\0';
+    // Combine opcode bytes into a single 32-bit value for comparison
+    const U32 opCode = (static_cast<U32>(opCodeBytes[0]) << 24) | (static_cast<U32>(opCodeBytes[1]) << 16) |
+                       (static_cast<U32>(opCodeBytes[2]) << 8) | static_cast<U32>(opCodeBytes[3]);
 
     // Check if opcode matches any in the bypass list
-    for (size_t i = 0; kBypassOpCodes[i] != nullptr; i++) {
-        if (std::strcmp(opCodeHex, kBypassOpCodes[i]) == 0) {
+    for (size_t i = 0; i < kBypassOpCodeCount; i++) {
+        if (opCode == kBypassOpCodes[i]) {
             return true;
         }
     }
