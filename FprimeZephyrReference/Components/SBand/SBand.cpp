@@ -15,6 +15,8 @@
 
 #include "FprimeHal.hpp"
 
+#include <zephyr/sys/printk.h>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -180,12 +182,14 @@ SBand::Status SBand ::configure_radio() {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio begin successful\n");
 
     state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio setOutputPower successful\n");
 
     // Match modulation parameters to CircuitPython defaults
     state = this->m_rlb_radio.setSpreadingFactor(7);
@@ -193,18 +197,21 @@ SBand::Status SBand ::configure_radio() {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio setSpreadingFactor successful\n");
 
     state = this->m_rlb_radio.setBandwidth(406.25);
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio setBandwidth successful\n");
 
     state = this->m_rlb_radio.setCodingRate(5);
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio setCodingRate successful\n");
 
     state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
                                                   RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
@@ -212,6 +219,7 @@ SBand::Status SBand ::configure_radio() {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+    printk("Radio setPacketParamsLoRa successful\n");
 
     return Status::SUCCESS;
 }
