@@ -85,8 +85,6 @@ def test_01_safe_mode_tests_power(fprime_test_api):
 
     # ensure the load switches are turned off
 
-    # ensure the radio is back to baseline
-
     print("\n\n\n\n\n\n")
     print("Entered safe mode")
     print(
@@ -104,6 +102,18 @@ def test_02_safe_mode_tests_load_switches(fprime_test_api):
     """
 
     # ensure we are in normal mode
+
+    # turn on the radio
+    fprime_test_api.send_command("ReferenceDeployment.lora.TRANSMIT", ["ENABLED"])
+    # com deplay set to small number
+    fprime_test_api.send_command(
+        "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", ["2"]
+    )
+
+    fprime_test_api.send_command(
+        "ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET", ["2"]
+    )
+
     fprime_test_api.send_and_assert_command(f"{mode_manager}.EXIT_SAFE_MODE")
 
     # turn on load switches for the faces 0-3
@@ -127,4 +137,38 @@ def test_02_safe_mode_tests_load_switches(fprime_test_api):
     )
     fprime_test_api.assert_event(
         "ReferenceDeployment.face3LoadSwitch.StatusChanged", timeout=40
+    )
+
+
+def test_03_safe_mode_tests_enter_exit_radio_talking(fprime_test_api):
+    """Test to run the safe mode tests
+    to ensure the ground system can exit safe mode
+    """
+
+    # made sure we are not in safe more
+    fprime_test_api.send_and_assert_command(f"{mode_manager}.EXIT_SAFE_MODE")
+
+    # turn on the radio
+    fprime_test_api.send_command("ReferenceDeployment.lora.TRANSMIT", ["ENABLED"])
+    # com deplay set to small number
+    fprime_test_api.send_command(
+        "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", ["2"]
+    )
+
+    fprime_test_api.send_command(
+        "ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET", ["2"]
+    )
+
+    # change radio parameters to fast
+    fprime_test_api.send_command("ReferenceDeployment.lora.TRANSMIT", ["DISABLED"])
+    fprime_test_api.send_command("ReferenceDeployment.lora.DATA_RATE_PRM_SET", ["SF_7"])
+    fprime_test_api.send_command("ReferenceDeployment.lora.TRANSMIT", ["ENABLED"])
+
+    # we now cannot talk to the ground system, until we reset the radio
+
+    fprime_test_api.send_and_assert_command(f"{mode_manager}.FORCE_SAFE_MODE")
+
+    # once we enable the radio, we should be able to talk to the ground system
+    fprime_test_api.send_and_assert_command(
+        "ReferenceDeployment.lora.TRANSMIT", ["ENABLED"]
     )
