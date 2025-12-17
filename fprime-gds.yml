@@ -5,3 +5,13 @@ command-line-options:
   dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
   output-unframed-data: "-"
   frame-size: 248
+
+  # Multi-satellite SCID switching support
+  # Uncomment these lines to enable dynamic satellite switching:
+  framing-selection: multi-scid
+  scids: "0x44,0x45,0x46"
+  switcher-port: 8089
+  #
+  # Then use HTTP API to switch satellites:
+  #   curl http://localhost:8089/satellites
+  #   curl -X POST http://localhost:8089/satellites/0x45

@@ -103,8 +103,9 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+GDS_PLUGINS ?= FprimeZephyrReference.gds:MultiScidFramerDeframer;FprimeZephyrReference.gds:SatelliteSwitcher
+GDS_COMMAND ?= PYTHONPATH=$(shell pwd) FPRIME_GDS_EXTRA_PLUGINS="$(GDS_PLUGINS)" $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
 
 .PHONY: sequence
 sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=startup)

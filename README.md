@@ -61,6 +61,37 @@ Finally, run the fprime-gds.
 make gds
 ```
 
+## Multi-Satellite Support
+
+The GDS supports switching between multiple satellites at runtime without restarting. This is useful when operating multiple spacecraft from a single ground station.
+
+### Setup
+
+1. Update `fprime-gds.yml` to enable multi-SCID mode:
+```yaml
+command-line-options:
+  # ... existing options ...
+  framing-selection: multi-scid
+  scids: "0x44,0x45,0x46"  # Your satellite SCIDs
+  switcher-port: 8089
+```
+
+2. Start the GDS with `make gds` (plugins are loaded automatically)
+
+### Switching Satellites
+
+Use the HTTP API to switch between satellites:
+
+```shell
+# List all configured satellites and current active
+curl http://localhost:8089/satellites
+
+# Switch to a different satellite
+curl -X POST http://localhost:8089/satellites/0x45
+```
+
+The GDS will immediately start using the new spacecraft ID for all communication - no restart required.
+
 ## Running Integration Tests
 
 First, start GDS with:
