@@ -27,7 +27,7 @@ module Components {
 
         event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, packet rejected" throttle 2
 
-        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}" throttle 2
+        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}"
 
         event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}" throttle 2
 
