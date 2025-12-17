@@ -4,7 +4,7 @@
 # ======================================================================
 
 @ Number of rate group member output ports for ActiveRateGroup
-constant ActiveRateGroupOutputPorts = 16
+constant ActiveRateGroupOutputPorts = 25
 
 @ Number of rate group member output ports for PassiveRateGroup
 constant PassiveRateGroupOutputPorts = 10
@@ -13,7 +13,7 @@ constant PassiveRateGroupOutputPorts = 10
 constant RateGroupDriverRateGroupPorts = 5
 
 @ Used for command and registration ports
-constant CmdDispatcherComponentCommandPorts = 65
+constant CmdDispatcherComponentCommandPorts = 70
 
 @ Used for uplink/sequencer buffer/response ports
 constant CmdDispatcherSequencePorts = 5

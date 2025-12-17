@@ -10,19 +10,23 @@
 #include <string>
 
 // Subtopology PingEntries includes
+#include "FprimeZephyrReference/ComCcsdsLora/PingEntries.hpp"
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
-#include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
 #include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
 #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
+#include "FprimeZephyrReference/ComCcsdsLora/SubtopologyTopologyDefs.hpp"
+#include "FprimeZephyrReference/ComCcsdsUart/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
-#include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
-// ComCcsds Enum Includes
+// ComCcsds Enum Includes (for ComCcsdsLora)
 #include "Svc/Subtopologies/ComCcsds/Ports_ComBufferQueueEnumAc.hpp"
 #include "Svc/Subtopologies/ComCcsds/Ports_ComPacketQueueEnumAc.hpp"
+// ComCcsdsUart Enum Includes
+#include "FprimeZephyrReference/ComCcsdsUart/Ports_ComBufferQueueEnumAc.hpp"
+#include "FprimeZephyrReference/ComCcsdsUart/Ports_ComPacketQueueEnumAc.hpp"
 
 // Include autocoded FPP constants
 #include "FprimeZephyrReference/ReferenceDeployment/Top/FppConstantsAc.hpp"
@@ -84,11 +88,12 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;             //!< UART device path for communication
-    const device* loraDevice;             //!< LoRa device path for communication
-    U32 baudRate;                         //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    const device* uartDevice;                     //!< UART device path for communication
+    const device* loraDevice;                     //!< LoRa device path for communication
+    ComCcsdsLora::SubtopologyState comCcsdsLora;  //!< Subtopology state for ComCcsdsLora
+    U32 baudRate;                                 //!< Baud rate for UART communication
+    CdhCore::SubtopologyState cdhCore;            //!< Subtopology state for CdhCore
+    ComCcsdsUart::SubtopologyState comCcsdsUart;  //!< Subtopology state for ComCcsds
     const device* peripheralUart;
     U32 peripheralBaudRate;
     const device* peripheralUart2;

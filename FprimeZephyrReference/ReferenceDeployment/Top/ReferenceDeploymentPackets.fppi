@@ -22,6 +22,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
+
+    # Communications Data
+    ComCcsdsLora.authenticatelora.CurrentSequenceNumber
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
+
   }
 
   ### Live Satellite Sensor Data Packets ###
@@ -99,8 +104,8 @@ telemetry packets ReferenceDeploymentPackets {
 
   ### Health and Status Packets ###
   packet Health id 2 group 5 {
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsLora.comQueue.comQueueDepth
+    ComCcsdsLora.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup50Hz.RgMaxTime
@@ -116,7 +121,7 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
+    ComCcsdsLora.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager2.NoBuffs
@@ -129,7 +134,7 @@ telemetry packets ReferenceDeploymentPackets {
 
 
   packet HealthAuxiliary id 4 group 5 {
-    ComCcsds.comQueue.buffQueueDepth
+    ComCcsdsLora.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
@@ -138,6 +143,26 @@ telemetry packets ReferenceDeploymentPackets {
   packet FileSystem id 5 group 5 {
     fsSpace.FreeSpace
     fsSpace.TotalSpace
+  }
+
+  packet Authenticate id 6 group 5 {
+    ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+
+    ComCcsdsLora.authenticatelora.RejectedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+
+    ComCcsdsLora.authenticationRouter.ByPassedRouter
+    ComCcsdsUart.authenticationRouter.ByPassedRouter
+
+    ComCcsdsLora.authenticationRouter.PassedRouter
+    ComCcsdsUart.authenticationRouter.PassedRouter
+
+    ComCcsdsLora.authenticationRouter.FailedRouter
+    ComCcsdsUart.authenticationRouter.FailedRouter
+
+    ReferenceDeployment.amateurRadio.count_names
+
   }
 
   packet Parameters id 15 group 6 {
@@ -192,13 +217,13 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
 
-  ComCcsds.commsBufferManager.EmptyBuffs
+  ComCcsdsLora.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
   payloadBufferManager2.EmptyBuffs
 
-  ComCcsds.commsBufferManager.TotalBuffs
-  ComCcsds.commsBufferManager.CurrBuffs
+  ComCcsdsLora.commsBufferManager.TotalBuffs
+  ComCcsdsLora.commsBufferManager.CurrBuffs
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
   payloadBufferManager2.TotalBuffs
@@ -209,7 +234,6 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
-
 
   # Moved to omit as this is specific to Alcyone Build
   ReferenceDeployment.cameraHandler2.BytesReceived

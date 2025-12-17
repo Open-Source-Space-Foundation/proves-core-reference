@@ -1,5 +1,5 @@
-#ifndef COMCCSDSSUBTOPOLOGY_DEFS_HPP
-#define COMCCSDSSUBTOPOLOGY_DEFS_HPP
+#ifndef COMCCSDSLORASUBTOPOLOGY_DEFS_HPP
+#define COMCCSDSLORASUBTOPOLOGY_DEFS_HPP
 
 #include <Fw/Types/MallocAllocator.hpp>
 #include <Svc/BufferManager/BufferManager.hpp>
@@ -8,14 +8,14 @@
 #include "ComCcsdsConfig/ComCcsdsSubtopologyConfig.hpp"
 #include "Svc/Subtopologies/ComCcsds/ComCcsdsConfig/FppConstantsAc.hpp"
 
-namespace ComCcsdsUart {
+namespace ComCcsdsLora {
 struct SubtopologyState {
-    // Empty - no external state needed for ComCcsdsUart subtopology
+    // Empty - no external state needed for ComCcsdsLora subtopology
 };
 
 struct TopologyState {
-    SubtopologyState comCcsdsUart;
+    SubtopologyState comCcsdsLora;
 };
-}  // namespace ComCcsdsUart
+}  // namespace ComCcsdsLora
 
 #endif
