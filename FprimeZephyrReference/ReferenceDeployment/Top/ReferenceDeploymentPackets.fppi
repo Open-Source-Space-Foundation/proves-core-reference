@@ -110,8 +110,6 @@ telemetry packets ReferenceDeploymentPackets {
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
@@ -126,8 +124,6 @@ telemetry packets ReferenceDeploymentPackets {
     payloadBufferManager2.NoBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_10Hz.RgCycleSlips
   }
 
 
