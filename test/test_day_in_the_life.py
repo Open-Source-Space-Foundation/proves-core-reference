@@ -12,6 +12,7 @@ from fprime_gds.common.testing_fw import predicates
 
 ROOT = Path(__file__).parent.parent
 
+mode_manager = "ReferenceDeployment.modeManager"
 # Open up the serial port to the ground station
 try:
     pass_through_serial = serial.Serial("/dev/ttyACM0", baudrate=115200)
