@@ -12,7 +12,7 @@ module Components {
         ### Parameters ###
 
         @ Parameter for storing the rotational threshold for detumble to be enabled (default 12 deg/s)
-        param ROTATIONAL_THRESHOLD: F32 default 12.0 id 1
+        param ROTATIONAL_THRESHOLD: F64 default 12.0 id 1
 
         @ Parameter for storing the max amount of time an iteration can run
         param MAX_TIME: U32 default 10800 id 2

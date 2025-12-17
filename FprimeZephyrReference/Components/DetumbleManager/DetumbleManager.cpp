@@ -26,7 +26,7 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_xPlusMagnetorquer.voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
     this->m_xPlusMagnetorquer.resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
     this->m_xPlusMagnetorquer.numTurns = this->paramGet_X_PLUS_NUM_TURNS(isValid);
-    this->m_xPlusMagnetorquer.shape = magnetorquerCoil::RECTANGULAR;
+    this->m_xPlusMagnetorquer.shape = this->paramGet_X_PLUS_SHAPE(isValid);
     this->m_xPlusMagnetorquer.width = this->paramGet_X_PLUS_WIDTH(isValid);
     this->m_xPlusMagnetorquer.length = this->paramGet_X_PLUS_LENGTH(isValid);
 
@@ -35,7 +35,7 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_xMinusMagnetorquer.voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
     this->m_xMinusMagnetorquer.resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
     this->m_xMinusMagnetorquer.numTurns = this->paramGet_X_MINUS_NUM_TURNS(isValid);
-    this->m_xMinusMagnetorquer.shape = magnetorquerCoil::RECTANGULAR;
+    this->m_xMinusMagnetorquer.shape = this->paramGet_X_MINUS_SHAPE(isValid);
     this->m_xMinusMagnetorquer.width = this->paramGet_X_MINUS_WIDTH(isValid);
     this->m_xMinusMagnetorquer.length = this->paramGet_X_MINUS_LENGTH(isValid);
 
@@ -44,7 +44,7 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_yPlusMagnetorquer.voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
     this->m_yPlusMagnetorquer.resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
     this->m_yPlusMagnetorquer.numTurns = this->paramGet_Y_PLUS_NUM_TURNS(isValid);
-    this->m_yPlusMagnetorquer.shape = magnetorquerCoil::RECTANGULAR;
+    this->m_yPlusMagnetorquer.shape = this->paramGet_Y_PLUS_SHAPE(isValid);
     this->m_yPlusMagnetorquer.width = this->paramGet_Y_PLUS_WIDTH(isValid);
     this->m_yPlusMagnetorquer.length = this->paramGet_Y_PLUS_LENGTH(isValid);
 
@@ -53,7 +53,7 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_yMinusMagnetorquer.voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
     this->m_yMinusMagnetorquer.resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
     this->m_yMinusMagnetorquer.numTurns = this->paramGet_Y_MINUS_NUM_TURNS(isValid);
-    this->m_yMinusMagnetorquer.shape = magnetorquerCoil::RECTANGULAR;
+    this->m_yMinusMagnetorquer.shape = this->paramGet_Y_MINUS_SHAPE(isValid);
     this->m_yMinusMagnetorquer.width = this->paramGet_Y_MINUS_WIDTH(isValid);
     this->m_yMinusMagnetorquer.length = this->paramGet_Y_MINUS_LENGTH(isValid);
 
@@ -62,7 +62,7 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_zMinusMagnetorquer.voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
     this->m_zMinusMagnetorquer.resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
     this->m_zMinusMagnetorquer.numTurns = this->paramGet_Z_MINUS_NUM_TURNS(isValid);
-    this->m_zMinusMagnetorquer.shape = magnetorquerCoil::CIRCULAR;
+    this->m_zMinusMagnetorquer.shape = this->paramGet_Z_MINUS_SHAPE(isValid);
     this->m_zMinusMagnetorquer.diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
 }
 
@@ -131,35 +131,19 @@ bool DetumbleManager ::executeControlStep(std::string& reason) {
 }
 
 void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
-    // Convert dipole moment to (unlimited) current
-    F64 unlimited_x1 =
-        dpMoment.get_x() / (this->m_xPlusMagnetorquer.numTurns * this->getCoilArea(this->m_xPlusMagnetorquer));
-    F64 unlimited_x2 =
-        dpMoment.get_x() / (this->m_xMinusMagnetorquer.numTurns * this->getCoilArea(this->m_xMinusMagnetorquer));
-    F64 unlimited_y1 =
-        dpMoment.get_y() / (this->m_yPlusMagnetorquer.numTurns * this->getCoilArea(this->m_yPlusMagnetorquer));
-    F64 unlimited_y2 =
-        dpMoment.get_y() / (this->m_yMinusMagnetorquer.numTurns * this->getCoilArea(this->m_yMinusMagnetorquer));
-    F64 unlimited_z =
-        dpMoment.get_z() / (this->m_zMinusMagnetorquer.numTurns * this->getCoilArea(this->m_zMinusMagnetorquer));
+    // Calculate target currents
+    F64 targetCurrent_x_plus = this->calculateTargetCurrent(dpMoment.get_x(), this->m_xPlusMagnetorquer);
+    F64 targetCurrent_x_minus = this->calculateTargetCurrent(dpMoment.get_x(), this->m_xMinusMagnetorquer);
+    F64 targetCurrent_y_plus = this->calculateTargetCurrent(dpMoment.get_y(), this->m_yPlusMagnetorquer);
+    F64 targetCurrent_y_minus = this->calculateTargetCurrent(dpMoment.get_y(), this->m_yMinusMagnetorquer);
+    F64 targetCurrent_z_minus = this->calculateTargetCurrent(dpMoment.get_z(), this->m_zMinusMagnetorquer);
 
-    // Limit current for each axis to max coil current
-    F64 limited_x1 = std::fmin(std::fabs(unlimited_x1), this->getMaxCoilCurrent(this->m_xPlusMagnetorquer)) *
-                     (unlimited_x1 >= 0 ? 1.0 : -1.0);
-    F64 limited_x2 = std::fmin(std::fabs(unlimited_x2), this->getMaxCoilCurrent(this->m_xMinusMagnetorquer)) *
-                     (unlimited_x2 >= 0 ? 1.0 : -1.0);
-    F64 limited_y1 = std::fmin(std::fabs(unlimited_y1), this->getMaxCoilCurrent(this->m_yPlusMagnetorquer)) *
-                     (unlimited_y1 >= 0 ? 1.0 : -1.0);
-    F64 limited_y2 = std::fmin(std::fabs(unlimited_y2), this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
-                     (unlimited_y2 >= 0 ? 1.0 : -1.0);
-    F64 limited_z = std::fmin(std::fabs(unlimited_z), this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
-                    (unlimited_z >= 0 ? 1.0 : -1.0);
-
-    F64 x1 = limited_x1;
-    F64 x2 = -limited_x2;
-    F64 y1 = limited_y1;
-    F64 y2 = -limited_y2;
-    F64 z1 = limited_z;
+    // Clamp currents
+    F64 clampedCurrent_x_plus = this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer);
+    F64 clampedCurrent_x_minus = this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer);
+    F64 clampedCurrent_y_plus = this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer);
+    F64 clampedCurrent_y_minus = this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer);
+    F64 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
 
     // All true for now until we figure out how to determine what should be on or off
     bool values[5] = {true, true, true, true, true};
@@ -183,7 +167,8 @@ void DetumbleManager ::setMagnetorquers(bool val[5]) {
 }
 
 F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
-    if (coil.shape == magnetorquerCoil::CIRCULAR) {
+    if (coil.shape == MagnetorquerCoilShape::CIRCULAR) {
+        // Area = π * (d/2)^2
         return this->PI * std::pow(coil.diameter / 2.0, 2.0);
     }
     // Default to Rectangular
@@ -191,11 +176,26 @@ F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
 }
 
 F64 DetumbleManager ::getMaxCoilCurrent(const magnetorquerCoil& coil) {
-    // Ohm's law: I = V / R
     if (coil.resistance == 0.0) {
         return 0.0;
     }
     return coil.voltage / coil.resistance;
+}
+
+F64 DetumbleManager ::calculateTargetCurrent(F64 dipoleMoment, const magnetorquerCoil& coil) {
+    F64 area = this->getCoilArea(coil);
+    if (coil.numTurns == 0.0 || area == 0.0) {
+        return 0.0;
+    }
+    return dipoleMoment / (coil.numTurns * area);
+}
+
+F64 DetumbleManager ::clampCurrent(F64 current, const magnetorquerCoil& coil) {
+    F64 maxCurrent = this->getMaxCoilCurrent(coil);
+    if (std::fabs(current) > maxCurrent) {
+        return (current > 0) ? maxCurrent : -maxCurrent;
+    }
+    return current;
 }
 
 }  // namespace Components
