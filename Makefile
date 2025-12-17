@@ -40,7 +40,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -52,6 +52,22 @@ generate-if-needed:
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
+
+##@ Authentication Keys
+
+AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
+
+.PHONY: generate-auth-key
+generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
+	@if [ -f "$(AUTH_DEFAULT_KEY_HEADER)" ]; then \
+		echo "$(AUTH_DEFAULT_KEY_HEADER) already exists. Skipping generation."; \
+	else \
+		echo "Generating $(AUTH_DEFAULT_KEY_HEADER) with random key..."; \
+		$(UV_RUN) python3 scripts/generate_auth_key_header.py --output $(AUTH_DEFAULT_KEY_HEADER) --template $(AUTH_KEY_TEMPLATE); \
+	fi
+	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
+
 
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot
@@ -103,7 +119,9 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
+GDS_COMMAND_CI ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
+
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
 .PHONY: sequence
@@ -118,7 +136,8 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(GDS_COMMAND)
+	@echo "Using UART_DEVICE=$(UART_DEVICE)"
+	@$(GDS_COMMAND) --uart-device $(UART_DEVICE)
 
 .PHONY: delete-shadow-gds
 delete-shadow-gds:
@@ -127,13 +146,19 @@ delete-shadow-gds:
 	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
-gds-integration:
+gds-integration: framer-plugin
+	@echo "Using UART_DEVICE=$(UART_DEVICE)"
 	@$(GDS_COMMAND) --gui=none
 
 .PHONY: DoL_test
 DoL_test:
 	@echo "make sure passthrough GDS is running"
 	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
+.PHONY: framer-plugin
+framer-plugin: fprime-venv ## Build framer plugin
+	@echo "Framer plugin built and installed in virtual environment."
+	@ cd Framing && $(UV_RUN) pip install -e .
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk

@@ -81,7 +81,11 @@ jobs:
 
       - name: Set up dependencies
         run: |
-         make submodules fprime-venv
+          make submodules fprime-venv
+
+      - name: Generate authentication key
+        run: |
+          make generate-auth-key
 
       - name: Trigger Bootloader
         run: |
