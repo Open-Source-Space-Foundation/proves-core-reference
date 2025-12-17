@@ -15,8 +15,8 @@ module ComCcsdsConfig {
     }
 
     module Priorities {
-        constant aggregator = 5 # Aggregator (consumer) must have higher priority than comQueue (producer)
-        constant comQueue   = 6 # ComQueue has higher priority than data producers (e.g. events, telemetry)
+        constant aggregator = 7 # Aggregator (consumer) must have higher priority than comQueue (producer)
+        constant comQueue   = 8 # ComQueue has higher priority than data producers (e.g. events, telemetry)
     }
 
     # Queue configuration constants

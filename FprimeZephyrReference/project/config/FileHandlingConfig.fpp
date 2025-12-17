@@ -17,10 +17,10 @@ module FileHandlingConfig {
     }
 
     module Priorities {
-        constant fileUplink    = 11
-        constant fileDownlink  = 12
-        constant fileManager   = 13
-        constant prmDb         = 14
+        constant fileUplink    = 9
+        constant fileDownlink  = 9
+        constant prmDb         = 10
+        constant fileManager   = 15
     }
 
     # File downlink configuration constants
