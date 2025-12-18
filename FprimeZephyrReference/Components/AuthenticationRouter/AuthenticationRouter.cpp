@@ -6,7 +6,9 @@
 
 #include "FprimeZephyrReference/Components/AuthenticationRouter/AuthenticationRouter.hpp"
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
+#include <Fw/Time/Time.hpp>
 #include <Fw/Types/String.hpp>
 
 #include "Fw/Com/ComPacket.hpp"
@@ -155,6 +157,26 @@ void AuthenticationRouter ::cmdResponseIn_handler(FwIndexType portNum,
                                                   U32 cmdSeq,
                                                   const Fw::CmdResponse& response) {
     // Nothing to do
+}
+
+Fw::Time AuthenticationRouter ::update_command_loss_start() {
+    Fw::ParamValid is_valid;
+    auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    Fw::Time time = this->getTime();
+    // Open the quiescence start time file and read the current time. On read failure, return the current time.
+    Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
+
+    // On read failure, write the current time to the file for future reads. This only happens on read failure because
+    // there is a singular quiescence start time for the whole mission.
+    if (status != Os::File::OP_OK) {
+        status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+        if (status != Os::File::OP_OK) {
+            this->log_WARNING_HI_CommandLossFileInitFailure();
+        }
+    }
+    return time;
 }
 
 void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::Buffer& fwBuffer) {

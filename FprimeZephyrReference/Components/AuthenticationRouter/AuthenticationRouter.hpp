@@ -59,6 +59,8 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     // Restarts the satellite and calls safemode when
     // command loss time expires
     void RestartSatelliteAndCallSafeMode();
+
+    Fw::Time update_command_loss_start();
 };
 
 }  // namespace Svc
