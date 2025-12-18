@@ -107,13 +107,13 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
+void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     // Calculate target currents
-    F64 targetCurrent_x_plus = this->calculateTargetCurrent(dpMoment.get_x(), this->m_xPlusMagnetorquer);
-    F64 targetCurrent_x_minus = this->calculateTargetCurrent(dpMoment.get_x(), this->m_xMinusMagnetorquer);
-    F64 targetCurrent_y_plus = this->calculateTargetCurrent(dpMoment.get_y(), this->m_yPlusMagnetorquer);
-    F64 targetCurrent_y_minus = this->calculateTargetCurrent(dpMoment.get_y(), this->m_yMinusMagnetorquer);
-    F64 targetCurrent_z_minus = this->calculateTargetCurrent(dpMoment.get_z(), this->m_zMinusMagnetorquer);
+    F64 targetCurrent_x_plus = this->calculateTargetCurrent(dipoleMoment.get_x(), this->m_xPlusMagnetorquer);
+    F64 targetCurrent_x_minus = this->calculateTargetCurrent(dipoleMoment.get_x(), this->m_xMinusMagnetorquer);
+    F64 targetCurrent_y_plus = this->calculateTargetCurrent(dipoleMoment.get_y(), this->m_yPlusMagnetorquer);
+    F64 targetCurrent_y_minus = this->calculateTargetCurrent(dipoleMoment.get_y(), this->m_yMinusMagnetorquer);
+    F64 targetCurrent_z_minus = this->calculateTargetCurrent(dipoleMoment.get_z(), this->m_zMinusMagnetorquer);
 
     // Clamp currents
     F64 clampedCurrent_x_plus = this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer);
@@ -204,6 +204,8 @@ void DetumbleManager ::stateSensingActions() {
         this->log_WARNING_LO_AngularVelocityRetrievalFailed();
         return;
     }
+    this->log_WARNING_LO_AngularVelocityRetrievalFailed_ThrottleClear();
+
     F64 angular_velocity_magnitude = this->getAngularVelocityMagnitude(angular_velocity);
 
     // If angular velocity is below threshold, remain in SENSING state
@@ -220,6 +222,7 @@ void DetumbleManager ::stateSensingActions() {
         this->log_WARNING_LO_DipoleMomentRetrievalFailed();
         return;
     }
+    this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
 
     // Transition to TORQUING state
     this->m_torqueStartTime = this->getTime();

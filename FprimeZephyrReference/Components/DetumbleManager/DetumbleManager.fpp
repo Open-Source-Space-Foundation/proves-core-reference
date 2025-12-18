@@ -10,97 +10,10 @@ module Components {
     }
 
     enum DetumbleState {
-        # IDLE,     @< Low rotation rate, monitoring
         COOLDOWN, @< Waiting for magnetometers to settle
         SENSING,  @< Reading magnetic field
         TORQUING, @< Applying torque
     }
-
-    # @ A state machine representing the detumble manager's internal states
-    # state machine DetumbleMachine {
-    #     @ An action on entering the DISABLED state, like disabling magnetorquers
-    #     action enterDisabled
-
-    #     @ A signal for enabling automatic detumbling
-    #     signal cmdAuto
-
-    #     @ A signal for disabling detumbling
-    #     signal cmdDisable
-
-    #     @ A signal for setting the detumble state to COOLDOWN
-    #     signal cmdCooldown
-
-    #     @ A signal for setting the detumble state to SENSING
-    #     signal cmdSensing
-
-    #     @ A signal for setting the detumble state to TORQUING
-    #     signal cmdTorquing
-
-    #     @ The initial state is DISABLED
-    #     initial enter DISABLED
-
-    #     @ The DISABLED state
-    #     state DISABLED {
-    #         @ In the DISABLED state, a cmdAuto signal causes a transition to the AUTO state
-    #         on cmdAuto enter AUTO
-
-    #         @ On entering the DISABLED state, do enterDisabled
-    #         entry do { enterDisabled }
-    #     }
-
-    #     @ The AUTO state
-    #     state AUTO {
-
-    #         # @ On entering the AUTO state, do enterAuto
-    #         # entry do { enterAuto }
-
-    #         @ In the AUTO state, a cmdDisable signal causes a transition to the DISABLED state
-    #         on cmdDisable enter DISABLED
-
-    #         @ In the AUTO state, a cmdCooldown signal causes a transition to the COOLDOWN state
-    #         on cmdCooldown enter COOLDOWN
-
-    #         # @ In the ON state, a cmdReset signal causes an internal transition
-    #         # on cmdReset do { reset }
-
-    #         # @ On exiting the AUTO state, do exitAuto
-    #         # exit do { exitAuto }
-
-    #         @ The initial state is SAFE
-    #         initial enter COOLDOWN
-
-    #         @ The COOLDOWN state
-    #         state COOLDOWN {
-    #             @ In the COOLDOWN state, a cmdDisable signal causes a transition to the DISABLED state
-    #             on cmdDisable enter DISABLED
-
-    #             @ In the COOLDOWN state, a cmdSensing signal causes a transition to the SENSING state
-    #             on cmdSensing enter SENSING
-    #         }
-
-    #         @ The SENSING state
-    #         state SENSING {
-    #             @ In the SENSING state, a cmdDisable signal causes a transition to the DISABLED state
-    #             on cmdDisable enter DISABLED
-
-    #             @ In the SENSING state, a cmdTorquing signal causes a transition to the TORQUING state
-    #             on cmdTorquing enter TORQUING
-    #         }
-
-    #         @ The TORQUING state
-    #         state TORQUING {
-    #             @ In the TORQUING state, a cmdDisable signal causes a transition to the DISABLED state
-    #             on cmdDisable enter DISABLED
-
-    #             @ In the TORQUING state, a cmdCooldown signal causes a transition to the COOLDOWN state
-    #             on cmdCooldown enter COOLDOWN
-    #         }
-
-    #     }
-
-    # }
-
-
 }
 
 module Components {
@@ -199,10 +112,10 @@ module Components {
         ### Events ###
 
         @ Event for reporting dipole moment retrieval failure
-        event DipoleMomentRetrievalFailed() severity warning low format "Failed to retrieve dipole moment."
+        event DipoleMomentRetrievalFailed() severity warning low format "Failed to retrieve dipole moment." throttle 5
 
         @ Event for reporting angular velocity retrieval failure
-        event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity."
+        event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
 
         ### Telemetry ###
 
