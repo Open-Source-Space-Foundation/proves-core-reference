@@ -97,7 +97,7 @@ jobs:
 
       - name: Kill all python processes
         run: |
-          pkill -9 python
+          pkill -9 python || true
 
       - name: Trigger Bootloader
         run: |
@@ -112,7 +112,7 @@ jobs:
 
       - name: Kill all python processes
         run: |
-          pkill -9 python
+          pkill -9 python || true
 
       - name: Sync Sequence Number
         run: |
@@ -120,7 +120,7 @@ jobs:
 
       - name: Kill all python processes
         run: |
-          pkill -9 python
+          pkill -9 python || true
 
       - name: Run Integration Tests
         run: |
