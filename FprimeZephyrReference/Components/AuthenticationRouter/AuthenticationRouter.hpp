@@ -55,6 +55,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! Checks whether or not the opcode of the packet is in the list of
     //! opcodes that bypassauthentification
     bool BypassesAuthentification(Fw::Buffer& packetBuffer);
+
+    // Restarts the satellite and calls safemode when
+    // command loss time expires
+    void RestartSatelliteAndCallSafeMode();
 };
 
 }  // namespace Svc

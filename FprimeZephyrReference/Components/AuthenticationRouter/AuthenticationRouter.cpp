@@ -64,6 +64,10 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     return false;
 }
 
+void AuthenticationRouter ::RestartSatelliteAndCallSafeMode() {
+    // TODO: Implement this
+}
+
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {

@@ -39,6 +39,9 @@ module Svc {
         @ Port for deallocating buffers
         output port bufferDeallocate: Fw.BufferSend
 
+        @ Port to trigger safe mode (e.g., on command loss timeout)
+        output port SetSafeMode: Components.ForceSafeModeWithReason
+
         @ An error occurred while serializing a com buffer
         event SerializationError(
                 status: U32 @< The status of the operation
@@ -57,6 +60,14 @@ module Svc {
         @ An allocation error occurred
         event AllocationError(reason: AllocationReason) severity warning high \
             format "Buffer allocation for {} failed"
+
+        @ Command Loss is Activated
+        event CommandLossFound(duration: U32) severity warning high \
+            format "The Satellite has been put into command loss timing after {} seconds without contact"
+
+        @
+        param COMM_LOSS_TIME: U32 default 30
+
 
         ###############################################################################
         # Standard AC Ports for Events

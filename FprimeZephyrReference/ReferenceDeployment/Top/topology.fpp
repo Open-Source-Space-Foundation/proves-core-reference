@@ -398,6 +398,10 @@ module ReferenceDeployment {
       # Allows ModeManager to detect unintended reboots
       resetManager.prepareForReboot -> modeManager.prepareForReboot
 
+      # Ports for Changing the mode - notify both LoRa and UART authentication routers
+      ComCcsdsLora.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
+      ComCcsdsUart.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
+
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
       # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.
