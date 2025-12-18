@@ -47,6 +47,7 @@ void Watchdog ::start_handler(FwIndexType portNum) {
 
 void Watchdog ::stop_handler(FwIndexType portNum) {
     // Stop the watchdog
+    this->prepareForReboot_out(0, Fw::Signal::ON);
     this->m_run = false;
 
     // Report watchdog stopped
