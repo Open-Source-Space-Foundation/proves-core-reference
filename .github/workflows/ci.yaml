@@ -91,6 +91,10 @@ jobs:
         run: |
           echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
 
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
       - name: Trigger Bootloader
         run: |
           make bootloader
