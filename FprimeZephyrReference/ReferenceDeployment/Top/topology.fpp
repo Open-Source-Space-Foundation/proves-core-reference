@@ -7,8 +7,6 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
-    rateGroup1_6Hz
-    rateGroup1_10Hz
   }
 
   topology ReferenceDeployment {
@@ -17,7 +15,7 @@ module ReferenceDeployment {
   # Subtopology imports
   # ----------------------------------------------------------------------
     import CdhCore.Subtopology
-    import ComCcsds.FramingSubtopology
+    import ComCcsdsLora.Subtopology
     import ComCcsdsUart.Subtopology
     import FileHandling.Subtopology
     import Update.Subtopology
@@ -27,8 +25,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
-    instance rateGroup1_6Hz
-    instance rateGroup1_10Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -54,6 +50,7 @@ module ReferenceDeployment {
     instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
+    instance amateurRadio
     # For UART sideband communication
     instance comDriver
 
@@ -135,19 +132,19 @@ module ReferenceDeployment {
     connections ComCcsds_CdhCore {
       # Core events and telemetry to communication queue
       CdhCore.events.PktSend -> comSplitterEvents.comIn
-      comSplitterEvents.comOut-> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      comSplitterEvents.comOut-> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
       comSplitterEvents.comOut-> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
       CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
-      comSplitterTelemetry.comOut -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
-      ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
+      ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsLora.authenticationRouter.cmdResponseIn
 
-      ComCcsdsUart.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.fprimeRouter.cmdResponseIn
+      ComCcsdsUart.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.authenticationRouter.cmdResponseIn
 
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
@@ -159,23 +156,23 @@ module ReferenceDeployment {
     }
 
     connections CommunicationsRadio {
-      lora.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
-      lora.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
+      lora.allocate      -> ComCcsdsLora.commsBufferManager.bufferGetCallee
+      lora.deallocate    -> ComCcsdsLora.commsBufferManager.bufferSendIn
 
-      # ComDriver <-> ComStub (Uplink)
-      lora.dataOut -> ComCcsds.frameAccumulator.dataIn
-      ComCcsds.frameAccumulator.dataReturnOut -> lora.dataReturnIn
+      # ComDriver <-> FrameAccumulator (Uplink)
+      lora.dataOut -> ComCcsdsLora.frameAccumulator.dataIn
+      ComCcsdsLora.frameAccumulator.dataReturnOut -> lora.dataReturnIn
 
       # ComStub <-> ComDriver (Downlink)
-      ComCcsds.framer.dataOut -> loraRetry.dataIn
+      ComCcsdsLora.framer.dataOut -> loraRetry.dataIn
       loraRetry.dataOut -> lora.dataIn
 
       lora.dataReturnOut -> loraRetry.dataReturnIn
-      loraRetry.dataReturnOut -> ComCcsds.framer.dataReturnIn
+      loraRetry.dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
 
       lora.comStatusOut -> loraRetry.comStatusIn
       loraRetry.comStatusOut -> downlinkDelay.comStatusIn
-      downlinkDelay.comStatusOut ->ComCcsds.framer.comStatusIn
+      downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
 
       startupManager.runSequence -> cmdSeq.seqRunIn
@@ -204,7 +201,7 @@ module ReferenceDeployment {
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsds.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsdsLora.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver2.schedIn
       rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
@@ -219,9 +216,9 @@ module ReferenceDeployment {
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
-      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
+      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsdsLora.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
-      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsdsLora.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
       rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
@@ -234,14 +231,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
-
-      # Slower rate (1/6Hz) rate group
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-      rateGroup1_6Hz.RateGroupMemberOut[0] -> imuManager.run
-      rateGroup1_6Hz.RateGroupMemberOut[1] -> adcs.run
-      rateGroup1_6Hz.RateGroupMemberOut[2] -> thermalManager.run
-
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
+      rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
     }
 
 
@@ -340,10 +332,10 @@ module ReferenceDeployment {
       downlinkRepeater.singleOut -> FileHandling.fileDownlink.bufferReturn
 
       downlinkRepeater.multiOut[0] -> ComCcsdsUart.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
-      downlinkRepeater.multiOut[1] -> ComCcsds.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
+      downlinkRepeater.multiOut[1] -> ComCcsdsLora.comQueue.bufferQueueIn[ComCcsds.Ports_ComBufferQueue.FILE]
 
       ComCcsdsUart.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[0]
-      ComCcsds.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[1]
+      ComCcsdsLora.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[1]
 
     }
 
@@ -352,10 +344,10 @@ module ReferenceDeployment {
       fileUplinkCollector.singleOut -> FileHandling.fileUplink.bufferSendIn
       FileHandling.fileUplink.bufferSendOut -> fileUplinkCollector.singleIn
 
-      ComCcsdsUart.fprimeRouter.fileOut     -> fileUplinkCollector.multiIn[1]
-      fileUplinkCollector.multiOut[1] -> ComCcsdsUart.fprimeRouter.fileBufferReturnIn
-      ComCcsds.fprimeRouter.fileOut     -> fileUplinkCollector.multiIn[0]
-      fileUplinkCollector.multiOut[0] -> ComCcsds.fprimeRouter.fileBufferReturnIn
+      ComCcsdsUart.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[1]
+      fileUplinkCollector.multiOut[1] -> ComCcsdsUart.authenticationRouter.fileBufferReturnIn
+      ComCcsdsLora.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[0]
+      fileUplinkCollector.multiOut[0] -> ComCcsdsLora.authenticationRouter.fileBufferReturnIn
     }
 
 
@@ -420,6 +412,7 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
+
     }
 
   }

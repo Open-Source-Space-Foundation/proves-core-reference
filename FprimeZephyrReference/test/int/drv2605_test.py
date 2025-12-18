@@ -32,7 +32,9 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     """Helper to get the current system power draw in Watts"""
-    start: TimeType = TimeType().set_datetime(datetime.now())
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
     proves_send_and_assert_command(
         fprime_test_api,
         f"{ina219SysManager}.GetPower",
@@ -55,7 +57,9 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
     time.sleep(1)  # Allow some time for power increase
 
     try:
-        start: TimeType = TimeType().set_datetime(datetime.now())
+        start: TimeType = TimeType().set_datetime(
+            datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+        )
         proves_send_and_assert_command(
             fprime_test_api,
             f"{ina219SysManager}.GetPower",
