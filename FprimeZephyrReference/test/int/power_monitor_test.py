@@ -34,7 +34,9 @@ def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get power telemetry from INA219 managers"""
-    start: TimeType = TimeType().set_datetime(datetime.now())
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
     sys_voltage: ChData = fprime_test_api.assert_telemetry(
         f"{ina219SysManager}.Voltage", start=start, timeout=65
     )
