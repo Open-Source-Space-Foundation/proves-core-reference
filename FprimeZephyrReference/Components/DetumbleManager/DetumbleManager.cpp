@@ -73,62 +73,40 @@ DetumbleManager ::~DetumbleManager() {}
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
-    // I'm not checking the value of isValid for paramGet calls since all of the parameters have a
-    // default value, but maybe there should still be specific logging for if the default parameter
-    // was used and retrieval failed.
+    // Check operating mode
     Fw::ParamValid isValid;
+    DetumbleMode mode = this->paramGet_OPERATING_MODE(isValid);
 
-    if (this->m_bDotRunning) {
-        // Give two iterations for the magnetorquers to fully turn off for magnetic reading
-        if (this->m_itrCount > 2) {
-            std::string reason = "";
-            bool stepSuccess = this->executeControlStep(reason);
+    // Telemeter mode
+    this->tlmWrite_Mode(mode);
 
-            if (!stepSuccess) {
-                this->log_WARNING_HI_ControlStepFailed(Fw::String(reason.c_str()));
-            }
+    // Telemeter state
+    this->tlmWrite_State(this->m_detumbleState);
 
-            this->m_bDotRunning = false;
-            this->m_itrCount = 0;
-        } else {
-            this->m_itrCount++;
-        }
-
+    // If detumble is disabled, ensure magnetorquers are off and exit early
+    if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
+        bool disableAll[5] = {false, false, false, false, false};
+        this->setMagnetorquers(disableAll);
+        this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         return;
     }
 
-    Fw::Success condition;
-    F64 angVelMagnitude = this->getAngularVelocityMagnitude(this->angularVelocityGet_out(0, condition));
-    if (angVelMagnitude < this->paramGet_ROTATIONAL_THRESHOLD(isValid)) {
-        // Magnetude below threshold, disable magnetorquers
-        bool values[5] = {false, false, false, false, false};
-        this->setMagnetorquers(values);
-    } else {
-        this->m_bDotRunning = true;
-
-        // Disable the magnetorquers so magnetic reading can take place
-        bool values[5] = {false, false, false, false, false};
-        this->setMagnetorquers(values);
+    switch (this->m_detumbleState) {
+        case DetumbleState::COOLDOWN:
+            this->stateCooldownActions();
+            return;
+        case DetumbleState::SENSING:
+            this->stateSensingActions();
+            return;
+        case DetumbleState::TORQUING:
+            this->stateTorquingActions();
+            return;
     }
 }
 
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
-
-bool DetumbleManager ::executeControlStep(std::string& reason) {
-    Fw::Success condition;
-
-    Drv::DipoleMoment dpMoment = this->dipoleMomentGet_out(0, condition);
-    if (condition != Fw::Success::SUCCESS) {
-        reason = "Dipole moment retrieval failed";
-        return false;
-    }
-
-    this->setDipoleMoment(dpMoment);
-
-    return true;
-}
 
 void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     // Calculate target currents
@@ -151,7 +129,6 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
-    // Calculate magnitude in rad/s
     F64 magRadPerSec =
         std::sqrt(angVel.get_x() * angVel.get_x() + angVel.get_y() * angVel.get_y() + angVel.get_z() * angVel.get_z());
 
@@ -168,7 +145,6 @@ void DetumbleManager ::setMagnetorquers(bool val[5]) {
 
 F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
     if (coil.shape == MagnetorquerCoilShape::CIRCULAR) {
-        // Area = π * (d/2)^2
         return this->PI * std::pow(coil.diameter / 2.0, 2.0);
     }
     // Default to Rectangular
@@ -196,6 +172,84 @@ F64 DetumbleManager ::clampCurrent(F64 current, const magnetorquerCoil& coil) {
         return (current > 0) ? maxCurrent : -maxCurrent;
     }
     return current;
+}
+
+void DetumbleManager ::stateCooldownActions() {
+    // First run call, initialize cooldown start time
+    if (this->m_cooldownStartTime == Fw::ZERO_TIME) {
+        this->m_cooldownStartTime = this->getTime();
+    }
+
+    // Get cooldown duration from parameter
+    Fw::ParamValid isValid;
+    Fw::TimeIntervalValue period = this->paramGet_COOLDOWN_DURATION(isValid);
+    Fw::Time duration(this->m_cooldownStartTime.getTimeBase(), period.get_seconds(), period.get_useconds());
+    Fw::Time cooldown_end_time = Fw::Time::add(this->m_cooldownStartTime, duration);
+
+    // Check if cooldown period has elapsed and transition to SENSING state
+    Fw::Time currentTime = this->getTime();
+    if (currentTime >= cooldown_end_time) {
+        // Transition to SENSING state
+        this->m_detumbleState = DetumbleState::SENSING;
+    }
+}
+
+void DetumbleManager ::stateSensingActions() {
+    // Get rotational threshold from parameter
+    Fw::ParamValid isValid;
+    F64 rotational_threshold = this->paramGet_ROTATIONAL_THRESHOLD(isValid);
+
+    // Get current angular velocity magnitude
+    Fw::Success condition;
+    Drv::AngularVelocity angular_velocity = this->angularVelocityGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_AngularVelocityRetrievalFailed();
+        return;
+    }
+    F64 angular_velocity_magnitude = this->getAngularVelocityMagnitude(angular_velocity);
+
+    // If angular velocity is below threshold, remain in SENSING state
+    // TODO(nateinaction): Consider transitioning the mode to DISABLED if below threshold
+    if (angular_velocity_magnitude < rotational_threshold) {
+        this->tlmWrite_BelowRotationalThreshold(true);
+        return;
+    }
+    this->tlmWrite_BelowRotationalThreshold(false);
+
+    // Get dipole moment
+    this->m_dipole_moment = this->dipoleMomentGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_DipoleMomentRetrievalFailed();
+        return;
+    }
+
+    // Transition to TORQUING state
+    this->m_torqueStartTime = this->getTime();
+    this->m_detumbleState = DetumbleState::TORQUING;
+}
+
+void DetumbleManager ::stateTorquingActions() {
+    // Check duration of torquing
+    Fw::Time currentTime = this->getTime();
+
+    // Get torque duration from parameter
+    Fw::ParamValid isValid;
+    Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
+    Fw::Time duration(this->m_torqueStartTime.getTimeBase(), torque_duration_param.get_seconds(),
+                      torque_duration_param.get_useconds());
+    Fw::Time torque_end_time = Fw::Time::add(this->m_torqueStartTime, duration);
+
+    // Check if torquing duration has elapsed and transition to COOLDOWN state
+    if (currentTime < torque_end_time) {
+        bool values[5] = {false, false, false, false, false};
+        this->setMagnetorquers(values);
+        this->m_cooldownStartTime = this->getTime();
+        this->m_detumbleState = DetumbleState::COOLDOWN;
+        return;
+    }
+
+    // Perform torqueing action
+    this->setDipoleMoment(this->m_dipole_moment);
 }
 
 }  // namespace Components

@@ -111,6 +111,15 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Set the magnetorquers on or off based on the provided values
     void setMagnetorquers(bool val[5]);
 
+    //! Actions to perform in the COOLDOWN state
+    void stateCooldownActions();
+
+    //! Actions to perform in the SENSING state
+    void stateSensingActions();
+
+    //! Actions to perform in the TORQUING state
+    void stateTorquingActions();
+
   private:
     // ----------------------------------------------------------------------
     //  Private member variables
@@ -118,6 +127,9 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
     //! Mathematical constant pi
     const double PI = 3.14159265358979323846;
+
+    //! Detumble state
+    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;
 
     //! X+ Coil parameters
     magnetorquerCoil m_xPlusMagnetorquer;
@@ -134,11 +146,14 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Z- Coil parameters
     magnetorquerCoil m_zMinusMagnetorquer;
 
-    U32 m_lastCompleted = 0;
-    bool m_detumbleRunning = true;
-    int m_itrCount = 0;
-    bool m_bDotRunning = false;
-    U32 m_bDotStartTime = -1;
+    //! Cooldown start time
+    Fw::Time m_cooldownStartTime;
+
+    //! Magnetorquer trigger start time
+    Fw::Time m_torqueStartTime;
+
+    //! Last dipole moment gathered
+    Drv::DipoleMoment m_dipole_moment;
 };
 
 }  // namespace Components

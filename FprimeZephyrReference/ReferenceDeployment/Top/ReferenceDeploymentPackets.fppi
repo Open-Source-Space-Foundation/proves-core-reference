@@ -165,7 +165,10 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
-  packet Parameters id 15 group 6 {
+  packet Detumble id 15 group 6 {
+    ReferenceDeployment.detumbleManager.Mode
+    ReferenceDeployment.detumbleManager.State
+    ReferenceDeployment.detumbleManager.BelowRotationalThreshold
     ReferenceDeployment.bDotDetumble.Gain
   }
 
