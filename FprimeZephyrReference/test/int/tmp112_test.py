@@ -28,7 +28,9 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get temperature"""
-    start: TimeType = TimeType().set_datetime(datetime.now())
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
 
     # Send command to get temperature
     proves_send_and_assert_command(
