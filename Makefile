@@ -113,6 +113,11 @@ bootloader: uv
 		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
 
+.PHONY: sync-sequence-number
+sync-sequence-number: uv
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
