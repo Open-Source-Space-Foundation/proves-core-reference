@@ -80,7 +80,10 @@ module ComCcsdsLora {
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500
+    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500 \
+        queue size ComCcsdsConfig.QueueSizes.authenticationRouter \
+        stack size ComCcsdsConfig.StackSizes.authenticationRouter \
+        priority ComCcsdsConfig.Priorities.authenticationRouter
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x04000
 
@@ -116,11 +119,11 @@ module ComCcsdsLora {
 
         # Active Components
         instance comQueue
+        instance authenticationRouter
 
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance authenticationRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer

@@ -5,18 +5,21 @@ module ComCcsdsConfig {
     constant BASE_ID_LORA = 0x22000000
 
     module QueueSizes {
-        constant comQueue   = 20
-        constant aggregator = 15
+        constant comQueue            = 20
+        constant aggregator          = 15
+        constant authenticationRouter = 2
     }
 
     module StackSizes {
-        constant comQueue   = 4 * 1024 # Must match prj.conf thread stack size
-        constant aggregator = 4 * 1024 # Must match prj.conf thread stack size
+        constant comQueue            = 4 * 1024 # Must match prj.conf thread stack size
+        constant aggregator          = 4 * 1024 # Must match prj.conf thread stack size
+        constant authenticationRouter = 4 * 1024 # Must match prj.conf thread stack size
     }
 
     module Priorities {
-        constant aggregator = 5 # Aggregator (consumer) must have higher priority than comQueue (producer)
-        constant comQueue   = 6 # ComQueue has higher priority than data producers (e.g. events, telemetry)
+        constant aggregator          = 5 # Aggregator (consumer) must have higher priority than comQueue (producer)
+        constant comQueue            = 6 # ComQueue has higher priority than data producers (e.g. events, telemetry)
+        constant authenticationRouter = 7 # AuthenticationRouter processes uplink packets
     }
 
     # Queue configuration constants
