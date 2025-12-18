@@ -57,6 +57,10 @@ jobs:
         run: |
           make generate
 
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+
       - name: Build
         run: |
           make build
@@ -83,9 +87,9 @@ jobs:
         run: |
           make submodules fprime-venv
 
-      - name: Generate authentication key
+      - name: Set Authentication Key
         run: |
-          make generate-auth-key
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
 
       - name: Trigger Bootloader
         run: |
