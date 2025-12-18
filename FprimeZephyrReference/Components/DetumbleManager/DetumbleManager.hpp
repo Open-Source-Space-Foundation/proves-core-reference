@@ -109,7 +109,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
 
     //! Set the magnetorquers on or off based on the provided values
-    void setMagnetorquers(bool val[5]);
+    void setMagnetorquers(bool x_plus, bool x_minus, bool y_plus, bool y_minus, bool z_minus);
 
     //! Actions to perform in the COOLDOWN state
     void stateCooldownActions();

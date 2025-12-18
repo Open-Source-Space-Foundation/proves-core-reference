@@ -85,8 +85,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
-        bool disableAll[5] = {false, false, false, false, false};
-        this->setMagnetorquers(disableAll);
+        this->setMagnetorquers(false, false, false, false, false);
         this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         return;
     }
@@ -124,8 +123,7 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dpMoment) {
     F64 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
 
     // All true for now until we figure out how to determine what should be on or off
-    bool values[5] = {true, true, true, true, true};
-    this->setMagnetorquers(values);
+    this->setMagnetorquers(true, true, true, true, true);
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -135,12 +133,12 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
     return magRadPerSec * 180.0 / this->PI;
 }
 
-void DetumbleManager ::setMagnetorquers(bool val[5]) {
-    this->xPlusToggle_out(0, val[0]);
-    this->xMinusToggle_out(0, val[1]);
-    this->yPlusToggle_out(0, val[2]);
-    this->yMinusToggle_out(0, val[3]);
-    this->zMinusToggle_out(0, val[4]);
+void DetumbleManager ::setMagnetorquers(bool x_plus, bool x_minus, bool y_plus, bool y_minus, bool z_minus) {
+    this->xPlusToggle_out(0, x_plus);
+    this->xMinusToggle_out(0, x_minus);
+    this->yPlusToggle_out(0, y_plus);
+    this->yMinusToggle_out(0, y_minus);
+    this->zMinusToggle_out(0, z_minus);
 }
 
 F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
@@ -241,8 +239,7 @@ void DetumbleManager ::stateTorquingActions() {
 
     // Check if torquing duration has elapsed and transition to COOLDOWN state
     if (currentTime < torque_end_time) {
-        bool values[5] = {false, false, false, false, false};
-        this->setMagnetorquers(values);
+        this->setMagnetorquers(false, false, false, false, false);
         this->m_cooldownStartTime = this->getTime();
         this->m_detumbleState = DetumbleState::COOLDOWN;
         return;
