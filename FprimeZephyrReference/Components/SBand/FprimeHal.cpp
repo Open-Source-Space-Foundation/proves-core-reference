@@ -9,7 +9,7 @@
 #include "SBand.hpp"
 #include <zephyr/kernel.h>
 
-FprimeHal::FprimeHal(Components::SBand* component) : RadioLibHal(0, 0, 0, 0, 0, 0), m_component(component) {}
+FprimeHal::FprimeHal(Components::SBand* component) : RadioLibHal(0, 0, 0, 1, 0, 0), m_component(component) {}
 
 void FprimeHal::init() {}
 
@@ -17,7 +17,16 @@ void FprimeHal::term() {}
 
 void FprimeHal::pinMode(uint32_t pin, uint32_t mode) {}
 
-void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {}
+void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {
+    if (pin == 6) {
+        // Reset pin
+        if (value == 0) {
+            this->m_component->resetSend_out(0, Fw::Logic::LOW);
+        } else {
+            this->m_component->resetSend_out(0, Fw::Logic::HIGH);
+        }
+    }
+}
 
 uint32_t FprimeHal::digitalRead(uint32_t pin) {
     if (pin == 5) {

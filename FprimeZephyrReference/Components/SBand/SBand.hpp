@@ -33,6 +33,7 @@ class SBand final : public SBandComponentBase {
 
     using SBandComponentBase::getIRQLine_out;
     using SBandComponentBase::getTime;
+    using SBandComponentBase::resetSend_out;
     using SBandComponentBase::spiSend_out;
 
   private:

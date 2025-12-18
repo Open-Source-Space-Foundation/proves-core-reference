@@ -563,7 +563,7 @@ zephyr_udc0: &usbd {
         };
 
 	sband_nrst: sband-nrst {
-            gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
             label = "SBAND_NRST";
 	};
 
