@@ -65,8 +65,11 @@ module Svc {
         event CommandLossFound(duration: U32) severity warning high \
             format "The Satellite has been put into command loss timing after {} seconds without contact"
 
-        @
+        @ Command Loss Time By Default
         param COMM_LOSS_TIME: U32 default 30
+
+        @ File to Read last command loss time from
+        param COMM_LOSS_TIME_START_FILE: string default "/comm_loss_start.bin"
 
 
         ###############################################################################
