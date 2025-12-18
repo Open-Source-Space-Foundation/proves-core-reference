@@ -102,7 +102,6 @@ class AuthenticateFramer(FramerDeframer):
         # Use provided key or read from AuthDefaultKey.h
         if authentication_key is None:
             authentication_key = get_default_auth_key_from_header()
-        print(f"Using authentication key: {authentication_key}")
         self.authentication_key = authentication_key
 
     def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
