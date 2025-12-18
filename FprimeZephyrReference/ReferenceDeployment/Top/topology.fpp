@@ -175,6 +175,7 @@ module ReferenceDeployment {
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
 
+
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqDone -> startupManager.completeSequence
     }
@@ -338,6 +339,7 @@ module ReferenceDeployment {
       ComCcsdsLora.comQueue.bufferReturnOut[ComCcsds.Ports_ComBufferQueue.FILE] -> downlinkRepeater.multiIn[1]
 
     }
+
 
     connections FileUplinkCollecting {
       # Router <-> FileUplink
