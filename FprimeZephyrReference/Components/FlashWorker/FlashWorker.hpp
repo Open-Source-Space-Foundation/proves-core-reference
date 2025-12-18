@@ -51,9 +51,9 @@ class FlashWorker final : public FlashWorkerComponentBase {
                               ) override;
 
     //! Handler implementation for updateImage
-    void updateImage_handler(FwIndexType portNum,  //!< The port number
-                             const Fw::StringBase& file, //!< File to read image from
-                             U32 crc32 //!< Expected CRC32 of the file used to verify file integrity
+    void updateImage_handler(FwIndexType portNum,         //!< The port number
+                             const Fw::StringBase& file,  //!< File to read image from
+                             U32 crc32                    //!< Expected CRC32 of the file used to verify file integrity
                              ) override;
 
   private:

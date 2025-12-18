@@ -73,6 +73,12 @@ Then, in another terminal, run the following command to execute the integration 
 make test-integration
 ```
 
+To run a single integration test file, set `TEST` to the filename (with or without `.py`):
+```sh
+make test-integration TEST=mode_manager_test
+make test-integration TEST=mode_manager_test.py
+```
+
 ## Running The Radio With CircuitPython
 
 To test the radio setup easily, you can use CircuitPython code on one board and fprime-zephyr on another. This provides a simple client/server setup and lets you observe what data is being sent through the radio.
@@ -112,48 +118,33 @@ You can control the specific command lists of the satellite by writing a sequenc
 
 ## MCUBootloader
 
-First, build the bootloader with west. This is easiest accomplished by building the `sysbuild` example "with_mcuboot" in zephyr. Change into the following directory.
-
-```
-in proves-core-reference
-cd lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+To build the bootloader, ensure you have sourced fprime-venv, and then run:
+```sh
+make build-mcuboot
 ```
 
-You **must** then set the following in `sysbuild.conf`:
+Once built, upload `mcuboot.uf2` like normally done.
 
-```
-+SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY=n
-+SB_CONFIG_MCUBOOT_MODE_SWAP_USING_OFFSET=y
-```
-
-And then build the mcuboot loader
-```
-<proves>/tools/bin/build-with-proves --sysbuild
-(example /home/username/proves-core-reference/tools/bin/build-with-proves --sysbuild)
-```
-
-Once built, cd upload `build/mcuboot/zephyr/zephyr.uf2` like normally done.
-
-Then build Proves like normal. This will make a UF2, but not for the second flash region.  To build a bootable image, use:
-
-```
-<proves>/tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin ./bootable.uf2
-```
-
-Now upload `bootable.uf2`.  This should chain from MCUBoot to the bootable software image, by changing the base address so it appears at slot0. Once you boot into it, you can use the FlashWorker component to write to slot 1 at runtime.
+Then build proves-core-reference like normal. This will put `bootable.uf2` inside of the current directory. Ensure you upload this file to the board instead of `build-artifacts/zephyr.uf2`.
 
 
 Before, you currently need to run
 
-``` pip install git+http://github.com/LeStarch/fprime-gds.git@0e23d212  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
+``` pip install git+https://github.com/LeStarch/fprime-gds@5b02709  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
+
+
+When you run the gds,
+
+``` fprime-gds --file-uplink-cooldown 0.8```
 
 Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the file uplink file
 
-set update.updater.update_image_from and set the next boot to book from _____
 
 1. prepare image
 2. update from (pass in the path)
 3. configure_next_boot = test
+
+to find the crc ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
 
 (either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
 

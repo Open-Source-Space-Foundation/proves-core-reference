@@ -57,6 +57,10 @@ jobs:
         run: |
           make generate
 
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+
       - name: Build
         run: |
           make build
@@ -66,7 +70,7 @@ jobs:
         with:
           name: artifacts
           path: |
-            build-artifacts/zephyr.uf2
+            bootable.uf2
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
@@ -81,9 +85,27 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          mkdir -p build-artifacts/zephyr/fprime-zephyr-deployment/dict \
-            && mv zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json build-artifacts/zephyr/fprime-zephyr-deployment/dict
           make submodules fprime-venv
+
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Sync Sequence Number
+        run: |
+          make sync-sequence-number
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
 
       - name: Trigger Bootloader
         run: |
@@ -92,8 +114,13 @@ jobs:
 
       - name: Copy Firmware
         run: |
-          picotool load ./zephyr.uf2
+          picotool load ./bootable.uf2
           picotool reboot
+          sleep 5
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
 
       - name: Run Integration Tests
         run: |

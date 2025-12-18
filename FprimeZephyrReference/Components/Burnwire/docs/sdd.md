@@ -52,8 +52,7 @@ Add component states in the chart below
 Add unit test descriptions in the chart below
 | Name | Description | Output | Coverage |
 |------|-------------|--------|----------|
-|TestSafety|Tests Burnwire turns off after SAFETY_TIMER seconds|Integration|---|
-|TestSafety|Tests Burnwire emits correct events after start and stop|Integration|---|
+|test_01_start_and_stop_burnwire|Tests the burnwire functionality by enabling it and asserting that the power consumption of the satellite increases.|Integration|---|
 
 
 ## Parameter

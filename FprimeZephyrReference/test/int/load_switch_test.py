@@ -4,6 +4,8 @@ load_switch_test.py:
 Integration tests for the Load-Switch component.
 """
 
+import time
+
 import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.ch_data import ChData
@@ -41,7 +43,7 @@ def get_is_on(fprime_test_api: IntegrationTestAPI) -> str:
     proves_send_and_assert_command(
         fprime_test_api,
         "CdhCore.tlmSend.SEND_PKT",
-        ["9"],
+        ["10"],
     )
     result: ChData = fprime_test_api.assert_telemetry(
         f"{loadswitch}.IsOn", start="NOW", timeout=3
@@ -49,16 +51,14 @@ def get_is_on(fprime_test_api: IntegrationTestAPI) -> str:
     return result.get_val()
 
 
-def test_01_loadswitch_telemetry_basic(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can read IsOn telemetry"""
+def test_01_loadswitch_telemetry_and_events(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Test that we can read IsOn telemetry as well as a toggle on / off event."""
     value = get_is_on(fprime_test_api)
     assert value in (ON, OFF), f"IsOn should be {ON} or {OFF}, got {value}"
 
-
-def test_02_turn_on_sets_high(fprime_test_api: IntegrationTestAPI, start_gds):
-    """
-    Test TURN_ON command sets GPIO high, emits ON event, and updates telemetry
-    """
+    time.sleep(1)
 
     # Send turn_on command
     turn_on(fprime_test_api)
@@ -69,12 +69,6 @@ def test_02_turn_on_sets_high(fprime_test_api: IntegrationTestAPI, start_gds):
     # Confirm telemetry IsOn is 1
     value = get_is_on(fprime_test_api)
     assert value == ON, f"Expected IsOn = {ON} after TURN_ON, got {value}"
-
-
-def test_03_turn_off_sets_low(fprime_test_api: IntegrationTestAPI, start_gds):
-    """
-    Test TURN_OFF command sets GPIO low, emits OFF event, and updates telemetry
-    """
 
     # Send turn_on command
     turn_off(fprime_test_api)
