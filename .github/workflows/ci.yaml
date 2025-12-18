@@ -95,6 +95,10 @@ jobs:
         run: |
           make framer-plugin
 
+      - name: Kill all python processes
+        run: |
+          pkill -9 python
+
       - name: Trigger Bootloader
         run: |
           make bootloader
@@ -106,9 +110,17 @@ jobs:
           picotool reboot
           sleep 5
 
+      - name: Kill all python processes
+        run: |
+          pkill -9 python
+
       - name: Sync Sequence Number
         run: |
           make sync-sequence-number
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python
 
       - name: Run Integration Tests
         run: |
