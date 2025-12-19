@@ -5,7 +5,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
-    rateGroup50Hz
+    # rateGroup50Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -24,7 +24,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
-    instance rateGroup50Hz
+    # instance rateGroup50Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -202,8 +202,7 @@ module ReferenceDeployment {
       timer.CycleOut -> rateGroupDriver.CycleIn
 
       # 50Hz cause why not
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
-      rateGroup50Hz.RateGroupMemberOut[0] -> detumbleManager.run
+      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
 
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
@@ -242,6 +241,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> detumbleManager.run
     }
 
 

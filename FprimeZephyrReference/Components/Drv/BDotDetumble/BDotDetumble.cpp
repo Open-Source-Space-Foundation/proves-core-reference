@@ -60,7 +60,6 @@ Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNu
 
     // Return result
     condition = Fw::Success::SUCCESS;
-    this->log_WARNING_LO_DipoleThing(moment_x, moment_y, moment_z);
     return Drv::DipoleMoment(moment_x, moment_y, moment_z);
 }
 

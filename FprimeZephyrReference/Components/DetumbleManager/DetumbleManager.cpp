@@ -187,6 +187,9 @@ void DetumbleManager ::stateCooldownActions() {
     // Check if cooldown period has elapsed and transition to SENSING state
     Fw::Time currentTime = this->getTime();
     if (currentTime >= cooldown_end_time) {
+        // Reset cooldown start time
+        this->m_cooldownStartTime = Fw::ZERO_TIME;
+
         // Transition to SENSING state
         this->m_detumbleState = DetumbleState::SENSING;
     }
@@ -225,11 +228,18 @@ void DetumbleManager ::stateSensingActions() {
     this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
 
     // Transition to TORQUING state
-    this->m_torqueStartTime = this->getTime();
     this->m_detumbleState = DetumbleState::TORQUING;
 }
 
 void DetumbleManager ::stateTorquingActions() {
+    // First run call, initialize torque start time
+    if (this->m_torqueStartTime == Fw::ZERO_TIME) {
+        this->m_torqueStartTime = this->getTime();
+    }
+
+    // Perform torqueing action
+    this->setDipoleMoment(this->m_dipole_moment);
+
     // Check duration of torquing
     Fw::Time currentTime = this->getTime();
 
@@ -241,15 +251,16 @@ void DetumbleManager ::stateTorquingActions() {
     Fw::Time torque_end_time = Fw::Time::add(this->m_torqueStartTime, duration);
 
     // Check if torquing duration has elapsed and transition to COOLDOWN state
-    if (currentTime < torque_end_time) {
+    if (currentTime >= torque_end_time) {
+        // Turn off magnetorquers
         this->setMagnetorquers(false, false, false, false, false);
-        this->m_cooldownStartTime = this->getTime();
-        this->m_detumbleState = DetumbleState::COOLDOWN;
-        return;
-    }
 
-    // Perform torqueing action
-    this->setDipoleMoment(this->m_dipole_moment);
+        // Reset torque start time
+        this->m_torqueStartTime = Fw::ZERO_TIME;
+
+        // Transition to COOLDOWN state
+        this->m_detumbleState = DetumbleState::COOLDOWN;
+    }
 }
 
 }  // namespace Components

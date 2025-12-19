@@ -69,7 +69,7 @@ void configureTopology() {
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
-    rateGroup50Hz.configure(rateGroup50HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup50HzContext));
+    // rateGroup50Hz.configure(rateGroup50HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup50HzContext));
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
 

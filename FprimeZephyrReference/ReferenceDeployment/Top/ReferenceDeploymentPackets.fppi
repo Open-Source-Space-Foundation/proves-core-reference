@@ -108,7 +108,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
-    ReferenceDeployment.rateGroup50Hz.RgMaxTime
+    # ReferenceDeployment.rateGroup50Hz.RgMaxTime
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.QuiescenceEndTime
@@ -123,7 +123,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager2.NoBuffs
-    ReferenceDeployment.rateGroup50Hz.RgCycleSlips
+    # ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }

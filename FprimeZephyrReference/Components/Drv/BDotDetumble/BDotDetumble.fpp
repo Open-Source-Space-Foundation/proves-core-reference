@@ -24,8 +24,6 @@ module Drv {
         @ Gain used for B-Dot algorithm
         param Gain: F64 default 1.0
 
-        event DipoleThing(x: F64, y: F64, z: F64) severity warning low format "X: {}, Y: {}, Z: {}"
-
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
