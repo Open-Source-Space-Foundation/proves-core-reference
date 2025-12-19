@@ -9,7 +9,8 @@
 #include "SBand.hpp"
 #include <zephyr/kernel.h>
 
-FprimeHal::FprimeHal(Components::SBand* component) : RadioLibHal(0, 0, 0, 1, 0, 0), m_component(component) {}
+FprimeHal::FprimeHal(Components::SBand* component)
+    : RadioLibHal(0, 0, FPRIME_HAL_GPIO_LEVEL_LOW, FPRIME_HAL_GPIO_LEVEL_HIGH, 0, 0), m_component(component) {}
 
 void FprimeHal::init() {}
 
@@ -18,9 +19,8 @@ void FprimeHal::term() {}
 void FprimeHal::pinMode(uint32_t pin, uint32_t mode) {}
 
 void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {
-    if (pin == 6) {
-        // Reset pin
-        if (value == 0) {
+    if (pin == SBAND_PIN_RST) {
+        if (value == FPRIME_HAL_GPIO_LEVEL_LOW) {
             this->m_component->resetSend_out(0, Fw::Logic::LOW);
         } else {
             this->m_component->resetSend_out(0, Fw::Logic::HIGH);
@@ -29,16 +29,16 @@ void FprimeHal::digitalWrite(uint32_t pin, uint32_t value) {
 }
 
 uint32_t FprimeHal::digitalRead(uint32_t pin) {
-    if (pin == 5) {
+    if (pin == SBAND_PIN_IRQ) {
         Fw::Logic irqState;
         Drv::GpioStatus state = this->m_component->getIRQLine_out(0, irqState);
         FW_ASSERT(state == Drv::GpioStatus::OP_OK);
         if (irqState == Fw::Logic::HIGH)
-            return 1;
+            return FPRIME_HAL_GPIO_LEVEL_HIGH;
         else
-            return 0;
+            return FPRIME_HAL_GPIO_LEVEL_LOW;
     }
-    return 0;
+    return FPRIME_HAL_GPIO_LEVEL_LOW;
 }
 
 void FprimeHal::attachInterrupt(uint32_t interruptNum, void (*interruptCb)(void), uint32_t mode) {}

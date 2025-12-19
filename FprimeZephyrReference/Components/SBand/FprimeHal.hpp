@@ -3,6 +3,15 @@
 
 #include <RadioLib.h>
 
+#define FPRIME_HAL_GPIO_LEVEL_LOW 0
+#define FPRIME_HAL_GPIO_LEVEL_HIGH 1
+
+// SX1280 virtual pin numbers for RadioLib Module
+// These are logical pin IDs used by the HAL to route operations to F Prime ports
+#define SBAND_PIN_CS 0
+#define SBAND_PIN_IRQ 5
+#define SBAND_PIN_RST 6
+
 namespace Components {
 class SBand;
 }  // namespace Components

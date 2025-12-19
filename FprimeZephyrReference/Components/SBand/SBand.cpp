@@ -22,7 +22,10 @@ namespace Components {
 // ----------------------------------------------------------------------
 
 SBand ::SBand(const char* const compName)
-    : SBandComponentBase(compName), m_rlb_hal(this), m_rlb_module(&m_rlb_hal, 0, 5, 6), m_rlb_radio(&m_rlb_module) {}
+    : SBandComponentBase(compName),
+      m_rlb_hal(this),
+      m_rlb_module(&m_rlb_hal, SBAND_PIN_CS, SBAND_PIN_IRQ, SBAND_PIN_RST),
+      m_rlb_radio(&m_rlb_module) {}
 
 SBand ::~SBand() {}
 
