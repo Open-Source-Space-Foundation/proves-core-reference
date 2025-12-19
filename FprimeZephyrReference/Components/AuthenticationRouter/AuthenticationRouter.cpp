@@ -182,18 +182,28 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 
-    Fw::Time time = this->getTime();
-    Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
-
-    // On read failure, or if write_to_file is true, write the current time to the file for future reads.
-    if (status != Os::File::OP_OK || write_to_file) {
-        status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+    if (write_to_file) {
+        // Update file with current time and return current time
+        Fw::Time current_time = this->getTime();
+        Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
         }
-    }
+        return current_time;
+    } else {
+        // Read stored time from file, or use current time if file doesn't exist
+        Fw::Time time = this->getTime();
+        Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-    return time;
+        // On read failure, write the current time to the file for future reads
+        if (status != Os::File::OP_OK) {
+            status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+            if (status != Os::File::OP_OK) {
+                this->log_WARNING_HI_CommandLossFileInitFailure();
+            }
+        }
+        return time;
+    }
 }
 
 void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::Buffer& fwBuffer) {
