@@ -86,7 +86,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
-        this->setMagnetorquers(false, false, false, false, false);
+        this->stopMagnetorquers();
         this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         return;
     }
@@ -124,7 +124,7 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     F64 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
 
     // All true for now until we figure out how to determine what should be on or off
-    this->setMagnetorquers(true, true, true, true, true);
+    this->startMagnetorquers(0xFFFFFFFFu, 127, 127, 127, 127, 127);
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -134,27 +134,56 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
     return magRadPerSec * 180.0 / this->PI;
 }
 
-void DetumbleManager ::setMagnetorquers(bool x_plus, bool x_minus, bool y_plus, bool y_minus, bool z_minus) {
+void DetumbleManager ::startMagnetorquers(U32 duration_us,
+                                          I8 x_plus_amps,
+                                          I8 x_minus_amps,
+                                          I8 y_plus_amps,
+                                          I8 y_minus_amps,
+                                          I8 z_minus_amps) {
     Fw::ParamValid isValid;
 
     if (this->m_xPlusMagnetorquer.enabled) {
-        this->xPlusToggle_out(0, x_plus);
+        this->xPlusStart_out(0, duration_us, x_plus_amps);
     }
 
     if (this->m_xMinusMagnetorquer.enabled) {
-        this->xMinusToggle_out(0, x_minus);
+        this->xMinusStart_out(0, duration_us, x_minus_amps);
     }
 
     if (this->m_yPlusMagnetorquer.enabled) {
-        this->yPlusToggle_out(0, y_plus);
+        this->yPlusStart_out(0, duration_us, y_plus_amps);
     }
 
     if (this->m_yMinusMagnetorquer.enabled) {
-        this->yMinusToggle_out(0, y_minus);
+        this->yMinusStart_out(0, duration_us, y_minus_amps);
     }
 
     if (this->m_zMinusMagnetorquer.enabled) {
-        this->zMinusToggle_out(0, z_minus);
+        this->zMinusStart_out(0, duration_us, z_minus_amps);
+    }
+}
+
+void DetumbleManager ::stopMagnetorquers() {
+    Fw::ParamValid isValid;
+
+    if (this->m_xPlusMagnetorquer.enabled) {
+        this->xPlusStop_out(0);
+    }
+
+    if (this->m_xMinusMagnetorquer.enabled) {
+        this->xMinusStop_out(0);
+    }
+
+    if (this->m_yPlusMagnetorquer.enabled) {
+        this->yPlusStop_out(0);
+    }
+
+    if (this->m_yMinusMagnetorquer.enabled) {
+        this->yMinusStop_out(0);
+    }
+
+    if (this->m_zMinusMagnetorquer.enabled) {
+        this->zMinusStop_out(0);
     }
 }
 
@@ -286,7 +315,7 @@ void DetumbleManager ::stateEnterTorquingActions() {
 
 void DetumbleManager ::stateExitTorquingActions() {
     // Turn off magnetorquers
-    this->setMagnetorquers(false, false, false, false, false);
+    this->stopMagnetorquers();
 
     // Reset torque start time
     this->m_torqueStartTime = Fw::ZERO_TIME;

@@ -298,11 +298,18 @@ module ReferenceDeployment {
     connections DetumbleManager {
       detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
       detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
-      detumbleManager.xPlusToggle -> drv2605Face0Manager.toggleContinuous
-      detumbleManager.xMinusToggle -> drv2605Face1Manager.toggleContinuous
-      detumbleManager.yPlusToggle -> drv2605Face2Manager.toggleContinuous
-      detumbleManager.yMinusToggle -> drv2605Face3Manager.toggleContinuous
-      detumbleManager.zMinusToggle -> drv2605Face5Manager.toggleContinuous
+
+      detumbleManager.xPlusStart -> drv2605Face0Manager.start
+      detumbleManager.xMinusStart -> drv2605Face1Manager.start
+      detumbleManager.yPlusStart -> drv2605Face2Manager.start
+      detumbleManager.yMinusStart -> drv2605Face3Manager.start
+      detumbleManager.zMinusStart -> drv2605Face5Manager.start
+
+      detumbleManager.xPlusStop -> drv2605Face0Manager.stop
+      detumbleManager.xMinusStop -> drv2605Face1Manager.stop
+      detumbleManager.yPlusStop -> drv2605Face2Manager.stop
+      detumbleManager.yMinusStop -> drv2605Face3Manager.stop
+      detumbleManager.zMinusStop -> drv2605Face5Manager.stop
 
       bDotDetumble.magneticFieldGet -> imuManager.magneticFieldGet
     }

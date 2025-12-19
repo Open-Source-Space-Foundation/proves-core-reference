@@ -1,5 +1,8 @@
 module Drv {
-    port trigger(duration_us: U32, amps: I8) -> Fw.Success
+    port StartMagnetorquer(
+        duration_us: U32, @< Duration in microseconds to trigger the magnetorquer
+        amps: I8, @< Amplitude value between -127 and 127
+    ) -> Fw.Success
     port MagnetorquerToggle(value: bool)
 }
 
@@ -11,11 +14,11 @@ module Drv {
         @ Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
         sync input port run: Svc.Sched
 
-        @ Port to trigger the magnetorquer
-        sync input port trigger: trigger
+        @ Port to start the magnetorquer
+        sync input port start: StartMagnetorquer
 
-        @ Port to toggle if continuous mode is on or off
-        sync input port toggleContinuous: MagnetorquerToggle
+        @ Port to stop the magnetorquer
+        sync input port stop: Fw.Signal
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged

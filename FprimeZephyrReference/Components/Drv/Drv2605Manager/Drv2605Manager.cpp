@@ -65,29 +65,34 @@ void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
     //     this->trigger_handler(0);
     // }
 
-    if (this->loadSwitchReady() && !this->m_has_initialized && this->m_count > 50) {
-        this->m_has_initialized = true;
-        this->initializeDevice();
-    } else {
-        this->m_count++;
-    }
+    // if (this->loadSwitchReady() && !this->m_has_initialized && this->m_count > 50) {
+    //     this->m_has_initialized = true;
+    //     this->initializeDevice();
+    // } else {
+    //     this->m_count++;
+    // }
     return;
 }
 
-Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
+Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, U32 duration_us, I8 amps) {
     if (!this->initializeDevice()) {
         return Fw::Success::FAILURE;
     }
 
+    // Set the RTP data
+    hold_arr[0] = duration_us;
+    input_arr[0] = static_cast<uint8_t>(amps);
+
     union drv2605_config_data config_data;
     config_data.rtp_data = &rtp;
 
+    int rc = 0;
     if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data) != 0) {
         this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
         return Fw::Success::FAILURE;
     }
 
-    int rc = haptics_start_output(this->m_dev);
+    rc = haptics_start_output(this->m_dev);
     if (rc != 0) {
         this->log_WARNING_LO_TriggerFailed(rc);
         return Fw::Success::FAILURE;
@@ -95,20 +100,30 @@ Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
     return Fw::Success::SUCCESS;
 }
 
-void Drv2605Manager ::toggleContinuous_handler(FwIndexType portNum, bool value) {
-    this->m_continuous_mode = value;
+void Drv2605Manager ::stop_handler(FwIndexType portNum) {
+    if (!this->initializeDevice()) {
+        return;  // TODO(nateinaction): don't return??ASD?ASdfasdfj;alsdkjf;laskdhf
+    }
+
+    int rc = haptics_stop_output(this->m_dev);
+    if (rc != 0) {
+        this->log_WARNING_LO_TriggerFailed(rc);  // TODO(nateinaction): Different error?
+        return;
+    }
+    return;
 }
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
 void Drv2605Manager ::TRIGGER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Trigger the magnetorquer
-    Fw::Success condition = this->trigger_handler(0);
-    if (condition != Fw::Success::SUCCESS) {
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
+    // Fw::Success condition = this->trigger_handler(0);
+    // if (condition != Fw::Success::SUCCESS) {
+    //     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+    //     return;
+    // }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

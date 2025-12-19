@@ -52,13 +52,19 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    //! Handler implementation for trigger
+    //! Handler implementation for start
     //!
-    //! Port to trigger the DRV2605 device
-    Fw::Success trigger_handler(FwIndexType portNum  //!< The port number
-                                ) override;
+    //! Port to start the magnetorquer
+    Fw::Success start_handler(FwIndexType portNum,  //!< The port number
+                              U32 duration_us,      //!< Duration in microseconds to trigger the magnetorquer
+                              I8 amps               //!< Amplitude value between -127 and 127
+                              ) override;
 
-    void toggleContinuous_handler(FwIndexType portNum, bool value) override;
+    //! Handler implementation for stop
+    //!
+    //! Port to stop the magnetorquer
+    void stop_handler(FwIndexType portNum  //!< The port number
+                      ) override;
 
   private:
     // ----------------------------------------------------------------------

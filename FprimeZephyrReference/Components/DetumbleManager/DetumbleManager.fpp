@@ -95,19 +95,34 @@ module Components {
         output port dipoleMomentGet: Drv.DipoleMomentGet
 
         @ Port for triggering the X+ magnetorquer
-        output port xPlusToggle: Drv.MagnetorquerToggle
+        output port xPlusStart: Drv.StartMagnetorquer
+
+        @ Port for stopping the X+ magnetorquer
+        output port xPlusStop: Fw.Signal
 
         @ Port for triggering the X- magnetorquer
-        output port xMinusToggle: Drv.MagnetorquerToggle
+        output port xMinusStart: Drv.StartMagnetorquer
+
+        @ Port for stopping the X- magnetorquer
+        output port xMinusStop: Fw.Signal
 
         @ Port for triggering the Y+ magnetorquer
-        output port yPlusToggle: Drv.MagnetorquerToggle
+        output port yPlusStart: Drv.StartMagnetorquer
+
+        @ Port for stopping the Y+ magnetorquer
+        output port yPlusStop: Fw.Signal
 
         @ Port for triggering the Y- magnetorquer
-        output port yMinusToggle: Drv.MagnetorquerToggle
+        output port yMinusStart: Drv.StartMagnetorquer
+
+        @ Port for stopping the Y- magnetorquer
+        output port yMinusStop: Fw.Signal
 
         @ Port for triggering the Z- magnetorquer
-        output port zMinusToggle: Drv.MagnetorquerToggle
+        output port zMinusStart: Drv.StartMagnetorquer
+
+        @ Port for stopping the Z- magnetorquer
+        output port zMinusStop: Fw.Signal
 
         ### Events ###
 
