@@ -69,6 +69,8 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
 
 void AuthenticationRouter ::CallSafeMode() {
     // Call Safe mode with EXTERNAL_REQUEST reason (command loss is an external component request)
+    log_WARNING_HI_CommandLossFileInitFailure_ThrottleClear();
+
     this->SetSafeMode_out(0, Components::SafeModeReason::EXTERNAL_REQUEST);
 }
 
@@ -88,8 +90,6 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     this->update_command_loss_start(true);
     // Reset safe mode flag when a new command is received
     this->m_safeModeCalled = false;
-    // unthrottle the event
-    log_WARNING_HI_CommandLossFileInitFailure_ThrottleClear();
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
