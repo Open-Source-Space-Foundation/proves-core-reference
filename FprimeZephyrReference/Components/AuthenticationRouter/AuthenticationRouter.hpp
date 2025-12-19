@@ -62,9 +62,8 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! opcodes that bypassauthentification
     bool BypassesAuthentification(Fw::Buffer& packetBuffer);
 
-    // Restarts the satellite and calls safemode when
-    // command loss time expires
-    void RestartSatelliteAndCallSafeMode();
+    //! Calls safemode when command loss time expires
+    void CallSafeMode();
 
     //! Updates the command loss start time
     //! @param write_to_file If true, writes current time to file and returns it. If false, reads from file.

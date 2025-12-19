@@ -66,8 +66,9 @@ bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     return false;
 }
 
-void AuthenticationRouter ::RestartSatelliteAndCallSafeMode() {
-    // TODO: Implement this
+void AuthenticationRouter ::CallSafeMode() {
+    // Call Safe mode with EXTERNAL_REQUEST reason (command loss is an external component request)
+    this->SetSafeMode_out(0, Components::SafeModeReason::EXTERNAL_REQUEST);
 }
 
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
@@ -166,15 +167,17 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
 
     Fw::Time current_time = this->getTime();
 
-    Fw::TimeIntervalValue command_loss_duration = this->paramGet_COMM_LOSS_TIME(is_valid);
+    Fw::ParamValid is_valid;
+    U32 command_loss_duration_seconds = this->paramGet_COMM_LOSS_TIME(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::TimeIntervalValue command_loss_duration(command_loss_duration_seconds, 0);
     Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_duration.get_seconds(),
                                    command_loss_duration.get_useconds());
     Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
 
     if (current_time > command_loss_end) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
-        this->RestartSatelliteAndCallSafeMode();
+        this->CallSafeMode();
     }
 }
 
