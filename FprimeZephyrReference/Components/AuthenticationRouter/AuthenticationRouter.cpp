@@ -88,6 +88,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     this->update_command_loss_start(true);
     // Reset safe mode flag when a new command is received
     this->m_safeModeCalled = false;
+    // unthrottle the event
+    log_WARNING_HI_CommandLossFileInitFailure_ThrottleClear();
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
