@@ -7,6 +7,7 @@
 #include "FprimeZephyrReference/Components/StartupManager/StartupManager.hpp"
 
 #include "Os/File.hpp"
+#include <zephyr/drivers/rtc.h>
 
 namespace Components {
 
@@ -140,6 +141,12 @@ Fw::Time StartupManager ::update_quiescence_start() {
     return time;
 }
 
+Fw::Time StartupManager ::get_uptime() {
+    uint32_t seconds = k_uptime_seconds();
+    Fw::Time time(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), 0);
+    return time;
+}
+
 void StartupManager ::completeSequence_handler(FwIndexType portNum,
                                                FwOpcodeType opCode,
                                                U32 cmdSeq,
@@ -178,8 +185,11 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
         bool armed = this->paramGet_ARMED(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
+        Fw::Time current_time =
+            (end_time.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
+
         // If not armed or this is not the first boot, we skip waiting
-        if (!armed || end_time <= this->getTime()) {
+        if (!armed || end_time <= current_time) {
             this->m_waiting = false;
             this->cmdResponse_out(this->m_stored_opcode, this->m_stored_sequence, Fw::CmdResponse::OK);
         }

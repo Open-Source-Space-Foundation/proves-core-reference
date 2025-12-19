@@ -9,4 +9,10 @@ extern Fw::MemAllocator& memAllocator;
 }
 }  // namespace ComCcsdsSband
 
+namespace ComCcsdsLora {
+namespace Allocation {
+extern Fw::MemAllocator& memAllocator;
+}
+}  // namespace ComCcsdsLora
+
 #endif
