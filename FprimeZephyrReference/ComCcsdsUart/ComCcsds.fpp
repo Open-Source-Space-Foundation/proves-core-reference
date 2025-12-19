@@ -44,7 +44,8 @@ module ComCcsdsUart {
 
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_UART + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
-        stack size ComCcsdsConfig.StackSizes.aggregator
+        stack size ComCcsdsConfig.StackSizes.aggregator \
+        priority ComCcsdsConfig.Priorities.aggregator
 
     # ----------------------------------------------------------------------
     # Passive Components

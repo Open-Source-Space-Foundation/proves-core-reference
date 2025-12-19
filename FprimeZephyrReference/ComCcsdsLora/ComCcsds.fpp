@@ -91,7 +91,8 @@ module ComCcsdsLora {
 
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_LORA + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
-        stack size ComCcsdsConfig.StackSizes.aggregator
+        stack size ComCcsdsConfig.StackSizes.aggregator \
+        priority ComCcsdsConfig.Priorities.aggregator
 
     # NOTE: name 'framer' is used for the framer that connects to the Com Adapter Interface for better subtopology interoperability
     instance framer: Svc.Ccsds.TmFramer base id ComCcsdsConfig.BASE_ID_LORA + 0x07000

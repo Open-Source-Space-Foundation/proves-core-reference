@@ -7,8 +7,6 @@ module ReferenceDeployment {
   enum Ports_RateGroups {
     rateGroup10Hz
     rateGroup1Hz
-    rateGroup1_6Hz
-    rateGroup1_10Hz
   }
 
   topology ReferenceDeployment {
@@ -27,8 +25,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
     instance rateGroup10Hz
     instance rateGroup1Hz
-    instance rateGroup1_6Hz
-    instance rateGroup1_10Hz
     instance rateGroupDriver
     instance timer
     instance lora
@@ -235,16 +231,12 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> ComCcsdsUart.authenticationRouter.run
-      rateGroup1Hz.RateGroupMemberOut[16] -> ComCcsdsLora.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> ComCcsdsUart.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
 
-      # Slower rate (1/6Hz) rate group
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn
-      rateGroup1_6Hz.RateGroupMemberOut[0] -> imuManager.run
-      rateGroup1_6Hz.RateGroupMemberOut[1] -> adcs.run
-      rateGroup1_6Hz.RateGroupMemberOut[2] -> thermalManager.run
-
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_10Hz] -> rateGroup1_10Hz.CycleIn
     }
 
 
@@ -396,9 +388,10 @@ module ReferenceDeployment {
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
 
-      # Connection for clean shutdown notification from ResetManager
+      # Connection for clean shutdown notification from ResetManager and Watchdog
       # Allows ModeManager to detect unintended reboots
       resetManager.prepareForReboot -> modeManager.prepareForReboot
+      watchdog.prepareForReboot -> modeManager.prepareForReboot
 
       # Ports for Changing the mode - notify both LoRa and UART authentication routers
       ComCcsdsLora.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode

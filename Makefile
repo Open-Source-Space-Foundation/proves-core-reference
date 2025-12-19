@@ -106,12 +106,17 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 
 .PHONY: bootloader
 bootloader: uv
-	@if [ -d "/Volumes/RP2350" ] || [ -d "/Volumes/RPI-RP2" ] || ls /media/*/RP2350 2>/dev/null || ls /media/*/RPI-RP2 2>/dev/null; then \
+	@if picotool info ; then \
 		echo "RP2350 already in bootloader mode - skipping trigger"; \
 	else \
 		echo "RP2350 not in bootloader mode - triggering bootloader"; \
 		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
+
+.PHONY: sync-sequence-number
+sync-sequence-number: uv
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
