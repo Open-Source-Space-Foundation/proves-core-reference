@@ -235,6 +235,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
+      rateGroup1Hz.RateGroupMemberOut[15] -> ComCcsdsUart.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[16] -> ComCcsdsLora.authenticationRouter.run
 
       # Slower rate (1/6Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1_6Hz] -> rateGroup1_6Hz.CycleIn

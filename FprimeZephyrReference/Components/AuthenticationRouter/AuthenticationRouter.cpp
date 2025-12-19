@@ -42,6 +42,10 @@ AuthenticationRouter ::~AuthenticationRouter() {}
 // Handler implementations for user-defined typed input ports
 // ----------------------------------------------------------------------
 
+void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
+    // TODO: Implement this
+}
+
 bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // Check bounds before extracting
     if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {

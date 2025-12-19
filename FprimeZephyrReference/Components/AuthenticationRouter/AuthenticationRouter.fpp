@@ -10,6 +10,9 @@ module Svc {
         # ----------------------------------------------------------------------
         # Router interface (ports defined explicitly for active component)
         # ----------------------------------------------------------------------
+        @ Port receiving calls from the rate group for periodic command loss time checking
+        async input port run: Svc.Sched
+
         # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
         async input port dataIn: Svc.ComDataWithContext
 

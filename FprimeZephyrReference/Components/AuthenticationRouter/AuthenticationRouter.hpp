@@ -52,6 +52,12 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
                                     Fw::Buffer& fwBuffer  //!< The buffer
                                     ) override;
 
+    //! Handler implementation for run port
+    //! Port receiving calls from the rate group for periodic command loss time checking
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
+
     //! Checks whether or not the opcode of the packet is in the list of
     //! opcodes that bypassauthentification
     bool BypassesAuthentification(Fw::Buffer& packetBuffer);
