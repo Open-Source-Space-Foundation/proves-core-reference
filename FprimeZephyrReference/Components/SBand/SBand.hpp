@@ -74,9 +74,6 @@ class SBand final : public SBandComponentBase {
                                                     const ComCfg::FrameContext& context) override;
 
   private:
-    // Configure the SX1280 radio (setup and parameter tuning)
-    Status configure_radio();
-
     //! Enable receive mode
     Status enableRx();
 

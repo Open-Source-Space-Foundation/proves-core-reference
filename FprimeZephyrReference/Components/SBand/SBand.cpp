@@ -177,7 +177,7 @@ SBand::Status SBand ::enableTx() {
     return Status::SUCCESS;
 }
 
-SBand::Status SBand ::configure_radio() {
+SBand::Status SBand ::configureRadio() {
     float frequencyMHz = 2400.0;
     float bandwidthKHz = 406.25;
     uint8_t spreadingFactor = 7;
@@ -200,27 +200,12 @@ SBand::Status SBand ::configure_radio() {
         return Status::ERROR;
     }
 
-    return Status::SUCCESS;
-}
-
-SBand::Status SBand ::configureRadio() {
-    Status config_status = this->configure_radio();
-    if (config_status != Status::SUCCESS) {
-        // configure_radio logs RadioLibFailed internally
-        return Status::ERROR;
-    }
-
-    // Mark as configured
-    m_configured = true;
-
-    // Enable RX mode
     Status rx_status = this->enableRx();
     if (rx_status != Status::SUCCESS) {
-        // enableRx logs RadioLibFailed internally
         return Status::ERROR;
     }
 
-    // Send success status
+    m_configured = true;
     Fw::Success status = Fw::Success::SUCCESS;
     this->comStatusOut_out(0, status);
 
