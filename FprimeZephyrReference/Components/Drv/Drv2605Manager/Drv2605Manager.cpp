@@ -12,6 +12,14 @@
 
 namespace Drv {
 
+static uint32_t hold_arr[1];
+static uint8_t input_arr[1];
+static drv2605_rtp_data rtp = {
+    .size = 1,
+    .rtp_hold_us = hold_arr,
+    .rtp_input = input_arr,
+};
+
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
@@ -68,6 +76,14 @@ void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
 
 Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
     if (!this->initializeDevice()) {
+        return Fw::Success::FAILURE;
+    }
+
+    union drv2605_config_data config_data;
+    config_data.rtp_data = &rtp;
+
+    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data) != 0) {
+        this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
         return Fw::Success::FAILURE;
     }
 
@@ -165,25 +181,7 @@ Fw::Success Drv2605Manager ::initializeDevice() {
     }
     this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
 
-    // Configure DRV2605 config struct
-    uint32_t rtp_hold_us[8] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
-    uint8_t rtp_input[8] = {100, 255, 100, 255, 100, 255, 100, 255};
-    static struct drv2605_rtp_data rtp_data = {
-        .size = 8,
-        .rtp_hold_us = rtp_hold_us,
-        .rtp_input = rtp_input,
-    };
-
-    union drv2605_config_data config_data;
-    config_data.rtp_data = &rtp_data;
-
-    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data) != 0) {
-        this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
-        return Fw::Success::FAILURE;
-    }
-
     this->log_ACTIVITY_LO_DeviceInitialized();
-    haptics_start_output(this->m_dev);
 
     return Fw::Success::SUCCESS;
 }

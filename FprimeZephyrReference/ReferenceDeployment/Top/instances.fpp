@@ -27,11 +27,6 @@ module ReferenceDeployment {
   # Active component instances
   # ----------------------------------------------------------------------
 
-  instance rateGroup50Hz: Svc.ActiveRateGroup base id 0x10005000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 1
-
   instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \

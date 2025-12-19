@@ -1,5 +1,5 @@
 module Drv {
-    port trigger -> Fw.Success
+    port trigger(duration_us: U32, amps: I8) -> Fw.Success
     port MagnetorquerToggle(value: bool)
 }
 

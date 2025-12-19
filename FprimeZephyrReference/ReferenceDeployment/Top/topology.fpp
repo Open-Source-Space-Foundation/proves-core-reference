@@ -5,7 +5,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
-    # rateGroup50Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -24,7 +23,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
-    # instance rateGroup50Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -200,9 +198,6 @@ module ReferenceDeployment {
     connections RateGroups {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
-
-      # 50Hz cause why not
-      # rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
 
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
