@@ -337,6 +337,9 @@ modParam3 = 0x01  # CR = 4/5
 
 sband_radio._radio.set_Modulation_Params(modParam1, modParam2, modParam3)
 
+# rewrite wait_for_irq to prevent blocking on tx (interfering with rx)
+sband_radio._radio.wait_for_irq = lambda: time.sleep(0.01)
+
 print("[INFO] LoRa Receiver receiving packets")
 while True:
     # Returns the last packet received if there is no new packet
