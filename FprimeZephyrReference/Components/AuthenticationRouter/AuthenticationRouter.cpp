@@ -42,10 +42,6 @@ AuthenticationRouter ::~AuthenticationRouter() {}
 // Handler implementations for user-defined typed input ports
 // ----------------------------------------------------------------------
 
-void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
-    // TODO: Implement this
-}
-
 bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
     // Check bounds before extracting
     if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {
@@ -86,6 +82,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
         this->dataReturnOut_out(0, packetBuffer, context);
         return;
     }
+
+    this->update_command_loss_start(true);
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
@@ -163,23 +161,38 @@ void AuthenticationRouter ::cmdResponseIn_handler(FwIndexType portNum,
     // Nothing to do
 }
 
-Fw::Time AuthenticationRouter ::update_command_loss_start() {
+void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
+    Fw::Time command_loss_start = this->update_command_loss_start();
+
+    Fw::Time current_time = this->getTime();
+
+    Fw::TimeIntervalValue command_loss_duration = this->paramGet_COMM_LOSS_TIME(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_duration.get_seconds(),
+                                   command_loss_duration.get_useconds());
+    Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
+
+    if (current_time > command_loss_end) {
+        this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
+        this->RestartSatelliteAndCallSafeMode();
+    }
+}
+
+Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     Fw::Time time = this->getTime();
-    // Open the quiescence start time file and read the current time. On read failure, return the current time.
     Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-    // On read failure, write the current time to the file for future reads. This only happens on read failure because
-    // there is a singular quiescence start time for the whole mission.
-    if (status != Os::File::OP_OK) {
+    // On read failure, or if write_to_file is true, write the current time to the file for future reads.
+    if (status != Os::File::OP_OK || write_to_file) {
         status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
         }
     }
+
     return time;
 }
 

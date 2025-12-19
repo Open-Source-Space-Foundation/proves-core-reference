@@ -66,7 +66,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     // command loss time expires
     void RestartSatelliteAndCallSafeMode();
 
-    Fw::Time update_command_loss_start();
+    //! Updates the command loss start time
+    //! @param write_to_file If true, writes current time to file and returns it. If false, reads from file.
+    //! @return The command loss start time (current time if writing, stored time if reading)
+    Fw::Time update_command_loss_start(bool write_to_file = false);
 };
 
 }  // namespace Svc
