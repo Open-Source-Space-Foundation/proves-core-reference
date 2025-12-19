@@ -44,16 +44,12 @@ Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
     {getRateGroupPeriod(10), 0},  // 10Hz = 100ms
     {getRateGroupPeriod(1), 0},   // 1Hz = 1s
-    {6000, 0},                    // 1/6Hz = 6s
-    {12000, 0}                    // 1/10Hz = 10s
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
-U32 rateGroup1_6HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {6000};
-U32 rateGroup1_10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {12000};
 
 /**
  * \brief configure/setup components in project-specific way
