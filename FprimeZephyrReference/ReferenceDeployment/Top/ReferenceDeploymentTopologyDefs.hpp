@@ -13,7 +13,8 @@
 #include "FprimeZephyrReference/ComCcsdsLora/PingEntries.hpp"
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
 #include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
-#include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
+// Replaced with override section below
+// #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
 #include "FprimeZephyrReference/ComCcsdsLora/SubtopologyTopologyDefs.hpp"
@@ -53,6 +54,23 @@
  * }
  * ```
  */
+
+// Override section for FileHandling PingEntries
+namespace PingEntries {
+namespace FileHandling_fileDownlink {
+enum { WARN = 3, FATAL = 5 };
+}
+namespace FileHandling_fileManager {
+enum { WARN = 30, FATAL = 60 };
+}
+namespace FileHandling_fileUplink {
+enum { WARN = 3, FATAL = 5 };
+}
+namespace FileHandling_prmDb {
+enum { WARN = 3, FATAL = 5 };
+}
+}  // namespace PingEntries
+
 namespace PingEntries {
 namespace ReferenceDeployment_rateGroup10Hz {
 enum { WARN = 3, FATAL = 5 };
