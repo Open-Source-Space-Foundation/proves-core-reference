@@ -17,6 +17,21 @@
 
 namespace Components {
 
+static float bandwidthEnumToKHz(SBandBandwidth bw) {
+    switch (bw.e) {
+        case SBandBandwidth::BW_203_125_KHZ:
+            return 203.125f;
+        case SBandBandwidth::BW_406_25_KHZ:
+            return 406.25f;
+        case SBandBandwidth::BW_812_5_KHZ:
+            return 812.5f;
+        case SBandBandwidth::BW_1625_KHZ:
+            return 1625.0f;
+        default:
+            FW_ASSERT(false);  // Should be unreachable if enum is valid
+    }
+}
+
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
@@ -144,12 +159,41 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
 }
 
 SBand::Status SBand ::enableRx() {
+    Fw::ParamValid isValid = Fw::ParamValid::INVALID;
+    const SBandDataRate dataRate = this->paramGet_DATA_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandCodingRate codingRate = this->paramGet_CODING_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandBandwidth bandwidth = this->paramGet_BANDWIDTH_RX(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+
     this->txEnable_out(0, Fw::Logic::LOW);
     this->rxEnable_out(0, Fw::Logic::HIGH);
 
     SX1280* radio = &this->m_rlb_radio;
 
     int16_t state = radio->standby();
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
+    state = radio->setSpreadingFactor(static_cast<uint8_t>(dataRate.e));
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
+    state = radio->setCodingRate(static_cast<uint8_t>(codingRate.e));
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
+    state = radio->setBandwidth(bandwidthEnumToKHz(bandwidth));
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
@@ -164,6 +208,17 @@ SBand::Status SBand ::enableRx() {
 }
 
 SBand::Status SBand ::enableTx() {
+    Fw::ParamValid isValid = Fw::ParamValid::INVALID;
+    const SBandDataRate dataRate = this->paramGet_DATA_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandCodingRate codingRate = this->paramGet_CODING_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandBandwidth bandwidth = this->paramGet_BANDWIDTH_TX(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+
     this->rxEnable_out(0, Fw::Logic::LOW);
     this->txEnable_out(0, Fw::Logic::HIGH);
 
@@ -174,19 +229,49 @@ SBand::Status SBand ::enableTx() {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
+
+    state = radio->setSpreadingFactor(static_cast<uint8_t>(dataRate.e));
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
+    state = radio->setCodingRate(static_cast<uint8_t>(codingRate.e));
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
+    state = radio->setBandwidth(bandwidthEnumToKHz(bandwidth));
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+        return Status::ERROR;
+    }
+
     return Status::SUCCESS;
 }
 
 SBand::Status SBand ::configureRadio() {
+    Fw::ParamValid isValid = Fw::ParamValid::INVALID;
+    const SBandDataRate dataRate = this->paramGet_DATA_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandCodingRate codingRate = this->paramGet_CODING_RATE(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+    const SBandBandwidth bandwidthRx = this->paramGet_BANDWIDTH_RX(isValid);
+    FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
+              static_cast<FwAssertArgType>(isValid));
+
     float frequencyMHz = 2400.0;
-    float bandwidthKHz = 406.25;
-    uint8_t spreadingFactor = 7;
-    uint8_t codingRate = 5;
+    float bandwidthKHz = bandwidthEnumToKHz(bandwidthRx);
+    uint8_t spreadingFactor = static_cast<uint8_t>(dataRate.e);
+    uint8_t codingRateValue = static_cast<uint8_t>(codingRate.e);
     uint8_t syncWord = RADIOLIB_SX128X_SYNC_WORD_PRIVATE;
     int8_t outputPowerDbm = 13;  // 13 dBm is max
     uint16_t preambleLength = 12;
 
-    int16_t state = this->m_rlb_radio.begin(frequencyMHz, bandwidthKHz, spreadingFactor, codingRate, syncWord,
+    int16_t state = this->m_rlb_radio.begin(frequencyMHz, bandwidthKHz, spreadingFactor, codingRateValue, syncWord,
                                             outputPowerDbm, preambleLength);
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
