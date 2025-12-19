@@ -108,7 +108,7 @@ def main():
             if args.print_key:
                 print(key)
             else:
-                print(f"Extracted key from {args.output}: {key}")
+                print(f"Extracted key from {args.output}")
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
@@ -128,7 +128,7 @@ def main():
             if args.print_key:
                 print(key)
             else:
-                print(f"Generated {args.output} with key: {key}")
+                print(f"Generated {args.output}")
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

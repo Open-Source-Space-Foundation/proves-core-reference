@@ -27,55 +27,46 @@ module ReferenceDeployment {
   # Active component instances
   # ----------------------------------------------------------------------
 
-  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 2
-
-  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 3
-
-  instance rateGroup1_6Hz: Svc.ActiveRateGroup base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 4
-
-  instance rateGroup1_10Hz: Svc.ActiveRateGroup base id 0x10004000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
   instance rateGroup50Hz: Svc.ActiveRateGroup base id 0x10005000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 1
 
-  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
-    queue size Default.QUEUE_SIZE * 2 \
-    stack size Default.STACK_SIZE \
-    priority 15
-
-  instance prmDb: Svc.PrmDb base id 0x10007000 \
+  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 14
+    priority 1
 
-  instance payload: Components.PayloadCom base id 0x10008000 \
+  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 10
-
-  instance payload2: Components.PayloadCom base id 0x10009000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 11
+    priority 2
 
   instance modeManager: Components.ModeManager base id 0x1000A000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
-    priority 4
+    priority 3
+
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 12
+
+  instance payloadSeq: Svc.CmdSequencer base id 0x10062000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 13
+
+  instance payload: Components.PayloadCom base id 0x10008000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 13
+
+  instance payload2: Components.PayloadCom base id 0x10009000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 13
+
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -244,15 +235,11 @@ module ReferenceDeployment {
   instance drv2605Face2Manager: Drv.Drv2605Manager base id 0x10057000
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
+
   instance detumbleManager: Components.DetumbleManager base id 0x1005A000
   instance bDotDetumble: Drv.BDotDetumble base id 0x1005B000
   instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
   instance telemetryDelay: Utilities.RateDelay base id 0x10061000
-
-  instance payloadSeq: Svc.CmdSequencer base id 0x10062000 \
-    queue size Default.QUEUE_SIZE * 2 \
-    stack size Default.STACK_SIZE \
-    priority 15
 
   instance loraRetry: Svc.ComRetry base id 0x10063000
 

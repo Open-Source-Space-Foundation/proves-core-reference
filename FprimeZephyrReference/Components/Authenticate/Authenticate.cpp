@@ -301,7 +301,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     }
 
     // check the sequence number is valid
-    U32 expectedSeqNum = this->get_SequenceNumber();
+    U32 expectedSeqNum = this->sequenceNumber.load();
 
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
     if (!sequenceNumberValid) {
@@ -312,6 +312,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // increment the stored sequence number
     U32 newSequenceNumber = sequenceNumber + 1;
     this->sequenceNumber.store(newSequenceNumber);
+    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, newSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
 
     U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;

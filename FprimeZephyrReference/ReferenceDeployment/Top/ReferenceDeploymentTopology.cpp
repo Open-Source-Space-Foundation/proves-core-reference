@@ -72,8 +72,6 @@ void configureTopology() {
     rateGroup50Hz.configure(rateGroup50HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup50HzContext));
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
-    rateGroup1_6Hz.configure(rateGroup1_6HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_6HzContext));
-    rateGroup1_10Hz.configure(rateGroup1_10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1_10HzContext));
 
     gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
