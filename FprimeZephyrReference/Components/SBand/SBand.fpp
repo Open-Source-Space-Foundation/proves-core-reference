@@ -1,6 +1,35 @@
 
 
 module Components {
+
+    @ SX1280 Spreading Factor / Data Rate
+    enum SBandDataRate : U8 {
+        SF_5 = 5
+        SF_6 = 6
+        SF_7 = 7
+        SF_8 = 8
+        SF_9 = 9
+        SF_10 = 10
+        SF_11 = 11
+        SF_12 = 12
+    }
+
+    @ SX1280 Coding Rate
+    enum SBandCodingRate : U8 {
+        CR_4_5 = 5
+        CR_4_6 = 6
+        CR_4_7 = 7
+        CR_4_8 = 8
+    }
+
+    @ SX1280 LoRa Bandwidth (kHz)
+    enum SBandBandwidth : U8 {
+        BW_203_125_KHZ = 0
+        BW_406_25_KHZ = 1
+        BW_812_5_KHZ = 2
+        BW_1625_KHZ = 3
+    }
+
     @ Component for F Prime FSW framework.
     active component SBand {
 
@@ -58,6 +87,22 @@ module Components {
 
         @ Last received SNR (if available)
         telemetry LastSnr: F32 update on change
+
+        ###############################################################################
+        # Parameters                                                                   #
+        ###############################################################################
+
+        @ Data rate / spreading factor
+        param DATA_RATE: SBandDataRate default SBandDataRate.SF_7
+
+        @ Coding rate: data bits/total bits (including checksum/hamming)
+        param CODING_RATE: SBandCodingRate default SBandCodingRate.CR_4_5
+
+        @ Bandwidth for transmission
+        param BANDWIDTH_TX: SBandBandwidth default SBandBandwidth.BW_406_25_KHZ
+
+        @ Bandwidth for reception
+        param BANDWIDTH_RX: SBandBandwidth default SBandBandwidth.BW_406_25_KHZ
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
