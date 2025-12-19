@@ -50,7 +50,9 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation
+    //! Handler implementation for run
+    //!
+    //! Run loop
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
@@ -114,11 +116,23 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Actions to perform in the COOLDOWN state
     void stateCooldownActions();
 
+    //! Actions to perform when entering the COOLDOWN state
+    void stateEnterCooldownActions();
+
+    //! Actions to perform when exiting the COOLDOWN state
+    void stateExitCooldownActions();
+
     //! Actions to perform in the SENSING state
     void stateSensingActions();
 
     //! Actions to perform in the TORQUING state
     void stateTorquingActions();
+
+    //! Actions to perform when entering the TORQUING state
+    void stateEnterTorquingActions();
+
+    //! Actions to perform when exiting the TORQUING state
+    void stateExitTorquingActions();
 
   private:
     // ----------------------------------------------------------------------

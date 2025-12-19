@@ -20,6 +20,7 @@ namespace Components {
 DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName) {
     Fw::ParamValid isValid;
 
+    // TODO(nateinaction): Set these in a slow rate group instead of constructor to allow them to change at runtime
     // Initialize coil parameters from configuration parameters
     // X+ Coil
     this->m_xPlusMagnetorquer.enabled = this->paramGet_X_PLUS_ENABLED(isValid);
@@ -134,11 +135,27 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
 }
 
 void DetumbleManager ::setMagnetorquers(bool x_plus, bool x_minus, bool y_plus, bool y_minus, bool z_minus) {
-    this->xPlusToggle_out(0, x_plus);
-    this->xMinusToggle_out(0, x_minus);
-    this->yPlusToggle_out(0, y_plus);
-    this->yMinusToggle_out(0, y_minus);
-    this->zMinusToggle_out(0, z_minus);
+    Fw::ParamValid isValid;
+
+    if (this->m_xPlusMagnetorquer.enabled) {
+        this->xPlusToggle_out(0, x_plus);
+    }
+
+    if (this->m_xMinusMagnetorquer.enabled) {
+        this->xMinusToggle_out(0, x_minus);
+    }
+
+    if (this->m_yPlusMagnetorquer.enabled) {
+        this->yPlusToggle_out(0, y_plus);
+    }
+
+    if (this->m_yMinusMagnetorquer.enabled) {
+        this->yMinusToggle_out(0, y_minus);
+    }
+
+    if (this->m_zMinusMagnetorquer.enabled) {
+        this->zMinusToggle_out(0, z_minus);
+    }
 }
 
 F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
@@ -174,9 +191,7 @@ F64 DetumbleManager ::clampCurrent(F64 current, const magnetorquerCoil& coil) {
 
 void DetumbleManager ::stateCooldownActions() {
     // First run call, initialize cooldown start time
-    if (this->m_cooldownStartTime == Fw::ZERO_TIME) {
-        this->m_cooldownStartTime = this->getTime();
-    }
+    this->stateEnterCooldownActions();
 
     // Get cooldown duration from parameter
     Fw::ParamValid isValid;
@@ -187,12 +202,22 @@ void DetumbleManager ::stateCooldownActions() {
     // Check if cooldown period has elapsed and transition to SENSING state
     Fw::Time currentTime = this->getTime();
     if (currentTime >= cooldown_end_time) {
-        // Reset cooldown start time
-        this->m_cooldownStartTime = Fw::ZERO_TIME;
-
-        // Transition to SENSING state
-        this->m_detumbleState = DetumbleState::SENSING;
+        this->stateExitCooldownActions();
     }
+}
+
+void DetumbleManager ::stateEnterCooldownActions() {
+    if (this->m_cooldownStartTime == Fw::ZERO_TIME) {
+        this->m_cooldownStartTime = this->getTime();
+    }
+}
+
+void DetumbleManager ::stateExitCooldownActions() {
+    // Reset cooldown start time
+    this->m_cooldownStartTime = Fw::ZERO_TIME;
+
+    // Transition to SENSING state
+    this->m_detumbleState = DetumbleState::SENSING;
 }
 
 void DetumbleManager ::stateSensingActions() {
@@ -232,10 +257,7 @@ void DetumbleManager ::stateSensingActions() {
 }
 
 void DetumbleManager ::stateTorquingActions() {
-    // First run call, initialize torque start time
-    if (this->m_torqueStartTime == Fw::ZERO_TIME) {
-        this->m_torqueStartTime = this->getTime();
-    }
+    this->stateEnterTorquingActions();
 
     // Perform torqueing action
     this->setDipoleMoment(this->m_dipole_moment);
@@ -252,15 +274,25 @@ void DetumbleManager ::stateTorquingActions() {
 
     // Check if torquing duration has elapsed and transition to COOLDOWN state
     if (currentTime >= torque_end_time) {
-        // Turn off magnetorquers
-        this->setMagnetorquers(false, false, false, false, false);
-
-        // Reset torque start time
-        this->m_torqueStartTime = Fw::ZERO_TIME;
-
-        // Transition to COOLDOWN state
-        this->m_detumbleState = DetumbleState::COOLDOWN;
+        this->stateExitTorquingActions();
     }
+}
+
+void DetumbleManager ::stateEnterTorquingActions() {
+    if (this->m_torqueStartTime == Fw::ZERO_TIME) {
+        this->m_torqueStartTime = this->getTime();
+    }
+}
+
+void DetumbleManager ::stateExitTorquingActions() {
+    // Turn off magnetorquers
+    this->setMagnetorquers(false, false, false, false, false);
+
+    // Reset torque start time
+    this->m_torqueStartTime = Fw::ZERO_TIME;
+
+    // Transition to COOLDOWN state
+    this->m_detumbleState = DetumbleState::COOLDOWN;
 }
 
 }  // namespace Components
