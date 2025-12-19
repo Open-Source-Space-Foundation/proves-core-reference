@@ -35,7 +35,8 @@ namespace Svc {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AuthenticationRouter ::AuthenticationRouter(const char* const compName) : AuthenticationRouterComponentBase(compName) {}
+AuthenticationRouter ::AuthenticationRouter(const char* const compName)
+    : AuthenticationRouterComponentBase(compName), m_safeModeCalled(false), m_commandLossStartTime(Fw::ZERO_TIME) {}
 AuthenticationRouter ::~AuthenticationRouter() {}
 
 // ----------------------------------------------------------------------
@@ -85,6 +86,8 @@ void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
     }
 
     this->update_command_loss_start(true);
+    // Reset safe mode flag when a new command is received
+    this->m_safeModeCalled = false;
 
     Fw::SerializeStatus status;
     Fw::ComPacketType packetType = context.get_apid();
@@ -175,9 +178,10 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
                                    command_loss_duration.get_useconds());
     Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
 
-    if (current_time > command_loss_end) {
+    if (current_time > command_loss_end && !this->m_safeModeCalled) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
         this->CallSafeMode();
+        this->m_safeModeCalled = true;
     }
 }
 
@@ -186,26 +190,33 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 
     if (write_to_file) {
-        // Update file with current time and return current time
+        // Update file with current time and cache it
         Fw::Time current_time = this->getTime();
         Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
         }
+        this->m_commandLossStartTime = current_time;
         return current_time;
     } else {
-        // Read stored time from file, or use current time if file doesn't exist
-        Fw::Time time = this->getTime();
-        Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
+        // Check if we need to load from file (cache is zero/uninitialized)
+        if (this->m_commandLossStartTime == Fw::ZERO_TIME) {
+            // Read stored time from file, or use current time if file doesn't exist
+            Fw::Time time = this->getTime();
+            Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-        // On read failure, write the current time to the file for future reads
-        if (status != Os::File::OP_OK) {
-            status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+            // On read failure, write the current time to the file for future reads
             if (status != Os::File::OP_OK) {
-                this->log_WARNING_HI_CommandLossFileInitFailure();
+                status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+                if (status != Os::File::OP_OK) {
+                    this->log_WARNING_HI_CommandLossFileInitFailure();
+                }
             }
+            // Cache the loaded time
+            this->m_commandLossStartTime = time;
         }
-        return time;
+        // Return cached time
+        return this->m_commandLossStartTime;
     }
 }
 

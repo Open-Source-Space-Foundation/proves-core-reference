@@ -69,7 +69,8 @@ module Svc {
             format "The Satellite has been put into command loss timing after {} seconds without contact"
 
         event CommandLossFileInitFailure() severity warning high \
-            format "Command Loss Timer Failed to update most recent time"
+            format "Command Loss Timer Failed to update most recent time" \
+            throttle 3
 
         @ Command Loss Time By Default
         param COMM_LOSS_TIME: U32 default 30
