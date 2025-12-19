@@ -234,8 +234,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> ComCcsdsUart.authenticationRouter.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> ComCcsdsLora.authenticationRouter.run
 
     }
 
@@ -395,7 +394,6 @@ module ReferenceDeployment {
 
       # Ports for Changing the mode - notify both LoRa and UART authentication routers
       ComCcsdsLora.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
-      ComCcsdsUart.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
 
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.

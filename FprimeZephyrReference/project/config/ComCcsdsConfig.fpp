@@ -7,17 +7,14 @@ module ComCcsdsConfig {
     module QueueSizes {
         constant comQueue            = 20
         constant aggregator          = 15
-        constant authenticationRouter = 2
     }
 
     module StackSizes {
         constant comQueue            = 4 * 1024 # Must match prj.conf thread stack size
         constant aggregator          = 4 * 1024 # Must match prj.conf thread stack size
-        constant authenticationRouter = 4 * 1024 # Must match prj.conf thread stack size
     }
 
     module Priorities {
-        constant authenticationRouter = 15 # AuthenticationRouter processes uplink packets
         constant aggregator = 7 # Aggregator (consumer) must have higher priority than comQueue (producer)
         constant comQueue   = 8 # ComQueue has higher priority than data producers (e.g. events, telemetry)
     }

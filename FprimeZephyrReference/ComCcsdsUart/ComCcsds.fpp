@@ -95,10 +95,7 @@ module ComCcsdsUart {
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000 \
-        queue size ComCcsdsConfig.QueueSizes.authenticationRouter \
-        stack size ComCcsdsConfig.StackSizes.authenticationRouter \
-        priority ComCcsdsConfig.Priorities.authenticationRouter
+    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x04000
 
@@ -132,11 +129,11 @@ module ComCcsdsUart {
 
         # Active Components
         instance comQueue
-        instance authenticationRouter
 
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
+        instance authenticationRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer

@@ -71,7 +71,7 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     Fw::Time update_command_loss_start(bool write_to_file = false);
 
     //! Flag to track if safe mode has been called for the current command loss event
-    bool m_safeModeCalled;
+    std::atomic<bool> m_safeModeCalled;
 
     //! Cached command loss start time (initialized to zero, loaded from file on first read)
     Fw::Time m_commandLossStartTime;

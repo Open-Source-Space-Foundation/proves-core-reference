@@ -1,6 +1,6 @@
 module Svc {
     @ Routes packets deframed by the Deframer to the rest of the system
-    active component AuthenticationRouter {
+    passive component AuthenticationRouter {
 
         enum AllocationReason : U8{
             FILE_UPLINK,  @< Buffer allocation for file uplink
@@ -8,13 +8,13 @@ module Svc {
         }
 
         # ----------------------------------------------------------------------
-        # Router interface (ports defined explicitly for active component)
+        # Router interface (ports defined explicitly for passive component)
         # ----------------------------------------------------------------------
         @ Port receiving calls from the rate group for periodic command loss time checking
-        async input port run: Svc.Sched
+        sync input port run: Svc.Sched
 
         # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
-        async input port dataIn: Svc.ComDataWithContext
+        sync input port dataIn: Svc.ComDataWithContext
 
         # Port for returning ownership of data (includes Fw.Buffer) received on dataIn
         output port dataReturnOut: Svc.ComDataWithContext
@@ -23,13 +23,13 @@ module Svc {
         output port fileOut: Fw.BufferSend
 
         # Port for receiving ownership back of buffers sent on fileOut
-        async input port fileBufferReturnIn: Fw.BufferSend
+        sync input port fileBufferReturnIn: Fw.BufferSend
 
         # Port for sending command packets as Fw::ComBuffers
         output port commandOut: Fw.Com
 
         # Port for receiving command responses from a command dispatcher (can be a no-op)
-        async input port cmdResponseIn: Fw.CmdResponse
+        sync input port cmdResponseIn: Fw.CmdResponse
 
         @ Port for forwarding non-recognized packet types
         @ Ownership of the buffer is retained by the AuthenticationRouter, meaning receiving
