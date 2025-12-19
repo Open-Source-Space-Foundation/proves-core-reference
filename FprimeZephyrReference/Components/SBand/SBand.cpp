@@ -175,38 +175,22 @@ SBand::Status SBand ::enableTx() {
 }
 
 SBand::Status SBand ::configure_radio() {
-    int16_t state = this->m_rlb_radio.begin();
+    float frequencyMHz = 2400.0;
+    float bandwidthKHz = 406.25;
+    uint8_t spreadingFactor = 7;
+    uint8_t codingRate = 5;
+    uint8_t syncWord = RADIOLIB_SX128X_SYNC_WORD_PRIVATE;
+    int8_t outputPowerDbm = 13;  // 13 dBm is max
+    uint16_t preambleLength = 12;
+
+    int16_t state = this->m_rlb_radio.begin(frequencyMHz, bandwidthKHz, spreadingFactor, codingRate, syncWord,
+                                            outputPowerDbm, preambleLength);
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
         return Status::ERROR;
     }
 
-    state = this->m_rlb_radio.setOutputPower(13);  // 13dB is max
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    // Match modulation parameters to CircuitPython defaults
-    state = this->m_rlb_radio.setSpreadingFactor(7);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setBandwidth(406.25);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setCodingRate(5);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    state = this->m_rlb_radio.setPacketParamsLoRa(12, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
+    state = this->m_rlb_radio.setPacketParamsLoRa(preambleLength, RADIOLIB_SX128X_LORA_HEADER_EXPLICIT, 255,
                                                   RADIOLIB_SX128X_LORA_CRC_ON, RADIOLIB_SX128X_LORA_IQ_STANDARD);
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
