@@ -188,6 +188,10 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
+    std::mutex file_lock;
+
+    file_lock.lock()
+
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 
@@ -199,6 +203,8 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
         }
         this->m_commandLossStartTime = current_time;
+        file_lock.unlock()
+
         return current_time;
     } else {
         // Check if we need to load from file (cache is zero/uninitialized)
@@ -218,6 +224,8 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
             this->m_commandLossStartTime = time;
         }
         // Return cached time
+        file_lock.unlock()
+
         return this->m_commandLossStartTime;
     }
 }
