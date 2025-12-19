@@ -331,6 +331,12 @@ time_start = time.time()
 packet_count = 0
 last_packet = None
 
+modParam1 = 0x70  # SF = 7
+modParam2 = 0x26  # BW = 406.25 KHz
+modParam3 = 0x01  # CR = 4/5
+
+sband_radio._radio.set_Modulation_Params(modParam1, modParam2, modParam3)
+
 print("[INFO] LoRa Receiver receiving packets")
 while True:
     # Returns the last packet received if there is no new packet
