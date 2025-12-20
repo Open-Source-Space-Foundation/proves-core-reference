@@ -104,7 +104,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! I_clamped is the clamped current (A)
     //! I is the target current (A)
     //! I_max is the maximum current (A)
-    I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil);
+    I8 clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil);
 
     //! Set the dipole moment by toggling the magnetorquers
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
