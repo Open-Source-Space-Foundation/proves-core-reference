@@ -11,8 +11,6 @@
 #include <numbers>
 #include <string>
 
-#include <zephyr/sys/printk.h>
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -181,7 +179,7 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
         clampedCurrent = targetCurrent;
     }
 
-    // Convert to int8_t value in range [-127, 127]
+    // Scale to int8_t range [-127, 127]
     return static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
 }
 
