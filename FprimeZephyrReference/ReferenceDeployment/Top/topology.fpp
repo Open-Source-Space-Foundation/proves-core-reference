@@ -217,21 +217,21 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsdsLora.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> watchdog.run
-      rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
+      # rateGroup1Hz.RateGroupMemberOut[4] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[5] -> telemetryDelay.runIn
-      rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
-      rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
+      # rateGroup1Hz.RateGroupMemberOut[6] -> burnwire.schedIn
+      # rateGroup1Hz.RateGroupMemberOut[7] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[8] -> fsSpace.run
-      rateGroup1Hz.RateGroupMemberOut[9] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager2.schedIn
-      rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
-      rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
-      rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
-      rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> detumbleManager.run
+      # rateGroup1Hz.RateGroupMemberOut[9] -> payloadBufferManager.schedIn
+      # rateGroup1Hz.RateGroupMemberOut[10] -> payloadBufferManager2.schedIn
+      # rateGroup1Hz.RateGroupMemberOut[11] -> FileHandling.fileDownlink.Run
+      # rateGroup1Hz.RateGroupMemberOut[12] -> startupManager.run
+      # rateGroup1Hz.RateGroupMemberOut[13] -> powerMonitor.run
+      # rateGroup1Hz.RateGroupMemberOut[14] -> modeManager.run
+      # rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
+      # rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
+      # rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
+      # rateGroup1Hz.RateGroupMemberOut[18] -> detumbleManager.run
     }
 
 

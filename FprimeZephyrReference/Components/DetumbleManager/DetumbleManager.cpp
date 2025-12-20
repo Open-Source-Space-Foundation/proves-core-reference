@@ -86,7 +86,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
-        this->stopMagnetorquers();
+        // this->stopMagnetorquers();
         this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         return;
     }
@@ -137,7 +137,7 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     Fw::ParamValid isValid;
     Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
     U32 torque_duration_us =
-        static_cast<U32>(torque_duration_param.get_seconds() * 1'000'000 + torque_duration_param.get_useconds());
+        static_cast<U32>(torque_duration_param.get_seconds() * 1000000 + torque_duration_param.get_useconds());
     // TODO(nateinaction): Use calculated currents
     this->startMagnetorquers(torque_duration_us, 127, 127, 127, 127, 127);
 }
