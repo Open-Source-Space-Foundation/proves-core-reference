@@ -113,7 +113,6 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
 
     if (this->m_transmit_enabled != SBandTransmitState::ENABLED) {
         this->dataReturnOut_out(0, mutableData, context);
-        Fw::Logger::log("[SBand] comStatusOut: FAILURE (transmit not enabled)\n");
         this->comStatusOut_out(0, returnStatus);
         return;
     }
@@ -134,8 +133,6 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
     }
 
     this->dataReturnOut_out(0, mutableData, context);
-    Fw::Logger::log("[SBand] comStatusOut: %s (after TX)\n",
-                    returnStatus == Fw::Success::SUCCESS ? "SUCCESS" : "FAILURE");
     this->comStatusOut_out(0, returnStatus);
 
     status = this->enableRx();
@@ -150,7 +147,6 @@ void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg:
         this->log_WARNING_HI_RadioNotConfigured();
         Fw::Success failureStatus = Fw::Success::FAILURE;
         this->dataReturnOut_out(0, data, context);
-        Fw::Logger::log("[SBand] comStatusOut: FAILURE (not configured)\n");
         this->comStatusOut_out(0, failureStatus);
         return;
     }
@@ -301,7 +297,6 @@ SBand::Status SBand ::configureRadio() {
     // Only start ping-pong protocol if transmit is enabled
     if (this->m_transmit_enabled == SBandTransmitState::ENABLED) {
         Fw::Success status = Fw::Success::SUCCESS;
-        Fw::Logger::log("[SBand] comStatusOut: SUCCESS (configured)\\n");
         this->comStatusOut_out(0, status);
     }
 
@@ -326,7 +321,6 @@ void SBand ::deferredTransmitCmd_internalInterfaceHandler(const SBandTransmitSta
             // Must transition to ENABLED **BEFORE** calling comStatusOut
             this->m_transmit_enabled = SBandTransmitState::ENABLED;
             Fw::Success comStatus = Fw::Success::SUCCESS;
-            Fw::Logger::log("[SBand] comStatusOut: SUCCESS (TRANSMIT enabled)\n");
             this->comStatusOut_out(0, comStatus);
         }
     } else {
