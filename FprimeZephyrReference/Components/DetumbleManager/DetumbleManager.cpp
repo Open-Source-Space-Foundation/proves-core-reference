@@ -11,8 +11,6 @@
 #include <numbers>
 #include <string>
 
-#include <zephyr/sys/printk.h>
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -145,10 +143,10 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
 
     // Clamp currents and start magnetorquers
     this->startMagnetorquers(this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer),
-                             this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer),
+                             -this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer),
                              this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer),
-                             this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer),
-                             this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer));
+                             -this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer),
+                             -this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer));
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -195,8 +193,6 @@ F64 DetumbleManager ::getMaxCoilCurrent(const magnetorquerCoil& coil) {
 
 F64 DetumbleManager ::calculateTargetCurrent(F64 dipoleMoment, const magnetorquerCoil& coil) {
     F64 area = this->getCoilArea(coil);
-    printk("Calculating Target Current: Dipole Moment = %.3f A·m², Coil Area = %.6f m², Num Turns = %.1f\n",
-           dipoleMoment, area, coil.numTurns);
     if (coil.numTurns == 0.0 || area == 0.0) {
         return 0.0;
     }
@@ -216,8 +212,6 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
 
     // Scale to int8_t range [-127, 127]
     I8 scaledCurrent = static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
-    printk("Target Current: %.3f A, Clamped Current: %.3f A, Scaled Current: %d\n", targetCurrent, clampedCurrent,
-           scaledCurrent);
     return static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
 }
 
@@ -287,9 +281,6 @@ void DetumbleManager ::stateSensingActions() {
         return;
     }
     this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
-
-    printk("Dipole Moment: [%.3f, %.3f, %.3f] A·m²\n", this->m_dipole_moment.get_x(), this->m_dipole_moment.get_y(),
-           this->m_dipole_moment.get_z());
 
     // Transition to TORQUING state
     this->m_detumbleState = DetumbleState::TORQUING;
