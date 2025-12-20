@@ -1,49 +1,49 @@
-module ComCcsdsLora {
+module ComCcsdsSband {
 
     # ----------------------------------------------------------------------
     # Active Components
     # ----------------------------------------------------------------------
-    instance comQueue: Svc.ComQueue base id ComCcsdsConfig.BASE_ID_LORA + 0x00000 \
+    instance comQueue: Svc.ComQueue base id ComCcsdsConfig.BASE_ID_SBAND + 0x00000 \
         queue size ComCcsdsConfig.QueueSizes.comQueue \
         stack size ComCcsdsConfig.StackSizes.comQueue \
         priority ComCcsdsConfig.Priorities.comQueue \
     {
         phase Fpp.ToCpp.Phases.configComponents """
-        using namespace ComCcsdsLora;
-        Svc::ComQueue::QueueConfigurationTable configurationTableLora;
+        using namespace ComCcsdsSband;
+        Svc::ComQueue::QueueConfigurationTable configurationTableSband;
 
         // Events (highest-priority)
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::EVENTS].depth = ComCcsdsConfig::QueueDepths::events;
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::EVENTS].priority = ComCcsdsConfig::QueuePriorities::events;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::EVENTS].depth = ComCcsdsConfig::QueueDepths::events;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::EVENTS].priority = ComCcsdsConfig::QueuePriorities::events;
 
         // Telemetry
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::TELEMETRY].depth = ComCcsdsConfig::QueueDepths::tlm;
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::TELEMETRY].priority = ComCcsdsConfig::QueuePriorities::tlm;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::TELEMETRY].depth = ComCcsdsConfig::QueueDepths::tlm;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::TELEMETRY].priority = ComCcsdsConfig::QueuePriorities::tlm;
 
         // File Downlink Queue (buffer queue using NUM_CONSTANTS offset)
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::NUM_CONSTANTS + ComCcsds::Ports_ComBufferQueue::FILE].depth = ComCcsdsConfig::QueueDepths::file;
-        configurationTableLora.entries[ComCcsds::Ports_ComPacketQueue::NUM_CONSTANTS + ComCcsds::Ports_ComBufferQueue::FILE].priority = ComCcsdsConfig::QueuePriorities::file;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::NUM_CONSTANTS + ComCcsds::Ports_ComBufferQueue::FILE].depth = ComCcsdsConfig::QueueDepths::file;
+        configurationTableSband.entries[ComCcsds::Ports_ComPacketQueue::NUM_CONSTANTS + ComCcsds::Ports_ComBufferQueue::FILE].priority = ComCcsdsConfig::QueuePriorities::file;
 
         // Allocation identifier is 0 as the MallocAllocator discards it
-        ComCcsdsLora::comQueue.configure(configurationTableLora, 0, ComCcsds::Allocation::memAllocator);
+        ComCcsdsSband::comQueue.configure(configurationTableSband, 0, ComCcsds::Allocation::memAllocator);
         """
         phase Fpp.ToCpp.Phases.tearDownComponents """
-        ComCcsdsLora::comQueue.cleanup();
+        ComCcsdsSband::comQueue.cleanup();
         """
     }
 
     # ----------------------------------------------------------------------
     # Passive Components
     # ----------------------------------------------------------------------
-    instance frameAccumulator: Svc.FrameAccumulator base id ComCcsdsConfig.BASE_ID_LORA + 0x01000 \
+    instance frameAccumulator: Svc.FrameAccumulator base id ComCcsdsConfig.BASE_ID_SBAND + 0x01000 \
     {
 
         phase Fpp.ToCpp.Phases.configObjects """
         Svc::FrameDetectors::CcsdsTcFrameDetector frameDetector;
         """
         phase Fpp.ToCpp.Phases.configComponents """
-        ComCcsdsLora::frameAccumulator.configure(
-            ConfigObjects::ComCcsdsLora_frameAccumulator::frameDetector,
+        ComCcsdsSband::frameAccumulator.configure(
+            ConfigObjects::ComCcsdsSband_frameAccumulator::frameDetector,
             1,
             ComCcsds::Allocation::memAllocator,
             ComCcsdsConfig::BuffMgr::frameAccumulatorSize
@@ -51,54 +51,54 @@ module ComCcsdsLora {
         """
 
         phase Fpp.ToCpp.Phases.tearDownComponents """
-        ComCcsdsLora::frameAccumulator.cleanup();
+        ComCcsdsSband::frameAccumulator.cleanup();
         """
     }
 
-    instance commsBufferManager: Svc.BufferManager base id ComCcsdsConfig.BASE_ID_LORA + 0x02000 \
+    instance commsBufferManager: Svc.BufferManager base id ComCcsdsConfig.BASE_ID_SBAND + 0x02000 \
     {
         phase Fpp.ToCpp.Phases.configObjects """
         Svc::BufferManager::BufferBins bins;
         """
 
         phase Fpp.ToCpp.Phases.configComponents """
-        memset(&ConfigObjects::ComCcsdsLora_commsBufferManager::bins, 0, sizeof(ConfigObjects::ComCcsdsLora_commsBufferManager::bins));
-        ConfigObjects::ComCcsdsLora_commsBufferManager::bins.bins[0].bufferSize = ComCcsdsConfig::BuffMgr::commsBuffSize;
-        ConfigObjects::ComCcsdsLora_commsBufferManager::bins.bins[0].numBuffers = ComCcsdsConfig::BuffMgr::commsBuffCount;
-        ConfigObjects::ComCcsdsLora_commsBufferManager::bins.bins[1].bufferSize = ComCcsdsConfig::BuffMgr::commsFileBuffSize;
-        ConfigObjects::ComCcsdsLora_commsBufferManager::bins.bins[1].numBuffers = ComCcsdsConfig::BuffMgr::commsFileBuffCount;
-        ComCcsdsLora::commsBufferManager.setup(
+        memset(&ConfigObjects::ComCcsdsSband_commsBufferManager::bins, 0, sizeof(ConfigObjects::ComCcsdsSband_commsBufferManager::bins));
+        ConfigObjects::ComCcsdsSband_commsBufferManager::bins.bins[0].bufferSize = ComCcsdsConfig::BuffMgr::commsBuffSize;
+        ConfigObjects::ComCcsdsSband_commsBufferManager::bins.bins[0].numBuffers = ComCcsdsConfig::BuffMgr::commsBuffCount;
+        ConfigObjects::ComCcsdsSband_commsBufferManager::bins.bins[1].bufferSize = ComCcsdsConfig::BuffMgr::commsFileBuffSize;
+        ConfigObjects::ComCcsdsSband_commsBufferManager::bins.bins[1].numBuffers = ComCcsdsConfig::BuffMgr::commsFileBuffCount;
+        ComCcsdsSband::commsBufferManager.setup(
             ComCcsdsConfig::BuffMgr::commsBuffMgrId,
             0,
             ComCcsds::Allocation::memAllocator,
-            ConfigObjects::ComCcsdsLora_commsBufferManager::bins
+            ConfigObjects::ComCcsdsSband_commsBufferManager::bins
         );
         """
 
         phase Fpp.ToCpp.Phases.tearDownComponents """
-        ComCcsdsLora::commsBufferManager.cleanup();
+        ComCcsdsSband::commsBufferManager.cleanup();
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500
+    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_SBAND + 0x03500
 
-    instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x04000
+    instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_SBAND + 0x04000
 
-    instance spacePacketDeframer: Svc.Ccsds.SpacePacketDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x05000
+    instance spacePacketDeframer: Svc.Ccsds.SpacePacketDeframer base id ComCcsdsConfig.BASE_ID_SBAND + 0x05000
 
-    instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_LORA + 0x06000 \
+    instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_SBAND + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
         stack size ComCcsdsConfig.StackSizes.aggregator \
         priority ComCcsdsConfig.Priorities.aggregator
 
     # NOTE: name 'framer' is used for the framer that connects to the Com Adapter Interface for better subtopology interoperability
-    instance framer: Svc.Ccsds.TmFramer base id ComCcsdsConfig.BASE_ID_LORA + 0x07000
+    instance framer: Svc.Ccsds.TmFramer base id ComCcsdsConfig.BASE_ID_SBAND + 0x07000
 
-    instance spacePacketFramer: Svc.Ccsds.SpacePacketFramer base id ComCcsdsConfig.BASE_ID_LORA + 0x08000
+    instance spacePacketFramer: Svc.Ccsds.SpacePacketFramer base id ComCcsdsConfig.BASE_ID_SBAND + 0x08000
 
-    instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_LORA + 0x09000
+    instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_SBAND + 0x09000
 
-    instance authenticatelora: Components.Authenticate base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000
+    instance authenticatesband: Components.Authenticate base id ComCcsdsConfig.BASE_ID_SBAND + 0x0B000
 
     topology Subtopology {
         # Usage Note:
@@ -107,12 +107,12 @@ module ComCcsdsLora {
         # the Svc.Com (Svc/Interfaces/Com.fpp) interface. They are as follows:
         #
         # 1) Outputs:
-        #     - ComCcsdsLora.framer.dataOut                 -> [Svc.Com].dataIn
-        #     - ComCcsdsLora.frameAccumulator.dataReturnOut -> [Svc.Com].dataReturnIn
+        #     - ComCcsdsSband.framer.dataOut                 -> [Svc.Com].dataIn
+        #     - ComCcsdsSband.frameAccumulator.dataReturnOut -> [Svc.Com].dataReturnIn
         # 2) Inputs:
-        #     - [Svc.Com].dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
-        #     - [Svc.Com].comStatusOut  -> ComCcsdsLora.framer.comStatusIn
-        #     - [Svc.Com].dataOut       -> ComCcsdsLora.frameAccumulator.dataIn
+        #     - [Svc.Com].dataReturnOut -> ComCcsdsSband.framer.dataReturnIn
+        #     - [Svc.Com].comStatusOut  -> ComCcsdsSband.framer.comStatusIn
+        #     - [Svc.Com].dataOut       -> ComCcsdsSband.frameAccumulator.dataIn
 
 
         # Active Components
@@ -128,7 +128,7 @@ module ComCcsdsLora {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticatelora
+        instance authenticatesband
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -161,11 +161,11 @@ module ComCcsdsLora {
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
             # Authenticate <-> SpacePacketDeframer
-            authenticatelora.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticatelora.dataReturnIn
+            authenticatesband.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> authenticatesband.dataReturnIn
             # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticatelora.dataIn
-            authenticatelora.dataReturnOut -> tcDeframer.dataReturnIn
+            tcDeframer.dataOut                -> authenticatesband.dataIn
+            authenticatesband.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
             # SpacePacketDeframer <-> AuthenticationRouter (routes both commands and files)
@@ -177,4 +177,4 @@ module ComCcsdsLora {
         }
     } # end Subtopology
 
-} # end ComCcsdsLora
+} # end ComCcsdsSband

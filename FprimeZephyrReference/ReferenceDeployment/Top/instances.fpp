@@ -105,15 +105,15 @@ module ReferenceDeployment {
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10022000
 
-  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x10023000
+  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x10023000
 
-  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x10024000
+  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x10024000
 
-  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x10025000
+  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x10025000
 
-  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x10026000
+  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x10026000
 
-  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x10027000
+  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x10027000
 
   instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x10028000
 
@@ -237,4 +237,22 @@ module ReferenceDeployment {
   instance loraRetry: Svc.ComRetry base id 0x10063000
 
   instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
+
+  instance comDelaySband: Components.ComDelay base id 0x10070000
+
+  instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10071000
+
+  instance sband : Components.SBand base id 0x10072000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 10
+
+  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
+
+  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
+
+  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
+
+  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
+
 }
