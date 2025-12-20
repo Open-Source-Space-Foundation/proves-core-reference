@@ -124,8 +124,7 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
-GDS_COMMAND_CI ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
+GDS_COMMAND ?= $(UV_RUN) fprime-gds
 
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
@@ -141,8 +140,11 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@echo "Using UART_DEVICE=$(UART_DEVICE)"
-	@$(GDS_COMMAND) --uart-device $(UART_DEVICE)
+	@if [ -n "$(UART_DEVICE)" ]; then \
+		echo "Using UART_DEVICE=$(UART_DEVICE)"; \
+		$(GDS_COMMAND) --uart-device $(UART_DEVICE); \
+	fi
+	$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
 delete-shadow-gds:

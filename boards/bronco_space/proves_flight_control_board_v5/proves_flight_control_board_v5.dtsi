@@ -226,7 +226,7 @@ zephyr_udc0: &usbd {
 				label = "FACE0_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -263,7 +263,7 @@ zephyr_udc0: &usbd {
 				label = "FACE1_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -300,7 +300,7 @@ zephyr_udc0: &usbd {
 				label = "FACE2_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -337,7 +337,7 @@ zephyr_udc0: &usbd {
 				label = "FACE3_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -412,7 +412,7 @@ zephyr_udc0: &usbd {
 				label = "FACE5_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -431,7 +431,7 @@ zephyr_udc0: &usbd {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
-				label = "FACE5_TMP112";
+				label = "FACE6_TMP112";
 				zephyr,deferred-init;
 			};
 
@@ -439,7 +439,7 @@ zephyr_udc0: &usbd {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
-				label = "FACE5_VEML6031";
+				label = "FACE6_VEML6031";
 				zephyr,deferred-init;
 			};
 
@@ -447,10 +447,10 @@ zephyr_udc0: &usbd {
 				compatible = "ti,drv2605";
 				status = "okay";
 				reg = <0x5a>;
-				label = "FACE5_DRV2605";
+				label = "FACE6_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};

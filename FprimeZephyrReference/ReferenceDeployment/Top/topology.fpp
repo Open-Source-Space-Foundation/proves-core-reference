@@ -209,11 +209,6 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[6] -> cmdSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[7] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
       rateGroup10Hz.RateGroupMemberOut[13] -> downlinkDelay.run
 
       # Slow rate (1Hz) rate group
@@ -236,7 +231,12 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> detumbleManager.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> drv2605Face0Manager.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> drv2605Face1Manager.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> drv2605Face2Manager.run
+      rateGroup1Hz.RateGroupMemberOut[21] -> drv2605Face3Manager.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> drv2605Face5Manager.run
+      rateGroup1Hz.RateGroupMemberOut[23] -> detumbleManager.run
     }
 
 
