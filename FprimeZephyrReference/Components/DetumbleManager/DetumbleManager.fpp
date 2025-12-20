@@ -138,6 +138,102 @@ module Components {
         @ Rotational velocity below threshold
         telemetry BelowRotationalThreshold: bool
 
+        @ Rotational threshold (deg/s)
+        telemetry RotationalThreshold: F64
+
+        @ Cooldown duration
+        telemetry CooldownDuration: Fw.TimeIntervalValue
+
+        @ Torque duration
+        telemetry TorqueDuration: Fw.TimeIntervalValue
+
+        @ X+ coil voltage (V)
+        telemetry XPlusVoltage: F64
+
+        @ X+ coil resistance (Ω)
+        telemetry XPlusResistance: F64
+
+        @ X+ coil number of turns
+        telemetry XPlusNumTurns: F64
+
+        @ X+ coil length (m)
+        telemetry XPlusLength: F64
+
+        @ X+ coil width (m)
+        telemetry XPlusWidth: F64
+
+        @ X+ coil shape
+        telemetry XPlusShape: MagnetorquerCoilShape
+
+        @ X- coil voltage (V)
+        telemetry XMinusVoltage: F64
+
+        @ X- coil resistance (Ω)
+        telemetry XMinusResistance: F64
+
+        @ X- coil number of turns
+        telemetry XMinusNumTurns: F64
+
+        @ X- coil length (m)
+        telemetry XMinusLength: F64
+
+        @ X- coil width (m)
+        telemetry XMinusWidth: F64
+
+        @ X- coil shape
+        telemetry XMinusShape: MagnetorquerCoilShape
+
+        @ Y+ coil voltage (V)
+        telemetry YPlusVoltage: F64
+
+        @ Y+ coil resistance (Ω)
+        telemetry YPlusResistance: F64
+
+        @ Y+ coil number of turns
+        telemetry YPlusNumTurns: F64
+
+        @ Y+ coil length (m)
+        telemetry YPlusLength: F64
+
+        @ Y+ coil width (m)
+        telemetry YPlusWidth: F64
+
+        @ Y+ coil shape
+        telemetry YPlusShape: MagnetorquerCoilShape
+
+        @ Y- coil voltage (V)
+        telemetry YMinusVoltage: F64
+
+        @ Y- coil resistance (Ω)
+        telemetry YMinusResistance: F64
+
+        @ Y- coil number of turns
+        telemetry YMinusNumTurns: F64
+
+        @ Y- coil length (m)
+        telemetry YMinusLength: F64
+
+        @ Y- coil width (m)
+        telemetry YMinusWidth: F64
+
+        @ Y- coil shape
+        telemetry YMinusShape: MagnetorquerCoilShape
+
+        @ Z- coil voltage (V)
+        telemetry ZMinusVoltage: F64
+
+        @ Z- coil resistance (Ω)
+        telemetry ZMinusResistance: F64
+
+        @ Z- coil number of turns
+        telemetry ZMinusNumTurns: F64
+
+        @ Z- coil diameter (m)
+        telemetry ZMinusDiameter: F64
+
+        @ Z- coil shape
+        telemetry ZMinusShape: MagnetorquerCoilShape
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

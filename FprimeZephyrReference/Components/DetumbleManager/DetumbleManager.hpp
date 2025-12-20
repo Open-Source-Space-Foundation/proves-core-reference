@@ -56,6 +56,14 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+  public:
+    // ----------------------------------------------------------------------
+    //  Public helper functions
+    // ----------------------------------------------------------------------
+
+    //! Configure and initialize magnetorquer coils from parameters
+    void configure();
+
   private:
     // ----------------------------------------------------------------------
     //  Private helper methods

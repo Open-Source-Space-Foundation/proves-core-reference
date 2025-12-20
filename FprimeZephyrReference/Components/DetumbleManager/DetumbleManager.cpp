@@ -11,55 +11,15 @@
 #include <numbers>
 #include <string>
 
+#include <zephyr/sys/printk.h>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName) {
-    Fw::ParamValid isValid;
-
-    // Initialize coil parameters from configuration parameters
-    // X+ Coil
-    this->m_xPlusMagnetorquer.voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
-    this->m_xPlusMagnetorquer.resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
-    this->m_xPlusMagnetorquer.numTurns = this->paramGet_X_PLUS_NUM_TURNS(isValid);
-    this->m_xPlusMagnetorquer.shape = this->paramGet_X_PLUS_SHAPE(isValid);
-    this->m_xPlusMagnetorquer.width = this->paramGet_X_PLUS_WIDTH(isValid);
-    this->m_xPlusMagnetorquer.length = this->paramGet_X_PLUS_LENGTH(isValid);
-
-    // X- Coil
-    this->m_xMinusMagnetorquer.voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
-    this->m_xMinusMagnetorquer.resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
-    this->m_xMinusMagnetorquer.numTurns = this->paramGet_X_MINUS_NUM_TURNS(isValid);
-    this->m_xMinusMagnetorquer.shape = this->paramGet_X_MINUS_SHAPE(isValid);
-    this->m_xMinusMagnetorquer.width = this->paramGet_X_MINUS_WIDTH(isValid);
-    this->m_xMinusMagnetorquer.length = this->paramGet_X_MINUS_LENGTH(isValid);
-
-    // Y+ Coil
-    this->m_yPlusMagnetorquer.voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
-    this->m_yPlusMagnetorquer.resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
-    this->m_yPlusMagnetorquer.numTurns = this->paramGet_Y_PLUS_NUM_TURNS(isValid);
-    this->m_yPlusMagnetorquer.shape = this->paramGet_Y_PLUS_SHAPE(isValid);
-    this->m_yPlusMagnetorquer.width = this->paramGet_Y_PLUS_WIDTH(isValid);
-    this->m_yPlusMagnetorquer.length = this->paramGet_Y_PLUS_LENGTH(isValid);
-
-    // Y- Coil
-    this->m_yMinusMagnetorquer.voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
-    this->m_yMinusMagnetorquer.resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
-    this->m_yMinusMagnetorquer.numTurns = this->paramGet_Y_MINUS_NUM_TURNS(isValid);
-    this->m_yMinusMagnetorquer.shape = this->paramGet_Y_MINUS_SHAPE(isValid);
-    this->m_yMinusMagnetorquer.width = this->paramGet_Y_MINUS_WIDTH(isValid);
-    this->m_yMinusMagnetorquer.length = this->paramGet_Y_MINUS_LENGTH(isValid);
-
-    // Z- Coil
-    this->m_zMinusMagnetorquer.voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
-    this->m_zMinusMagnetorquer.resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
-    this->m_zMinusMagnetorquer.numTurns = this->paramGet_Z_MINUS_NUM_TURNS(isValid);
-    this->m_zMinusMagnetorquer.shape = this->paramGet_Z_MINUS_SHAPE(isValid);
-    this->m_zMinusMagnetorquer.diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
-}
+DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName) {}
 
 DetumbleManager ::~DetumbleManager() {}
 
@@ -101,6 +61,79 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
+
+void DetumbleManager ::configure() {
+    Fw::ParamValid isValid;
+
+    // Initialize coil parameters from configuration parameters
+    // X+ Coil
+    this->m_xPlusMagnetorquer.voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
+    this->m_xPlusMagnetorquer.resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
+    this->m_xPlusMagnetorquer.numTurns = this->paramGet_X_PLUS_NUM_TURNS(isValid);
+    this->m_xPlusMagnetorquer.shape = this->paramGet_X_PLUS_SHAPE(isValid);
+    this->m_xPlusMagnetorquer.width = this->paramGet_X_PLUS_WIDTH(isValid);
+    this->m_xPlusMagnetorquer.length = this->paramGet_X_PLUS_LENGTH(isValid);
+    this->tlmWrite_XPlusVoltage(this->m_xPlusMagnetorquer.voltage);
+    this->tlmWrite_XPlusResistance(this->m_xPlusMagnetorquer.resistance);
+    this->tlmWrite_XPlusNumTurns(this->m_xPlusMagnetorquer.numTurns);
+    this->tlmWrite_XPlusShape(this->m_xPlusMagnetorquer.shape);
+    this->tlmWrite_XPlusWidth(this->m_xPlusMagnetorquer.width);
+    this->tlmWrite_XPlusLength(this->m_xPlusMagnetorquer.length);
+
+    // X- Coil
+    this->m_xMinusMagnetorquer.voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
+    this->m_xMinusMagnetorquer.resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
+    this->m_xMinusMagnetorquer.numTurns = this->paramGet_X_MINUS_NUM_TURNS(isValid);
+    this->m_xMinusMagnetorquer.shape = this->paramGet_X_MINUS_SHAPE(isValid);
+    this->m_xMinusMagnetorquer.width = this->paramGet_X_MINUS_WIDTH(isValid);
+    this->m_xMinusMagnetorquer.length = this->paramGet_X_MINUS_LENGTH(isValid);
+    this->tlmWrite_XMinusVoltage(this->m_xMinusMagnetorquer.voltage);
+    this->tlmWrite_XMinusResistance(this->m_xMinusMagnetorquer.resistance);
+    this->tlmWrite_XMinusNumTurns(this->m_xMinusMagnetorquer.numTurns);
+    this->tlmWrite_XMinusShape(this->m_xMinusMagnetorquer.shape);
+    this->tlmWrite_XMinusWidth(this->m_xMinusMagnetorquer.width);
+    this->tlmWrite_XMinusLength(this->m_xMinusMagnetorquer.length);
+
+    // Y+ Coil
+    this->m_yPlusMagnetorquer.voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
+    this->m_yPlusMagnetorquer.resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
+    this->m_yPlusMagnetorquer.numTurns = this->paramGet_Y_PLUS_NUM_TURNS(isValid);
+    this->m_yPlusMagnetorquer.shape = this->paramGet_Y_PLUS_SHAPE(isValid);
+    this->m_yPlusMagnetorquer.width = this->paramGet_Y_PLUS_WIDTH(isValid);
+    this->m_yPlusMagnetorquer.length = this->paramGet_Y_PLUS_LENGTH(isValid);
+    this->tlmWrite_YPlusVoltage(this->m_yPlusMagnetorquer.voltage);
+    this->tlmWrite_YPlusResistance(this->m_yPlusMagnetorquer.resistance);
+    this->tlmWrite_YPlusNumTurns(this->m_yPlusMagnetorquer.numTurns);
+    this->tlmWrite_YPlusShape(this->m_yPlusMagnetorquer.shape);
+    this->tlmWrite_YPlusWidth(this->m_yPlusMagnetorquer.width);
+    this->tlmWrite_YPlusLength(this->m_yPlusMagnetorquer.length);
+
+    // Y- Coil
+    this->m_yMinusMagnetorquer.voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
+    this->m_yMinusMagnetorquer.resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
+    this->m_yMinusMagnetorquer.numTurns = this->paramGet_Y_MINUS_NUM_TURNS(isValid);
+    this->m_yMinusMagnetorquer.shape = this->paramGet_Y_MINUS_SHAPE(isValid);
+    this->m_yMinusMagnetorquer.width = this->paramGet_Y_MINUS_WIDTH(isValid);
+    this->m_yMinusMagnetorquer.length = this->paramGet_Y_MINUS_LENGTH(isValid);
+    this->tlmWrite_YMinusVoltage(this->m_yMinusMagnetorquer.voltage);
+    this->tlmWrite_YMinusResistance(this->m_yMinusMagnetorquer.resistance);
+    this->tlmWrite_YMinusNumTurns(this->m_yMinusMagnetorquer.numTurns);
+    this->tlmWrite_YMinusShape(this->m_yMinusMagnetorquer.shape);
+    this->tlmWrite_YMinusWidth(this->m_yMinusMagnetorquer.width);
+    this->tlmWrite_YMinusLength(this->m_yMinusMagnetorquer.length);
+
+    // Z- Coil
+    this->m_zMinusMagnetorquer.voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
+    this->m_zMinusMagnetorquer.resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
+    this->m_zMinusMagnetorquer.numTurns = this->paramGet_Z_MINUS_NUM_TURNS(isValid);
+    this->m_zMinusMagnetorquer.shape = this->paramGet_Z_MINUS_SHAPE(isValid);
+    this->m_zMinusMagnetorquer.diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
+    this->tlmWrite_ZMinusVoltage(this->m_zMinusMagnetorquer.voltage);
+    this->tlmWrite_ZMinusResistance(this->m_zMinusMagnetorquer.resistance);
+    this->tlmWrite_ZMinusNumTurns(this->m_zMinusMagnetorquer.numTurns);
+    this->tlmWrite_ZMinusShape(this->m_zMinusMagnetorquer.shape);
+    this->tlmWrite_ZMinusDiameter(this->m_zMinusMagnetorquer.diameter);
+}
 
 void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     // Calculate target currents
@@ -162,6 +195,8 @@ F64 DetumbleManager ::getMaxCoilCurrent(const magnetorquerCoil& coil) {
 
 F64 DetumbleManager ::calculateTargetCurrent(F64 dipoleMoment, const magnetorquerCoil& coil) {
     F64 area = this->getCoilArea(coil);
+    printk("Calculating Target Current: Dipole Moment = %.3f A·m², Coil Area = %.6f m², Num Turns = %.1f\n",
+           dipoleMoment, area, coil.numTurns);
     if (coil.numTurns == 0.0 || area == 0.0) {
         return 0.0;
     }
@@ -180,6 +215,9 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
     }
 
     // Scale to int8_t range [-127, 127]
+    I8 scaledCurrent = static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
+    printk("Target Current: %.3f A, Clamped Current: %.3f A, Scaled Current: %d\n", targetCurrent, clampedCurrent,
+           scaledCurrent);
     return static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
 }
 
@@ -189,6 +227,9 @@ void DetumbleManager ::stateCooldownActions() {
     // Get cooldown duration from parameter
     Fw::ParamValid isValid;
     Fw::TimeIntervalValue period = this->paramGet_COOLDOWN_DURATION(isValid);
+    this->tlmWrite_CooldownDuration(period);
+
+    // Calculate cooldown end time
     Fw::Time duration(this->m_cooldownStartTime.getTimeBase(), period.get_seconds(), period.get_useconds());
     Fw::Time cooldown_end_time = Fw::Time::add(this->m_cooldownStartTime, duration);
 
@@ -247,6 +288,9 @@ void DetumbleManager ::stateSensingActions() {
     }
     this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
 
+    printk("Dipole Moment: [%.3f, %.3f, %.3f] A·m²\n", this->m_dipole_moment.get_x(), this->m_dipole_moment.get_y(),
+           this->m_dipole_moment.get_z());
+
     // Transition to TORQUING state
     this->m_detumbleState = DetumbleState::TORQUING;
 }
@@ -257,6 +301,9 @@ void DetumbleManager ::stateTorquingActions() {
     // Get torque duration from parameter
     Fw::ParamValid isValid;
     Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
+    this->tlmWrite_TorqueDuration(torque_duration_param);
+
+    // Calculate torque end time
     Fw::Time duration(this->m_torqueStartTime.getTimeBase(), torque_duration_param.get_seconds(),
                       torque_duration_param.get_useconds());
     Fw::Time torque_end_time = Fw::Time::add(this->m_torqueStartTime, duration);

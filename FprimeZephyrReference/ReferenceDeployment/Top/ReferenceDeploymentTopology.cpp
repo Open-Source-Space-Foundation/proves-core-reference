@@ -175,6 +175,8 @@ void setupTopology(const TopologyState& state) {
     drv2605Face2Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face2drv2605Device);
     drv2605Face3Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face3drv2605Device);
     drv2605Face5Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face5drv2605Device);
+
+    detumbleManager.configure();
 }
 
 void startRateGroups() {
