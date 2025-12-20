@@ -14,7 +14,7 @@ namespace Drv {
 
 static uint32_t hold_arr[1];
 static uint8_t input_arr[1];
-static drv2605_rtp_data rtp = {
+static struct drv2605_rtp_data rtp = {
     .size = 1,
     .rtp_hold_us = hold_arr,
     .rtp_input = input_arr,
@@ -119,11 +119,11 @@ void Drv2605Manager ::stop_handler(FwIndexType portNum) {
 
 void Drv2605Manager ::TRIGGER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Trigger the magnetorquer
-    // Fw::Success condition = this->trigger_handler(0);
-    // if (condition != Fw::Success::SUCCESS) {
-    //     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-    //     return;
-    // }
+    Fw::Success condition = this->start_handler(0, 30000000, 127);  // 30 second at 127 value
+    if (condition != Fw::Success::SUCCESS) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
