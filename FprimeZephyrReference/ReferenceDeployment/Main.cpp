@@ -117,40 +117,6 @@ int main(int argc, char* argv[]) {
     // ========================================
     printk("\n--- Initializing Mux Channel 0 Sensors ---\n");
 
-    // // Get TMP112 sensor on mux channel 0 (deferred-init)
-    // const struct device* mux0_temp_sens = DEVICE_DT_GET(DT_NODELABEL(mux0_temp_sens));
-
-    // // Initialize the TMP112 sensor (deferred-init requires explicit init)
-    // printk("Initializing TMP112 on mux channel 0...\n");
-    // int ret_1 = device_init(mux0_temp_sens);
-    // if (ret_1 < 0) {
-    //     printk("ERROR: Failed to initialize TMP112 on channel 0 (error %d)\n", ret_1);
-    //     return -1;
-    // }
-
-    // if (!device_is_ready(mux0_temp_sens)) {
-    //     printk("ERROR: TMP112 sensor on mux channel 0 not ready after init\n");
-    //     return -1;
-    // }
-    // printk("TMP112 sensor on channel 0 initialized and ready\n");
-
-    // // Get VEML6031 sensor on mux channel 0 (deferred-init)
-    // const struct device* mux0_light_sens = DEVICE_DT_GET(DT_NODELABEL(mux0_light_sens));
-
-    // // Initialize the VEML6031 sensor (deferred-init requires explicit init)
-    // printk("Initializing VEML6031 on mux channel 0...\n");
-    // int ret_2 = device_init(mux0_light_sens);
-    // if (ret_2 < 0) {
-    //     printk("ERROR: Failed to initialize VEML6031 on channel 0 (error %d)\n", ret_2);
-    //     return -1;
-    // }
-
-    // if (!device_is_ready(mux0_light_sens)) {
-    //     printk("ERROR: VEML6031 sensor on mux channel 0 not ready after init\n");
-    //     return -1;
-    // }
-    // printk("VEML6031 sensor on channel 0 initialized and ready\n");
-
     // Get DRV2605 haptic driver on mux channel 0 (deferred-init)
     const struct device* mux0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux0_drv2605));
 
@@ -168,40 +134,6 @@ int main(int argc, char* argv[]) {
     // ========================================
     printk("\n--- Initializing Mux Channel 1 Sensors ---\n");
 
-    // // Get TMP112 sensor on mux channel 1 (deferred-init)
-    // const struct device* mux1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(mux1_temp_sens));
-
-    // // Initialize the TMP112 sensor (deferred-init requires explicit init)
-    // printk("Initializing TMP112 on mux channel 1...\n");
-    // int ret_4 = device_init(mux1_temp_sens);
-    // if (ret_4 < 0) {
-    //     printk("ERROR: Failed to initialize TMP112 on channel 1 (error %d)\n", ret_4);
-    //     return -1;
-    // }
-
-    // if (!device_is_ready(mux1_temp_sens)) {
-    //     printk("ERROR: TMP112 sensor on mux channel 1 not ready after init\n");
-    //     return -1;
-    // }
-    // printk("TMP112 sensor on channel 1 initialized and ready\n");
-
-    // // Get VEML6031 sensor on mux channel 1 (deferred-init)
-    // const struct device* mux1_light_sens = DEVICE_DT_GET(DT_NODELABEL(mux1_light_sens));
-
-    // // Initialize the VEML6031 sensor (deferred-init requires explicit init)
-    // printk("Initializing VEML6031 on mux channel 1...\n");
-    // int ret_5 = device_init(mux1_light_sens);
-    // if (ret_5 < 0) {
-    //     printk("ERROR: Failed to initialize VEML6031 on channel 1 (error %d)\n", ret_5);
-    //     return -1;
-    // }
-
-    // if (!device_is_ready(mux1_light_sens)) {
-    //     printk("ERROR: VEML6031 sensor on mux channel 1 not ready after init\n");
-    //     return -1;
-    // }
-    // printk("VEML6031 sensor on channel 1 initialized and ready\n");
-
     // Get DRV2605 haptic driver on mux channel 1 (deferred-init)
     const struct device* mux1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux1_drv2605));
 
@@ -214,94 +146,6 @@ int main(int argc, char* argv[]) {
     }
     printk("DRV2605 on channel 1 initialized and ready\n\n");
 
-    // I2C address scanning function
-    printk("Starting I2C address scan on TCA9548A channel 0...\n");
-    printk("Scanning addresses 0x03 to 0x77...\n\n");
-
-    int found_count = 0;
-    for (uint8_t addr = 0x03; addr <= 0x77; addr++) {
-        uint8_t dummy;
-
-        // Try to read 1 byte from the address
-        int ret = i2c_read(mux_channel_0, &dummy, 1, addr);
-
-        if (ret == 0) {
-            printk("  Device found at address 0x%02X\n", addr);
-            found_count++;
-        }
-
-        // Small delay between scans
-        k_sleep(K_MSEC(1));
-    }
-
-    printk("\nScan complete. Found %d device(s)\n\n", found_count);
-
-    // Read initial temperature from both channels
-    printk("--- Initial Sensor Readings ---\n");
-    printk("\nMux Channel 0:\n");
-
-    // int ret = sensor_sample_fetch(mux0_temp_sens);
-    // if (ret < 0) {
-    //     printk("ERROR: Failed to fetch TMP112 sample from channel 0 (error %d)\n", ret);
-    // } else {
-    //     struct sensor_value temperature;
-    //     ret = sensor_channel_get(mux0_temp_sens, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
-    //     if (ret < 0) {
-    //         printk("ERROR: Failed to get temperature channel from channel 0 (error %d)\n", ret);
-    //     } else {
-    //         double temp_celsius = sensor_value_to_double(&temperature);
-    //         printk("Temperature: %.2f °C\n", temp_celsius);
-    //     }
-    // }
-
-    // ret = sensor_sample_fetch(mux0_light_sens);
-    // if (ret == -E2BIG) {
-    //     printk("Light: OVERFLOW (>bright limit)\n");
-    // } else if (ret < 0) {
-    //     printk("ERROR: Failed to fetch VEML6031 sample from channel 0 (error %d)\n", ret);
-    // } else {
-    //     struct sensor_value light;
-    //     ret = sensor_channel_get(mux0_light_sens, SENSOR_CHAN_LIGHT, &light);
-    //     if (ret < 0) {
-    //         printk("ERROR: Failed to get light channel from channel 0 (error %d)\n", ret);
-    //     } else {
-    //         double light_lux = sensor_value_to_double(&light);
-    //         printk("Light: %.2f lux\n", light_lux);
-    //     }
-    // }
-
-    printk("\nMux Channel 1:\n");
-
-    // ret = sensor_sample_fetch(mux1_temp_sens);
-    // if (ret < 0) {
-    //     printk("ERROR: Failed to fetch TMP112 sample from channel 1 (error %d)\n", ret);
-    // } else {
-    //     struct sensor_value temperature;
-    //     ret = sensor_channel_get(mux1_temp_sens, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
-    //     if (ret < 0) {
-    //         printk("ERROR: Failed to get temperature channel from channel 1 (error %d)\n", ret);
-    //     } else {
-    //         double temp_celsius = sensor_value_to_double(&temperature);
-    //         printk("Temperature: %.2f °C\n", temp_celsius);
-    //     }
-    // }
-
-    // ret = sensor_sample_fetch(mux1_light_sens);
-    // if (ret == -E2BIG) {
-    //     printk("Light: OVERFLOW (>bright limit)\n\n");
-    // } else if (ret < 0) {
-    //     printk("ERROR: Failed to fetch VEML6031 sample from channel 1 (error %d)\n", ret);
-    // } else {
-    //     struct sensor_value light;
-    //     ret = sensor_channel_get(mux1_light_sens, SENSOR_CHAN_LIGHT, &light);
-    //     if (ret < 0) {
-    //         printk("ERROR: Failed to get light channel from channel 1 (error %d)\n", ret);
-    //     } else {
-    //         double light_lux = sensor_value_to_double(&light);
-    //         printk("Light: %.2f lux\n\n", light_lux);
-    //     }
-    // }
-
     // Loop forever - read sensors every second
     while (1) {
         k_sleep(K_MSEC(1000));
@@ -313,94 +157,32 @@ int main(int argc, char* argv[]) {
         // ========================================
         // Mux Channel 0 Readings
         // ========================================
-        printk("\nMux Channel 0:\n");
+        // printk("\nMux Channel 0:\n");
 
-        // Temperature
-        // ret = sensor_sample_fetch(mux0_temp_sens);
-        // if (ret < 0) {
-        //     printk("ERROR: Failed to fetch TMP112 sample from channel 0 (error %d)\n", ret);
-        // } else {
-        //     struct sensor_value temperature;
-        //     ret = sensor_channel_get(mux0_temp_sens, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
-        //     if (ret < 0) {
-        //         printk("ERROR: Failed to get temperature channel from channel 0 (error %d)\n", ret);
-        //     } else {
-        //         double temp_celsius = sensor_value_to_double(&temperature);
-        //         printk("Temperature: %.2f °C\n", temp_celsius);
-        //     }
-        // }
-
-        // // Light
-        // ret = sensor_sample_fetch(mux0_light_sens);
-        // if (ret == -E2BIG) {
-        //     printk("Light: OVERFLOW (>bright limit)\n");
-        // } else if (ret < 0) {
-        //     printk("ERROR: Failed to fetch VEML6031 sample from channel 0 (error %d)\n", ret);
-        // } else {
-        //     struct sensor_value light;
-        //     ret = sensor_channel_get(mux0_light_sens, SENSOR_CHAN_LIGHT, &light);
-        //     if (ret < 0) {
-        //         printk("ERROR: Failed to get light channel from channel 0 (error %d)\n", ret);
-        //     } else {
-        //         double light_lux = sensor_value_to_double(&light);
-        //         printk("Light: %.2f lux\n", light_lux);
-        //     }
-        // }
-
-        // Haptic - trigger a short vibration
-        printk("Triggering haptic on channel 0...\n");
+        // // Haptic - trigger a short vibration
+        // printk("Triggering haptic on channel 0...\n");
         int ret = 0;
-        ret = haptics_start_output(mux0_drv2605);
-        if (ret < 0) {
-            printk("ERROR: Failed to start haptic on channel 0 (error %d)\n", ret);
-        } else {
-            printk("Haptic: Started\n");
-            k_sleep(K_MSEC(100));  // Vibrate for 100ms
+        // ret = haptics_start_output(mux0_drv2605);
+        // if (ret < 0) {
+        //     printk("ERROR: Failed to start haptic on channel 0 (error %d)\n", ret);
+        // } else {
+        //     printk("Haptic: Started\n");
+        //     k_sleep(K_MSEC(100));  // Vibrate for 100ms
 
-            ret = haptics_stop_output(mux0_drv2605);
-            if (ret < 0) {
-                printk("ERROR: Failed to stop haptic on channel 0 (error %d)\n", ret);
-            } else {
-                printk("Haptic: Stopped\n");
-            }
-        }
+        //     ret = haptics_stop_output(mux0_drv2605);
+        //     if (ret < 0) {
+        //         printk("ERROR: Failed to stop haptic on channel 0 (error %d)\n", ret);
+        //     } else {
+        //         printk("Haptic: Stopped\n");
+        //     }
+        // }
 
         // ========================================
         // Mux Channel 1 Readings
         // ========================================
         printk("\nMux Channel 1:\n");
 
-        // Temperature
-        // ret = sensor_sample_fetch(mux1_temp_sens);
-        // if (ret < 0) {
-        //     printk("ERROR: Failed to fetch TMP112 sample from channel 1 (error %d)\n", ret);
-        // } else {
-        //     struct sensor_value temperature;
-        //     ret = sensor_channel_get(mux1_temp_sens, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
-        //     if (ret < 0) {
-        //         printk("ERROR: Failed to get temperature channel from channel 1 (error %d)\n", ret);
-        //     } else {
-        //         double temp_celsius = sensor_value_to_double(&temperature);
-        //         printk("Temperature: %.2f °C\n", temp_celsius);
-        //     }
-        // }
-
-        // // Light
-        // ret = sensor_sample_fetch(mux1_light_sens);
-        // if (ret == -E2BIG) {
-        //     printk("Light: OVERFLOW (>bright limit)\n");
-        // } else if (ret < 0) {
-        //     printk("ERROR: Failed to fetch VEML6031 sample from channel 1 (error %d)\n", ret);
-        // } else {
-        //     struct sensor_value light;
-        //     ret = sensor_channel_get(mux1_light_sens, SENSOR_CHAN_LIGHT, &light);
-        //     if (ret < 0) {
-        //         printk("ERROR: Failed to get light channel from channel 1 (error %d)\n", ret);
-        //     } else {
-        //         double light_lux = sensor_value_to_double(&light);
-        //         printk("Light: %.2f lux\n", light_lux);
-        //     }
-        // }
+        // k_sleep(K_MSEC(500));
 
         // Haptic - trigger a short vibration
         printk("Triggering haptic on channel 1...\n");
