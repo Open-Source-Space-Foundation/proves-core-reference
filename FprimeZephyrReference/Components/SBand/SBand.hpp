@@ -73,6 +73,16 @@ class SBand final : public SBandComponentBase {
     void deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data,
                                                     const ComCfg::FrameContext& context) override;
 
+    //! Handler implementation for deferredTransmitCmd
+    //!
+    //! Internal async handler for processing TRANSMIT command state changes
+    void deferredTransmitCmd_internalInterfaceHandler(const SBandTransmitState& enabled) override;
+
+    //! Handler implementation for command TRANSMIT
+    //!
+    //! Start/stop transmission on the S-Band module
+    void TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, SBandTransmitState enabled) override;
+
   private:
     //! Enable receive mode
     Status enableRx();
@@ -81,11 +91,12 @@ class SBand final : public SBandComponentBase {
     Status enableTx();
 
   private:
-    FprimeHal m_rlb_hal;             //!< RadioLib HAL instance
-    Module m_rlb_module;             //!< RadioLib Module instance
-    SX1280 m_rlb_radio;              //!< RadioLib SX1280 radio instance
-    bool m_configured = false;       //!< Flag indicating radio is configured
-    bool m_rxHandlerQueued = false;  //!< Flag indicating RX handler is queued
+    FprimeHal m_rlb_hal;                                                   //!< RadioLib HAL instance
+    Module m_rlb_module;                                                   //!< RadioLib Module instance
+    SX1280 m_rlb_radio;                                                    //!< RadioLib SX1280 radio instance
+    bool m_configured = false;                                             //!< Flag indicating radio is configured
+    bool m_rxHandlerQueued = false;                                        //!< Flag indicating RX handler is queued
+    SBandTransmitState m_transmit_enabled = SBandTransmitState::DISABLED;  //!< Transmit state
 };
 
 }  // namespace Components

@@ -30,6 +30,12 @@ module Components {
         BW_1625_KHZ = 3
     }
 
+    @ Transmit state for controlling radio transmission
+    enum SBandTransmitState : U8 {
+        ENABLED
+        DISABLED
+    }
+
     @ Component for F Prime FSW framework.
     active component SBand {
 
@@ -47,6 +53,11 @@ module Components {
         internal port deferredTxHandler(
             data: Fw.Buffer
             context: ComCfg.FrameContext
+        ) priority 10
+
+        @ Internal port for deferred TRANSMIT command processing
+        internal port deferredTransmitCmd(
+            enabled: SBandTransmitState
         ) priority 10
 
         @ Import Communication Interface
@@ -103,6 +114,13 @@ module Components {
 
         @ Bandwidth for reception
         param BANDWIDTH_RX: SBandBandwidth default SBandBandwidth.BW_406_25_KHZ
+
+        ###############################################################################
+        # Commands                                                                     #
+        ###############################################################################
+
+        @ Start/stop transmission on the S-Band module
+        sync command TRANSMIT(enabled: SBandTransmitState)
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

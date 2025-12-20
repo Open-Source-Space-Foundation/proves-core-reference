@@ -109,6 +109,13 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
 
 void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, const ComCfg::FrameContext& context) {
     Fw::Success returnStatus = Fw::Success::FAILURE;
+    Fw::Buffer mutableData = data;  // hack to get around const-ness
+
+    if (this->m_transmit_enabled != SBandTransmitState::ENABLED) {
+        this->dataReturnOut_out(0, mutableData, context);
+        this->comStatusOut_out(0, returnStatus);
+        return;
+    }
 
     // Enable transmit mode
     Status status = this->enableTx();
@@ -125,14 +132,10 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
         }
     }
 
-    // Return buffer and status (need mutable copy for dataReturnOut_out)
-    Fw::Buffer mutableData = data;
     this->dataReturnOut_out(0, mutableData, context);
     this->comStatusOut_out(0, returnStatus);
 
-    // Re-enable RX mode after transmission
     status = this->enableRx();
-    // enableRx will log RadioLibFailed internally if it fails
 }
 
 // ----------------------------------------------------------------------
@@ -140,7 +143,6 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
 // ----------------------------------------------------------------------
 
 void SBand ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // Only process if radio is configured
     if (!m_configured) {
         this->log_WARNING_HI_RadioNotConfigured();
         Fw::Success failureStatus = Fw::Success::FAILURE;
@@ -295,6 +297,31 @@ SBand::Status SBand ::configureRadio() {
     this->comStatusOut_out(0, status);
 
     return Status::SUCCESS;
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, SBandTransmitState enabled) {
+    // Invoke internal port to handle state change asynchronously
+    // This prevents concurrent access issues with m_transmit_enabled
+    this->deferredTransmitCmd_internalInterfaceInvoke(enabled);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void SBand ::deferredTransmitCmd_internalInterfaceHandler(const SBandTransmitState& enabled) {
+    if (enabled == SBandTransmitState::ENABLED) {
+        // Start the ping-pong protocol if we are disabled
+        if (this->m_transmit_enabled == SBandTransmitState::DISABLED) {
+            // Must transition to ENABLED **BEFORE** calling comStatusOut
+            this->m_transmit_enabled = SBandTransmitState::ENABLED;
+            Fw::Success comStatus = Fw::Success::SUCCESS;
+            this->comStatusOut_out(0, comStatus);
+        }
+    } else {
+        this->m_transmit_enabled = SBandTransmitState::DISABLED;
+    }
 }
 
 }  // namespace Components
