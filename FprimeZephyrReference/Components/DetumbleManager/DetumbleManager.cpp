@@ -123,8 +123,23 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     F64 clampedCurrent_y_minus = this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer);
     F64 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
 
-    // All true for now until we figure out how to determine what should be on or off
-    this->startMagnetorquers(0xFFFFFFFFu, 127, 127, 127, 127, 127);
+    // Convert to int8_t values in range [-127, 127]
+    // TODO(nateinaction): this is not correct
+    // I8 x_plus_amps = static_cast<I8>(std::round((clampedCurrent_x_plus /
+    // this->getMaxCoilCurrent(this->m_xPlusMagnetorquer)) * 127.0)); I8 x_minus_amps =
+    // static_cast<I8>(std::round((clampedCurrent_x_minus / this->getMaxCoilCurrent(this->m_xMinusMagnetorquer)) *
+    // 127.0)); I8 y_plus_amps = static_cast<I8>(std::round((clampedCurrent_y_plus /
+    // this->getMaxCoilCurrent(this->m_yPlusMagnetorquer)) * 127.0)); I8 y_minus_amps =
+    // static_cast<I8>(std::round((clampedCurrent_y_minus / this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
+    // 127.0)); I8 z_minus_amps = static_cast<I8>(std::round((clampedCurrent_z_minus /
+    // this->getMaxCoilCurrent(this->m_zMinusMagnetorquer)) * 127.0));
+
+    Fw::ParamValid isValid;
+    Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
+    U32 torque_duration_us =
+        static_cast<U32>(torque_duration_param.get_seconds() * 1'000'000 + torque_duration_param.get_useconds());
+    // TODO(nateinaction): Use calculated currents
+    this->startMagnetorquers(torque_duration_us, 127, 127, 127, 127, 127);
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -141,25 +156,47 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
                                           I8 y_minus_amps,
                                           I8 z_minus_amps) {
     Fw::ParamValid isValid;
+    Fw::Success condition;
+    Fw::String name;
 
     if (this->m_xPlusMagnetorquer.enabled) {
-        this->xPlusStart_out(0, duration_us, x_plus_amps);
+        condition = this->xPlusStart_out(0, duration_us, x_plus_amps);
+        if (condition != Fw::Success::SUCCESS) {
+            name = "X+";
+            this->log_WARNING_LO_MagnetorquerStartFailed(name);
+        }
     }
 
     if (this->m_xMinusMagnetorquer.enabled) {
-        this->xMinusStart_out(0, duration_us, x_minus_amps);
+        condition = this->xMinusStart_out(0, duration_us, x_minus_amps);
+        if (condition != Fw::Success::SUCCESS) {
+            name = "X-";
+            this->log_WARNING_LO_MagnetorquerStartFailed(name);
+        }
     }
 
     if (this->m_yPlusMagnetorquer.enabled) {
-        this->yPlusStart_out(0, duration_us, y_plus_amps);
+        condition = this->yPlusStart_out(0, duration_us, y_plus_amps);
+        if (condition != Fw::Success::SUCCESS) {
+            name = "Y+";
+            this->log_WARNING_LO_MagnetorquerStartFailed(name);
+        }
     }
 
     if (this->m_yMinusMagnetorquer.enabled) {
-        this->yMinusStart_out(0, duration_us, y_minus_amps);
+        condition = this->yMinusStart_out(0, duration_us, y_minus_amps);
+        if (condition != Fw::Success::SUCCESS) {
+            name = "Y-";
+            this->log_WARNING_LO_MagnetorquerStartFailed(name);
+        }
     }
 
     if (this->m_zMinusMagnetorquer.enabled) {
-        this->zMinusStart_out(0, duration_us, z_minus_amps);
+        condition = this->zMinusStart_out(0, duration_us, z_minus_amps);
+        if (condition != Fw::Success::SUCCESS) {
+            name = "Z-";
+            this->log_WARNING_LO_MagnetorquerStartFailed(name);
+        }
     }
 }
 
@@ -219,7 +256,6 @@ F64 DetumbleManager ::clampCurrent(F64 current, const magnetorquerCoil& coil) {
 }
 
 void DetumbleManager ::stateCooldownActions() {
-    // First run call, initialize cooldown start time
     this->stateEnterCooldownActions();
 
     // Get cooldown duration from parameter
@@ -228,7 +264,7 @@ void DetumbleManager ::stateCooldownActions() {
     Fw::Time duration(this->m_cooldownStartTime.getTimeBase(), period.get_seconds(), period.get_useconds());
     Fw::Time cooldown_end_time = Fw::Time::add(this->m_cooldownStartTime, duration);
 
-    // Check if cooldown period has elapsed and transition to SENSING state
+    // Check if cooldown period has elapsed and exit cooldown state
     Fw::Time currentTime = this->getTime();
     if (currentTime >= cooldown_end_time) {
         this->stateExitCooldownActions();
@@ -236,7 +272,9 @@ void DetumbleManager ::stateCooldownActions() {
 }
 
 void DetumbleManager ::stateEnterCooldownActions() {
+    // On first call after state transition
     if (this->m_cooldownStartTime == Fw::ZERO_TIME) {
+        // Record cooldown start time
         this->m_cooldownStartTime = this->getTime();
     }
 }
@@ -288,12 +326,6 @@ void DetumbleManager ::stateSensingActions() {
 void DetumbleManager ::stateTorquingActions() {
     this->stateEnterTorquingActions();
 
-    // Perform torqueing action
-    this->setDipoleMoment(this->m_dipole_moment);
-
-    // Check duration of torquing
-    Fw::Time currentTime = this->getTime();
-
     // Get torque duration from parameter
     Fw::ParamValid isValid;
     Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
@@ -301,14 +333,20 @@ void DetumbleManager ::stateTorquingActions() {
                       torque_duration_param.get_useconds());
     Fw::Time torque_end_time = Fw::Time::add(this->m_torqueStartTime, duration);
 
-    // Check if torquing duration has elapsed and transition to COOLDOWN state
+    // Check if torquing duration has elapsed and exit torquing state
+    Fw::Time currentTime = this->getTime();
     if (currentTime >= torque_end_time) {
         this->stateExitTorquingActions();
     }
 }
 
 void DetumbleManager ::stateEnterTorquingActions() {
+    // On first call after state transition
     if (this->m_torqueStartTime == Fw::ZERO_TIME) {
+        // Perform torqueing action
+        this->setDipoleMoment(this->m_dipole_moment);
+
+        // Record torque start time
         this->m_torqueStartTime = this->getTime();
     }
 }

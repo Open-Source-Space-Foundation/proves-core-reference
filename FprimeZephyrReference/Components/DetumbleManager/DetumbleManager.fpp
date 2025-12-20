@@ -132,6 +132,9 @@ module Components {
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
 
+        @ Event for reporting magnetorquer start failure
+        event MagnetorquerStartFailed(name: string) severity warning low format "Failed to start magnetorquer {}." throttle 5
+
         ### Telemetry ###
 
         @ Current operating mode
