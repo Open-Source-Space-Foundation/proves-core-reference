@@ -19,8 +19,23 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+Framing/uv.lock
+bootable.uf2
+mcuboot.uf2
+startup.bin
+camera_handler_1.bin
 
 **/__pycache__/
 **/*.egg-info/
 
-bin/
+/bin/
+_codeql_detected_source_root
+
+# Generated authentication files (generated at build time)
+FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+spi
+# Generated spi_dict.txt
+UploadsFilesystem/AuthenticateFiles/spi_dict.txt
+Framing/src/sequence_number.bin
+
+lib/fprime-extras/

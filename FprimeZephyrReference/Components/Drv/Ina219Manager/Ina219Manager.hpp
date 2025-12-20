@@ -7,7 +7,6 @@
 #define Drv_Ina219Manager_HPP
 
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219ManagerComponentAc.hpp"
-
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
@@ -56,6 +55,25 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
     //! Port to read the voltage in volts
     F64 voltageGet_handler(FwIndexType portNum  //!< The port number
                            ) override;
+
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for GetVoltage command
+    void GetVoltage_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
+    //! Handler implementation for GetCurrent command
+    void GetCurrent_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
+    //! Handler implementation for GetPower command
+    void GetPower_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq            //!< The command sequence number
+                             ) override;
 
     // ----------------------------------------------------------------------
     // Member variables

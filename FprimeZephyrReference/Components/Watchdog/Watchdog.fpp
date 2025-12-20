@@ -31,6 +31,9 @@ module Components {
         @ Port to stop the watchdog
         sync input port stop: Fw.Signal
 
+        @ Port to signal a clean reboot (notify ModeManager before reboot)
+        output port prepareForReboot: Fw.Signal
+
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 

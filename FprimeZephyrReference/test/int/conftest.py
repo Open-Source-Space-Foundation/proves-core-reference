@@ -10,8 +10,10 @@ import subprocess
 import time
 
 import pytest
-from common import cmdDispatch
+from common import cmdDispatch, proves_send_and_assert_command
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+TELEMETRY_DELAY = "ReferenceDeployment.telemetryDelay"
 
 
 @pytest.fixture(scope="session")
@@ -33,6 +35,9 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
         try:
             fprime_test_api_session.send_and_assert_command(
                 command=f"{cmdDispatch}.CMD_NO_OP"
+            )
+            proves_send_and_assert_command(
+                fprime_test_api_session, f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET", [0]
             )
             gds_working = True
             break

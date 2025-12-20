@@ -4,17 +4,18 @@
 #include <Fw/Types/MallocAllocator.hpp>
 #include <Svc/BufferManager/BufferManager.hpp>
 #include <Svc/FrameAccumulator/FrameDetector/CcsdsTcFrameDetector.hpp>
+
 #include "ComCcsdsConfig/ComCcsdsSubtopologyConfig.hpp"
 #include "Svc/Subtopologies/ComCcsds/ComCcsdsConfig/FppConstantsAc.hpp"
 
-namespace ComCcsds {
+namespace ComCcsdsUart {
 struct SubtopologyState {
-    // Empty - no external state needed for ComCcsds subtopology
+    // Empty - no external state needed for ComCcsdsUart subtopology
 };
 
 struct TopologyState {
-    SubtopologyState comCcsds;
+    SubtopologyState comCcsdsUart;
 };
-}  // namespace ComCcsds
+}  // namespace ComCcsdsUart
 
 #endif

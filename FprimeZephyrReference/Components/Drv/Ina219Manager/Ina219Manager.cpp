@@ -4,6 +4,7 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/Drv/Ina219Manager/Ina219Manager.hpp"
+
 #include <Fw/Types/Assert.hpp>
 
 namespace Drv {
@@ -80,6 +81,28 @@ F64 Ina219Manager ::voltageGet_handler(FwIndexType portNum) {
     this->tlmWrite_Voltage(sensor_value_to_double(&voltage));
 
     return sensor_value_to_double(&voltage);
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void Ina219Manager::GetVoltage_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    F64 voltage = this->voltageGet_handler(0);
+    this->log_ACTIVITY_LO_VoltageReading(voltage);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Ina219Manager::GetCurrent_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    F64 current = this->currentGet_handler(0);
+    this->log_ACTIVITY_LO_CurrentReading(current);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Ina219Manager::GetPower_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    F64 power = this->powerGet_handler(0);
+    this->log_ACTIVITY_LO_PowerReading(power);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Drv

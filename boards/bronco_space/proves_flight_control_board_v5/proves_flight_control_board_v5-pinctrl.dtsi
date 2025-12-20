@@ -11,6 +11,26 @@
 			input-enable;
 		};
 	};
+	uart0_default: uart0_default {
+		group1 {
+			pinmux = <UART0_TX_P0>;
+		};
+
+		group2 {
+			pinmux = <UART0_RX_P1>;
+			input-enable;
+		};
+	};
+	uart1_default: uart1_default {
+		group1 {
+			pinmux = <UART1_TX_P4>;
+		};
+
+		group2 {
+			pinmux = <UART1_RX_P5>;
+			input-enable;
+		};
+	};
 	spi1_default: spi1_default {
 		group1 {
 			pinmux = <SPI1_SCK_P10>, <SPI1_TX_P11>;

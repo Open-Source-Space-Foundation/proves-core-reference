@@ -1,19 +1,14 @@
 // ======================================================================
 // \title  LoadSwitch.hpp
-// \author sarah
+// \author Moises, sarah
 // \brief  hpp file for LoadSwitch component implementation class
 // ======================================================================
 
 #ifndef Components_LoadSwitch_HPP
 #define Components_LoadSwitch_HPP
 
-#include <zephyr/kernel.h>
 #include "FprimeZephyrReference/Components/LoadSwitch/LoadSwitchComponentAc.hpp"
-
-// Undefine EMPTY macro from Zephyr headers to avoid conflict with F Prime Os::Queue::EMPTY
-#ifdef EMPTY
-#undef EMPTY
-#endif
+#include <zephyr/kernel.h>
 
 // Forward declare Zephyr types to avoid header conflicts
 struct device;
@@ -48,13 +43,24 @@ class LoadSwitch final : public LoadSwitchComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
+    //! Handler implementation for turnOn
+    void turnOn_handler(FwIndexType portNum  //!< The port number
+                        ) override;
+
+    //! Handler implementation for turnOff
+    void turnOff_handler(FwIndexType portNum  //!< The port number
+                         ) override;
+
     // ----------------------------------------------------------------------
-    // Handler implementations for typed input ports
+    // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for Reset
-    void Reset_handler(FwIndexType portNum  //!< The port number
-                       ) override;
+    //! Set the load switch state (common implementation for commands and ports)
+    void setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
+    );
+
+    //! Get current load switch state
+    Fw::On getLoadSwitchState();  //<! Get the current state (ON or OFF)
 };
 
 }  // namespace Components

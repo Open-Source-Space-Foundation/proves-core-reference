@@ -118,8 +118,8 @@ int main(int argc, char* argv[]) {
     printk("\n--- Initializing Mux Channel 0 Sensors ---\n");
 
     // Get TMP112 sensor on mux channel 0 (deferred-init)
-    const struct device* mux0_temp_sens = DEVICE_DT_GET(DT_NODELABEL(mux0_temp_sens));
-    
+    const struct device* mux0_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face0_temp_sens));
+
     // Initialize the TMP112 sensor (deferred-init requires explicit init)
     printk("Initializing TMP112 on mux channel 0...\n");
     int ret_1 = device_init(mux0_temp_sens);
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
         printk("ERROR: Failed to initialize TMP112 on channel 0 (error %d)\n", ret_1);
         return -1;
     }
-    
+
     if (!device_is_ready(mux0_temp_sens)) {
         printk("ERROR: TMP112 sensor on mux channel 0 not ready after init\n");
         return -1;
@@ -135,8 +135,8 @@ int main(int argc, char* argv[]) {
     printk("TMP112 sensor on channel 0 initialized and ready\n");
 
     // Get VEML6031 sensor on mux channel 0 (deferred-init)
-    const struct device* mux0_light_sens = DEVICE_DT_GET(DT_NODELABEL(mux0_light_sens));
-    
+    const struct device* mux0_light_sens = DEVICE_DT_GET(DT_NODELABEL(face0_light_sens));
+
     // Initialize the VEML6031 sensor (deferred-init requires explicit init)
     printk("Initializing VEML6031 on mux channel 0...\n");
     int ret_2 = device_init(mux0_light_sens);
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
         printk("ERROR: Failed to initialize VEML6031 on channel 0 (error %d)\n", ret_2);
         return -1;
     }
-    
+
     if (!device_is_ready(mux0_light_sens)) {
         printk("ERROR: VEML6031 sensor on mux channel 0 not ready after init\n");
         return -1;
@@ -152,8 +152,8 @@ int main(int argc, char* argv[]) {
     printk("VEML6031 sensor on channel 0 initialized and ready\n");
 
     // Get DRV2605 haptic driver on mux channel 0 (deferred-init)
-    const struct device* mux0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux0_drv2605));
-    
+    const struct device* mux0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face0_drv2605));
+
     // Initialize the DRV2605 (deferred-init requires explicit init)
     printk("Initializing DRV2605 on mux channel 0...\n");
     int ret_3 = device_init(mux0_drv2605);
@@ -169,8 +169,8 @@ int main(int argc, char* argv[]) {
     printk("\n--- Initializing Mux Channel 1 Sensors ---\n");
 
     // Get TMP112 sensor on mux channel 1 (deferred-init)
-    const struct device* mux1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(mux1_temp_sens));
-    
+    const struct device* mux1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face1_temp_sens));
+
     // Initialize the TMP112 sensor (deferred-init requires explicit init)
     printk("Initializing TMP112 on mux channel 1...\n");
     int ret_4 = device_init(mux1_temp_sens);
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
         printk("ERROR: Failed to initialize TMP112 on channel 1 (error %d)\n", ret_4);
         return -1;
     }
-    
+
     if (!device_is_ready(mux1_temp_sens)) {
         printk("ERROR: TMP112 sensor on mux channel 1 not ready after init\n");
         return -1;
@@ -186,8 +186,8 @@ int main(int argc, char* argv[]) {
     printk("TMP112 sensor on channel 1 initialized and ready\n");
 
     // Get VEML6031 sensor on mux channel 1 (deferred-init)
-    const struct device* mux1_light_sens = DEVICE_DT_GET(DT_NODELABEL(mux1_light_sens));
-    
+    const struct device* mux1_light_sens = DEVICE_DT_GET(DT_NODELABEL(face1_light_sens));
+
     // Initialize the VEML6031 sensor (deferred-init requires explicit init)
     printk("Initializing VEML6031 on mux channel 1...\n");
     int ret_5 = device_init(mux1_light_sens);
@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
         printk("ERROR: Failed to initialize VEML6031 on channel 1 (error %d)\n", ret_5);
         return -1;
     }
-    
+
     if (!device_is_ready(mux1_light_sens)) {
         printk("ERROR: VEML6031 sensor on mux channel 1 not ready after init\n");
         return -1;
@@ -203,8 +203,8 @@ int main(int argc, char* argv[]) {
     printk("VEML6031 sensor on channel 1 initialized and ready\n");
 
     // Get DRV2605 haptic driver on mux channel 1 (deferred-init)
-    const struct device* mux1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(mux1_drv2605));
-    
+    const struct device* mux1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
+
     // Initialize the DRV2605 (deferred-init requires explicit init)
     printk("Initializing DRV2605 on mux channel 1...\n");
     int ret_6 = device_init(mux1_drv2605);
@@ -221,15 +221,15 @@ int main(int argc, char* argv[]) {
     int found_count = 0;
     for (uint8_t addr = 0x03; addr <= 0x77; addr++) {
         uint8_t dummy;
-        
+
         // Try to read 1 byte from the address
         int ret = i2c_read(mux_channel_0, &dummy, 1, addr);
-        
+
         if (ret == 0) {
             printk("  Device found at address 0x%02X\n", addr);
             found_count++;
         }
-        
+
         // Small delay between scans
         k_sleep(K_MSEC(1));
     }
@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
     // Read initial temperature from both channels
     printk("--- Initial Sensor Readings ---\n");
     printk("\nMux Channel 0:\n");
-    
+
     int ret = sensor_sample_fetch(mux0_temp_sens);
     if (ret < 0) {
         printk("ERROR: Failed to fetch TMP112 sample from channel 0 (error %d)\n", ret);
@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
     }
 
     printk("\nMux Channel 1:\n");
-    
+
     ret = sensor_sample_fetch(mux1_temp_sens);
     if (ret < 0) {
         printk("ERROR: Failed to fetch TMP112 sample from channel 1 (error %d)\n", ret);
@@ -305,16 +305,16 @@ int main(int argc, char* argv[]) {
     // Loop forever - read sensors every second
     while (1) {
         k_sleep(K_MSEC(1000));
-        
+
         printk("\n======================================\n");
         printk("--- Sensor Readings ---\n");
         printk("======================================\n");
-        
+
         // ========================================
         // Mux Channel 0 Readings
         // ========================================
         printk("\nMux Channel 0:\n");
-        
+
         // Temperature
         ret = sensor_sample_fetch(mux0_temp_sens);
         if (ret < 0) {
@@ -329,7 +329,7 @@ int main(int argc, char* argv[]) {
                 printk("Temperature: %.2f °C\n", temp_celsius);
             }
         }
-        
+
         // Light
         ret = sensor_sample_fetch(mux0_light_sens);
         if (ret == -E2BIG) {
@@ -346,7 +346,7 @@ int main(int argc, char* argv[]) {
                 printk("Light: %.2f lux\n", light_lux);
             }
         }
-        
+
         // Haptic - trigger a short vibration
         printk("Triggering haptic on channel 0...\n");
         ret = haptics_start_output(mux0_drv2605);
@@ -355,7 +355,7 @@ int main(int argc, char* argv[]) {
         } else {
             printk("Haptic: Started\n");
             k_sleep(K_MSEC(100));  // Vibrate for 100ms
-            
+
             ret = haptics_stop_output(mux0_drv2605);
             if (ret < 0) {
                 printk("ERROR: Failed to stop haptic on channel 0 (error %d)\n", ret);
@@ -368,7 +368,7 @@ int main(int argc, char* argv[]) {
         // Mux Channel 1 Readings
         // ========================================
         printk("\nMux Channel 1:\n");
-        
+
         // Temperature
         ret = sensor_sample_fetch(mux1_temp_sens);
         if (ret < 0) {
@@ -383,7 +383,7 @@ int main(int argc, char* argv[]) {
                 printk("Temperature: %.2f °C\n", temp_celsius);
             }
         }
-        
+
         // Light
         ret = sensor_sample_fetch(mux1_light_sens);
         if (ret == -E2BIG) {
@@ -400,7 +400,7 @@ int main(int argc, char* argv[]) {
                 printk("Light: %.2f lux\n", light_lux);
             }
         }
-        
+
         // Haptic - trigger a short vibration
         printk("Triggering haptic on channel 1...\n");
         ret = haptics_start_output(mux1_drv2605);
@@ -409,7 +409,7 @@ int main(int argc, char* argv[]) {
         } else {
             printk("Haptic: Started\n");
             k_sleep(K_MSEC(100));  // Vibrate for 100ms
-            
+
             ret = haptics_stop_output(mux1_drv2605);
             if (ret < 0) {
                 printk("ERROR: Failed to stop haptic on channel 1 (error %d)\n", ret);
