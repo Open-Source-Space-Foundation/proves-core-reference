@@ -6,7 +6,7 @@
 	url = https://github.com/zephyrproject-rtos/zephyr.git
 [submodule "lib/fprime-zephyr"]
 	path = lib/fprime-zephyr
-	url = https://github.com/fprime-community/fprime-zephyr.git
+	url = https://github.com/Open-Source-Space-Foundation/fprime-zephyr.git
 [submodule "lib/RadioLib"]
 	path = lib/RadioLib
 	url = https://github.com/jgromes/RadioLib
