@@ -98,31 +98,31 @@ module Components {
         output port xPlusStart: Drv.StartMagnetorquer
 
         @ Port for stopping the X+ magnetorquer
-        output port xPlusStop: Fw.Signal
+        output port xPlusStop: Drv.StopMagnetorquer
 
         @ Port for triggering the X- magnetorquer
         output port xMinusStart: Drv.StartMagnetorquer
 
         @ Port for stopping the X- magnetorquer
-        output port xMinusStop: Fw.Signal
+        output port xMinusStop: Drv.StopMagnetorquer
 
         @ Port for triggering the Y+ magnetorquer
         output port yPlusStart: Drv.StartMagnetorquer
 
         @ Port for stopping the Y+ magnetorquer
-        output port yPlusStop: Fw.Signal
+        output port yPlusStop: Drv.StopMagnetorquer
 
         @ Port for triggering the Y- magnetorquer
         output port yMinusStart: Drv.StartMagnetorquer
 
         @ Port for stopping the Y- magnetorquer
-        output port yMinusStop: Fw.Signal
+        output port yMinusStop: Drv.StopMagnetorquer
 
         @ Port for triggering the Z- magnetorquer
         output port zMinusStart: Drv.StartMagnetorquer
 
         @ Port for stopping the Z- magnetorquer
-        output port zMinusStop: Fw.Signal
+        output port zMinusStop: Drv.StopMagnetorquer
 
         ### Events ###
 

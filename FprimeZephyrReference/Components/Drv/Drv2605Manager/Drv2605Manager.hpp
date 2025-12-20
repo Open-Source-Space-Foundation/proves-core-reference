@@ -45,52 +45,39 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Port to initialize and deinitialize the device on load switch state change
     Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
                                                const Fw::On& state) override;
-    //! Handler implementation for run
-    //!
-    //! Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
-    void run_handler(FwIndexType portNum,  //!< The port number
-                     U32 context           //!< The call order
-                     ) override;
 
     //! Handler implementation for start
     //!
     //! Port to start the magnetorquer
     Fw::Success start_handler(FwIndexType portNum,  //!< The port number
-                              U32 duration_us,      //!< Duration in microseconds to trigger the magnetorquer
-                              I8 amps               //!< Amplitude value between -127 and 127
+                              I8 val                //!< Value between -127 and 127
                               ) override;
 
     //! Handler implementation for stop
     //!
     //! Port to stop the magnetorquer
-    void stop_handler(FwIndexType portNum  //!< The port number
-                      ) override;
+    Fw::Success stop_handler(FwIndexType portNum  //!< The port number
+                             ) override;
 
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for command TRIGGER
+    //! Handler implementation for command START
     //!
-    //! Command to trigger the magnetorquer
-    void TRIGGER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                            U32 cmdSeq            //!< The command sequence number
-                            ) override;
+    //! Command to start the magnetorquer
+    void START_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                          U32 cmdSeq,           //!< The command sequence number
+                          I8 val                //!< Value between -127 and 127
+                          ) override;
 
-    //! Handler implementation for command START_CONTINUOUS_MODE
+    //! Handler implementation for command STOP
     //!
-    //! Command to start continuous mode
-    void START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                          U32 cmdSeq            //!< The command sequence number
-                                          ) override;
-
-    //! Handler implementation for command STOP_CONTINUOUS_MODE
-    //!
-    //! Command to stop continuous mode
-    void STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                         U32 cmdSeq            //!< The command sequence number
-                                         ) override;
+    //! Command to stop the magnetorquer
+    void STOP_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                         U32 cmdSeq            //!< The command sequence number
+                         ) override;
 
   private:
     // ----------------------------------------------------------------------

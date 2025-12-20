@@ -134,12 +134,8 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     // 127.0)); I8 z_minus_amps = static_cast<I8>(std::round((clampedCurrent_z_minus /
     // this->getMaxCoilCurrent(this->m_zMinusMagnetorquer)) * 127.0));
 
-    Fw::ParamValid isValid;
-    Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
-    U32 torque_duration_us =
-        static_cast<U32>(torque_duration_param.get_seconds() * 1000000 + torque_duration_param.get_useconds());
     // TODO(nateinaction): Use calculated currents
-    this->startMagnetorquers(torque_duration_us, 127, 127, 127, 127, 127);
+    this->startMagnetorquers(127, 127, 127, 127, 127);
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -149,8 +145,7 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
     return magRadPerSec * 180.0 / this->PI;
 }
 
-void DetumbleManager ::startMagnetorquers(U32 duration_us,
-                                          I8 x_plus_amps,
+void DetumbleManager ::startMagnetorquers(I8 x_plus_amps,
                                           I8 x_minus_amps,
                                           I8 y_plus_amps,
                                           I8 y_minus_amps,
@@ -160,7 +155,7 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
     Fw::String name;
 
     if (this->m_xPlusMagnetorquer.enabled) {
-        condition = this->xPlusStart_out(0, duration_us, x_plus_amps);
+        condition = this->xPlusStart_out(0, x_plus_amps);
         if (condition != Fw::Success::SUCCESS) {
             name = "X+";
             this->log_WARNING_LO_MagnetorquerStartFailed(name);
@@ -168,7 +163,7 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
     }
 
     if (this->m_xMinusMagnetorquer.enabled) {
-        condition = this->xMinusStart_out(0, duration_us, x_minus_amps);
+        condition = this->xMinusStart_out(0, x_minus_amps);
         if (condition != Fw::Success::SUCCESS) {
             name = "X-";
             this->log_WARNING_LO_MagnetorquerStartFailed(name);
@@ -176,7 +171,7 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
     }
 
     if (this->m_yPlusMagnetorquer.enabled) {
-        condition = this->yPlusStart_out(0, duration_us, y_plus_amps);
+        condition = this->yPlusStart_out(0, y_plus_amps);
         if (condition != Fw::Success::SUCCESS) {
             name = "Y+";
             this->log_WARNING_LO_MagnetorquerStartFailed(name);
@@ -184,7 +179,7 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
     }
 
     if (this->m_yMinusMagnetorquer.enabled) {
-        condition = this->yMinusStart_out(0, duration_us, y_minus_amps);
+        condition = this->yMinusStart_out(0, y_minus_amps);
         if (condition != Fw::Success::SUCCESS) {
             name = "Y-";
             this->log_WARNING_LO_MagnetorquerStartFailed(name);
@@ -192,7 +187,7 @@ void DetumbleManager ::startMagnetorquers(U32 duration_us,
     }
 
     if (this->m_zMinusMagnetorquer.enabled) {
-        condition = this->zMinusStart_out(0, duration_us, z_minus_amps);
+        condition = this->zMinusStart_out(0, z_minus_amps);
         if (condition != Fw::Success::SUCCESS) {
             name = "Z-";
             this->log_WARNING_LO_MagnetorquerStartFailed(name);
