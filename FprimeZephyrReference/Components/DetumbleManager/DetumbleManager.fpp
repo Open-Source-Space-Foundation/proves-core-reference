@@ -70,7 +70,7 @@ module Components {
 
         # --- Z- Coil ---
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
-        param Z_MINUS_RESISTANCE: F64 default 248.8 id 30
+        param Z_MINUS_RESISTANCE: F64 default 150.7 id 30
         param Z_MINUS_NUM_TURNS: F64 default 153.0 id 31
         param Z_MINUS_DIAMETER: F64 default 0.05755 id 32
         param Z_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.CIRCULAR id 37
