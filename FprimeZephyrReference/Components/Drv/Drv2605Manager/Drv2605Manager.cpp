@@ -86,8 +86,8 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, U32 duration_us,
     union drv2605_config_data config_data;
     config_data.rtp_data = &rtp;
 
-    int rc = 0;
-    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data) != 0) {
+    int rc = drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data);
+    if (rc != 0) {
         this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
         return Fw::Success::FAILURE;
     }

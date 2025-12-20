@@ -231,12 +231,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[15] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[16] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[17] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> drv2605Face0Manager.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> drv2605Face1Manager.run
-      rateGroup1Hz.RateGroupMemberOut[20] -> drv2605Face2Manager.run
-      rateGroup1Hz.RateGroupMemberOut[21] -> drv2605Face3Manager.run
-      rateGroup1Hz.RateGroupMemberOut[22] -> drv2605Face5Manager.run
-      rateGroup1Hz.RateGroupMemberOut[23] -> detumbleManager.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> detumbleManager.run
     }
 
 
