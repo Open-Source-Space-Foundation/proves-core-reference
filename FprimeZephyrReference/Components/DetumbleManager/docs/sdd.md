@@ -1,18 +1,28 @@
 # Components::DetumbleManager
 
-The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with two drivers: the LIS2MDL Manager and the LSM6DSO Driver which provide acceleration, angular velocity, magnetic field, and temperature measurements.
+The Detumble Manager component implements a B-dot style detumbling controller. It coordinates angular-velocity measurements, dipole moment commands, and magnetorquer actuation to reduce the spacecraft rotation rate. The component operates as a scheduled passive component and drives a set of configured magnetorquer coils.
 
 ## Usage Examples
 
-The IMU Manager component is designed to be scheduled periodically to trigger collection of sensor data and telemetering. It operates as a passive component that responds to scheduler calls.
+The Detumble Manager is designed to be scheduled periodically to drive its internal state machine:
+
+- **COOLDOWN** – wait for sensors and the magnetic environment to settle after a torque command
+- **SENSING** – read angular velocity, compare against a configurable threshold, and decide whether detumbling is required
+- **TORQUING** – command magnetorquers using a dipole moment provided by an upstream controller
 
 ### Typical Usage
 
-1. The component is instantiated and initialized during system startup
-2. The scheduler calls the `run` port at regular intervals
-3. On each run call, the component:
-   - Fetches sensor data from both the LIS2MDL Manager and LSM6DSO Driver
-   - Outputs telemetry for acceleration, angular velocity, magnetic field, and temperature
+1. The component is instantiated and initialized during system startup.
+2. Parameters are loaded (mode, thresholds, timing, coil properties).
+3. The deployment calls `configure()` in the component configuration phase to cache coil parameters and publish related telemetry.
+4. The scheduler periodically calls the `run` port.
+5. On each run:
+   - The component checks the operating mode (DISABLED or AUTO).
+   - The state machine executes COOLDOWN, SENSING, or TORQUING actions.
+   - When appropriate, it requests:
+     - Angular velocity via `angularVelocityGet`.
+     - Dipole moment command via `dipoleMomentGet`.
+   - It starts or stops the magnetorquers via the `x*/y*/z*Start` and `x*/y*/z*Stop` ports.
 
 ## Class Diagram
 
@@ -25,49 +35,164 @@ classDiagram
         class DetumbleManager {
             + DetumbleManager(const char* compName)
             + ~DetumbleManager()
+            + configure(): void
             - run_handler(FwIndexType portNum, U32 context): void
+            - executeControlStep(reason: std::string&): bool
+            - getAngularVelocityMagnitude(angVel: Drv::AngularVelocity): F64
+            - getCoilArea(coil: magnetorquerCoil): F64
+            - getMaxCoilCurrent(coil: magnetorquerCoil): F64
+            - calculateTargetCurrent(dipoleMoment: F64, coil: magnetorquerCoil): F64
+            - clampCurrent(targetCurrent: F64, coil: magnetorquerCoil): I8
+            - setDipoleMoment(dpMoment: Drv::DipoleMoment): void
+            - startMagnetorquers(...): void
+            - stopMagnetorquers(): void
+            - stateCooldownActions(): void
+            - stateEnterCooldownActions(): void
+            - stateExitCooldownActions(): void
+            - stateSensingActions(): void
+            - stateTorquingActions(): void
+            - stateEnterTorquingActions(): void
+            - stateExitTorquingActions(): void
+        }
+
+        class magnetorquerCoil {
+            + shape: MagnetorquerCoilShape::T
+            + maxCurrent: F64
+            + numTurns: F64
+            + voltage: F64
+            + resistance: F64
+            + width: F64
+            + length: F64
+            + diameter: F64
         }
     }
+
     DetumbleManagerComponentBase <|-- DetumbleManager : inherits
+    DetumbleManager "1" o-- "5" magnetorquerCoil
 ```
 
 ## Port Descriptions
 
-| Name               | Type       | Description                                                |
-| ------------------ | ---------- | ---------------------------------------------------------- |
-| run                | sync input | Scheduler port that triggers sensor data collection        |
-| accelerationGet    | output     | Port for calling accelerationGet on the LSM6DSO Manager    |
-| angularVelocityGet | output     | Port for calling angularVelocityGet on the LSM6DSO Manager |
-| magneticFieldGet   | output     | Port for calling magneticFieldGet on the LIS2MDL Manager   |
-| temperatureGet     | output     | Port for calling temperatureGet on the LSM6DSO Manager     |
-| timeCaller         | time get   | Port for requesting current system time                    |
+| Name             | Type         | Description                                                        |
+| ---------------- | ------------ | ------------------------------------------------------------------ |
+| run              | sync input   | Scheduler port that advances the detumble state machine           |
+| angularVelocityGet | output     | Requests current angular velocity vector                          |
+| magneticFieldGet | output       | Requests current magnetic field vector (for upstream controller)  |
+| dipoleMomentGet  | output       | Requests commanded dipole moment from a detumble controller       |
+| xPlusStart       | output       | Command to start the X+ magnetorquer with a signed current value  |
+| xPlusStop        | output       | Command to stop the X+ magnetorquer                               |
+| xMinusStart      | output       | Command to start the X− magnetorquer with a signed current value  |
+| xMinusStop       | output       | Command to stop the X− magnetorquer                               |
+| yPlusStart       | output       | Command to start the Y+ magnetorquer with a signed current value  |
+| yPlusStop        | output       | Command to stop the Y+ magnetorquer                               |
+| yMinusStart      | output       | Command to start the Y− magnetorquer with a signed current value  |
+| yMinusStop       | output       | Command to stop the Y− magnetorquer                               |
+| zMinusStart      | output       | Command to start the Z− magnetorquer with a signed current value  |
+| zMinusStop       | output       | Command to stop the Z− magnetorquer                               |
+| timeCaller       | time get     | Requests current system time for timing COOLDOWN and TORQUING     |
+| logTextOut       | text event   | Sends textual events                                               |
+| logOut           | event        | Sends binary events                                                |
+| tlmOut           | telemetry    | Sends telemetry channels                                           |
+| prmGetOut        | param get    | Retrieves parameter values                                        |
+| prmSetOut        | param set    | Updates parameter values                                          |
+| cmdRegOut        | command reg  | Registers commands                                                 |
+| cmdIn            | command recv | Receives commands                                                  |
+| cmdResponseOut   | command resp | Sends command responses                                            |
+
+## Parameters and Telemetry (Summary)
+
+- **Mode and thresholds**
+  - `OPERATING_MODE` (DetumbleMode): DISABLED or AUTO.
+  - `ROTATIONAL_THRESHOLD` (F64): Angular-velocity threshold (deg/s) for enabling torquing.
+  - `COOLDOWN_DURATION` (Fw.TimeIntervalValue): Time spent waiting after a torque command.
+  - `TORQUE_DURATION` (Fw.TimeIntervalValue): Duration of a single torque actuation.
+
+- **Coil configuration (per axis/coil)**
+  - Voltage, resistance, number of turns, dimensions, and shape.
+  - A full set exists for X+, X−, Y+, Y−, and Z− coils.
+
+- **Key telemetry**
+  - `Mode` (DetumbleMode): Current operating mode.
+  - `State` (DetumbleState): COOLDOWN, SENSING, or TORQUING.
+  - `BelowRotationalThreshold` (bool): Whether the angular-velocity magnitude is currently below the threshold.
+  - `RotationalThreshold`, `CooldownDuration`, `TorqueDuration`.
+  - Per-coil configuration telemetry for all coils (voltage, resistance, turns, geometry, shape).
+
+- **Events**
+  - `DipoleMomentRetrievalFailed`: Logged if `dipoleMomentGet` does not succeed.
+  - `AngularVelocityRetrievalFailed`: Logged if `angularVelocityGet` does not succeed.
 
 ## Sequence Diagrams
+
+### State Machine Overview (AUTO mode)
 
 ```mermaid
 sequenceDiagram
     participant Scheduler
-    participant IMU Manager
-    participant LIS2MDL Manager
-    participant LSM6DSO Manager
+    participant DetumbleManager
+    participant AngularSource as Angular Velocity Source
+    participant DipoleSource as Dipole Moment Source
+    participant MTQ as Magnetorquer Drivers
 
-    Scheduler-->>IMU Manager: run
-    IMU Manager->>LSM6DSO Manager: AccelerationGet
-    IMU Manager->>LSM6DSO Manager: AngularVelocityGet
-    IMU Manager->>LSM6DSO Manager: TemperatureGet
-    IMU Manager->>LIS2MDL Manager: MagneticFieldGet
+    Scheduler->>DetumbleManager: run()
+    alt OPERATING_MODE == DISABLED
+        DetumbleManager->>MTQ: x*/y*/z*Stop
+        note right of DetumbleManager: State reset to COOLDOWN
+    else AUTO
+        opt COOLDOWN
+            DetumbleManager->>DetumbleManager: stateCooldownActions()
+            DetumbleManager->>timeCaller: getTime()
+            timeCaller-->>DetumbleManager: current time
+            note right of DetumbleManager: Transition to SENSING after cooldown duration
+        end
+
+        opt SENSING
+            DetumbleManager->>AngularSource: angularVelocityGet()
+            AngularSource-->>DetumbleManager: angular velocity, status
+            alt retrieval failed
+                DetumbleManager->>DetumbleManager: log AngularVelocityRetrievalFailed
+            else |ω| < threshold
+                note right of DetumbleManager: Stay in SENSING, no torquing
+            else |ω| >= threshold
+                DetumbleManager->>DipoleSource: dipoleMomentGet()
+                DipoleSource-->>DetumbleManager: dipole moment, status
+                alt retrieval failed
+                    DetumbleManager->>DetumbleManager: log DipoleMomentRetrievalFailed
+                else success
+                    note right of DetumbleManager: Transition to TORQUING
+                end
+            end
+        end
+
+        opt TORQUING
+            DetumbleManager->>DetumbleManager: stateTorquingActions()
+            note right of DetumbleManager: On first entry, compute coil currents
+            DetumbleManager->>MTQ: x*/y*/z*Start(currents)
+            DetumbleManager->>timeCaller: getTime()
+            timeCaller-->>DetumbleManager: current time
+            alt torque interval elapsed
+                DetumbleManager->>MTQ: x*/y*/z*Stop
+                note right of DetumbleManager: Transition to COOLDOWN
+            end
+        end
+    end
 ```
 
 ## Requirements
 
-| Name                   | Description                                                                                          | Validation                                             |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Sensor Data Collection | The component shall trigger data collection from both LSM6DSO and LIS2MDL sensors when run is called | Verify all sensor manager output ports are called      |
-| Periodic Operation     | The component shall operate as a scheduled component responding to scheduler calls                   | Verify component responds correctly to scheduler input |
+| Name                        | Description                                                                                               | Validation                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Mode Control                | The component shall support DISABLED and AUTO modes via `OPERATING_MODE`.                                | Parameter set and telemetry `Mode` observed over GDS.        |
+| Safe Disable                | When in DISABLED mode, all magnetorquer outputs shall be turned off and the internal state reset.       | Force DISABLED, verify all `*Stop` ports are called.         |
+| Threshold-Based Activation  | Detumbling shall only be performed when the measured angular-velocity magnitude exceeds the configured threshold. | Sweep angular velocity values around `ROTATIONAL_THRESHOLD` and monitor transitions to TORQUING. |
+| Cooldown Timing             | After TORQUING, the component shall remain in COOLDOWN for at least `COOLDOWN_DURATION` before SENSING. | Instrument time via `timeCaller` and observe state changes.  |
+| Torque Duration             | During TORQUING, magnetorquers shall be active for at most `TORQUE_DURATION` before being stopped.      | Verify `*Start` followed by `*Stop` bracket the configured interval. |
+| Coil Current Limiting       | Commanded coil currents shall not exceed the maximum allowable current derived from voltage and resistance. | Inject large commanded dipole moments and inspect computed currents. |
+| Parameter Telemetry         | Coil configuration parameters shall be telemetered for all coils after configuration.                   | Call `configure()` and verify coil telemetry channels.       |
+| Error Reporting             | The component shall emit warning events when angular velocity or dipole moment retrieval fails.         | Force non-success return codes and observe events.           |
 
 ## Change Log
 
-| Date      | Description                                                           |
-| --------- | --------------------------------------------------------------------- |
-| 2025-9-9  | Initial IMU Manager component                                         |
-| 2025-9-18 | Extracted Zephyr calls to discrete LIS2MDL Manager and LSM6DSO Driver |
+| Date       | Description                                                                 |
+| ---------- | --------------------------------------------------------------------------- |
+| 2025-12-20 | Initial design document drafted for Detumble Manager component             |
