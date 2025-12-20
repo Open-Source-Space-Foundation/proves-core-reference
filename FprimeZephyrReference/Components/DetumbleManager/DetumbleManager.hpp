@@ -22,7 +22,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     struct magnetorquerCoil {
         enum MagnetorquerCoilShape::T shape;
 
-        bool enabled;
         F64 maxCurrent;
         F64 numTurns;
         F64 voltage;
@@ -99,13 +98,13 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! A is the coil area (m²)
     F64 calculateTargetCurrent(F64 dipoleMoment, const magnetorquerCoil& coil);
 
-    //! Clamp the current to the maximum allowed for the coil.
+    //! Clamp the current to the maximum for the coil and scale to int8_t range [-127, 127].
     //! Formula: I_clamped = sign(I) * min(|I|, I_max)
     //!
     //! I_clamped is the clamped current (A)
     //! I is the target current (A)
     //! I_max is the maximum current (A)
-    F64 clampCurrent(F64 current, const magnetorquerCoil& coil);
+    I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil);
 
     //! Set the dipole moment by toggling the magnetorquers
     void setDipoleMoment(Drv::DipoleMoment dpMoment);
@@ -164,10 +163,10 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     magnetorquerCoil m_zMinusMagnetorquer;
 
     //! Cooldown start time
-    Fw::Time m_cooldownStartTime;
+    Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;
 
     //! Magnetorquer trigger start time
-    Fw::Time m_torqueStartTime;
+    Fw::Time m_torqueStartTime = Fw::ZERO_TIME;
 
     //! Last dipole moment gathered
     Drv::DipoleMoment m_dipole_moment;

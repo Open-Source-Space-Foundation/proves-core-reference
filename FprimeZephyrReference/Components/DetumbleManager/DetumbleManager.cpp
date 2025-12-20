@@ -11,6 +11,8 @@
 #include <numbers>
 #include <string>
 
+#include <zephyr/sys/printk.h>
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -20,10 +22,8 @@ namespace Components {
 DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName) {
     Fw::ParamValid isValid;
 
-    // TODO(nateinaction): Set these in a slow rate group instead of constructor to allow them to change at runtime
     // Initialize coil parameters from configuration parameters
     // X+ Coil
-    this->m_xPlusMagnetorquer.enabled = this->paramGet_X_PLUS_ENABLED(isValid);
     this->m_xPlusMagnetorquer.voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
     this->m_xPlusMagnetorquer.resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
     this->m_xPlusMagnetorquer.numTurns = this->paramGet_X_PLUS_NUM_TURNS(isValid);
@@ -32,7 +32,6 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_xPlusMagnetorquer.length = this->paramGet_X_PLUS_LENGTH(isValid);
 
     // X- Coil
-    this->m_xMinusMagnetorquer.enabled = this->paramGet_X_MINUS_ENABLED(isValid);
     this->m_xMinusMagnetorquer.voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
     this->m_xMinusMagnetorquer.resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
     this->m_xMinusMagnetorquer.numTurns = this->paramGet_X_MINUS_NUM_TURNS(isValid);
@@ -41,7 +40,6 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_xMinusMagnetorquer.length = this->paramGet_X_MINUS_LENGTH(isValid);
 
     // Y+ Coil
-    this->m_yPlusMagnetorquer.enabled = this->paramGet_Y_PLUS_ENABLED(isValid);
     this->m_yPlusMagnetorquer.voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
     this->m_yPlusMagnetorquer.resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
     this->m_yPlusMagnetorquer.numTurns = this->paramGet_Y_PLUS_NUM_TURNS(isValid);
@@ -50,7 +48,6 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_yPlusMagnetorquer.length = this->paramGet_Y_PLUS_LENGTH(isValid);
 
     // Y- Coil
-    this->m_yMinusMagnetorquer.enabled = this->paramGet_Y_MINUS_ENABLED(isValid);
     this->m_yMinusMagnetorquer.voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
     this->m_yMinusMagnetorquer.resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
     this->m_yMinusMagnetorquer.numTurns = this->paramGet_Y_MINUS_NUM_TURNS(isValid);
@@ -59,7 +56,6 @@ DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerC
     this->m_yMinusMagnetorquer.length = this->paramGet_Y_MINUS_LENGTH(isValid);
 
     // Z- Coil
-    this->m_zMinusMagnetorquer.enabled = this->paramGet_Z_MINUS_ENABLED(isValid);
     this->m_zMinusMagnetorquer.voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
     this->m_zMinusMagnetorquer.resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
     this->m_zMinusMagnetorquer.numTurns = this->paramGet_Z_MINUS_NUM_TURNS(isValid);
@@ -86,7 +82,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
-        // this->stopMagnetorquers();
+        this->stopMagnetorquers();
         this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         return;
     }
@@ -116,26 +112,12 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     F64 targetCurrent_y_minus = this->calculateTargetCurrent(dipoleMoment.get_y(), this->m_yMinusMagnetorquer);
     F64 targetCurrent_z_minus = this->calculateTargetCurrent(dipoleMoment.get_z(), this->m_zMinusMagnetorquer);
 
-    // Clamp currents
-    F64 clampedCurrent_x_plus = this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer);
-    F64 clampedCurrent_x_minus = this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer);
-    F64 clampedCurrent_y_plus = this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer);
-    F64 clampedCurrent_y_minus = this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer);
-    F64 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
-
-    // Convert to int8_t values in range [-127, 127]
-    // TODO(nateinaction): this is not correct
-    // I8 x_plus_amps = static_cast<I8>(std::round((clampedCurrent_x_plus /
-    // this->getMaxCoilCurrent(this->m_xPlusMagnetorquer)) * 127.0)); I8 x_minus_amps =
-    // static_cast<I8>(std::round((clampedCurrent_x_minus / this->getMaxCoilCurrent(this->m_xMinusMagnetorquer)) *
-    // 127.0)); I8 y_plus_amps = static_cast<I8>(std::round((clampedCurrent_y_plus /
-    // this->getMaxCoilCurrent(this->m_yPlusMagnetorquer)) * 127.0)); I8 y_minus_amps =
-    // static_cast<I8>(std::round((clampedCurrent_y_minus / this->getMaxCoilCurrent(this->m_yMinusMagnetorquer)) *
-    // 127.0)); I8 z_minus_amps = static_cast<I8>(std::round((clampedCurrent_z_minus /
-    // this->getMaxCoilCurrent(this->m_zMinusMagnetorquer)) * 127.0));
-
-    // TODO(nateinaction): Use calculated currents
-    this->startMagnetorquers(127, 127, 127, 127, 127);
+    // Clamp currents and start magnetorquers
+    this->startMagnetorquers(this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer),
+                             this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer),
+                             this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer),
+                             this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer),
+                             this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer));
 }
 
 F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
@@ -145,78 +127,24 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
     return magRadPerSec * 180.0 / this->PI;
 }
 
-void DetumbleManager ::startMagnetorquers(I8 x_plus_amps,
-                                          I8 x_minus_amps,
-                                          I8 y_plus_amps,
-                                          I8 y_minus_amps,
-                                          I8 z_minus_amps) {
-    Fw::ParamValid isValid;
-    Fw::Success condition;
-    Fw::String name;
-
-    if (this->m_xPlusMagnetorquer.enabled) {
-        condition = this->xPlusStart_out(0, x_plus_amps);
-        if (condition != Fw::Success::SUCCESS) {
-            name = "X+";
-            this->log_WARNING_LO_MagnetorquerStartFailed(name);
-        }
-    }
-
-    if (this->m_xMinusMagnetorquer.enabled) {
-        condition = this->xMinusStart_out(0, x_minus_amps);
-        if (condition != Fw::Success::SUCCESS) {
-            name = "X-";
-            this->log_WARNING_LO_MagnetorquerStartFailed(name);
-        }
-    }
-
-    if (this->m_yPlusMagnetorquer.enabled) {
-        condition = this->yPlusStart_out(0, y_plus_amps);
-        if (condition != Fw::Success::SUCCESS) {
-            name = "Y+";
-            this->log_WARNING_LO_MagnetorquerStartFailed(name);
-        }
-    }
-
-    if (this->m_yMinusMagnetorquer.enabled) {
-        condition = this->yMinusStart_out(0, y_minus_amps);
-        if (condition != Fw::Success::SUCCESS) {
-            name = "Y-";
-            this->log_WARNING_LO_MagnetorquerStartFailed(name);
-        }
-    }
-
-    if (this->m_zMinusMagnetorquer.enabled) {
-        condition = this->zMinusStart_out(0, z_minus_amps);
-        if (condition != Fw::Success::SUCCESS) {
-            name = "Z-";
-            this->log_WARNING_LO_MagnetorquerStartFailed(name);
-        }
-    }
+void DetumbleManager ::startMagnetorquers(I8 x_plus_val,
+                                          I8 x_minus_val,
+                                          I8 y_plus_val,
+                                          I8 y_minus_val,
+                                          I8 z_minus_val) {
+    this->xPlusStart_out(0, x_plus_val);
+    this->xMinusStart_out(0, x_minus_val);
+    this->yPlusStart_out(0, y_plus_val);
+    this->yMinusStart_out(0, y_minus_val);
+    this->zMinusStart_out(0, z_minus_val);
 }
 
 void DetumbleManager ::stopMagnetorquers() {
-    Fw::ParamValid isValid;
-
-    if (this->m_xPlusMagnetorquer.enabled) {
-        this->xPlusStop_out(0);
-    }
-
-    if (this->m_xMinusMagnetorquer.enabled) {
-        this->xMinusStop_out(0);
-    }
-
-    if (this->m_yPlusMagnetorquer.enabled) {
-        this->yPlusStop_out(0);
-    }
-
-    if (this->m_yMinusMagnetorquer.enabled) {
-        this->yMinusStop_out(0);
-    }
-
-    if (this->m_zMinusMagnetorquer.enabled) {
-        this->zMinusStop_out(0);
-    }
+    this->xPlusStop_out(0);
+    this->xMinusStop_out(0);
+    this->yPlusStop_out(0);
+    this->yMinusStop_out(0);
+    this->zMinusStop_out(0);
 }
 
 F64 DetumbleManager ::getCoilArea(const magnetorquerCoil& coil) {
@@ -242,12 +170,19 @@ F64 DetumbleManager ::calculateTargetCurrent(F64 dipoleMoment, const magnetorque
     return dipoleMoment / (coil.numTurns * area);
 }
 
-F64 DetumbleManager ::clampCurrent(F64 current, const magnetorquerCoil& coil) {
+I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil) {
+    F64 clampedCurrent;
     F64 maxCurrent = this->getMaxCoilCurrent(coil);
-    if (std::fabs(current) > maxCurrent) {
-        return (current > 0) ? maxCurrent : -maxCurrent;
+
+    // Clamp to max current
+    if (std::fabs(targetCurrent) > maxCurrent) {
+        clampedCurrent = (targetCurrent > 0) ? maxCurrent : -maxCurrent;
+    } else {
+        clampedCurrent = targetCurrent;
     }
-    return current;
+
+    // Convert to int8_t value in range [-127, 127]
+    return static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
 }
 
 void DetumbleManager ::stateCooldownActions() {

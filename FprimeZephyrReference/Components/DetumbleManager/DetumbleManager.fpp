@@ -37,43 +37,38 @@ module Components {
         ### Magnetorquer Properties Parameters ###
 
         # --- X+ Coil ---
-        param X_PLUS_ENABLED: bool default true id 4
         param X_PLUS_VOLTAGE: F64 default 3.3 id 9
-        param X_PLUS_RESISTANCE: F64 default 57.2 id 10
+        param X_PLUS_RESISTANCE: F64 default 13 id 10
         param X_PLUS_NUM_TURNS: F64 default 48.0 id 11
         param X_PLUS_LENGTH: F64 default 0.053 id 12
         param X_PLUS_WIDTH: F64 default 0.045 id 13
         param X_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 33
 
         # --- X- Coil ---
-        param X_MINUS_ENABLED: bool default true id 5
         param X_MINUS_VOLTAGE: F64 default 3.3 id 14
-        param X_MINUS_RESISTANCE: F64 default 57.2 id 15
+        param X_MINUS_RESISTANCE: F64 default 13 id 15
         param X_MINUS_NUM_TURNS: F64 default 48.0 id 16
         param X_MINUS_LENGTH: F64 default 0.053 id 17
         param X_MINUS_WIDTH: F64 default 0.045 id 18
         param X_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 34
 
         # --- Y+ Coil ---
-        param Y_PLUS_ENABLED: bool default true id 6
         param Y_PLUS_VOLTAGE: F64 default 3.3 id 19
-        param Y_PLUS_RESISTANCE: F64 default 57.2 id 20
+        param Y_PLUS_RESISTANCE: F64 default 13 id 20
         param Y_PLUS_NUM_TURNS: F64 default 48.0 id 21
         param Y_PLUS_LENGTH: F64 default 0.053 id 22
         param Y_PLUS_WIDTH: F64 default 0.045 id 23
         param Y_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 35
 
         # --- Y- Coil ---
-        param Y_MINUS_ENABLED: bool default true id 7
         param Y_MINUS_VOLTAGE: F64 default 3.3 id 24
-        param Y_MINUS_RESISTANCE: F64 default 57.2 id 25
+        param Y_MINUS_RESISTANCE: F64 default 13 id 25
         param Y_MINUS_NUM_TURNS: F64 default 48.0 id 26
         param Y_MINUS_LENGTH: F64 default 0.053 id 27
         param Y_MINUS_WIDTH: F64 default 0.045 id 28
         param Y_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 36
 
         # --- Z- Coil ---
-        param Z_MINUS_ENABLED: bool default true id 8
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
         param Z_MINUS_RESISTANCE: F64 default 248.8 id 30
         param Z_MINUS_NUM_TURNS: F64 default 153.0 id 31
@@ -131,9 +126,6 @@ module Components {
 
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
-
-        @ Event for reporting magnetorquer start failure
-        event MagnetorquerStartFailed(name: string) severity warning low format "Failed to start magnetorquer {}." throttle 5
 
         ### Telemetry ###
 
