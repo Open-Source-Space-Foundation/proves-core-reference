@@ -24,6 +24,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
 
     # Communications Data
+    ComCcsdsSband.authenticatesband.CurrentSequenceNumber
     ComCcsdsLora.authenticatelora.CurrentSequenceNumber
     ComCcsdsUart.authenticate.CurrentSequenceNumber
 
@@ -42,9 +43,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
-  packet LoRa id 8 group 2 {
+  packet Radio id 8 group 2 {
     lora.LastRssi
     lora.LastSnr
+    sband.LastRssi
+    sband.LastSnr
   }
 
   packet PowerMonitor id 11 group 2 {
@@ -106,6 +109,8 @@ telemetry packets ReferenceDeploymentPackets {
   packet Health id 2 group 5 {
     ComCcsdsLora.comQueue.comQueueDepth
     ComCcsdsLora.commsBufferManager.HiBuffs
+    ComCcsdsSband.comQueue.comQueueDepth
+    ComCcsdsSband.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
@@ -119,6 +124,7 @@ telemetry packets ReferenceDeploymentPackets {
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
     ComCcsdsLora.commsBufferManager.NoBuffs
+    ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     payloadBufferManager2.NoBuffs
@@ -129,6 +135,7 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthAuxiliary id 4 group 5 {
     ComCcsdsLora.comQueue.buffQueueDepth
+    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
@@ -140,18 +147,23 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Authenticate id 6 group 5 {
+    ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
     ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
 
+    ComCcsdsSband.authenticatesband.RejectedPacketsCount
     ComCcsdsLora.authenticatelora.RejectedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
 
+    ComCcsdsSband.authenticationRouter.ByPassedRouter
     ComCcsdsLora.authenticationRouter.ByPassedRouter
     ComCcsdsUart.authenticationRouter.ByPassedRouter
 
+    ComCcsdsSband.authenticationRouter.PassedRouter
     ComCcsdsLora.authenticationRouter.PassedRouter
     ComCcsdsUart.authenticationRouter.PassedRouter
 
+    ComCcsdsSband.authenticationRouter.FailedRouter
     ComCcsdsLora.authenticationRouter.FailedRouter
     ComCcsdsUart.authenticationRouter.FailedRouter
 
@@ -215,12 +227,16 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.comQueue.buffQueueDepth
 
   ComCcsdsLora.commsBufferManager.EmptyBuffs
+  ComCcsdsSband.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
   payloadBufferManager2.EmptyBuffs
 
   ComCcsdsLora.commsBufferManager.TotalBuffs
   ComCcsdsLora.commsBufferManager.CurrBuffs
+  ComCcsdsSband.commsBufferManager.TotalBuffs
+  ComCcsdsSband.commsBufferManager.CurrBuffs
+
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
   payloadBufferManager2.TotalBuffs

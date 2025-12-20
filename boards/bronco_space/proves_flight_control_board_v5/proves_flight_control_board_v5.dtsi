@@ -124,7 +124,7 @@ zephyr_udc0: &usbd {
 
 &spi0 {
 	status = "okay";
-	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
 	sdhc0: sdhc@0 {
@@ -539,7 +539,7 @@ zephyr_udc0: &usbd {
 	};
 };
 
-// GPIO Expander IO
+// GPIO Names
 / {
 
     // Define the GPIO outputs based on your schematic
@@ -605,7 +605,22 @@ zephyr_udc0: &usbd {
             gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
             label = "PAYLOAD_BATT_ENABLE";
         };
-    };
+
+	sband_nrst: sband-nrst {
+            gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_NRST";
+	};
+
+	sband_rx_en: sband-rx-en {
+            gpios = <&gpio0 21 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_RX_EN";
+	};
+
+	sband_tx_en: sband-tx-en {
+            gpios = <&gpio0 22 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_TX_EN";
+	};
+	};
 
     // Define GPIO inputs
     gpio_inputs {
