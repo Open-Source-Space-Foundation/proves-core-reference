@@ -6,3 +6,4 @@ command-line-options:
   output-unframed-data: "-"
   frame-size: 248
   framing-selection: authenticate-space-data-link
+  file-uplink-cooldown: 0.400
