@@ -58,7 +58,7 @@ module Components {
         @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
         sync input port dataReturnIn: Svc.ComDataWithContext
 
-        param SEQ_NUM_WINDOW : U32 default 50
+        param SEQ_NUM_WINDOW : U32 default 50000
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
