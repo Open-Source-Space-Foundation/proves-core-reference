@@ -19,8 +19,6 @@
 
 constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
 constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
-std::mutex m_commandLossMutex;
-Fw::Time m_commandLossStartTime;
 
 // List of opcodes (as hex strings) that bypass authentication
 // Format: 8 hex characters (4 bytes = 32-bit opcode)
@@ -190,8 +188,7 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
-
-
+    Os::ScopeLock lock(this->m_commandLossMutex);
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 

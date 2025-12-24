@@ -77,8 +77,7 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     Fw::Time m_commandLossStartTime;
 
     //! mutex for command loss file reading and writing
-    std::mutex m_commandLossMutex;
-
+    Os::Mutex m_commandLossMutex;
 };
 
 }  // namespace Svc
