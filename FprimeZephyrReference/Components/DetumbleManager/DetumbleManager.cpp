@@ -39,7 +39,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
         if (this->m_detumbleState != DetumbleState::COOLDOWN) {
-            this->stopMagnetorquers();
+            this->stateEnterCooldownActions();
             this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         }
         return;
@@ -235,34 +235,20 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
 
 void DetumbleManager ::stateCooldownActions() {
     this->stateEnterCooldownActions();
-
-    // Get cooldown duration from parameter
-    Fw::ParamValid isValid;
-    Fw::TimeIntervalValue period = this->paramGet_COOLDOWN_DURATION(isValid);
-    this->tlmWrite_CooldownDuration(period);
-
-    // Calculate cooldown end time
-    Fw::Time duration(this->m_cooldownStartTime.getTimeBase(), period.get_seconds(), period.get_useconds());
-    Fw::Time cooldown_end_time = Fw::Time::add(this->m_cooldownStartTime, duration);
-
-    // Check if cooldown period has elapsed and exit cooldown state
-    Fw::Time currentTime = this->getTime();
-    if (currentTime >= cooldown_end_time) {
-        this->stateExitCooldownActions();
-    }
+    this->stateExitCooldownActions();
 }
 
 void DetumbleManager ::stateEnterCooldownActions() {
-    // On first call after state transition
-    if (this->m_cooldownStartTime == Fw::ZERO_TIME) {
-        // Record cooldown start time
-        this->m_cooldownStartTime = this->getTime();
-    }
+    // Turn off magnetorquers
+    this->stopMagnetorquers();
+
+    // Record cooldown start time
+    // this->m_cooldownStartTime = this->getTime();
 }
 
 void DetumbleManager ::stateExitCooldownActions() {
     // Reset cooldown start time
-    this->m_cooldownStartTime = Fw::ZERO_TIME;
+    // this->m_cooldownStartTime = Fw::ZERO_TIME;
 
     // Transition to SENSING state
     this->m_detumbleState = DetumbleState::SENSING;
@@ -306,41 +292,20 @@ void DetumbleManager ::stateSensingActions() {
 
 void DetumbleManager ::stateTorquingActions() {
     this->stateEnterTorquingActions();
-
-    // Get torque duration from parameter
-    Fw::ParamValid isValid;
-    Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
-    this->tlmWrite_TorqueDuration(torque_duration_param);
-
-    // Calculate torque end time
-    Fw::Time duration(this->m_torqueStartTime.getTimeBase(), torque_duration_param.get_seconds(),
-                      torque_duration_param.get_useconds());
-    Fw::Time torque_end_time = Fw::Time::add(this->m_torqueStartTime, duration);
-
-    // Check if torquing duration has elapsed and exit torquing state
-    Fw::Time currentTime = this->getTime();
-    if (currentTime >= torque_end_time) {
-        this->stateExitTorquingActions();
-    }
+    this->stateExitTorquingActions();
 }
 
 void DetumbleManager ::stateEnterTorquingActions() {
-    // On first call after state transition
-    if (this->m_torqueStartTime == Fw::ZERO_TIME) {
-        // Perform torqueing action
-        this->setDipoleMoment(this->m_dipole_moment);
+    // Perform torqueing action
+    this->setDipoleMoment(this->m_dipole_moment);
 
-        // Record torque start time
-        this->m_torqueStartTime = this->getTime();
-    }
+    // Record torque start time
+    // this->m_torqueStartTime = this->getTime();
 }
 
 void DetumbleManager ::stateExitTorquingActions() {
-    // Turn off magnetorquers
-    this->stopMagnetorquers();
-
     // Reset torque start time
-    this->m_torqueStartTime = Fw::ZERO_TIME;
+    // this->m_torqueStartTime = Fw::ZERO_TIME;
 
     // Transition to COOLDOWN state
     this->m_detumbleState = DetumbleState::COOLDOWN;

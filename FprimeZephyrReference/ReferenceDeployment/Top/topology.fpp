@@ -5,6 +5,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
+    rateGroup50Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
+    instance rateGroup50Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -230,6 +232,9 @@ module ReferenceDeployment {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
+      # Ultra high rate (50Hz) rate group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
+
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
@@ -244,6 +249,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> downlinkDelay.run
       rateGroup10Hz.RateGroupMemberOut[10] -> sband.run
       rateGroup10Hz.RateGroupMemberOut[11] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -265,7 +271,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> detumbleManager.run
     }
 
 
