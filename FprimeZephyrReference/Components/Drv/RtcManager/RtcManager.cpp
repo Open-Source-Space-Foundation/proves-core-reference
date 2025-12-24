@@ -28,11 +28,10 @@ void RtcManager ::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
-    // Get microseconds from system clock cycles
-    // Note: RV3028 does not provide sub-second precision, so this is
-    // just an approximation based on system cycles.
-    // FPrime expects microseconds in the range [0, 999999]
-    uint32_t useconds = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
+    // Get system uptime
+    int64_t t = k_uptime_get();
+    U32 seconds_since_boot = static_cast<U32>(t / 1000);
+    U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
@@ -46,8 +45,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         }
 
         // Use monotonic time as fallback
-        uint32_t seconds = k_uptime_seconds();
-        time.set(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
+        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
 
@@ -60,14 +58,15 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Convert to time_t (seconds since epoch)
     errno = 0;
-    time_t seconds = timeutil_timegm(time_tm);
+    U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
     if (errno == ERANGE) {
         Fw::Logger::log("RTC returned invalid time");
         return;
     }
 
     // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time,
+             this->rescaleUseconds(seconds_real_time, useconds_since_boot));
 }
 
 // ----------------------------------------------------------------------
@@ -172,6 +171,16 @@ bool RtcManager ::timeDataIsValid(Drv::TimeData t) {
     }
 
     return valid;
+}
+
+U32 RtcManager ::rescaleUseconds(U32 current_seconds, U32 current_useconds) {
+    if (this->m_last_seen_seconds != current_seconds) {
+        this->m_last_seen_seconds = current_seconds;
+        this->m_useconds_offset = current_useconds;
+    }
+
+    // FPrime expects microseconds in the range [0, 999999]
+    return (this->m_useconds_offset + current_useconds) % 1000000;
 }
 
 }  // namespace Drv

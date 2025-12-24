@@ -15,6 +15,7 @@
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/timeutil.h>
 
 namespace Drv {
@@ -77,13 +78,26 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
-    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
+
+    //! Rescales useconds to ensure monotonic increase because RV3028 does not provide sub-second precision
+    //! We have two clocks: the RTC clock which provides seconds, and the system uptime clock which provides
+    //! milliseconds since boot. We use the initial offset of the system uptime clock when the RTC time is first read
+    //! to ensure that the microseconds portion of the time is always increasing.
+    U32 rescaleUseconds(U32 current_seconds, U32 current_useconds);
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
-    //! device stores the initialized Zephyr RTC device
-    const struct device* m_dev;
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
+
+    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
+    const struct device* m_dev;             //!< The initialized Zephyr RTC device
+    U32 m_last_seen_seconds = 0;            //!< The last seen seconds value from the RTC
+    // U32 m_last_seconds_with_scaled_microseconds = 0;  //!< The last seconds value when microseconds were scaled
+    U32 m_useconds_offset = 0;  //!< The offset to apply to microseconds to ensure monotonicity
 };
 
 }  // namespace Drv
