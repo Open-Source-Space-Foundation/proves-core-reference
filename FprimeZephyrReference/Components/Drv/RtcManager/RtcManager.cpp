@@ -180,7 +180,7 @@ U32 RtcManager ::rescaleUseconds(U32 current_seconds, U32 current_useconds) {
     }
 
     // FPrime expects microseconds in the range [0, 999999]
-    return (this->m_useconds_offset + current_useconds) % 1000000;
+    return (current_useconds - this->m_useconds_offset) % 1000000;
 }
 
 }  // namespace Drv
