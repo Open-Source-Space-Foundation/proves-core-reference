@@ -96,8 +96,7 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
     const struct device* m_dev;             //!< The initialized Zephyr RTC device
     U32 m_last_seen_seconds = 0;            //!< The last seen seconds value from the RTC
-    // U32 m_last_seconds_with_scaled_microseconds = 0;  //!< The last seconds value when microseconds were scaled
-    U32 m_useconds_offset = 0;  //!< The offset to apply to microseconds to ensure monotonicity
+    U32 m_useconds_offset = 0;              //!< The offset to apply to microseconds to ensure monotonicity
 };
 
 }  // namespace Drv
