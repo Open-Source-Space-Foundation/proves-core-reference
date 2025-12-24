@@ -84,7 +84,7 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
 }
 
 Fw::Success Drv2605Manager ::stop_handler(FwIndexType portNum) {
-    return this->start_handler(portNum, 0)
+    return this->start_handler(portNum, 0);
 }
 
 // ----------------------------------------------------------------------
