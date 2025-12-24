@@ -4,6 +4,9 @@ conftest.py:
 Pytest configuration for integration tests.
 """
 
+import os
+import signal
+import subprocess
 import time
 
 import pytest
@@ -19,14 +22,14 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
 
     GDS is used to send commands and receive telemetry/events.
     """
-    # pro = subprocess.Popen(
-    #     ["make", "gds-integration"],
-    #     cwd=os.getcwd(),
-    #     stdout=subprocess.PIPE,
-    #     preexec_fn=os.setsid,
-    # )
+    pro = subprocess.Popen(
+        ["make", "gds-integration"],
+        cwd=os.getcwd(),
+        stdout=subprocess.PIPE,
+        preexec_fn=os.setsid,
+    )
 
-    gds_working = True
+    gds_working = False
     timeout_time = time.time() + 30
     while time.time() < timeout_time:
         try:
@@ -43,4 +46,4 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     assert gds_working
 
     yield
-    # os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
+    os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
