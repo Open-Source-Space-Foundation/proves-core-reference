@@ -244,6 +244,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> downlinkDelay.run
       rateGroup10Hz.RateGroupMemberOut[10] -> sband.run
       rateGroup10Hz.RateGroupMemberOut[11] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -265,7 +266,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> detumbleManager.run
     }
 
 
