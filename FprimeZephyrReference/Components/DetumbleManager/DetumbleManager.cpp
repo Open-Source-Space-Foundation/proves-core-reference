@@ -38,8 +38,10 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
     if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
-        this->stopMagnetorquers();
-        this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
+        if (this->m_detumbleState != DetumbleState::COOLDOWN) {
+            this->stopMagnetorquers();
+            this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
+        }
         return;
     }
 
@@ -57,7 +59,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 // ----------------------------------------------------------------------
-//  Private helper methods
+//  Public helper methods
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::configure() {
@@ -133,6 +135,10 @@ void DetumbleManager ::configure() {
     this->tlmWrite_ZMinusDiameter(this->m_zMinusMagnetorquer.diameter);
 }
 
+// ----------------------------------------------------------------------
+//  Private helper methods
+// ----------------------------------------------------------------------
+
 void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     // Calculate target currents
     F64 targetCurrent_x_plus = this->calculateTargetCurrent(dipoleMoment.get_x(), this->m_xPlusMagnetorquer);
@@ -156,16 +162,16 @@ F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& an
     return magRadPerSec * 180.0 / this->PI;
 }
 
-void DetumbleManager ::startMagnetorquers(I8 x_plus_val,
-                                          I8 x_minus_val,
-                                          I8 y_plus_val,
-                                          I8 y_minus_val,
-                                          I8 z_minus_val) {
-    this->xPlusStart_out(0, x_plus_val);
-    this->xMinusStart_out(0, x_minus_val);
-    this->yPlusStart_out(0, y_plus_val);
-    this->yMinusStart_out(0, y_minus_val);
-    this->zMinusStart_out(0, z_minus_val);
+void DetumbleManager ::startMagnetorquers(I8 x_plus_drive_level,
+                                          I8 x_minus_drive_level,
+                                          I8 y_plus_drive_level,
+                                          I8 y_minus_drive_level,
+                                          I8 z_minus_drive_level) {
+    this->xPlusStart_out(0, x_plus_drive_level);
+    this->xMinusStart_out(0, x_minus_drive_level);
+    this->yPlusStart_out(0, y_plus_drive_level);
+    this->yMinusStart_out(0, y_minus_drive_level);
+    this->zMinusStart_out(0, z_minus_drive_level);
 }
 
 void DetumbleManager ::stopMagnetorquers() {
@@ -211,7 +217,6 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
     }
 
     // Scale to int8_t range [-127, 127]
-    I8 scaledCurrent = static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
     return static_cast<I8>(std::round((clampedCurrent / maxCurrent) * 127.0));
 }
 

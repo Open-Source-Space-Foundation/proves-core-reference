@@ -58,13 +58,13 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
     return Fw::Success::SUCCESS;
 }
 
-Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 val) {
+Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
     if (!this->initializeDevice()) {
         return Fw::Success::FAILURE;
     }
 
     // Set the RTP data
-    input_arr[0] = static_cast<uint8_t>(val);
+    input_arr[0] = static_cast<uint8_t>(driveLevel);
     union drv2605_config_data config_data;
     config_data.rtp_data = &rtp;
 
@@ -84,19 +84,16 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 val) {
 }
 
 Fw::Success Drv2605Manager ::stop_handler(FwIndexType portNum) {
-    if (this->start_handler(0, 0) != Fw::Success::SUCCESS) {
-        return Fw::Success::FAILURE;
-    }
-    return Fw::Success::SUCCESS;
+    return this->start_handler(portNum, 0)
 }
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Drv2605Manager ::START_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, I8 val) {
-    // Trigger the magnetorquer
-    Fw::Success condition = this->start_handler(0, val);
+void Drv2605Manager ::START_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, I8 driveLevel) {
+    // Start the magnetorquer
+    Fw::Success condition = this->start_handler(0, driveLevel);
     if (condition != Fw::Success::SUCCESS) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -106,7 +103,11 @@ void Drv2605Manager ::START_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, I8 val) 
 
 void Drv2605Manager ::STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Stop the magnetorquer
-    this->stop_handler(0);
+    Fw::Success condition = this->stop_handler(0);
+    if (condition != Fw::Success::SUCCESS) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

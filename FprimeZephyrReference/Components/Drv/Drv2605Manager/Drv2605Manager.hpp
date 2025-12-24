@@ -49,9 +49,10 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Handler implementation for start
     //!
     //! Port to start the magnetorquer
-    Fw::Success start_handler(FwIndexType portNum,  //!< The port number
-                              I8 val                //!< Value between -127 and 127
-                              ) override;
+    Fw::Success start_handler(
+        FwIndexType portNum,  //!< The port number
+        I8 driveLevel         //!< Magnetorquer drive level as a signed current scale in the range -127 to 127.
+        ) override;
 
     //! Handler implementation for stop
     //!
@@ -67,10 +68,11 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Handler implementation for command START
     //!
     //! Command to start the magnetorquer
-    void START_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                          U32 cmdSeq,           //!< The command sequence number
-                          I8 val                //!< Value between -127 and 127
-                          ) override;
+    void START_cmdHandler(
+        FwOpcodeType opCode,  //!< The opcode
+        U32 cmdSeq,           //!< The command sequence number
+        I8 driveLevel         //!< Magnetorquer drive level as a signed current scale in the range -127 to 127.
+        ) override;
 
     //! Handler implementation for command STOP
     //!

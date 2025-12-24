@@ -58,7 +58,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
   public:
     // ----------------------------------------------------------------------
-    //  Public helper functions
+    //  Public helper methods
     // ----------------------------------------------------------------------
 
     //! Configure and initialize magnetorquer coils from parameters

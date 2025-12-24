@@ -1,6 +1,6 @@
 module Drv {
     port StartMagnetorquer(
-        val: I8, @< Value between -127 and 127
+        val: I8, @< Magnetorquer drive level as a signed current scale in the range -127 to 127.
     ) -> Fw.Success
     port StopMagnetorquer() -> Fw.Success
     port MagnetorquerToggle(value: bool)
