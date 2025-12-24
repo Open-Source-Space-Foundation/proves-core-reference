@@ -147,17 +147,30 @@ void DetumbleManager ::setDipoleMoment(Drv::DipoleMoment dipoleMoment) {
     F64 targetCurrent_y_minus = this->calculateTargetCurrent(dipoleMoment.get_y(), this->m_yMinusMagnetorquer);
     F64 targetCurrent_z_minus = this->calculateTargetCurrent(dipoleMoment.get_z(), this->m_zMinusMagnetorquer);
 
-    // Clamp currents and start magnetorquers
-    this->startMagnetorquers(this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer),
-                             -this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer),
-                             this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer),
-                             -this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer),
-                             -this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer));
+    // Calculate clamped currents
+    I8 clampedCurrent_x_plus = this->clampCurrent(targetCurrent_x_plus, this->m_xPlusMagnetorquer);
+    I8 clampedCurrent_x_minus = this->clampCurrent(targetCurrent_x_minus, this->m_xMinusMagnetorquer);
+    I8 clampedCurrent_y_plus = this->clampCurrent(targetCurrent_y_plus, this->m_yPlusMagnetorquer);
+    I8 clampedCurrent_y_minus = this->clampCurrent(targetCurrent_y_minus, this->m_yMinusMagnetorquer);
+    I8 clampedCurrent_z_minus = this->clampCurrent(targetCurrent_z_minus, this->m_zMinusMagnetorquer);
+
+    // Adjust signs so that a positive drive level always produces the same dipole / torque
+    // direction, compensating for the opposite physical orientation of the "minus" coils.
+    I8 x_plus_drive_level = clampedCurrent_x_plus;
+    I8 x_minus_drive_level = -clampedCurrent_x_minus;
+    I8 y_plus_drive_level = clampedCurrent_y_plus;
+    I8 y_minus_drive_level = -clampedCurrent_y_minus;
+    I8 z_minus_drive_level = -clampedCurrent_z_minus;
+
+    // Start magnetorquers
+    this->startMagnetorquers(x_plus_drive_level, x_minus_drive_level, y_plus_drive_level, y_minus_drive_level,
+                             z_minus_drive_level);
 }
 
-F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel) {
-    F64 magRadPerSec =
-        std::sqrt(angVel.get_x() * angVel.get_x() + angVel.get_y() * angVel.get_y() + angVel.get_z() * angVel.get_z());
+F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angular_velocity) {
+    F64 magRadPerSec = std::sqrt(angular_velocity.get_x() * angular_velocity.get_x() +
+                                 angular_velocity.get_y() * angular_velocity.get_y() +
+                                 angular_velocity.get_z() * angular_velocity.get_z());
 
     return magRadPerSec * 180.0 / this->PI;
 }

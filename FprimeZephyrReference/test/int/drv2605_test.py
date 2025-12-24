@@ -45,6 +45,8 @@ def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     return power_event.args[0].val
 
 
+# This test works reliably on hardware driven by a battery, mark as not flaky when CI system is powered by programmable power supply
+@pytest.mark.skip("Flaky")
 def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that magnetorquer powers on by asserting higher power draw"""
 

@@ -77,7 +77,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //!
     //! ωx, ωy, ωz are the angular velocity components in rad/s
     //! Returns magnitude in deg/s
-    F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angVel);
+    F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angular_velocity);
 
     //! Compute the coil area based on its shape and dimensions.
     //! For Rectangular: A = w * l
@@ -115,10 +115,14 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     I8 clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil);
 
     //! Set the dipole moment by toggling the magnetorquers
-    void setDipoleMoment(Drv::DipoleMoment dpMoment);
+    void setDipoleMoment(Drv::DipoleMoment dipoleMoment);
 
     //! Turn the magnetorquers on based on the provided values
-    void startMagnetorquers(I8 x_plus_amps, I8 x_minus_amps, I8 y_plus_amps, I8 y_minus_amps, I8 z_minus_amps);
+    void DetumbleManager ::startMagnetorquers(I8 x_plus_drive_level,
+                                              I8 x_minus_drive_level,
+                                              I8 y_plus_drive_level,
+                                              I8 y_minus_drive_level,
+                                              I8 z_minus_drive_level);
 
     //! Turn the magnetorquers off based on the provided values
     void stopMagnetorquers();
