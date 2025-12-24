@@ -118,11 +118,11 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     void setDipoleMoment(Drv::DipoleMoment dipoleMoment);
 
     //! Turn the magnetorquers on based on the provided values
-    void DetumbleManager ::startMagnetorquers(I8 x_plus_drive_level,
-                                              I8 x_minus_drive_level,
-                                              I8 y_plus_drive_level,
-                                              I8 y_minus_drive_level,
-                                              I8 z_minus_drive_level);
+    void startMagnetorquers(I8 x_plus_drive_level,
+                            I8 x_minus_drive_level,
+                            I8 y_plus_drive_level,
+                            I8 y_minus_drive_level,
+                            I8 z_minus_drive_level);
 
     //! Turn the magnetorquers off based on the provided values
     void stopMagnetorquers();
