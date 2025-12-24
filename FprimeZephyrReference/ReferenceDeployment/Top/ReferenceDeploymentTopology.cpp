@@ -12,6 +12,7 @@
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/spi.h>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
@@ -25,6 +26,10 @@ static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODEL
 static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
 static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
     GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
+static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_nrst), gpios);
+static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
+static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
+static const struct gpio_dt_spec sbandTxEnIRQ = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io1), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -44,16 +49,12 @@ Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
     {getRateGroupPeriod(10), 0},  // 10Hz = 100ms
     {getRateGroupPeriod(1), 0},   // 1Hz = 1s
-    {6000, 0},                    // 1/6Hz = 6s
-    {12000, 0}                    // 1/10Hz = 10s
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
-U32 rateGroup1_6HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {6000};
-U32 rateGroup1_10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {12000};
 
 /**
  * \brief configure/setup components in project-specific way
@@ -84,6 +85,10 @@ void configureTopology() {
     gpioface5LS.open(face5LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadPowerLS.open(payloadPowerLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadBatteryLS.open(payloadBatteryLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandNrst.open(sbandNrstGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandRxEn.open(sbandRxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandTxEn.open(sbandTxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandIRQ.open(sbandTxEnIRQ, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
@@ -115,6 +120,22 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
+
+    static struct spi_cs_control cs_ctrl = {
+        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),
+        .delay = 0U, /* us to wait after asserting CS before transfer */
+        .cs_is_gpio = true,
+    };
+
+    struct spi_config cfg = {
+        .frequency = 100000,  // 100 KHz -- sx1280 has maximum 18.18 MHz -- there is a 12MHz oscillator on-board
+        .operation = SPI_WORD_SET(8),
+        .slave = 0,
+        .cs = cs_ctrl,
+        .word_delay = 0,
+    };
+    spiDriver.configure(state.spi0Device, cfg);
+    sband.configureRadio();
 
     // UART from the board to the payload
     peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
