@@ -118,7 +118,7 @@ bootloader: uv
 	fi
 
 .PHONY: sync-sequence-number
-sync-sequence-number: uv ## Synchronize sequence number between GDS and flight software
+sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
 	@echo "Synchronizing sequence number"
 	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
