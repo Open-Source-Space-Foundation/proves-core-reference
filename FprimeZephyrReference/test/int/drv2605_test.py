@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime.common.models.serialize.time_type import TimeType
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
@@ -45,14 +45,11 @@ def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     return power_event.args[0].val
 
 
-@pytest.mark.skip("Flaky")
 def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that magnetorquer powers on by asserting higher power draw"""
 
     baseline_power = get_system_power(fprime_test_api)
-    proves_send_and_assert_command(
-        fprime_test_api, f"{drv2605Manager}.START_CONTINUOUS_MODE"
-    )
+    proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.START", ["127"])
 
     time.sleep(1)  # Allow some time for power increase
 
@@ -79,6 +76,4 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
         raise e
     finally:
         # Ensure burnwire is stopped
-        proves_send_and_assert_command(
-            fprime_test_api, f"{drv2605Manager}.STOP_CONTINUOUS_MODE"
-        )
+        proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.STOP")

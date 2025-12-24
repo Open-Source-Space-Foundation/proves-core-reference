@@ -16,6 +16,10 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+# Setting specific fprime-gds pre-release for features:
+# - file-uplink-cooldown arg
+# - file-uplink-chunk-size arg
+	@$(UV) pip install fprime-gds==4.1.1a2
 
 
 .PHONY: zephyr-setup
