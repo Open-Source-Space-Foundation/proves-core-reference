@@ -10,13 +10,3 @@ R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Setting Bandwidths"
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET, BW_125_KHZ
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SET, BW_125_KHZ
 R00:00:00 ReferenceDeployment.lora.TRANSMIT, ENABLED
-
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Saving to ParamDb"
-R00:00:00 ReferenceDeployment.lora.DATA_RATE_PRM_SAVE
-R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SAVE
-R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SAVE
-R00:00:00 ReferenceDeployment.lora.CODING_RATE_PRM_SAVE
-R00:00:00 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SAVE
-R00:00:00 ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SAVE
-R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
-
