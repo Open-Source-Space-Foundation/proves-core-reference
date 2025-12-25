@@ -72,8 +72,8 @@ module Svc {
             format "Command Loss Timer Failed to update most recent time" \
             throttle 1
 
-        @ Command Loss Time By Default
-        param COMM_LOSS_TIME: U32 default 30
+        @ Command Loss Time By Default, one day
+        param COMM_LOSS_TIME: U32 default 1440
 
         @ File to Read last command loss time from
         param COMM_LOSS_TIME_START_FILE: string default "/comm_loss_start.bin"
