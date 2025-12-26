@@ -11,7 +11,6 @@
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
 
-#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcHelper.hpp"
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 
@@ -115,7 +114,7 @@ void setupTopology(const TopologyState& state) {
     startTasks(state);
 
     // Try to configure the RTC device first because all other components need time
-    rtcManager.configure(state.rtcDevice, Drv::RtcHelper());
+    rtcManager.configure(state.rtcDevice);
 
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.

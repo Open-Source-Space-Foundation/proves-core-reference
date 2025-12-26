@@ -40,7 +40,7 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Configure the RTC device
-    void configure(const struct device* dev, RtcHelper rtcHelper);
+    void configure(const struct device* dev);
 
   private:
     // ----------------------------------------------------------------------

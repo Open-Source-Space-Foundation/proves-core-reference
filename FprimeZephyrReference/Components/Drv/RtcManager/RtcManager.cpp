@@ -11,7 +11,7 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {}
 
 RtcManager ::~RtcManager() {}
 
@@ -19,9 +19,8 @@ RtcManager ::~RtcManager() {}
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void RtcManager ::configure(const struct device* dev, RtcHelper rtcHelper) {
+void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
-    this->m_rtcHelper = rtcHelper;
 }
 
 // ----------------------------------------------------------------------
