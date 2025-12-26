@@ -43,6 +43,8 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
+    instance detumbleManager
+    instance bDotDetumble
     instance imuManager
     instance bootloaderTrigger
     instance comDelaySband
@@ -234,18 +236,13 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[6] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[7] -> cmdSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[8] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[13] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[14] -> downlinkDelay.run
-      rateGroup10Hz.RateGroupMemberOut[15] -> sband.run
-      rateGroup10Hz.RateGroupMemberOut[16] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> downlinkDelay.run
+      rateGroup10Hz.RateGroupMemberOut[10] -> sband.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
-      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsdsLora.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> ComCcsdsSband.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[2] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[3] -> ComCcsdsLora.commsBufferManager.schedIn
@@ -261,9 +258,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[17] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
     }
 
 
@@ -320,6 +316,25 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
+    }
+
+    connections DetumbleManager {
+      detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
+      detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
+
+      detumbleManager.xPlusStart -> drv2605Face0Manager.start
+      detumbleManager.xMinusStart -> drv2605Face1Manager.start
+      detumbleManager.yPlusStart -> drv2605Face2Manager.start
+      detumbleManager.yMinusStart -> drv2605Face3Manager.start
+      detumbleManager.zMinusStart -> drv2605Face5Manager.start
+
+      detumbleManager.xPlusStop -> drv2605Face0Manager.stop
+      detumbleManager.xMinusStop -> drv2605Face1Manager.stop
+      detumbleManager.yPlusStop -> drv2605Face2Manager.stop
+      detumbleManager.yMinusStop -> drv2605Face3Manager.stop
+      detumbleManager.zMinusStop -> drv2605Face5Manager.stop
+
+      bDotDetumble.magneticFieldGet -> imuManager.magneticFieldGet
     }
 
     connections PayloadCom {

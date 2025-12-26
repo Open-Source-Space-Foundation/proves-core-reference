@@ -169,6 +169,63 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
+  packet Detumble id 15 group 6 {
+    ReferenceDeployment.detumbleManager.Mode
+    ReferenceDeployment.detumbleManager.State
+    ReferenceDeployment.detumbleManager.BelowRotationalThreshold
+    ReferenceDeployment.bDotDetumble.Gain
+  }
+
+  packet DetumbleParams id 16 group 100 {
+    ReferenceDeployment.detumbleManager.RotationalThreshold
+    ReferenceDeployment.detumbleManager.CooldownDuration
+    ReferenceDeployment.detumbleManager.TorqueDuration
+  }
+  packet DetumbleXPlusCoilParams id 17 group 100 {
+    # X+ coil parameters
+    ReferenceDeployment.detumbleManager.XPlusVoltage
+    ReferenceDeployment.detumbleManager.XPlusResistance
+    ReferenceDeployment.detumbleManager.XPlusNumTurns
+    ReferenceDeployment.detumbleManager.XPlusLength
+    ReferenceDeployment.detumbleManager.XPlusWidth
+    ReferenceDeployment.detumbleManager.XPlusShape
+  }
+  packet DetumbleXMinusCoilParams id 18 group 100 {
+    # X- coil parameters
+    ReferenceDeployment.detumbleManager.XMinusVoltage
+    ReferenceDeployment.detumbleManager.XMinusResistance
+    ReferenceDeployment.detumbleManager.XMinusNumTurns
+    ReferenceDeployment.detumbleManager.XMinusLength
+    ReferenceDeployment.detumbleManager.XMinusWidth
+    ReferenceDeployment.detumbleManager.XMinusShape
+  }
+  packet DetumbleYPlusCoilParams id 19 group 100 {
+    # Y+ coil parameters
+    ReferenceDeployment.detumbleManager.YPlusVoltage
+    ReferenceDeployment.detumbleManager.YPlusResistance
+    ReferenceDeployment.detumbleManager.YPlusNumTurns
+    ReferenceDeployment.detumbleManager.YPlusLength
+    ReferenceDeployment.detumbleManager.YPlusWidth
+    ReferenceDeployment.detumbleManager.YPlusShape
+  }
+  packet DetumbleYMinusCoilParams id 20 group 100 {
+    # Y- coil parameters
+    ReferenceDeployment.detumbleManager.YMinusVoltage
+    ReferenceDeployment.detumbleManager.YMinusResistance
+    ReferenceDeployment.detumbleManager.YMinusNumTurns
+    ReferenceDeployment.detumbleManager.YMinusLength
+    ReferenceDeployment.detumbleManager.YMinusWidth
+    ReferenceDeployment.detumbleManager.YMinusShape
+  }
+  packet DetumbleZMinusCoilParams id 21 group 100 {
+    # Z- coil parameters
+    ReferenceDeployment.detumbleManager.ZMinusVoltage
+    ReferenceDeployment.detumbleManager.ZMinusResistance
+    ReferenceDeployment.detumbleManager.ZMinusNumTurns
+    ReferenceDeployment.detumbleManager.ZMinusDiameter
+    ReferenceDeployment.detumbleManager.ZMinusShape
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions

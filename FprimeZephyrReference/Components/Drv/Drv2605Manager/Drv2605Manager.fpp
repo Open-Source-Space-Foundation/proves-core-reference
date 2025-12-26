@@ -1,5 +1,9 @@
 module Drv {
-    port trigger -> Fw.Success
+    port StartMagnetorquer(
+        val: I8, @< Magnetorquer drive level as a signed current scale in the range -127 to 127.
+    ) -> Fw.Success
+    port StopMagnetorquer() -> Fw.Success
+    port MagnetorquerToggle(value: bool)
 }
 
 module Drv {
@@ -7,24 +11,21 @@ module Drv {
     passive component Drv2605Manager {
 
         #### Ports ####
-        @ Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
-        sync input port run: Svc.Sched
+        @ Port to start the magnetorquer
+        sync input port start: StartMagnetorquer
 
-        @ Port to trigger the magnetorquer
-        sync input port trigger: trigger
+        @ Port to stop the magnetorquer
+        sync input port stop: StopMagnetorquer
 
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         #### Commands ####
-        @ Command to trigger the magnetorquer
-        sync command TRIGGER()
+        @ Command to start the magnetorquer
+        sync command START(val: I8)
 
-        @ Command to start continuous mode
-        sync command START_CONTINUOUS_MODE()
-
-        @ Command to stop continuous mode
-        sync command STOP_CONTINUOUS_MODE()
+        @ Command to stop the magnetorquer
+        sync command STOP()
 
         #### Events ####
         @ Event for reporting not ready error

@@ -68,7 +68,7 @@ module Components {
         param ACCELEROMETER_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_12_5Hz id 0
 
         @ Parameter for storing the gyroscope sampling frequency
-        param GYROSCOPE_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_12_5Hz id 1
+        param GYROSCOPE_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_104Hz id 1
 
         @ Parameter for storing the magnetometer sampling frequency
         param MAGNETOMETER_SAMPLING_FREQUENCY: Lis2mdlSamplingFrequency default Lis2mdlSamplingFrequency.SF_100Hz id 2

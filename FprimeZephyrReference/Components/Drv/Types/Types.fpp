@@ -19,5 +19,13 @@ module Drv {
         x: F64 @< Magnetic field in gauss in the X direction.
         y: F64 @< Magnetic field in gauss in the Y direction.
         z: F64 @< Magnetic field in gauss in the Z direction.
+        timestamp: Fw.TimeValue @< Time the magnetic field reading was taken.
+    }
+
+    @ Calculated dipole moment from the B-Dot algorithm.
+    struct DipoleMoment {
+        x: F64
+        y: F64
+        z: F64
     }
 }

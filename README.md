@@ -127,12 +127,6 @@ Once built, upload `mcuboot.uf2` like normally done.
 
 Then build proves-core-reference like normal. This will put `bootable.uf2` inside of the current directory. Ensure you upload this file to the board instead of `build-artifacts/zephyr.uf2`.
 
-
-Before, you currently need to run
-
-``` pip install git+https://github.com/LeStarch/fprime-gds@5b02709  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
-
-
 When you run the gds,
 
 ``` fprime-gds --file-uplink-cooldown 0.8```
