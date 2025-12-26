@@ -7,7 +7,7 @@ name = "fprime-gds-my-plugin"
 version = "0.1.0"
 dependencies = [
     "pluggy>=1.3.0",
-    "fprime-gds>=3.4.4"
+    "fprime-gds>=4.1.1a2"
 ]
 
 [project.entry-points.fprime_gds]

@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime.common.models.serialize.time_type import TimeType
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"

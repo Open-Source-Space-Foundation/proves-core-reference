@@ -29,6 +29,7 @@ static float bandwidthEnumToKHz(SBandBandwidth bw) {
             return 1625.0f;
         default:
             FW_ASSERT(false);  // Should be unreachable if enum is valid
+            return 0.0f;
     }
 }
 

@@ -11,9 +11,9 @@ from datetime import datetime, timezone
 import pytest
 from common import cmdDispatch, proves_send_and_assert_command
 from fprime.common.models.serialize.numerical_types import U32Type
-from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.data_types.event_data import EventData
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 

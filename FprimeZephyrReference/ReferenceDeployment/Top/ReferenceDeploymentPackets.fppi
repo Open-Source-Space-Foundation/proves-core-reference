@@ -37,7 +37,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.Acceleration
     ReferenceDeployment.imuManager.AngularVelocity
     ReferenceDeployment.imuManager.MagneticField
-    ReferenceDeployment.imuManager.Temperature
     ReferenceDeployment.imuManager.AccelerometerSamplingFrequency
     ReferenceDeployment.imuManager.GyroscopeSamplingFrequency
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
