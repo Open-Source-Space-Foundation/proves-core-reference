@@ -6,13 +6,13 @@ module ComCcsdsConfig {
     constant BASE_ID_SBAND = 0x23000000
 
     module QueueSizes {
-        constant comQueue   = 20
-        constant aggregator = 15
+        constant comQueue            = 20
+        constant aggregator          = 15
     }
 
     module StackSizes {
-        constant comQueue   = 4 * 1024 # Must match prj.conf thread stack size
-        constant aggregator = 4 * 1024 # Must match prj.conf thread stack size
+        constant comQueue            = 4 * 1024 # Must match prj.conf thread stack size
+        constant aggregator          = 4 * 1024 # Must match prj.conf thread stack size
     }
 
     module Priorities {
