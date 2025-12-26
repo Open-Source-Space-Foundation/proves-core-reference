@@ -69,9 +69,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //  Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Perform a single B-Dot control step.
-    bool executeControlStep(std::string& reason);
-
     //! Compute the angular velocity magnitude in degrees per second.
     //! Formula: |ω| = sqrt(ωx² + ωy² + ωz²)
     //!

@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  BDotDetumble.cpp
-// \author aychar
 // \brief  cpp file for BDotDetumble component implementation class
 // ======================================================================
 
@@ -19,10 +18,10 @@ BDotDetumble ::BDotDetumble(const char* const compName) : BDotDetumbleComponentB
 BDotDetumble ::~BDotDetumble() {}
 
 // ----------------------------------------------------------------------
-//  Private helper methods
+//  public helper methods
 // ----------------------------------------------------------------------
 
-Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNum, Fw::Success& condition) {
+Drv::DipoleMoment BDotDetumble ::getDipoleMomentGet(Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     // Set previous magnetic field if uninitialized
@@ -67,12 +66,12 @@ Drv::DipoleMoment BDotDetumble::dipoleMomentGet_handler(const FwIndexType portNu
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-F64 BDotDetumble::getMagnitude(const Drv::MagneticField magField) {
+F64 BDotDetumble ::getMagnitude(const Drv::MagneticField magField) {
     return sqrt((magField.get_x() * magField.get_x()) + (magField.get_y() * magField.get_y()) +
                 (magField.get_z() * magField.get_z()));
 }
 
-std::array<F64, 3> BDotDetumble::dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField) {
+std::array<F64, 3> BDotDetumble ::dB_dt(const Drv::MagneticField currMagField, const Drv::MagneticField prevMagField) {
     // To compute dB/dt, we need the time difference between the two readings to be non-zero
     Fw::TimeInterval dt =
         Fw::TimeInterval(this->magneticFieldReadingTime(currMagField), this->magneticFieldReadingTime(prevMagField));
@@ -95,7 +94,7 @@ std::array<F64, 3> BDotDetumble::dB_dt(const Drv::MagneticField currMagField, co
     return arr;
 }
 
-Fw::Time BDotDetumble::magneticFieldReadingTime(const Drv::MagneticField magField) {
+Fw::Time BDotDetumble ::magneticFieldReadingTime(const Drv::MagneticField magField) {
     return Fw::Time(magField.get_timestamp().get_timeBase(), magField.get_timestamp().get_timeContext(),
                     magField.get_timestamp().get_seconds(), magField.get_timestamp().get_useconds());
 }

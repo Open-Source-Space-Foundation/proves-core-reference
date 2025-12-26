@@ -1,26 +1,22 @@
 // ======================================================================
 // \title  BDotDetumble.hpp
-// \author aychar
 // \brief  hpp file for BDotDetumble component implementation class
 // ======================================================================
 
-#ifndef Drv_BDotDetumble_HPP
-#define Drv_BDotDetumble_HPP
+#pragma once
 
 #include <array>
 
-#include "FprimeZephyrReference/Components/Drv/BDotDetumble/BDotDetumbleComponentAc.hpp"
-namespace Drv {
+namespace Components {
 
-class BDotDetumble final : public BDotDetumbleComponentBase {
+class BDotDetumble {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
     //! Construct BDotDetumble object
-    BDotDetumble(const char* const compName  //!< The component name
-    );
+    BDotDetumble();
 
     //! Destroy BDotDetumble object
     ~BDotDetumble();
@@ -38,13 +34,7 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     // k is a gain constant
     // dB/dt is the time derivative of the magnetic field reading in micro-Tesla per second (uT/s)
     // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
-    Drv::DipoleMoment dipoleMomentGet_handler(const FwIndexType portNum,  //!< The port number
-                                              Fw::Success& condition) override;
-
-  private:
-    // ----------------------------------------------------------------------
-    //  Private helper methods
-    // ----------------------------------------------------------------------
+    Drv::DipoleMoment getDipoleMomentGet(Fw::Success& condition) override;
 
     //! Computes the magnitude of the magnetic field vector.
     F64 getMagnitude(Drv::MagneticField magField);
@@ -61,5 +51,5 @@ class BDotDetumble final : public BDotDetumbleComponentBase {
     // ----------------------------------------------------------------------
     Drv::MagneticField m_previousMagField;  //!< Previous magnetic field reading
 };
-}  // namespace Drv
-#endif
+
+}  // namespace Components

@@ -37,7 +37,7 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
     this->tlmWrite_State(this->m_detumbleState);
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
-    if (this->paramGet_OPERATING_MODE(isValid) == DetumbleMode::DISABLED) {
+    if (mode == DetumbleMode::DISABLED) {
         if (this->m_detumbleState != DetumbleState::COOLDOWN) {
             this->stopMagnetorquers();
             this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
@@ -227,6 +227,11 @@ I8 DetumbleManager ::clampCurrent(F64 targetCurrent, const magnetorquerCoil& coi
         clampedCurrent = (targetCurrent > 0) ? maxCurrent : -maxCurrent;
     } else {
         clampedCurrent = targetCurrent;
+    }
+
+    // Avoid division by zero
+    if (maxCurrent == 0.0) {
+        return 0;
     }
 
     // Scale to int8_t range [-127, 127]

@@ -86,13 +86,13 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Initialize the TMP112 device
+    //! Initialize the DRV2605 device
     Fw::Success initializeDevice();
 
-    //! Deinitialize the TMP112 device
+    //! Deinitialize the DRV2605 device
     Fw::Success deinitializeDevice();
 
-    //! Check if the TMP112 device is initialized
+    //! Check if the DRV2605 device is initialized
     bool isDeviceInitialized();
 
     //! Check if the load switch is ready (on and timeout passed)
@@ -103,7 +103,7 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    //! Zephyr device stores the initialized TMP112 sensor
+    //! Zephyr device stores the initialized DRV2605 sensor
     const struct device* m_dev;
 
     //! Zephyr device for the TCA
@@ -118,16 +118,6 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Load switch on timeout
     //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
     Fw::Time m_load_switch_on_timeout;
-
-    //! Load switch check
-    //! Available to disable if the component is not powered by a load switch
-    bool m_load_switch_check = true;
-
-    //! Continuous mode
-    //! If true, the magnetorquer will be triggered on every run port call
-    bool m_continuous_mode = false;
-    bool m_has_initialized = false;
-    int m_count = 0;
 };
 
 }  // namespace Drv
