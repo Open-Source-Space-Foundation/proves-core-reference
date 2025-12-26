@@ -77,6 +77,11 @@ build-mcuboot: submodules zephyr fprime-venv
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
+test-unit: ## Run unit tests
+	cmake -S tests -B build-gtest -DBUILD_TESTING=ON
+	cmake --build build-gtest
+	ctest --test-dir build-gtest
+
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
