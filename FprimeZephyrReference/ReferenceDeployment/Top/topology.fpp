@@ -71,13 +71,9 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsSpace
     instance payload
-    instance payload2
     instance cameraHandler
     instance peripheralUartDriver
-    instance cameraHandler2
-    instance peripheralUartDriver2
     instance payloadBufferManager
-    instance payloadBufferManager2
     instance cmdSeq
     instance payloadSeq
     instance safeModeSeq
@@ -242,22 +238,20 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsdsLora.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
-      rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver2.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
-      rateGroup10Hz.RateGroupMemberOut[6] -> ComCcsdsSband.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[7] -> FileHandling.fileManager.schedIn
-      rateGroup10Hz.RateGroupMemberOut[8] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[9] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[10] -> safeModeSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[13] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[14] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[15] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[16] -> downlinkDelay.run
-      rateGroup10Hz.RateGroupMemberOut[17] -> sband.run
-      rateGroup10Hz.RateGroupMemberOut[18] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[3] -> ComCcsdsSband.aggregator.timeout
+      rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[6] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[7] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[8] -> payloadSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[9] -> safeModeSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face0Manager.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face1Manager.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face2Manager.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> drv2605Face3Manager.run
+      rateGroup10Hz.RateGroupMemberOut[14] -> drv2605Face5Manager.run
+      rateGroup10Hz.RateGroupMemberOut[15] -> downlinkDelay.run
+      rateGroup10Hz.RateGroupMemberOut[16] -> sband.run
+      rateGroup10Hz.RateGroupMemberOut[17] -> comDelaySband.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -273,7 +267,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[12] -> payloadBufferManager2.schedIn
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
@@ -354,23 +347,6 @@ module ReferenceDeployment {
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
-    }
-
-     connections PayloadCom2 {
-      # PayloadCom <-> UART Driver
-      payload2.uartForward -> peripheralUartDriver2.$send
-      peripheralUartDriver2.$recv -> payload2.uartDataIn
-
-      # Buffer return path (critical! - matches ComStub pattern)
-      payload2.bufferReturn -> peripheralUartDriver2.recvReturnIn
-
-      # PayloadCom <-> CameraHandler data flow
-      payload2.uartDataOut -> cameraHandler2.dataIn
-      cameraHandler2.commandOut -> payload2.commandIn
-
-      # UART driver allocates/deallocates from BufferManager
-      peripheralUartDriver2.allocate -> payloadBufferManager.bufferGetCallee
-      peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
     }
 
     connections MyConnectionGraph {
