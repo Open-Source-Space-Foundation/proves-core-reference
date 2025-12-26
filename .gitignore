@@ -2,6 +2,7 @@
 logs/
 cmake-build-*
 build-artifacts/
+build-gtest/
 build-fprime-*
 *-template
 *.template.cpp
