@@ -17,7 +17,7 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 
 #### `timeGetPort` Port Usage
 1. The component is instantiated and initialized during system startup
-2. In a deployment topology, a `time connection` relation is made to sync F Prime's internal clock
+2. In a deployment topology, a `time connection` relation is made to sync FPrime's internal clock
 3. On each call, the component:
     - Checks if the RTC device is ready
     - If the RTC is ready:
@@ -54,15 +54,15 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | Name | Description | Validation |
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
-| RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or uptime since boot | Integration test |
+| RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or uptime | Integration test |
 | RtcManager-003 | The RTC Manager logs a warning when the RTC is not ready and falls back to monotonic time | Integration test |
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 | RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
-| RtcManager-007 | The RTC Manager provides monotonic uptime when the RTC device is unavailable | Integration test |
+| RtcManager-007 | The RTC Manager provides uptime when the RTC device is unavailable | Integration test |
 | RtcManager-008 | Time increments continuously regardless of RTC availability | Integration test |
 | RtcManager-009 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
-| RtcManager-010   | Time is monotonic | Integration test |
+| RtcManager-010 | Time is monotonic | Integration test |
 
 ## Port Descriptions
 | Name | Description |
@@ -89,6 +89,7 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 
 ## Class Diagram
 
+### RTC Manager Class Diagram
 ```mermaid
 classDiagram
     namespace Drv {
@@ -98,25 +99,38 @@ classDiagram
         class RtcManager {
             - m_dev: device*
             - m_console_throttled: atomic~bool~
-            - m_initial_useconds_set: bool
-            - m_initial_useconds: U32
+
             + RtcManager(char* compName)
             + ~RtcManager()
             + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
             - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
             - bool timeDataIsValid(Drv::TimeData t)
-            - U32 rescaleUseconds(U32 current_useconds)
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
+```
+
+### RTC Helper Class Diagram
+```mermaid
+classDiagram
+    namespace Drv {
+        class RtcHelper {
+            -m_last_seen_seconds: uint32_t
+            -m_useconds_offset: uint32_t
+
+            +RtcHelper()
+            +~RtcHelper()
+            +rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t) uint32_t
+        }
+    }
 ```
 
 ## Sequence Diagrams
 
 ### `timeGetPort` port
 
-The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with F Prime's internal clock. The component automatically falls back to monotonic uptime if the RTC is unavailable, and always rescales the sub-second field to maintain monotonic microseconds.
+The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to uptime if the RTC is unavailable.
 
 #### Success (RTC Available)
 
@@ -129,16 +143,19 @@ sequenceDiagram
     participant RTC Sensor
 
     Deployment Time Connection->>RTC Manager: Call timeGetPort time port
-    RTC Manager->>RTC Manager: Check device_is_ready()
-    RTC Manager->>System Clock: Get cycle-based ticks (k_cycle_get_32)
-    System Clock-->>RTC Manager: Return raw ticks
-    RTC Manager->>RTC Manager: rescaleUseconds(raw_useconds)\n(m_initial_useconds + raw) % 1_000_000
+    RTC Manager->>System Clock: Get uptime via k_uptime_get()
+    System Clock-->>RTC Manager: Return uptime in ms
+    RTC Manager->>RTC Manager: Check RTC device_is_ready()
+    Note over RTC Manager: Device is ready
+    RTC Manager->>RTC Sensor: Get real time in seconds
     RTC Manager->>Zephyr RTC API: Read time via rtc_get_time()
     Zephyr RTC API->>RTC Sensor: Read time
     RTC Sensor-->>Zephyr RTC API: Return time
     Zephyr RTC API-->>RTC Manager: Return rtc_time struct
     RTC Manager->>RTC Manager: Convert to time_t via timeutil_timegm()
-    RTC Manager-->>Deployment Time Connection: Return Fw::Time (TB_WORKSTATION_TIME, monotonic useconds)
+    RTC Manager->>RTC Helper: Combine RTC and System clock data to get monotonicly increasing useconds
+    RTC Helper-->>RTC Manager: Return useconds
+    RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_WORKSTATION_TIME`
 ```
 
 #### Failover to Monotonic Time (RTC Unavailable)
@@ -151,15 +168,12 @@ sequenceDiagram
     participant System Clock
 
     Deployment Time Connection->>RTC Manager: Call timeGetPort time port
-    RTC Manager->>RTC Manager: Check device_is_ready()
+    RTC Manager->>System Clock: Get uptime via k_uptime_get()
+    System Clock-->>RTC Manager: Return uptime in ms
+    RTC Manager->>RTC Manager: Check RTC device_is_ready()
     Note over RTC Manager: Device not ready
     RTC Manager->>Console Log: Log "RTC not ready" (throttled)
-    RTC Manager->>System Clock: Get cycle-based ticks (k_cycle_get_32)
-    System Clock-->>RTC Manager: Return raw ticks
-    RTC Manager->>RTC Manager: rescaleUseconds(raw_useconds)\n(m_initial_useconds + raw) % 1_000_000
-    RTC Manager->>System Clock: Get uptime via k_uptime_seconds()
-    System Clock-->>RTC Manager: Return seconds since boot
-    RTC Manager-->>Deployment Time Connection: Return Fw::Time (TB_PROC_TIME, monotonic useconds)
+    RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_PROC_TIME`
 ```
 
 ### `TIME_SET` Command
@@ -244,8 +258,8 @@ sequenceDiagram
 
 ## Change Log
 
-| Date       | Description                                                                                                      |
-|------------|------------------------------------------------------------------------------------------------------------------|
-| 2025-09-18 | Initial RTC Manager component                                                                                   |
+| Date | Description |
+|---|---|
+| 2025-9-18 | Initial RTC Manager component |
 | 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
