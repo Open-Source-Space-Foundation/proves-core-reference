@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cerrno>
 
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcHelper.hpp"
 #include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
@@ -39,7 +40,7 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Configure the RTC device
-    void configure(const struct device* dev);
+    void configure(const struct device* dev, RtcHelper rtcHelper);
 
   private:
     // ----------------------------------------------------------------------
@@ -66,24 +67,10 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
-    //! Handler implementation for command TEST_UNCONFIGURE_DEVICE
-    //!
-    //! TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time
-    //! since boot.
-    void TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                            U32 cmdSeq            //!< The command sequence number
-                                            ) override;
-
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
-
-    //! Rescales useconds to ensure monotonic increase because RV3028 does not provide sub-second precision
-    //! We have two clocks: the RTC clock which provides seconds, and the system uptime clock which provides
-    //! milliseconds since boot. We use the initial offset of the system uptime clock when the RTC time is first read
-    //! to ensure that the microseconds portion of the time is always increasing.
-    U32 rescaleUseconds(U32 current_seconds, U32 current_useconds);
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
@@ -95,8 +82,7 @@ class RtcManager final : public RtcManagerComponentBase {
 
     std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
     const struct device* m_dev;             //!< The initialized Zephyr RTC device
-    U32 m_last_seen_seconds = 0;            //!< The last seen seconds value from the RTC
-    U32 m_useconds_offset = 0;              //!< The offset to apply to microseconds to ensure monotonicity
+    RtcHelper m_rtcHelper;                  //!< Helper for RTC operations
 };
 
 }  // namespace Drv

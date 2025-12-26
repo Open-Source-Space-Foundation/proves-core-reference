@@ -65,6 +65,10 @@ jobs:
         run: |
           make build
 
+      - name: Unit Tests
+        run: |
+          make test-unit
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

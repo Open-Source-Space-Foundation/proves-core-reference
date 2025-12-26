@@ -19,8 +19,9 @@ RtcManager ::~RtcManager() {}
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void RtcManager ::configure(const struct device* dev) {
+void RtcManager ::configure(const struct device* dev, RtcHelper rtcHelper) {
     this->m_dev = dev;
+    this->m_rtcHelper = rtcHelper;
 }
 
 // ----------------------------------------------------------------------
@@ -66,7 +67,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Set FPrime time object
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time,
-             this->rescaleUseconds(seconds_real_time, useconds_since_boot));
+             this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
 }
 
 // ----------------------------------------------------------------------
@@ -130,13 +131,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void RtcManager ::TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Unconfigure the RTC device by setting m_dev to nullptr
-    this->m_dev = nullptr;
-
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
 bool RtcManager ::timeDataIsValid(Drv::TimeData t) {
     bool valid = true;
 
@@ -171,16 +165,6 @@ bool RtcManager ::timeDataIsValid(Drv::TimeData t) {
     }
 
     return valid;
-}
-
-U32 RtcManager ::rescaleUseconds(U32 current_seconds, U32 current_useconds) {
-    if (this->m_last_seen_seconds != current_seconds) {
-        this->m_last_seen_seconds = current_seconds;
-        this->m_useconds_offset = current_useconds;
-    }
-
-    // FPrime expects microseconds in the range [0, 999999]
-    return (current_useconds - this->m_useconds_offset) % 1000000;
 }
 
 }  // namespace Drv
