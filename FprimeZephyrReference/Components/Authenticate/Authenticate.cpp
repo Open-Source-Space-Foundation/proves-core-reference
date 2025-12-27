@@ -6,10 +6,14 @@
 
 #include "FprimeZephyrReference/Components/Authenticate/Authenticate.hpp"
 
+#include <mbedtls/error.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/rsa.h>
 #include <psa/crypto.h>
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
+#include <cstring>
 #include <iomanip>
 
 // Include generated header with default key (generated at build time)
@@ -72,6 +76,139 @@ Authenticate ::~Authenticate() {}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
+
+bool Authenticate::computeRSA(const U8* data,
+                              const FwSizeType dataLength,
+                              const Fw::String& key,
+                              U8* output,
+                              FwSizeType outputSize) {
+    // Use the public key to reveal the original hash
+    // This function decrypts an RSA signature (in 'data') using the public key
+    // to reveal the hash that was originally signed.
+    //
+    // Parameters:
+    //   data: RSA signature (encrypted hash) to decrypt
+    //   key: RSA public key (in DER or PEM format)
+    //   output: Buffer to receive the revealed hash (typically 32 bytes for SHA-256)
+    //   outputSize: Size of output buffer
+
+    // IMRPOTANT NOTE!! THIS IS ALL DEMO CODE AN ALSO SUPER NOT SAFE TO RUN< JUST HACKING IT FOR NOW
+    // DEMO PURPOSES SO WE KNOW IF WE CAN DO THESE THINGS ON A PICO2
+
+    // Check if the output buffer is large enough to hold the hash
+    if (output == nullptr || outputSize < 32) {
+        // Need at least 32 bytes for SHA-256 hash output
+        return false;
+    }
+
+    // Initialize PSA crypto (idempotent, safe to call multiple times)
+    psa_status_t psa_status = psa_crypto_init();
+    if (psa_status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(psa_status));
+        return false;
+    }
+
+    // Use mbedTLS directly for raw RSA operations to reveal the hash from signature
+    const char* keyStr = key.toChar();
+    size_t keyLength = key.length();
+
+    mbedtls_pk_context pk;
+    mbedtls_pk_init(&pk);
+
+    // Parse the public key (supports both PEM and DER formats)
+    int ret = mbedtls_pk_parse_public_key(&pk, reinterpret_cast<const unsigned char*>(keyStr),
+                                          keyLength + 1);  // +1 for null terminator if PEM
+
+    if (ret != 0) {
+        // Try without null terminator (for DER format)
+        ret = mbedtls_pk_parse_public_key(&pk, reinterpret_cast<const unsigned char*>(keyStr), keyLength);
+    }
+
+    if (ret != 0) {
+        mbedtls_pk_free(&pk);
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(ret));
+        return false;
+    }
+
+    // Verify it's an RSA key
+    if (mbedtls_pk_get_type(&pk) != MBEDTLS_PK_RSA) {
+        mbedtls_pk_free(&pk);
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(-1));
+        return false;
+    }
+
+    // Get the RSA context
+    mbedtls_rsa_context* rsa = mbedtls_pk_rsa(pk);
+
+    // Perform RSA public key operation to decrypt the signature
+    // This reveals the padded hash
+    size_t rsaKeySize = mbedtls_rsa_get_len(rsa);
+    if (dataLength != rsaKeySize) {
+        mbedtls_pk_free(&pk);
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(-1));
+        return false;
+    }
+
+    // Allocate buffer for decrypted signature (padded hash)
+    unsigned char* decrypted = new unsigned char[rsaKeySize];
+    if (decrypted == nullptr) {
+        mbedtls_pk_free(&pk);
+        return false;
+    }
+
+    // Perform RSA public key operation (decrypt signature to reveal hash)
+    ret = mbedtls_rsa_public(rsa, data, decrypted);
+
+    if (ret != 0) {
+        delete[] decrypted;
+        mbedtls_pk_free(&pk);
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(ret));
+        return false;
+    }
+
+    // Extract the hash from PKCS#1 v1.5 padding
+    // PKCS#1 v1.5 format: 00 01 FF FF ... FF 00 || ASN.1 DigestInfo || Hash
+    // For SHA-256, we need to find the hash (last 32 bytes after the ASN.1 header)
+    // ASN.1 DigestInfo for SHA-256 is: 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20
+    const unsigned char sha256DigestInfo[] = {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+                                              0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20};
+    const size_t digestInfoLen = sizeof(sha256DigestInfo);
+
+    // Find the start of the hash (after padding and ASN.1 header)
+    size_t hashStart = rsaKeySize - 32;  // Hash is last 32 bytes
+    bool found = false;
+
+    // Check if PKCS#1 v1.5 padding is correct
+    if (decrypted[0] == 0x00 && decrypted[1] == 0x01) {
+        // Find the 00 separator after padding
+        size_t i = 2;
+        while (i < rsaKeySize - digestInfoLen - 32 && decrypted[i] == 0xFF) {
+            i++;
+        }
+        if (i < rsaKeySize - digestInfoLen - 32 && decrypted[i] == 0x00) {
+            i++;
+            // Check for ASN.1 DigestInfo
+            if (std::memcmp(&decrypted[i], sha256DigestInfo, digestInfoLen) == 0) {
+                hashStart = i + digestInfoLen;
+                found = true;
+            }
+        }
+    }
+
+    if (!found) {
+        // Fallback: assume hash is in the last 32 bytes
+        hashStart = rsaKeySize - 32;
+    }
+
+    // Copy the revealed hash to output
+    std::memcpy(output, &decrypted[hashStart], 32);
+
+    // Clean up
+    delete[] decrypted;
+    mbedtls_pk_free(&pk);
+
+    return true;
+}
 
 bool Authenticate::computeHMAC(const U8* data,
                                const FwSizeType dataLength,

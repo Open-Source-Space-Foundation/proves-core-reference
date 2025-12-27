@@ -69,6 +69,12 @@ class Authenticate final : public AuthenticateComponentBase {
                      U8* output,
                      FwSizeType outputSize);
 
+    bool computeRSA(const U8* data,
+                    const FwSizeType dataLength,
+                    const Fw::String& key,
+                    U8* output,
+                    FwSizeType outputSize);
+
     bool validateSequenceNumber(U32 received, U32 expected);
 
     bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
