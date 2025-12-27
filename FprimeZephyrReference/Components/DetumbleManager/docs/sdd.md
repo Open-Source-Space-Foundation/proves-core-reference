@@ -58,7 +58,7 @@ classDiagram
         class magnetorquerCoil {
             + shape: MagnetorquerCoilShape::T
             + maxCurrent: F64
-            + numTurns: F64
+            + Turns: F64
             + voltage: F64
             + resistance: F64
             + width: F64

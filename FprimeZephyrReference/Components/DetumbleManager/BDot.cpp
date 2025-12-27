@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  BDot.cpp
-// \brief  cpp file for BDot component implementation class
+// \brief  cpp file for BDot implementation class
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/DetumbleManager/BDot.hpp"
@@ -23,13 +23,15 @@ BDot ::~BDot() {}
 //  public helper methods
 // ----------------------------------------------------------------------
 
-std::array<double, 3> BDot ::getDipoleMoment(
-    std::array<double, 3> magnetic_field,
-    std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds> reading_time,
-    double gain) {
+std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_field,
+                                             uint32_t reading_seconds,
+                                             uint32_t reading_useconds,
+                                             double gain) {
     errno = 0;
 
     // Compute the time delta between current and previous reading
+    TimePoint reading_time =
+        TimePoint{std::chrono::seconds(reading_seconds) + std::chrono::microseconds(reading_useconds)};
     std::chrono::microseconds dt_us = reading_time - this->m_previous_magnetic_field_reading_time;
 
     // Validate time delta
@@ -39,8 +41,7 @@ std::array<double, 3> BDot ::getDipoleMoment(
         // If errno is set to EINVAL, readings are out of order or too close together
 
         // Update previous magnetic field
-        this->m_previous_magnetic_field = magnetic_field;
-        this->m_previous_magnetic_field_reading_time = reading_time;
+        this->updatePreviousReading(magnetic_field, reading_time);
 
         // Return zero dipole moment
         return std::array<double, 3>{0.0, 0.0, 0.0};
@@ -63,8 +64,7 @@ std::array<double, 3> BDot ::getDipoleMoment(
     double moment_z = gain * dB_dt[2] / magnitude;
 
     // Update previous magnetic field
-    this->m_previous_magnetic_field = magnetic_field;
-    this->m_previous_magnetic_field_reading_time = reading_time;
+    this->updatePreviousReading(magnetic_field, reading_time);
 
     // Return result
     return std::array<double, 3>{moment_x, moment_y, moment_z};
@@ -97,6 +97,11 @@ std::array<double, 3> BDot ::dB_dt(std::array<double, 3> magnetic_field, std::ch
 
 double BDot ::getMagnitude(std::array<double, 3> vector) {
     return std::sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
+}
+
+void BDot ::updatePreviousReading(std::array<double, 3> magnetic_field, TimePoint reading) {
+    this->m_previous_magnetic_field = magnetic_field;
+    this->m_previous_magnetic_field_reading_time = reading;
 }
 
 bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us) {

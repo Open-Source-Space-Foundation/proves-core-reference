@@ -185,7 +185,7 @@ telemetry packets ReferenceDeploymentPackets {
     # X+ coil parameters
     ReferenceDeployment.detumbleManager.XPlusVoltage
     ReferenceDeployment.detumbleManager.XPlusResistance
-    ReferenceDeployment.detumbleManager.XPlusNumTurns
+    ReferenceDeployment.detumbleManager.XPlusTurns
     ReferenceDeployment.detumbleManager.XPlusLength
     ReferenceDeployment.detumbleManager.XPlusWidth
     ReferenceDeployment.detumbleManager.XPlusShape
@@ -194,7 +194,7 @@ telemetry packets ReferenceDeploymentPackets {
     # X- coil parameters
     ReferenceDeployment.detumbleManager.XMinusVoltage
     ReferenceDeployment.detumbleManager.XMinusResistance
-    ReferenceDeployment.detumbleManager.XMinusNumTurns
+    ReferenceDeployment.detumbleManager.XMinusTurns
     ReferenceDeployment.detumbleManager.XMinusLength
     ReferenceDeployment.detumbleManager.XMinusWidth
     ReferenceDeployment.detumbleManager.XMinusShape
@@ -203,7 +203,7 @@ telemetry packets ReferenceDeploymentPackets {
     # Y+ coil parameters
     ReferenceDeployment.detumbleManager.YPlusVoltage
     ReferenceDeployment.detumbleManager.YPlusResistance
-    ReferenceDeployment.detumbleManager.YPlusNumTurns
+    ReferenceDeployment.detumbleManager.YPlusTurns
     ReferenceDeployment.detumbleManager.YPlusLength
     ReferenceDeployment.detumbleManager.YPlusWidth
     ReferenceDeployment.detumbleManager.YPlusShape
@@ -212,7 +212,7 @@ telemetry packets ReferenceDeploymentPackets {
     # Y- coil parameters
     ReferenceDeployment.detumbleManager.YMinusVoltage
     ReferenceDeployment.detumbleManager.YMinusResistance
-    ReferenceDeployment.detumbleManager.YMinusNumTurns
+    ReferenceDeployment.detumbleManager.YMinusTurns
     ReferenceDeployment.detumbleManager.YMinusLength
     ReferenceDeployment.detumbleManager.YMinusWidth
     ReferenceDeployment.detumbleManager.YMinusShape
@@ -221,7 +221,7 @@ telemetry packets ReferenceDeploymentPackets {
     # Z- coil parameters
     ReferenceDeployment.detumbleManager.ZMinusVoltage
     ReferenceDeployment.detumbleManager.ZMinusResistance
-    ReferenceDeployment.detumbleManager.ZMinusNumTurns
+    ReferenceDeployment.detumbleManager.ZMinusTurns
     ReferenceDeployment.detumbleManager.ZMinusDiameter
     ReferenceDeployment.detumbleManager.ZMinusShape
   }

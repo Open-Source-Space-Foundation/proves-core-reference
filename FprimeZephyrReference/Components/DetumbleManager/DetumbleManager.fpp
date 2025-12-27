@@ -48,7 +48,7 @@ module Components {
         # --- X+ Coil ---
         param X_PLUS_VOLTAGE: F64 default 3.3 id 9
         param X_PLUS_RESISTANCE: F64 default 13 id 10
-        param X_PLUS_NUM_TURNS: F64 default 48.0 id 11
+        param X_PLUS_TURNS: F64 default 48.0 id 11
         param X_PLUS_LENGTH: F64 default 0.053 id 12
         param X_PLUS_WIDTH: F64 default 0.045 id 13
         param X_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 33
@@ -56,7 +56,7 @@ module Components {
         # --- X- Coil ---
         param X_MINUS_VOLTAGE: F64 default 3.3 id 14
         param X_MINUS_RESISTANCE: F64 default 13 id 15
-        param X_MINUS_NUM_TURNS: F64 default 48.0 id 16
+        param X_MINUS_TURNS: F64 default 48.0 id 16
         param X_MINUS_LENGTH: F64 default 0.053 id 17
         param X_MINUS_WIDTH: F64 default 0.045 id 18
         param X_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 34
@@ -64,7 +64,7 @@ module Components {
         # --- Y+ Coil ---
         param Y_PLUS_VOLTAGE: F64 default 3.3 id 19
         param Y_PLUS_RESISTANCE: F64 default 13 id 20
-        param Y_PLUS_NUM_TURNS: F64 default 48.0 id 21
+        param Y_PLUS_TURNS: F64 default 48.0 id 21
         param Y_PLUS_LENGTH: F64 default 0.053 id 22
         param Y_PLUS_WIDTH: F64 default 0.045 id 23
         param Y_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 35
@@ -72,7 +72,7 @@ module Components {
         # --- Y- Coil ---
         param Y_MINUS_VOLTAGE: F64 default 3.3 id 24
         param Y_MINUS_RESISTANCE: F64 default 13 id 25
-        param Y_MINUS_NUM_TURNS: F64 default 48.0 id 26
+        param Y_MINUS_TURNS: F64 default 48.0 id 26
         param Y_MINUS_LENGTH: F64 default 0.053 id 27
         param Y_MINUS_WIDTH: F64 default 0.045 id 28
         param Y_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 36
@@ -80,7 +80,7 @@ module Components {
         # --- Z- Coil ---
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
         param Z_MINUS_RESISTANCE: F64 default 150.7 id 30
-        param Z_MINUS_NUM_TURNS: F64 default 153.0 id 31
+        param Z_MINUS_TURNS: F64 default 153.0 id 31
         param Z_MINUS_DIAMETER: F64 default 0.05755 id 32
         param Z_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.CIRCULAR id 37
 
@@ -128,7 +128,7 @@ module Components {
         ### Events ###
 
         @ Event for reporting dipole moment retrieval failure
-        event DipoleMomentRetrievalFailed() severity warning low format "Failed to retrieve dipole moment." throttle 5
+        event DipoleMomentRetrievalFailed(return_code: U8) severity warning low format "Failed to retrieve dipole moment with return code: {}." throttle 5
 
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
@@ -163,7 +163,7 @@ module Components {
         telemetry XPlusResistance: F64
 
         @ X+ coil number of turns
-        telemetry XPlusNumTurns: F64
+        telemetry XPlusTurns: F64
 
         @ X+ coil length (m)
         telemetry XPlusLength: F64
@@ -181,7 +181,7 @@ module Components {
         telemetry XMinusResistance: F64
 
         @ X- coil number of turns
-        telemetry XMinusNumTurns: F64
+        telemetry XMinusTurns: F64
 
         @ X- coil length (m)
         telemetry XMinusLength: F64
@@ -199,7 +199,7 @@ module Components {
         telemetry YPlusResistance: F64
 
         @ Y+ coil number of turns
-        telemetry YPlusNumTurns: F64
+        telemetry YPlusTurns: F64
 
         @ Y+ coil length (m)
         telemetry YPlusLength: F64
@@ -217,7 +217,7 @@ module Components {
         telemetry YMinusResistance: F64
 
         @ Y- coil number of turns
-        telemetry YMinusNumTurns: F64
+        telemetry YMinusTurns: F64
 
         @ Y- coil length (m)
         telemetry YMinusLength: F64
@@ -235,7 +235,7 @@ module Components {
         telemetry ZMinusResistance: F64
 
         @ Z- coil number of turns
-        telemetry ZMinusNumTurns: F64
+        telemetry ZMinusTurns: F64
 
         @ Z- coil diameter (m)
         telemetry ZMinusDiameter: F64

@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/DetumbleManager.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/DetumbleManager.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/BDot.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
