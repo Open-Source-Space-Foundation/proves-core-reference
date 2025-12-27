@@ -29,10 +29,10 @@ module Components {
         param ROTATIONAL_THRESHOLD: F64 default 12.0 id 1
 
         @ Parameter for storing the cooldown duration
-        param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 1, useconds = 0} id 3
+        param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
 
         @ Parameter for storing the detumble torquing duration
-        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 3, useconds = 0} id 38
+        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
 
         ### Magnetorquer Properties Parameters ###
 

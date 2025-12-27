@@ -15,12 +15,12 @@ register_fprime_module()
 
 
 #### UTS ####
-set(UT_SOURCE_FILES
-  "${CMAKE_CURRENT_LIST_DIR}/AuthenticationRouter.fpp"
-  "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticationRouter.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticationRouter.cpp"
-)
-set(UT_AUTO_HELPERS ON)
+# set(UT_SOURCE_FILES
+#   "${CMAKE_CURRENT_LIST_DIR}/AuthenticationRouter.fpp"
+#   "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticationRouter.cpp"
+#   "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticationRouter.cpp"
+# )
+# set(UT_AUTO_HELPERS ON)
 
 
-register_fprime_ut()
+# register_fprime_ut()

@@ -127,7 +127,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
-    payloadBufferManager2.NoBuffs
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }
@@ -137,7 +136,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.comQueue.buffQueueDepth
     ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
-    payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
@@ -280,7 +278,6 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsSband.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
-  payloadBufferManager2.EmptyBuffs
 
   ComCcsdsLora.commsBufferManager.TotalBuffs
   ComCcsdsLora.commsBufferManager.CurrBuffs
@@ -289,21 +286,11 @@ telemetry packets ReferenceDeploymentPackets {
 
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
-  payloadBufferManager2.TotalBuffs
-  payloadBufferManager2.CurrBuffs
 
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
-
-  # Moved to omit as this is specific to Alcyone Build
-  ReferenceDeployment.cameraHandler2.BytesReceived
-  ReferenceDeployment.cameraHandler2.ExpectedSize
-  ReferenceDeployment.cameraHandler2.IsReceiving
-  ReferenceDeployment.cameraHandler2.FileOpen
-  ReferenceDeployment.cameraHandler2.FileErrorCount
-  ReferenceDeployment.cameraHandler2.ImagesSaved
 
 }
