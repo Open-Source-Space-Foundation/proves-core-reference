@@ -44,7 +44,6 @@ module ReferenceDeployment {
     instance watchdog
     instance rtcManager
     instance detumbleManager
-    instance bDotDetumble
     instance imuManager
     instance bootloaderTrigger
     instance comDelaySband
@@ -320,7 +319,7 @@ module ReferenceDeployment {
 
     connections DetumbleManager {
       detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
-      detumbleManager.dipoleMomentGet -> bDotDetumble.dipoleMomentGet
+      detumbleManager.magneticFieldGet -> imuManager.magneticFieldGet
 
       detumbleManager.xPlusStart -> drv2605Face0Manager.start
       detumbleManager.xMinusStart -> drv2605Face1Manager.start
@@ -333,8 +332,6 @@ module ReferenceDeployment {
       detumbleManager.yPlusStop -> drv2605Face2Manager.stop
       detumbleManager.yMinusStop -> drv2605Face3Manager.stop
       detumbleManager.zMinusStop -> drv2605Face5Manager.stop
-
-      bDotDetumble.magneticFieldGet -> imuManager.magneticFieldGet
     }
 
     connections PayloadCom {

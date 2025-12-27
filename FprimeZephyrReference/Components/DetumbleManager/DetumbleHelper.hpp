@@ -10,6 +10,26 @@ namespace Components {
 class DetumbleHelper {
   public:
     // ----------------------------------------------------------------------
+    //  Public helper types
+    // ----------------------------------------------------------------------
+
+    //! Structure to hold magnetorquer coil parameters
+    struct magnetorquerCoil {
+        enum MagnetorquerCoilShape::T shape;
+
+        double maxCurrent;
+        double numTurns;
+        double voltage;
+        double resistance;
+
+        // Dimensions
+        double width;     // For Rectangular
+        double length;    // For Rectangular
+        double diameter;  // For Circular
+    };
+
+  public:
+    // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
@@ -39,7 +59,7 @@ class DetumbleHelper {
     //! w is the width (m)
     //! l is the length (m)
     //! d is the diameter (m)
-    F64 getCoilArea(const magnetorquerCoil& coil);
+    double getCoilArea(const magnetorquerCoil& coil);
 
     //! Compute the maximum coil current based on its voltage and resistance.
     //! Formula: I_max = V / R
@@ -47,7 +67,7 @@ class DetumbleHelper {
     //! I_max is the maximum current (A)
     //! V is the voltage (V)
     //! R is the resistance (Ω)
-    F64 getMaxCoilCurrent(const magnetorquerCoil& coil);
+    double getMaxCoilCurrent(const magnetorquerCoil& coil);
 
     //! Calculate the target current required to generate a specific dipole moment.
     //! Formula: I = m / (N * A)
@@ -56,7 +76,7 @@ class DetumbleHelper {
     //! m is the dipole moment (A·m²)
     //! N is the number of turns
     //! A is the coil area (m²)
-    F64 calculateTargetCurrent(F64 dipoleMoment, const magnetorquerCoil& coil);
+    double calculateTargetCurrent(double dipoleMoment, const magnetorquerCoil& coil);
 
     //! Clamp the current to the maximum for the coil and scale to int8_t range [-127, 127].
     //! Formula: I_clamped = sign(I) * min(|I|, I_max)
@@ -64,7 +84,7 @@ class DetumbleHelper {
     //! I_clamped is the clamped current (A)
     //! I is the target current (A)
     //! I_max is the maximum current (A)
-    I8 clampCurrent(F64 targetCurrent, const magnetorquerCoil& coil);
+    std::int8_t clampCurrent(double targetCurrent, const magnetorquerCoil& coil);
 };
 
 }  // namespace Components

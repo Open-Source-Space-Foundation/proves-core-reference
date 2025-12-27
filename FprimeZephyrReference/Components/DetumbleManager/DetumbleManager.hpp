@@ -14,25 +14,6 @@
 namespace Components {
 
 class DetumbleManager final : public DetumbleManagerComponentBase {
-    // ----------------------------------------------------------------------
-    //  Private helper types
-    // ----------------------------------------------------------------------
-
-    //! Structure to hold magnetorquer coil parameters
-    struct magnetorquerCoil {
-        enum MagnetorquerCoilShape::T shape;
-
-        F64 maxCurrent;
-        F64 numTurns;
-        F64 voltage;
-        F64 resistance;
-
-        // Dimensions
-        F64 width;     // For Rectangular
-        F64 length;    // For Rectangular
-        F64 diameter;  // For Circular
-    };
-
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
@@ -150,35 +131,20 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //  Private member variables
     // ----------------------------------------------------------------------
 
-    //! Mathematical constant pi
-    const double PI = 3.14159265358979323846;
+    const double PI = 3.14159265358979323846;  //!< Mathematical constant pi
 
-    //! Detumble state
-    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;
+    BDot m_BDot;  //!< B-Dot detumble algorithm class
 
-    //! X+ Coil parameters
-    magnetorquerCoil m_xPlusMagnetorquer;
+    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;  //!< Detumble state
 
-    //! X- Coil parameters
-    magnetorquerCoil m_xMinusMagnetorquer;
+    magnetorquerCoil m_xPlusMagnetorquer;   //!< X+ Coil parameters
+    magnetorquerCoil m_xMinusMagnetorquer;  //!< X- Coil parameters
+    magnetorquerCoil m_yPlusMagnetorquer;   //!< Y+ Coil parameters
+    magnetorquerCoil m_yMinusMagnetorquer;  //!< Y- Coil parameters
+    magnetorquerCoil m_zMinusMagnetorquer;  //!< Z- Coil parameters
 
-    //! Y+ Coil parameters
-    magnetorquerCoil m_yPlusMagnetorquer;
-
-    //! Y- Coil parameters
-    magnetorquerCoil m_yMinusMagnetorquer;
-
-    //! Z- Coil parameters
-    magnetorquerCoil m_zMinusMagnetorquer;
-
-    //! Cooldown start time
-    Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;
-
-    //! Magnetorquer trigger start time
-    Fw::Time m_torqueStartTime = Fw::ZERO_TIME;
-
-    //! Last dipole moment gathered
-    Drv::DipoleMoment m_dipole_moment;
+    Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;  //!< Cooldown start time
+    Fw::Time m_torqueStartTime = Fw::ZERO_TIME;    //!< Torque start time
 };
 
 }  // namespace Components

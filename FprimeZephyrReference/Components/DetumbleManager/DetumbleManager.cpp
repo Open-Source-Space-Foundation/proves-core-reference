@@ -17,7 +17,7 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName) {}
+DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName), m_BDot() {}
 
 DetumbleManager ::~DetumbleManager() {}
 
@@ -297,14 +297,6 @@ void DetumbleManager ::stateSensingActions() {
     }
     this->tlmWrite_BelowRotationalThreshold(false);
 
-    // Get dipole moment
-    this->m_dipole_moment = this->dipoleMomentGet_out(0, condition);
-    if (condition != Fw::Success::SUCCESS) {
-        this->log_WARNING_LO_DipoleMomentRetrievalFailed();
-        return;
-    }
-    this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
-
     // Transition to TORQUING state
     this->m_detumbleState = DetumbleState::TORQUING;
 }
@@ -330,14 +322,32 @@ void DetumbleManager ::stateTorquingActions() {
 }
 
 void DetumbleManager ::stateEnterTorquingActions() {
-    // On first call after state transition
-    if (this->m_torqueStartTime == Fw::ZERO_TIME) {
-        // Perform torqueing action
-        this->setDipoleMoment(this->m_dipole_moment);
-
-        // Record torque start time
-        this->m_torqueStartTime = this->getTime();
+    // Only perform actions on first call after state transition
+    if (this->m_torqueStartTime != Fw::ZERO_TIME) {
+        return;
     }
+
+    // Get magnetic field for dipole moment calculation
+    Drv::MagneticField magnetic_field = this->magneticFieldGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_MagneticFieldRetrievalFailed();
+        return;
+    }
+    this->log_WARNING_LO_MagneticFieldRetrievalFailed_ThrottleClear();
+
+    // Get dipole moment
+    Drv::DipoleMoment dipole_moment = this->m_BDot.getDipoleMoment(magnetic_field, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_DipoleMomentRetrievalFailed();
+        return;
+    }
+    this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
+
+    // Perform torqueing action
+    this->setDipoleMoment(dipole_moment);
+
+    // Record torque start time
+    this->m_torqueStartTime = this->getTime();
 }
 
 void DetumbleManager ::stateExitTorquingActions() {

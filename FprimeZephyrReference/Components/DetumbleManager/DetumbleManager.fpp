@@ -25,14 +25,23 @@ module Components {
         @ Parameter for storing the operating mode (default DISABLED)
         param OPERATING_MODE: DetumbleMode default DetumbleMode.DISABLED id 0
 
-        @ Parameter for storing the rotational threshold for detumble to be enabled (default 12 deg/s)
-        param ROTATIONAL_THRESHOLD: F64 default 12.0 id 1
+        @ Parameter for storing the upper rotational threshold, above which bdot detumbling is replaced by hysteresis detumbling (default 30 deg/s)
+        param UPPER_ROTATIONAL_THRESHOLD: F64 default 30.0 id 40
+
+        @ Parameter for storing the deadband rotational threshold, between upper and lower thresholds (default 18 deg/s)
+        param DEADBAND_ROTATIONAL_THRESHOLD: F64 default 18.0 id 41
+
+        @ Parameter for storing the lower rotational threshold, below which detumble is considered complete (default 12 deg/s)
+        param LOWER_ROTATIONAL_THRESHOLD: F64 default 12.0 id 1
 
         @ Parameter for storing the cooldown duration
         param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
 
         @ Parameter for storing the detumble torquing duration
         param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
+
+        @ Gain used for B-Dot algorithm
+        param Gain: F64 default 2.0 id 39
 
         ### Magnetorquer Properties Parameters ###
 
@@ -80,14 +89,11 @@ module Components {
         @ Run loop
         sync input port run: Svc.Sched
 
-        @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
+        @ Port for sending angularVelocityGet calls to the IMU Driver
         output port angularVelocityGet: AngularVelocityGet
 
-        @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
+        @ Port for sending magneticFieldGet calls to the IMU Manager
         output port magneticFieldGet: MagneticFieldGet
-
-        @ Port for sending dipoleMomentGet calls to the BDotDetumble Component
-        output port dipoleMomentGet: Drv.DipoleMomentGet
 
         @ Port for triggering the X+ magnetorquer
         output port xPlusStart: Drv.StartMagnetorquer
@@ -140,6 +146,9 @@ module Components {
 
         @ Rotational threshold (deg/s)
         telemetry RotationalThreshold: F64
+
+        @ Telemetry for the gain used in B-Dot algorithm
+        telemetry Gain: F64
 
         @ Cooldown duration
         telemetry CooldownDuration: Fw.TimeIntervalValue

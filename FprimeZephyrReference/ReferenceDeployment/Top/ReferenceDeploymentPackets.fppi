@@ -173,7 +173,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.Mode
     ReferenceDeployment.detumbleManager.State
     ReferenceDeployment.detumbleManager.BelowRotationalThreshold
-    ReferenceDeployment.bDotDetumble.Gain
+    ReferenceDeployment.detumbleManager.Gain
   }
 
   packet DetumbleParams id 16 group 100 {
