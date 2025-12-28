@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug test_DetumbleManager_Magnetorquer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_DetumbleManager_Magnetorquer",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
+            "name": "Debug test_DetumbleManager_StrategySelector",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_DetumbleManager_StrategySelector",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
+            "name": "Debug test_RtcManager_RtcHelper",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_RtcManager_RtcHelper",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build unit tests",
+            "type": "shell",
+            "command":
+                "cmake -S tests -B build-gtest -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON && cmake --build build-gtest",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
