@@ -124,19 +124,18 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
     BDot m_bdot;                           //!< B-Dot detumble algorithm class
     StrategySelector m_strategy_selector;  //!< Detumble helper class
-
-    Magnetorquer m_xPlusMagnetorquer;   //!< X+ Coil parameters
-    Magnetorquer m_xMinusMagnetorquer;  //!< X- Coil parameters
-    Magnetorquer m_yPlusMagnetorquer;   //!< Y+ Coil parameters
-    Magnetorquer m_yMinusMagnetorquer;  //!< Y- Coil parameters
-    Magnetorquer m_zMinusMagnetorquer;  //!< Z- Coil parameters
+    Magnetorquer m_x_plus_magnetorquer;    //!< X+ Coil parameters
+    Magnetorquer m_x_minus_magnetorquer;   //!< X- Coil parameters
+    Magnetorquer m_y_plus_magnetorquer;    //!< Y+ Coil parameters
+    Magnetorquer m_y_minus_magnetorquer;   //!< Y- Coil parameters
+    Magnetorquer m_z_minus_magnetorquer;   //!< Z- Coil parameters
 
     DetumbleMode m_mode = DetumbleMode::DISABLED;          //!< Detumble mode
     DetumbleState m_state = DetumbleState::COOLDOWN;       //!< Detumble state
     DetumbleStrategy m_strategy = DetumbleStrategy::IDLE;  //!< Detumble strategy
 
-    Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;  //!< Cooldown start time
-    Fw::Time m_torqueStartTime = Fw::ZERO_TIME;    //!< Torque start time
+    Fw::Time m_cooldown_start_time = Fw::ZERO_TIME;  //!< Cooldown start time
+    Fw::Time m_torque_start_time = Fw::ZERO_TIME;    //!< Torque start time
 };
 
 }  // namespace Components
