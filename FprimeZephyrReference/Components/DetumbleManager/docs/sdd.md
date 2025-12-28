@@ -157,9 +157,10 @@ classDiagram
 | Name             | Type         | Description                                                        |
 | ---------------- | ------------ | ------------------------------------------------------------------ |
 | run              | sync input   | Scheduler port that advances the detumble state machine           |
+| setMode          | sync input   | Port for disabling detumbling                                     |
+| systemModeChanged| sync input   | Port for receiving system mode change notifications               |
 | angularVelocityGet | output     | Requests current angular velocity vector                          |
-| magneticFieldGet | output       | Requests current magnetic field vector (for upstream controller)  |
-| dipoleMomentGet  | output       | Requests commanded dipole moment from a detumble controller       |
+| magneticFieldGet | output       | Requests current magnetic field vector                            |
 | xPlusStart       | output       | Command to start the X+ magnetorquer with a signed current value  |
 | xPlusStop        | output       | Command to stop the X+ magnetorquer                               |
 | xMinusStart      | output       | Command to start the X− magnetorquer with a signed current value  |
@@ -184,7 +185,10 @@ classDiagram
 
 - **Mode and thresholds**
   - `OPERATING_MODE` (DetumbleMode): DISABLED or AUTO.
-  - `ROTATIONAL_THRESHOLD` (F64): Angular-velocity threshold (deg/s) for enabling torquing.
+  - `BDOT_MAX_THRESHOLD` (F64): Upper rotational threshold (deg/s) above which hysteresis is used.
+  - `DEADBAND_UPPER_THRESHOLD` (F64): Upper deadband rotational threshold (deg/s).
+  - `DEADBAND_LOWER_THRESHOLD` (F64): Lower deadband rotational threshold (deg/s).
+  - `GAIN` (F64): Gain used for B-Dot algorithm.
   - `COOLDOWN_DURATION` (Fw.TimeIntervalValue): Time spent waiting after a torque command.
   - `TORQUE_DURATION` (Fw.TimeIntervalValue): Duration of a single torque actuation.
 
@@ -195,13 +199,18 @@ classDiagram
 - **Key telemetry**
   - `Mode` (DetumbleMode): Current operating mode.
   - `State` (DetumbleState): COOLDOWN, SENSING, or TORQUING.
-  - `BelowRotationalThreshold` (bool): Whether the angular-velocity magnitude is currently below the threshold.
-  - `RotationalThreshold`, `CooldownDuration`, `TorqueDuration`.
+  - `DetumbleStrategy` (DetumbleStrategy): IDLE, BDOT, or HYSTERESIS.
+  - `BdotMaxThreshold`, `DeadbandUpperThreshold`, `DeadbandLowerThreshold`, `Gain`.
+  - `CooldownDuration`, `TorqueDuration`.
   - Per-coil configuration telemetry for all coils (voltage, resistance, turns, geometry, shape).
 
 - **Events**
-  - `DipoleMomentRetrievalFailed`: Logged if `dipoleMomentGet` does not succeed.
+  - `MagneticFieldRetrievalFailed`: Logged if `magneticFieldGet` does not succeed.
   - `AngularVelocityRetrievalFailed`: Logged if `angularVelocityGet` does not succeed.
+  - `MagneticFieldTooSmallForDipoleMoment`: Logged if magnetic field magnitude is too small.
+  - `InvalidMagneticFieldReadingForDipoleMoment`: Logged if readings are out of order or too fast.
+  - `UnknownDipoleMomentComputationError`: Logged if an unknown error occurs during computation.
+  - `InvalidDetumbleStrategy`: Logged if an invalid strategy is selected.
 
 ## Sequence Diagrams
 
@@ -212,7 +221,7 @@ sequenceDiagram
     participant Scheduler
     participant DetumbleManager
     participant AngularSource as Angular Velocity Source
-    participant DipoleSource as Dipole Moment Source
+    participant MagSource as Magnetic Field Source
     participant MTQ as Magnetorquer Drivers
 
     Scheduler->>DetumbleManager: run()
@@ -232,22 +241,25 @@ sequenceDiagram
             AngularSource-->>DetumbleManager: angular velocity, status
             alt retrieval failed
                 DetumbleManager->>DetumbleManager: log AngularVelocityRetrievalFailed
-            else |ω| < threshold
-                note right of DetumbleManager: Stay in SENSING, no torquing
-            else |ω| >= threshold
-                DetumbleManager->>DipoleSource: dipoleMomentGet()
-                DipoleSource-->>DetumbleManager: dipole moment, status
-                alt retrieval failed
-                    DetumbleManager->>DetumbleManager: log DipoleMomentRetrievalFailed
-                else success
-                    note right of DetumbleManager: Transition to TORQUING
+            else
+                DetumbleManager->>DetumbleManager: Select Strategy (IDLE, BDOT, HYSTERESIS)
+                alt Strategy == IDLE
+                     note right of DetumbleManager: Stay in SENSING, no torquing
+                else Strategy == BDOT or HYSTERESIS
+                    DetumbleManager->>MagSource: magneticFieldGet()
+                    MagSource-->>DetumbleManager: magnetic field, status
+                    alt retrieval failed
+                        DetumbleManager->>DetumbleManager: log MagneticFieldRetrievalFailed
+                    else success
+                        note right of DetumbleManager: Transition to TORQUING
+                    end
                 end
             end
         end
 
         opt TORQUING
             DetumbleManager->>DetumbleManager: stateTorquingActions()
-            note right of DetumbleManager: On first entry, compute coil currents
+            note right of DetumbleManager: On first entry, compute coil currents based on Strategy
             DetumbleManager->>MTQ: x*/y*/z*Start(currents)
             DetumbleManager->>timeCaller: getTime()
             timeCaller-->>DetumbleManager: current time
@@ -264,13 +276,16 @@ sequenceDiagram
 | Name                        | Description                                                                                               | Validation                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | Mode Control                | The component shall support DISABLED and AUTO modes via `OPERATING_MODE`.                                | Parameter set and telemetry `Mode` observed over GDS.        |
+| External Control            | The component shall provide an input port to allow other components to set the detumble mode.             | Verify that calling the `setMode` port updates the component mode. |
+| System Safe Mode            | The component shall disable detumbling when the system enters SAFE mode.                                  | Simulate a system mode change to SAFE and verify detumbling is disabled. |
 | Safe Disable                | When in DISABLED mode, all magnetorquer outputs shall be turned off and the internal state reset.       | Force DISABLED, verify all `*Stop` ports are called.         |
-| Threshold-Based Activation  | Detumbling shall only be performed when the measured angular-velocity magnitude exceeds the configured threshold. | Sweep angular velocity values around `ROTATIONAL_THRESHOLD` and monitor transitions to TORQUING. |
+| Deadband Activation         | The component shall implement a deadband using upper and lower thresholds to prevent rapid switching between IDLE and active detumbling. | Verify that detumbling starts only above the upper threshold and stops only below the lower threshold. |
+| Hysteresis Strategy         | The component shall employ a hysteresis (bang-bang) strategy when the angular velocity exceeds the `BDOT_MAX_THRESHOLD`. | Verify that the Hysteresis strategy is selected when angular velocity is high. |
+| B-Dot Strategy              | The component shall employ a B-Dot strategy when the angular velocity is within the active range (above deadband, below `BDOT_MAX_THRESHOLD`). | Verify that the B-Dot strategy is selected when angular velocity is in the intermediate range. |
 | Cooldown Timing             | After TORQUING, the component shall remain in COOLDOWN for at least `COOLDOWN_DURATION` before SENSING. | Instrument time via `timeCaller` and observe state changes.  |
-| Torque Duration             | During TORQUING, magnetorquers shall be active for at most `TORQUE_DURATION` before being stopped.      | Verify `*Start` followed by `*Stop` bracket the configured interval. |
-| Coil Current Limiting       | Commanded coil currents shall not exceed the maximum allowable current derived from voltage and resistance. | Inject large commanded dipole moments and inspect computed currents. |
 | Parameter Telemetry         | Coil configuration parameters shall be telemetered for all coils after configuration.                   | Call `configure()` and verify coil telemetry channels.       |
-| Error Reporting             | The component shall emit warning events when angular velocity or dipole moment retrieval fails.         | Force non-success return codes and observe events.           |
+| Error Reporting             | The component shall emit warning events when angular velocity or magnetic field retrieval fails.         | Force non-success return codes and observe events.           |
+
 
 ## Change Log
 
