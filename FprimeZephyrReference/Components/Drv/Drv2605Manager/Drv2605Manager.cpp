@@ -15,6 +15,9 @@ namespace Drv {
 static uint8_t input_arr[1];
 static struct drv2605_rtp_data rtp = {
     .size = 1,
+    // rtp_hold_us is intentionally set to 1us to minimize blocking time in haptics_start_output().
+    // The actual RTP output continues running until rtp_input is set to 0, allowing for
+    // fast component cycling while maintaining continuous haptic output control.
     .rtp_hold_us = (uint32_t[]){1},
     .rtp_input = input_arr,
 };
