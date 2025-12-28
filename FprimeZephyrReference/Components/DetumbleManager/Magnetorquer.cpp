@@ -3,7 +3,7 @@
 // \brief  cpp file for Magnetorquer implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/DetumbleManager/Magnetorquer.hpp"
+#include "Magnetorquer.hpp"
 
 #include <algorithm>
 #include <cmath>

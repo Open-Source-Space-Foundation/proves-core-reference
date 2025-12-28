@@ -3,7 +3,7 @@
 // \brief  cpp file for BDot implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/DetumbleManager/BDot.hpp"
+#include "BDot.hpp"
 
 #include <errno.h>
 

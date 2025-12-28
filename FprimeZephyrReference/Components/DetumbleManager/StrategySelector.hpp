@@ -47,9 +47,6 @@ class StrategySelector {
                    double deadband_lower_threshold   //!< Lower deadband rotational threshold in deg/s
     );
 
-    //! Reset rotation target to lower deadband threshold
-    void resetRotationTarget();
-
   private:
     // ----------------------------------------------------------------------
     //  Private helper methods

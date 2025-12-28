@@ -3,7 +3,7 @@
 // \brief  cpp file for StrategySelector implementation class
 // ======================================================================
 
-#include "FprimeZephyrReference/Components/DetumbleManager/StrategySelector.hpp"
+#include "StrategySelector.hpp"
 
 #include <cmath>
 
@@ -58,12 +58,9 @@ void StrategySelector ::configure(double bdot_max_threshold,
     this->m_bdot_max_threshold = bdot_max_threshold;
     this->m_deadband_upper_threshold = deadband_upper_threshold;
     this->m_deadband_lower_threshold = deadband_lower_threshold;
-}
 
-void StrategySelector ::resetRotationTarget() {
-    if (this->m_rotation_target != this->m_deadband_lower_threshold ||
-        this->m_rotation_target != this->m_deadband_upper_threshold) {
-        this->m_rotation_target = this->m_deadband_lower_threshold;
+    if (this->m_rotation_target != deadband_upper_threshold || this->m_rotation_target != deadband_lower_threshold) {
+        this->m_rotation_target = deadband_lower_threshold;
     }
 }
 
