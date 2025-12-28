@@ -37,14 +37,10 @@ classDiagram
             + ~DetumbleManager()
             + configure(): void
             - run_handler(FwIndexType portNum, U32 context): void
-            - executeControlStep(reason: std::string&): bool
-            - getAngularVelocityMagnitude(angVel: Drv::AngularVelocity): F64
-            - getCoilArea(coil: magnetorquerCoil): F64
-            - getMaxCoilCurrent(coil: magnetorquerCoil): F64
-            - calculateTargetCurrent(dipoleMoment: F64, coil: magnetorquerCoil): F64
-            - clampCurrent(targetCurrent: F64, coil: magnetorquerCoil): I8
-            - setDipoleMoment(dpMoment: Drv::DipoleMoment): void
-            - startMagnetorquers(...): void
+            - setMode_handler(FwIndexType portNum, const DetumbleMode& mode): void
+            - systemModeChanged_handler(FwIndexType portNum, const SystemMode& mode): void
+            - SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, DetumbleMode mode): void
+            - startMagnetorquers(I8 x_plus, I8 x_minus, I8 y_plus, I8 y_minus, I8 z_minus): void
             - stopMagnetorquers(): void
             - stateCooldownActions(): void
             - stateEnterCooldownActions(): void
@@ -53,22 +49,107 @@ classDiagram
             - stateTorquingActions(): void
             - stateEnterTorquingActions(): void
             - stateExitTorquingActions(): void
-        }
-
-        class magnetorquerCoil {
-            + shape: MagnetorquerCoilShape::T
-            + maxCurrent: F64
-            + Turns: F64
-            + voltage: F64
-            + resistance: F64
-            + width: F64
-            + length: F64
-            + diameter: F64
+            - bdotTorqueAction(): void
+            - hysteresisTorqueAction(): void
+            - m_bdot: BDot
+            - m_strategy_selector: StrategySelector
+            - m_xPlusMagnetorquer: Magnetorquer
+            - m_xMinusMagnetorquer: Magnetorquer
+            - m_yPlusMagnetorquer: Magnetorquer
+            - m_yMinusMagnetorquer: Magnetorquer
+            - m_zMinusMagnetorquer: Magnetorquer
+            - m_mode: DetumbleMode
+            - m_state: DetumbleState
+            - m_strategy: DetumbleStrategy
+            - m_cooldownStartTime: Fw::Time
+            - m_torqueStartTime: Fw::Time
         }
     }
 
     DetumbleManagerComponentBase <|-- DetumbleManager : inherits
-    DetumbleManager "1" o-- "5" magnetorquerCoil
+    DetumbleManager "1" *-- "1" BDot
+    DetumbleManager "1" *-- "1" StrategySelector
+    DetumbleManager "1" *-- "5" Magnetorquer
+```
+
+### Helper Classes
+
+#### BDot
+
+```mermaid
+classDiagram
+    class BDot {
+        + BDot()
+        + ~BDot()
+        + getDipoleMoment(magnetic_field: double[3], reading_seconds: uint32, reading_useconds: uint32, gain: double) double[3]
+        - dB_dt(magnetic_field: double[3], dt_us: microseconds) double[3]
+        - getMagnitude(vector: double[3]) double
+        - updatePreviousReading(magnetic_field: double[3], reading: TimePoint)
+        - validateTimeDelta(dt: microseconds) bool
+        - m_previous_magnetic_field: double[3]
+        - m_previous_magnetic_field_reading_time: TimePoint
+    }
+```
+
+#### Magnetorquer
+
+```mermaid
+classDiagram
+    class Magnetorquer {
+        + Magnetorquer()
+        + ~Magnetorquer()
+        + dipoleMomentToCurrent(dipole_moment_component: double) int8
+        - getCoilArea() double
+        - getMaxCoilCurrent() double
+        - computeTargetCurrent(dipole_moment_component: double) double
+        - computeClampedCurrent(target_current: double) int8
+        + PI: double
+        + m_turns: double
+        + m_voltage: double
+        + m_resistance: double
+        + m_direction_sign: DirectionSign
+        + m_shape: CoilShape
+        + m_width: double
+        + m_length: double
+        + m_diameter: double
+    }
+    class CoilShape {
+        <<enumeration>>
+        RECTANGULAR
+        CIRCULAR
+    }
+    class DirectionSign {
+        <<enumeration>>
+        POSITIVE
+        NEGATIVE
+    }
+    Magnetorquer -- CoilShape
+    Magnetorquer -- DirectionSign
+```
+
+#### StrategySelector
+
+```mermaid
+classDiagram
+    class StrategySelector {
+        + StrategySelector()
+        + ~StrategySelector()
+        + fromAngularVelocity(angular_velocity: double[3]) Strategy
+        + configure(bdot_max_threshold: double, deadband_upper_threshold: double, deadband_lower_threshold: double)
+        - getAngularVelocityMagnitude(angular_velocity: double[3]) double
+        - PI: double
+        - m_bdot_max_threshold: double
+        - m_deadband_lower_threshold: double
+        - m_deadband_upper_threshold: double
+        - m_rotation_target: double
+    }
+    class Strategy {
+        <<enumeration>>
+        IDLE
+        BDOT
+        HYSTERESIS
+    }
+    StrategySelector -- Strategy
 ```
 
 ## Port Descriptions
