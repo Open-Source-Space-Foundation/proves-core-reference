@@ -12,7 +12,7 @@ class MagnetorquerTest : public ::testing::Test {
 
     void SetUp() override {
         // Default configuration for a rectangular coil
-        m_torquer.m_shape = Magnetorquer::RECTANGULAR;
+        m_torquer.m_shape = Magnetorquer::CoilShape::RECTANGULAR;
         m_torquer.m_width = 0.1;   // 10 cm
         m_torquer.m_length = 0.2;  // 20 cm
         m_torquer.m_turns = 100.0;
@@ -40,7 +40,7 @@ TEST_F(MagnetorquerTest, RectangularAreaCalculation) {
 }
 
 TEST_F(MagnetorquerTest, CircularAreaCalculation) {
-    m_torquer.m_shape = Magnetorquer::CIRCULAR;
+    m_torquer.m_shape = Magnetorquer::CoilShape::CIRCULAR;
     m_torquer.m_diameter = 0.2;  // Radius = 0.1
     // Area = pi * 0.1^2 = 0.0314159... m^2
     // Max Current = 0.5 A
