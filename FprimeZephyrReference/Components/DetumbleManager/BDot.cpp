@@ -5,8 +5,7 @@
 
 #include "BDot.hpp"
 
-#include <errno.h>
-
+#include <cerrno>
 #include <cmath>
 
 namespace Components {

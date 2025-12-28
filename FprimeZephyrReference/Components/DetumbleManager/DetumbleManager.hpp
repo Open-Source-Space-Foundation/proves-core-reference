@@ -6,9 +6,6 @@
 #ifndef Components_DetumbleManager_HPP
 #define Components_DetumbleManager_HPP
 
-#include <cmath>
-#include <string>
-
 #include "FprimeZephyrReference/Components/DetumbleManager/BDot.hpp"
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
 #include "FprimeZephyrReference/Components/DetumbleManager/Magnetorquer.hpp"

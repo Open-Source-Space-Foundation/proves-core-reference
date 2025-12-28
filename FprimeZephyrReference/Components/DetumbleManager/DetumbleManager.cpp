@@ -5,12 +5,7 @@
 
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManager.hpp"
 
-#include <Fw/Types/String.hpp>
-#include <algorithm>
 #include <cerrno>
-#include <cmath>
-#include <numbers>
-#include <string>
 
 namespace Components {
 
