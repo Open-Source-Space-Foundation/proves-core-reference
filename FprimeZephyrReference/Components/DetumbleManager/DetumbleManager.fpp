@@ -145,6 +145,9 @@ module Components {
         @ Event for reporting unknown dipole moment computation error
         event UnknownDipoleMomentComputationError() severity warning low format "Unknown error occurred during dipole moment computation." throttle 5
 
+        @ Event for reporting invalid detumble strategy selection
+        event InvalidDetumbleStrategy(strategy: FpDetumbleStrategy) severity warning low format "Invalid detumble strategy selected: %d" throttle 5
+
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
 

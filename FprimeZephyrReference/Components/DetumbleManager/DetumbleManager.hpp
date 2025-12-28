@@ -84,6 +84,12 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Actions to perform when exiting the TORQUING state
     void stateExitTorquingActions();
 
+    // Detumble torqueing action based on BDot strategy
+    void bdotTorqueAction();
+
+    // Detumble torqueing action based on hysteresis strategy
+    void hysteresisTorqueAction();
+
     //! Convert FpCoilShape enum to Magnetorquer::CoilShape enum
     Magnetorquer::CoilShape toCoilShape(FpCoilShape shape);
 

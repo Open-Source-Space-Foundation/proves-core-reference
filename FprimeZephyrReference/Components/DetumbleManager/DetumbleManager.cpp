@@ -281,6 +281,37 @@ void DetumbleManager ::stateEnterTorquingActions() {
         return;
     }
 
+    // Perform torqueing action based on selected strategy
+    switch (this->m_detumbleStrategy) {
+        case FpDetumbleStrategy::BDOT:
+            this->bdotTorqueAction();
+            break;
+        case FpDetumbleStrategy::HYSTERESIS:
+            this->hysteresisTorqueAction();
+            break;
+        default:
+            // Invalid strategy, log error and transition back to SENSING state
+            this->log_WARNING_LO_InvalidDetumbleStrategy(this->m_detumbleStrategy);
+            this->m_detumbleState = DetumbleState::SENSING;
+            return;
+    }
+
+    // Record torque start time
+    this->m_torqueStartTime = this->getTime();
+}
+
+void DetumbleManager ::stateExitTorquingActions() {
+    // Turn off magnetorquers
+    this->stopMagnetorquers();
+
+    // Reset torque start time
+    this->m_torqueStartTime = Fw::ZERO_TIME;
+
+    // Transition to COOLDOWN state
+    this->m_detumbleState = DetumbleState::COOLDOWN;
+}
+
+void DetumbleManager ::bdotTorqueAction() {
     // Get magnetic field for dipole moment calculation
     Fw::Success condition;
     Drv::MagneticField magnetic_field = this->magneticFieldGet_out(0, condition);
@@ -296,33 +327,32 @@ void DetumbleManager ::stateEnterTorquingActions() {
     this->tlmWrite_Gain(gain);
 
     // Get dipole moment
-    int rc = errno;
+    errno = 0;  // Clear errno
     std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
                                                   magnetic_field.get_z()};
     std::array<double, 3> dipole_moment =
         this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
                                      magnetic_field.get_timestamp().get_useconds(), gain);
 
-    if (rc == EAGAIN) {
-        return;  // Not enough data yet
-    }
-
-    if (rc == EDOM) {
-        this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment();
-        return;
+    // Check for errors in dipole moment computation
+    int rc = errno;
+    if (rc != 0) {
+        switch (rc) {
+            case EAGAIN:
+                return;
+            case EDOM:
+                this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment();
+                return;
+            case EINVAL:
+                this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment();
+                return;
+            default:
+                this->log_WARNING_LO_UnknownDipoleMomentComputationError();
+                return;
+        }
     }
     this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment_ThrottleClear();
-
-    if (rc == EINVAL) {
-        this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment();
-        return;
-    }
     this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment_ThrottleClear();
-
-    if (rc != 0) {
-        this->log_WARNING_LO_UnknownDipoleMomentComputationError();
-        return;
-    }
     this->log_WARNING_LO_UnknownDipoleMomentComputationError_ThrottleClear();
 
     // Perform torqueing action
@@ -331,20 +361,11 @@ void DetumbleManager ::stateEnterTorquingActions() {
                              this->m_yPlusMagnetorquer.dipoleMomentToCurrent(dipole_moment[1]),
                              this->m_yMinusMagnetorquer.dipoleMomentToCurrent(dipole_moment[1]),
                              this->m_zMinusMagnetorquer.dipoleMomentToCurrent(dipole_moment[2]));
-
-    // Record torque start time
-    this->m_torqueStartTime = this->getTime();
 }
 
-void DetumbleManager ::stateExitTorquingActions() {
-    // Turn off magnetorquers
-    this->stopMagnetorquers();
-
-    // Reset torque start time
-    this->m_torqueStartTime = Fw::ZERO_TIME;
-
-    // Transition to COOLDOWN state
-    this->m_detumbleState = DetumbleState::COOLDOWN;
+void DetumbleManager ::hysteresisTorqueAction() {
+    // Perform torqueing action
+    this->startMagnetorquers(127, -127, 0, 0, 0);
 }
 
 Magnetorquer::CoilShape DetumbleManager ::toCoilShape(FpCoilShape shape) {
