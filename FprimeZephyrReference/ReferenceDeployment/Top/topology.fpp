@@ -242,6 +242,7 @@ module ReferenceDeployment {
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
+      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsdsLora.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> ComCcsdsSband.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[2] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[3] -> ComCcsdsLora.commsBufferManager.schedIn
