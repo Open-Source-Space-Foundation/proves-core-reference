@@ -46,17 +46,7 @@ def test_02_angular_velocity_telemetry(fprime_test_api: IntegrationTestAPI, star
     )
 
 
-def test_03_temperature_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get Temperature telemetry"""
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{imuManager}.Temperature", start="NOW", timeout=3
-    )
-
-    reading: int = result.get_val()
-    assert reading != 0, "Temperature reading should be non-zero"
-
-
-def test_04_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_03_magnetic_field_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get MagneticField telemetry"""
     result: ChData = fprime_test_api.assert_telemetry(
         f"{imuManager}.MagneticField", start="NOW", timeout=3

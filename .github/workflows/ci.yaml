@@ -16,6 +16,25 @@ jobs:
         run: |
           make fmt
 
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download bin tools
+        if: steps.cache-bin.outputs.cache-hit != 'true'
+        run: |
+          make download-bin
+
+      - name: Setup submodules
+        if: steps.cache-submodules.outputs.cache-hit != 'true'
+        run: |
+          make submodules
+
+      - name: Run Unit Tests
+        run: |
+          make test-unit
+
   build:
     runs-on: deathstar
     steps:

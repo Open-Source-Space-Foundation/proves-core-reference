@@ -10,11 +10,13 @@
 #include <atomic>
 #include <cerrno>
 
+#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcHelper.hpp"
 #include "FprimeZephyrReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/timeutil.h>
 
 namespace Drv {
@@ -65,25 +67,22 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
-    //! Handler implementation for command TEST_UNCONFIGURE_DEVICE
-    //!
-    //! TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time
-    //! since boot.
-    void TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                            U32 cmdSeq            //!< The command sequence number
-                                            ) override;
-
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
-    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
-    //! device stores the initialized Zephyr RTC device
-    const struct device* m_dev;
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
+
+    std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
+    const struct device* m_dev;             //!< The initialized Zephyr RTC device
+    RtcHelper m_rtcHelper;                  //!< Helper for RTC operations
 };
 
 }  // namespace Drv
