@@ -18,8 +18,14 @@ module Components {
     enum DetumbleStrategy {
         IDLE,       @< Do not detumble
         BDOT,       @< Use B-Dot detumbling
-        HYSTERESIS, @<Use hysteresis detumbling
+        HYSTERESIS, @< Use hysteresis detumbling
     };
+
+    enum HysteresisAxis {
+        X_AXIS, @< X axis
+        Y_AXIS, @< Y axis
+        Z_AXIS, @< Z axis
+    }
 
     port SetDetumbleMode (
         mode: DetumbleMode,     @< Desired detumble mode
@@ -52,8 +58,11 @@ module Components {
         @ Parameter for storing the detumble torquing duration
         param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
 
-        @ Gain used for B-Dot algorithm
+        @ Parameter for storing the gain used in the B-Dot algorithm
         param GAIN: F64 default 2.0 id 39
+
+        @ Parameter for storing the hysteresis axis
+        param HYSTERESIS_AXIS: HysteresisAxis default HysteresisAxis.X_AXIS id 42
 
         ### Magnetorquer Properties Parameters ###
 
@@ -185,6 +194,9 @@ module Components {
 
         @ Gain used in B-Dot algorithm
         telemetry Gain: F64
+
+        @ Hysteresis axis
+        telemetry HysteresisAxis: HysteresisAxis
 
         @ Cooldown duration
         telemetry CooldownDuration: Fw.TimeIntervalValue

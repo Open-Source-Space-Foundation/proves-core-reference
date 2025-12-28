@@ -272,7 +272,7 @@ void DetumbleManager ::stateSensingActions() {
     StrategySelector::Strategy detumble_strategy =
         this->m_strategy_selector.fromAngularVelocity(angular_velocity_array);
 
-    this->m_strategy = static_cast<DetumbleStrategy::T>(static_cast<Magnetorquer::CoilShape>(detumble_strategy));
+    this->m_strategy = static_cast<DetumbleStrategy::T>(detumble_strategy);
     this->tlmWrite_DetumbleStrategy(this->m_strategy);
 
     // No detumbling required, remain in SENSING state
@@ -393,8 +393,21 @@ void DetumbleManager ::bdotTorqueAction() {
 }
 
 void DetumbleManager ::hysteresisTorqueAction() {
-    // Perform torqueing action
-    this->startMagnetorquers(127, -127, 0, 0, 0);
+    Fw::ParamValid isValid;
+    HysteresisAxis axis = this->paramGet_HYSTERESIS_AXIS(isValid);
+    this->tlmWrite_HysteresisAxis(axis);
+
+    switch (axis) {
+        case HysteresisAxis::X_AXIS:
+            this->startMagnetorquers(127, -127, 0, 0, 0);
+            return;
+        case HysteresisAxis::Y_AXIS:
+            this->startMagnetorquers(0, 0, 127, -127, 0);
+            return;
+        case HysteresisAxis::Z_AXIS:
+            this->startMagnetorquers(0, 0, 0, 0, -127);
+            return;
+    }
 }
 
 }  // namespace Components

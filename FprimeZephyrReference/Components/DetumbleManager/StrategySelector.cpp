@@ -59,6 +59,7 @@ void StrategySelector ::configure(double bdot_max_threshold,
     this->m_deadband_upper_threshold = deadband_upper_threshold;
     this->m_deadband_lower_threshold = deadband_lower_threshold;
 
+    // Set rotation target to lower deadband if not already set to either threshold
     if (this->m_rotation_target != deadband_upper_threshold || this->m_rotation_target != deadband_lower_threshold) {
         this->m_rotation_target = deadband_lower_threshold;
     }

@@ -181,6 +181,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.DeadbandLowerThreshold
     ReferenceDeployment.detumbleManager.CooldownDuration
     ReferenceDeployment.detumbleManager.TorqueDuration
+    ReferenceDeployment.detumbleManager.HysteresisAxis
   }
 
   packet DetumbleXPlusCoilParams id 17 group 100 {
