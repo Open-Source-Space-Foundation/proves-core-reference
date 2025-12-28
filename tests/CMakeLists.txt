@@ -31,6 +31,14 @@ target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
+# DetumbleManager BDot
+add_library(detumble_manager_bdot STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../FprimeZephyrReference/Components/DetumbleManager/BDot.cpp
+)
+target_include_directories(detumble_manager_bdot PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
 # --- Auto-discover and build tests ---
 
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
@@ -43,6 +51,7 @@ foreach(test_src ${TEST_SOURCES})
         gtest_main
         detumble_manager_magnetorquer
         detumble_manager_strategy_selector
+        detumble_manager_bdot
         rtc_manager_rtc_helper
     )
 

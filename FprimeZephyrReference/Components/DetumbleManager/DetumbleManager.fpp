@@ -136,8 +136,14 @@ module Components {
         @ Event for reporting magnetic field retrieval failure
         event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5
 
-        @ Event for reporting dipole moment retrieval failure
-        event DipoleMomentRetrievalFailed(return_code: U8) severity warning low format "Failed to retrieve dipole moment with return code: {}." throttle 5
+        @ Event for reporting magnetic field too small for dipole moment calculation
+        event MagneticFieldTooSmallForDipoleMoment() severity warning low format "Magnetic field magnitude too small to compute dipole moment." throttle 5
+
+        @ Event for reporting invalid magnetic field readings for dipole moment calculation
+        event InvalidMagneticFieldReadingForDipoleMoment() severity warning low format "Out of order readings or readings taken too quickly, failed to compute dipole moment" throttle 5
+
+        @ Event for reporting unknown dipole moment computation error
+        event UnknownDipoleMomentComputationError() severity warning low format "Unknown error occurred during dipole moment computation." throttle 5
 
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5

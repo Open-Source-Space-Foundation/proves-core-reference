@@ -2,6 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug test_DetumbleManager_BDot",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_DetumbleManager_BDot",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
             "name": "Debug test_DetumbleManager_Magnetorquer",
             "type": "cppdbg",
             "request": "launch",

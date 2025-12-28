@@ -290,19 +290,40 @@ void DetumbleManager ::stateEnterTorquingActions() {
     }
     this->log_WARNING_LO_MagneticFieldRetrievalFailed_ThrottleClear();
 
-    // Get dipole moment
+    // Get gain parameter
     Fw::ParamValid isValid;
+    F64 gain = this->paramGet_GAIN(isValid);
+    this->tlmWrite_Gain(gain);
+
+    // Get dipole moment
     int rc = errno;
     std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
                                                   magnetic_field.get_z()};
     std::array<double, 3> dipole_moment =
         this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
-                                     magnetic_field.get_timestamp().get_useconds(), this->paramGet_GAIN(isValid));
-    if (rc != 0) {
-        this->log_WARNING_LO_DipoleMomentRetrievalFailed(static_cast<U8>(rc));
+                                     magnetic_field.get_timestamp().get_useconds(), gain);
+
+    if (rc == EAGAIN) {
+        return;  // Not enough data yet
+    }
+
+    if (rc == EDOM) {
+        this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment();
         return;
     }
-    this->log_WARNING_LO_DipoleMomentRetrievalFailed_ThrottleClear();
+    this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment_ThrottleClear();
+
+    if (rc == EINVAL) {
+        this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment();
+        return;
+    }
+    this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment_ThrottleClear();
+
+    if (rc != 0) {
+        this->log_WARNING_LO_UnknownDipoleMomentComputationError();
+        return;
+    }
+    this->log_WARNING_LO_UnknownDipoleMomentComputationError_ThrottleClear();
 
     // Perform torqueing action
     this->startMagnetorquers(this->m_xPlusMagnetorquer.dipoleMomentToCurrent(dipole_moment[0]),
