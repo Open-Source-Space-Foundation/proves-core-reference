@@ -18,8 +18,10 @@ register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/DetumbleManager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/DetumbleManager.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/BDot.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/DetumbleManager.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Magnetorquer.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/StrategySelector.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )

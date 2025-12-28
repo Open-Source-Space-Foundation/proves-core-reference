@@ -12,6 +12,7 @@
 #include "FprimeZephyrReference/Components/DetumbleManager/BDot.hpp"
 #include "FprimeZephyrReference/Components/DetumbleManager/DetumbleManagerComponentAc.hpp"
 #include "FprimeZephyrReference/Components/DetumbleManager/Magnetorquer.hpp"
+#include "FprimeZephyrReference/Components/DetumbleManager/StrategySelector.hpp"
 
 namespace Components {
 
@@ -52,13 +53,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //  Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Compute the angular velocity magnitude in degrees per second.
-    //! Formula: |ω| = sqrt(ωx² + ωy² + ωz²)
-    //!
-    //! ωx, ωy, ωz are the angular velocity components in rad/s
-    //! Returns magnitude in deg/s
-    F64 getAngularVelocityMagnitude(const Drv::AngularVelocity& angular_velocity);
-
     //! Turn the magnetorquers on based on the provided values
     void startMagnetorquers(I8 x_plus_drive_level,
                             I8 x_minus_drive_level,
@@ -90,8 +84,11 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Actions to perform when exiting the TORQUING state
     void stateExitTorquingActions();
 
-    //! Convert MagnetorquerCoilShape enum to Magnetorquer::CoilShape enum
-    Magnetorquer::CoilShape toCoilShape(MagnetorquerCoilShape shape);
+    //! Convert FpCoilShape enum to Magnetorquer::CoilShape enum
+    Magnetorquer::CoilShape toCoilShape(FpCoilShape shape);
+
+    //! Convert StrategySelector::Strategy enum to FpDetumbleStrategy enum
+    FpDetumbleStrategy toFpDetumbleStrategy(StrategySelector::Strategy strategy);
 
   private:
     // ----------------------------------------------------------------------
@@ -100,15 +97,17 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
     const double PI = 3.14159265358979323846;  //!< Mathematical constant pi
 
-    BDot m_BDot;  //!< B-Dot detumble algorithm class
-
-    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;  //!< Detumble state
+    BDot m_bdot;                           //!< B-Dot detumble algorithm class
+    StrategySelector m_strategy_selector;  //!< Detumble helper class
 
     Magnetorquer m_xPlusMagnetorquer;   //!< X+ Coil parameters
     Magnetorquer m_xMinusMagnetorquer;  //!< X- Coil parameters
     Magnetorquer m_yPlusMagnetorquer;   //!< Y+ Coil parameters
     Magnetorquer m_yMinusMagnetorquer;  //!< Y- Coil parameters
     Magnetorquer m_zMinusMagnetorquer;  //!< Z- Coil parameters
+
+    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;           //!< Detumble state
+    FpDetumbleStrategy m_detumbleStrategy = FpDetumbleStrategy::IDLE;  //!< Detumble strategy
 
     Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;  //!< Cooldown start time
     Fw::Time m_torqueStartTime = Fw::ZERO_TIME;    //!< Torque start time

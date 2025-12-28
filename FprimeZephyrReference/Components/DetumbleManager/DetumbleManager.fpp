@@ -1,5 +1,5 @@
 module Components {
-    enum MagnetorquerCoilShape {
+    enum FpCoilShape {
         RECTANGULAR, @< Rectangular coil shape
         CIRCULAR,    @< Circular coil shape
     }
@@ -14,6 +14,12 @@ module Components {
         SENSING,  @< Reading magnetic field
         TORQUING, @< Applying torque
     }
+
+    enum FpDetumbleStrategy {
+        IDLE,       @< Do not detumble
+        BDOT,       @< Use B-Dot detumbling
+        HYSTERESIS, @<Use hysteresis detumbling
+    };
 }
 
 module Components {
@@ -25,14 +31,14 @@ module Components {
         @ Parameter for storing the operating mode (default DISABLED)
         param OPERATING_MODE: DetumbleMode default DetumbleMode.DISABLED id 0
 
-        @ Parameter for storing the upper rotational threshold, above which bdot detumbling is replaced by hysteresis detumbling (default 30 deg/s)
-        param UPPER_ROTATIONAL_THRESHOLD: F64 default 30.0 id 40
+        @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling
+        param BDOT_MAX_THRESHOLD: F64 default 30.0 id 40
 
-        @ Parameter for storing the deadband rotational threshold, between upper and lower thresholds (default 18 deg/s)
-        param DEADBAND_ROTATIONAL_THRESHOLD: F64 default 18.0 id 41
+        @ Parameter for storing the upper deadband rotational threshold in deg/s
+        param DEADBAND_UPPER_THRESHOLD: F64 default 18.0 id 41
 
-        @ Parameter for storing the lower rotational threshold, below which detumble is considered complete (default 12 deg/s)
-        param LOWER_ROTATIONAL_THRESHOLD: F64 default 12.0 id 1
+        @ Parameter for storing the lower deadband rotational threshold in deg/s, below which detumble is considered complete
+        param DEADBAND_LOWER_THRESHOLD: F64 default 12.0 id 1
 
         @ Parameter for storing the cooldown duration
         param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
@@ -41,7 +47,7 @@ module Components {
         param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
 
         @ Gain used for B-Dot algorithm
-        param Gain: F64 default 2.0 id 39
+        param GAIN: F64 default 2.0 id 39
 
         ### Magnetorquer Properties Parameters ###
 
@@ -51,7 +57,7 @@ module Components {
         param X_PLUS_TURNS: F64 default 48.0 id 11
         param X_PLUS_LENGTH: F64 default 0.053 id 12
         param X_PLUS_WIDTH: F64 default 0.045 id 13
-        param X_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 33
+        param X_PLUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 33
 
         # --- X- Coil ---
         param X_MINUS_VOLTAGE: F64 default 3.3 id 14
@@ -59,7 +65,7 @@ module Components {
         param X_MINUS_TURNS: F64 default 48.0 id 16
         param X_MINUS_LENGTH: F64 default 0.053 id 17
         param X_MINUS_WIDTH: F64 default 0.045 id 18
-        param X_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 34
+        param X_MINUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 34
 
         # --- Y+ Coil ---
         param Y_PLUS_VOLTAGE: F64 default 3.3 id 19
@@ -67,7 +73,7 @@ module Components {
         param Y_PLUS_TURNS: F64 default 48.0 id 21
         param Y_PLUS_LENGTH: F64 default 0.053 id 22
         param Y_PLUS_WIDTH: F64 default 0.045 id 23
-        param Y_PLUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 35
+        param Y_PLUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 35
 
         # --- Y- Coil ---
         param Y_MINUS_VOLTAGE: F64 default 3.3 id 24
@@ -75,24 +81,24 @@ module Components {
         param Y_MINUS_TURNS: F64 default 48.0 id 26
         param Y_MINUS_LENGTH: F64 default 0.053 id 27
         param Y_MINUS_WIDTH: F64 default 0.045 id 28
-        param Y_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.RECTANGULAR id 36
+        param Y_MINUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 36
 
         # --- Z- Coil ---
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
         param Z_MINUS_RESISTANCE: F64 default 150.7 id 30
         param Z_MINUS_TURNS: F64 default 153.0 id 31
         param Z_MINUS_DIAMETER: F64 default 0.05755 id 32
-        param Z_MINUS_SHAPE: MagnetorquerCoilShape default MagnetorquerCoilShape.CIRCULAR id 37
+        param Z_MINUS_SHAPE: FpCoilShape default FpCoilShape.CIRCULAR id 37
 
         ### Ports ###
 
         @ Run loop
         sync input port run: Svc.Sched
 
-        @ Port for sending angularVelocityGet calls to the IMU Driver
+        @ Port for getting angular velocity readings in rad/s
         output port angularVelocityGet: AngularVelocityGet
 
-        @ Port for sending magneticFieldGet calls to the IMU Manager
+        @ Port for getting magnetic field readings in gauss
         output port magneticFieldGet: MagneticFieldGet
 
         @ Port for triggering the X+ magnetorquer
@@ -127,6 +133,9 @@ module Components {
 
         ### Events ###
 
+        @ Event for reporting magnetic field retrieval failure
+        event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5
+
         @ Event for reporting dipole moment retrieval failure
         event DipoleMomentRetrievalFailed(return_code: U8) severity warning low format "Failed to retrieve dipole moment with return code: {}." throttle 5
 
@@ -141,13 +150,19 @@ module Components {
         @ Current internal state
         telemetry State: DetumbleState
 
-        @ Rotational velocity below threshold
-        telemetry BelowRotationalThreshold: bool
+        @ Selected detumble strategy
+        telemetry DetumbleStrategy: FpDetumbleStrategy
 
-        @ Rotational threshold (deg/s)
-        telemetry RotationalThreshold: F64
+        @ Maximum angular velocity where BDot should be used (deg/s)
+        telemetry BdotMaxThreshold: F64
 
-        @ Telemetry for the gain used in B-Dot algorithm
+        @ Upper deadband rotational threshold (deg/s)
+        telemetry DeadbandUpperThreshold: F64
+
+        @ Lower deadband rotational threshold (deg/s)
+        telemetry DeadbandLowerThreshold: F64
+
+        @ Gain used in B-Dot algorithm
         telemetry Gain: F64
 
         @ Cooldown duration
@@ -172,7 +187,7 @@ module Components {
         telemetry XPlusWidth: F64
 
         @ X+ coil shape
-        telemetry XPlusShape: MagnetorquerCoilShape
+        telemetry XPlusShape: FpCoilShape
 
         @ X- coil voltage (V)
         telemetry XMinusVoltage: F64
@@ -190,7 +205,7 @@ module Components {
         telemetry XMinusWidth: F64
 
         @ X- coil shape
-        telemetry XMinusShape: MagnetorquerCoilShape
+        telemetry XMinusShape: FpCoilShape
 
         @ Y+ coil voltage (V)
         telemetry YPlusVoltage: F64
@@ -208,7 +223,7 @@ module Components {
         telemetry YPlusWidth: F64
 
         @ Y+ coil shape
-        telemetry YPlusShape: MagnetorquerCoilShape
+        telemetry YPlusShape: FpCoilShape
 
         @ Y- coil voltage (V)
         telemetry YMinusVoltage: F64
@@ -226,7 +241,7 @@ module Components {
         telemetry YMinusWidth: F64
 
         @ Y- coil shape
-        telemetry YMinusShape: MagnetorquerCoilShape
+        telemetry YMinusShape: FpCoilShape
 
         @ Z- coil voltage (V)
         telemetry ZMinusVoltage: F64
@@ -241,7 +256,7 @@ module Components {
         telemetry ZMinusDiameter: F64
 
         @ Z- coil shape
-        telemetry ZMinusShape: MagnetorquerCoilShape
+        telemetry ZMinusShape: FpCoilShape
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

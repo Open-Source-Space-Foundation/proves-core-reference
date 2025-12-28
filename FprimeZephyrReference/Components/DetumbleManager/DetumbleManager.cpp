@@ -18,7 +18,15 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-DetumbleManager ::DetumbleManager(const char* const compName) : DetumbleManagerComponentBase(compName), m_BDot() {}
+DetumbleManager ::DetumbleManager(const char* const compName)
+    : DetumbleManagerComponentBase(compName),
+      m_bdot(),
+      m_strategy_selector(),
+      m_xPlusMagnetorquer(),
+      m_xMinusMagnetorquer(),
+      m_yPlusMagnetorquer(),
+      m_yMinusMagnetorquer(),
+      m_zMinusMagnetorquer() {}
 
 DetumbleManager ::~DetumbleManager() {}
 
@@ -68,105 +76,87 @@ void DetumbleManager ::configure() {
 
     // Initialize coil parameters from configuration parameters
     // X+ Coil
-    double xPlusMagnetorquer_voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
-    double xPlusMagnetorquer_resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
-    double xPlusMagnetorquer_turns = this->paramGet_X_PLUS_TURNS(isValid);
-    MagnetorquerCoilShape xPlusMagnetorquer_shape = this->paramGet_X_PLUS_SHAPE(isValid);
-    double xPlusMagnetorquer_width = this->paramGet_X_PLUS_WIDTH(isValid);
-    double xPlusMagnetorquer_length = this->paramGet_X_PLUS_LENGTH(isValid);
-    this->tlmWrite_XPlusVoltage(xPlusMagnetorquer_voltage);
-    this->tlmWrite_XPlusResistance(xPlusMagnetorquer_resistance);
-    this->tlmWrite_XPlusTurns(xPlusMagnetorquer_turns);
-    this->tlmWrite_XPlusShape(xPlusMagnetorquer_shape);
-    this->tlmWrite_XPlusWidth(xPlusMagnetorquer_width);
-    this->tlmWrite_XPlusLength(xPlusMagnetorquer_length);
-    this->m_xPlusMagnetorquer =
-        Magnetorquer(xPlusMagnetorquer_voltage, xPlusMagnetorquer_resistance, xPlusMagnetorquer_turns,
-                     Magnetorquer::DirectionSign::POSITIVE, this->toCoilShape(xPlusMagnetorquer_shape),
-                     xPlusMagnetorquer_width, xPlusMagnetorquer_length, 0.0);
+    m_xPlusMagnetorquer.m_voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
+    m_xPlusMagnetorquer.m_resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
+    m_xPlusMagnetorquer.m_turns = this->paramGet_X_PLUS_TURNS(isValid);
+    m_xPlusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
+    FpCoilShape xPlus_shape = this->paramGet_X_PLUS_SHAPE(isValid);
+    m_xPlusMagnetorquer.m_shape = this->toCoilShape(xPlus_shape);
+    m_xPlusMagnetorquer.m_width = this->paramGet_X_PLUS_WIDTH(isValid);
+    m_xPlusMagnetorquer.m_length = this->paramGet_X_PLUS_LENGTH(isValid);
+    this->tlmWrite_XPlusVoltage(m_xPlusMagnetorquer.m_voltage);
+    this->tlmWrite_XPlusResistance(m_xPlusMagnetorquer.m_resistance);
+    this->tlmWrite_XPlusTurns(m_xPlusMagnetorquer.m_turns);
+    this->tlmWrite_XPlusShape(xPlus_shape);
+    this->tlmWrite_XPlusWidth(m_xPlusMagnetorquer.m_width);
+    this->tlmWrite_XPlusLength(m_xPlusMagnetorquer.m_length);
 
     // X- Coil
-    double xMinusMagnetorquer_voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
-    double xMinusMagnetorquer_resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
-    double xMinusMagnetorquer_turns = this->paramGet_X_MINUS_TURNS(isValid);
-    MagnetorquerCoilShape xMinusMagnetorquer_shape = this->paramGet_X_MINUS_SHAPE(isValid);
-    double xMinusMagnetorquer_width = this->paramGet_X_MINUS_WIDTH(isValid);
-    double xMinusMagnetorquer_length = this->paramGet_X_MINUS_LENGTH(isValid);
-    this->tlmWrite_XMinusVoltage(xMinusMagnetorquer_voltage);
-    this->tlmWrite_XMinusResistance(xMinusMagnetorquer_resistance);
-    this->tlmWrite_XMinusTurns(xMinusMagnetorquer_turns);
-    this->tlmWrite_XMinusShape(xMinusMagnetorquer_shape);
-    this->tlmWrite_XMinusWidth(xMinusMagnetorquer_width);
-    this->tlmWrite_XMinusLength(xMinusMagnetorquer_length);
-    this->m_xMinusMagnetorquer =
-        Magnetorquer(xMinusMagnetorquer_voltage, xMinusMagnetorquer_resistance, xMinusMagnetorquer_turns,
-                     Magnetorquer::DirectionSign::NEGATIVE, this->toCoilShape(xMinusMagnetorquer_shape),
-                     xMinusMagnetorquer_width, xMinusMagnetorquer_length, 0.0);
+    m_xMinusMagnetorquer.m_voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
+    m_xMinusMagnetorquer.m_resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
+    m_xMinusMagnetorquer.m_turns = this->paramGet_X_MINUS_TURNS(isValid);
+    m_xMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
+    FpCoilShape xMinus_shape = this->paramGet_X_MINUS_SHAPE(isValid);
+    m_xMinusMagnetorquer.m_shape = this->toCoilShape(xMinus_shape);
+    m_xMinusMagnetorquer.m_width = this->paramGet_X_MINUS_WIDTH(isValid);
+    m_xMinusMagnetorquer.m_length = this->paramGet_X_MINUS_LENGTH(isValid);
+    this->tlmWrite_XMinusVoltage(m_xMinusMagnetorquer.m_voltage);
+    this->tlmWrite_XMinusResistance(m_xMinusMagnetorquer.m_resistance);
+    this->tlmWrite_XMinusTurns(m_xMinusMagnetorquer.m_turns);
+    this->tlmWrite_XMinusShape(xMinus_shape);
+    this->tlmWrite_XMinusWidth(m_xMinusMagnetorquer.m_width);
+    this->tlmWrite_XMinusLength(m_xMinusMagnetorquer.m_length);
 
     // Y+ Coil
-    double yPlusMagnetorquer_voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
-    double yPlusMagnetorquer_resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
-    double yPlusMagnetorquer_turns = this->paramGet_Y_PLUS_TURNS(isValid);
-    MagnetorquerCoilShape yPlusMagnetorquer_shape = this->paramGet_Y_PLUS_SHAPE(isValid);
-    double yPlusMagnetorquer_width = this->paramGet_Y_PLUS_WIDTH(isValid);
-    double yPlusMagnetorquer_length = this->paramGet_Y_PLUS_LENGTH(isValid);
-    this->tlmWrite_YPlusVoltage(yPlusMagnetorquer_voltage);
-    this->tlmWrite_YPlusResistance(yPlusMagnetorquer_resistance);
-    this->tlmWrite_YPlusTurns(yPlusMagnetorquer_turns);
-    this->tlmWrite_YPlusShape(yPlusMagnetorquer_shape);
-    this->tlmWrite_YPlusWidth(yPlusMagnetorquer_width);
-    this->tlmWrite_YPlusLength(yPlusMagnetorquer_length);
-    this->m_yPlusMagnetorquer =
-        Magnetorquer(yPlusMagnetorquer_voltage, yPlusMagnetorquer_resistance, yPlusMagnetorquer_turns,
-                     Magnetorquer::DirectionSign::POSITIVE, this->toCoilShape(yPlusMagnetorquer_shape),
-                     yPlusMagnetorquer_width, yPlusMagnetorquer_length, 0.0);
+    m_yPlusMagnetorquer.m_voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
+    m_yPlusMagnetorquer.m_resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
+    m_yPlusMagnetorquer.m_turns = this->paramGet_Y_PLUS_TURNS(isValid);
+    m_yPlusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
+    FpCoilShape yPlus_shape = this->paramGet_Y_PLUS_SHAPE(isValid);
+    m_yPlusMagnetorquer.m_shape = this->toCoilShape(yPlus_shape);
+    m_yPlusMagnetorquer.m_width = this->paramGet_Y_PLUS_WIDTH(isValid);
+    m_yPlusMagnetorquer.m_length = this->paramGet_Y_PLUS_LENGTH(isValid);
+    this->tlmWrite_YPlusVoltage(m_yPlusMagnetorquer.m_voltage);
+    this->tlmWrite_YPlusResistance(m_yPlusMagnetorquer.m_resistance);
+    this->tlmWrite_YPlusTurns(m_yPlusMagnetorquer.m_turns);
+    this->tlmWrite_YPlusShape(yPlus_shape);
+    this->tlmWrite_YPlusWidth(m_yPlusMagnetorquer.m_width);
+    this->tlmWrite_YPlusLength(m_yPlusMagnetorquer.m_length);
 
     // Y- Coil
-    double yMinusMagnetorquer_voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
-    double yMinusMagnetorquer_resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
-    double yMinusMagnetorquer_turns = this->paramGet_Y_MINUS_TURNS(isValid);
-    MagnetorquerCoilShape yMinusMagnetorquer_shape = this->paramGet_Y_MINUS_SHAPE(isValid);
-    double yMinusMagnetorquer_width = this->paramGet_Y_MINUS_WIDTH(isValid);
-    double yMinusMagnetorquer_length = this->paramGet_Y_MINUS_LENGTH(isValid);
-    this->tlmWrite_YMinusVoltage(yMinusMagnetorquer_voltage);
-    this->tlmWrite_YMinusResistance(yMinusMagnetorquer_resistance);
-    this->tlmWrite_YMinusTurns(yMinusMagnetorquer_turns);
-    this->tlmWrite_YMinusShape(yMinusMagnetorquer_shape);
-    this->tlmWrite_YMinusWidth(yMinusMagnetorquer_width);
-    this->tlmWrite_YMinusLength(yMinusMagnetorquer_length);
-    this->m_yMinusMagnetorquer =
-        Magnetorquer(yMinusMagnetorquer_voltage, yMinusMagnetorquer_resistance, yMinusMagnetorquer_turns,
-                     Magnetorquer::DirectionSign::NEGATIVE, this->toCoilShape(yMinusMagnetorquer_shape),
-                     yMinusMagnetorquer_width, yMinusMagnetorquer_length, 0.0);
+    m_yMinusMagnetorquer.m_voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
+    m_yMinusMagnetorquer.m_resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
+    m_yMinusMagnetorquer.m_turns = this->paramGet_Y_MINUS_TURNS(isValid);
+    m_yMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
+    FpCoilShape yMinus_shape = this->paramGet_Y_MINUS_SHAPE(isValid);
+    m_yMinusMagnetorquer.m_shape = this->toCoilShape(yMinus_shape);
+    m_yMinusMagnetorquer.m_width = this->paramGet_Y_MINUS_WIDTH(isValid);
+    m_yMinusMagnetorquer.m_length = this->paramGet_Y_MINUS_LENGTH(isValid);
+    this->tlmWrite_YMinusVoltage(m_yMinusMagnetorquer.m_voltage);
+    this->tlmWrite_YMinusResistance(m_yMinusMagnetorquer.m_resistance);
+    this->tlmWrite_YMinusTurns(m_yMinusMagnetorquer.m_turns);
+    this->tlmWrite_YMinusShape(yMinus_shape);
+    this->tlmWrite_YMinusWidth(m_yMinusMagnetorquer.m_width);
+    this->tlmWrite_YMinusLength(m_yMinusMagnetorquer.m_length);
 
     // Z- Coil
-    double zMinusMagnetorquer_voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
-    double zMinusMagnetorquer_resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
-    double zMinusMagnetorquer_turns = this->paramGet_Z_MINUS_TURNS(isValid);
-    MagnetorquerCoilShape zMinusMagnetorquer_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
-    double zMinusMagnetorquer_diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
-    this->tlmWrite_ZMinusVoltage(zMinusMagnetorquer_voltage);
-    this->tlmWrite_ZMinusResistance(zMinusMagnetorquer_resistance);
-    this->tlmWrite_ZMinusTurns(zMinusMagnetorquer_turns);
-    this->tlmWrite_ZMinusShape(zMinusMagnetorquer_shape);
-    this->tlmWrite_ZMinusDiameter(zMinusMagnetorquer_diameter);
-    this->m_zMinusMagnetorquer =
-        Magnetorquer(zMinusMagnetorquer_voltage, zMinusMagnetorquer_resistance, zMinusMagnetorquer_turns,
-                     Magnetorquer::DirectionSign::NEGATIVE, this->toCoilShape(zMinusMagnetorquer_shape), 0.0, 0.0,
-                     zMinusMagnetorquer_diameter);
+    m_zMinusMagnetorquer.m_voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
+    m_zMinusMagnetorquer.m_resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
+    m_zMinusMagnetorquer.m_turns = this->paramGet_Z_MINUS_TURNS(isValid);
+    m_zMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
+    FpCoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
+    m_zMinusMagnetorquer.m_shape = this->toCoilShape(zMinus_shape);
+    m_zMinusMagnetorquer.m_diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
+    this->tlmWrite_ZMinusVoltage(m_zMinusMagnetorquer.m_voltage);
+    this->tlmWrite_ZMinusResistance(m_zMinusMagnetorquer.m_resistance);
+    this->tlmWrite_ZMinusTurns(m_zMinusMagnetorquer.m_turns);
+    this->tlmWrite_ZMinusShape(zMinus_shape);
+    this->tlmWrite_ZMinusDiameter(m_zMinusMagnetorquer.m_diameter);
 }
 
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
-
-F64 DetumbleManager ::getAngularVelocityMagnitude(const Drv::AngularVelocity& angular_velocity) {
-    F64 magRadPerSec = std::sqrt(angular_velocity.get_x() * angular_velocity.get_x() +
-                                 angular_velocity.get_y() * angular_velocity.get_y() +
-                                 angular_velocity.get_z() * angular_velocity.get_z());
-
-    return magRadPerSec * 180.0 / this->PI;
-}
 
 void DetumbleManager ::startMagnetorquers(I8 x_plus_drive_level,
                                           I8 x_minus_drive_level,
@@ -224,11 +214,21 @@ void DetumbleManager ::stateExitCooldownActions() {
 }
 
 void DetumbleManager ::stateSensingActions() {
-    // Get rotational threshold from parameter
+    // Get angular velocity thresholds from parameters
     Fw::ParamValid isValid;
-    F64 rotational_threshold = this->paramGet_ROTATIONAL_THRESHOLD(isValid);
+    F64 bdot_max_threshold = this->paramGet_BDOT_MAX_THRESHOLD(isValid);
+    F64 deadband_upper_threshold = this->paramGet_DEADBAND_UPPER_THRESHOLD(isValid);
+    F64 deadband_lower_threshold = this->paramGet_DEADBAND_LOWER_THRESHOLD(isValid);
 
-    // Get current angular velocity magnitude
+    // Telemeter thresholds
+    this->tlmWrite_BdotMaxThreshold(bdot_max_threshold);
+    this->tlmWrite_DeadbandUpperThreshold(deadband_upper_threshold);
+    this->tlmWrite_DeadbandLowerThreshold(deadband_lower_threshold);
+
+    // Configure strategy selector with updated thresholds
+    this->m_strategy_selector.configure(bdot_max_threshold, deadband_upper_threshold, deadband_lower_threshold);
+
+    // Get angular velocity
     Fw::Success condition;
     Drv::AngularVelocity angular_velocity = this->angularVelocityGet_out(0, condition);
     if (condition != Fw::Success::SUCCESS) {
@@ -237,15 +237,19 @@ void DetumbleManager ::stateSensingActions() {
     }
     this->log_WARNING_LO_AngularVelocityRetrievalFailed_ThrottleClear();
 
-    F64 angular_velocity_magnitude = this->getAngularVelocityMagnitude(angular_velocity);
+    // Select detumble strategy based on angular velocity
+    std::array<double, 3> angular_velocity_array = {angular_velocity.get_x(), angular_velocity.get_y(),
+                                                    angular_velocity.get_z()};
+    StrategySelector::Strategy detumble_strategy =
+        this->m_strategy_selector.fromAngularVelocity(angular_velocity_array);
 
-    // If angular velocity is below threshold, remain in SENSING state
-    // TODO(nateinaction): Consider transitioning the mode to DISABLED if below threshold
-    if (angular_velocity_magnitude < rotational_threshold) {
-        this->tlmWrite_BelowRotationalThreshold(true);
+    this->m_detumbleStrategy = this->toFpDetumbleStrategy(detumble_strategy);
+    this->tlmWrite_DetumbleStrategy(this->m_detumbleStrategy);
+
+    // No detumbling required, remain in SENSING state
+    if (this->m_detumbleStrategy == FpDetumbleStrategy::IDLE) {
         return;
     }
-    this->tlmWrite_BelowRotationalThreshold(false);
 
     // Transition to TORQUING state
     this->m_detumbleState = DetumbleState::TORQUING;
@@ -278,6 +282,7 @@ void DetumbleManager ::stateEnterTorquingActions() {
     }
 
     // Get magnetic field for dipole moment calculation
+    Fw::Success condition;
     Drv::MagneticField magnetic_field = this->magneticFieldGet_out(0, condition);
     if (condition != Fw::Success::SUCCESS) {
         this->log_WARNING_LO_MagneticFieldRetrievalFailed();
@@ -286,13 +291,14 @@ void DetumbleManager ::stateEnterTorquingActions() {
     this->log_WARNING_LO_MagneticFieldRetrievalFailed_ThrottleClear();
 
     // Get dipole moment
-    errno rc;
+    Fw::ParamValid isValid;
+    int rc = errno;
     std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
                                                   magnetic_field.get_z()};
     std::array<double, 3> dipole_moment =
-        this->m_BDot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
-                                     magnetic_field.get_timestamp().get_useconds(), this->paramGet_BDOT_GAIN(isValid));
-    if (errno != 0) {
+        this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
+                                     magnetic_field.get_timestamp().get_useconds(), this->paramGet_GAIN(isValid));
+    if (rc != 0) {
         this->log_WARNING_LO_DipoleMomentRetrievalFailed(static_cast<U8>(rc));
         return;
     }
@@ -320,12 +326,23 @@ void DetumbleManager ::stateExitTorquingActions() {
     this->m_detumbleState = DetumbleState::COOLDOWN;
 }
 
-Magnetorquer::CoilShape DetumbleManager ::toCoilShape(MagnetorquerCoilShape shape) {
-    switch (static_cast<MagnetorquerCoilShape::T>(shape)) {
-        case MagnetorquerCoilShape::CIRCULAR:
+Magnetorquer::CoilShape DetumbleManager ::toCoilShape(FpCoilShape shape) {
+    switch (static_cast<FpCoilShape::T>(shape)) {
+        case FpCoilShape::CIRCULAR:
             return Magnetorquer::CoilShape::CIRCULAR;
         default:
             return Magnetorquer::CoilShape::RECTANGULAR;
+    }
+}
+
+FpDetumbleStrategy DetumbleManager ::toFpDetumbleStrategy(StrategySelector::Strategy strategy) {
+    switch (strategy) {
+        case StrategySelector::Strategy::BDOT:
+            return FpDetumbleStrategy::BDOT;
+        case StrategySelector::Strategy::HYSTERESIS:
+            return FpDetumbleStrategy::HYSTERESIS;
+        default:
+            return FpDetumbleStrategy::IDLE;
     }
 }
 

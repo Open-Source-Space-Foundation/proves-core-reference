@@ -14,23 +14,7 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Magnetorquer ::Magnetorquer(double voltage,
-                            double resistance,
-                            double turns,
-                            DirectionSign sign,
-                            CoilShape shape,
-                            double width,
-                            double length,
-                            double diameter) {
-    this->m_voltage = voltage;
-    this->m_resistance = resistance;
-    this->m_turns = turns;
-    this->m_direction_sign = sign;
-    this->m_shape = shape;
-    this->m_width = width;
-    this->m_length = length;
-    this->m_diameter = diameter;
-}
+Magnetorquer ::Magnetorquer() {}
 
 Magnetorquer ::~Magnetorquer() {}
 

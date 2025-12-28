@@ -26,14 +26,7 @@ class Magnetorquer {
     // ----------------------------------------------------------------------
 
     //! Construct Magnetorquer object
-    Magnetorquer(double voltage,
-                 double resistance,
-                 double turns,
-                 DirectionSign sign,
-                 CoilShape shape,
-                 double width,
-                 double length,
-                 double diameter);
+    Magnetorquer();
 
     //! Destroy Magnetorquer object
     ~Magnetorquer();
@@ -95,11 +88,6 @@ class Magnetorquer {
     // ----------------------------------------------------------------------
 
     static constexpr double PI = 3.14159265358979323846;  //!< Mathematical constant pi
-
-  private:
-    // ----------------------------------------------------------------------
-    //  Private member variables
-    // ----------------------------------------------------------------------
 
     double m_turns;       //<! Number of turns in the coil
     double m_voltage;     //<! Voltage (V) supplied to the coil
