@@ -40,6 +40,31 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    //! Handler implementation for setMode
+    //!
+    //! Port for disabling detumbling
+    void setMode_handler(FwIndexType portNum,                  //!< The port number
+                         const Components::DetumbleMode& mode  //!< Desired detumble mode
+                         ) override;
+
+    //! Handler implementation for systemModeChanged
+    //!
+    //! Port for receiving system mode change notifications
+    void systemModeChanged_handler(FwIndexType portNum,  //!< The port number
+                                   const Components::SystemMode& mode) override;
+
+  private:
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for command SET_MODE
+    //!
+    //! Command to set the operating mode
+    void SET_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                             U32 cmdSeq,           //!< The command sequence number
+                             Components::DetumbleMode mode) override;
+
   public:
     // ----------------------------------------------------------------------
     //  Public helper methods
@@ -90,12 +115,6 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     // Detumble torqueing action based on hysteresis strategy
     void hysteresisTorqueAction();
 
-    //! Convert FpCoilShape enum to Magnetorquer::CoilShape enum
-    Magnetorquer::CoilShape toCoilShape(FpCoilShape shape);
-
-    //! Convert StrategySelector::Strategy enum to FpDetumbleStrategy enum
-    FpDetumbleStrategy toFpDetumbleStrategy(StrategySelector::Strategy strategy);
-
   private:
     // ----------------------------------------------------------------------
     //  Private member variables
@@ -112,8 +131,9 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     Magnetorquer m_yMinusMagnetorquer;  //!< Y- Coil parameters
     Magnetorquer m_zMinusMagnetorquer;  //!< Z- Coil parameters
 
-    DetumbleState m_detumbleState = DetumbleState::COOLDOWN;           //!< Detumble state
-    FpDetumbleStrategy m_detumbleStrategy = FpDetumbleStrategy::IDLE;  //!< Detumble strategy
+    DetumbleMode m_mode = DetumbleMode::DISABLED;          //!< Detumble mode
+    DetumbleState m_state = DetumbleState::COOLDOWN;       //!< Detumble state
+    DetumbleStrategy m_strategy = DetumbleStrategy::IDLE;  //!< Detumble strategy
 
     Fw::Time m_cooldownStartTime = Fw::ZERO_TIME;  //!< Cooldown start time
     Fw::Time m_torqueStartTime = Fw::ZERO_TIME;    //!< Torque start time

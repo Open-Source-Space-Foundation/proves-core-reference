@@ -1,5 +1,5 @@
 module Components {
-    enum FpCoilShape {
+    enum CoilShape {
         RECTANGULAR, @< Rectangular coil shape
         CIRCULAR,    @< Circular coil shape
     }
@@ -15,21 +15,27 @@ module Components {
         TORQUING, @< Applying torque
     }
 
-    enum FpDetumbleStrategy {
+    enum DetumbleStrategy {
         IDLE,       @< Do not detumble
         BDOT,       @< Use B-Dot detumbling
         HYSTERESIS, @<Use hysteresis detumbling
     };
+
+    port SetDetumbleMode (
+        mode: DetumbleMode,     @< Desired detumble mode
+    )
 }
 
 module Components {
     @ Detumble Manager Component for F Prime FSW framework.
     passive component DetumbleManager {
 
-        ### Parameters ###
+        ### Commands ###
 
-        @ Parameter for storing the operating mode (default DISABLED)
-        param OPERATING_MODE: DetumbleMode default DetumbleMode.DISABLED id 0
+        @ Command to set the operating mode
+        sync command SET_MODE(mode: DetumbleMode)
+
+        ### Parameters ###
 
         @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling
         param BDOT_MAX_THRESHOLD: F64 default 30.0 id 40
@@ -57,7 +63,7 @@ module Components {
         param X_PLUS_TURNS: F64 default 48.0 id 11
         param X_PLUS_LENGTH: F64 default 0.053 id 12
         param X_PLUS_WIDTH: F64 default 0.045 id 13
-        param X_PLUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 33
+        param X_PLUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 33
 
         # --- X- Coil ---
         param X_MINUS_VOLTAGE: F64 default 3.3 id 14
@@ -65,7 +71,7 @@ module Components {
         param X_MINUS_TURNS: F64 default 48.0 id 16
         param X_MINUS_LENGTH: F64 default 0.053 id 17
         param X_MINUS_WIDTH: F64 default 0.045 id 18
-        param X_MINUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 34
+        param X_MINUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 34
 
         # --- Y+ Coil ---
         param Y_PLUS_VOLTAGE: F64 default 3.3 id 19
@@ -73,7 +79,7 @@ module Components {
         param Y_PLUS_TURNS: F64 default 48.0 id 21
         param Y_PLUS_LENGTH: F64 default 0.053 id 22
         param Y_PLUS_WIDTH: F64 default 0.045 id 23
-        param Y_PLUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 35
+        param Y_PLUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 35
 
         # --- Y- Coil ---
         param Y_MINUS_VOLTAGE: F64 default 3.3 id 24
@@ -81,19 +87,25 @@ module Components {
         param Y_MINUS_TURNS: F64 default 48.0 id 26
         param Y_MINUS_LENGTH: F64 default 0.053 id 27
         param Y_MINUS_WIDTH: F64 default 0.045 id 28
-        param Y_MINUS_SHAPE: FpCoilShape default FpCoilShape.RECTANGULAR id 36
+        param Y_MINUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 36
 
         # --- Z- Coil ---
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
         param Z_MINUS_RESISTANCE: F64 default 150.7 id 30
         param Z_MINUS_TURNS: F64 default 153.0 id 31
         param Z_MINUS_DIAMETER: F64 default 0.05755 id 32
-        param Z_MINUS_SHAPE: FpCoilShape default FpCoilShape.CIRCULAR id 37
+        param Z_MINUS_SHAPE: CoilShape default CoilShape.CIRCULAR id 37
 
         ### Ports ###
 
         @ Run loop
         sync input port run: Svc.Sched
+
+        @ Port for disabling detumbling
+        sync input port setMode: SetDetumbleMode
+
+        @ Port for receiving system mode change notifications
+        sync input port systemModeChanged: Components.SystemModeChanged
 
         @ Port for getting angular velocity readings in rad/s
         output port angularVelocityGet: AngularVelocityGet
@@ -146,7 +158,7 @@ module Components {
         event UnknownDipoleMomentComputationError() severity warning low format "Unknown error occurred during dipole moment computation." throttle 5
 
         @ Event for reporting invalid detumble strategy selection
-        event InvalidDetumbleStrategy(strategy: FpDetumbleStrategy) severity warning low format "Invalid detumble strategy selected: %d" throttle 5
+        event InvalidDetumbleStrategy(strategy: DetumbleStrategy) severity warning low format "Invalid detumble strategy selected: {}" throttle 5
 
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
@@ -160,7 +172,7 @@ module Components {
         telemetry State: DetumbleState
 
         @ Selected detumble strategy
-        telemetry DetumbleStrategy: FpDetumbleStrategy
+        telemetry DetumbleStrategy: DetumbleStrategy
 
         @ Maximum angular velocity where BDot should be used (deg/s)
         telemetry BdotMaxThreshold: F64
@@ -196,7 +208,7 @@ module Components {
         telemetry XPlusWidth: F64
 
         @ X+ coil shape
-        telemetry XPlusShape: FpCoilShape
+        telemetry XPlusShape: CoilShape
 
         @ X- coil voltage (V)
         telemetry XMinusVoltage: F64
@@ -214,7 +226,7 @@ module Components {
         telemetry XMinusWidth: F64
 
         @ X- coil shape
-        telemetry XMinusShape: FpCoilShape
+        telemetry XMinusShape: CoilShape
 
         @ Y+ coil voltage (V)
         telemetry YPlusVoltage: F64
@@ -232,7 +244,7 @@ module Components {
         telemetry YPlusWidth: F64
 
         @ Y+ coil shape
-        telemetry YPlusShape: FpCoilShape
+        telemetry YPlusShape: CoilShape
 
         @ Y- coil voltage (V)
         telemetry YMinusVoltage: F64
@@ -250,7 +262,7 @@ module Components {
         telemetry YMinusWidth: F64
 
         @ Y- coil shape
-        telemetry YMinusShape: FpCoilShape
+        telemetry YMinusShape: CoilShape
 
         @ Z- coil voltage (V)
         telemetry ZMinusVoltage: F64
@@ -265,7 +277,7 @@ module Components {
         telemetry ZMinusDiameter: F64
 
         @ Z- coil shape
-        telemetry ZMinusShape: FpCoilShape
+        telemetry ZMinusShape: CoilShape
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

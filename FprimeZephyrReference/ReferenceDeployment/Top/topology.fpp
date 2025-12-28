@@ -332,6 +332,8 @@ module ReferenceDeployment {
       detumbleManager.yPlusStop -> drv2605Face2Manager.stop
       detumbleManager.yMinusStop -> drv2605Face3Manager.stop
       detumbleManager.zMinusStop -> drv2605Face5Manager.stop
+
+      modeManager.modeChanged -> detumbleManager.systemModeChanged
     }
 
     connections PayloadCom {
@@ -386,9 +388,6 @@ module ReferenceDeployment {
       ComCcsdsLora.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[0]
       fileUplinkCollector.multiOut[0] -> ComCcsdsLora.authenticationRouter.fileBufferReturnIn
     }
-
-
-
 
     connections sysPowerMonitor {
       powerMonitor.sysVoltageGet -> ina219SysManager.voltageGet

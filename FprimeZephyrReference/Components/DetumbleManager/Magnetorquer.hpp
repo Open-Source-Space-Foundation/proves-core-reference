@@ -16,7 +16,7 @@ class Magnetorquer {
     //  Public types
     // ----------------------------------------------------------------------
 
-    enum CoilShape { RECTANGULAR, CIRCULAR };
+    enum class CoilShape { RECTANGULAR = 0, CIRCULAR = 1 };
 
     enum DirectionSign { POSITIVE = 1, NEGATIVE = -1 };
 

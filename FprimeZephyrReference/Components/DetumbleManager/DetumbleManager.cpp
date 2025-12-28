@@ -26,7 +26,26 @@ DetumbleManager ::DetumbleManager(const char* const compName)
       m_xMinusMagnetorquer(),
       m_yPlusMagnetorquer(),
       m_yMinusMagnetorquer(),
-      m_zMinusMagnetorquer() {}
+      m_zMinusMagnetorquer() {
+    // Compile-time verification that internal CoilShape enum matches FPP-generated enum
+    static_assert(
+        static_cast<U8>(Magnetorquer::CoilShape::CIRCULAR) == static_cast<U8>(Components::CoilShape::CIRCULAR),
+        "Internal CoilShape::CIRCULAR value must match FPP enum");
+    static_assert(
+        static_cast<U8>(Magnetorquer::CoilShape::RECTANGULAR) == static_cast<U8>(Components::CoilShape::RECTANGULAR),
+        "Internal CoilShape::RECTANGULAR value must match FPP enum");
+
+    // Compile-time verification that internal DetumbleStrategy enum matches FPP-generated enum
+    static_assert(
+        static_cast<U8>(StrategySelector::Strategy::IDLE) == static_cast<U8>(Components::DetumbleStrategy::IDLE),
+        "Internal DetumbleStrategy::IDLE value must match FPP enum");
+    static_assert(
+        static_cast<U8>(StrategySelector::Strategy::BDOT) == static_cast<U8>(Components::DetumbleStrategy::BDOT),
+        "Internal DetumbleStrategy::BDOT value must match FPP enum");
+    static_assert(static_cast<U8>(StrategySelector::Strategy::HYSTERESIS) ==
+                      static_cast<U8>(Components::DetumbleStrategy::HYSTERESIS),
+                  "Internal DetumbleStrategy::HYSTERESIS value must match FPP enum");
+}
 
 DetumbleManager ::~DetumbleManager() {}
 
@@ -35,26 +54,22 @@ DetumbleManager ::~DetumbleManager() {}
 // ----------------------------------------------------------------------
 
 void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
-    // Check operating mode
-    Fw::ParamValid isValid;
-    DetumbleMode mode = this->paramGet_OPERATING_MODE(isValid);
-
     // Telemeter mode
-    this->tlmWrite_Mode(mode);
+    this->tlmWrite_Mode(this->m_mode);
 
     // Telemeter state
-    this->tlmWrite_State(this->m_detumbleState);
+    this->tlmWrite_State(this->m_state);
 
     // If detumble is disabled, ensure magnetorquers are off and exit early
-    if (mode == DetumbleMode::DISABLED) {
-        if (this->m_detumbleState != DetumbleState::COOLDOWN) {
+    if (this->m_mode == DetumbleMode::DISABLED) {
+        if (this->m_state != DetumbleState::COOLDOWN) {
             this->stopMagnetorquers();
-            this->m_detumbleState = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
+            this->m_state = DetumbleState::COOLDOWN;  // Reset state to COOLDOWN when re-enabled
         }
         return;
     }
 
-    switch (this->m_detumbleState) {
+    switch (this->m_state) {
         case DetumbleState::COOLDOWN:
             this->stateCooldownActions();
             return;
@@ -65,6 +80,25 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
             this->stateTorquingActions();
             return;
     }
+}
+
+void DetumbleManager ::setMode_handler(FwIndexType portNum, const Components::DetumbleMode& mode) {
+    this->m_mode = mode;
+}
+
+void DetumbleManager ::systemModeChanged_handler(FwIndexType portNum, const Components::SystemMode& mode) {
+    if (mode == Components::SystemMode::SAFE_MODE) {
+        this->m_mode = DetumbleMode::DISABLED;
+    }
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void DetumbleManager ::SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Components::DetumbleMode mode) {
+    this->setMode_handler(0, mode);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 // ----------------------------------------------------------------------
@@ -80,8 +114,8 @@ void DetumbleManager ::configure() {
     m_xPlusMagnetorquer.m_resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
     m_xPlusMagnetorquer.m_turns = this->paramGet_X_PLUS_TURNS(isValid);
     m_xPlusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
-    FpCoilShape xPlus_shape = this->paramGet_X_PLUS_SHAPE(isValid);
-    m_xPlusMagnetorquer.m_shape = this->toCoilShape(xPlus_shape);
+    CoilShape xPlus_shape = this->paramGet_X_PLUS_SHAPE(isValid);
+    m_xPlusMagnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xPlus_shape));
     m_xPlusMagnetorquer.m_width = this->paramGet_X_PLUS_WIDTH(isValid);
     m_xPlusMagnetorquer.m_length = this->paramGet_X_PLUS_LENGTH(isValid);
     this->tlmWrite_XPlusVoltage(m_xPlusMagnetorquer.m_voltage);
@@ -96,8 +130,8 @@ void DetumbleManager ::configure() {
     m_xMinusMagnetorquer.m_resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
     m_xMinusMagnetorquer.m_turns = this->paramGet_X_MINUS_TURNS(isValid);
     m_xMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
-    FpCoilShape xMinus_shape = this->paramGet_X_MINUS_SHAPE(isValid);
-    m_xMinusMagnetorquer.m_shape = this->toCoilShape(xMinus_shape);
+    CoilShape xMinus_shape = this->paramGet_X_MINUS_SHAPE(isValid);
+    m_xMinusMagnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xMinus_shape));
     m_xMinusMagnetorquer.m_width = this->paramGet_X_MINUS_WIDTH(isValid);
     m_xMinusMagnetorquer.m_length = this->paramGet_X_MINUS_LENGTH(isValid);
     this->tlmWrite_XMinusVoltage(m_xMinusMagnetorquer.m_voltage);
@@ -112,8 +146,8 @@ void DetumbleManager ::configure() {
     m_yPlusMagnetorquer.m_resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
     m_yPlusMagnetorquer.m_turns = this->paramGet_Y_PLUS_TURNS(isValid);
     m_yPlusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
-    FpCoilShape yPlus_shape = this->paramGet_Y_PLUS_SHAPE(isValid);
-    m_yPlusMagnetorquer.m_shape = this->toCoilShape(yPlus_shape);
+    CoilShape yPlus_shape = this->paramGet_Y_PLUS_SHAPE(isValid);
+    m_yPlusMagnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yPlus_shape));
     m_yPlusMagnetorquer.m_width = this->paramGet_Y_PLUS_WIDTH(isValid);
     m_yPlusMagnetorquer.m_length = this->paramGet_Y_PLUS_LENGTH(isValid);
     this->tlmWrite_YPlusVoltage(m_yPlusMagnetorquer.m_voltage);
@@ -128,8 +162,8 @@ void DetumbleManager ::configure() {
     m_yMinusMagnetorquer.m_resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
     m_yMinusMagnetorquer.m_turns = this->paramGet_Y_MINUS_TURNS(isValid);
     m_yMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
-    FpCoilShape yMinus_shape = this->paramGet_Y_MINUS_SHAPE(isValid);
-    m_yMinusMagnetorquer.m_shape = this->toCoilShape(yMinus_shape);
+    CoilShape yMinus_shape = this->paramGet_Y_MINUS_SHAPE(isValid);
+    m_yMinusMagnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yMinus_shape));
     m_yMinusMagnetorquer.m_width = this->paramGet_Y_MINUS_WIDTH(isValid);
     m_yMinusMagnetorquer.m_length = this->paramGet_Y_MINUS_LENGTH(isValid);
     this->tlmWrite_YMinusVoltage(m_yMinusMagnetorquer.m_voltage);
@@ -144,8 +178,8 @@ void DetumbleManager ::configure() {
     m_zMinusMagnetorquer.m_resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
     m_zMinusMagnetorquer.m_turns = this->paramGet_Z_MINUS_TURNS(isValid);
     m_zMinusMagnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
-    FpCoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
-    m_zMinusMagnetorquer.m_shape = this->toCoilShape(zMinus_shape);
+    CoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
+    m_zMinusMagnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(zMinus_shape));
     m_zMinusMagnetorquer.m_diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
     this->tlmWrite_ZMinusVoltage(m_zMinusMagnetorquer.m_voltage);
     this->tlmWrite_ZMinusResistance(m_zMinusMagnetorquer.m_resistance);
@@ -210,7 +244,7 @@ void DetumbleManager ::stateExitCooldownActions() {
     this->m_cooldownStartTime = Fw::ZERO_TIME;
 
     // Transition to SENSING state
-    this->m_detumbleState = DetumbleState::SENSING;
+    this->m_state = DetumbleState::SENSING;
 }
 
 void DetumbleManager ::stateSensingActions() {
@@ -243,16 +277,16 @@ void DetumbleManager ::stateSensingActions() {
     StrategySelector::Strategy detumble_strategy =
         this->m_strategy_selector.fromAngularVelocity(angular_velocity_array);
 
-    this->m_detumbleStrategy = this->toFpDetumbleStrategy(detumble_strategy);
-    this->tlmWrite_DetumbleStrategy(this->m_detumbleStrategy);
+    this->m_strategy = static_cast<DetumbleStrategy::T>(static_cast<Magnetorquer::CoilShape>(detumble_strategy));
+    this->tlmWrite_DetumbleStrategy(this->m_strategy);
 
     // No detumbling required, remain in SENSING state
-    if (this->m_detumbleStrategy == FpDetumbleStrategy::IDLE) {
+    if (this->m_strategy == DetumbleStrategy::IDLE) {
         return;
     }
 
     // Transition to TORQUING state
-    this->m_detumbleState = DetumbleState::TORQUING;
+    this->m_state = DetumbleState::TORQUING;
 }
 
 void DetumbleManager ::stateTorquingActions() {
@@ -282,17 +316,17 @@ void DetumbleManager ::stateEnterTorquingActions() {
     }
 
     // Perform torqueing action based on selected strategy
-    switch (this->m_detumbleStrategy) {
-        case FpDetumbleStrategy::BDOT:
+    switch (this->m_strategy) {
+        case DetumbleStrategy::BDOT:
             this->bdotTorqueAction();
             break;
-        case FpDetumbleStrategy::HYSTERESIS:
+        case DetumbleStrategy::HYSTERESIS:
             this->hysteresisTorqueAction();
             break;
         default:
             // Invalid strategy, log error and transition back to SENSING state
-            this->log_WARNING_LO_InvalidDetumbleStrategy(this->m_detumbleStrategy);
-            this->m_detumbleState = DetumbleState::SENSING;
+            this->log_WARNING_LO_InvalidDetumbleStrategy(this->m_strategy);
+            this->m_state = DetumbleState::SENSING;
             return;
     }
 
@@ -308,7 +342,7 @@ void DetumbleManager ::stateExitTorquingActions() {
     this->m_torqueStartTime = Fw::ZERO_TIME;
 
     // Transition to COOLDOWN state
-    this->m_detumbleState = DetumbleState::COOLDOWN;
+    this->m_state = DetumbleState::COOLDOWN;
 }
 
 void DetumbleManager ::bdotTorqueAction() {
@@ -366,26 +400,6 @@ void DetumbleManager ::bdotTorqueAction() {
 void DetumbleManager ::hysteresisTorqueAction() {
     // Perform torqueing action
     this->startMagnetorquers(127, -127, 0, 0, 0);
-}
-
-Magnetorquer::CoilShape DetumbleManager ::toCoilShape(FpCoilShape shape) {
-    switch (static_cast<FpCoilShape::T>(shape)) {
-        case FpCoilShape::CIRCULAR:
-            return Magnetorquer::CoilShape::CIRCULAR;
-        default:
-            return Magnetorquer::CoilShape::RECTANGULAR;
-    }
-}
-
-FpDetumbleStrategy DetumbleManager ::toFpDetumbleStrategy(StrategySelector::Strategy strategy) {
-    switch (strategy) {
-        case StrategySelector::Strategy::BDOT:
-            return FpDetumbleStrategy::BDOT;
-        case StrategySelector::Strategy::HYSTERESIS:
-            return FpDetumbleStrategy::HYSTERESIS;
-        default:
-            return FpDetumbleStrategy::IDLE;
-    }
 }
 
 }  // namespace Components

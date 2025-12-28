@@ -52,7 +52,7 @@ module Components {
         # ----------------------------------------------------------------------
 
         @ Port to notify other components of mode changes (with current mode)
-        output port modeChanged: Components.SystemModeChanged
+        output port modeChanged: [1] Components.SystemModeChanged
 
         @ Ports to turn on LoadSwitch instances (6 face switches + 2 payload switches)
         output port loadSwitchTurnOn: [8] Fw.Signal
