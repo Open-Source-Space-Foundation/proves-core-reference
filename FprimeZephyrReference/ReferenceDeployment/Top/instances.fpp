@@ -27,20 +27,26 @@ module ReferenceDeployment {
   # Active component instances
   # ----------------------------------------------------------------------
 
-  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
+
+  instance rateGroup50Hz: Svc.ActiveRateGroup base id 0x10001000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 1
 
-  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
+  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 2
 
-  instance modeManager: Components.ModeManager base id 0x1000A000 \
+  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10003000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 3
+
+  instance modeManager: Components.ModeManager base id 0x1000A000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 4
 
   instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
     queue size Default.QUEUE_SIZE * 2 \
