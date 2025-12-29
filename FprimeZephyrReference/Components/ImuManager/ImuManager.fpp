@@ -56,15 +56,6 @@ module Components {
         @ Port to get the time between magnetic field reads
         sync input port magneticFieldSamplingPeriodGet: SamplingPeriodGet
 
-        @ Port for sending accelerationGet calls to the LSM6DSO Driver
-        output port acceleration: AccelerationGet
-
-        @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
-        output port angularVelocity: AngularVelocityGet
-
-        @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
-        output port magneticField: MagneticFieldGet
-
         ### Parameters ###
 
         @ Parameter for storing the accelerometer sampling frequency
