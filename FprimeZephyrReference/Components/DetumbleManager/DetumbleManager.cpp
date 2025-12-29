@@ -113,12 +113,12 @@ void DetumbleManager ::configure() {
     m_x_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xPlus_shape));
     m_x_plus_magnetorquer.m_width = this->paramGet_X_PLUS_WIDTH(isValid);
     m_x_plus_magnetorquer.m_length = this->paramGet_X_PLUS_LENGTH(isValid);
-    this->tlmWrite_XPlusVoltage(m_x_plus_magnetorquer.m_voltage);
-    this->tlmWrite_XPlusResistance(m_x_plus_magnetorquer.m_resistance);
-    this->tlmWrite_XPlusTurns(m_x_plus_magnetorquer.m_turns);
-    this->tlmWrite_XPlusShape(xPlus_shape);
-    this->tlmWrite_XPlusWidth(m_x_plus_magnetorquer.m_width);
-    this->tlmWrite_XPlusLength(m_x_plus_magnetorquer.m_length);
+    this->tlmWrite_XPlusVoltageParam(m_x_plus_magnetorquer.m_voltage);
+    this->tlmWrite_XPlusResistanceParam(m_x_plus_magnetorquer.m_resistance);
+    this->tlmWrite_XPlusTurnsParam(m_x_plus_magnetorquer.m_turns);
+    this->tlmWrite_XPlusShapeParam(xPlus_shape);
+    this->tlmWrite_XPlusWidthParam(m_x_plus_magnetorquer.m_width);
+    this->tlmWrite_XPlusLengthParam(m_x_plus_magnetorquer.m_length);
 
     // X- Coil
     m_x_minus_magnetorquer.m_voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
@@ -129,12 +129,12 @@ void DetumbleManager ::configure() {
     m_x_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xMinus_shape));
     m_x_minus_magnetorquer.m_width = this->paramGet_X_MINUS_WIDTH(isValid);
     m_x_minus_magnetorquer.m_length = this->paramGet_X_MINUS_LENGTH(isValid);
-    this->tlmWrite_XMinusVoltage(m_x_minus_magnetorquer.m_voltage);
-    this->tlmWrite_XMinusResistance(m_x_minus_magnetorquer.m_resistance);
-    this->tlmWrite_XMinusTurns(m_x_minus_magnetorquer.m_turns);
-    this->tlmWrite_XMinusShape(xMinus_shape);
-    this->tlmWrite_XMinusWidth(m_x_minus_magnetorquer.m_width);
-    this->tlmWrite_XMinusLength(m_x_minus_magnetorquer.m_length);
+    this->tlmWrite_XMinusVoltageParam(m_x_minus_magnetorquer.m_voltage);
+    this->tlmWrite_XMinusResistanceParam(m_x_minus_magnetorquer.m_resistance);
+    this->tlmWrite_XMinusTurnsParam(m_x_minus_magnetorquer.m_turns);
+    this->tlmWrite_XMinusShapeParam(xMinus_shape);
+    this->tlmWrite_XMinusWidthParam(m_x_minus_magnetorquer.m_width);
+    this->tlmWrite_XMinusLengthParam(m_x_minus_magnetorquer.m_length);
 
     // Y+ Coil
     m_y_plus_magnetorquer.m_voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
@@ -145,12 +145,12 @@ void DetumbleManager ::configure() {
     m_y_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yPlus_shape));
     m_y_plus_magnetorquer.m_width = this->paramGet_Y_PLUS_WIDTH(isValid);
     m_y_plus_magnetorquer.m_length = this->paramGet_Y_PLUS_LENGTH(isValid);
-    this->tlmWrite_YPlusVoltage(m_y_plus_magnetorquer.m_voltage);
-    this->tlmWrite_YPlusResistance(m_y_plus_magnetorquer.m_resistance);
-    this->tlmWrite_YPlusTurns(m_y_plus_magnetorquer.m_turns);
-    this->tlmWrite_YPlusShape(yPlus_shape);
-    this->tlmWrite_YPlusWidth(m_y_plus_magnetorquer.m_width);
-    this->tlmWrite_YPlusLength(m_y_plus_magnetorquer.m_length);
+    this->tlmWrite_YPlusVoltageParam(m_y_plus_magnetorquer.m_voltage);
+    this->tlmWrite_YPlusResistanceParam(m_y_plus_magnetorquer.m_resistance);
+    this->tlmWrite_YPlusTurnsParam(m_y_plus_magnetorquer.m_turns);
+    this->tlmWrite_YPlusShapeParam(yPlus_shape);
+    this->tlmWrite_YPlusWidthParam(m_y_plus_magnetorquer.m_width);
+    this->tlmWrite_YPlusLengthParam(m_y_plus_magnetorquer.m_length);
 
     // Y- Coil
     m_y_minus_magnetorquer.m_voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
@@ -161,12 +161,12 @@ void DetumbleManager ::configure() {
     m_y_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yMinus_shape));
     m_y_minus_magnetorquer.m_width = this->paramGet_Y_MINUS_WIDTH(isValid);
     m_y_minus_magnetorquer.m_length = this->paramGet_Y_MINUS_LENGTH(isValid);
-    this->tlmWrite_YMinusVoltage(m_y_minus_magnetorquer.m_voltage);
-    this->tlmWrite_YMinusResistance(m_y_minus_magnetorquer.m_resistance);
-    this->tlmWrite_YMinusTurns(m_y_minus_magnetorquer.m_turns);
-    this->tlmWrite_YMinusShape(yMinus_shape);
-    this->tlmWrite_YMinusWidth(m_y_minus_magnetorquer.m_width);
-    this->tlmWrite_YMinusLength(m_y_minus_magnetorquer.m_length);
+    this->tlmWrite_YMinusVoltageParam(m_y_minus_magnetorquer.m_voltage);
+    this->tlmWrite_YMinusResistanceParam(m_y_minus_magnetorquer.m_resistance);
+    this->tlmWrite_YMinusTurnsParam(m_y_minus_magnetorquer.m_turns);
+    this->tlmWrite_YMinusShapeParam(yMinus_shape);
+    this->tlmWrite_YMinusWidthParam(m_y_minus_magnetorquer.m_width);
+    this->tlmWrite_YMinusLengthParam(m_y_minus_magnetorquer.m_length);
 
     // Z- Coil
     m_z_minus_magnetorquer.m_voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
@@ -176,11 +176,11 @@ void DetumbleManager ::configure() {
     CoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
     m_z_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(zMinus_shape));
     m_z_minus_magnetorquer.m_diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
-    this->tlmWrite_ZMinusVoltage(m_z_minus_magnetorquer.m_voltage);
-    this->tlmWrite_ZMinusResistance(m_z_minus_magnetorquer.m_resistance);
-    this->tlmWrite_ZMinusTurns(m_z_minus_magnetorquer.m_turns);
-    this->tlmWrite_ZMinusShape(zMinus_shape);
-    this->tlmWrite_ZMinusDiameter(m_z_minus_magnetorquer.m_diameter);
+    this->tlmWrite_ZMinusVoltageParam(m_z_minus_magnetorquer.m_voltage);
+    this->tlmWrite_ZMinusResistanceParam(m_z_minus_magnetorquer.m_resistance);
+    this->tlmWrite_ZMinusTurnsParam(m_z_minus_magnetorquer.m_turns);
+    this->tlmWrite_ZMinusShapeParam(zMinus_shape);
+    this->tlmWrite_ZMinusDiameterParam(m_z_minus_magnetorquer.m_diameter);
 }
 
 // ----------------------------------------------------------------------
@@ -213,7 +213,7 @@ void DetumbleManager ::stateCooldownActions() {
     // Get cooldown duration from parameter
     Fw::ParamValid isValid;
     Fw::TimeIntervalValue period = this->paramGet_COOLDOWN_DURATION(isValid);
-    this->tlmWrite_CooldownDuration(period);
+    this->tlmWrite_CooldownDurationParam(period);
 
     // Calculate cooldown end time
     Fw::Time duration(this->m_cooldown_start_time.getTimeBase(), period.get_seconds(), period.get_useconds());
@@ -250,9 +250,9 @@ void DetumbleManager ::stateSensingActions() {
     F64 deadband_lower_threshold = this->paramGet_DEADBAND_LOWER_THRESHOLD(isValid);
 
     // Telemeter thresholds
-    this->tlmWrite_BdotMaxThreshold(bdot_max_threshold);
-    this->tlmWrite_DeadbandUpperThreshold(deadband_upper_threshold);
-    this->tlmWrite_DeadbandLowerThreshold(deadband_lower_threshold);
+    this->tlmWrite_BdotMaxThresholdParam(bdot_max_threshold);
+    this->tlmWrite_DeadbandUpperThresholdParam(deadband_upper_threshold);
+    this->tlmWrite_DeadbandLowerThresholdParam(deadband_lower_threshold);
 
     // Configure strategy selector with updated thresholds
     this->m_strategy_selector.configure(bdot_max_threshold, deadband_upper_threshold, deadband_lower_threshold);
@@ -272,7 +272,7 @@ void DetumbleManager ::stateSensingActions() {
     StrategySelector::Strategy detumble_strategy =
         this->m_strategy_selector.fromAngularVelocity(angular_velocity_array);
 
-    this->m_strategy = static_cast<DetumbleStrategy::T>(static_cast<Magnetorquer::CoilShape>(detumble_strategy));
+    this->m_strategy = static_cast<DetumbleStrategy::T>(detumble_strategy);
     this->tlmWrite_DetumbleStrategy(this->m_strategy);
 
     // No detumbling required, remain in SENSING state
@@ -292,14 +292,19 @@ void DetumbleManager ::stateTorquingActions() {
     Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
     this->tlmWrite_TorqueDuration(torque_duration_param);
 
-    // Calculate torque end time
-    Fw::Time duration(this->m_torque_start_time.getTimeBase(), torque_duration_param.get_seconds(),
-                      torque_duration_param.get_useconds());
-    Fw::Time torque_end_time = Fw::Time::add(this->m_torque_start_time, duration);
+    // Calculate elapsed torquing duration
+    Fw::Time current_time = this->getTime();
+    Fw::TimeInterval torque_duration = Fw::TimeInterval(this->m_torque_start_time, current_time);
+    Fw::TimeInterval required_torque_duration(torque_duration_param.get_seconds(),
+                                              torque_duration_param.get_useconds());
 
     // Check if torquing duration has elapsed and exit torquing state
-    Fw::Time currentTime = this->getTime();
-    if (currentTime >= torque_end_time) {
+    if (Fw::TimeInterval::compare(torque_duration, required_torque_duration) == Fw::TimeInterval::GT) {
+        // Telemeter actual torque duration
+        this->tlmWrite_TorqueDuration(
+            Fw::TimeIntervalValue(torque_duration.getSeconds(), torque_duration.getUSeconds()));
+
+        // Exit torquing state
         this->stateExitTorquingActions();
     }
 }
@@ -353,15 +358,29 @@ void DetumbleManager ::bdotTorqueAction() {
     // Get gain parameter
     Fw::ParamValid isValid;
     F64 gain = this->paramGet_GAIN(isValid);
-    this->tlmWrite_Gain(gain);
+    this->tlmWrite_GainParam(gain);
+
+    // Get magnetometer sampling period
+    Fw::TimeIntervalValue sampling_period = this->magneticFieldSamplingPeriodGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_MagneticFieldSamplingPeriodRetrievalFailed();
+        return;
+    }
+    this->log_WARNING_LO_MagneticFieldSamplingPeriodRetrievalFailed_ThrottleClear();
 
     // Get dipole moment
     errno = 0;  // Clear errno
     std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
                                                   magnetic_field.get_z()};
+    std::chrono::microseconds sampling_period_us(sampling_period.get_useconds());
     std::array<double, 3> dipole_moment =
         this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
-                                     magnetic_field.get_timestamp().get_useconds(), gain);
+                                     magnetic_field.get_timestamp().get_useconds(), gain, sampling_period_us);
+
+    // Telemeter time between magnetic field readings
+    std::chrono::microseconds dt_readings = this->m_bdot.getTimeBetweenReadings();
+    this->tlmWrite_TimeBetweenMagneticFieldReadings(Fw::TimeIntervalValue(
+        static_cast<U32>(dt_readings.count() / 1000000), static_cast<U32>(dt_readings.count() % 1000000)));
 
     // Check for errors in dipole moment computation
     int rc = errno;
@@ -393,8 +412,21 @@ void DetumbleManager ::bdotTorqueAction() {
 }
 
 void DetumbleManager ::hysteresisTorqueAction() {
-    // Perform torqueing action
-    this->startMagnetorquers(127, -127, 0, 0, 0);
+    Fw::ParamValid isValid;
+    HysteresisAxis axis = this->paramGet_HYSTERESIS_AXIS(isValid);
+    this->tlmWrite_HysteresisAxisParam(axis);
+
+    switch (axis) {
+        case HysteresisAxis::X_AXIS:
+            this->startMagnetorquers(127, -127, 0, 0, 0);
+            return;
+        case HysteresisAxis::Y_AXIS:
+            this->startMagnetorquers(0, 0, 127, -127, 0);
+            return;
+        case HysteresisAxis::Z_AXIS:
+            this->startMagnetorquers(0, 0, 0, 0, -127);
+            return;
+    }
 }
 
 }  // namespace Components

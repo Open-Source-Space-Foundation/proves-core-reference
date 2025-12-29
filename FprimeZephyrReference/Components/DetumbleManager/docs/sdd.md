@@ -81,15 +81,24 @@ classDiagram
     class BDot {
         + BDot()
         + ~BDot()
-        + getDipoleMoment(magnetic_field: double[3], reading_seconds: uint32, reading_useconds: uint32, gain: double) double[3]
+        + getDipoleMoment(magnetic_field: double[3], reading_seconds: uint32, reading_useconds: uint32, gain: double, sampling_period_us: microseconds) double[3]
+        + getTimeBetweenReadings() microseconds
         - dB_dt(magnetic_field: double[3], dt_us: microseconds) double[3]
         - getMagnitude(vector: double[3]) double
         - updatePreviousReading(magnetic_field: double[3], reading: TimePoint)
-        - validateTimeDelta(dt: microseconds) bool
+        - validateTimeDelta(dt: microseconds, min_dt: microseconds) bool
         - m_previous_magnetic_field: double[3]
         - m_previous_magnetic_field_reading_time: TimePoint
+        - m_previous_time_delta_us: microseconds
     }
 ```
+
+#### BDot Timing Limitations
+
+- The B-Dot algorithm only computes a non-zero dipole moment when the time between consecutive magnetic-field readings lies between the configured magnetometer sampling period and 600 ms.
+- If readings arrive faster than the magnetometer sampling period, they are treated as invalid (out-of-order or too fast) and the algorithm returns a zero dipole moment with an error condition.
+- If the time between readings exceeds 600 ms, the sample is treated as a first/expired reading and the algorithm returns a zero dipole moment with an error condition.
+- As a consequence, B-Dot detumbling is not effective on rate groups slower than 600 ms or on configurations where magnetic-field samples are provided irregularly or much slower than the magnetometer ODR.
 
 #### Magnetorquer
 
@@ -151,6 +160,23 @@ classDiagram
     }
     StrategySelector -- Strategy
 ```
+
+#### BDot Maximum Threshold
+
+The B-Dot maximum threshold parameter defines the upper rotational rate (deg/s) above which the hysteresis strategy is used instead of B-Dot. This threshold is computed as:
+
+$$
+\omega_{\max} = \min\!\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\,\delta T}\right)
+$$
+
+where:
+
+- $\omega_{\max}$ is the maximum angular velocity (deg/s),
+- $\Delta t$ is the duration of the actuation,
+- $\delta T$ is the time elapsed between the measurement of $\dot{B}$.
+
+Testing on 2025‑12‑28 indicated that our B-Dot controller could maintain control up to an angular velocity of $180\,\text{deg/s}$. For the default value we have selected a more conservative threshold of $150\,\text{deg/s}$ to ensure robust operation. Above this threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
+
 
 ## Port Descriptions
 

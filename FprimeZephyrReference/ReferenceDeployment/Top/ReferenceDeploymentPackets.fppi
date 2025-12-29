@@ -176,62 +176,68 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.DetumbleStrategy
   }
 
-  packet DetumbleParams id 16 group 100 {
-    ReferenceDeployment.detumbleManager.Gain
-    ReferenceDeployment.detumbleManager.BdotMaxThreshold
-    ReferenceDeployment.detumbleManager.DeadbandUpperThreshold
-    ReferenceDeployment.detumbleManager.DeadbandLowerThreshold
-    ReferenceDeployment.detumbleManager.CooldownDuration
+  packet DetumblePerformance id 16 group 6 {
     ReferenceDeployment.detumbleManager.TorqueDuration
+    ReferenceDeployment.detumbleManager.TimeBetweenMagneticFieldReadings
   }
 
-  packet DetumbleXPlusCoilParams id 17 group 100 {
+  packet DetumbleParams id 17 group 100 {
+    ReferenceDeployment.detumbleManager.GainParam
+    ReferenceDeployment.detumbleManager.BdotMaxThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandUpperThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandLowerThresholdParam
+    ReferenceDeployment.detumbleManager.CooldownDurationParam
+    ReferenceDeployment.detumbleManager.TorqueDurationParam
+    ReferenceDeployment.detumbleManager.HysteresisAxisParam
+  }
+
+  packet DetumbleXPlusCoilParams id 18 group 100 {
     # X+ coil parameters
-    ReferenceDeployment.detumbleManager.XPlusVoltage
-    ReferenceDeployment.detumbleManager.XPlusResistance
-    ReferenceDeployment.detumbleManager.XPlusTurns
-    ReferenceDeployment.detumbleManager.XPlusLength
-    ReferenceDeployment.detumbleManager.XPlusWidth
-    ReferenceDeployment.detumbleManager.XPlusShape
+    ReferenceDeployment.detumbleManager.XPlusVoltageParam
+    ReferenceDeployment.detumbleManager.XPlusResistanceParam
+    ReferenceDeployment.detumbleManager.XPlusTurnsParam
+    ReferenceDeployment.detumbleManager.XPlusLengthParam
+    ReferenceDeployment.detumbleManager.XPlusWidthParam
+    ReferenceDeployment.detumbleManager.XPlusShapeParam
   }
 
-  packet DetumbleXMinusCoilParams id 18 group 100 {
+  packet DetumbleXMinusCoilParams id 19 group 100 {
     # X- coil parameters
-    ReferenceDeployment.detumbleManager.XMinusVoltage
-    ReferenceDeployment.detumbleManager.XMinusResistance
-    ReferenceDeployment.detumbleManager.XMinusTurns
-    ReferenceDeployment.detumbleManager.XMinusLength
-    ReferenceDeployment.detumbleManager.XMinusWidth
-    ReferenceDeployment.detumbleManager.XMinusShape
+    ReferenceDeployment.detumbleManager.XMinusVoltageParam
+    ReferenceDeployment.detumbleManager.XMinusResistanceParam
+    ReferenceDeployment.detumbleManager.XMinusTurnsParam
+    ReferenceDeployment.detumbleManager.XMinusLengthParam
+    ReferenceDeployment.detumbleManager.XMinusWidthParam
+    ReferenceDeployment.detumbleManager.XMinusShapeParam
   }
 
-  packet DetumbleYPlusCoilParams id 19 group 100 {
+  packet DetumbleYPlusCoilParams id 20 group 100 {
     # Y+ coil parameters
-    ReferenceDeployment.detumbleManager.YPlusVoltage
-    ReferenceDeployment.detumbleManager.YPlusResistance
-    ReferenceDeployment.detumbleManager.YPlusTurns
-    ReferenceDeployment.detumbleManager.YPlusLength
-    ReferenceDeployment.detumbleManager.YPlusWidth
-    ReferenceDeployment.detumbleManager.YPlusShape
+    ReferenceDeployment.detumbleManager.YPlusVoltageParam
+    ReferenceDeployment.detumbleManager.YPlusResistanceParam
+    ReferenceDeployment.detumbleManager.YPlusTurnsParam
+    ReferenceDeployment.detumbleManager.YPlusLengthParam
+    ReferenceDeployment.detumbleManager.YPlusWidthParam
+    ReferenceDeployment.detumbleManager.YPlusShapeParam
   }
 
-  packet DetumbleYMinusCoilParams id 20 group 100 {
+  packet DetumbleYMinusCoilParams id 21 group 100 {
     # Y- coil parameters
-    ReferenceDeployment.detumbleManager.YMinusVoltage
-    ReferenceDeployment.detumbleManager.YMinusResistance
-    ReferenceDeployment.detumbleManager.YMinusTurns
-    ReferenceDeployment.detumbleManager.YMinusLength
-    ReferenceDeployment.detumbleManager.YMinusWidth
-    ReferenceDeployment.detumbleManager.YMinusShape
+    ReferenceDeployment.detumbleManager.YMinusVoltageParam
+    ReferenceDeployment.detumbleManager.YMinusResistanceParam
+    ReferenceDeployment.detumbleManager.YMinusTurnsParam
+    ReferenceDeployment.detumbleManager.YMinusLengthParam
+    ReferenceDeployment.detumbleManager.YMinusWidthParam
+    ReferenceDeployment.detumbleManager.YMinusShapeParam
   }
 
-  packet DetumbleZMinusCoilParams id 21 group 100 {
+  packet DetumbleZMinusCoilParams id 22 group 100 {
     # Z- coil parameters
-    ReferenceDeployment.detumbleManager.ZMinusVoltage
-    ReferenceDeployment.detumbleManager.ZMinusResistance
-    ReferenceDeployment.detumbleManager.ZMinusTurns
-    ReferenceDeployment.detumbleManager.ZMinusDiameter
-    ReferenceDeployment.detumbleManager.ZMinusShape
+    ReferenceDeployment.detumbleManager.ZMinusVoltageParam
+    ReferenceDeployment.detumbleManager.ZMinusResistanceParam
+    ReferenceDeployment.detumbleManager.ZMinusTurnsParam
+    ReferenceDeployment.detumbleManager.ZMinusDiameterParam
+    ReferenceDeployment.detumbleManager.ZMinusShapeParam
   }
 
 } omit {

@@ -41,9 +41,12 @@ class BDot {
     std::array<double, 3> getDipoleMoment(
         std::array<double, 3> magnetic_field,  //!< Magnetic field vector
         uint32_t reading_seconds,              //!< Timestamp of reading: whole seconds since epoch
-        uint32_t reading_useconds,             //!< Timestamp of reading: fractional part in microseconds [0, 999999]
-        double gain                            //!< Gain constant
+        uint32_t reading_useconds,             //!< Timestamp of reading: fractional part in microseconds
+        double gain,                           //!< Gain constant
+        std::chrono::microseconds magnetometer_sampling_period_us  //!< Magnetometer sampling period in microseconds
     );
+
+    std::chrono::microseconds getTimeBetweenReadings();
 
   private:
     // ----------------------------------------------------------------------
@@ -51,26 +54,34 @@ class BDot {
     // ----------------------------------------------------------------------
 
     //! Compute the derivative of the magnetic field vector.
-    std::array<double, 3> dB_dt(std::array<double, 3> magnetic_field,  //!< Magnetic field
-                                std::chrono::microseconds dt_us  //!< Time delta between current and previous reading
+    std::array<double, 3> dB_dt(
+        std::array<double, 3> magnetic_field,  //!< Magnetic field
+        std::chrono::microseconds dt_us        //!< Time delta between current and previous reading in microseconds
     );
 
     //! Compute the magnitude of a 3D vector.
-    double getMagnitude(std::array<double, 3> vector);
+    double getMagnitude(std::array<double, 3> vector  //!< 3D vector
+    );
 
     //! Update previous magnetic field reading and timestamp
-    void updatePreviousReading(std::array<double, 3> magnetic_field, TimePoint reading);
+    void updatePreviousReading(std::array<double, 3> magnetic_field,  //!< Magnetic field in gauss
+                               TimePoint reading                      //!< Time of current reading
+    );
 
     //! Validate time delta between readings
-    bool validateTimeDelta(std::chrono::microseconds dt);
+    bool validateTimeDelta(
+        std::chrono::microseconds dt,        //!< Time delta between current and previous reading in microseconds
+        std::chrono::microseconds min_dt_us  //!< Minimum allowable time delta between readings in microseconds
+    );
 
   private:
     // ----------------------------------------------------------------------
     //  Private member variables
     // ----------------------------------------------------------------------
 
-    std::array<double, 3> m_previous_magnetic_field;   //!< Previous magnetic field reading
-    TimePoint m_previous_magnetic_field_reading_time;  //!< Time of previous reading
+    std::array<double, 3> m_previous_magnetic_field;     //!< Previous magnetic field reading
+    TimePoint m_previous_magnetic_field_reading_time;    //!< Time of previous reading
+    std::chrono::microseconds m_previous_time_delta_us;  //!< Time delta between last two readings
 };
 
 }  // namespace Components

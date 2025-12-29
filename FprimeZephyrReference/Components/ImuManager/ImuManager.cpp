@@ -135,6 +135,26 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
     return magnetic_field;
 }
 
+Fw::TimeIntervalValue ImuManager ::magneticFieldSamplingPeriodGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
+    // Get sampling frequency in Hz
+    struct sensor_value odr = getMagnetometerSamplingFrequency();
+    double frequency_hz = sensor_value_to_double(&odr);
+    if (frequency_hz <= 0.0) {
+        this->log_WARNING_LO_MagnetometerSamplingFrequencyZeroHz();
+        return Fw::TimeIntervalValue();
+    }
+    this->log_WARNING_LO_MagnetometerSamplingFrequencyZeroHz_ThrottleClear();
+
+    // Convert sampling frequency to microseconds
+    double period_seconds = 1.0 / frequency_hz;
+    U32 period_useconds = static_cast<U32>(period_seconds * 1e6);
+
+    condition = Fw::Success::SUCCESS;
+    return Fw::TimeIntervalValue(0, period_useconds);
+}
+
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------

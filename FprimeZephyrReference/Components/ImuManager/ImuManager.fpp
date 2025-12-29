@@ -2,6 +2,7 @@ module Components {
     port AccelerationGet(ref condition: Fw.Success) -> Drv.Acceleration
     port AngularVelocityGet(ref condition: Fw.Success)-> Drv.AngularVelocity
     port MagneticFieldGet(ref condition: Fw.Success) -> Drv.MagneticField
+    port SamplingPeriodGet(ref condition: Fw.Success) -> Fw.TimeIntervalValue
 
     @ Magnetometer sampling frequency settings for LIS2MDL sensor
     enum Lis2mdlSamplingFrequency {
@@ -52,14 +53,8 @@ module Components {
         @ Port to read the current magnetic field in gauss.
         sync input port magneticFieldGet: MagneticFieldGet
 
-        @ Port for sending accelerationGet calls to the LSM6DSO Driver
-        output port acceleration: AccelerationGet
-
-        @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
-        output port angularVelocity: AngularVelocityGet
-
-        @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
-        output port magneticField: MagneticFieldGet
+        @ Port to get the time between magnetic field reads
+        sync input port magneticFieldSamplingPeriodGet: SamplingPeriodGet
 
         ### Parameters ###
 
@@ -114,6 +109,12 @@ module Components {
 
         @ Event for reporting LIS2MDS magnetometer frequency not configured
         event MagnetometerSamplingFrequencyNotConfigured() severity warning high format "LIS2MDL magnetomiter sampling frequency not configured" throttle 5
+
+        @ Event for reporting failure to retrieve LIS2MDS magnetometer sampling frequency
+        event MagnetometerSamplingFrequencyGetFailed() severity warning low format "Failed to retrieve LIS2MDL magnetometer sampling frequency" throttle 5
+
+        @ Event to report LIS2MDL magnetometer sampling frequency of 0 Hz
+        event MagnetometerSamplingFrequencyZeroHz() severity warning low format "LIS2MDL magnetometer sampling frequency is set to 0 Hz" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
