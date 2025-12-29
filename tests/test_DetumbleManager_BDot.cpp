@@ -46,8 +46,8 @@ TEST(BDotTest, ReadingTooSlowReturnsZeroAndEAGAIN) {
     // Prime the state
     bdot.getDipoleMoment(b1, 100, 0, -1.0, SAMPLING_PERIOD_US);
 
-    // Second reading 600ms later (limit is 500ms)
-    auto result = bdot.getDipoleMoment(b1, 100, 600000, -1.0, SAMPLING_PERIOD_US);
+    // Second reading 700ms later (limit is 600ms)
+    auto result = bdot.getDipoleMoment(b1, 100, 700000, -1.0, SAMPLING_PERIOD_US);
 
     EXPECT_EQ(result[0], 0.0);
     EXPECT_EQ(errno, EAGAIN);
