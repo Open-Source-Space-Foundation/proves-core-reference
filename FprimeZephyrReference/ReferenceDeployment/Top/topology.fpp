@@ -229,7 +229,7 @@ module ReferenceDeployment {
 
       # Ultra high rate (50Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
-      # rateGroup50Hz.RateGroupMemberOut[0] -> detumbleManager.run
+      rateGroup50Hz.RateGroupMemberOut[0] -> detumbleManager.run
 
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
@@ -244,7 +244,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> downlinkDelay.run
       rateGroup10Hz.RateGroupMemberOut[10] -> sband.run
       rateGroup10Hz.RateGroupMemberOut[11] -> comDelaySband.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
+      # rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
