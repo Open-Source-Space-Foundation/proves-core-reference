@@ -47,6 +47,9 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
         return std::array<double, 3>{0.0, 0.0, 0.0};
     }
 
+    // Store time delta between last two readings
+    this->m_previous_time_delta_us = dt_us;
+
     // Compute dB/dt
     std::array<double, 3> dB_dt = this->dB_dt(magnetic_field, dt_us);
 
@@ -68,6 +71,10 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
 
     // Return result
     return std::array<double, 3>{moment_x, moment_y, moment_z};
+}
+
+std::chrono::microseconds BDot ::getTimeBetweenReadings() {
+    return this->m_previous_time_delta_us;
 }
 
 // ----------------------------------------------------------------------
@@ -113,9 +120,9 @@ bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us, std::chrono::micr
     }
 
     // TODO(nateinaction): Take this in as an argument
-    // TODO(nateinaction): The 500ms limitation needs to be recorded in documentation, this prevents detumble from
-    // working on slower rate groups Set previous magnetic field if last reading time was more than 500ms ago
-    if (dt_us > std::chrono::milliseconds(500)) {
+    // TODO(nateinaction): The 600ms limitation needs to be recorded in documentation, this prevents detumble from
+    // working on slower rate groups Set previous magnetic field if last reading time was more than 600ms ago
+    if (dt_us > std::chrono::milliseconds(600)) {
         // First reading or too much time has passed, cannot compute dipole moment
         errno = EAGAIN;
         return false;

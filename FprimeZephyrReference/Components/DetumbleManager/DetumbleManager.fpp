@@ -43,8 +43,8 @@ module Components {
 
         ### Parameters ###
 
-        @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling
-        param BDOT_MAX_THRESHOLD: F64 default 50.0 id 40
+        @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling. Given by ω_max = min(2π/∆t, π/2δT) where ∆t is the duration of actuation and δT is the time elapsed between the measurement of Ḃ.
+        param BDOT_MAX_THRESHOLD: F64 default 150.0 id 40
 
         @ Parameter for storing the upper deadband rotational threshold in deg/s
         param DEADBAND_UPPER_THRESHOLD: F64 default 8.0 id 41
@@ -190,112 +190,118 @@ module Components {
         telemetry DetumbleStrategy: DetumbleStrategy
 
         @ Maximum angular velocity where BDot should be used (deg/s)
-        telemetry BdotMaxThreshold: F64
+        telemetry BdotMaxThresholdParam: F64
 
         @ Upper deadband rotational threshold (deg/s)
-        telemetry DeadbandUpperThreshold: F64
+        telemetry DeadbandUpperThresholdParam: F64
 
         @ Lower deadband rotational threshold (deg/s)
-        telemetry DeadbandLowerThreshold: F64
+        telemetry DeadbandLowerThresholdParam: F64
 
         @ Gain used in B-Dot algorithm
-        telemetry Gain: F64
+        telemetry GainParam: F64
 
         @ Hysteresis axis
-        telemetry HysteresisAxis: HysteresisAxis
+        telemetry HysteresisAxisParam: HysteresisAxis
 
         @ Cooldown duration
-        telemetry CooldownDuration: Fw.TimeIntervalValue
+        telemetry CooldownDurationParam: Fw.TimeIntervalValue
 
-        @ Torque duration
+        @ Torque duration parameter
+        telemetry TorqueDurationParam: Fw.TimeIntervalValue
+
+        @ Actual torque duration
         telemetry TorqueDuration: Fw.TimeIntervalValue
 
+        @ Time between magnetic field readings
+        telemetry TimeBetweenMagneticFieldReadings: Fw.TimeIntervalValue
+
         @ X+ coil voltage (V)
-        telemetry XPlusVoltage: F64
+        telemetry XPlusVoltageParam: F64
 
         @ X+ coil resistance (Ω)
-        telemetry XPlusResistance: F64
+        telemetry XPlusResistanceParam: F64
 
         @ X+ coil number of turns
-        telemetry XPlusTurns: F64
+        telemetry XPlusTurnsParam: F64
 
         @ X+ coil length (m)
-        telemetry XPlusLength: F64
+        telemetry XPlusLengthParam: F64
 
         @ X+ coil width (m)
-        telemetry XPlusWidth: F64
+        telemetry XPlusWidthParam: F64
 
         @ X+ coil shape
-        telemetry XPlusShape: CoilShape
+        telemetry XPlusShapeParam: CoilShape
 
         @ X- coil voltage (V)
-        telemetry XMinusVoltage: F64
+        telemetry XMinusVoltageParam: F64
 
         @ X- coil resistance (Ω)
-        telemetry XMinusResistance: F64
+        telemetry XMinusResistanceParam: F64
 
         @ X- coil number of turns
-        telemetry XMinusTurns: F64
+        telemetry XMinusTurnsParam: F64
 
         @ X- coil length (m)
-        telemetry XMinusLength: F64
+        telemetry XMinusLengthParam: F64
 
         @ X- coil width (m)
-        telemetry XMinusWidth: F64
+        telemetry XMinusWidthParam: F64
 
         @ X- coil shape
-        telemetry XMinusShape: CoilShape
+        telemetry XMinusShapeParam: CoilShape
 
         @ Y+ coil voltage (V)
-        telemetry YPlusVoltage: F64
+        telemetry YPlusVoltageParam: F64
 
         @ Y+ coil resistance (Ω)
-        telemetry YPlusResistance: F64
+        telemetry YPlusResistanceParam: F64
 
         @ Y+ coil number of turns
-        telemetry YPlusTurns: F64
+        telemetry YPlusTurnsParam: F64
 
         @ Y+ coil length (m)
-        telemetry YPlusLength: F64
+        telemetry YPlusLengthParam: F64
 
         @ Y+ coil width (m)
-        telemetry YPlusWidth: F64
+        telemetry YPlusWidthParam: F64
 
         @ Y+ coil shape
-        telemetry YPlusShape: CoilShape
+        telemetry YPlusShapeParam: CoilShape
 
         @ Y- coil voltage (V)
-        telemetry YMinusVoltage: F64
+        telemetry YMinusVoltageParam: F64
 
         @ Y- coil resistance (Ω)
-        telemetry YMinusResistance: F64
+        telemetry YMinusResistanceParam: F64
 
         @ Y- coil number of turns
-        telemetry YMinusTurns: F64
+        telemetry YMinusTurnsParam: F64
 
         @ Y- coil length (m)
-        telemetry YMinusLength: F64
+        telemetry YMinusLengthParam: F64
 
         @ Y- coil width (m)
-        telemetry YMinusWidth: F64
+        telemetry YMinusWidthParam: F64
 
         @ Y- coil shape
-        telemetry YMinusShape: CoilShape
+        telemetry YMinusShapeParam: CoilShape
 
         @ Z- coil voltage (V)
-        telemetry ZMinusVoltage: F64
+        telemetry ZMinusVoltageParam: F64
 
         @ Z- coil resistance (Ω)
-        telemetry ZMinusResistance: F64
+        telemetry ZMinusResistanceParam: F64
 
         @ Z- coil number of turns
-        telemetry ZMinusTurns: F64
+        telemetry ZMinusTurnsParam: F64
 
         @ Z- coil diameter (m)
-        telemetry ZMinusDiameter: F64
+        telemetry ZMinusDiameterParam: F64
 
         @ Z- coil shape
-        telemetry ZMinusShape: CoilShape
+        telemetry ZMinusShapeParam: CoilShape
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
