@@ -55,6 +55,12 @@ class ImuManager final : public ImuManagerComponentBase {
     Drv::MagneticField magneticFieldGet_handler(FwIndexType portNum,  //!< The port number
                                                 Fw::Success& condition) override;
 
+    //! Handler implementation for magneticFieldPeriodGet
+    //!
+    //! Port to get the time between magnetic field reads
+    Fw::TimeIntervalValue magneticFieldSamplingPeriodGet_handler(FwIndexType portNum,  //!< The port number
+                                                                 Fw::Success& condition) override;
+
     //! Handler implementation for run
     //!
     //! Port to trigger periodic data fetching and telemetry updating

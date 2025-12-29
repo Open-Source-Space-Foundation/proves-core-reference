@@ -44,13 +44,13 @@ module Components {
         ### Parameters ###
 
         @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling
-        param BDOT_MAX_THRESHOLD: F64 default 30.0 id 40
+        param BDOT_MAX_THRESHOLD: F64 default 50.0 id 40
 
         @ Parameter for storing the upper deadband rotational threshold in deg/s
-        param DEADBAND_UPPER_THRESHOLD: F64 default 18.0 id 41
+        param DEADBAND_UPPER_THRESHOLD: F64 default 8.0 id 41
 
         @ Parameter for storing the lower deadband rotational threshold in deg/s, below which detumble is considered complete
-        param DEADBAND_LOWER_THRESHOLD: F64 default 12.0 id 1
+        param DEADBAND_LOWER_THRESHOLD: F64 default 5.0 id 1
 
         @ Parameter for storing the cooldown duration
         param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
@@ -122,6 +122,9 @@ module Components {
         @ Port for getting magnetic field readings in gauss
         output port magneticFieldGet: MagneticFieldGet
 
+        @ Port to get sampling period between magnetic field reads
+        output port magneticFieldSamplingPeriodGet: SamplingPeriodGet
+
         @ Port for triggering the X+ magnetorquer
         output port xPlusStart: Drv.StartMagnetorquer
 
@@ -156,6 +159,9 @@ module Components {
 
         @ Event for reporting magnetic field retrieval failure
         event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5
+
+        @ Event for reporting magnetic field period retrieval failure
+        event MagneticFieldSamplingPeriodRetrievalFailed() severity warning low format "Failed to retrieve magnetic field sampling frequency." throttle 5
 
         @ Event for reporting magnetic field too small for dipole moment calculation
         event MagneticFieldTooSmallForDipoleMoment() severity warning low format "Magnetic field magnitude too small to compute dipole moment." throttle 5

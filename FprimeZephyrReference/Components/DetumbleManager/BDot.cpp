@@ -25,7 +25,8 @@ BDot ::~BDot() {}
 std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_field,
                                              uint32_t reading_seconds,
                                              uint32_t reading_useconds,
-                                             double gain) {
+                                             double gain,
+                                             std::chrono::microseconds magnetometer_sampling_period_us) {
     errno = 0;
 
     // Compute the time delta between current and previous reading
@@ -34,7 +35,7 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
     std::chrono::microseconds dt_us = reading_time - this->m_previous_magnetic_field_reading_time;
 
     // Validate time delta
-    if (!this->validateTimeDelta(dt_us)) {
+    if (!this->validateTimeDelta(dt_us, magnetometer_sampling_period_us)) {
         // Unable to compute dipole moment
         // If errno is set to EAGAIN, this is the first reading or too much time has passed
         // If errno is set to EINVAL, readings are out of order or too close together
@@ -103,10 +104,9 @@ void BDot ::updatePreviousReading(std::array<double, 3> magnetic_field, TimePoin
     this->m_previous_magnetic_field_reading_time = reading;
 }
 
-bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us) {
-    // TODO(nateinaction): Take ODR in as an argument
+bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us, std::chrono::microseconds min_dt_us) {
     // Ensure magnetorquer readings are not faster than 100Hz magnetometer ODR
-    if (std::chrono::milliseconds(10) > dt_us) {
+    if (min_dt_us > dt_us) {
         // Out of order readings or readings taken too quickly, cannot compute dipole moment
         errno = EINVAL;
         return false;

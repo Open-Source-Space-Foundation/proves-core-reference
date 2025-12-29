@@ -355,13 +355,22 @@ void DetumbleManager ::bdotTorqueAction() {
     F64 gain = this->paramGet_GAIN(isValid);
     this->tlmWrite_Gain(gain);
 
+    // Get magnetometer sampling period
+    Fw::TimeIntervalValue sampling_period = this->magneticFieldSamplingPeriodGet_out(0, condition);
+    if (condition != Fw::Success::SUCCESS) {
+        this->log_WARNING_LO_MagneticFieldSamplingPeriodRetrievalFailed();
+        return;
+    }
+    this->log_WARNING_LO_MagneticFieldSamplingPeriodRetrievalFailed_ThrottleClear();
+
     // Get dipole moment
     errno = 0;  // Clear errno
     std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
                                                   magnetic_field.get_z()};
+    std::chrono::microseconds sampling_period_us(sampling_period.get_useconds());
     std::array<double, 3> dipole_moment =
         this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
-                                     magnetic_field.get_timestamp().get_useconds(), gain);
+                                     magnetic_field.get_timestamp().get_useconds(), gain, sampling_period_us);
 
     // Check for errors in dipole moment computation
     int rc = errno;
