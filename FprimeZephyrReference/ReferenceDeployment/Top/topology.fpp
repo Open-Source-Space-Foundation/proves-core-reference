@@ -270,6 +270,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[17] -> imuManager.run
       rateGroup1Hz.RateGroupMemberOut[18] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[19] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> ComCcsdsLora.authenticationRouter.run
     }
 
 
