@@ -103,6 +103,96 @@ classDiagram
     }
 ```
 
+#### Magnetorquer
+
+```mermaid
+classDiagram
+    class Magnetorquer {
+        + Magnetorquer()
+        + ~Magnetorquer()
+        + dipoleMomentToCurrent(dipole_moment_component: double) int8
+        - getCoilArea() double
+        - getMaxCoilCurrent() double
+        - computeTargetCurrent(dipole_moment_component: double) double
+        - computeClampedCurrent(target_current: double) int8
+        + m_turns: double
+        + m_voltage: double
+        + m_resistance: double
+        + m_direction_sign: DirectionSign
+        + m_shape: CoilShape
+        + m_width: double
+        + m_length: double
+        + m_diameter: double
+    }
+    class CoilShape {
+        <<enumeration>>
+        RECTANGULAR
+        CIRCULAR
+    }
+    class DirectionSign {
+        <<enumeration>>
+        POSITIVE
+        NEGATIVE
+    }
+    Magnetorquer -- CoilShape
+    Magnetorquer -- DirectionSign
+```
+
+#### StrategySelector
+
+```mermaid
+classDiagram
+    class StrategySelector {
+        + StrategySelector()
+        + ~StrategySelector()
+        + fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec: double) Strategy
+        + configure(bdot_max_threshold: double, deadband_upper_threshold: double, deadband_lower_threshold: double)
+        - m_bdot_max_threshold: double
+        - m_deadband_lower_threshold: double
+        - m_deadband_upper_threshold: double
+        - m_rotation_target: double
+    }
+    class Strategy {
+        <<enumeration>>
+        IDLE
+        BDOT
+        HYSTERESIS
+    }
+    StrategySelector -- Strategy
+```
+
+## Default Parameters and Mathematical Constants
+
+### BDot Maximum Threshold
+
+The B-Dot maximum threshold parameter defines the upper rotational rate (deg/s) above which the hysteresis strategy is used instead of B-Dot. This threshold is computed as:
+
+$$
+\omega_{\max} = \min\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\delta T}\right) = \min\left(\frac{360\ \text{deg}}{\Delta t}, \frac{90\ \text{deg}}{\delta T}\right)
+$$
+
+where:
+
+- $\omega_{\max}$ is the maximum angular velocity (deg/s),
+- $\Delta t$ is the duration of the actuation,
+- $\delta T$ is the time elapsed between the measurement of $\dot{B}$.
+
+For the PROVES CubeSat mission, we have:
+
+$$
+\omega_{\max} = \min\left(\frac{360\ \text{deg}}{0.32\ \text{s}}, \frac{90\ \text{deg}}{0.08\ \text{s}}\right) = 1125\ \text{deg/s}
+$$
+
+Given:
+- Actuation duration, $\Delta t = 0.32\ \text{s}$ (configured via `TORQUE_DURATION` parameter)
+- Time between $\dot{B}$ measurements, $\delta T = 0.08\ \text{s}$ (based on `DetumbleManger` rate group $20Hz$ and and B-Dot sample window of $5$ samples)
+
+In this reference deployment the `BDOT_MAX_THRESHOLD` parameter defaults to $720\,\text{deg/s}$ (see the FPP definition), well under the computed maximum of $1125\ \text{deg/s}$ to provide a buffer for margin of error. Above the configured threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
+
+### Detumble Cooldown Duration Decision
+The `COOLDOWN_DURATION` parameter defines the time spent waiting after a torque command before sensing angular velocity again. This cooldown period allows the magnetic environment and sensors to settle after actuation so that measurements are not contaminated by residual fields. The LIS2MDL magnetometer takes new measurements every $10ms$ ($100Hz$). To ensure at least one new measurement is available after actuation, we set the `COOLDOWN_DURATION` parameter to $20ms$ in this reference deployment.
+
+
 #### BDot Implementation Options
 The B-Dot algorithm estimates the time derivative of the magnetic field vector $\dot{B}$ to compute the required dipole moment for detumbling. Several methods exist for estimating $\dot{B}$ from various sensor inputs:
 
@@ -202,92 +292,8 @@ $$
 
 We set the default `k` gain constant to $3.0 \ s$ in this reference deployment, providing a small margin below the computed maximum to account for uncertainties.
 
-#### Magnetorquer
-
-```mermaid
-classDiagram
-    class Magnetorquer {
-        + Magnetorquer()
-        + ~Magnetorquer()
-        + dipoleMomentToCurrent(dipole_moment_component: double) int8
-        - getCoilArea() double
-        - getMaxCoilCurrent() double
-        - computeTargetCurrent(dipole_moment_component: double) double
-        - computeClampedCurrent(target_current: double) int8
-        + m_turns: double
-        + m_voltage: double
-        + m_resistance: double
-        + m_direction_sign: DirectionSign
-        + m_shape: CoilShape
-        + m_width: double
-        + m_length: double
-        + m_diameter: double
-    }
-    class CoilShape {
-        <<enumeration>>
-        RECTANGULAR
-        CIRCULAR
-    }
-    class DirectionSign {
-        <<enumeration>>
-        POSITIVE
-        NEGATIVE
-    }
-    Magnetorquer -- CoilShape
-    Magnetorquer -- DirectionSign
-```
-
-#### StrategySelector
-
-```mermaid
-classDiagram
-    class StrategySelector {
-        + StrategySelector()
-        + ~StrategySelector()
-        + fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec: double) Strategy
-        + configure(bdot_max_threshold: double, deadband_upper_threshold: double, deadband_lower_threshold: double)
-        - m_bdot_max_threshold: double
-        - m_deadband_lower_threshold: double
-        - m_deadband_upper_threshold: double
-        - m_rotation_target: double
-    }
-    class Strategy {
-        <<enumeration>>
-        IDLE
-        BDOT
-        HYSTERESIS
-    }
-    StrategySelector -- Strategy
-```
-
-#### BDot Maximum Threshold
-
-The B-Dot maximum threshold parameter defines the upper rotational rate (deg/s) above which the hysteresis strategy is used instead of B-Dot. This threshold is computed as:
-
-$$
-\omega_{\max} = \min\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\delta T}\right) = \min\left(\frac{360\ \text{deg}}{\Delta t}, \frac{90\ \text{deg}}{\delta T}\right)
-$$
-
-where:
-
-- $\omega_{\max}$ is the maximum angular velocity (deg/s),
-- $\Delta t$ is the duration of the actuation,
-- $\delta T$ is the time elapsed between the measurement of $\dot{B}$.
-
-For the PROVES CubeSat mission, we have:
-
-$$
-\omega_{\max} = \min\left(\frac{360\ \text{deg}}{0.32\ \text{s}}, \frac{90\ \text{deg}}{0.08\ \text{s}}\right) = 1125\ \text{deg/s}
-$$
-
-Given:
-- Actuation duration, $\Delta t = 0.32\ \text{s}$ (configured via `TORQUE_DURATION` parameter)
-- Time between $\dot{B}$ measurements, $\delta T = 0.08\ \text{s}$ (based on `DetumbleManger` rate group $20Hz$ and and B-Dot sample window of $5$ samples)
-
-In this reference deployment the `BDOT_MAX_THRESHOLD` parameter defaults to $720\,\text{deg/s}$ (see the FPP definition), well under the computed maximum of $1125\ \text{deg/s}$ to provide a buffer for margin of error. Above the configured threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
-
-#### Detumble Cooldown Duration Decision
-The `COOLDOWN_DURATION` parameter defines the time spent waiting after a torque command before sensing angular velocity again. This cooldown period allows the magnetic environment and sensors to settle after actuation so that measurements are not contaminated by residual fields. The LIS2MDL magnetometer takes new measurements every $10ms$ ($100Hz$). To ensure at least one new measurement is available after actuation, we set the `COOLDOWN_DURATION` parameter to $20ms$ in this reference deployment.
+#### `DEADBAND_LOWER_THRESHOLD` Decision
+The `DEADBAND_LOWER_THRESHOLD` parameter defines the rotational rate (deg/s) below which detumbling is considered complete and the `IDLE` strategy is selected. This threshold should be set low enough to ensure that the spacecraft is sufficiently detumbled for mission operations, but high enough to prevent the satellite from settling into a poor orientation (like antenna board directly pointed at the sun) or suffer thermal issues due to heat taken on from the sun.
 
 ## Port Descriptions
 
