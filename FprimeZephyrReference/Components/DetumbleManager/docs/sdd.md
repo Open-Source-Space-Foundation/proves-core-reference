@@ -93,12 +93,49 @@ classDiagram
     }
 ```
 
-#### BDot Timing Limitations
+#### BDot Implementation Options
+The B-Dot algorithm estimates the time derivative of the magnetic field vector $\dot{B}$ to compute the required dipole moment for detumbling. Several methods exist for estimating $\dot{B}$ from various sensor inputs:
 
-- The B-Dot algorithm only computes a non-zero dipole moment when the time between consecutive magnetic-field readings lies between the configured magnetometer sampling period and 600 ms.
-- If readings arrive faster than the magnetometer sampling period, they are treated as invalid (out-of-order or too fast) and the algorithm returns a zero dipole moment with an error condition.
-- If the time between readings exceeds 600 ms, the sample is treated as a first/expired reading and the algorithm returns a zero dipole moment with an error condition.
-- As a consequence, B-Dot detumbling is not effective on rate groups slower than 600 ms or on configurations where magnetic-field samples are provided irregularly or much slower than the magnetometer ODR.
+##### 1. Cross Product Method
+The cross product method estimates $\dot{B}$ using the cross product of an angular velocity vector $\omega$ and the magnetic field vector $B$:
+
+$$
+\dot{B} = \omega \times B
+$$
+
+Both the angular velocity and magnetic field vectors are available to the `DetumbleManger` component via ports in the `ImuManager` component. This method requires accurate angular velocity measurements and is sensitive to noise in both measurements.
+
+References:
+- [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama ](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
+
+##### 2. Derivative Method
+The derivative method estimates $\dot{B}$ using finite differences between consecutive magnetic field readings:
+
+$$
+\dot{B} \approx \frac{B(t) - B(t - \Delta t)}{\Delta t}
+$$
+
+This method is straightforward to implement and requires only magnetic field measurements. However, like the cross product method it is sensitive to noise. Also, in `Discrete Control with First Order Bdot Controller`, Dr. Montalvo notes that this method did not perform as well as the cross product method in simulations.
+
+References:
+- [Lecture slides on Control Systems - Dr. Jan Bekkeng - University of Oslo](https://www.uio.no/studier/emner/matnat/fys/FYS3240/v23/lectures/l11---control-systems-v23.pdf)
+- [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
+
+##### 3. Least Squares Method
+The least squares method fits a line to a series of magnetic field readings over time and computes the slope of that line as an estimate of $\dot{B}$.
+
+
+This method can be more robust to noise, especially when multiple readings are available.
+
+References:
+- [Hardware-In-The-Loop and Software-In-The-Loop
+Testing of the MOVE-II CubeSat - Jonis Kiesbye et al. - 2019](https://s3vi.ndc.nasa.gov/ssri-kb/static/resources/aerospace-06-00130-v2.pdf)
+
+#### BDot Implementation Decision
+After evaluating the options, we selected the Least Squares Method for the following reasons:
+- **Noise Robustness**: The least squares method can better handle noisy measurements by averaging over multiple readings.
+- **Simplicity**: It requires only magnetic field measurements, simplifying the system architecture.
+- **Performance**: While the cross product method may offer better performance in some scenarios, the least squares method provides a good balance between performance and robustness for our application.
 
 #### Magnetorquer
 
@@ -166,7 +203,7 @@ classDiagram
 The B-Dot maximum threshold parameter defines the upper rotational rate (deg/s) above which the hysteresis strategy is used instead of B-Dot. This threshold is computed as:
 
 $$
-\omega_{\max} = \min\!\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\,\delta T}\right)
+\omega_{\max} = \min\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\delta T}\right) = \min\left(\frac{360\ \text{deg}}{\Delta t}, \frac{90\ \text{deg}}{\delta T}\right)
 $$
 
 where:

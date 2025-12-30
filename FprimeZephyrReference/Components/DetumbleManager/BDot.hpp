@@ -23,10 +23,10 @@ class BDot {
     //  Public types
     // ----------------------------------------------------------------------
 
-    //! Sample structure for magnetic field readings
+    //! Sample structure for magnetic field samples
     struct Sample {
         std::array<double, 3> magnetic_field;  //!< Magnetic field vector in gauss
-        std::chrono::microseconds timestamp;   //!< Timestamp of the reading
+        std::chrono::microseconds timestamp;   //!< Timestamp of the sample
     };
 
   public:
@@ -51,7 +51,7 @@ class BDot {
     //
     // m is the dipole moment in A⋅m²
     // k is a gain constant
-    // dB/dt is the time derivative of the magnetic field reading in micro-Tesla per second (uT/s)
+    // dB/dt is the time derivative of the magnetic field sample in micro-Tesla per second (uT/s)
     // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
     std::array<double, 3> getDipoleMoment();
 
@@ -63,14 +63,14 @@ class BDot {
 
     //! Adds a magnetic field sample set
     void addSample(const std::array<double, 3>& magnetic_field,  //!< Magnetic field vector in gauss
-                   std::chrono::microseconds timestamp           //!< Timestamp of the reading
+                   std::chrono::microseconds timestamp           //!< Timestamp of the sample
     );
 
     //! Tells the caller if the sample set is full
-    bool samplingComplete();
+    bool samplingComplete() const;
 
-    //! Time delta for all readings in the sample set
-    std::chrono::microseconds getTimeBetweenReadings();
+    //! Time delta for all samples in the set
+    std::chrono::microseconds getTimeBetweenSamples() const;
 
     //! Empties the sample set
     void emptySampleSet();
@@ -80,19 +80,15 @@ class BDot {
     //  Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Compute the derivative of the magnetic field vector.
-    std::array<double, 3> dB_dt(
-        std::array<double, 3> magnetic_field,  //!< Magnetic field
-        std::chrono::microseconds dt_us        //!< Time delta between current and previous reading in microseconds
-    );
+    //! Compute BDot
+    std::array<double, 3> computeBDot() const;
 
-    //! Compute the magnitude of a 3D vector.
-    double getMagnitude(std::array<double, 3> vector  //!< 3D vector
-    );
+    //! Compute the magnitude of the most recent magnetic field sample.
+    double getMagnitude() const;
 
-    //! Validate time delta between readings
+    //! Validate time delta between samples.
     bool validateTimeDelta(
-        std::chrono::microseconds dt  //!< Time delta between current and previous reading in microseconds
+        std::chrono::microseconds dt  //!< Time delta between current and previous sample in microseconds
     );
 
   private:

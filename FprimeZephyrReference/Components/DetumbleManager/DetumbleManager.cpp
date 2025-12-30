@@ -66,11 +66,6 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    Fw::Time current_time = this->getTime();
-    Fw::TimeInterval dt_readings(this->last_cycle_time, current_time);
-    Fw::Logger::log("Run handler delta time: %u useconds\n", dt_readings.getUSeconds());
-    this->last_cycle_time = current_time;
-
     switch (this->m_state) {
         case DetumbleState::COOLDOWN:
             this->stateCooldownActions();
@@ -334,8 +329,19 @@ void DetumbleManager ::stateSensingMagneticFieldActions() {
     }
     this->log_WARNING_LO_MagneticFieldRetrievalFailed_ThrottleClear();
 
-    // Transition to ACTUATING_BDOT state
-    this->m_state = DetumbleState::ACTUATING_BDOT;
+    // Add magnetic field sample to B-Dot controller
+    std::chrono::microseconds sample_time(magnetic_field.get_timestamp().get_seconds() * 1000000 +
+                                          magnetic_field.get_timestamp().get_useconds());
+    std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
+                                                  magnetic_field.get_z()};
+    this->m_bdot.addSample(magnetic_field_array, sample_time);
+
+    if (this->m_bdot.samplingComplete()) {
+        // Sampling complete, transition to ACTUATING_BDOT state
+        this->m_state = DetumbleState::ACTUATING_BDOT;
+
+        Fw::Logger::log("Magnetic field readings delta: %lld useconds\n", this->m_bdot.getTimeBetweenSamples().count());
+    }
 }
 
 void DetumbleManager ::stateActuatingBDotActions() {
@@ -343,44 +349,7 @@ void DetumbleManager ::stateActuatingBDotActions() {
     this->stateEnterActuatingBDotActions();
 
     // Get dipole moment
-    errno = 0;  // Clear errno
-    std::array<double, 3> magnetic_field_array = {magnetic_field.get_x(), magnetic_field.get_y(),
-                                                  magnetic_field.get_z()};
-    std::array<double, 3> dipole_moment =
-        this->m_bdot.getDipoleMoment(magnetic_field_array, magnetic_field.get_timestamp().get_seconds(),
-                                     magnetic_field.get_timestamp().get_useconds(), gain, sampling_period_us);
-
-    // Telemeter time between magnetic field readings
-    std::chrono::microseconds dt_readings = this->m_bdot.getTimeBetweenReadings();
-    this->tlmWrite_TimeBetweenMagneticFieldReadings(Fw::TimeIntervalValue(
-        static_cast<U32>(dt_readings.count() / 1000000), static_cast<U32>(dt_readings.count() % 1000000)));
-
-    Fw::Logger::log("Magnetic field readings delta: %lld useconds\n", dt_readings.count() % 1000000);
-
-    // Check for errors in dipole moment computation
-    int rc = errno;
-    if (rc != 0) {
-        switch (rc) {
-            case EAGAIN:
-                Fw::Logger::log("Not enough magnetic field readings to compute dipole moment\n");
-                return;
-            case EDOM:
-                Fw::Logger::log("Magnetic field too small to compute dipole moment\n");
-                this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment();
-                return;
-            case EINVAL:
-                Fw::Logger::log("Invalid magnetic field reading for dipole moment computation\n");
-                this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment();
-                return;
-            default:
-                Fw::Logger::log("Unknown error in dipole moment computation\n");
-                this->log_WARNING_LO_UnknownDipoleMomentComputationError();
-                return;
-        }
-    }
-    this->log_WARNING_LO_MagneticFieldTooSmallForDipoleMoment_ThrottleClear();
-    this->log_WARNING_LO_InvalidMagneticFieldReadingForDipoleMoment_ThrottleClear();
-    this->log_WARNING_LO_UnknownDipoleMomentComputationError_ThrottleClear();
+    std::array<double, 3> dipole_moment = this->m_bdot.getDipoleMoment();
 
     // Perform torqueing action
     this->startMagnetorquers(this->m_x_plus_magnetorquer.dipoleMomentToCurrent(dipole_moment[0]),
@@ -416,7 +385,9 @@ void DetumbleManager ::stateEnterActuatingBDotActions() {
     std::chrono::microseconds sampling_period_us(sampling_period.get_useconds());
 
     // Configure B-Dot controller
-    this->m_bdot.configure(gain, sampling_period_us);
+    this->m_bdot.configure(
+        gain, sampling_period_us,
+        std::chrono::microseconds(30000));  // TODO(nateinaction): MOVE THIS SOMEWHERE 30 ms max rate group period
 
     // Record torque start time
     this->m_torque_start_time = this->getTime();
@@ -440,6 +411,9 @@ void DetumbleManager ::stateExitActuatingBDotActions() {
         // Torque duration not yet elapsed, remain in ACTUATING_BDOT state
         return;
     }
+
+    // Empty B-Dot sample set for next detumble cycle
+    this->m_bdot.emptySampleSet();
 
     // Turn off magnetorquers
     this->stopMagnetorquers();
