@@ -58,7 +58,7 @@ module Components {
         param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
 
         @ Parameter for storing the detumble torquing duration
-        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
+        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 320000} id 38
 
         @ Parameter for storing the gain used in the B-Dot algorithm
         param GAIN: F64 default 2.0 id 39
