@@ -131,11 +131,22 @@ References:
 - [Hardware-In-The-Loop and Software-In-The-Loop
 Testing of the MOVE-II CubeSat - Jonis Kiesbye et al. - 2019](https://s3vi.ndc.nasa.gov/ssri-kb/static/resources/aerospace-06-00130-v2.pdf)
 
+##### 4. 5-Point Central Difference Method
+The central difference method uses a five-point stencil to estimate $\dot{B}$, providing a higher-order approximation:
+
+$$
+\dot{B} \approx \frac{-B_4 + 8B_3 - 8B_1 + B_0}{12\cdot \Delta t}
+$$
+
+Where $B_i$ are magnetic field readings at different time points and $\Delta t$ is the time interval between readings. The `DetumbleManager` is on a $50Hz$ rate group so the time between readings is $0.02 s$.
+
+TODO(egjellison): Write up on coefficient derivation (-1, 8, 12, etc.)
+
 #### BDot Implementation Decision
-After evaluating the options, we selected the Least Squares Method for the following reasons:
-- **Noise Robustness**: The least squares method can better handle noisy measurements by averaging over multiple readings.
-- **Simplicity**: It requires only magnetic field measurements, simplifying the system architecture.
-- **Performance**: While the cross product method may offer better performance in some scenarios, the least squares method provides a good balance between performance and robustness for our application.
+After evaluating the options, we selected the 5-Point Central Difference Method for the following reasons:
+- **Noise Robustness**: The central difference method can better handle noisy measurements by averaging over multiple readings.
+- **Simplicity**: It requires only magnetic field measurements, addition and division, simplifying the system architecture.
+- **Performance**: While the cross product and least squared methods may offer better performance in some scenarios, the central difference method provides a good balance between performance and robustness for our application.
 
 #### `k` Gain Constant Default Value
 The gain constant `k` in the B-Dot algorithm determines the strength of the magnetic moment command in response to the estimated $\dot{B}$. A higher `k` value results in stronger torques, while a lower `k` value results in gentler torques.
