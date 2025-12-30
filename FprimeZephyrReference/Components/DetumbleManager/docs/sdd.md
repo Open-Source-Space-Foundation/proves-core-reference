@@ -137,6 +137,42 @@ After evaluating the options, we selected the Least Squares Method for the follo
 - **Simplicity**: It requires only magnetic field measurements, simplifying the system architecture.
 - **Performance**: While the cross product method may offer better performance in some scenarios, the least squares method provides a good balance between performance and robustness for our application.
 
+#### `k` Gain Constant Default Value
+The gain constant `k` in the B-Dot algorithm determines the strength of the magnetic moment command in response to the estimated $\dot{B}$. A higher `k` value results in stronger torques, while a lower `k` value results in gentler torques.
+
+We can determine the `k` constant based on the following formula:
+
+$$
+k ≤ \frac{m_{\max}}{||\dot{B}_{\max}||}
+$$
+
+where:
+- $m_{max}$ is the maximum magnetic moment achievable by the magnetorquers (A⋅m²),
+- $||\dot{B}_{max}||$ is the maximum expected rate of change of the magnetic field (uT/s).
+
+For the PROVES CubeSat mission, we estimated using the lowest performing magnetorquer (Z- coil) and an altitude of 420 km:
+
+$$
+m_{max} = I_{max}\cdot n\cdot A
+ \approx 0.0043575491\ \mu T
+$$
+
+Given:
+- Maximum coil current, $I_{\max} = 3.3\ \text{V} / 150.7\ \text{m}\Omega$
+- Number of turns, $n = 153$
+- Coil diameter, $d = 0.05755\ \text{m}$
+- Coil area, $A = \frac{1}{2}\pi \cdot (\frac{1}{2}\ 0.05755\ \text{m})^2$
+
+And
+
+$$
+||\dot{B}_{\max}|| = \omega_{\max} \cdot B_{\max} \approx 785\ \mu T/s
+$$
+
+Given:
+- Maximum angular velocity controllable by the B-Dot controller, $\omega_{\max} \approx 19.635\ \text{rad/s}$ (computed below)
+- Maximum magnetic field at 420 km altitude, $B_{\max} \approx 40\ \mu T$
+
 #### Magnetorquer
 
 ```mermaid

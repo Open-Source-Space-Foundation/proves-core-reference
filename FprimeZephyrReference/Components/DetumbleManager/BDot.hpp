@@ -12,7 +12,8 @@
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
 namespace {
-constexpr std::size_t SAMPLING_SET_SIZE = 5;  //!< Number of samples
+constexpr std::size_t SAMPLING_SET_SIZE =
+    5;  //!< Number of samples, to change this you must also change the computeBDot method
 }
 
 namespace Components {
@@ -47,12 +48,11 @@ class BDot {
 
     // Compute the required magnetic moment to detumble the satellite.
     //
-    // m = -k * (dB/dt) / |B|
+    // m = -k * Ḃ
     //
     // m is the magnetic moment in A⋅m²
     // k is a gain constant
-    // dB/dt is the time derivative of the magnetic field sample in micro-Tesla per second (uT/s)
-    // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
+    // Ḃ is the time derivative of the magnetic field sample in micro-Tesla per second (uT/s)
     std::array<double, 3> getMagneticMoment();
 
     //! Configure BDot parameters
@@ -80,7 +80,13 @@ class BDot {
     //  Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Compute BDot
+    //! Compute BDot uses the central difference method to estimate the time derivative of the magnetic field.
+    //!
+    //! Ḃ = (-1)B_4 + 8B_3 - 8B_1 + B_0) / (12 * 𝚫t)
+    //!
+    //! B_i is the magnetic field vector at sample i
+    //! 𝚫t is the time delta between samples in seconds
+    //! Coefficients (-1, 8, 12, etc.) are based on a five-point stencil for numerical differentiation
     std::array<double, 3> computeBDot() const;
 
     //! Compute the magnitude of the most recent magnetic field sample.
