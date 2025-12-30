@@ -8,6 +8,10 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+constexpr double PI = 3.14159265358979323846;
+}
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -41,7 +45,7 @@ std::int8_t Magnetorquer ::dipoleMomentToCurrent(double dipole_moment_component)
 double Magnetorquer ::getCoilArea() {
     // Calculate area based on coil shape
     if (this->m_shape == CoilShape::CIRCULAR) {
-        return this->PI * std::pow(this->m_diameter / 2.0, 2.0);
+        return PI * std::pow(this->m_diameter / 2.0, 2.0);
     }
 
     // Default to Rectangular

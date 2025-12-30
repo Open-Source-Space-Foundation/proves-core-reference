@@ -8,6 +8,8 @@
 #include <cerrno>
 #include <cmath>
 
+#include "Fw/Logger/Logger.hpp"
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -42,6 +44,7 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
 
         // Update previous magnetic field
         this->updatePreviousReading(magnetic_field, reading_time);
+        Fw::Logger::log("Invalid magnetometer reading delta: %lld useconds\n", dt_us.count());
 
         // Return zero dipole moment
         return std::array<double, 3>{0.0, 0.0, 0.0};
@@ -49,6 +52,8 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
 
     // Store time delta between last two readings
     this->m_previous_time_delta_us = dt_us;
+    Fw::Logger::log("Valid magnetometer reading delta: %lld useconds. min_dt_us %lld\n", dt_us.count(),
+                    magnetometer_sampling_period_us.count());
 
     // Compute dB/dt
     std::array<double, 3> dB_dt = this->dB_dt(magnetic_field, dt_us);
@@ -73,8 +78,9 @@ std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_fiel
     return std::array<double, 3>{moment_x, moment_y, moment_z};
 }
 
-std::chrono::microseconds BDot ::getTimeBetweenReadings() {
-    return this->m_previous_time_delta_us;
+void BDot ::configure(double gain, std::chrono::microseconds magnetometer_sampling_period_us) {
+    this->m_gain = gain;
+    this->m_magnetometer_sampling_period_us = magnetometer_sampling_period_us;
 }
 
 // ----------------------------------------------------------------------
@@ -112,9 +118,18 @@ void BDot ::updatePreviousReading(std::array<double, 3> magnetic_field, TimePoin
 }
 
 bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us, std::chrono::microseconds min_dt_us) {
+    // Check for out of order
+    if (dt_us.count() < 0) {
+        // Out of order readings, cannot compute dipole moment
+        Fw::Logger::log("Magnetometer readings out of order: %lld useconds\n", dt_us.count());
+        errno = EINVAL;
+        return false;
+    }
+
     // Ensure magnetorquer readings are not faster than 100Hz magnetometer ODR
-    if (min_dt_us > dt_us) {
+    if (dt_us < min_dt_us) {
         // Out of order readings or readings taken too quickly, cannot compute dipole moment
+        Fw::Logger::log("Magnetometer readings too close together: %lld useconds\n", dt_us.count());
         errno = EINVAL;
         return false;
     }
@@ -124,6 +139,7 @@ bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us, std::chrono::micr
     // working on slower rate groups Set previous magnetic field if last reading time was more than 600ms ago
     if (dt_us > std::chrono::milliseconds(600)) {
         // First reading or too much time has passed, cannot compute dipole moment
+        Fw::Logger::log("Magnetometer reading too old: %lld useconds\n", dt_us.count());
         errno = EAGAIN;
         return false;
     }

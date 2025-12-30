@@ -325,8 +325,8 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
       detumbleManager.magneticFieldGet -> imuManager.magneticFieldGet
+      detumbleManager.angularVelocityMagnitudeGet -> imuManager.angularVelocityMagnitudeGet
       detumbleManager.magneticFieldSamplingPeriodGet -> imuManager.magneticFieldSamplingPeriodGet
 
       detumbleManager.xPlusStart -> drv2605Face0Manager.start

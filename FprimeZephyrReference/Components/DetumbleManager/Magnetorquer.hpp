@@ -87,8 +87,6 @@ class Magnetorquer {
     //  Public member variables
     // ----------------------------------------------------------------------
 
-    static constexpr double PI = 3.14159265358979323846;  //!< Mathematical constant pi
-
     double m_turns;       //<! Number of turns in the coil
     double m_voltage;     //<! Voltage (V) supplied to the coil
     double m_resistance;  //<! Resistance (Ω) of the coil

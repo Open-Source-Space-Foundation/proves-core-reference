@@ -46,7 +46,11 @@ class BDot {
         std::chrono::microseconds magnetometer_sampling_period_us  //!< Magnetometer sampling period in microseconds
     );
 
-    std::chrono::microseconds getTimeBetweenReadings();
+    //! Configure BDot parameters
+    void configure(
+        double gain,                                               //!< Gain constant
+        std::chrono::microseconds magnetometer_sampling_period_us  //!< Magnetometer sampling period in microseconds
+    );
 
   private:
     // ----------------------------------------------------------------------
@@ -79,9 +83,11 @@ class BDot {
     //  Private member variables
     // ----------------------------------------------------------------------
 
-    std::array<double, 3> m_previous_magnetic_field;     //!< Previous magnetic field reading
-    TimePoint m_previous_magnetic_field_reading_time;    //!< Time of previous reading
-    std::chrono::microseconds m_previous_time_delta_us;  //!< Time delta between last two readings
+    double m_gain;                                                //!< Gain constant
+    std::chrono::microseconds m_magnetometer_sampling_period_us;  //!< Magnetometer
+
+    std::array<double, 3> m_previous_magnetic_field;   //!< Previous magnetic field reading
+    TimePoint m_previous_magnetic_field_reading_time;  //!< Time of previous reading
 };
 
 }  // namespace Components

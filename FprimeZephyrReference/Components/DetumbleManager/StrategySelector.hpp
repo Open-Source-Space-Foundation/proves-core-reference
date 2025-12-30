@@ -15,6 +15,7 @@ class StrategySelector {
     //  Public types
     // ----------------------------------------------------------------------
 
+    //! Detumble strategies
     enum Strategy {
         IDLE = 0,        //<! Do not detumble
         BDOT = 1,        //<! Use B-Dot detumbling
@@ -37,8 +38,9 @@ class StrategySelector {
     //  Public helper methods
     // ----------------------------------------------------------------------
 
-    //! Determine detumble strategy based on angular velocity
-    Strategy fromAngularVelocity(std::array<double, 3> angular_velocity  //!< Angular velocity in rad/s
+    //! Determine detumble strategy based on angular velocity magnitude
+    Strategy fromAngularVelocityMagnitude(
+        double angular_velocity_magnitude_deg_sec  //!< Angular velocity magnitude in deg/s
     );
 
     //! Configure detumble strategy thresholds
@@ -49,23 +51,8 @@ class StrategySelector {
 
   private:
     // ----------------------------------------------------------------------
-    //  Private helper methods
-    // ----------------------------------------------------------------------
-
-    //! Compute the angular velocity magnitude in degrees per second.
-    //! Formula: |ω| = sqrt(ωx² + ωy² + ωz²)
-    //!
-    //! ωx, ωy, ωz are the angular velocity components in rad/s
-    //! Returns magnitude in deg/s
-    double getAngularVelocityMagnitude(std::array<double, 3> angular_velocity  //!< Angular velocity in rad/s
-    );
-
-  private:
-    // ----------------------------------------------------------------------
     //  Private members variables
     // ----------------------------------------------------------------------
-
-    const double PI = 3.14159265358979323846;  //!< Mathematical constant pi
 
     double m_bdot_max_threshold;        //!< B-Dot maximum rotational threshold in deg/s
     double m_deadband_lower_threshold;  //!< Lower deadband threshold in deg/s

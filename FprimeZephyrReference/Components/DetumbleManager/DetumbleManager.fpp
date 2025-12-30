@@ -10,9 +10,11 @@ module Components {
     }
 
     enum DetumbleState {
-        COOLDOWN, @< Waiting for magnetometers to settle
-        SENSING,  @< Reading magnetic field
-        TORQUING, @< Applying torque
+        COOLDOWN,                 @< Waiting for magnetometers to settle
+        SENSING_ANGULAR_VELOCITY, @< Reading angular velocity
+        SENSING_MAGNETIC_FIELD,   @< Reading magnetic field
+        ACTUATING_BDOT,           @< Actuating the magnetorquers via B-Dot
+        ACTUATING_HYSTERESIS,     @< Actuating the magnetorquers via hysteresis
     }
 
     enum DetumbleStrategy {
@@ -116,8 +118,8 @@ module Components {
         @ Port for receiving system mode change notifications
         sync input port systemModeChanged: Components.SystemModeChanged
 
-        @ Port for getting angular velocity readings in rad/s
-        output port angularVelocityGet: AngularVelocityGet
+        @ Port for getting angular velocity magnitude readings
+        output port angularVelocityMagnitudeGet: AngularVelocityMagnitudeGet
 
         @ Port for getting magnetic field readings in gauss
         output port magneticFieldGet: MagneticFieldGet
@@ -156,6 +158,12 @@ module Components {
         output port zMinusStop: Drv.StopMagnetorquer
 
         ### Events ###
+
+        @ Event for recording detumbling start
+        event DetumbleStarted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble started. Angular velocity magnitude: {} deg/s" throttle 1
+
+        @ Event for recording detumbling completion
+        event DetumbleCompleted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble complete. Angular velocity magnitude: {} deg/s" throttle 1
 
         @ Event for reporting magnetic field retrieval failure
         event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5
