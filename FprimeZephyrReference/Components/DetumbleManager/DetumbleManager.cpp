@@ -7,8 +7,6 @@
 
 #include <cerrno>
 
-#include "Fw/Logger/Logger.hpp"
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -350,8 +348,6 @@ void DetumbleManager ::stateSensingMagneticFieldActions() {
     if (this->m_bdot.samplingComplete()) {
         // Sampling complete, transition to ACTUATING_BDOT state
         this->m_state = DetumbleState::ACTUATING_BDOT;
-
-        Fw::Logger::log("Magnetic field readings delta: %lld useconds\n", this->m_bdot.getTimeBetweenSamples().count());
     }
 }
 
@@ -431,8 +427,6 @@ void DetumbleManager ::stateExitActuatingBDotActions() {
 
     // Telemeter actual torque duration
     this->tlmWrite_TorqueDuration(Fw::TimeIntervalValue(torque_duration.getSeconds(), torque_duration.getUSeconds()));
-
-    Fw::Logger::log("Torquing complete: %u useconds\n", torque_duration.getUSeconds());
 
     // Reset torque start time
     this->m_torque_start_time = Fw::ZERO_TIME;
