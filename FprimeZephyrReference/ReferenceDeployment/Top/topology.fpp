@@ -341,6 +341,7 @@ module ReferenceDeployment {
       detumbleManager.yMinusStop -> drv2605Face3Manager.stop
       detumbleManager.zMinusStop -> drv2605Face5Manager.stop
 
+      detumbleManager.getSystemMode -> modeManager.getMode
       modeManager.modeChanged -> detumbleManager.systemModeChanged
     }
 

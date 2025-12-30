@@ -131,6 +131,9 @@ module Components {
         @ Port to get sampling period between magnetic field reads
         output port magneticFieldSamplingPeriodGet: SamplingPeriodGet
 
+        @ Port for querying the current system mode
+        output port getSystemMode: Components.GetSystemMode
+
         @ Port for triggering the X+ magnetorquer
         output port xPlusStart: Drv.StartMagnetorquer
 
@@ -162,6 +165,9 @@ module Components {
         output port zMinusStop: Drv.StopMagnetorquer
 
         ### Events ###
+
+        @ Event for reporting failed enable attempt due to system in SAFE_MODE
+        event EnableFailedSafeMode() severity warning low format "Failed to enable detumbling because system is in SAFE_MODE." throttle 5
 
         @ Event for recording detumbling start
         event DetumbleStarted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble started. Angular velocity magnitude: {} deg/s" throttle 1

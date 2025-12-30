@@ -86,6 +86,13 @@ void DetumbleManager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 void DetumbleManager ::setMode_handler(FwIndexType portNum, const Components::DetumbleMode& mode) {
+    if (mode != DetumbleMode::DISABLED && this->getSystemMode_out(0) == Components::SystemMode::SAFE_MODE) {
+        this->log_WARNING_LO_EnableFailedSafeMode();
+        this->m_mode = DetumbleMode::DISABLED;
+        return;
+    }
+    this->log_WARNING_LO_EnableFailedSafeMode_ThrottleClear();
+
     this->m_mode = mode;
 }
 
