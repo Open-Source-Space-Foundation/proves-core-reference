@@ -16,6 +16,7 @@
 #include "Fw/Logger/Logger.hpp"
 #include "Os/File.hpp"
 #include "config/ApidEnumAc.hpp"
+#include <zephyr/drivers/rtc.h>
 
 constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
 constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
