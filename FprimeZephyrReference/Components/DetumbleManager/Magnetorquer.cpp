@@ -26,16 +26,19 @@ Magnetorquer ::~Magnetorquer() {}
 //  Public helper methods
 // ----------------------------------------------------------------------
 
-std::int8_t Magnetorquer ::dipoleMomentToCurrent(double dipole_moment_component) {
+std::int8_t Magnetorquer ::magneticMomentToCurrent(double magnetic_moment_component) {
     // Calculate target current
-    double target_current = this->computeTargetCurrent(dipole_moment_component);
+    double target_current = this->computeTargetCurrent(magnetic_moment_component);
 
     // Clamp current and scale to int8_t range
-    std::int8_t clampedCurrent = this->computeClampedCurrent(target_current);
+    double clampedCurrent = this->computeClampedCurrent(target_current);
+
+    // Scale to int8_t
+    std::int8_t scaledCurrent = this->scaled8BitCurrent(clampedCurrent);
 
     // Adjust sign so that a positive drive level always produces the same dipole / torque
     // direction, compensating for the opposite physical orientation of the "minus" coils.
-    return this->m_direction_sign * clampedCurrent;
+    return this->m_direction_sign * scaledCurrent;
 }
 
 // ----------------------------------------------------------------------
@@ -75,18 +78,21 @@ double Magnetorquer ::getMaxCoilCurrent() {
     return this->m_voltage / this->m_resistance;
 }
 
-std::int8_t Magnetorquer ::computeClampedCurrent(double target_current) {
-    double clampedCurrent;
-
+double Magnetorquer ::computeClampedCurrent(double target_current) {
     // Get maximum coil current
     double max_current = this->getMaxCoilCurrent();
 
     // Clamp to max current
     if (std::fabs(target_current) > max_current) {
-        clampedCurrent = (target_current > 0) ? max_current : -max_current;
-    } else {
-        clampedCurrent = target_current;
+        return (target_current > 0) ? max_current : -max_current;
     }
+
+    return target_current;
+}
+
+std::int8_t Magnetorquer ::scaled8BitCurrent(double clampedCurrent) {
+    // Get maximum coil current
+    double max_current = this->getMaxCoilCurrent();
 
     // Avoid division by zero
     if (max_current == 0.0) {

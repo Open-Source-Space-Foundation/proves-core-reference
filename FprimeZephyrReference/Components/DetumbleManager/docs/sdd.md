@@ -259,13 +259,13 @@ $$
 
 where:
 - $m_{max}$ is the maximum magnetic moment achievable by the magnetorquers (A⋅m²),
-- $||\dot{B}_{max}||$ is the maximum expected rate of change of the magnetic field (uT/s).
+- $||\dot{B}_{max}||$ is the maximum expected rate of change of the magnetic field (G/s).
 
 For the PROVES CubeSat mission, we estimated using the lowest performing magnetorquer (Z- coil) and an altitude of 420 km:
 
 $$
 m_{max} = I_{max}\cdot n\cdot A
- \approx 0.0043575491\ \mu T
+ \approx 43.575491\ G
 $$
 
 Given:
@@ -277,17 +277,17 @@ Given:
 And
 
 $$
-||\dot{B}_{\max}|| = \omega_{\max} \cdot B_{\max} \approx 785\ \mu T/s
+||\dot{B}_{\max}|| = \omega_{\max} \cdot B_{\max} \approx 7.854\ G/s
 $$
 
 Given:
 - Maximum angular velocity controllable by the B-Dot controller, $\omega_{\max} \approx 19.635\ \text{rad/s}$ (computed below)
-- Maximum magnetic field at 420 km altitude, $B_{\max} \approx 40\ \mu T$
+- Maximum magnetic field at 420 km altitude, $B_{\max} \approx 0.4\ G$
 
 Therefore:
 
 $$
-k ≤ \frac{0.0043575491\ \mu T}{785\ \mu T/s} \approx 5.55\ s
+k ≤ \frac{43.575491\ G}{7.854\ G/s} \approx 5.55\ A\cdot m^2\cdot s/G
 $$
 
 We set the default `k` gain constant to $3.0 \ s$ in this reference deployment, providing a small margin below the computed maximum to account for uncertainties.

@@ -359,15 +359,15 @@ void DetumbleManager ::stateActuatingBDotActions() {
     // Enter ACTUATING_BDOT state
     this->stateEnterActuatingBDotActions();
 
-    // Get dipole moment
-    std::array<double, 3> dipole_moment = this->m_bdot.getMagneticMoment();
+    // Get magnetic moment
+    std::array<double, 3> magnetic_moment = this->m_bdot.getMagneticMoment();
 
     // Perform torqueing action
-    this->startMagnetorquers(this->m_x_plus_magnetorquer.dipoleMomentToCurrent(dipole_moment[0]),
-                             this->m_x_minus_magnetorquer.dipoleMomentToCurrent(dipole_moment[0]),
-                             this->m_y_plus_magnetorquer.dipoleMomentToCurrent(dipole_moment[1]),
-                             this->m_y_minus_magnetorquer.dipoleMomentToCurrent(dipole_moment[1]),
-                             this->m_z_minus_magnetorquer.dipoleMomentToCurrent(dipole_moment[2]));
+    this->startMagnetorquers(this->m_x_plus_magnetorquer.magneticMomentToCurrent(magnetic_moment[0]),
+                             this->m_x_minus_magnetorquer.magneticMomentToCurrent(magnetic_moment[0]),
+                             this->m_y_plus_magnetorquer.magneticMomentToCurrent(magnetic_moment[1]),
+                             this->m_y_minus_magnetorquer.magneticMomentToCurrent(magnetic_moment[1]),
+                             this->m_z_minus_magnetorquer.magneticMomentToCurrent(magnetic_moment[2]));
 
     // Exit ACTUATING_BDOT state
     this->stateExitActuatingBDotActions();

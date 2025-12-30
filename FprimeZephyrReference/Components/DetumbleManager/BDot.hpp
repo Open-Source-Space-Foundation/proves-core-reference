@@ -51,8 +51,8 @@ class BDot {
     // m = -k * Ḃ
     //
     // m is the magnetic moment in A⋅m²
-    // k is a gain constant
-    // Ḃ is the time derivative of the magnetic field sample in micro-Tesla per second (uT/s)
+    // k is a gain constant in A⋅m²⋅s/G
+    // Ḃ is the time derivative of the magnetic field sample in gauss per second (G/s)
     std::array<double, 3> getMagneticMoment();
 
     //! Configure BDot parameters
