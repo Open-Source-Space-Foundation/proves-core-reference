@@ -45,15 +45,15 @@ class BDot {
     // Public helper methods
     // ----------------------------------------------------------------------
 
-    // Compute the required dipole moment to detumble the satellite.
+    // Compute the required magnetic moment to detumble the satellite.
     //
     // m = -k * (dB/dt) / |B|
     //
-    // m is the dipole moment in A⋅m²
+    // m is the magnetic moment in A⋅m²
     // k is a gain constant
     // dB/dt is the time derivative of the magnetic field sample in micro-Tesla per second (uT/s)
     // |B| is the magnitude of the magnetic field vector in micro-Tesla (uT)
-    std::array<double, 3> getDipoleMoment();
+    std::array<double, 3> getMagneticMoment();
 
     //! Configure BDot parameters
     void configure(double gain,                                             //!< Gain constant
@@ -85,11 +85,6 @@ class BDot {
 
     //! Compute the magnitude of the most recent magnetic field sample.
     double getMagnitude() const;
-
-    //! Validate time delta between samples.
-    bool validateTimeDelta(
-        std::chrono::microseconds dt  //!< Time delta between current and previous sample in microseconds
-    );
 
   private:
     // ----------------------------------------------------------------------

@@ -112,10 +112,14 @@ void DetumbleManager ::configure() {
     Fw::ParamValid isValid;
 
     // Initialize coil parameters from configuration parameters
+    F64 x_turns = this->paramGet_X_TURNS(isValid);
+    F64 y_turns = this->paramGet_Y_TURNS(isValid);
+    F64 z_turns = this->paramGet_Z_TURNS(isValid);
+
     // X+ Coil
     m_x_plus_magnetorquer.m_voltage = this->paramGet_X_PLUS_VOLTAGE(isValid);
     m_x_plus_magnetorquer.m_resistance = this->paramGet_X_PLUS_RESISTANCE(isValid);
-    m_x_plus_magnetorquer.m_turns = this->paramGet_X_PLUS_TURNS(isValid);
+    m_x_plus_magnetorquer.m_turns = x_turns;
     m_x_plus_magnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
     CoilShape xPlus_shape = this->paramGet_X_PLUS_SHAPE(isValid);
     m_x_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xPlus_shape));
@@ -131,7 +135,7 @@ void DetumbleManager ::configure() {
     // X- Coil
     m_x_minus_magnetorquer.m_voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
     m_x_minus_magnetorquer.m_resistance = this->paramGet_X_MINUS_RESISTANCE(isValid);
-    m_x_minus_magnetorquer.m_turns = this->paramGet_X_MINUS_TURNS(isValid);
+    m_x_minus_magnetorquer.m_turns = x_turns;
     m_x_minus_magnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
     CoilShape xMinus_shape = this->paramGet_X_MINUS_SHAPE(isValid);
     m_x_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xMinus_shape));
@@ -147,7 +151,7 @@ void DetumbleManager ::configure() {
     // Y+ Coil
     m_y_plus_magnetorquer.m_voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
     m_y_plus_magnetorquer.m_resistance = this->paramGet_Y_PLUS_RESISTANCE(isValid);
-    m_y_plus_magnetorquer.m_turns = this->paramGet_Y_PLUS_TURNS(isValid);
+    m_y_plus_magnetorquer.m_turns = y_turns;
     m_y_plus_magnetorquer.m_direction_sign = Magnetorquer::DirectionSign::POSITIVE;
     CoilShape yPlus_shape = this->paramGet_Y_PLUS_SHAPE(isValid);
     m_y_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yPlus_shape));
@@ -163,7 +167,7 @@ void DetumbleManager ::configure() {
     // Y- Coil
     m_y_minus_magnetorquer.m_voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
     m_y_minus_magnetorquer.m_resistance = this->paramGet_Y_MINUS_RESISTANCE(isValid);
-    m_y_minus_magnetorquer.m_turns = this->paramGet_Y_MINUS_TURNS(isValid);
+    m_y_minus_magnetorquer.m_turns = y_turns;
     m_y_minus_magnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
     CoilShape yMinus_shape = this->paramGet_Y_MINUS_SHAPE(isValid);
     m_y_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yMinus_shape));
@@ -179,7 +183,7 @@ void DetumbleManager ::configure() {
     // Z- Coil
     m_z_minus_magnetorquer.m_voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
     m_z_minus_magnetorquer.m_resistance = this->paramGet_Z_MINUS_RESISTANCE(isValid);
-    m_z_minus_magnetorquer.m_turns = this->paramGet_Z_MINUS_TURNS(isValid);
+    m_z_minus_magnetorquer.m_turns = z_turns;
     m_z_minus_magnetorquer.m_direction_sign = Magnetorquer::DirectionSign::NEGATIVE;
     CoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
     m_z_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(zMinus_shape));
@@ -349,7 +353,7 @@ void DetumbleManager ::stateActuatingBDotActions() {
     this->stateEnterActuatingBDotActions();
 
     // Get dipole moment
-    std::array<double, 3> dipole_moment = this->m_bdot.getDipoleMoment();
+    std::array<double, 3> dipole_moment = this->m_bdot.getMagneticMoment();
 
     // Perform torqueing action
     this->startMagnetorquers(this->m_x_plus_magnetorquer.dipoleMomentToCurrent(dipole_moment[0]),

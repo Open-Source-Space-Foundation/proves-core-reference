@@ -52,7 +52,7 @@ double Magnetorquer ::getCoilArea() {
     return this->m_width * this->m_length;
 }
 
-double Magnetorquer ::computeTargetCurrent(double dipole_moment_component) {
+double Magnetorquer ::computeTargetCurrent(double magnetic_moment_component) {
     // Get coil area
     double area = this->getCoilArea();
 
@@ -62,7 +62,7 @@ double Magnetorquer ::computeTargetCurrent(double dipole_moment_component) {
     }
 
     // Calculate target current
-    return dipole_moment_component / (this->m_turns * area);
+    return magnetic_moment_component / (this->m_turns * area);
 }
 
 double Magnetorquer ::getMaxCoilCurrent() {
