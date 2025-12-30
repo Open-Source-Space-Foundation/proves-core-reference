@@ -46,7 +46,7 @@ module Components {
         ### Parameters ###
 
         @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling. Given by ω_max = min(2π/∆t, π/2δT) where ∆t is the duration of actuation and δT is the time elapsed between the measurement of Ḃ.
-        param BDOT_MAX_THRESHOLD: F64 default 150.0 id 40
+        param BDOT_MAX_THRESHOLD: F64 default 720.0 id 40
 
         @ Parameter for storing the upper deadband rotational threshold in deg/s
         param DEADBAND_UPPER_THRESHOLD: F64 default 8.0 id 41
