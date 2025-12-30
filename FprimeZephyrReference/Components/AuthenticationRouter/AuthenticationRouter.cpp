@@ -170,21 +170,27 @@ void AuthenticationRouter ::cmdResponseIn_handler(FwIndexType portNum,
 void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Time command_loss_start = this->update_command_loss_start();
 
-    Fw::Time current_time = this->getTime();
-
     Fw::ParamValid is_valid;
-    U32 command_loss_duration_seconds = this->paramGet_COMM_LOSS_TIME(is_valid);
+    Fw::TimeIntervalValue command_loss_period = this->paramGet_COMM_LOSS_TIME(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    Fw::TimeIntervalValue command_loss_duration(command_loss_duration_seconds, 0);
-    Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_duration.get_seconds(),
-                                   command_loss_duration.get_useconds());
+    Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_period.get_seconds(),
+                                   command_loss_period.get_useconds());
     Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
+
+    Fw::Time current_time =
+        (command_loss_end.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
 
     if (current_time > command_loss_end && !this->m_safeModeCalled) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
         this->CallSafeMode();
         this->m_safeModeCalled = true;
     }
+}
+
+Fw::Time AuthenticationRouter ::get_uptime() {
+    uint32_t seconds = k_uptime_seconds();
+    Fw::Time time(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), 0);
+    return time;
 }
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
