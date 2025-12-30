@@ -175,18 +175,6 @@ module Components {
         @ Event for reporting magnetic field period retrieval failure
         event MagneticFieldSamplingPeriodRetrievalFailed() severity warning low format "Failed to retrieve magnetic field sampling frequency." throttle 5
 
-        @ Event for reporting magnetic field too small for dipole moment calculation
-        event MagneticFieldTooSmallForDipoleMoment() severity warning low format "Magnetic field magnitude too small to compute dipole moment." throttle 5
-
-        @ Event for reporting invalid magnetic field readings for dipole moment calculation
-        event InvalidMagneticFieldReadingForDipoleMoment() severity warning low format "Out of order readings or readings taken too quickly, failed to compute dipole moment" throttle 5
-
-        @ Event for reporting unknown dipole moment computation error
-        event UnknownDipoleMomentComputationError() severity warning low format "Unknown error occurred during dipole moment computation." throttle 5
-
-        @ Event for reporting invalid detumble strategy selection
-        event InvalidDetumbleStrategy(strategy: DetumbleStrategy) severity warning low format "Invalid detumble strategy selected: {}" throttle 5
-
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
 

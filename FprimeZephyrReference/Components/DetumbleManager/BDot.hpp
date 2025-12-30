@@ -86,7 +86,7 @@ class BDot {
     //!
     //! B_i is the magnetic field vector at sample i
     //! 𝚫t is the time delta between samples in seconds
-    //! TODO(egjellison): Write up on coefficient derivation
+    //! TODO(evanjellison): Write up on coefficient derivation
     //! Coefficients (-1, 8, 12, etc.)
     std::array<double, 3> computeBDot() const;
 
