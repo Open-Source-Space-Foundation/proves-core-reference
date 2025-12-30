@@ -2,7 +2,6 @@ module Components {
     port AccelerationGet(ref condition: Fw.Success) -> Drv.Acceleration
     port AngularVelocityGet(ref condition: Fw.Success)-> Drv.AngularVelocity
     port MagneticFieldGet(ref condition: Fw.Success) -> Drv.MagneticField
-    port TemperatureGet(ref condition: Fw.Success) -> F64
 
     @ Magnetometer sampling frequency settings for LIS2MDL sensor
     enum Lis2mdlSamplingFrequency {
@@ -89,9 +88,6 @@ module Components {
 
         @ Telemetry channel for current magnetic field in gauss.
         telemetry MagneticField: Drv.MagneticField
-
-        @ Telemetry channel for current temperature in degrees celsius.
-        telemetry Temperature: F64
 
         @ Accelerometer sampling frequency telemetry channel
         telemetry AccelerometerSamplingFrequency: Lsm6dsoSamplingFrequency

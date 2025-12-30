@@ -37,7 +37,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.Acceleration
     ReferenceDeployment.imuManager.AngularVelocity
     ReferenceDeployment.imuManager.MagneticField
-    ReferenceDeployment.imuManager.Temperature
     ReferenceDeployment.imuManager.AccelerometerSamplingFrequency
     ReferenceDeployment.imuManager.GyroscopeSamplingFrequency
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
@@ -201,6 +200,11 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.payloadSeq.CS_CommandsExecuted
   ReferenceDeployment.payloadSeq.CS_SequencesCompleted
   ReferenceDeployment.payloadSeq.CS_Errors
+  ReferenceDeployment.safeModeSeq.CS_LoadCommands
+  ReferenceDeployment.safeModeSeq.CS_CancelCommands
+  ReferenceDeployment.safeModeSeq.CS_CommandsExecuted
+  ReferenceDeployment.safeModeSeq.CS_SequencesCompleted
+  ReferenceDeployment.safeModeSeq.CS_Errors
   FileHandling.fileUplink.FilesReceived
   FileHandling.fileUplink.PacketsReceived
   FileHandling.fileDownlink.FilesSent
