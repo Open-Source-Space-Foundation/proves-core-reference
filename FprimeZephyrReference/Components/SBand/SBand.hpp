@@ -96,7 +96,7 @@ class SBand final : public SBandComponentBase {
     Module m_rlb_module;                                                   //!< RadioLib Module instance
     SX1280 m_rlb_radio;                                                    //!< RadioLib SX1280 radio instance
     bool m_configured = false;                                             //!< Flag indicating radio is configured
-    bool m_rxHandlerQueued = false;                                        //!< Flag indicating RX handler is queued
+    std::atomic<bool> m_rxHandlerQueued{false};                            //!< Flag indicating RX handler is queued
     SBandTransmitState m_transmit_enabled = SBandTransmitState::DISABLED;  //!< Transmit state
 };
 
