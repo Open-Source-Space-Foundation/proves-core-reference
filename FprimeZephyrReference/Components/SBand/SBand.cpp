@@ -62,12 +62,10 @@ void SBand ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 void SBand ::deferredRxHandler_internalInterfaceHandler() {
-    // Check IRQ status
     uint16_t irqStatus = this->m_rlb_radio.getIrqStatus();
 
-    // Only process if RX_DONE
     if (irqStatus & RADIOLIB_SX128X_IRQ_RX_DONE) {
-        // Process received data
+        Fw::Buffer buffer;
         SX1280* radio = &this->m_rlb_radio;
         uint8_t data[256] = {0};
         size_t len = radio->getPacketLength();
@@ -76,21 +74,16 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
         } else {
-            Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
+            this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
+            float rssi = radio->getRSSI();
+            float snr = radio->getSNR();
+            this->tlmWrite_LastRssi(rssi);
+            this->tlmWrite_LastSnr(snr);
+
+            buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
             if (buffer.isValid()) {
-                (void)::memcpy(buffer.getData(), data, len);
-                ComCfg::FrameContext frameContext;
-                this->dataOut_out(0, buffer, frameContext);
-
-                // Log RSSI and SNR for received packet
-                float rssi = radio->getRSSI();
-                float snr = radio->getSNR();
-                this->tlmWrite_LastRssi(rssi);
-                this->tlmWrite_LastSnr(snr);
-
-                // Clear throttled warnings on success
-                this->log_WARNING_HI_RadioLibFailed_ThrottleClear();
                 this->log_WARNING_HI_AllocationFailed_ThrottleClear();
+                (void)::memcpy(buffer.getData(), data, len);
             } else {
                 this->log_WARNING_HI_AllocationFailed(static_cast<FwSizeType>(len));
             }
@@ -100,6 +93,12 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
+        }
+
+        // Do this AFTER all SPI operations otherwise FS and RadioLib contend for SPI bus causing long delays
+        if (buffer.isValid()) {
+            ComCfg::FrameContext frameContext;
+            this->dataOut_out(0, buffer, frameContext);
         }
     }
 
