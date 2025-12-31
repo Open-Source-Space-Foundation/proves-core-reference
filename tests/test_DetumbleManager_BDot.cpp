@@ -15,8 +15,7 @@ TEST(BDotTest, SamplingCompleteAndTimeDelta) {
 
     // Configure with arbitrary but valid parameters
     const double gain = 1.0;
-    const std::chrono::microseconds rate_group_max_period(50000);
-    bdot.configure(gain, SAMPLING_PERIOD_US, rate_group_max_period);
+    bdot.configure(gain, SAMPLING_PERIOD_US);
 
     // Add 5 samples with increasing timestamps
     for (std::size_t i = 0; i < 5; ++i) {
@@ -32,8 +31,7 @@ TEST(BDotTest, MagneticMomentLinearXAxis) {
     BDot bdot;
 
     const double gain = 2.0;
-    const std::chrono::microseconds rate_group_max_period(50000);
-    bdot.configure(gain, SAMPLING_PERIOD_US, rate_group_max_period);
+    bdot.configure(gain, SAMPLING_PERIOD_US);
 
     const double slope_x = 10.0;  // dB/dt in G/s
     const double dt_seconds = SAMPLING_PERIOD_US.count() / 1e6;
@@ -60,8 +58,7 @@ TEST(BDotTest, MagneticMomentLinearMultiAxis) {
     BDot bdot;
 
     const double gain = -1.5;
-    const std::chrono::microseconds rate_group_max_period(50000);
-    bdot.configure(gain, SAMPLING_PERIOD_US, rate_group_max_period);
+    bdot.configure(gain, SAMPLING_PERIOD_US);
 
     const double slope_x = 5.0;
     const double slope_y = -3.0;
@@ -94,8 +91,7 @@ TEST(BDotTest, EmptySampleSetCanBeReused) {
     BDot bdot;
 
     const double gain = 1.0;
-    const std::chrono::microseconds rate_group_max_period(50000);
-    bdot.configure(gain, SAMPLING_PERIOD_US, rate_group_max_period);
+    bdot.configure(gain, SAMPLING_PERIOD_US);
 
     // First fill
     for (std::size_t i = 0; i < 5; ++i) {
