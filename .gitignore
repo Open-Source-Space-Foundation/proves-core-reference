@@ -15,7 +15,9 @@ lib/zephyr-workspace/*
 /venv/
 /fprime-venv/
 /.idea/
-/.vscode/
+/.vscode/*
+!/.vscode/launch.json
+!/.vscode/tasks.json
 .DS_Store
 *.gcov
 build

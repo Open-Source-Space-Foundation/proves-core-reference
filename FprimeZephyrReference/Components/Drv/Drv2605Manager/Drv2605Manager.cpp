@@ -12,6 +12,16 @@
 
 namespace Drv {
 
+static uint8_t input_arr[1];
+static struct drv2605_rtp_data rtp = {
+    .size = 1,
+    // rtp_hold_us is intentionally set to 1us to minimize blocking time in haptics_start_output().
+    // The actual RTP output continues running until rtp_input is set to 0, allowing for
+    // fast component cycling while maintaining continuous haptic output control.
+    .rtp_hold_us = (uint32_t[]){1},
+    .rtp_input = input_arr,
+};
+
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
@@ -51,33 +61,42 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
     return Fw::Success::SUCCESS;
 }
 
-void Drv2605Manager ::run_handler(FwIndexType portNum, U32 context) {
-    // If continuous mode is enabled, trigger the magnetorquer
-    if (this->m_continuous_mode) {
-        this->trigger_handler(0);
-    }
-}
-
-Fw::Success Drv2605Manager ::trigger_handler(FwIndexType portNum) {
+Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
     if (!this->initializeDevice()) {
         return Fw::Success::FAILURE;
     }
 
-    int rc = haptics_start_output(this->m_dev);
-    if (rc != 0) {
+    // Set the RTP data
+    input_arr[0] = static_cast<uint8_t>(driveLevel);
+    union drv2605_config_data config_data;
+    config_data.rtp_data = &rtp;
+
+    int rc = drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data);
+    if (rc < 0) {
+        this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
+        return Fw::Success::FAILURE;
+    }
+
+    // Start the magnetorquer
+    rc = haptics_start_output(this->m_dev);
+    if (rc < 0) {
         this->log_WARNING_LO_TriggerFailed(rc);
         return Fw::Success::FAILURE;
     }
     return Fw::Success::SUCCESS;
 }
 
+Fw::Success Drv2605Manager ::stop_handler(FwIndexType portNum) {
+    return this->start_handler(portNum, 0);
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Drv2605Manager ::TRIGGER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Trigger the magnetorquer
-    Fw::Success condition = this->trigger_handler(0);
+void Drv2605Manager ::START_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, I8 driveLevel) {
+    // Start the magnetorquer
+    Fw::Success condition = this->start_handler(0, driveLevel);
     if (condition != Fw::Success::SUCCESS) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -85,16 +104,10 @@ void Drv2605Manager ::TRIGGER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void Drv2605Manager ::START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->m_continuous_mode = true;
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Drv2605Manager ::STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->m_continuous_mode = false;
-    int rc = haptics_stop_output(this->m_dev);
-    if (rc != 0) {
-        this->log_WARNING_LO_TriggerFailed(rc);
+void Drv2605Manager ::STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Stop the magnetorquer
+    Fw::Success condition = this->stop_handler(0);
+    if (condition != Fw::Success::SUCCESS) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
@@ -149,30 +162,17 @@ Fw::Success Drv2605Manager ::initializeDevice() {
 
     int rc = device_init(this->m_dev);
     if (rc < 0) {
+        // Log the initialization failure
         this->log_WARNING_LO_DeviceInitFailed(rc);
+
+        // Deinitialize the device to reset state
+        this->deinitializeDevice();
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
 
-    // Configure DRV2605 config struct
-    union drv2605_config_data config_data;
-    static struct drv2605_rom_data rom_data = {
-        .trigger = DRV2605_MODE_INTERNAL_TRIGGER,
-        .library = DRV2605_LIBRARY_LRA,
-        .seq_regs = {3, 3, 3, 3, 3, 3, 3, 3},
-        .overdrive_time = 0,
-        .sustain_pos_time = 0,
-        .sustain_neg_time = 0,
-        .brake_time = 0,
-    };
-    config_data.rom_data = &rom_data;
-
-    if (drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_ROM, &config_data) != 0) {
-        this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
-        return Fw::Success::FAILURE;
-    }
-
     this->log_ACTIVITY_LO_DeviceInitialized();
+
     return Fw::Success::SUCCESS;
 }
 
@@ -190,6 +190,7 @@ Fw::Success Drv2605Manager ::deinitializeDevice() {
     this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
 
     this->m_dev->state->initialized = false;
+    this->m_dev->state->init_res = 0;
     return Fw::Success::SUCCESS;
 }
 

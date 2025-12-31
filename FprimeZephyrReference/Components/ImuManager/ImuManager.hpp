@@ -49,11 +49,31 @@ class ImuManager final : public ImuManagerComponentBase {
     Drv::AngularVelocity angularVelocityGet_handler(FwIndexType portNum,  //!< The port number
                                                     Fw::Success& condition) override;
 
+    //! Handler implementation for angularVelocityMagnitudeGet
+    //!
+    //! Formula for magnitude:
+    //! |ω| = sqrt(ωx² + ωy² + ωz²)
+    //! ωx, ωy, ωz are the angular velocity components in rad/s
+    //!
+    //! Formula for conversion to degrees per second:
+    //! |ω|_deg/s = |ω|_rad/s * (180 / π)
+    //!
+    //! Port to read the current angular velocity magnitude.
+    F64 angularVelocityMagnitudeGet_handler(FwIndexType portNum,  //!< The port number
+                                            Fw::Success& condition,
+                                            const Components::AngularUnit& unit) override;
+
     //! Handler implementation for magneticFieldGet
     //!
     //! Port to read the current magnetic field in gauss.
     Drv::MagneticField magneticFieldGet_handler(FwIndexType portNum,  //!< The port number
                                                 Fw::Success& condition) override;
+
+    //! Handler implementation for magneticFieldPeriodGet
+    //!
+    //! Port to get the time between magnetic field reads
+    Fw::TimeIntervalValue magneticFieldSamplingPeriodGet_handler(FwIndexType portNum,  //!< The port number
+                                                                 Fw::Success& condition) override;
 
     //! Handler implementation for run
     //!
@@ -84,7 +104,10 @@ class ImuManager final : public ImuManagerComponentBase {
     //! Get magnetometer sampling frequency from parameter
     struct sensor_value getMagnetometerSamplingFrequency();
 
+    //! Compare two sensor_value structs for equality
     bool sensorValuesEqual(struct sensor_value* sv1, struct sensor_value* sv2);
+
+    F64 convertAngularVelocityToUnit(Drv::AngularVelocity angularVelocity);
 
   private:
     // ----------------------------------------------------------------------

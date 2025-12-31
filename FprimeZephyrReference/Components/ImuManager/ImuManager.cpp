@@ -6,6 +6,12 @@
 #include "FprimeZephyrReference/Components/ImuManager/ImuManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
+#include <cmath>
+
+namespace {
+constexpr double PI = 3.14159265358979323846;
+constexpr double RAD_TO_DEG = 180.0 / PI;
+}  // namespace
 
 namespace Components {
 
@@ -105,12 +111,33 @@ Drv::AngularVelocity ImuManager ::angularVelocityGet_handler(FwIndexType portNum
     return angular_velocity;
 }
 
+F64 ImuManager ::angularVelocityMagnitudeGet_handler(FwIndexType portNum,
+                                                     Fw::Success& condition,
+                                                     const Components::AngularUnit& unit) {
+    condition = Fw::Success::FAILURE;
+
+    // Get angular velocity
+    Drv::AngularVelocity angular_velocity = this->angularVelocityGet_handler(0, condition);
+
+    // Compute magnitude
+    F64 magnitude = std::sqrt(angular_velocity.get_x() * angular_velocity.get_x() +
+                              angular_velocity.get_y() * angular_velocity.get_y() +
+                              angular_velocity.get_z() * angular_velocity.get_z());
+
+    // Convert to requested unit
+    if (unit == AngularUnit::DEG_PER_SEC) {
+        return magnitude * RAD_TO_DEG;
+    }
+
+    return magnitude;
+}
+
 Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw::Success& condition) {
     condition = Fw::Success::FAILURE;
 
     if (!device_is_ready(this->m_lis2mdl)) {
         this->log_WARNING_HI_Lis2mdlDeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0);
+        return Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue());
     }
     this->log_WARNING_HI_Lis2mdlDeviceNotReady_ThrottleClear();
 
@@ -123,13 +150,36 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 
     this->applyAxisOrientation(x, y, z);
 
-    Drv::MagneticField magnetic_field =
-        Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y), sensor_value_to_double(&z));
+    Fw::Time t = this->getTime();
+    Fw::TimeValue timestamp = Fw::TimeValue(t.getTimeBase(), t.getContext(), t.getSeconds(), t.getUSeconds());
+
+    Drv::MagneticField magnetic_field = Drv::MagneticField(sensor_value_to_double(&x), sensor_value_to_double(&y),
+                                                           sensor_value_to_double(&z), timestamp);
 
     this->tlmWrite_MagneticField(magnetic_field);
 
     condition = Fw::Success::SUCCESS;
     return magnetic_field;
+}
+
+Fw::TimeIntervalValue ImuManager ::magneticFieldSamplingPeriodGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
+
+    // Get sampling frequency in Hz
+    struct sensor_value odr = getMagnetometerSamplingFrequency();
+    double frequency_hz = sensor_value_to_double(&odr);
+    if (frequency_hz <= 0.0) {
+        this->log_WARNING_LO_MagnetometerSamplingFrequencyZeroHz();
+        return Fw::TimeIntervalValue();
+    }
+    this->log_WARNING_LO_MagnetometerSamplingFrequencyZeroHz_ThrottleClear();
+
+    // Convert sampling frequency to microseconds
+    double period_seconds = 1.0 / frequency_hz;
+    U32 period_useconds = static_cast<U32>(period_seconds * 1e6);
+
+    condition = Fw::Success::SUCCESS;
+    return Fw::TimeIntervalValue(0, period_useconds);
 }
 
 // ----------------------------------------------------------------------

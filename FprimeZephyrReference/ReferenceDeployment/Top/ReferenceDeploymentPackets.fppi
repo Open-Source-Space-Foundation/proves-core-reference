@@ -6,6 +6,7 @@ telemetry packets ReferenceDeploymentPackets {
   # 3 - Satellite Meta Data
   # 4 - Payload Meta Data
   # 5 - Health and Status
+  # 6 - Parameters
   ########################################
 
   packet Beacon id 1 group 1 {
@@ -93,6 +94,12 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
+  packet Detumble id 15 group 3 {
+    ReferenceDeployment.detumbleManager.Mode
+    ReferenceDeployment.detumbleManager.State
+    ReferenceDeployment.detumbleManager.DetumbleStrategy
+  }
+
   ### Payload Meta Data Packets ###
 
   packet CameraDebug id 14 group 4 {
@@ -112,6 +119,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsSband.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
+    ReferenceDeployment.rateGroup50Hz.RgMaxTime
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
     ReferenceDeployment.startupManager.QuiescenceEndTime
@@ -126,6 +134,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
+    ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
   }
@@ -166,6 +175,70 @@ telemetry packets ReferenceDeploymentPackets {
 
     ReferenceDeployment.amateurRadio.count_names
 
+  }
+
+  packet DetumblePerformance id 16 group 5 {
+    ReferenceDeployment.detumbleManager.TorqueDuration
+    ReferenceDeployment.detumbleManager.TimeBetweenMagneticFieldReadings
+  }
+
+  packet DetumbleParams id 17 group 6 {
+    ReferenceDeployment.detumbleManager.GainParam
+    ReferenceDeployment.detumbleManager.BdotMaxThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandUpperThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandLowerThresholdParam
+    ReferenceDeployment.detumbleManager.CooldownDurationParam
+    ReferenceDeployment.detumbleManager.TorqueDurationParam
+    ReferenceDeployment.detumbleManager.HysteresisAxisParam
+  }
+
+  packet DetumbleXPlusCoilParams id 18 group 6 {
+    # X+ coil parameters
+    ReferenceDeployment.detumbleManager.XPlusVoltageParam
+    ReferenceDeployment.detumbleManager.XPlusResistanceParam
+    ReferenceDeployment.detumbleManager.XPlusTurnsParam
+    ReferenceDeployment.detumbleManager.XPlusLengthParam
+    ReferenceDeployment.detumbleManager.XPlusWidthParam
+    ReferenceDeployment.detumbleManager.XPlusShapeParam
+  }
+
+  packet DetumbleXMinusCoilParams id 19 group 6 {
+    # X- coil parameters
+    ReferenceDeployment.detumbleManager.XMinusVoltageParam
+    ReferenceDeployment.detumbleManager.XMinusResistanceParam
+    ReferenceDeployment.detumbleManager.XMinusTurnsParam
+    ReferenceDeployment.detumbleManager.XMinusLengthParam
+    ReferenceDeployment.detumbleManager.XMinusWidthParam
+    ReferenceDeployment.detumbleManager.XMinusShapeParam
+  }
+
+  packet DetumbleYPlusCoilParams id 20 group 6 {
+    # Y+ coil parameters
+    ReferenceDeployment.detumbleManager.YPlusVoltageParam
+    ReferenceDeployment.detumbleManager.YPlusResistanceParam
+    ReferenceDeployment.detumbleManager.YPlusTurnsParam
+    ReferenceDeployment.detumbleManager.YPlusLengthParam
+    ReferenceDeployment.detumbleManager.YPlusWidthParam
+    ReferenceDeployment.detumbleManager.YPlusShapeParam
+  }
+
+  packet DetumbleYMinusCoilParams id 21 group 6 {
+    # Y- coil parameters
+    ReferenceDeployment.detumbleManager.YMinusVoltageParam
+    ReferenceDeployment.detumbleManager.YMinusResistanceParam
+    ReferenceDeployment.detumbleManager.YMinusTurnsParam
+    ReferenceDeployment.detumbleManager.YMinusLengthParam
+    ReferenceDeployment.detumbleManager.YMinusWidthParam
+    ReferenceDeployment.detumbleManager.YMinusShapeParam
+  }
+
+  packet DetumbleZMinusCoilParams id 22 group 6 {
+    # Z- coil parameters
+    ReferenceDeployment.detumbleManager.ZMinusVoltageParam
+    ReferenceDeployment.detumbleManager.ZMinusResistanceParam
+    ReferenceDeployment.detumbleManager.ZMinusTurnsParam
+    ReferenceDeployment.detumbleManager.ZMinusDiameterParam
+    ReferenceDeployment.detumbleManager.ZMinusShapeParam
   }
 
 } omit {

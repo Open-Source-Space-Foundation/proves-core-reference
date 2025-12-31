@@ -404,9 +404,12 @@ void ModeManager ::enterSafeMode(Components::SafeModeReason reason) {
     this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
 
     // Notify other components of mode change with new mode value
-    if (this->isConnected_modeChanged_OutputPort(0)) {
-        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
-        this->modeChanged_out(0, fppMode);
+    Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+    for (FwIndexType i = 0; i < this->getNum_modeChanged_OutputPorts(); i++) {
+        if (!this->isConnected_modeChanged_OutputPort(i)) {
+            continue;
+        }
+        this->modeChanged_out(i, fppMode);
     }
 
     // Save state
