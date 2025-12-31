@@ -251,7 +251,189 @@ $$
 
 Where $B_i$ are magnetic field readings at different time points and $\Delta t$ is the time interval between readings. The `DetumbleManager` is on a $50Hz$ rate group so the time between readings is $0.02 s$.
 
-TODO(evanjellison): Write up on coefficient and divisor derivation
+The 5‑point central finite‑difference formula is obtained by combining Taylor expansions at five equally spaced points so that the combination reproduces the first derivative and cancels as many low‑order error terms as possible. The derivation of the 5‑point central finite‑difference formula is as follows:
+
+Let $f(t)$ be smooth and suppose values are known at five equally spaced points
+
+$$
+t_{-2}=t_0-2\Delta t,\quad
+t_{-1}=t_0-\Delta t,\quad
+t_0,\quad
+t_{+1}=t_0+\Delta t,\quad
+t_{+2}=t_0+2\Delta t,
+$$
+
+with corresponding values
+
+$$
+f_{-2}=f(t_0-2\Delta t),\;
+f_{-1}=f(t_0-\Delta t),\;
+f_0=f(t_0),\;
+f_{+1}=f(t_0+\Delta t),\;
+f_{+2}=f(t_0+2\Delta t).
+$$
+
+Expand $f$ at points $t_0\pm\Delta t$ and $t_0\pm 2\Delta t$ using Taylor series about $t_0$.
+
+Write derivatives at $t_0$ as
+
+$$
+f_0 = f(t_0),\quad
+f_0' = f'(t_0),\quad
+f_0'' = f''(t_0),\quad
+f_0^{(3)} = f^{(3)}(t_0),\quad
+f_0^{(4)} = f^{(4)}(t_0),\dots
+$$
+
+Then
+
+$$
+f(t_0+\Delta t) = f_0 + f_0'\Delta t + \frac{f_0''}{2}\Delta t^2 + \frac{f_0^{(3)}}{6}\Delta t^3 + \frac{f_0^{(4)}}{24}\Delta t^4 + O(\Delta t^5),
+$$
+
+$$
+f(t_0-\Delta t) = f_0 - f_0'\Delta t + \frac{f_0''}{2}\Delta t^2
+                 - \frac{f_0^{(3)}}{6}\Delta t^3
+                 + \frac{f_0^{(4)}}{24}\Delta t^4
+                 + O(\Delta t^5),
+$$
+
+$$
+f(t_0+2\Delta t) = f_0 + 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
+                  + 2^3\frac{f_0^{(3)}}{6}\Delta t^3
+                  + 2^4\frac{f_0^{(4)}}{24}\Delta t^4
+                  + O(\Delta t^5),
+$$
+
+$$
+f(t_0-2\Delta t) = f_0 - 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
+                  - 2^3\frac{f_0^{(3)}}{6}\Delta t^3
+                  + 2^4\frac{f_0^{(4)}}{24}\Delta t^4
+                  + O(\Delta t^5).
+$$
+
+These expansions are the raw material for building a linear combination that isolates $f_0'$.
+
+Consider a general linear combination of the five samples:
+
+$$
+L = a f(t_0-2\Delta t) + b f(t_0-\Delta t) + c f(t_0) + d f(t_0+\Delta t) + e f(t_0+2\Delta t).
+$$
+
+The goal is to choose $a,b,c,d,e$ so that
+
+$$
+L = f_0'\,\Delta t + \text{higher‑order terms},
+$$
+
+so that after division by $\Delta t$ the result approximates $f'(t_0)$.
+
+Because a central first‑derivative operator should be antisymmetric about the center, impose
+
+$$
+a = -e,\quad b=-d,\quad c=0.
+$$
+
+This automatically makes the approximation odd in $\Delta t$, which matches the behavior of a first derivative.
+
+With this symmetry,
+
+$$
+L = a\bigl[f(t_0-2\Delta t) - f(t_0+2\Delta t)\bigr] + b\bigl[f(t_0-\Delta t) - f(t_0+\Delta t)\bigr].
+$$
+
+Substitute the expansions and collect terms by derivative order. Using the series above, the contributions to $L$ are:
+
+- Constant term (involving $f_0$):
+
+$$
+a(f_0 - f_0) + b(f_0 - f_0) = 0,
+$$
+
+so the constant always cancels; that is consistent with $f'(t)$ being zero for constant functions.
+- First‑derivative term (involving $f_0'$):
+
+$$
+a\bigl(-2f_0'\Delta t - 2f_0'\Delta t\bigr) + b\bigl(-f_0'\Delta t - f_0'\Delta t\bigr) = (-4a - 2b) f_0' \Delta t.
+$$
+- Third‑derivative term (involving $f_0^{(3)}$), from the $\Delta t^3$ terms:
+
+$$
+a\left(-\frac{8}{6}f_0^{(3)}\Delta t^3 -\frac{8}{6}f_0^{(3)}\Delta t^3\right) + b\left(-\frac{1}{6}f_0^{(3)}\Delta t^3 -\frac{1}{6}f_0^{(3)}\Delta t^3\right) = -\frac{16a+2b}{6} f_0^{(3)}\Delta t^3.
+$$
+
+Terms in $f_0''$ already cancel because of the symmetry $a=-e,b=-d$, and higher derivatives are left as truncation error.
+
+To make $L$ approximate $f_0'\Delta t$ with high accuracy, require
+
+1. The coefficient of $f_0'\Delta t$ is $1$:
+
+$$
+-4a - 2b = 1.
+$$
+
+2. The coefficient of $f_0^{(3)}\Delta t^3$ vanishes (cancel cubic error):
+
+$$
+-\frac{16a+2b}{6} = 0 \quad\Longrightarrow\quad 16a + 2b = 0.
+$$
+
+So the coefficients must satisfy the system
+
+$$
+\begin{cases}
+-4a - 2b = 1,\\
+16a + 2b = 0.
+\end{cases}
+$$
+
+Solving:
+
+$$
+16a + 2b = 0 \;\Rightarrow\; b = -8a,
+$$
+
+$$
+-4a - 2(-8a) = -4a + 16a = 12a = 1 \;\Rightarrow\; a = \dfrac{1}{12},
+$$
+
+$$
+b = -8a = -\dfrac{8}{12} = -\dfrac{2}{3},\quad
+d = -b = \dfrac{2}{3},\quad
+e = -a = -\dfrac{1}{12},\quad
+c = 0.
+$$
+
+Thus
+
+$$
+L
+= \frac{1}{12} f(t_0-2\Delta t) - \frac{2}{3} f(t_0-\Delta t) + 0\cdot f(t_0) + \frac{2}{3} f(t_0+\Delta t) - \frac{1}{12} f(t_0+2\Delta t).
+$$
+
+Factor a common denominator $12$:
+
+$$
+L
+= \frac{-f(t_0+2\Delta t)
+        + 8 f(t_0+\Delta t)
+        - 8 f(t_0-\Delta t)
+        + f(t_0-2\Delta t)}{12}.
+$$
+
+From the construction,
+
+$$
+L = f_0'\Delta t + O(\Delta t^5),
+$$
+
+so dividing by $\Delta t$ gives the final 5‑point central derivative formula:
+
+$$
+f'(t_0)
+\approx
+\frac{-f(t_0+2\Delta t) + 8 f(t_0+\Delta t) - 8 f(t_0-\Delta t) + f(t_0-2\Delta t)}{12\,\Delta t} + O(\Delta t^4).
+$$
 
 ### BDot Implementation Decision
 After evaluating the options, we selected the 5-Point Central Difference Method for the following reasons:
