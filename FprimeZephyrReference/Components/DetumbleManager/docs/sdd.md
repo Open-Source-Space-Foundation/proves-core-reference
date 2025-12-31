@@ -313,12 +313,7 @@ These expansions are the raw material for building a linear combination that iso
 Consider a general linear combination of the five samples:
 
 $$
-L
-= a f(t_0-2\Delta t)
-+ b f(t_0-\Delta t)
-+ c f(t_0)
-+ d f(t_0+\Delta t)
-+ e f(t_0+2\Delta t).
+L = a f(t_0-2\Delta t) + b f(t_0-\Delta t) + c f(t_0) + d f(t_0+\Delta t) + e f(t_0+2\Delta t).
 $$
 
 The goal is to choose $a,b,c,d,e$ so that
@@ -392,7 +387,7 @@ $$
 -4a - 2b = 1,\\[0.2em]
 16a + 2b = 0.
 \end{cases}
-$$[^6_1][^6_3]
+$$
 
 Solving:
 
