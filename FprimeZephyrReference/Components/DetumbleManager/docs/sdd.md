@@ -189,9 +189,20 @@ Given:
 
 In this reference deployment the `BDOT_MAX_THRESHOLD` parameter defaults to $720\,\text{deg/s}$ (see the FPP definition), well under the computed maximum of $1125\ \text{deg/s}$ to provide a buffer for margin of error. Above the configured threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
 
-### Detumble Cooldown Duration Decision
+### `TORQUE_DURATION` Decision
+The `TORQUE_DURATION` parameter defines the duration of a single torque actuation. We can choose this duration based on the maximum angular velocity we wish to control via the B-Dot controller. Given the maximum angular velocity of $1125\ \text{deg/s}$, bound by the magnetic field sampling duration, we can select a torque duration that allows us to control up to this rate.
+
+$$
+\Delta t = \frac{360\ \text{deg}}{\omega_{\max}} = \frac{360\ \text{deg}}{1125\ \text{deg/s}} = 0.32\ \text{s} = 320\ \text{ms}
+$$
+
+We set the `TORQUE_DURATION` parameter to $320ms$ in this reference deployment, which allows us to control angular velocities up to $1125\ \text{deg/s}$ as computed above.
+
+### `COOLDOWN_DURATION` Decision
 The `COOLDOWN_DURATION` parameter defines the time spent waiting after a torque command before sensing angular velocity again. This cooldown period allows the magnetic environment and sensors to settle after actuation so that measurements are not contaminated by residual fields. The LIS2MDL magnetometer takes new measurements every $10ms$ ($100Hz$). To ensure at least one new measurement is available after actuation, we set the `COOLDOWN_DURATION` parameter to $20ms$ in this reference deployment.
 
+#### `DEADBAND_LOWER_THRESHOLD` Decision
+The `DEADBAND_LOWER_THRESHOLD` parameter defines the rotational rate (deg/s) below which detumbling is considered complete and the `IDLE` strategy is selected. This threshold should be set low enough to ensure that the spacecraft is sufficiently detumbled for mission operations, but high enough to prevent the satellite from settling into a poor orientation (like antenna board directly pointed at the sun) or suffer thermal issues due to heat taken on from the sun.
 
 #### BDot Implementation Options
 The B-Dot algorithm estimates the time derivative of the magnetic field vector $\dot{B}$ to compute the required dipole moment for detumbling. Several methods exist for estimating $\dot{B}$ from various sensor inputs:
@@ -291,9 +302,6 @@ k ≤ \frac{43.575491\ G}{7.854\ G/s} \approx 5.55\ A\cdot m^2\cdot s/G
 $$
 
 We set the default `k` gain constant to $3.0 \ s$ in this reference deployment, providing a small margin below the computed maximum to account for uncertainties.
-
-#### `DEADBAND_LOWER_THRESHOLD` Decision
-The `DEADBAND_LOWER_THRESHOLD` parameter defines the rotational rate (deg/s) below which detumbling is considered complete and the `IDLE` strategy is selected. This threshold should be set low enough to ensure that the spacecraft is sufficiently detumbled for mission operations, but high enough to prevent the satellite from settling into a poor orientation (like antenna board directly pointed at the sun) or suffer thermal issues due to heat taken on from the sun.
 
 ## Port Descriptions
 
