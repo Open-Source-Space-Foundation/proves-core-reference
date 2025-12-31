@@ -332,6 +332,7 @@ packet_count = 0
 last_packet = None
 
 modParam1 = 0x70  # SF = 7
+# Options: 1600: 0x0A, 800: 0x18, 400: 0x26, 200: 0x34)
 modParam2 = 0x26  # BW = 406.25 KHz
 modParam3 = 0x01  # CR = 4/5
 
