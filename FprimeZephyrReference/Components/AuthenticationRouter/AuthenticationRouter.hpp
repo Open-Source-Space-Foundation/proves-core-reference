@@ -52,9 +52,34 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
                                     Fw::Buffer& fwBuffer  //!< The buffer
                                     ) override;
 
+    //! Handler implementation for run port
+    //! Port receiving calls from the rate group for periodic command loss time checking
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
+
     //! Checks whether or not the opcode of the packet is in the list of
     //! opcodes that bypassauthentification
     bool BypassesAuthentification(Fw::Buffer& packetBuffer);
+
+    //! Calls safemode when command loss time expires
+    void CallSafeMode();
+
+    //! Updates the command loss start time
+    //! @param write_to_file If true, writes current time to file and returns it. If false, reads from file.
+    //! @return The command loss start time (current time if writing, stored time if reading)
+    Fw::Time update_command_loss_start(bool write_to_file = false);
+
+    Fw::Time get_uptime();
+
+    //! Flag to track if safe mode has been called for the current command loss event
+    std::atomic<bool> m_safeModeCalled;
+
+    //! Cached command loss start time (initialized to zero, loaded from file on first read)
+    Fw::Time m_commandLossStartTime;
+
+    //! mutex for command loss file reading and writing
+    Os::Mutex m_commandLossMutex;
 };
 
 }  // namespace Svc
