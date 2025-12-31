@@ -56,6 +56,11 @@ Now you want to install the firmware to the board.
 cp build-artifacts/zephyr.uf2 [path-to-your-board]
 ```
 
+If this is your first time running the gds, you must create the authentication plug:
+```shell
+make framer-plugin
+```
+
 Finally, run the fprime-gds.
 ```shell
 make gds
