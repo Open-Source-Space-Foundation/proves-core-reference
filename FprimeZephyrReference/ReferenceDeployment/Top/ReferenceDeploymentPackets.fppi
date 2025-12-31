@@ -6,6 +6,7 @@ telemetry packets ReferenceDeploymentPackets {
   # 3 - Satellite Meta Data
   # 4 - Payload Meta Data
   # 5 - Health and Status
+  # 6 - Parameters
   ########################################
 
   packet Beacon id 1 group 1 {
@@ -93,6 +94,12 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
+  packet Detumble id 15 group 3 {
+    ReferenceDeployment.detumbleManager.Mode
+    ReferenceDeployment.detumbleManager.State
+    ReferenceDeployment.detumbleManager.DetumbleStrategy
+  }
+
   ### Payload Meta Data Packets ###
 
   packet CameraDebug id 14 group 4 {
@@ -170,18 +177,12 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
-  packet Detumble id 15 group 6 {
-    ReferenceDeployment.detumbleManager.Mode
-    ReferenceDeployment.detumbleManager.State
-    ReferenceDeployment.detumbleManager.DetumbleStrategy
-  }
-
-  packet DetumblePerformance id 16 group 6 {
+  packet DetumblePerformance id 16 group 5 {
     ReferenceDeployment.detumbleManager.TorqueDuration
     ReferenceDeployment.detumbleManager.TimeBetweenMagneticFieldReadings
   }
 
-  packet DetumbleParams id 17 group 100 {
+  packet DetumbleParams id 17 group 6 {
     ReferenceDeployment.detumbleManager.GainParam
     ReferenceDeployment.detumbleManager.BdotMaxThresholdParam
     ReferenceDeployment.detumbleManager.DeadbandUpperThresholdParam
@@ -191,7 +192,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.HysteresisAxisParam
   }
 
-  packet DetumbleXPlusCoilParams id 18 group 100 {
+  packet DetumbleXPlusCoilParams id 18 group 6 {
     # X+ coil parameters
     ReferenceDeployment.detumbleManager.XPlusVoltageParam
     ReferenceDeployment.detumbleManager.XPlusResistanceParam
@@ -201,7 +202,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.XPlusShapeParam
   }
 
-  packet DetumbleXMinusCoilParams id 19 group 100 {
+  packet DetumbleXMinusCoilParams id 19 group 6 {
     # X- coil parameters
     ReferenceDeployment.detumbleManager.XMinusVoltageParam
     ReferenceDeployment.detumbleManager.XMinusResistanceParam
@@ -211,7 +212,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.XMinusShapeParam
   }
 
-  packet DetumbleYPlusCoilParams id 20 group 100 {
+  packet DetumbleYPlusCoilParams id 20 group 6 {
     # Y+ coil parameters
     ReferenceDeployment.detumbleManager.YPlusVoltageParam
     ReferenceDeployment.detumbleManager.YPlusResistanceParam
@@ -221,7 +222,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.YPlusShapeParam
   }
 
-  packet DetumbleYMinusCoilParams id 21 group 100 {
+  packet DetumbleYMinusCoilParams id 21 group 6 {
     # Y- coil parameters
     ReferenceDeployment.detumbleManager.YMinusVoltageParam
     ReferenceDeployment.detumbleManager.YMinusResistanceParam
@@ -231,7 +232,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.YMinusShapeParam
   }
 
-  packet DetumbleZMinusCoilParams id 22 group 100 {
+  packet DetumbleZMinusCoilParams id 22 group 6 {
     # Z- coil parameters
     ReferenceDeployment.detumbleManager.ZMinusVoltageParam
     ReferenceDeployment.detumbleManager.ZMinusResistanceParam
