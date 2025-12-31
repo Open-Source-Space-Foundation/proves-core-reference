@@ -26,7 +26,7 @@ Magnetorquer ::~Magnetorquer() {}
 //  Public helper methods
 // ----------------------------------------------------------------------
 
-std::int8_t Magnetorquer ::magneticMomentToCurrent(double magnetic_moment_component) {
+std::int8_t Magnetorquer ::magneticMomentToCurrent(double magnetic_moment_component) const {
     // Calculate target current
     double target_current = this->computeTargetCurrent(magnetic_moment_component);
 
@@ -45,7 +45,7 @@ std::int8_t Magnetorquer ::magneticMomentToCurrent(double magnetic_moment_compon
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-double Magnetorquer ::getCoilArea() {
+double Magnetorquer ::getCoilArea() const {
     // Calculate area based on coil shape
     if (this->m_shape == CoilShape::CIRCULAR) {
         return PI * std::pow(this->m_diameter / 2.0, 2.0);
@@ -55,7 +55,7 @@ double Magnetorquer ::getCoilArea() {
     return this->m_width * this->m_length;
 }
 
-double Magnetorquer ::computeTargetCurrent(double magnetic_moment_component) {
+double Magnetorquer ::computeTargetCurrent(double magnetic_moment_component) const {
     // Get coil area
     double area = this->getCoilArea();
 
@@ -68,7 +68,7 @@ double Magnetorquer ::computeTargetCurrent(double magnetic_moment_component) {
     return magnetic_moment_component / (this->m_turns * area);
 }
 
-double Magnetorquer ::getMaxCoilCurrent() {
+double Magnetorquer ::getMaxCoilCurrent() const {
     // Avoid division by zero
     if (this->m_resistance == 0.0) {
         return 0.0;
@@ -78,7 +78,7 @@ double Magnetorquer ::getMaxCoilCurrent() {
     return this->m_voltage / this->m_resistance;
 }
 
-double Magnetorquer ::computeClampedCurrent(double target_current) {
+double Magnetorquer ::computeClampedCurrent(double target_current) const {
     // Get maximum coil current
     double max_current = this->getMaxCoilCurrent();
 
@@ -90,7 +90,7 @@ double Magnetorquer ::computeClampedCurrent(double target_current) {
     return target_current;
 }
 
-std::int8_t Magnetorquer ::scaled8BitCurrent(double clampedCurrent) {
+std::int8_t Magnetorquer ::scaled8BitCurrent(double clampedCurrent) const {
     // Get maximum coil current
     double max_current = this->getMaxCoilCurrent();
 

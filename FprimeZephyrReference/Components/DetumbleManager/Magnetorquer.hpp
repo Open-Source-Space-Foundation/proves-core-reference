@@ -39,7 +39,7 @@ class Magnetorquer {
     //! Calculate the target current required to generate a specific magnetic moment.
     std::int8_t magneticMomentToCurrent(
         double magnetic_moment_component  //<! Magnetic moment component (x, y, or z) in A·m²
-    );
+    ) const;
 
   private:
     // ----------------------------------------------------------------------
@@ -54,7 +54,7 @@ class Magnetorquer {
     //! w is the width (m)
     //! l is the length (m)
     //! d is the diameter (m)
-    double getCoilArea();
+    double getCoilArea() const;
 
     //! Compute the maximum coil current based on its voltage and resistance.
     //!
@@ -63,7 +63,7 @@ class Magnetorquer {
     //! I_max is the maximum current (A)
     //! V is the voltage (V)
     //! R is the resistance (Ω)
-    double getMaxCoilCurrent();
+    double getMaxCoilCurrent() const;
 
     //! Compute the target current required to generate a specific dipole moment.
     //!
@@ -74,7 +74,7 @@ class Magnetorquer {
     //! N is the number of turns
     //! A is the coil area (m²)
     double computeTargetCurrent(double dipole_moment_component  //<! Dipole moment component (x, y, or z) in A·m²
-    );
+    ) const;
 
     //! Clamp the target current to the maximum coil current
     //!
@@ -84,7 +84,7 @@ class Magnetorquer {
     //! I is the target current (A)
     //! I_max is the maximum current (A)
     double computeClampedCurrent(double target_current  //<! Target current (A)
-    );
+    ) const;
 
     //! Scale the clamped current to int8_t range [-127, 127].
     //!
@@ -94,7 +94,7 @@ class Magnetorquer {
     //! I_clamped is the clamped current (A)
     //! I_max is the maximum current (A)
     std::int8_t scaled8BitCurrent(double clampedCurrent  //<! Clamped current (A)
-    );
+    ) const;
 
   public:
     // ----------------------------------------------------------------------
