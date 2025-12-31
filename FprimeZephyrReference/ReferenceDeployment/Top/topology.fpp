@@ -61,6 +61,7 @@ module ReferenceDeployment {
     instance gpioSbandRxEn
     instance gpioSbandTxEn
     instance gpioSbandIRQ
+    instance gpioSbandBusy
     instance face4LoadSwitch
     instance face0LoadSwitch
     instance face1LoadSwitch

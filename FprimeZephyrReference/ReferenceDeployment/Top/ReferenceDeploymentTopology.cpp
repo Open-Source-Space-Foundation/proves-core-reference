@@ -30,6 +30,7 @@ static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(s
 static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
 static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
 static const struct gpio_dt_spec sbandTxEnIRQ = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io1), gpios);
+static const struct gpio_dt_spec sbandBusyGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io0), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -89,6 +90,7 @@ void configureTopology() {
     gpioSbandRxEn.open(sbandRxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioSbandTxEn.open(sbandTxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioSbandIRQ.open(sbandTxEnIRQ, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
+    gpioSbandBusy.open(sbandBusyGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
