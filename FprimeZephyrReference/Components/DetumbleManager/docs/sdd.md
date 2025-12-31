@@ -408,11 +408,7 @@ Thus
 
 $$
 L
-= \frac{1}{12} f(t_0-2\Delta t)
-  - \frac{2}{3} f(t_0-\Delta t)
-  + 0\cdot f(t_0)
-  + \frac{2}{3} f(t_0+\Delta t)
-  - \frac{1}{12} f(t_0+2\Delta t).
+= \frac{1}{12} f(t_0-2\Delta t) - \frac{2}{3} f(t_0-\Delta t) + 0\cdot f(t_0) + \frac{2}{3} f(t_0+\Delta t) - \frac{1}{12} f(t_0+2\Delta t).
 $$
 
 Factor a common denominator $12$:
@@ -436,11 +432,7 @@ so dividing by $\Delta t$ gives the final 5‑point central derivative formula:
 $$
 f'(t_0)
 \approx
-\frac{-f(t_0+2\Delta t)
-      + 8 f(t_0+\Delta t)
-      - 8 f(t_0-\Delta t)
-      + f(t_0-2\Delta t)}{12\,\Delta t}
-+ O(\Delta t^4).
+\frac{-f(t_0+2\Delta t) + 8 f(t_0+\Delta t) - 8 f(t_0-\Delta t) + f(t_0-2\Delta t)}{12\,\Delta t} + O(\Delta t^4).
 $$
 
 ### BDot Implementation Decision
