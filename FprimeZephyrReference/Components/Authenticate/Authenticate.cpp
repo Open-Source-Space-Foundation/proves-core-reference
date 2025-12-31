@@ -95,6 +95,8 @@ bool Authenticate::computeRSA(const U8* data,
     // IMRPOTANT NOTE!! THIS IS ALL DEMO CODE AN ALSO SUPER NOT SAFE TO RUN< JUST HACKING IT FOR NOW
     // DEMO PURPOSES SO WE KNOW IF WE CAN DO THESE THINGS ON A PICO2
 
+    constexpr size_t kRSAOutputLength = 16;  // have this maych with HMAC rn
+
     // Check if the output buffer is large enough to hold the hash
     if (output == nullptr || outputSize < 32) {
         // Need at least 32 bytes for SHA-256 hash output
@@ -201,12 +203,15 @@ bool Authenticate::computeRSA(const U8* data,
     }
 
     // Copy the revealed hash to output
-    std::memcpy(output, &decrypted[hashStart], 32);
+    // std::memcpy(output, &decrypted[hashStart], 32);
 
     // Clean up
     delete[] decrypted;
     mbedtls_pk_free(&pk);
 
+    U8 Output[32];
+    // Copy first 16 bytes to output buffer
+    std::memcpy(output, Output, kRSAOutputLength);
     return true;
 }
 
@@ -351,6 +356,23 @@ bool Authenticate::validateHMAC(const U8* data,
     return hmacValid;
 }
 
+bool Components::Authenticate::validateRSA(const U8* data,
+                                           FwSizeType dataLength,
+                                           const Fw::String& key,
+                                           const U8* securityTrailer) {
+    constexpr size_t kHmacOutputLength = 16;
+    U8 computedHmac[kHmacOutputLength];
+
+    if (!this->computeRSA(data, dataLength, key, computedHmac, kHmacOutputLength)) {
+        return false;
+    }
+
+    // Compare computed HMAC with expected HMAC from security trailer
+    bool hmacValid = this->compareHMAC(computedHmac, securityTrailer, kHmacOutputLength);
+
+    return hmacValid;
+}
+
 bool Authenticate::validateHeader(Fw::Buffer& data,
                                   ComCfg::FrameContext& contextOut,
                                   U8* securityHeader,
@@ -417,7 +439,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     const FwSizeType dataToAuthenticateLength = data.getSize() - SECURITY_TRAILER_LENGTH;
 
     // Validate HMAC - compute over security header + payload, compare with trailer
-    bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
+    bool hmacValid = this->validateRSA(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
 
     if (!hmacValid) {
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);

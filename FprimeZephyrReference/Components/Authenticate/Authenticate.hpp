@@ -81,6 +81,8 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool validateHMAC(const U8* data, FwSizeType dataLength, const Fw::String& key, const U8* securityTrailer);
 
+    bool validateRSA(const U8* data, FwSizeType dataLength, const Fw::String& key, const U8* securityTrailer);
+
     //! Validate and extract security header information
     //! \param data: Input buffer containing security header + data + security trailer
     //! \param contextOut: Frame context (modified if packet is rejected)

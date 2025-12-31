@@ -7,6 +7,7 @@ The Authenticate component verifies the integrity and authenticity of CCSDS comm
 The Authenticate component sits in the uplink communications path between the `TcDeframer` and `SpacePacketDeframer` components. It adds a authenticated tag to the config of each packet before they are deframed and routed to the command dispatcher.  The component implements security features including:
 
 - HMAC-based authentication per CCSDS 355.0-B-2
+- RSA-Signature Verification
 - Security Association (SA) management with SPI-based key selection
 - Sequence number validation and anti-replay protection
 
