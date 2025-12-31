@@ -29,14 +29,14 @@ TEST_F(MagnetorquerTest, RectangularAreaCalculation) {
 
     // Test 100% positive
     // Expected: 127
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.0), 127);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.0), 127);
 
     // Test 50% positive
     // Target Dipole = 0.5 A*m^2 -> Current = 0.25 A -> 50% of max -> ~64
-    EXPECT_NEAR(m_torquer.dipoleMomentToCurrent(0.5), 64, 1);
+    EXPECT_NEAR(m_torquer.magneticMomentToCurrent(0.5), 64, 1);
 
     // Test 100% negative
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(-1.0), -127);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(-1.0), -127);
 }
 
 TEST_F(MagnetorquerTest, CircularAreaCalculation) {
@@ -46,38 +46,38 @@ TEST_F(MagnetorquerTest, CircularAreaCalculation) {
     // Max Current = 0.5 A
     // Max Dipole = 100 * 0.5 * 0.0314159 = 1.570795
 
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.570795), 127);
-    EXPECT_NEAR(m_torquer.dipoleMomentToCurrent(1.570795 / 2.0), 64, 1);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.570795), 127);
+    EXPECT_NEAR(m_torquer.magneticMomentToCurrent(1.570795 / 2.0), 64, 1);
 }
 
 TEST_F(MagnetorquerTest, Clamping) {
     // Max Dipole is 1.0 (from Rectangular setup)
     // Request 2.0
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(2.0), 127);
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(-2.0), -127);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(2.0), 127);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(-2.0), -127);
 }
 
 TEST_F(MagnetorquerTest, DirectionSign) {
     m_torquer.m_direction_sign = Magnetorquer::NEGATIVE;
     // Request positive dipole -> should result in negative drive value because of sign flip
     // Max Dipole 1.0 -> Current 0.5A -> Scaled 127 -> * -1 -> -127
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.0), -127);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.0), -127);
 }
 
 TEST_F(MagnetorquerTest, ZeroResistance) {
     m_torquer.m_resistance = 0.0;
     // Max current calculation should handle div by zero (return 0.0)
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.0), 0);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.0), 0);
 }
 
 TEST_F(MagnetorquerTest, ZeroTurns) {
     m_torquer.m_turns = 0.0;
     // computeTargetCurrent: if turns == 0, return 0.0.
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.0), 0);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.0), 0);
 }
 
 TEST_F(MagnetorquerTest, ZeroArea) {
     m_torquer.m_width = 0.0;
     // computeTargetCurrent: if area == 0, return 0.0.
-    EXPECT_EQ(m_torquer.dipoleMomentToCurrent(1.0), 0);
+    EXPECT_EQ(m_torquer.magneticMomentToCurrent(1.0), 0);
 }

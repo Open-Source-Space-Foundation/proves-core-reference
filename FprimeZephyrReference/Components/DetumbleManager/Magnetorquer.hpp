@@ -47,6 +47,7 @@ class Magnetorquer {
     // ----------------------------------------------------------------------
 
     //! Compute the coil area based on its shape and dimensions.
+    //!
     //! For Rectangular: A = w * l
     //! For Circular: A = π * (d/2)^2
     //!
