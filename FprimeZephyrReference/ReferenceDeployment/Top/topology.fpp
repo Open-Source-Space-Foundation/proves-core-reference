@@ -5,6 +5,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
+    rateGroup50Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
+    instance rateGroup50Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -225,6 +227,10 @@ module ReferenceDeployment {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
+      # Ultra high rate (50Hz) rate group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
+      rateGroup50Hz.RateGroupMemberOut[0] -> detumbleManager.run
+
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
@@ -238,7 +244,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[9] -> downlinkDelay.run
       rateGroup10Hz.RateGroupMemberOut[10] -> sband.run
       rateGroup10Hz.RateGroupMemberOut[11] -> comDelaySband.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
+      # rateGroup10Hz.RateGroupMemberOut[12] -> detumbleManager.run
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -319,8 +325,8 @@ module ReferenceDeployment {
     }
 
     connections DetumbleManager {
-      detumbleManager.angularVelocityGet -> imuManager.angularVelocityGet
       detumbleManager.magneticFieldGet -> imuManager.magneticFieldGet
+      detumbleManager.angularVelocityMagnitudeGet -> imuManager.angularVelocityMagnitudeGet
       detumbleManager.magneticFieldSamplingPeriodGet -> imuManager.magneticFieldSamplingPeriodGet
 
       detumbleManager.xPlusStart -> drv2605Face0Manager.start
@@ -335,6 +341,7 @@ module ReferenceDeployment {
       detumbleManager.yMinusStop -> drv2605Face3Manager.stop
       detumbleManager.zMinusStop -> drv2605Face5Manager.stop
 
+      detumbleManager.getSystemMode -> modeManager.getMode
       modeManager.modeChanged -> detumbleManager.systemModeChanged
     }
 

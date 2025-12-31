@@ -5,7 +5,6 @@
 
 #include "BDot.hpp"
 
-#include <cerrno>
 #include <cmath>
 
 namespace Components {
@@ -22,113 +21,78 @@ BDot ::~BDot() {}
 //  public helper methods
 // ----------------------------------------------------------------------
 
-std::array<double, 3> BDot ::getDipoleMoment(std::array<double, 3> magnetic_field,
-                                             uint32_t reading_seconds,
-                                             uint32_t reading_useconds,
-                                             double gain,
-                                             std::chrono::microseconds magnetometer_sampling_period_us) {
-    errno = 0;
-
-    // Compute the time delta between current and previous reading
-    TimePoint reading_time =
-        TimePoint{std::chrono::seconds(reading_seconds) + std::chrono::microseconds(reading_useconds)};
-    std::chrono::microseconds dt_us = reading_time - this->m_previous_magnetic_field_reading_time;
-
-    // Validate time delta
-    if (!this->validateTimeDelta(dt_us, magnetometer_sampling_period_us)) {
-        // Unable to compute dipole moment
-        // If errno is set to EAGAIN, this is the first reading or too much time has passed
-        // If errno is set to EINVAL, readings are out of order or too close together
-
-        // Update previous magnetic field
-        this->updatePreviousReading(magnetic_field, reading_time);
-
-        // Return zero dipole moment
-        return std::array<double, 3>{0.0, 0.0, 0.0};
-    }
-
-    // Store time delta between last two readings
-    this->m_previous_time_delta_us = dt_us;
-
-    // Compute dB/dt
-    std::array<double, 3> dB_dt = this->dB_dt(magnetic_field, dt_us);
-
-    // Compute magnitude of magnetic field
-    double magnitude = this->getMagnitude(magnetic_field);
-    if (magnitude < 1e-6) {
-        // Magnitude too small to compute dipole moment
-        errno = EDOM;
-        return std::array<double, 3>{0.0, 0.0, 0.0};
-    }
+std::array<double, 3> BDot ::getMagneticMoment() {
+    // Compute BDot
+    std::array<double, 3> b_dot = this->computeBDot();
 
     // Compute dipole moment components
-    double moment_x = gain * dB_dt[0] / magnitude;
-    double moment_y = gain * dB_dt[1] / magnitude;
-    double moment_z = gain * dB_dt[2] / magnitude;
-
-    // Update previous magnetic field
-    this->updatePreviousReading(magnetic_field, reading_time);
+    double moment_x = -this->m_gain * b_dot[0];
+    double moment_y = -this->m_gain * b_dot[1];
+    double moment_z = -this->m_gain * b_dot[2];
 
     // Return result
     return std::array<double, 3>{moment_x, moment_y, moment_z};
 }
 
-std::chrono::microseconds BDot ::getTimeBetweenReadings() {
-    return this->m_previous_time_delta_us;
+void BDot ::configure(double gain,
+                      std::chrono::microseconds magnetometer_sampling_period,
+                      std::chrono::microseconds rate_group_max_period) {
+    this->m_gain = gain;
+    this->m_magnetometer_sampling_period = magnetometer_sampling_period;
+    this->m_rate_group_max_period = rate_group_max_period;
+}
+
+void BDot ::addSample(const std::array<double, 3>& magnetic_field, std::chrono::microseconds timestamp) {
+    // Add sample if there is space
+    if (this->m_sample_count >= SAMPLING_SET_SIZE) {
+        return;
+    }
+    this->m_sampling_set[this->m_sample_count] = {magnetic_field, timestamp};
+    this->m_sample_count++;
+}
+
+bool BDot ::samplingComplete() const {
+    return this->m_sample_count >= SAMPLING_SET_SIZE;
+}
+
+std::chrono::microseconds BDot ::getTimeBetweenSamples() const {
+    if (this->m_sample_count < 2) {
+        return std::chrono::microseconds(0);
+    }
+
+    std::chrono::microseconds first_timestamp = this->m_sampling_set[0].timestamp;
+    std::chrono::microseconds last_timestamp = this->m_sampling_set[this->m_sample_count - 1].timestamp;
+
+    return last_timestamp - first_timestamp;
+}
+
+void BDot ::emptySampleSet() {
+    this->m_sample_count = 0;
 }
 
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-std::array<double, 3> BDot ::dB_dt(std::array<double, 3> magnetic_field, std::chrono::microseconds dt_us) {
-    // Extract components for readability
-    double magnetic_field_x = magnetic_field[0];
-    double magnetic_field_y = magnetic_field[1];
-    double magnetic_field_z = magnetic_field[2];
-    double previous_magnetic_field_x = this->m_previous_magnetic_field[0];
-    double previous_magnetic_field_y = this->m_previous_magnetic_field[1];
-    double previous_magnetic_field_z = this->m_previous_magnetic_field[2];
-
-    // Convert dt to seconds
-    double dt_seconds = dt_us.count() / 1e6;
-
-    // Compute the derivative for each axis
-    double dBx_dt = (magnetic_field_x - previous_magnetic_field_x) / dt_seconds;
-    double dBy_dt = (magnetic_field_y - previous_magnetic_field_y) / dt_seconds;
-    double dBz_dt = (magnetic_field_z - previous_magnetic_field_z) / dt_seconds;
-
-    // Return the derivative vector
-    return std::array<double, 3>{dBx_dt, dBy_dt, dBz_dt};
-}
-
-double BDot ::getMagnitude(std::array<double, 3> vector) {
-    return std::sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
-}
-
-void BDot ::updatePreviousReading(std::array<double, 3> magnetic_field, TimePoint reading) {
-    this->m_previous_magnetic_field = magnetic_field;
-    this->m_previous_magnetic_field_reading_time = reading;
-}
-
-bool BDot ::validateTimeDelta(std::chrono::microseconds dt_us, std::chrono::microseconds min_dt_us) {
-    // Ensure magnetorquer readings are not faster than 100Hz magnetometer ODR
-    if (min_dt_us > dt_us) {
-        // Out of order readings or readings taken too quickly, cannot compute dipole moment
-        errno = EINVAL;
-        return false;
+std::array<double, 3> BDot ::computeBDot() const {
+    // Get time delta between samples in seconds
+    double dt_seconds = this->m_magnetometer_sampling_period.count() / 1e6;
+    if (dt_seconds <= 0.0) {
+        return std::array<double, 3>{0.0, 0.0, 0.0};
     }
 
-    // TODO(nateinaction): Take this in as an argument
-    // TODO(nateinaction): The 600ms limitation needs to be recorded in documentation, this prevents detumble from
-    // working on slower rate groups Set previous magnetic field if last reading time was more than 600ms ago
-    if (dt_us > std::chrono::milliseconds(600)) {
-        // First reading or too much time has passed, cannot compute dipole moment
-        errno = EAGAIN;
-        return false;
-    }
+    // Compute BDot using 5-point Central Difference Formula
+    double x = (-1.0 * this->m_sampling_set[4].magnetic_field[0] + 8.0 * this->m_sampling_set[3].magnetic_field[0] +
+                -8.0 * this->m_sampling_set[1].magnetic_field[0] + 1.0 * this->m_sampling_set[0].magnetic_field[0]) /
+               (12.0 * dt_seconds);
+    double y = (-1.0 * this->m_sampling_set[4].magnetic_field[1] + 8.0 * this->m_sampling_set[3].magnetic_field[1] +
+                -8.0 * this->m_sampling_set[1].magnetic_field[1] + 1.0 * this->m_sampling_set[0].magnetic_field[1]) /
+               (12.0 * dt_seconds);
+    double z = (-1.0 * this->m_sampling_set[4].magnetic_field[2] + 8.0 * this->m_sampling_set[3].magnetic_field[2] +
+                -8.0 * this->m_sampling_set[1].magnetic_field[2] + 1.0 * this->m_sampling_set[0].magnetic_field[2]) /
+               (12.0 * dt_seconds);
 
-    return true;
+    return std::array<double, 3>{x, y, z};
 }
 
 }  // namespace Components

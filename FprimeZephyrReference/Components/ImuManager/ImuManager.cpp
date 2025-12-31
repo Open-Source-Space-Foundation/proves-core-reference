@@ -6,6 +6,12 @@
 #include "FprimeZephyrReference/Components/ImuManager/ImuManager.hpp"
 
 #include <Fw/Types/Assert.hpp>
+#include <cmath>
+
+namespace {
+constexpr double PI = 3.14159265358979323846;
+constexpr double RAD_TO_DEG = 180.0 / PI;
+}  // namespace
 
 namespace Components {
 
@@ -103,6 +109,27 @@ Drv::AngularVelocity ImuManager ::angularVelocityGet_handler(FwIndexType portNum
 
     condition = Fw::Success::SUCCESS;
     return angular_velocity;
+}
+
+F64 ImuManager ::angularVelocityMagnitudeGet_handler(FwIndexType portNum,
+                                                     Fw::Success& condition,
+                                                     const Components::AngularUnit& unit) {
+    condition = Fw::Success::FAILURE;
+
+    // Get angular velocity
+    Drv::AngularVelocity angular_velocity = this->angularVelocityGet_handler(0, condition);
+
+    // Compute magnitude
+    F64 magnitude = std::sqrt(angular_velocity.get_x() * angular_velocity.get_x() +
+                              angular_velocity.get_y() * angular_velocity.get_y() +
+                              angular_velocity.get_z() * angular_velocity.get_z());
+
+    // Convert to requested unit
+    if (unit == AngularUnit::DEG_PER_SEC) {
+        return magnitude * RAD_TO_DEG;
+    }
+
+    return magnitude;
 }
 
 Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw::Success& condition) {

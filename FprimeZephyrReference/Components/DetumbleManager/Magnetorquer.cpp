@@ -8,6 +8,10 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+constexpr double PI = 3.14159265358979323846;
+}
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -22,33 +26,36 @@ Magnetorquer ::~Magnetorquer() {}
 //  Public helper methods
 // ----------------------------------------------------------------------
 
-std::int8_t Magnetorquer ::dipoleMomentToCurrent(double dipole_moment_component) {
+std::int8_t Magnetorquer ::magneticMomentToCurrent(double magnetic_moment_component) const {
     // Calculate target current
-    double target_current = this->computeTargetCurrent(dipole_moment_component);
+    double target_current = this->computeTargetCurrent(magnetic_moment_component);
 
     // Clamp current and scale to int8_t range
-    std::int8_t clampedCurrent = this->computeClampedCurrent(target_current);
+    double clampedCurrent = this->computeClampedCurrent(target_current);
+
+    // Scale to int8_t
+    std::int8_t scaledCurrent = this->scaled8BitCurrent(clampedCurrent);
 
     // Adjust sign so that a positive drive level always produces the same dipole / torque
     // direction, compensating for the opposite physical orientation of the "minus" coils.
-    return this->m_direction_sign * clampedCurrent;
+    return this->m_direction_sign * scaledCurrent;
 }
 
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
 
-double Magnetorquer ::getCoilArea() {
+double Magnetorquer ::getCoilArea() const {
     // Calculate area based on coil shape
     if (this->m_shape == CoilShape::CIRCULAR) {
-        return this->PI * std::pow(this->m_diameter / 2.0, 2.0);
+        return PI * std::pow(this->m_diameter / 2.0, 2.0);
     }
 
     // Default to Rectangular
     return this->m_width * this->m_length;
 }
 
-double Magnetorquer ::computeTargetCurrent(double dipole_moment_component) {
+double Magnetorquer ::computeTargetCurrent(double magnetic_moment_component) const {
     // Get coil area
     double area = this->getCoilArea();
 
@@ -58,10 +65,10 @@ double Magnetorquer ::computeTargetCurrent(double dipole_moment_component) {
     }
 
     // Calculate target current
-    return dipole_moment_component / (this->m_turns * area);
+    return magnetic_moment_component / (this->m_turns * area);
 }
 
-double Magnetorquer ::getMaxCoilCurrent() {
+double Magnetorquer ::getMaxCoilCurrent() const {
     // Avoid division by zero
     if (this->m_resistance == 0.0) {
         return 0.0;
@@ -71,18 +78,21 @@ double Magnetorquer ::getMaxCoilCurrent() {
     return this->m_voltage / this->m_resistance;
 }
 
-std::int8_t Magnetorquer ::computeClampedCurrent(double target_current) {
-    double clampedCurrent;
-
+double Magnetorquer ::computeClampedCurrent(double target_current) const {
     // Get maximum coil current
     double max_current = this->getMaxCoilCurrent();
 
     // Clamp to max current
     if (std::fabs(target_current) > max_current) {
-        clampedCurrent = (target_current > 0) ? max_current : -max_current;
-    } else {
-        clampedCurrent = target_current;
+        return (target_current > 0) ? max_current : -max_current;
     }
+
+    return target_current;
+}
+
+std::int8_t Magnetorquer ::scaled8BitCurrent(double clampedCurrent) const {
+    // Get maximum coil current
+    double max_current = this->getMaxCoilCurrent();
 
     // Avoid division by zero
     if (max_current == 0.0) {

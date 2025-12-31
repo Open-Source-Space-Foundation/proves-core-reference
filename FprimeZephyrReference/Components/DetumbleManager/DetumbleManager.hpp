@@ -94,30 +94,34 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Actions to perform when exiting the COOLDOWN state
     void stateExitCooldownActions();
 
-    //! Actions to perform in the SENSING state
-    void stateSensingActions();
+    //! Actions to perform in the SENSING_ANGULAR_VELOCITY state
+    void stateSensingAngularVelocityActions();
 
-    //! Actions to perform in the TORQUING state
-    void stateTorquingActions();
+    //! Actions to perform when entering the SENSING_ANGULAR_VELOCITY state
+    void stateEnterSensingAngularVelocityActions();
 
-    //! Actions to perform when entering the TORQUING state
-    void stateEnterTorquingActions();
+    //! Actions to perform when exiting the SENSING_ANGULAR_VELOCITY state
+    void stateExitSensingAngularVelocityActions(F64 angular_velocity_magnetude_deg_sec);
 
-    //! Actions to perform when exiting the TORQUING state
-    void stateExitTorquingActions();
+    //! Actions to perform in the SENSING_MAGNETIC_FIELD state
+    void stateSensingMagneticFieldActions();
 
-    // Detumble torqueing action based on BDot strategy
-    void bdotTorqueAction();
+    //! Actions to perform in the ACTUATING_BDOT state
+    void stateActuatingBDotActions();
 
-    // Detumble torqueing action based on hysteresis strategy
-    void hysteresisTorqueAction();
+    //! Actions to perform when entering the ACTUATING_BDOT state
+    void stateEnterActuatingBDotActions();
+
+    //! Actions to perform when exiting the ACTUATING_BDOT state
+    void stateExitActuatingBDotActions();
+
+    //! Actions to perform in the ACTUATING_HYSTERESIS state
+    void stateActuatingHysteresisActions();
 
   private:
     // ----------------------------------------------------------------------
     //  Private member variables
     // ----------------------------------------------------------------------
-
-    const double PI = 3.14159265358979323846;  //!< Mathematical constant pi
 
     BDot m_bdot;                           //!< B-Dot detumble algorithm class
     StrategySelector m_strategy_selector;  //!< Detumble helper class
@@ -133,6 +137,8 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
 
     Fw::Time m_cooldown_start_time = Fw::ZERO_TIME;  //!< Cooldown start time
     Fw::Time m_torque_start_time = Fw::ZERO_TIME;    //!< Torque start time
+
+    Fw::Time last_cycle_time = Fw::ZERO_TIME;  //!< Time of last run cycle
 };
 
 }  // namespace Components

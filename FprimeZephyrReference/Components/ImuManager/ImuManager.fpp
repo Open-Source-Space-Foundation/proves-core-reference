@@ -1,6 +1,7 @@
 module Components {
     port AccelerationGet(ref condition: Fw.Success) -> Drv.Acceleration
     port AngularVelocityGet(ref condition: Fw.Success)-> Drv.AngularVelocity
+    port AngularVelocityMagnitudeGet(ref condition: Fw.Success, unit: AngularUnit) -> F64
     port MagneticFieldGet(ref condition: Fw.Success) -> Drv.MagneticField
     port SamplingPeriodGet(ref condition: Fw.Success) -> Fw.TimeIntervalValue
 
@@ -33,6 +34,12 @@ module Components {
         ROTATED_90_DEG_CCW @< Rotated 90 degrees counter-clockwise
         ROTATED_180_DEG @< Rotated 180 degrees
     }
+
+    @ Units for angular velocity
+    enum AngularUnit {
+        RAD_PER_SEC @< Radians per second
+        DEG_PER_SEC @< Degrees per second
+    }
 }
 
 module Components {
@@ -49,6 +56,9 @@ module Components {
 
         @ Port to read the current angular velocity in rad/s.
         sync input port angularVelocityGet: AngularVelocityGet
+
+        @ Port to read the current angular velocity magnitude.
+        sync input port angularVelocityMagnitudeGet: AngularVelocityMagnitudeGet
 
         @ Port to read the current magnetic field in gauss.
         sync input port magneticFieldGet: MagneticFieldGet

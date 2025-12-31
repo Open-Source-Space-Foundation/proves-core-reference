@@ -10,9 +10,11 @@ module Components {
     }
 
     enum DetumbleState {
-        COOLDOWN, @< Waiting for magnetometers to settle
-        SENSING,  @< Reading magnetic field
-        TORQUING, @< Applying torque
+        COOLDOWN,                 @< Waiting for magnetometers to settle
+        SENSING_ANGULAR_VELOCITY, @< Reading angular velocity
+        SENSING_MAGNETIC_FIELD,   @< Reading magnetic field
+        ACTUATING_BDOT,           @< Actuating the magnetorquers via B-Dot
+        ACTUATING_HYSTERESIS,     @< Actuating the magnetorquers via hysteresis
     }
 
     enum DetumbleStrategy {
@@ -44,7 +46,7 @@ module Components {
         ### Parameters ###
 
         @ Parameter for storing the upper rotational threshold in deg/s, above which bdot detumbling is replaced by hysteresis detumbling. Given by ω_max = min(2π/∆t, π/2δT) where ∆t is the duration of actuation and δT is the time elapsed between the measurement of Ḃ.
-        param BDOT_MAX_THRESHOLD: F64 default 150.0 id 40
+        param BDOT_MAX_THRESHOLD: F64 default 720.0 id 40
 
         @ Parameter for storing the upper deadband rotational threshold in deg/s
         param DEADBAND_UPPER_THRESHOLD: F64 default 8.0 id 41
@@ -56,20 +58,28 @@ module Components {
         param COOLDOWN_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 3
 
         @ Parameter for storing the detumble torquing duration
-        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 20000} id 38
+        param TORQUE_DURATION: Fw.TimeIntervalValue default {seconds = 0, useconds = 320000} id 38
 
         @ Parameter for storing the gain used in the B-Dot algorithm
-        param GAIN: F64 default 2.0 id 39
+        param GAIN: F64 default 3.0 id 39
 
         @ Parameter for storing the hysteresis axis
         param HYSTERESIS_AXIS: HysteresisAxis default HysteresisAxis.X_AXIS id 42
 
         ### Magnetorquer Properties Parameters ###
 
+        @ Number of turns for all coils on the X Axis
+        param X_TURNS: F64 default 96.0 id 11
+
+        @ Number of turns for all coils on the Y Axis
+        param Y_TURNS: F64 default 96.0 id 21
+
+        @ Number of turns for all coils on the Z Axis
+        param Z_TURNS: F64 default 153.0 id 31
+
         # --- X+ Coil ---
         param X_PLUS_VOLTAGE: F64 default 3.3 id 9
         param X_PLUS_RESISTANCE: F64 default 13 id 10
-        param X_PLUS_TURNS: F64 default 48.0 id 11
         param X_PLUS_LENGTH: F64 default 0.053 id 12
         param X_PLUS_WIDTH: F64 default 0.045 id 13
         param X_PLUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 33
@@ -77,7 +87,6 @@ module Components {
         # --- X- Coil ---
         param X_MINUS_VOLTAGE: F64 default 3.3 id 14
         param X_MINUS_RESISTANCE: F64 default 13 id 15
-        param X_MINUS_TURNS: F64 default 48.0 id 16
         param X_MINUS_LENGTH: F64 default 0.053 id 17
         param X_MINUS_WIDTH: F64 default 0.045 id 18
         param X_MINUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 34
@@ -85,7 +94,6 @@ module Components {
         # --- Y+ Coil ---
         param Y_PLUS_VOLTAGE: F64 default 3.3 id 19
         param Y_PLUS_RESISTANCE: F64 default 13 id 20
-        param Y_PLUS_TURNS: F64 default 48.0 id 21
         param Y_PLUS_LENGTH: F64 default 0.053 id 22
         param Y_PLUS_WIDTH: F64 default 0.045 id 23
         param Y_PLUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 35
@@ -93,7 +101,6 @@ module Components {
         # --- Y- Coil ---
         param Y_MINUS_VOLTAGE: F64 default 3.3 id 24
         param Y_MINUS_RESISTANCE: F64 default 13 id 25
-        param Y_MINUS_TURNS: F64 default 48.0 id 26
         param Y_MINUS_LENGTH: F64 default 0.053 id 27
         param Y_MINUS_WIDTH: F64 default 0.045 id 28
         param Y_MINUS_SHAPE: CoilShape default CoilShape.RECTANGULAR id 36
@@ -101,7 +108,6 @@ module Components {
         # --- Z- Coil ---
         param Z_MINUS_VOLTAGE: F64 default 3.3 id 29
         param Z_MINUS_RESISTANCE: F64 default 150.7 id 30
-        param Z_MINUS_TURNS: F64 default 153.0 id 31
         param Z_MINUS_DIAMETER: F64 default 0.05755 id 32
         param Z_MINUS_SHAPE: CoilShape default CoilShape.CIRCULAR id 37
 
@@ -116,14 +122,17 @@ module Components {
         @ Port for receiving system mode change notifications
         sync input port systemModeChanged: Components.SystemModeChanged
 
-        @ Port for getting angular velocity readings in rad/s
-        output port angularVelocityGet: AngularVelocityGet
+        @ Port for getting angular velocity magnitude readings
+        output port angularVelocityMagnitudeGet: AngularVelocityMagnitudeGet
 
         @ Port for getting magnetic field readings in gauss
         output port magneticFieldGet: MagneticFieldGet
 
         @ Port to get sampling period between magnetic field reads
         output port magneticFieldSamplingPeriodGet: SamplingPeriodGet
+
+        @ Port for querying the current system mode
+        output port getSystemMode: Components.GetSystemMode
 
         @ Port for triggering the X+ magnetorquer
         output port xPlusStart: Drv.StartMagnetorquer
@@ -157,23 +166,20 @@ module Components {
 
         ### Events ###
 
+        @ Event for reporting failed enable attempt due to system in SAFE_MODE
+        event EnableFailedSafeMode() severity warning low format "Failed to enable detumbling because system is in SAFE_MODE." throttle 5
+
+        @ Event for recording detumbling start
+        event DetumbleStarted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble started. Angular velocity magnitude: {} deg/s" throttle 1
+
+        @ Event for recording detumbling completion
+        event DetumbleCompleted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble complete. Angular velocity magnitude: {} deg/s" throttle 1
+
         @ Event for reporting magnetic field retrieval failure
         event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5
 
         @ Event for reporting magnetic field period retrieval failure
         event MagneticFieldSamplingPeriodRetrievalFailed() severity warning low format "Failed to retrieve magnetic field sampling frequency." throttle 5
-
-        @ Event for reporting magnetic field too small for dipole moment calculation
-        event MagneticFieldTooSmallForDipoleMoment() severity warning low format "Magnetic field magnitude too small to compute dipole moment." throttle 5
-
-        @ Event for reporting invalid magnetic field readings for dipole moment calculation
-        event InvalidMagneticFieldReadingForDipoleMoment() severity warning low format "Out of order readings or readings taken too quickly, failed to compute dipole moment" throttle 5
-
-        @ Event for reporting unknown dipole moment computation error
-        event UnknownDipoleMomentComputationError() severity warning low format "Unknown error occurred during dipole moment computation." throttle 5
-
-        @ Event for reporting invalid detumble strategy selection
-        event InvalidDetumbleStrategy(strategy: DetumbleStrategy) severity warning low format "Invalid detumble strategy selected: {}" throttle 5
 
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5

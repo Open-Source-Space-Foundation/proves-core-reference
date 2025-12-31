@@ -6,9 +6,11 @@ The Detumble Manager component implements a B-dot style detumbling controller. I
 
 The Detumble Manager is designed to be scheduled periodically to drive its internal state machine:
 
-- **COOLDOWN** – wait for sensors and the magnetic environment to settle after a torque command
-- **SENSING** – read angular velocity, compare against a configurable threshold, and decide whether detumbling is required
-- **TORQUING** – command magnetorquers using a dipole moment provided by an upstream controller
+- **COOLDOWN** – wait for sensors and the magnetic environment to settle after a torque command.
+- **SENSING_ANGULAR_VELOCITY** – read angular velocity magnitude, compare against configurable thresholds, and select a detumble strategy (IDLE, BDOT, or HYSTERESIS).
+- **SENSING_MAGNETIC_FIELD** – collect a fixed window of magnetic field samples for the B-Dot controller.
+- **ACTUATING_BDOT** – command magnetorquers using a dipole moment computed by the internal B-Dot controller.
+- **ACTUATING_HYSTERESIS** – command magnetorquers using a bang‑bang hysteresis strategy along a selected axis.
 
 ### Typical Usage
 
@@ -18,11 +20,12 @@ The Detumble Manager is designed to be scheduled periodically to drive its inter
 4. The scheduler periodically calls the `run` port.
 5. On each run:
    - The component checks the operating mode (DISABLED or AUTO).
-   - The state machine executes COOLDOWN, SENSING, or TORQUING actions.
-   - When appropriate, it requests:
-     - Angular velocity via `angularVelocityGet`.
-     - Dipole moment command via `dipoleMomentGet`.
-   - It starts or stops the magnetorquers via the `x*/y*/z*Start` and `x*/y*/z*Stop` ports.
+     - The state machine executes COOLDOWN, SENSING_ANGULAR_VELOCITY, SENSING_MAGNETIC_FIELD, ACTUATING_BDOT, or ACTUATING_HYSTERESIS actions.
+     - When appropriate, it requests:
+         - Angular velocity magnitude via `angularVelocityMagnitudeGet`.
+         - Magnetic field samples via `magneticFieldGet` and sampling period via `magneticFieldSamplingPeriodGet`.
+     - It computes a dipole moment using the internal `BDot` helper (for BDOT strategy) or selects a bang‑bang axis (for HYSTERESIS strategy).
+     - It starts or stops the magnetorquers via the `x*/y*/z*Start` and `x*/y*/z*Stop` ports.
 
 ## Class Diagram
 
@@ -45,24 +48,27 @@ classDiagram
             - stateCooldownActions(): void
             - stateEnterCooldownActions(): void
             - stateExitCooldownActions(): void
-            - stateSensingActions(): void
-            - stateTorquingActions(): void
-            - stateEnterTorquingActions(): void
-            - stateExitTorquingActions(): void
-            - bdotTorqueAction(): void
-            - hysteresisTorqueAction(): void
+            - stateSensingAngularVelocityActions(): void
+            - stateEnterSensingAngularVelocityActions(): void
+            - stateExitSensingAngularVelocityActions(F64 angular_velocity_magnitude_deg_sec): void
+            - stateSensingMagneticFieldActions(): void
+            - stateActuatingBDotActions(): void
+            - stateEnterActuatingBDotActions(): void
+            - stateExitActuatingBDotActions(): void
+            - stateActuatingHysteresisActions(): void
             - m_bdot: BDot
             - m_strategy_selector: StrategySelector
-            - m_xPlusMagnetorquer: Magnetorquer
-            - m_xMinusMagnetorquer: Magnetorquer
-            - m_yPlusMagnetorquer: Magnetorquer
-            - m_yMinusMagnetorquer: Magnetorquer
-            - m_zMinusMagnetorquer: Magnetorquer
+            - m_x_plus_magnetorquer: Magnetorquer
+            - m_x_minus_magnetorquer: Magnetorquer
+            - m_y_plus_magnetorquer: Magnetorquer
+            - m_y_minus_magnetorquer: Magnetorquer
+            - m_z_minus_magnetorquer: Magnetorquer
             - m_mode: DetumbleMode
             - m_state: DetumbleState
             - m_strategy: DetumbleStrategy
-            - m_cooldownStartTime: Fw::Time
-            - m_torqueStartTime: Fw::Time
+            - m_cooldown_start_time: Fw::Time
+            - m_torque_start_time: Fw::Time
+            - last_cycle_time: Fw::Time
         }
     }
 
@@ -81,24 +87,21 @@ classDiagram
     class BDot {
         + BDot()
         + ~BDot()
-        + getDipoleMoment(magnetic_field: double[3], reading_seconds: uint32, reading_useconds: uint32, gain: double, sampling_period_us: microseconds) double[3]
-        + getTimeBetweenReadings() microseconds
-        - dB_dt(magnetic_field: double[3], dt_us: microseconds) double[3]
-        - getMagnitude(vector: double[3]) double
-        - updatePreviousReading(magnetic_field: double[3], reading: TimePoint)
-        - validateTimeDelta(dt: microseconds, min_dt: microseconds) bool
-        - m_previous_magnetic_field: double[3]
-        - m_previous_magnetic_field_reading_time: TimePoint
-        - m_previous_time_delta_us: microseconds
+        + getMagneticMoment() double[3]
+        + configure(gain: double, magnetometer_sampling_period: microseconds, rate_group_max_period: microseconds) void
+        + addSample(magnetic_field: double[3], timestamp: microseconds) void
+        + samplingComplete() bool
+        + getTimeBetweenSamples() microseconds
+        + emptySampleSet() void
+        - computeBDot() double[3]
+        - getMagnitude() double
+        - m_gain: double
+        - m_magnetometer_sampling_period: microseconds
+        - m_rate_group_max_period: microseconds
+        - m_sampling_set: Sample[5]
+        - m_sample_count: size_t
     }
 ```
-
-#### BDot Timing Limitations
-
-- The B-Dot algorithm only computes a non-zero dipole moment when the time between consecutive magnetic-field readings lies between the configured magnetometer sampling period and 600 ms.
-- If readings arrive faster than the magnetometer sampling period, they are treated as invalid (out-of-order or too fast) and the algorithm returns a zero dipole moment with an error condition.
-- If the time between readings exceeds 600 ms, the sample is treated as a first/expired reading and the algorithm returns a zero dipole moment with an error condition.
-- As a consequence, B-Dot detumbling is not effective on rate groups slower than 600 ms or on configurations where magnetic-field samples are provided irregularly or much slower than the magnetometer ODR.
 
 #### Magnetorquer
 
@@ -112,7 +115,6 @@ classDiagram
         - getMaxCoilCurrent() double
         - computeTargetCurrent(dipole_moment_component: double) double
         - computeClampedCurrent(target_current: double) int8
-        + PI: double
         + m_turns: double
         + m_voltage: double
         + m_resistance: double
@@ -143,10 +145,8 @@ classDiagram
     class StrategySelector {
         + StrategySelector()
         + ~StrategySelector()
-        + fromAngularVelocity(angular_velocity: double[3]) Strategy
+        + fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec: double) Strategy
         + configure(bdot_max_threshold: double, deadband_upper_threshold: double, deadband_lower_threshold: double)
-        - getAngularVelocityMagnitude(angular_velocity: double[3]) double
-        - PI: double
         - m_bdot_max_threshold: double
         - m_deadband_lower_threshold: double
         - m_deadband_upper_threshold: double
@@ -161,12 +161,14 @@ classDiagram
     StrategySelector -- Strategy
 ```
 
-#### BDot Maximum Threshold
+## Default Parameters and Mathematical Constants
+
+### BDot Maximum Threshold
 
 The B-Dot maximum threshold parameter defines the upper rotational rate (deg/s) above which the hysteresis strategy is used instead of B-Dot. This threshold is computed as:
 
 $$
-\omega_{\max} = \min\!\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\,\delta T}\right)
+\omega_{\max} = \min\left(\frac{2\pi}{\Delta t}, \frac{\pi}{2\delta T}\right) = \min\left(\frac{360\ \text{deg}}{\Delta t}, \frac{90\ \text{deg}}{\delta T}\right)
 $$
 
 where:
@@ -175,18 +177,134 @@ where:
 - $\Delta t$ is the duration of the actuation,
 - $\delta T$ is the time elapsed between the measurement of $\dot{B}$.
 
-Testing on 2025‑12‑28 indicated that our B-Dot controller could maintain control up to an angular velocity of $180\,\text{deg/s}$. For the default value we have selected a more conservative threshold of $150\,\text{deg/s}$ to ensure robust operation. Above this threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
+For the PROVES CubeSat mission, we have:
 
+$$
+\omega_{\max} = \min\left(\frac{360\ \text{deg}}{0.32\ \text{s}}, \frac{90\ \text{deg}}{0.08\ \text{s}}\right) = 1125\ \text{deg/s}
+$$
+
+Given:
+- Actuation duration, $\Delta t = 0.32\ \text{s}$ (configured via `TORQUE_DURATION` parameter)
+- Time between $\dot{B}$ measurements, $\delta T = 0.08\ \text{s}$ (based on `DetumbleManger` rate group $20Hz$ and and B-Dot sample window of $5$ samples)
+
+In this reference deployment the `BDOT_MAX_THRESHOLD` parameter defaults to $720\,\text{deg/s}$ (see the FPP definition), well under the computed maximum of $1125\ \text{deg/s}$ to provide a buffer for margin of error. Above the configured threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
+
+### Detumble Cooldown Duration Decision
+The `COOLDOWN_DURATION` parameter defines the time spent waiting after a torque command before sensing angular velocity again. This cooldown period allows the magnetic environment and sensors to settle after actuation so that measurements are not contaminated by residual fields. The LIS2MDL magnetometer takes new measurements every $10ms$ ($100Hz$). To ensure at least one new measurement is available after actuation, we set the `COOLDOWN_DURATION` parameter to $20ms$ in this reference deployment.
+
+
+#### BDot Implementation Options
+The B-Dot algorithm estimates the time derivative of the magnetic field vector $\dot{B}$ to compute the required dipole moment for detumbling. Several methods exist for estimating $\dot{B}$ from various sensor inputs:
+
+##### 1. Cross Product Method
+The cross product method estimates $\dot{B}$ using the cross product of an angular velocity vector $\omega$ and the magnetic field vector $B$:
+
+$$
+\dot{B} = \omega \times B
+$$
+
+Both the angular velocity and magnetic field vectors are available to the `DetumbleManger` component via ports in the `ImuManager` component. This method requires accurate angular velocity measurements and is sensitive to noise in both measurements.
+
+References:
+- [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama ](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
+
+##### 2. Derivative Method
+The derivative method estimates $\dot{B}$ using finite differences between consecutive magnetic field readings:
+
+$$
+\dot{B} \approx \frac{B(t) - B(t - \Delta t)}{\Delta t}
+$$
+
+This method is straightforward to implement and requires only magnetic field measurements. However, like the cross product method it is sensitive to noise. Also, in `Discrete Control with First Order Bdot Controller`, Dr. Montalvo notes that this method did not perform as well as the cross product method in simulations.
+
+References:
+- [Lecture slides on Control Systems - Dr. Jan Bekkeng - University of Oslo](https://www.uio.no/studier/emner/matnat/fys/FYS3240/v23/lectures/l11---control-systems-v23.pdf)
+- [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
+
+##### 3. Least Squares Method
+The least squares method fits a line to a series of magnetic field readings over time and computes the slope of that line as an estimate of $\dot{B}$.
+
+
+This method can be more robust to noise, especially when multiple readings are available.
+
+References:
+- [Hardware-In-The-Loop and Software-In-The-Loop
+Testing of the MOVE-II CubeSat - Jonis Kiesbye et al. - 2019](https://s3vi.ndc.nasa.gov/ssri-kb/static/resources/aerospace-06-00130-v2.pdf)
+
+##### 4. 5-Point Central Difference Method
+The central difference method uses a five-point stencil to estimate $\dot{B}$, providing a higher-order approximation:
+
+$$
+\dot{B} \approx \frac{-B_4 + 8B_3 - 8B_1 + B_0}{12\cdot \Delta t}
+$$
+
+Where $B_i$ are magnetic field readings at different time points and $\Delta t$ is the time interval between readings. The `DetumbleManager` is on a $50Hz$ rate group so the time between readings is $0.02 s$.
+
+TODO(evanjellison): Write up on coefficient derivation (-1, 8, 12, etc.)
+
+#### BDot Implementation Decision
+After evaluating the options, we selected the 5-Point Central Difference Method for the following reasons:
+- **Noise Robustness**: The central difference method can better handle noisy measurements by averaging over multiple readings.
+- **Simplicity**: It requires only magnetic field measurements, addition and division, simplifying the system architecture.
+- **Performance**: While the cross product and least squared methods may offer better performance in some scenarios, the central difference method provides a good balance between performance and robustness for our application.
+
+#### `k` Gain Constant Default Value
+The gain constant `k` in the B-Dot algorithm determines the strength of the magnetic moment command in response to the estimated $\dot{B}$. A higher `k` value results in stronger torques, while a lower `k` value results in gentler torques.
+
+We can determine the `k` constant based on the following formula:
+
+$$
+k ≤ \frac{m_{\max}}{||\dot{B}_{\max}||}
+$$
+
+where:
+- $m_{max}$ is the maximum magnetic moment achievable by the magnetorquers (A⋅m²),
+- $||\dot{B}_{max}||$ is the maximum expected rate of change of the magnetic field (G/s).
+
+For the PROVES CubeSat mission, we estimated using the lowest performing magnetorquer (Z- coil) and an altitude of 420 km:
+
+$$
+m_{max} = I_{max}\cdot n\cdot A
+ \approx 43.575491\ G
+$$
+
+Given:
+- Maximum coil current, $I_{\max} = 3.3\ \text{V} / 150.7\ \text{m}\Omega$
+- Number of turns, $n = 153$
+- Coil diameter, $d = 0.05755\ \text{m}$
+- Coil area, $A = \frac{1}{2}\pi \cdot (\frac{1}{2}\ 0.05755\ \text{m})^2$
+
+And
+
+$$
+||\dot{B}_{\max}|| = \omega_{\max} \cdot B_{\max} \approx 7.854\ G/s
+$$
+
+Given:
+- Maximum angular velocity controllable by the B-Dot controller, $\omega_{\max} \approx 19.635\ \text{rad/s}$ (computed below)
+- Maximum magnetic field at 420 km altitude, $B_{\max} \approx 0.4\ G$
+
+Therefore:
+
+$$
+k ≤ \frac{43.575491\ G}{7.854\ G/s} \approx 5.55\ A\cdot m^2\cdot s/G
+$$
+
+We set the default `k` gain constant to $3.0 \ s$ in this reference deployment, providing a small margin below the computed maximum to account for uncertainties.
+
+#### `DEADBAND_LOWER_THRESHOLD` Decision
+The `DEADBAND_LOWER_THRESHOLD` parameter defines the rotational rate (deg/s) below which detumbling is considered complete and the `IDLE` strategy is selected. This threshold should be set low enough to ensure that the spacecraft is sufficiently detumbled for mission operations, but high enough to prevent the satellite from settling into a poor orientation (like antenna board directly pointed at the sun) or suffer thermal issues due to heat taken on from the sun.
 
 ## Port Descriptions
 
 | Name             | Type         | Description                                                        |
 | ---------------- | ------------ | ------------------------------------------------------------------ |
 | run              | sync input   | Scheduler port that advances the detumble state machine           |
-| setMode          | sync input   | Port for disabling detumbling                                     |
-| systemModeChanged| sync input   | Port for receiving system mode change notifications               |
-| angularVelocityGet | output     | Requests current angular velocity vector                          |
-| magneticFieldGet | output       | Requests current magnetic field vector                            |
+| setMode          | sync input   | Port for setting the detumble mode (DISABLED or AUTO)            |
+| systemModeChanged| sync input   | Port for receiving system mode change notifications (SAFE disables detumble) |
+| angularVelocityMagnitudeGet | output | Requests current angular velocity magnitude                     |
+| magneticFieldGet | output       | Requests current magnetic field vector (gauss)                    |
+| magneticFieldSamplingPeriodGet | output | Requests magnetometer sampling period                          |
 | xPlusStart       | output       | Command to start the X+ magnetorquer with a signed current value  |
 | xPlusStop        | output       | Command to stop the X+ magnetorquer                               |
 | xMinusStart      | output       | Command to start the X− magnetorquer with a signed current value  |
@@ -210,11 +328,11 @@ Testing on 2025‑12‑28 indicated that our B-Dot controller could maintain con
 ## Parameters and Telemetry (Summary)
 
 - **Mode and thresholds**
-  - `OPERATING_MODE` (DetumbleMode): DISABLED or AUTO.
   - `BDOT_MAX_THRESHOLD` (F64): Upper rotational threshold (deg/s) above which hysteresis is used.
   - `DEADBAND_UPPER_THRESHOLD` (F64): Upper deadband rotational threshold (deg/s).
   - `DEADBAND_LOWER_THRESHOLD` (F64): Lower deadband rotational threshold (deg/s).
-  - `GAIN` (F64): Gain used for B-Dot algorithm.
+    - `GAIN` (F64): Gain used for B-Dot algorithm.
+    - `HYSTERESIS_AXIS` (HysteresisAxis): Axis used for hysteresis detumbling.
   - `COOLDOWN_DURATION` (Fw.TimeIntervalValue): Time spent waiting after a torque command.
   - `TORQUE_DURATION` (Fw.TimeIntervalValue): Duration of a single torque actuation.
 
@@ -224,19 +342,20 @@ Testing on 2025‑12‑28 indicated that our B-Dot controller could maintain con
 
 - **Key telemetry**
   - `Mode` (DetumbleMode): Current operating mode.
-  - `State` (DetumbleState): COOLDOWN, SENSING, or TORQUING.
+    - `State` (DetumbleState): COOLDOWN, SENSING_ANGULAR_VELOCITY, SENSING_MAGNETIC_FIELD, ACTUATING_BDOT, or ACTUATING_HYSTERESIS.
   - `DetumbleStrategy` (DetumbleStrategy): IDLE, BDOT, or HYSTERESIS.
-  - `BdotMaxThreshold`, `DeadbandUpperThreshold`, `DeadbandLowerThreshold`, `Gain`.
-  - `CooldownDuration`, `TorqueDuration`.
+    - `BdotMaxThresholdParam`, `DeadbandUpperThresholdParam`, `DeadbandLowerThresholdParam`, `GainParam`.
+    - `HysteresisAxisParam`.
+    - `CooldownDurationParam`, `TorqueDurationParam`, and measured `TorqueDuration`.
+    - `TimeBetweenMagneticFieldReadings`.
   - Per-coil configuration telemetry for all coils (voltage, resistance, turns, geometry, shape).
 
 - **Events**
-  - `MagneticFieldRetrievalFailed`: Logged if `magneticFieldGet` does not succeed.
-  - `AngularVelocityRetrievalFailed`: Logged if `angularVelocityGet` does not succeed.
-  - `MagneticFieldTooSmallForDipoleMoment`: Logged if magnetic field magnitude is too small.
-  - `InvalidMagneticFieldReadingForDipoleMoment`: Logged if readings are out of order or too fast.
-  - `UnknownDipoleMomentComputationError`: Logged if an unknown error occurs during computation.
-  - `InvalidDetumbleStrategy`: Logged if an invalid strategy is selected.
+    - `DetumbleStarted`: Logged when a detumble cycle starts, with the current angular velocity magnitude.
+    - `DetumbleCompleted`: Logged when detumbling is considered complete (IDLE strategy selected).
+    - `MagneticFieldRetrievalFailed`: Logged if `magneticFieldGet` does not succeed.
+    - `MagneticFieldSamplingPeriodRetrievalFailed`: Logged if `magneticFieldSamplingPeriodGet` does not succeed.
+    - `AngularVelocityRetrievalFailed`: Logged if `angularVelocityMagnitudeGet` does not succeed.
 
 ## Sequence Diagrams
 
@@ -259,40 +378,68 @@ sequenceDiagram
             DetumbleManager->>DetumbleManager: stateCooldownActions()
             DetumbleManager->>timeCaller: getTime()
             timeCaller-->>DetumbleManager: current time
-            note right of DetumbleManager: Transition to SENSING after cooldown duration
+            note right of DetumbleManager: After COOLDOWN_DURATION, transition to SENSING_ANGULAR_VELOCITY
         end
 
-        opt SENSING
-            DetumbleManager->>AngularSource: angularVelocityGet()
-            AngularSource-->>DetumbleManager: angular velocity, status
+        opt SENSING_ANGULAR_VELOCITY
+            DetumbleManager->>DetumbleManager: stateEnterSensingAngularVelocityActions()
+            DetumbleManager->>AngularSource: angularVelocityMagnitudeGet(DEG_PER_SEC)
+            AngularSource-->>DetumbleManager: angular velocity magnitude, status
             alt retrieval failed
                 DetumbleManager->>DetumbleManager: log AngularVelocityRetrievalFailed
             else
                 DetumbleManager->>DetumbleManager: Select Strategy (IDLE, BDOT, HYSTERESIS)
                 alt Strategy == IDLE
-                     note right of DetumbleManager: Stay in SENSING, no torquing
-                else Strategy == BDOT or HYSTERESIS
-                    DetumbleManager->>MagSource: magneticFieldGet()
-                    MagSource-->>DetumbleManager: magnetic field, status
-                    alt retrieval failed
-                        DetumbleManager->>DetumbleManager: log MagneticFieldRetrievalFailed
-                    else success
-                        note right of DetumbleManager: Transition to TORQUING
-                    end
+                     DetumbleManager->>DetumbleManager: log DetumbleCompleted
+                     note right of DetumbleManager: Stay in SENSING_ANGULAR_VELOCITY, no torquing
+                else Strategy == BDOT
+                    DetumbleManager->>DetumbleManager: log DetumbleStarted
+                    note right of DetumbleManager: Transition to SENSING_MAGNETIC_FIELD
+                else Strategy == HYSTERESIS
+                    DetumbleManager->>DetumbleManager: log DetumbleStarted
+                    note right of DetumbleManager: Transition to ACTUATING_HYSTERESIS
                 end
             end
         end
 
-        opt TORQUING
-            DetumbleManager->>DetumbleManager: stateTorquingActions()
-            note right of DetumbleManager: On first entry, compute coil currents based on Strategy
-            DetumbleManager->>MTQ: x*/y*/z*Start(currents)
-            DetumbleManager->>timeCaller: getTime()
-            timeCaller-->>DetumbleManager: current time
-            alt torque interval elapsed
-                DetumbleManager->>MTQ: x*/y*/z*Stop
-                note right of DetumbleManager: Transition to COOLDOWN
+        opt SENSING_MAGNETIC_FIELD (BDOT)
+            loop until samplingComplete()
+                DetumbleManager->>MagSource: magneticFieldGet()
+                MagSource-->>DetumbleManager: magnetic field, status
+                alt retrieval failed
+                    DetumbleManager->>DetumbleManager: log MagneticFieldRetrievalFailed
+                    break
+                else
+                    DetumbleManager->>DetumbleManager: BDot.addSample(B, timestamp)
+                end
             end
+            note right of DetumbleManager: When sample window full, transition to ACTUATING_BDOT
+        end
+
+        opt ACTUATING_BDOT
+            DetumbleManager->>DetumbleManager: stateEnterActuatingBDotActions()
+            DetumbleManager->>MagSource: magneticFieldSamplingPeriodGet()
+            MagSource-->>DetumbleManager: sampling period, status
+            alt retrieval failed
+                DetumbleManager->>DetumbleManager: log MagneticFieldSamplingPeriodRetrievalFailed
+            else
+                DetumbleManager->>DetumbleManager: BDot.configure(gain, sampling_period)
+                DetumbleManager->>DetumbleManager: dipole = BDot.getMagneticMoment()
+                DetumbleManager->>MTQ: x*/y*/z*Start(currents from dipole)
+                DetumbleManager->>timeCaller: getTime()
+                timeCaller-->>DetumbleManager: current time
+                alt torque interval elapsed (TORQUE_DURATION)
+                    DetumbleManager->>MTQ: x*/y*/z*Stop
+                    DetumbleManager->>DetumbleManager: BDot.emptySampleSet()
+                    note right of DetumbleManager: Transition to COOLDOWN
+                end
+            end
+        end
+
+        opt ACTUATING_HYSTERESIS
+            DetumbleManager->>DetumbleManager: read HYSTERESIS_AXIS param
+            DetumbleManager->>MTQ: x*/y*/z*Start(saturated currents along axis)
+            note right of DetumbleManager: Immediately transition to COOLDOWN
         end
     end
 ```
