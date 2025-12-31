@@ -11,6 +11,7 @@
 #define SBAND_PIN_CS 0
 #define SBAND_PIN_IRQ 5
 #define SBAND_PIN_RST 6
+#define SBAND_PIN_BUSY 7
 
 namespace Components {
 class SBand;

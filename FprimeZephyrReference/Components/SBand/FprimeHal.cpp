@@ -38,6 +38,15 @@ uint32_t FprimeHal::digitalRead(uint32_t pin) {
         else
             return FPRIME_HAL_GPIO_LEVEL_LOW;
     }
+    if (pin == SBAND_PIN_BUSY) {
+        Fw::Logic busyState;
+        Drv::GpioStatus state = this->m_component->getBusyLine_out(0, busyState);
+        FW_ASSERT(state == Drv::GpioStatus::OP_OK);
+        if (busyState == Fw::Logic::HIGH)
+            return FPRIME_HAL_GPIO_LEVEL_HIGH;
+        else
+            return FPRIME_HAL_GPIO_LEVEL_LOW;
+    }
     return FPRIME_HAL_GPIO_LEVEL_LOW;
 }
 

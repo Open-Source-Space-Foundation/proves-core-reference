@@ -31,6 +31,7 @@ class SBand final : public SBandComponentBase {
     //! Configure the radio and start operation
     Status configureRadio();
 
+    using SBandComponentBase::getBusyLine_out;
     using SBandComponentBase::getIRQLine_out;
     using SBandComponentBase::getTime;
     using SBandComponentBase::resetSend_out;
