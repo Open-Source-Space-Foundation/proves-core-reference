@@ -95,6 +95,9 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_payloadSeq {
 enum { WARN = 3, FATAL = 5 };
 }
+namespace ReferenceDeployment_safeModeSeq {
+enum { WARN = 3, FATAL = 5 };
+}
 }  // namespace PingEntries
 
 // Definitions are placed within a namespace named after the deployment
