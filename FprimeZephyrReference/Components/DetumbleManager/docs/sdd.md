@@ -288,21 +288,22 @@ $$
 Then
 
 $$
-\begin{aligned}
-f(t_0+\Delta t) &= f_0 + f_0'\Delta t + \frac{f_0''}{2}\Delta t^2 + \frac{f_0^{(3)}}{6}\Delta t^3 + \frac{f_0^{(4)}}{24}\Delta t^4 + O(\Delta t^5),\\[0.4em]
-f(t_0-\Delta t) &= f_0 - f_0'\Delta t + \frac{f_0''}{2}\Delta t^2
+f(t_0+\Delta t) = f_0 + f_0'\Delta t + \frac{f_0''}{2}\Delta t^2 + \frac{f_0^{(3)}}{6}\Delta t^3 + \frac{f_0^{(4)}}{24}\Delta t^4 + O(\Delta t^5),
+$$
+
+$$
+f(t_0-\Delta t) = f_0 - f_0'\Delta t + \frac{f_0''}{2}\Delta t^2
                  - \frac{f_0^{(3)}}{6}\Delta t^3
                  + \frac{f_0^{(4)}}{24}\Delta t^4
                  + O(\Delta t^5),\\[0.4em]
-f(t_0+2\Delta t) &= f_0 + 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
+f(t_0+2\Delta t) = f_0 + 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
                   + 2^3\frac{f_0^{(3)}}{6}\Delta t^3
                   + 2^4\frac{f_0^{(4)}}{24}\Delta t^4
                   + O(\Delta t^5),\\[0.4em]                  
-f(t_0-2\Delta t) &= f_0 - 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
+f(t_0-2\Delta t) = f_0 - 2f_0'\Delta t + 2^2\frac{f_0''}{2}\Delta t^2
                   - 2^3\frac{f_0^{(3)}}{6}\Delta t^3
                   + 2^4\frac{f_0^{(4)}}{24}\Delta t^4
                   + O(\Delta t^5).
-\end{aligned}
 $$
 
 These expansions are the raw material for building a linear combination that isolates $f_0'$.
