@@ -10,6 +10,9 @@ module Svc {
         # ----------------------------------------------------------------------
         # Router interface (ports defined explicitly for passive component)
         # ----------------------------------------------------------------------
+        @ Port receiving calls from the rate group for periodic command loss time checking
+        sync input port run: Svc.Sched
+
         # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
         sync input port dataIn: Svc.ComDataWithContext
 
@@ -39,6 +42,9 @@ module Svc {
         @ Port for deallocating buffers
         output port bufferDeallocate: Fw.BufferSend
 
+        @ Port to trigger safe mode (e.g., on command loss timeout)
+        output port SetSafeMode: Components.ForceSafeModeWithReason
+
         @ An error occurred while serializing a com buffer
         event SerializationError(
                 status: U32 @< The status of the operation
@@ -57,6 +63,21 @@ module Svc {
         @ An allocation error occurred
         event AllocationError(reason: AllocationReason) severity warning high \
             format "Buffer allocation for {} failed"
+
+        @ Command Loss is Activated
+        event CommandLossFound(duration: U32) severity warning high \
+            format "The Satellite has been put into command loss timing after {} seconds without contact"
+
+        event CommandLossFileInitFailure() severity warning high \
+            format "Command Loss Timer Failed to update most recent time" \
+            throttle 1
+
+        @ Command Loss Time in seconds by Default, one day = 60*60*24
+        param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 60 * 60 * 24, useconds = 0}
+
+        @ File to Read last command loss time from
+        param COMM_LOSS_TIME_START_FILE: string default "/comm_loss_start.bin"
+
 
         ###############################################################################
         # Standard AC Ports for Events
