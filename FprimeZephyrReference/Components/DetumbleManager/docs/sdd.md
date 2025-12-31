@@ -339,8 +339,7 @@ This automatically makes the approximation odd in $\Delta t$, which matches the 
 With this symmetry,
 
 $$
-L = a\bigl[f(t_0-2\Delta t) - f(t_0+2\Delta t)\bigr]
-  + b\bigl[f(t_0-\Delta t) - f(t_0+\Delta t)\bigr].
+L = a\bigl[f(t_0-2\Delta t) - f(t_0+2\Delta t)\bigr] + b\bigl[f(t_0-\Delta t) - f(t_0+\Delta t)\bigr].
 $$
 
 Substitute the expansions and collect terms by derivative order. Using the series above, the contributions to $L$ are:
@@ -355,18 +354,12 @@ so the constant always cancels; that is consistent with $f'(t)$ being zero for c
 - First‑derivative term (involving $f_0'$):
 
 $$
-a\bigl(-2f_0'\Delta t - 2f_0'\Delta t\bigr)
-+ b\bigl(-f_0'\Delta t - f_0'\Delta t\bigr)
-= (-4a - 2b) f_0' \Delta t.
+a\bigl(-2f_0'\Delta t - 2f_0'\Delta t\bigr) + b\bigl(-f_0'\Delta t - f_0'\Delta t\bigr) = (-4a - 2b) f_0' \Delta t.
 $$
 - Third‑derivative term (involving $f_0^{(3)}$), from the $\Delta t^3$ terms:
 
 $$
-a\left(-\frac{8}{6}f_0^{(3)}\Delta t^3
-        -\frac{8}{6}f_0^{(3)}\Delta t^3\right)
-+ b\left(-\frac{1}{6}f_0^{(3)}\Delta t^3
-        -\frac{1}{6}f_0^{(3)}\Delta t^3\right)
-= -\frac{16a+2b}{6} f_0^{(3)}\Delta t^3.
+a\left(-\frac{8}{6}f_0^{(3)}\Delta t^3 -\frac{8}{6}f_0^{(3)}\Delta t^3\right) + b\left(-\frac{1}{6}f_0^{(3)}\Delta t^3 -\frac{1}{6}f_0^{(3)}\Delta t^3\right) = -\frac{16a+2b}{6} f_0^{(3)}\Delta t^3.
 $$
 
 Terms in $f_0''$ already cancel because of the symmetry $a=-e,b=-d$, and higher derivatives are left as truncation error.
