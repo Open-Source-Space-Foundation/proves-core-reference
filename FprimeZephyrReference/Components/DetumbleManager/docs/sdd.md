@@ -371,6 +371,7 @@ To make $L$ approximate $f_0'\Delta t$ with high accuracy, require
 $$
 -4a - 2b = 1.
 $$
+
 2. The coefficient of $f_0^{(3)}\Delta t^3$ vanishes (cancel cubic error):
 
 $$
@@ -381,7 +382,7 @@ So the coefficients must satisfy the system
 
 $$
 \begin{cases}
--4a - 2b = 1,\\[0.2em]
+-4a - 2b = 1,
 16a + 2b = 0.
 \end{cases}
 $$
