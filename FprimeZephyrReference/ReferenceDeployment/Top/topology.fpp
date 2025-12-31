@@ -369,6 +369,7 @@ module ReferenceDeployment {
       sband.txEnable -> gpioSbandTxEn.gpioWrite
       sband.rxEnable -> gpioSbandRxEn.gpioWrite
       sband.getIRQLine -> gpioSbandIRQ.gpioRead
+      sband.getBusyLine -> gpioSbandBusy.gpioRead
     }
 
     connections ComCcsds_FileHandling {

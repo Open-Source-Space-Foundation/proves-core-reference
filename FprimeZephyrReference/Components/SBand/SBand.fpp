@@ -81,6 +81,9 @@ module Components {
         @ S-Band IRQ Line
         output port getIRQLine: Drv.GpioRead
 
+        @ S-Band Busy Line
+        output port getBusyLine: Drv.GpioRead
+
         @ Event to indicate RadioLib call failure
         event RadioLibFailed(error: I16) severity warning high \
             format "SBand RadioLib call failed, error: {}" throttle 2
