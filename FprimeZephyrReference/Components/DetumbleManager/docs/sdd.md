@@ -416,7 +416,6 @@ sequenceDiagram
                 MagSource-->>DetumbleManager: magnetic field, status
                 alt retrieval failed
                     DetumbleManager->>DetumbleManager: log MagneticFieldRetrievalFailed
-                    break
                 else
                     DetumbleManager->>DetumbleManager: BDot.addSample(B, timestamp)
                 end
