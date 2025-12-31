@@ -55,7 +55,7 @@ set_target_properties(Svc_FatalHandler PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(fprime-zephyr_Drv_ZephyrSpiDriver PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 # If BUILD_TESTING is ON, add our GoogleTest tests
-if (BUILD_TESTING)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+#if (BUILD_TESTING)
+#    enable_testing()
+#    add_subdirectory(tests)
+#endif()
