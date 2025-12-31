@@ -382,7 +382,7 @@ So the coefficients must satisfy the system
 
 $$
 \begin{cases}
--4a - 2b = 1,
+-4a - 2b = 1,\\
 16a + 2b = 0.
 \end{cases}
 $$
