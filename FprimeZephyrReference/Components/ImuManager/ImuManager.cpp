@@ -137,7 +137,7 @@ Drv::MagneticField ImuManager ::magneticFieldGet_handler(FwIndexType portNum, Fw
 
     if (!device_is_ready(this->m_lis2mdl)) {
         this->log_WARNING_HI_Lis2mdlDeviceNotReady();
-        return Drv::MagneticField(0.0, 0.0, 0.0, Fw::TimeValue(TimeBase::TB_NONE, 0, 0, 0));
+        return Drv::MagneticField(0.0, 0.0, 0.0, Fw::ZERO_TIME);
     }
     this->log_WARNING_HI_Lis2mdlDeviceNotReady_ThrottleClear();
 
