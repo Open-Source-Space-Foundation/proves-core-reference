@@ -34,12 +34,9 @@ std::array<double, 3> BDot ::getMagneticMoment() {
     return std::array<double, 3>{moment_x, moment_y, moment_z};
 }
 
-void BDot ::configure(double gain,
-                      std::chrono::microseconds magnetometer_sampling_period,
-                      std::chrono::microseconds rate_group_max_period) {
+void BDot ::configure(double gain, std::chrono::microseconds magnetometer_sampling_period) {
     this->m_gain = gain;
     this->m_magnetometer_sampling_period = magnetometer_sampling_period;
-    this->m_rate_group_max_period = rate_group_max_period;
 }
 
 void BDot ::addSample(const std::array<double, 3>& magnetic_field, std::chrono::microseconds timestamp) {
@@ -78,6 +75,11 @@ std::array<double, 3> BDot ::computeBDot() const {
     // Get time delta between samples in seconds
     double dt_seconds = this->m_magnetometer_sampling_period.count() / 1e6;
     if (dt_seconds <= 0.0) {
+        return std::array<double, 3>{0.0, 0.0, 0.0};
+    }
+
+    // Ensure we have enough samples
+    if (!this->samplingComplete()) {
         return std::array<double, 3>{0.0, 0.0, 0.0};
     }
 

@@ -269,7 +269,7 @@ void DetumbleManager ::stateSensingAngularVelocityActions() {
     this->stateEnterSensingAngularVelocityActions();
 
     // Get angular velocity
-    F64 angular_velocity_magnetude_deg_sec =
+    F64 angular_velocity_magnitude_deg_sec =
         this->angularVelocityMagnitudeGet_out(0, condition, AngularUnit::DEG_PER_SEC);
     if (condition != Fw::Success::SUCCESS) {
         this->log_WARNING_LO_AngularVelocityRetrievalFailed();
@@ -279,14 +279,14 @@ void DetumbleManager ::stateSensingAngularVelocityActions() {
 
     // Select detumble strategy based on angular velocity
     StrategySelector::Strategy detumble_strategy =
-        this->m_strategy_selector.fromAngularVelocityMagnitude(angular_velocity_magnetude_deg_sec);
+        this->m_strategy_selector.fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec);
     this->m_strategy = static_cast<DetumbleStrategy::T>(detumble_strategy);
 
     // Telemeter selected strategy
     this->tlmWrite_DetumbleStrategy(this->m_strategy);
 
     // Perform actions upon exiting SENSING_ANGULAR_VELOCITY state
-    this->stateExitSensingAngularVelocityActions(angular_velocity_magnetude_deg_sec);
+    this->stateExitSensingAngularVelocityActions(angular_velocity_magnitude_deg_sec);
 }
 
 void DetumbleManager ::stateEnterSensingAngularVelocityActions() {
@@ -306,12 +306,12 @@ void DetumbleManager ::stateEnterSensingAngularVelocityActions() {
     this->m_strategy_selector.configure(bdot_max_threshold, deadband_upper_threshold, deadband_lower_threshold);
 }
 
-void DetumbleManager ::stateExitSensingAngularVelocityActions(F64 angular_velocity_magnetude_deg_sec) {
+void DetumbleManager ::stateExitSensingAngularVelocityActions(F64 angular_velocity_magnitude_deg_sec) {
     switch (this->m_strategy) {
         case DetumbleStrategy::IDLE:
             // No detumbling required, remain in SENSING_ANGULAR_VELOCITY state
             // Telemeter detumble completion
-            this->log_ACTIVITY_LO_DetumbleCompleted(angular_velocity_magnetude_deg_sec);
+            this->log_ACTIVITY_LO_DetumbleCompleted(angular_velocity_magnitude_deg_sec);
             this->log_ACTIVITY_LO_DetumbleStarted_ThrottleClear();
             return;
         case DetumbleStrategy::BDOT:
@@ -323,7 +323,7 @@ void DetumbleManager ::stateExitSensingAngularVelocityActions(F64 angular_veloci
     }
 
     // Telemeter detumble start
-    this->log_ACTIVITY_LO_DetumbleStarted(angular_velocity_magnetude_deg_sec);
+    this->log_ACTIVITY_LO_DetumbleStarted(angular_velocity_magnitude_deg_sec);
     this->log_ACTIVITY_LO_DetumbleCompleted_ThrottleClear();
 }
 
@@ -392,9 +392,7 @@ void DetumbleManager ::stateEnterActuatingBDotActions() {
     std::chrono::microseconds sampling_period_us(sampling_period.get_useconds());
 
     // Configure B-Dot controller
-    this->m_bdot.configure(
-        gain, sampling_period_us,
-        std::chrono::microseconds(30000));  // TODO(nateinaction): MOVE THIS SOMEWHERE 30 ms max rate group period
+    this->m_bdot.configure(gain, sampling_period_us);
 
     // Record torque start time
     this->m_torque_start_time = this->getTime();

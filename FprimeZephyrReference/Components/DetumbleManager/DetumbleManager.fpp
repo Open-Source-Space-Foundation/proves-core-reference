@@ -170,10 +170,10 @@ module Components {
         event EnableFailedSafeMode() severity warning low format "Failed to enable detumbling because system is in SAFE_MODE." throttle 5
 
         @ Event for recording detumbling start
-        event DetumbleStarted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble started. Angular velocity magnitude: {} deg/s" throttle 1
+        event DetumbleStarted(angular_velocity_magnitude_deg_sec: F64) severity activity low format "Detumble started. Angular velocity magnitude: {} deg/s" throttle 1
 
         @ Event for recording detumbling completion
-        event DetumbleCompleted(angular_velocity_magnetude_deg_sec: F64) severity activity low format "Detumble complete. Angular velocity magnitude: {} deg/s" throttle 1
+        event DetumbleCompleted(angular_velocity_magnitude_deg_sec: F64) severity activity low format "Detumble complete. Angular velocity magnitude: {} deg/s" throttle 1
 
         @ Event for reporting magnetic field retrieval failure
         event MagneticFieldRetrievalFailed() severity warning low format "Failed to retrieve magnetic field." throttle 5

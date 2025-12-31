@@ -101,7 +101,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     void stateEnterSensingAngularVelocityActions();
 
     //! Actions to perform when exiting the SENSING_ANGULAR_VELOCITY state
-    void stateExitSensingAngularVelocityActions(F64 angular_velocity_magnetude_deg_sec);
+    void stateExitSensingAngularVelocityActions(F64 angular_velocity_magnitude_deg_sec);
 
     //! Actions to perform in the SENSING_MAGNETIC_FIELD state
     void stateSensingMagneticFieldActions();

@@ -56,9 +56,8 @@ class BDot {
     std::array<double, 3> getMagneticMoment();
 
     //! Configure BDot parameters
-    void configure(double gain,                                             //!< Gain constant
-                   std::chrono::microseconds magnetometer_sampling_period,  //!< Magnetometer sampling period
-                   std::chrono::microseconds rate_group_max_period          //!< Rate group maximum period
+    void configure(double gain,                                            //!< Gain constant
+                   std::chrono::microseconds magnetometer_sampling_period  //!< Magnetometer sampling period
     );
 
     //! Adds a magnetic field sample set
@@ -100,7 +99,6 @@ class BDot {
 
     double m_gain;                                             //!< Gain constant
     std::chrono::microseconds m_magnetometer_sampling_period;  //!< Magnetometer
-    std::chrono::microseconds m_rate_group_max_period;         //!< Rate group maximum period
 
     std::array<Sample, SAMPLING_SET_SIZE> m_sampling_set{};  //!< Set of samples used to compute BDot
     std::size_t m_sample_count = 0;                          //!< Number of samples in the set
