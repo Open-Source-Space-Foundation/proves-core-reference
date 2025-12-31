@@ -85,8 +85,8 @@ class BDot {
     //!
     //! B_i is the magnetic field vector at sample i
     //! 𝚫t is the time delta between samples in seconds
-    //! TODO(evanjellison): Write up on coefficient derivation
-    //! Coefficients (-1, 8, 12, etc.)
+    //! TODO(evanjellison): Write up on coefficient and divisor derivation
+    //! Aoefficients are (-1, 8, -8, 1) with divisor 12 * 𝚫t.
     std::array<double, 3> computeBDot() const;
 
     //! Compute the magnitude of the most recent magnetic field sample.

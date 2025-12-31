@@ -185,7 +185,7 @@ $$
 
 Given:
 - Actuation duration, $\Delta t = 0.32\ \text{s}$ (configured via `TORQUE_DURATION` parameter)
-- Time between $\dot{B}$ measurements, $\delta T = 0.08\ \text{s}$ (based on `DetumbleManger` rate group $20Hz$ and and B-Dot sample window of $5$ samples)
+- Time between $\dot{B}$ measurements, $\delta T = 0.08\ \text{s}$ (based on `DetumbleManager` rate group $20Hz$ and B-Dot sample window of $5$ samples)
 
 In this reference deployment the `BDOT_MAX_THRESHOLD` parameter defaults to $720\,\text{deg/s}$ (see the FPP definition), well under the computed maximum of $1125\ \text{deg/s}$ to provide a buffer for margin of error. Above the configured threshold, the hysteresis strategy is used, which is less sensitive to timing issues.
 
@@ -201,25 +201,25 @@ We set the `TORQUE_DURATION` parameter to $320ms$ in this reference deployment, 
 ### `COOLDOWN_DURATION` Decision
 The `COOLDOWN_DURATION` parameter defines the time spent waiting after a torque command before sensing angular velocity again. This cooldown period allows the magnetic environment and sensors to settle after actuation so that measurements are not contaminated by residual fields. The LIS2MDL magnetometer takes new measurements every $10ms$ ($100Hz$). To ensure at least one new measurement is available after actuation, we set the `COOLDOWN_DURATION` parameter to $20ms$ in this reference deployment.
 
-#### `DEADBAND_LOWER_THRESHOLD` Decision
+### `DEADBAND_LOWER_THRESHOLD` Decision
 The `DEADBAND_LOWER_THRESHOLD` parameter defines the rotational rate (deg/s) below which detumbling is considered complete and the `IDLE` strategy is selected. This threshold should be set low enough to ensure that the spacecraft is sufficiently detumbled for mission operations, but high enough to prevent the satellite from settling into a poor orientation (like antenna board directly pointed at the sun) or suffer thermal issues due to heat taken on from the sun.
 
-#### BDot Implementation Options
+### BDot Implementation Options
 The B-Dot algorithm estimates the time derivative of the magnetic field vector $\dot{B}$ to compute the required dipole moment for detumbling. Several methods exist for estimating $\dot{B}$ from various sensor inputs:
 
-##### 1. Cross Product Method
+#### 1. Cross Product Method
 The cross product method estimates $\dot{B}$ using the cross product of an angular velocity vector $\omega$ and the magnetic field vector $B$:
 
 $$
 \dot{B} = \omega \times B
 $$
 
-Both the angular velocity and magnetic field vectors are available to the `DetumbleManger` component via ports in the `ImuManager` component. This method requires accurate angular velocity measurements and is sensitive to noise in both measurements.
+Both the angular velocity and magnetic field vectors are available to the `DetumbleManager` component via ports in the `ImuManager` component. This method requires accurate angular velocity measurements and is sensitive to noise in both measurements.
 
 References:
 - [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama ](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
 
-##### 2. Derivative Method
+#### 2. Derivative Method
 The derivative method estimates $\dot{B}$ using finite differences between consecutive magnetic field readings:
 
 $$
@@ -232,7 +232,7 @@ References:
 - [Lecture slides on Control Systems - Dr. Jan Bekkeng - University of Oslo](https://www.uio.no/studier/emner/matnat/fys/FYS3240/v23/lectures/l11---control-systems-v23.pdf)
 - [Discrete Control with First Order Bdot Controller - Dr. Carlos Montalvo - University of South Alabama](https://www.youtube.com/watch?v=0mh9D5QpjT8&list=PL_D7_GvGz-v0dng864FPenLhbSUNyKmfm&index=102).
 
-##### 3. Least Squares Method
+#### 3. Least Squares Method
 The least squares method fits a line to a series of magnetic field readings over time and computes the slope of that line as an estimate of $\dot{B}$.
 
 
@@ -242,7 +242,7 @@ References:
 - [Hardware-In-The-Loop and Software-In-The-Loop
 Testing of the MOVE-II CubeSat - Jonis Kiesbye et al. - 2019](https://s3vi.ndc.nasa.gov/ssri-kb/static/resources/aerospace-06-00130-v2.pdf)
 
-##### 4. 5-Point Central Difference Method
+#### 4. 5-Point Central Difference Method
 The central difference method uses a five-point stencil to estimate $\dot{B}$, providing a higher-order approximation:
 
 $$
@@ -251,15 +251,15 @@ $$
 
 Where $B_i$ are magnetic field readings at different time points and $\Delta t$ is the time interval between readings. The `DetumbleManager` is on a $50Hz$ rate group so the time between readings is $0.02 s$.
 
-TODO(evanjellison): Write up on coefficient derivation (-1, 8, 12, etc.)
+TODO(evanjellison): Write up on coefficient and divisor derivation
 
-#### BDot Implementation Decision
+### BDot Implementation Decision
 After evaluating the options, we selected the 5-Point Central Difference Method for the following reasons:
 - **Noise Robustness**: The central difference method can better handle noisy measurements by averaging over multiple readings.
 - **Simplicity**: It requires only magnetic field measurements, addition and division, simplifying the system architecture.
 - **Performance**: While the cross product and least squared methods may offer better performance in some scenarios, the central difference method provides a good balance between performance and robustness for our application.
 
-#### `k` Gain Constant Default Value
+### `k` Gain Constant Default Value
 The gain constant `k` in the B-Dot algorithm determines the strength of the magnetic moment command in response to the estimated $\dot{B}$. A higher `k` value results in stronger torques, while a lower `k` value results in gentler torques.
 
 We can determine the `k` constant based on the following formula:
