@@ -86,10 +86,12 @@ class SBand final : public SBandComponentBase {
 
   private:
     //! Enable receive mode
-    Status enableRx();
+    //! \return RadioLib state (RADIOLIB_ERR_NONE on success)
+    int16_t enableRx();
 
     //! Enable transmit mode
-    Status enableTx();
+    //! \return RadioLib state (RADIOLIB_ERR_NONE on success)
+    int16_t enableTx();
 
   private:
     FprimeHal m_rlb_hal;                                                   //!< RadioLib HAL instance

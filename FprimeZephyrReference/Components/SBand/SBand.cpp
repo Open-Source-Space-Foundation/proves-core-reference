@@ -91,7 +91,7 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         }
 
         // Re-enable receive mode
-        state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
+        state = this->enableRx();
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
         }
@@ -118,10 +118,12 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
     }
 
     // Enable transmit mode
-    Status status = this->enableTx();
-    if (status == Status::SUCCESS) {
+    int16_t state = this->enableTx();
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+    } else {
         // Transmit data
-        int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
+        state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
             returnStatus = Fw::Success::FAILURE;
@@ -135,7 +137,10 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
     this->dataReturnOut_out(0, mutableData, context);
     this->comStatusOut_out(0, returnStatus);
 
-    status = this->enableRx();
+    state = this->enableRx();
+    if (state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(state);
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -160,7 +165,7 @@ void SBand ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const C
     this->deallocate_out(0, data);
 }
 
-SBand::Status SBand ::enableRx() {
+int16_t SBand ::enableRx() {
     Fw::ParamValid isValid = Fw::ParamValid::INVALID;
     const SBandDataRate dataRate = this->paramGet_DATA_RATE(isValid);
     FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
@@ -179,37 +184,29 @@ SBand::Status SBand ::enableRx() {
 
     int16_t state = radio->standby();
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setSpreadingFactor(static_cast<uint8_t>(dataRate.e));
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setCodingRate(static_cast<uint8_t>(codingRate.e));
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setBandwidth(bandwidthEnumToKHz(bandwidth));
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-    return Status::SUCCESS;
+    return state;
 }
 
-SBand::Status SBand ::enableTx() {
+int16_t SBand ::enableTx() {
     Fw::ParamValid isValid = Fw::ParamValid::INVALID;
     const SBandDataRate dataRate = this->paramGet_DATA_RATE(isValid);
     FW_ASSERT((isValid == Fw::ParamValid::VALID) || (isValid == Fw::ParamValid::DEFAULT),
@@ -228,29 +225,21 @@ SBand::Status SBand ::enableTx() {
 
     int16_t state = radio->standby();
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setSpreadingFactor(static_cast<uint8_t>(dataRate.e));
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setCodingRate(static_cast<uint8_t>(codingRate.e));
     if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
+        return state;
     }
 
     state = radio->setBandwidth(bandwidthEnumToKHz(bandwidth));
-    if (state != RADIOLIB_ERR_NONE) {
-        this->log_WARNING_HI_RadioLibFailed(state);
-        return Status::ERROR;
-    }
-
-    return Status::SUCCESS;
+    return state;
 }
 
 SBand::Status SBand ::configureRadio() {
@@ -287,8 +276,9 @@ SBand::Status SBand ::configureRadio() {
         return Status::ERROR;
     }
 
-    Status rx_status = this->enableRx();
-    if (rx_status != Status::SUCCESS) {
+    int16_t rx_state = this->enableRx();
+    if (rx_state != RADIOLIB_ERR_NONE) {
+        this->log_WARNING_HI_RadioLibFailed(rx_state);
         return Status::ERROR;
     }
 
