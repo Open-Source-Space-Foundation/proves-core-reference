@@ -113,6 +113,7 @@ module ReferenceDeployment {
     instance drv2605Face3Manager
     instance drv2605Face5Manager
     instance downlinkRepeater
+    instance dropDetector
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -254,6 +255,7 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[10] -> downlinkDelay.run
       rateGroup10Hz.RateGroupMemberOut[11] -> sband.run
       rateGroup10Hz.RateGroupMemberOut[12] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> dropDetector.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn

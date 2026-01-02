@@ -236,4 +236,6 @@ module ReferenceDeployment {
 
   instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
 
+  instance dropDetector: Utilities.DropDetector base id 0x10077000
+
 }
