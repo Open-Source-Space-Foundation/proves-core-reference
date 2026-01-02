@@ -106,6 +106,7 @@ module ReferenceDeployment {
     instance drv2605Face3Manager
     instance drv2605Face5Manager
     instance downlinkRepeater
+    instance dropDetector
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -202,17 +203,13 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
       rateGroup10Hz.RateGroupMemberOut[1] -> ComCcsdsUart.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsdsLora.aggregator.timeout
-      rateGroup10Hz.RateGroupMemberOut[3] -> peripheralUartDriver.schedIn
-      rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver2.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> FileHandling.fileManager.schedIn
-      rateGroup10Hz.RateGroupMemberOut[6] -> cmdSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[7] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[8] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[13] -> downlinkDelay.run
+      rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver.schedIn
+      rateGroup10Hz.RateGroupMemberOut[6] -> FileHandling.fileManager.schedIn
+      rateGroup10Hz.RateGroupMemberOut[7] -> cmdSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[8] -> payloadSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[9] -> safeModeSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[10] -> downlinkDelay.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> dropDetector.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn

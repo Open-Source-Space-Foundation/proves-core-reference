@@ -237,4 +237,8 @@ module ReferenceDeployment {
   instance loraRetry: Svc.ComRetry base id 0x10063000
 
   instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
+
+  instance dropDetector: Utilities.DropDetector base id 0x10065000
+
+
 }
