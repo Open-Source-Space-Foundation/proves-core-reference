@@ -4,7 +4,7 @@ Component for F Prime FSW framework.
 
 ## Overview
 
-The Drv2605Manager component provides a driver interface for the Texas Instruments DRV2605 haptic motor driver. This passive component manages initialization, configuration, and triggering of haptic feedback effects using the Zephyr RTOS haptics API.
+The Drv2605Manager component provides a driver interface for the Texas Instruments DRV2605 haptic driver, which is used here as a current-controlled actuator (for example, to drive a magnetorquer). This passive component manages device configuration and safe triggering of output using the Zephyr RTOS haptics and DRV2605 APIs. It also coordinates with a power-domain load switch, a TCA device, and a mux to ensure the device is only used when hardware is healthy and fully powered.
 
 ## Usage Examples
 
@@ -12,9 +12,19 @@ The Drv2605Manager component provides a driver interface for the Texas Instrumen
 
 The typical usage pattern for the Drv2605Manager component is:
 
-1. **Configure the device**: Call `configure()` with a Zephyr device pointer during system initialization
-2. **Initialize the device**: Invoke the `init` port to initialize the DRV2605 hardware
-3. **Trigger haptic effects**: Call the `triggerDevice` port to activate the configured haptic sequence
+1. **Configure devices**: Call `configure(tca, mux, dev)` during system initialization to provide Zephyr device pointers for the TCA, mux, and DRV2605.
+2. **Track power state**: A higher-level component calls the `loadSwitchStateChanged` port whenever the associated load switch turns on or off.
+3. **Start output**: Application code or another component calls the `start` port (or the `START` command) with a value in the range [-127, 127] to request output.
+4. **Stop output**: Application code or another component calls the `stop` port (or the `STOP` command) to stop output.
+
+On each `start` request, the component automatically:
+
+- Verifies that the DRV2605 device is initialized and `device_is_ready()`.
+- Verifies that the TCA and mux devices are healthy.
+- Verifies that the load switch has been ON long enough to be considered stable.
+- Initializes the DRV2605 if needed using `device_init()`.
+- Configures the DRV2605 using `drv2605_haptic_config()` with RTP data derived from the requested value.
+- Starts output using `haptics_start_output()`.
 
 ## Class Diagram
 
@@ -27,94 +37,136 @@ classDiagram
     }
 
     class Drv2605Manager {
-        - device* m_dev
-        - drv2605_config_data m_config_data
-        + configure(dev)
-        # init_handler()
-        # triggerDevice_handler()
+        + Drv2605Manager(compName: const char*)
+        + ~Drv2605Manager()
+        + configure(tca: device*, mux: device*, dev: device*): void
+        # loadSwitchStateChanged_handler(portNum, state): Fw::Success
+        # start_handler(portNum, val: I8): Fw::Success
+        # stop_handler(portNum): Fw::Success
+        # START_cmdHandler(opCode, cmdSeq, val: I8): void
+        # STOP_cmdHandler(opCode, cmdSeq): void
+        - initializeDevice(): Fw::Success
+        - deinitializeDevice(): Fw::Success
+        - isDeviceInitialized(): bool
+        - loadSwitchReady(): bool
+        - m_dev: const device*
+        - m_tca: const device*
+        - m_mux: const device*
+        - m_load_switch_state: Fw::On
+        - m_load_switch_on_timeout: Fw::Time
+        - m_load_switch_check: bool
     }
 ```
 
 ## Port Descriptions
 
-| Name          | Type                | Direction  | Description                                                                                                                                                 |
-| ------------- | ------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| init          | Fw.SuccessCondition | sync input | Initializes the DRV2605 device. Must be called successfully before the device can be triggered. Returns SUCCESS or FAILURE based on initialization outcome. |
-| triggerDevice | triggerDevice       | sync input | Triggers the DRV2605 to execute the configured haptic sequence. Returns true on success, false on failure.                                                  |
+| Name                 | Type                            | Direction  | Description                                                                                                  |
+| -------------------- | ------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| start                | Drv.StartMagnetorquer           | sync input | Starts output on the DRV2605 with a signed value [-127, 127]. Internally initializes and configures device. |
+| stop                 | Drv.StopMagnetorquer            | sync input | Stops output by issuing a zero-value RTP update through `start_handler`.                                     |
+| loadSwitchStateChanged | Components.loadSwitchStateChanged | sync input | Notifies the component when the power-domain load switch changes state, driving (de)initialization timing.  |
+| timeCaller           | time get                        | time get   | Provides current time used to implement the load-switch stabilization timeout.                              |
+| cmdRegOut            | command reg                     | output     | Registers the `START` and `STOP` commands.                                                                  |
+| cmdIn                | command recv                    | input      | Receives ground commands, including `START` and `STOP`.                                                     |
+| cmdResponseOut       | command resp                    | output     | Sends command responses (OK or EXECUTION_ERROR).                                                            |
+| logTextOut           | text event                      | output     | Sends textual event representations.                                                                        |
+| logOut               | event                           | output     | Sends binary events for downlink.                                                                           |
 
-## Component States
+## Component Behavior and States
 
-| Name         | Description                                                       |
-| ------------ | ----------------------------------------------------------------- |
-| UNCONFIGURED | Component constructed but device not configured. `m_dev` is null. |
-| CONFIGURED   | Device pointer set via `configure()` but device not initialized.  |
-| INITIALIZED  | Device successfully initialized and ready for haptic triggers.    |
-| ERROR        | Device initialization failed or device/state is nil.              |
+Internally, Drv2605Manager maintains device and power readiness via `m_dev`, `m_tca`, `m_mux`, and `m_load_switch_state`. While there is no explicit state enum, the behavior can be described with the following conceptual states:
+
+| Name           | Description                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| POWERED_OFF    | Load switch is OFF; device is deinitialized or not ready.                                           |
+| POWERING_ON    | Load switch just turned ON; waiting for `m_load_switch_on_timeout` to elapse before using device.   |
+| READY          | Device pointers are valid, dependencies are healthy, and DRV2605 is initialized and ready to start. |
+| ERROR          | Initialization or health checks have failed; events are emitted and the request returns FAILURE.    |
 
 ```mermaid
 stateDiagram-v2
-    [*] --> UNCONFIGURED: Component Created
-    UNCONFIGURED --> CONFIGURED: configure(dev)
-    CONFIGURED --> INITIALIZED: init() returns SUCCESS
-    CONFIGURED --> ERROR: init() returns FAILURE
-    ERROR --> CONFIGURED: Re-configure device
-    INITIALIZED --> INITIALIZED: triggerDevice()
-    INITIALIZED --> ERROR: Device becomes invalid
+    [*] --> POWERED_OFF: Component created / load switch OFF
+    POWERED_OFF --> POWERING_ON: loadSwitchStateChanged(ON)
+    POWERING_ON --> READY: loadSwitchReady() == true
+    POWERING_ON --> POWERED_OFF: loadSwitchStateChanged(OFF)
+    READY --> READY: start(val) / STOP, device remains healthy
+    READY --> ERROR: initializeDevice() or start_handler() detects error
+    ERROR --> POWERED_OFF: loadSwitchStateChanged(OFF) or reconfigure/repair
 ```
 
 ## Sequence Diagrams
 
-### Initialization Sequence
+### Initialization and Start Sequence
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Drv2605Manager
-    participant ZephyrDriver
+    participant App as Client
+    participant LS as Load Switch Controller
+    participant Drv2605Manager as DRV
+    participant TCA
+    participant MUX
+    participant Dev as DRV2605
 
-    Client->>Drv2605Manager: configure(device*)
-    Drv2605Manager->>Drv2605Manager: Store m_dev, m_config_data
+    App->>DRV: configure(tca, mux, dev)
+    DRV->>DRV: store m_tca, m_mux, m_dev
 
-    Client->>Drv2605Manager: init(portNum, condition)
-    Drv2605Manager->>Drv2605Manager: Check m_dev != null
-    alt Device is null
-        Drv2605Manager->>Drv2605Manager: log_WARNING_HI_DeviceNil()
-        Drv2605Manager-->>Client: condition = FAILURE
-    else Device state is null
-        Drv2605Manager->>Drv2605Manager: log_WARNING_HI_DeviceStateNil()
-        Drv2605Manager-->>Client: condition = FAILURE
-    else Valid device
-        Drv2605Manager->>ZephyrDriver: device_init(m_dev)
-        alt Init failed
-            ZephyrDriver-->>Drv2605Manager: rc < 0
-            Drv2605Manager->>Drv2605Manager: log_WARNING_HI_DeviceInitFailed(rc)
-            Drv2605Manager-->>Client: condition = FAILURE
-        else Init success
-            ZephyrDriver-->>Drv2605Manager: rc >= 0
-            Drv2605Manager->>ZephyrDriver: drv2605_haptic_config()
-            Drv2605Manager-->>Client: condition = SUCCESS
+    LS->>DRV: loadSwitchStateChanged(ON)
+    DRV->>DRV: m_load_switch_state = ON
+    DRV->>DRV: m_load_switch_on_timeout = now + 1s
+
+    App->>DRV: start(portNum, val)
+    DRV->>DRV: initializeDevice()
+    alt already initialized and ready
+        DRV->>Dev: device_is_ready(m_dev)
+        alt not ready
+            DRV->>DRV: log_WARNING_LO_DeviceNotReady()
+            DRV-->>App: FAILURE
+        else ready
+            DRV-->>App: SUCCESS (continue)
         end
+    else not initialized yet
+        DRV->>TCA: device_is_ready(m_tca)
+        DRV->>MUX: device_is_ready(m_mux)
+        DRV->>DRV: loadSwitchReady()
+        DRV->>Dev: device_init(m_dev)
+        alt init failed
+            Dev-->>DRV: rc < 0
+            DRV->>DRV: log_WARNING_LO_DeviceInitFailed(rc)
+            DRV->>DRV: deinitializeDevice()
+            DRV-->>App: FAILURE
+        else init success
+            Dev-->>DRV: rc >= 0
+            DRV->>DRV: log_ACTIVITY_LO_DeviceInitialized()
+        end
+    end
+
+    App-->>DRV: (if initializeDevice() SUCCESS)
+    DRV->>DRV: prepare RTP data from val
+    DRV->>Dev: drv2605_haptic_config(DEV, RTP, config_data)
+    DRV->>Dev: haptics_start_output(DEV)
+    alt success
+        Dev-->>DRV: 0
+        DRV-->>App: Fw::Success::SUCCESS
+    else failure
+        Dev-->>DRV: error code
+        DRV->>DRV: log_WARNING_LO_TriggerFailed(rc)
+        DRV-->>App: Fw::Success::FAILURE
     end
 ```
 
-### Trigger Haptic Sequence
+### Stop Sequence
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Drv2605Manager
-    participant ZephyrDriver
-    participant HapticMotor
+    participant App as Client
+    participant DRV as Drv2605Manager
 
-    Client->>Drv2605Manager: triggerDevice(portNum)
-    Drv2605Manager->>ZephyrDriver: haptics_start_output(m_dev)
-    ZephyrDriver->>HapticMotor: Execute configured sequence
-    alt Success
-        ZephyrDriver-->>Drv2605Manager: 0
-        Drv2605Manager-->>Client: true
-    else Failure
-        ZephyrDriver-->>Drv2605Manager: error code
-        Drv2605Manager-->>Client: false
+    App->>DRV: stop(portNum)
+    DRV->>DRV: start_handler(0, 0)  %% sends zero RTP value
+    alt success
+        DRV-->>App: Fw::Success::SUCCESS
+    else failure
+        DRV-->>App: Fw::Success::FAILURE
     end
 ```
 
@@ -126,20 +178,30 @@ sequenceDiagram
 
 ## Commands
 
-This component does not define any ground commands.
+The component exposes simple ground commands to map to the start/stop ports:
 
-| Name | Description         |
-| ---- | ------------------- |
-| N/A  | No commands defined |
+| Name  | Arguments         | Description                                                                 |
+| ----- | ----------------- | --------------------------------------------------------------------------- |
+| START | `val: I8`         | Starts output with a signed value [-127, 127]. Uses the `start` handler.   |
+| STOP  | (none)            | Stops output by calling the `stop` handler.                                 |
+
+Command responses are sent on `cmdResponseOut` with `OK` on success or `EXECUTION_ERROR` on failure.
 
 ## Events
 
-| Name             | Severity   | Throttle | Description                                                                                                          |
-| ---------------- | ---------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| DeviceNotReady   | WARNING_HI | 5        | Emitted when the DRV2605 device is not ready for operation. Currently defined in FPP but not used in implementation. |
-| DeviceInitFailed | WARNING_HI | 5        | Emitted when DRV2605 initialization fails. Includes the error return code from `device_init()`.                      |
-| DeviceNil        | WARNING_HI | 5        | Emitted when the device pointer (`m_dev`) is null during initialization.                                             |
-| DeviceStateNil   | WARNING_HI | 5        | Emitted when the device state pointer is null during initialization.                                                 |
+| Name                      | Severity        | Throttle | Description                                                                                       |
+| ------------------------- | --------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| DeviceNotReady            | WARNING_LO      | 5        | Emitted when `device_is_ready(m_dev)` returns false for an already-initialized device.           |
+| DeviceInitFailed          | WARNING_LO      | 5        | Emitted when DRV2605 initialization via `device_init()` fails; includes the error return code.   |
+| DeviceNil                 | WARNING_LO      | 5        | Emitted when the DRV2605 device pointer (`m_dev`) is null during init/deinit checks.             |
+| DeviceStateNil            | WARNING_LO      | 5        | Emitted when the DRV2605 device state pointer is null during init/deinit checks.                 |
+| DeviceHapticConfigSetFailed | WARNING_LO    | 5        | Emitted when `drv2605_haptic_config()` fails; includes the error return code.                    |
+| TcaUnhealthy              | WARNING_LO      | 5        | Emitted when the TCA device is not ready according to `device_is_ready(m_tca)`.                  |
+| MuxUnhealthy              | WARNING_LO      | 5        | Emitted when the mux device is not ready according to `device_is_ready(m_mux)`.                  |
+| TriggerFailed             | WARNING_LO      | 5        | Emitted when `haptics_start_output()` fails; includes the error return code.                     |
+| DeviceInitialized         | ACTIVITY_LO     | (none)   | Emitted once when DRV2605 initialization succeeds.                                               |
+
+All warning events are throttled to reduce log spam; `_ThrottleClear` calls in the implementation clear throttling on success.
 
 ## Telemetry
 
@@ -149,19 +211,20 @@ This component does not define any ground commands.
 
 ## Requirements
 
-| Name    | Description                                                          | Validation                                                         |
-| ------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| DRV-001 | Component shall initialize DRV2605 device via Zephyr driver          | Test successful initialization, verify device_init called          |
-| DRV-002 | Component shall configure DRV2605 for LRA mode with internal trigger | Verify drv2605_haptic_config called with correct parameters        |
-| DRV-003 | Component shall trigger haptic output on demand                      | Test triggerDevice returns true when haptics_start_output succeeds |
-| DRV-004 | Component shall report initialization failures                       | Verify DeviceInitFailed event emitted with error code              |
-| DRV-005 | Component shall validate device pointer before use                   | Verify DeviceNil event when m_dev is null                          |
-| DRV-006 | Component shall validate device state before use                     | Verify DeviceStateNil event when device state is null              |
-| DRV-007 | Component shall throttle error events to prevent log spam            | Verify events limited to 5 occurrences per event type              |
-| DRV-008 | Component shall support re-initialization                            | Verify device->state->initialized reset before device_init         |
+| Name    | Description                                                                                   | Validation                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| DRV-001 | Component shall initialize the DRV2605 device via the Zephyr driver when needed.             | Exercise `start`/`START` with an uninitialized device and verify `device_init()` is called. |
+| DRV-002 | Component shall verify TCA and mux health before initializing the DRV2605 device.            | Force `device_is_ready(m_tca/m_mux)` to fail and verify `TcaUnhealthy`/`MuxUnhealthy` events. |
+| DRV-003 | Component shall respect the load switch warm-up delay before using the DRV2605.              | Toggle `loadSwitchStateChanged(ON)` then call `start` before and after timeout; expect failure then success. |
+| DRV-004 | Component shall configure DRV2605 with RTP data based on the requested signed value.         | Inspect calls to `drv2605_haptic_config()` and resulting behavior for various `val` inputs. |
+| DRV-005 | Component shall start output using `haptics_start_output()` and report failures.             | Induce a driver error and verify `TriggerFailed` is emitted and `start` returns FAILURE.    |
+| DRV-006 | Component shall validate device pointer and state before use.                                | Force `m_dev` or `m_dev->state` to be null and verify `DeviceNil` or `DeviceStateNil` events. |
+| DRV-007 | Component shall report device-not-ready conditions for already initialized devices.          | Make `isDeviceInitialized()` true but `device_is_ready(m_dev)` false and verify `DeviceNotReady`. |
+| DRV-008 | Component shall support ground commands to start and stop output.                            | Send `START`/`STOP` commands and verify correct mapping to ports and command responses.     |
 
 ## Change Log
 
-| Date       | Description            |
-| ---------- | ---------------------- |
-| 2025-12-01 | Initial implementation |
+| Date       | Description                                      |
+| ---------- | ------------------------------------------------ |
+| 2025-12-01 | Initial implementation and documentation draft. |
+| 2025-12-20 | Use RTP mode to drive magnetorquers.            |

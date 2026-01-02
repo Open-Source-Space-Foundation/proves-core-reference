@@ -15,7 +15,9 @@ lib/zephyr-workspace/*
 /venv/
 /fprime-venv/
 /.idea/
-/.vscode/
+/.vscode/*
+!/.vscode/launch.json
+!/.vscode/tasks.json
 .DS_Store
 *.gcov
 build
@@ -23,8 +25,7 @@ settings.ini
 Framing/uv.lock
 bootable.uf2
 mcuboot.uf2
-startup.bin
-camera_handler_1.bin
+/sequences/*.bin
 
 **/__pycache__/
 **/*.egg-info/

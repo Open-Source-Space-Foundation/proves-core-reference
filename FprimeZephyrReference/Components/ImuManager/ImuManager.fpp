@@ -1,7 +1,9 @@
 module Components {
     port AccelerationGet(ref condition: Fw.Success) -> Drv.Acceleration
     port AngularVelocityGet(ref condition: Fw.Success)-> Drv.AngularVelocity
+    port AngularVelocityMagnitudeGet(ref condition: Fw.Success, unit: AngularUnit) -> F64
     port MagneticFieldGet(ref condition: Fw.Success) -> Drv.MagneticField
+    port SamplingPeriodGet(ref condition: Fw.Success) -> Fw.TimeIntervalValue
 
     @ Magnetometer sampling frequency settings for LIS2MDL sensor
     enum Lis2mdlSamplingFrequency {
@@ -32,6 +34,12 @@ module Components {
         ROTATED_90_DEG_CCW @< Rotated 90 degrees counter-clockwise
         ROTATED_180_DEG @< Rotated 180 degrees
     }
+
+    @ Units for angular velocity
+    enum AngularUnit {
+        RAD_PER_SEC @< Radians per second
+        DEG_PER_SEC @< Degrees per second
+    }
 }
 
 module Components {
@@ -49,17 +57,14 @@ module Components {
         @ Port to read the current angular velocity in rad/s.
         sync input port angularVelocityGet: AngularVelocityGet
 
+        @ Port to read the current angular velocity magnitude.
+        sync input port angularVelocityMagnitudeGet: AngularVelocityMagnitudeGet
+
         @ Port to read the current magnetic field in gauss.
         sync input port magneticFieldGet: MagneticFieldGet
 
-        @ Port for sending accelerationGet calls to the LSM6DSO Driver
-        output port acceleration: AccelerationGet
-
-        @ Port for sending angularVelocityGet calls to the LSM6DSO Driver
-        output port angularVelocity: AngularVelocityGet
-
-        @ Port for sending magneticFieldGet calls to the LIS2MDL Manager
-        output port magneticField: MagneticFieldGet
+        @ Port to get the time between magnetic field reads
+        sync input port magneticFieldSamplingPeriodGet: SamplingPeriodGet
 
         ### Parameters ###
 
@@ -67,7 +72,7 @@ module Components {
         param ACCELEROMETER_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_12_5Hz id 0
 
         @ Parameter for storing the gyroscope sampling frequency
-        param GYROSCOPE_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_12_5Hz id 1
+        param GYROSCOPE_SAMPLING_FREQUENCY: Lsm6dsoSamplingFrequency default Lsm6dsoSamplingFrequency.SF_104Hz id 1
 
         @ Parameter for storing the magnetometer sampling frequency
         param MAGNETOMETER_SAMPLING_FREQUENCY: Lis2mdlSamplingFrequency default Lis2mdlSamplingFrequency.SF_100Hz id 2
@@ -114,6 +119,12 @@ module Components {
 
         @ Event for reporting LIS2MDS magnetometer frequency not configured
         event MagnetometerSamplingFrequencyNotConfigured() severity warning high format "LIS2MDL magnetomiter sampling frequency not configured" throttle 5
+
+        @ Event for reporting failure to retrieve LIS2MDS magnetometer sampling frequency
+        event MagnetometerSamplingFrequencyGetFailed() severity warning low format "Failed to retrieve LIS2MDL magnetometer sampling frequency" throttle 5
+
+        @ Event to report LIS2MDL magnetometer sampling frequency of 0 Hz
+        event MagnetometerSamplingFrequencyZeroHz() severity warning low format "LIS2MDL magnetometer sampling frequency is set to 0 Hz" throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
