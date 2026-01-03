@@ -219,6 +219,7 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     // current session
 
     if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
+        // Don't write monotonic time to file, but cache it for use in current session
         this->m_commandLossStartTime = current_time;
         return current_time;
     }
@@ -235,20 +236,25 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
 
         return current_time;
     } else {
-        // Read stored time from file, or use current time if file doesn't exist
-        Fw::Time time = this->getTime();
-        Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
+        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch)
+        // Otherwise we want to read from the cache in case the filesystem is broken
+        // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
+        if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
+            this->m_commandLossStartTime.getTimeBase() != current_time.getTimeBase()) {
+            // Read stored time from file, or use current time if file doesn't exist
+            Fw::Time time = this->getTime();
+            Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-        // On read failure, write the current time to the file for future reads
-        if (status != Os::File::OP_OK) {
-            status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+            // On read failure, write the current time to the file for future reads
             if (status != Os::File::OP_OK) {
-                this->log_WARNING_HI_CommandLossFileInitFailure();
+                status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
+                if (status != Os::File::OP_OK) {
+                    this->log_WARNING_HI_CommandLossFileInitFailure();
+                }
             }
+            // Cache the loaded time
+            this->m_commandLossStartTime = time;
         }
-        // Cache the loaded time
-        this->m_commandLossStartTime = time;
-
         // Return cached time
         return this->m_commandLossStartTime;
     }
