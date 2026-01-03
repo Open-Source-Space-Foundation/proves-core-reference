@@ -45,6 +45,7 @@ module Svc {
         @ Port to trigger safe mode (e.g., on command loss timeout)
         output port SetSafeMode: Components.ForceSafeModeWithReason
 
+        @ Port to reset the watchdog timer
         output port reset_watchdog: Fw.Signal
 
         @telemetry to track command loss time currently
