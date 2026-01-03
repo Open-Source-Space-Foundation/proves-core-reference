@@ -8,4 +8,6 @@ R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SAVE
 R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
 
 R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED
+
 R00:00:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
+R03:00:00 ReferenceDeployment.detumbleManager.SET_MODE, DISABLED
