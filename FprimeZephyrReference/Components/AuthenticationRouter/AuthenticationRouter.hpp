@@ -65,6 +65,13 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! Calls safemode when command loss time expires
     void CallSafeMode();
 
+    //! Handler implementation for command GET_COMMAND_LOSS_DATA
+    //!
+    //! Command to Get Command Loss Data
+    void GET_COMMAND_LOSS_DATA_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                          U32 cmdSeq            //!< The command sequence number
+                                          ) override;
+
     //! Updates the command loss start time
     //! @param write_to_file If true, writes current time to file and returns it. If false, reads from file.
     //! @return The command loss start time (current time if writing, stored time if reading)

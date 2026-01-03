@@ -77,6 +77,10 @@ void AuthenticationRouter ::CallSafeMode() {
     if (this->isConnected_reset_watchdog_OutputPort(0)) {
         this->reset_watchdog_out(0);
     }
+
+    // write current time to file
+    this->update_command_loss_start(true);
+
     // Since it takes 26 seconds for the watchdog to reboot the system, we set safe mode after resetting the watchdog,
     // it should boot back into safe mode
 
@@ -200,6 +204,21 @@ Fw::Time AuthenticationRouter ::get_uptime() {
     uint32_t seconds = k_uptime_seconds();
     Fw::Time time(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), 0);
     return time;
+}
+
+void AuthenticationRouter ::GET_COMMAND_LOSS_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Time current_time = this->getTime();
+    Fw::Time command_loss_start = this->update_command_loss_start();
+    Fw::ParamValid is_valid;
+    Fw::TimeIntervalValue command_loss_period = this->paramGet_COMM_LOSS_TIME(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_period.get_seconds(),
+                                   command_loss_period.get_useconds());
+    Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
+    this->log_ACTIVITY_LO_EmitCommandLossData(command_loss_start.getSeconds(), current_time.getSeconds(),
+                                              command_loss_interval.getSeconds(), command_loss_end.getSeconds(),
+                                              this->m_safeModeCalled);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {

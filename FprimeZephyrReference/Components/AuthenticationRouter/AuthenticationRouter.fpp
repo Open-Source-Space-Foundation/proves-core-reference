@@ -31,6 +31,9 @@ module Svc {
         # Port for receiving command responses from a command dispatcher (can be a no-op)
         sync input port cmdResponseIn: Fw.CmdResponse
 
+        @ Command to Get Command Loss Data
+        sync command GET_COMMAND_LOSS_DATA
+
         @ Port for forwarding non-recognized packet types
         @ Ownership of the buffer is retained by the AuthenticationRouter, meaning receiving
         @ components should either process data synchronously, or copy the data if needed
@@ -62,6 +65,19 @@ module Svc {
             severity warning high \
             format "Deserializing packet type failed with status {}"
 
+        @ Getting Command Loss Data
+        event EmitCommandLossData(start_time: U32
+                                current_time: U32
+                                intervel: U32
+                                endtime: U32
+                                status: U32
+                            ) severity activity low \
+            format "Command Loss Start: {}, Current Time: {}, Command Interval {}, Endtime: {}, Command Loss Status: {}"
+
+
+        @ Deleting the File
+        event CommandLossFileDeleteFailure() severity warning low \
+            format "Failed to Delete Command Loss File"
 
         @ An allocation error occurred
         event AllocationError(reason: AllocationReason) severity warning high \
