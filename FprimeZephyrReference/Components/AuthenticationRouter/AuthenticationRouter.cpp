@@ -185,6 +185,8 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_period.get_seconds(),
                                    command_loss_period.get_useconds());
     Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
+    printk("command_loss_start: %d + command_loss_interval: %d = command_loss_end: %d\n",
+           command_loss_start.getSeconds(), command_loss_interval.getSeconds(), command_loss_end.getSeconds());
 
     Fw::Time current_time =
         (command_loss_end.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
@@ -219,9 +221,14 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     // current session
 
     if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
-        // Don't write monotonic time to file, but cache it for use in current session
-        this->m_commandLossStartTime = current_time;
-        return current_time;
+        if (write_to_file) {
+            // Don't write monotonic time to file, but cache it for use in current session
+            this->m_commandLossStartTime = current_time;
+            return current_time;
+        } else {
+            // Return cached time (the time when last command arrived)
+            return this->m_commandLossStartTime;
+        }
     }
 
     Fw::ParamValid is_valid;
