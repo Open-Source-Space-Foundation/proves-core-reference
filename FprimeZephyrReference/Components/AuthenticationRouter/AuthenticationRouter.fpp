@@ -47,6 +47,15 @@ module Svc {
 
         output port reset_watchdog: Fw.Signal
 
+        @telemetry to track command loss time currently
+        telemetry CommandLossTimeCurrent: U32
+
+        @telemetry to track command loss time end
+        telemetry CommandLossTimeEnd: U32
+
+        @telemetry to track command loss state
+        telemetry InCommandLossState: bool
+
         @ An error occurred while serializing a com buffer
         event SerializationError(
                 status: U32 @< The status of the operation
