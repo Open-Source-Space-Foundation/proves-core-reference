@@ -189,10 +189,6 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Time current_time =
         (command_loss_end.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
 
-    tlmWrite_CommandLossTimeCurrent(current_time.getSeconds());
-    tlmWrite_CommandLossTimeEnd(command_loss_end.getSeconds());
-    tlmWrite_InCommandLossState(this->m_safeModeCalled);
-
     if (current_time > command_loss_end && !this->m_safeModeCalled) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
         this->CallSafeMode();

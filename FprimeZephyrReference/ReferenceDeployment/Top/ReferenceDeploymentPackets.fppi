@@ -177,12 +177,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
-  packet CommandLoss id 9 group 5 {
-    ComCcsdsLora.authenticationRouter.CommandLossTimeCurrent
-    ComCcsdsLora.authenticationRouter.CommandLossTimeEnd
-    ComCcsdsLora.authenticationRouter.InCommandLossState
-  }
-
   packet DetumblePerformance id 16 group 5 {
     ReferenceDeployment.detumbleManager.TorqueDuration
     ReferenceDeployment.detumbleManager.TimeBetweenMagneticFieldReadings
@@ -318,13 +312,5 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
-
-  ComCcsdsSband.authenticationRouter.CommandLossTimeCurrent
-  ComCcsdsSband.authenticationRouter.CommandLossTimeEnd
-  ComCcsdsSband.authenticationRouter.InCommandLossState
-
-  ComCcsdsUart.authenticationRouter.CommandLossTimeCurrent
-  ComCcsdsUart.authenticationRouter.CommandLossTimeEnd
-  ComCcsdsUart.authenticationRouter.InCommandLossState
 
 }
