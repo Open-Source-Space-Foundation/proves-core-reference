@@ -197,9 +197,6 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
         this->CallSafeMode();
         this->m_safeModeCalled = true;
-        printk("AuthenticationRouter: Command loss detected, entering safe mode.\n");
-    } else {
-        printk("AuthenticationRouter: Command loss not detected.\n");
     }
 }
 
@@ -217,6 +214,17 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     if (write_to_file) {
         // Update file with current time and cache it
         Fw::Time current_time = this->getTime();
+
+        // if current time base if monotonic, we don't want to write it to file, but we still want to update the cached
+        // time and return it this way we never write monotonic time to file, which would be invalid on reboot and if
+        // the system is using monotonic time, we don't consistently return a previously saved workstation time to a
+        // cube stuck on monotonic (ie broken RTC)
+
+        if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
+            this->m_commandLossStartTime = current_time;
+            return current_time;
+        }
+
         Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
