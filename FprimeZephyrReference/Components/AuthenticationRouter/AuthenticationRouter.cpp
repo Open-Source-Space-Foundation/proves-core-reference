@@ -72,6 +72,12 @@ void AuthenticationRouter ::CallSafeMode() {
     // Call Safe mode with EXTERNAL_REQUEST reason (command loss is an external component request)
     log_WARNING_HI_CommandLossFileInitFailure_ThrottleClear();
 
+    // Only the Lora is connetcted to the watchdog, so check connections to prevent fault
+    // should never happen bc Sband and UART are not connected to the rate group, but just in case
+    if (this->isConnected_reset_watchdog_OutputPort(0)) {
+        this->reset_watchdog_out(0);
+    }
+
     this->SetSafeMode_out(0, Components::SafeModeReason::EXTERNAL_REQUEST);
 }
 
@@ -183,8 +189,8 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
 
     if (current_time > command_loss_end && !this->m_safeModeCalled) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
-        this->CallSafeMode();
         this->m_safeModeCalled = true;
+        this->CallSafeMode();
     }
 }
 
