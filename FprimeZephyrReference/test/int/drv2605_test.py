@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime.common.models.serialize.time_type import TimeType
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
@@ -32,7 +32,9 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
     """Helper to get the current system power draw in Watts"""
-    start: TimeType = TimeType().set_datetime(datetime.now())
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
     proves_send_and_assert_command(
         fprime_test_api,
         f"{ina219SysManager}.GetPower",
@@ -48,14 +50,14 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
     """Test that magnetorquer powers on by asserting higher power draw"""
 
     baseline_power = get_system_power(fprime_test_api)
-    proves_send_and_assert_command(
-        fprime_test_api, f"{drv2605Manager}.START_CONTINUOUS_MODE"
-    )
+    proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.START", ["127"])
 
     time.sleep(1)  # Allow some time for power increase
 
     try:
-        start: TimeType = TimeType().set_datetime(datetime.now())
+        start: TimeType = TimeType().set_datetime(
+            datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+        )
         proves_send_and_assert_command(
             fprime_test_api,
             f"{ina219SysManager}.GetPower",
@@ -75,6 +77,4 @@ def test_01_magnetorquer_power_draw(fprime_test_api: IntegrationTestAPI, start_g
         raise e
     finally:
         # Ensure burnwire is stopped
-        proves_send_and_assert_command(
-            fprime_test_api, f"{drv2605Manager}.STOP_CONTINUOUS_MODE"
-        )
+        proves_send_and_assert_command(fprime_test_api, f"{drv2605Manager}.STOP")

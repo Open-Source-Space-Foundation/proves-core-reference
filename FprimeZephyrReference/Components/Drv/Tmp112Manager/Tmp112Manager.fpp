@@ -39,9 +39,6 @@ module Drv {
         @ Event for reporting MUX unhealthy state
         event MuxUnhealthy() severity warning low format "MUX device is unhealthy" throttle 5
 
-        @ Event for reporting Load Switch not ready state
-        event LoadSwitchNotReady() severity warning low format "Load Switch is not ready" throttle 5
-
         @ Event for reporting sensor fetch failure
         event SensorSampleFetchFailed(ret: I32) severity warning low format "Sensor fetch failed with return code: {}" throttle 5
 

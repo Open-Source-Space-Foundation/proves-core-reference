@@ -139,14 +139,17 @@ Fw::Success Tmp112Manager ::initializeDevice() {
     this->log_WARNING_LO_MuxUnhealthy_ThrottleClear();
 
     if (!this->loadSwitchReady()) {
-        this->log_WARNING_LO_LoadSwitchNotReady();
         return Fw::Success::FAILURE;
     }
-    this->log_WARNING_LO_LoadSwitchNotReady_ThrottleClear();
 
     int rc = device_init(this->m_dev);
     if (rc < 0) {
+        // Log the initialization failure
         this->log_WARNING_LO_DeviceInitFailed(rc);
+
+        // Deinitialize the device to reset state
+        this->deinitializeDevice();
+
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
@@ -168,6 +171,7 @@ Fw::Success Tmp112Manager ::deinitializeDevice() {
     this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
 
     this->m_dev->state->initialized = false;
+    this->m_dev->state->init_res = 0;
     return Fw::Success::SUCCESS;
 }
 

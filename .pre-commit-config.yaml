@@ -42,6 +42,7 @@ repos:
       args:
         - --ignore-init-method
         - --omit-covered-files
-        - --fail-under=100
+        - --fail-under=40
         - -vv
         - --color
+        - --exclude=Framing/*

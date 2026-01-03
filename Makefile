@@ -16,6 +16,22 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+# Setting specific fprime-gds pre-release for features:
+# - file-uplink-cooldown arg
+# - file-uplink-chunk-size arg
+	@$(UV) pip install fprime-gds==4.1.1a2
+
+
+.PHONY: zephyr-setup
+zephyr-setup: fprime-venv ## Set up Zephyr environment
+	@test -d lib/zephyr-workspace/modules/hal/rpi_pico || test -d ../lib/zephyr-workspace/modules/hal/rpi_pico || { \
+		echo "Setting up Zephyr environment..."; \
+		$(UVX) west update && \
+		$(UVX) west zephyr-export && \
+		$(UV) run west packages pip --install && \
+		$(UV) run west sdk install --toolchains arm-zephyr-eabi && \
+		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
+	}
 
 ##@ Development
 
@@ -28,7 +44,7 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -39,6 +55,36 @@ generate-if-needed:
 .PHONY: build
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
+	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
+
+##@ Authentication Keys
+
+AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
+
+.PHONY: generate-auth-key
+generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
+	@if [ -f "$(AUTH_DEFAULT_KEY_HEADER)" ]; then \
+		echo "$(AUTH_DEFAULT_KEY_HEADER) already exists. Skipping generation."; \
+	else \
+		echo "Generating $(AUTH_DEFAULT_KEY_HEADER) with random key..."; \
+		$(UV_RUN) python3 scripts/generate_auth_key_header.py --output $(AUTH_DEFAULT_KEY_HEADER) --template $(AUTH_KEY_TEMPLATE); \
+	fi
+	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
+
+
+SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
+.PHONY: build-mcuboot
+build-mcuboot: submodules zephyr fprime-venv
+	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
+
+	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
+	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
+
+test-unit: ## Run unit tests
+	cmake -S tests -B build-gtest -DBUILD_TESTING=ON
+	cmake --build build-gtest
+	ctest --test-dir build-gtest
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -70,12 +116,17 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 
 .PHONY: bootloader
 bootloader: uv
-	@if [ -d "/Volumes/RP2350" ] || [ -d "/Volumes/RPI-RP2" ] || ls /media/*/RP2350 2>/dev/null || ls /media/*/RPI-RP2 2>/dev/null; then \
+	@if picotool info ; then \
 		echo "RP2350 already in bootloader mode - skipping trigger"; \
 	else \
 		echo "RP2350 not in bootloader mode - triggering bootloader"; \
 		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
+
+.PHONY: sync-sequence-number
+sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -83,7 +134,8 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data
+GDS_COMMAND ?= $(UV_RUN) fprime-gds
+
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
 .PHONY: sequence
@@ -98,7 +150,11 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@$(GDS_COMMAND)
+	@if [ -n "$(UART_DEVICE)" ]; then \
+		echo "Using UART_DEVICE=$(UART_DEVICE)"; \
+		$(GDS_COMMAND) --uart-device $(UART_DEVICE); \
+	fi
+	$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
 delete-shadow-gds:
@@ -107,8 +163,19 @@ delete-shadow-gds:
 	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
-gds-integration:
+gds-integration: framer-plugin
+	@echo "Using UART_DEVICE=$(UART_DEVICE)"
 	@$(GDS_COMMAND) --gui=none
+
+.PHONY: DoL_test
+DoL_test:
+	@echo "make sure passthrough GDS is running"
+	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
+.PHONY: framer-plugin
+framer-plugin: fprime-venv ## Build framer plugin
+	@echo "Framer plugin built and installed in virtual environment."
+	@ cd Framing && $(UV_RUN) pip install -e .
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk

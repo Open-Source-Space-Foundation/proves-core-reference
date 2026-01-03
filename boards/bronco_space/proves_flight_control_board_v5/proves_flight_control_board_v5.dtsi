@@ -9,8 +9,10 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,flash-controller = &qmi;
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
+		zephyr,code-partition = &slot0_partition;
 	};
 
 	fstab {
@@ -56,8 +58,42 @@ zephyr_udc0: &usbd {
 	};
 };
 
+&qmi {
+	status = "okay";
+};
+
 &flash0 {
-       reg = <0x10000000 DT_SIZE_M(4)>;
+    reg = <0x10000000 DT_SIZE_M(4)>;
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+
+        boot_partition: partition@0 {
+            label = "mcuboot";
+            reg = <0x0 0x100000>;
+        };
+
+        slot0_partition: partition@100000 {
+            label = "current";
+            reg = <0x100000 0x100000>;
+        };
+
+        slot1_partition: partition@200000 {
+            label = "golden";
+            reg = <0x200000 0x100000>;
+        };
+
+        slot2_partition: partition@300000 {
+            label = "test";
+            reg = <0x300000 0x100000>;
+        };
+
+        storage_partition: partition@400000 {
+            label = "storage";
+            reg = <0x400000 0xC00000>;
+        };
+    };
 };
 
 &timer0 {
@@ -72,9 +108,23 @@ zephyr_udc0: &usbd {
 	status = "okay";
 };
 
+&uart0 {
+    status = "okay";
+    pinctrl-0 = <&uart0_default>;
+	current-speed = <115200>;
+    pinctrl-names = "default";
+};
+
+&uart1 {
+    status = "okay";
+    pinctrl-0 = <&uart1_default>;
+	current-speed = <115200>;
+    pinctrl-names = "default";
+};
+
 &spi0 {
 	status = "okay";
-	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>, <&gpio0 7 GPIO_ACTIVE_LOW>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
 	sdhc0: sdhc@0 {
@@ -145,6 +195,7 @@ zephyr_udc0: &usbd {
 		#size-cells = <0>;
 		label = "TCA9548A";
 		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+		i2c-mux-idle-disconnect;
 
 		mux_channel_0: i2c_mux@0 {
 			compatible = "ti,tca9548a-channel";
@@ -176,7 +227,7 @@ zephyr_udc0: &usbd {
 				label = "FACE0_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -213,7 +264,7 @@ zephyr_udc0: &usbd {
 				label = "FACE1_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -250,7 +301,7 @@ zephyr_udc0: &usbd {
 				label = "FACE2_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -287,7 +338,7 @@ zephyr_udc0: &usbd {
 				label = "FACE3_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -362,7 +413,7 @@ zephyr_udc0: &usbd {
 				label = "FACE5_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -381,7 +432,7 @@ zephyr_udc0: &usbd {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
 				status = "okay";
-				label = "FACE5_TMP112";
+				label = "FACE6_TMP112";
 				zephyr,deferred-init;
 			};
 
@@ -389,7 +440,7 @@ zephyr_udc0: &usbd {
 				compatible = "vishay,veml6031";
 				reg = <0x29>;
 				status = "okay";
-				label = "FACE5_VEML6031";
+				label = "FACE6_VEML6031";
 				zephyr,deferred-init;
 			};
 
@@ -397,10 +448,10 @@ zephyr_udc0: &usbd {
 				compatible = "ti,drv2605";
 				status = "okay";
 				reg = <0x5a>;
-				label = "FACE5_DRV2605";
+				label = "FACE6_DRV2605";
 				zephyr,deferred-init;
 
-				actuator-mode = "LRA";
+				actuator-mode = "ERM";
 				loop-gain = "HIGH";
 				feedback-brake-factor = "2X";
 			};
@@ -488,7 +539,7 @@ zephyr_udc0: &usbd {
 	};
 };
 
-// GPIO Expander IO
+// GPIO Names
 / {
 
     // Define the GPIO outputs based on your schematic
@@ -554,7 +605,22 @@ zephyr_udc0: &usbd {
             gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>;  // GPA3
             label = "PAYLOAD_BATT_ENABLE";
         };
-    };
+
+	sband_nrst: sband-nrst {
+            gpios = <&gpio0 17 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_NRST";
+	};
+
+	sband_rx_en: sband-rx-en {
+            gpios = <&gpio0 21 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_RX_EN";
+	};
+
+	sband_tx_en: sband-tx-en {
+            gpios = <&gpio0 22 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+            label = "SBAND_TX_EN";
+	};
+	};
 
     // Define GPIO inputs
     gpio_inputs {

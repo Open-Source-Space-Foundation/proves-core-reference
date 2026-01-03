@@ -11,14 +11,15 @@ from datetime import datetime, timezone
 import pytest
 from common import cmdDispatch, proves_send_and_assert_command
 from fprime.common.models.serialize.numerical_types import U32Type
-from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.data_types.event_data import EventData
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 
 resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
+ina219SysManager = "ReferenceDeployment.ina219SysManager"
 
 
 @pytest.fixture(autouse=True)
@@ -98,7 +99,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch initial time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=3
+        f"{ina219SysManager}.Voltage", timeout=3
     )
 
     # Convert FPrime time to datetime
@@ -111,7 +112,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Fetch updated time
     result: ChData = fprime_test_api.assert_telemetry(
-        f"{cmdDispatch}.CommandsDispatched", timeout=3
+        f"{ina219SysManager}.Voltage", timeout=3
     )
 
     # Convert FPrime time to datetime
