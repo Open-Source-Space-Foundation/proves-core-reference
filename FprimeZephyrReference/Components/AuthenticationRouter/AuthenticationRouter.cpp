@@ -185,8 +185,6 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
     Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_period.get_seconds(),
                                    command_loss_period.get_useconds());
     Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
-    printk("command_loss_start: %d + command_loss_interval: %d = command_loss_end: %d\n",
-           command_loss_start.getSeconds(), command_loss_interval.getSeconds(), command_loss_end.getSeconds());
 
     Fw::Time current_time =
         (command_loss_end.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
@@ -243,7 +241,7 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
 
         return current_time;
     } else {
-        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch)
+        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch with the file)
         // Otherwise we want to read from the cache in case the filesystem is broken
         // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
         if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
