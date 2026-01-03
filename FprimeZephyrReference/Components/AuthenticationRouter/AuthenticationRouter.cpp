@@ -191,12 +191,15 @@ void AuthenticationRouter ::run_handler(FwIndexType portNum, U32 context) {
 
     tlmWrite_CommandLossTimeCurrent(current_time.getSeconds());
     tlmWrite_CommandLossTimeEnd(command_loss_end.getSeconds());
-    tlmWrite_InCommandLossState(!this->m_safeModeCalled);
+    tlmWrite_InCommandLossState(this->m_safeModeCalled);
 
     if (current_time > command_loss_end && !this->m_safeModeCalled) {
         this->log_WARNING_HI_CommandLossFound(Fw::Time::sub(current_time, command_loss_start).getSeconds());
-        this->m_safeModeCalled = true;
         this->CallSafeMode();
+        this->m_safeModeCalled = true;
+        printk("AuthenticationRouter: Command loss detected, entering safe mode.\n");
+    } else {
+        printk("AuthenticationRouter: Command loss not detected.\n");
     }
 }
 
