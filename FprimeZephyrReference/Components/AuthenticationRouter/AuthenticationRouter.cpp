@@ -77,6 +77,8 @@ void AuthenticationRouter ::CallSafeMode() {
     if (this->isConnected_reset_watchdog_OutputPort(0)) {
         this->reset_watchdog_out(0);
     }
+    // Since it takes 26 seconds for the watchdog to reboot the system, we set safe mode after resetting the watchdog,
+    // it should boot back into safe mode
 
     this->SetSafeMode_out(0, Components::SafeModeReason::EXTERNAL_REQUEST);
 }
