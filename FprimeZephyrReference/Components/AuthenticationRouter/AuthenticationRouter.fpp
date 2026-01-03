@@ -45,6 +45,8 @@ module Svc {
         @ Port to trigger safe mode (e.g., on command loss timeout)
         output port SetSafeMode: Components.ForceSafeModeWithReason
 
+        output port reset_watchdog: Fw.Signal
+
         @ An error occurred while serializing a com buffer
         event SerializationError(
                 status: U32 @< The status of the operation
