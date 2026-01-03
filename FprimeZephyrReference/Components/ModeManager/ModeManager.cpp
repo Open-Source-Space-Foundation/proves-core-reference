@@ -128,6 +128,8 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum, const Components::
         this->runSafeModeSequence();
 
         this->enterSafeMode(effectiveReason);
+    } else if (this->m_mode == SystemMode::SAFE_MODE) {
+        this->log_WARNING_LO_SafeModeRequestIgnored();
     }
     // Note: Request ignored if already in SAFE_MODE
 }

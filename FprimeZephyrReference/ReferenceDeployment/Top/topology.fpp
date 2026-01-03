@@ -283,6 +283,7 @@ module ReferenceDeployment {
 
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
+      ComCcsdsLora.authenticationRouter.reset_watchdog -> watchdog.stop
     }
 
     connections LoadSwitches {

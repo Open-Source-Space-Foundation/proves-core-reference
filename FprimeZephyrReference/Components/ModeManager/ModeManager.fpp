@@ -161,6 +161,9 @@ module Components {
             severity warning low \
             format "Safe Mode Radio Sequence Failed: {}"
 
+        event SafeModeRequestIgnored() \
+            severity warning low \
+            format "SafeMode Request Ignored: Already in Safe Mode"
 
         # ----------------------------------------------------------------------
         # Telemetry
