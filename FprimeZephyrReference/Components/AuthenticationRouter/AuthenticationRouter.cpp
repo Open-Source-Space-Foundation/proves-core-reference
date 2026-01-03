@@ -208,23 +208,25 @@ Fw::Time AuthenticationRouter ::get_uptime() {
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     Os::ScopeLock lock(this->m_commandLossMutex);
+
+    // Update file with current time and cache it
+    Fw::Time current_time = this->getTime();
+
+    // if current time base if monotonic, we don't want to write it to file, but we still want to update the cached
+    // time and return it this way we never write monotonic time to file, which would be invalid on reboot and if
+    // the system is using monotonic time, we don't consistently return a previously saved workstation time to a
+    // cube stuck on monotonic (ie broken RTC). So we don't write monotonic time to file, but cache it for use in
+    // current session
+
+    if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
+        this->m_commandLossStartTime = current_time;
+        return current_time;
+    }
+
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 
     if (write_to_file) {
-        // Update file with current time and cache it
-        Fw::Time current_time = this->getTime();
-
-        // if current time base if monotonic, we don't want to write it to file, but we still want to update the cached
-        // time and return it this way we never write monotonic time to file, which would be invalid on reboot and if
-        // the system is using monotonic time, we don't consistently return a previously saved workstation time to a
-        // cube stuck on monotonic (ie broken RTC)
-
-        if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
-            this->m_commandLossStartTime = current_time;
-            return current_time;
-        }
-
         Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
@@ -233,22 +235,20 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
 
         return current_time;
     } else {
-        // Check if we need to load from file (cache is zero/uninitialized)
-        if (this->m_commandLossStartTime == Fw::ZERO_TIME) {
-            // Read stored time from file, or use current time if file doesn't exist
-            Fw::Time time = this->getTime();
-            Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
+        // Read stored time from file, or use current time if file doesn't exist
+        Fw::Time time = this->getTime();
+        Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-            // On read failure, write the current time to the file for future reads
+        // On read failure, write the current time to the file for future reads
+        if (status != Os::File::OP_OK) {
+            status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
             if (status != Os::File::OP_OK) {
-                status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
-                if (status != Os::File::OP_OK) {
-                    this->log_WARNING_HI_CommandLossFileInitFailure();
-                }
+                this->log_WARNING_HI_CommandLossFileInitFailure();
             }
-            // Cache the loaded time
-            this->m_commandLossStartTime = time;
         }
+        // Cache the loaded time
+        this->m_commandLossStartTime = time;
+
         // Return cached time
         return this->m_commandLossStartTime;
     }
