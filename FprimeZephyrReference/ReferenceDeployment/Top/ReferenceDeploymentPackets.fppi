@@ -29,6 +29,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.authenticatelora.CurrentSequenceNumber
     ComCcsdsUart.authenticate.CurrentSequenceNumber
 
+    lora.BytesReceived
+
   }
 
   ### Live Satellite Sensor Data Packets ###
@@ -46,6 +48,7 @@ telemetry packets ReferenceDeploymentPackets {
   packet Radio id 8 group 2 {
     lora.LastRssi
     lora.LastSnr
+    lora.BytesSent
     sband.LastRssi
     sband.LastSnr
   }
