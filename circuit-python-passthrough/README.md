@@ -5,3 +5,5 @@ This folder holds the code necessary to set up a flight controller board to act 
 ```
 make install {sband|lora} BOARD_MOUNT_POINT={path to board}
 ```
+
+You can also use the `make circuit-python` command to get the CircuitPython firmware for the board you are using.
