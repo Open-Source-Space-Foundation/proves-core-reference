@@ -4,12 +4,11 @@ module Components {
     passive component ThermalManager {
         sync input port run: Svc.Sched
 
-        # Output ports to  instances
+        @ The number of face temperature sensors
+        constant numFaceTempSensors = 5
 
         @ Port for face temperature sensors
-        output port faceTempGet: [5] Drv.temperatureGet
-
-        # Battery Cell
+        output port faceTempGet: [numFaceTempSensors] Drv.temperatureGet
 
         @ Port for battery cell temperature sensors
         output port battCellTempGet: [4] Drv.temperatureGet
