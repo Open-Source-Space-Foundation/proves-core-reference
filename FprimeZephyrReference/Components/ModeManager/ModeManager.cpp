@@ -225,17 +225,6 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Manual command to exit safe mode
-
-    // Check if currently in safe mode
-    if (this->m_mode != SystemMode::SAFE_MODE) {
-        Fw::LogStringArg cmdNameStr("EXIT_SAFE_MODE");
-        Fw::LogStringArg reasonStr("Not currently in safe mode");
-        this->log_WARNING_LO_CommandValidationFailed(cmdNameStr, reasonStr);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
-        return;
-    }
-
-    // All validations passed - exit safe mode
     this->exitSafeMode();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

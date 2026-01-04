@@ -107,14 +107,6 @@ module Components {
             severity warning high \
             format "External fault detected - external component forced safe mode"
 
-        @ Event emitted when command validation fails
-        event CommandValidationFailed(
-            cmdName: string size 50 @< Command that failed validation
-            reason: string size 100 @< Reason for failure
-        ) \
-            severity warning low \
-            format "Command {} failed: {}"
-
         @ Event emitted when state persistence fails
         event StatePersistenceFailure(
             operation: string size 20 @< Operation that failed (save/load)
