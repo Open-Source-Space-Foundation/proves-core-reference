@@ -313,7 +313,6 @@ void ModeManager ::loadState() {
     if (unintendedReboot) {
         // On unintended reboot, re-enter safe mode and run the safe mode sequence
         this->log_WARNING_HI_UnintendedRebootDetected();
-        this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
     }
 
