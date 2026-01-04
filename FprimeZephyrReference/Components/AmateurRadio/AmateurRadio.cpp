@@ -5,18 +5,18 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/AmateurRadio/AmateurRadio.hpp"
-#include "FprimeZephyrReference/Components/AmateurRadio/JokesList.hpp"
-#include <zephyr/random/random.h>
 
 #include <string>
+
+#include "FprimeZephyrReference/Components/AmateurRadio/JokesList.hpp"
+#include <zephyr/random/random.h>
 namespace Components {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AmateurRadio ::AmateurRadio(const char* const compName)
-    : AmateurRadioComponentBase(compName), m_count_names(0) {}
+AmateurRadio ::AmateurRadio(const char* const compName) : AmateurRadioComponentBase(compName), m_count_names(0) {}
 
 AmateurRadio ::~AmateurRadio() {}
 
