@@ -48,12 +48,14 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
 Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
+    {getRateGroupPeriod(50), 0},  // 50Hz = 20ms
     {getRateGroupPeriod(10), 0},  // 10Hz = 100ms
     {getRateGroupPeriod(1), 0},   // 1Hz = 1s
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
+U32 rateGroup50HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(50)};
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
 
@@ -69,6 +71,7 @@ void configureTopology() {
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
+    rateGroup50Hz.configure(rateGroup50HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup50HzContext));
     rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
 
@@ -78,6 +81,7 @@ void configureTopology() {
 
     cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
     payloadSeq.allocateBuffer(0, mallocator, 5 * 1024);
+    safeModeSeq.allocateBuffer(0, mallocator, 5 * 1024);
     gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
@@ -146,10 +150,7 @@ void setupTopology(const TopologyState& state) {
     ina219SolManager.configure(state.ina219SolDevice);
 
     // Configure camera handlers | NOT ALL SATS HAVE CAMERAS
-    cameraHandler.configure(0);   // Camera 0
-    cameraHandler2.configure(1);  // Camera 1
-    peripheralUartDriver2.configure(state.peripheralUart2, state.peripheralBaudRate2);
-    // TODO: Update Configuration Per Satellite
+    cameraHandler.configure(0);  // Camera 0
 
     // Configure TMP112 temperature sensor managers
     tmp112Face0Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face0TempDevice, true);
@@ -177,6 +178,8 @@ void setupTopology(const TopologyState& state) {
     drv2605Face2Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face2drv2605Device);
     drv2605Face3Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face3drv2605Device);
     drv2605Face5Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face5drv2605Device);
+
+    detumbleManager.configure();
 }
 
 void startRateGroups() {
@@ -198,5 +201,6 @@ void teardownTopology(const TopologyState& state) {
     tearDownComponents(state);
     cmdSeq.deallocateBuffer(mallocator);
     payloadSeq.deallocateBuffer(mallocator);
+    safeModeSeq.deallocateBuffer(mallocator);
 }
 };  // namespace ReferenceDeployment

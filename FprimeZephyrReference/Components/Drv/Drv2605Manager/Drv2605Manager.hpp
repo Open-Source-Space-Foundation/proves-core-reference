@@ -45,57 +45,54 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Port to initialize and deinitialize the device on load switch state change
     Fw::Success loadSwitchStateChanged_handler(FwIndexType portNum,  //!< The port number
                                                const Fw::On& state) override;
-    //! Handler implementation for run
-    //!
-    //! Port to be called by rategroup to trigger magnetorquer when continuous mode is enabled
-    void run_handler(FwIndexType portNum,  //!< The port number
-                     U32 context           //!< The call order
-                     ) override;
 
-    //! Handler implementation for trigger
+    //! Handler implementation for start
     //!
-    //! Port to trigger the DRV2605 device
-    Fw::Success trigger_handler(FwIndexType portNum  //!< The port number
-                                ) override;
+    //! Port to start the magnetorquer
+    Fw::Success start_handler(
+        FwIndexType portNum,  //!< The port number
+        I8 driveLevel         //!< Magnetorquer drive level as a signed current scale in the range -127 to 127.
+        ) override;
+
+    //! Handler implementation for stop
+    //!
+    //! Port to stop the magnetorquer
+    Fw::Success stop_handler(FwIndexType portNum  //!< The port number
+                             ) override;
 
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for command TRIGGER
+    //! Handler implementation for command START
     //!
-    //! Command to trigger the magnetorquer
-    void TRIGGER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                            U32 cmdSeq            //!< The command sequence number
-                            ) override;
+    //! Command to start the magnetorquer
+    void START_cmdHandler(
+        FwOpcodeType opCode,  //!< The opcode
+        U32 cmdSeq,           //!< The command sequence number
+        I8 driveLevel         //!< Magnetorquer drive level as a signed current scale in the range -127 to 127.
+        ) override;
 
-    //! Handler implementation for command START_CONTINUOUS_MODE
+    //! Handler implementation for command STOP
     //!
-    //! Command to start continuous mode
-    void START_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                          U32 cmdSeq            //!< The command sequence number
-                                          ) override;
-
-    //! Handler implementation for command STOP_CONTINUOUS_MODE
-    //!
-    //! Command to stop continuous mode
-    void STOP_CONTINUOUS_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                         U32 cmdSeq            //!< The command sequence number
-                                         ) override;
+    //! Command to stop the magnetorquer
+    void STOP_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                         U32 cmdSeq            //!< The command sequence number
+                         ) override;
 
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Initialize the TMP112 device
+    //! Initialize the DRV2605 device
     Fw::Success initializeDevice();
 
-    //! Deinitialize the TMP112 device
+    //! Deinitialize the DRV2605 device
     Fw::Success deinitializeDevice();
 
-    //! Check if the TMP112 device is initialized
+    //! Check if the DRV2605 device is initialized
     bool isDeviceInitialized();
 
     //! Check if the load switch is ready (on and timeout passed)
@@ -106,7 +103,7 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    //! Zephyr device stores the initialized TMP112 sensor
+    //! Zephyr device stores the initialized DRV2605 sensor
     const struct device* m_dev;
 
     //! Zephyr device for the TCA
@@ -121,14 +118,6 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Load switch on timeout
     //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
     Fw::Time m_load_switch_on_timeout;
-
-    //! Load switch check
-    //! Available to disable if the component is not powered by a load switch
-    bool m_load_switch_check = true;
-
-    //! Continuous mode
-    //! If true, the magnetorquer will be triggered on every run port call
-    bool m_continuous_mode = false;
 };
 
 }  // namespace Drv

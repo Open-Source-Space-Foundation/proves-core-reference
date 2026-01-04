@@ -10,6 +10,9 @@ module Svc {
         # ----------------------------------------------------------------------
         # Router interface (ports defined explicitly for passive component)
         # ----------------------------------------------------------------------
+        @ Port receiving calls from the rate group for periodic command loss time checking
+        sync input port run: Svc.Sched
+
         # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
         sync input port dataIn: Svc.ComDataWithContext
 
@@ -28,6 +31,9 @@ module Svc {
         # Port for receiving command responses from a command dispatcher (can be a no-op)
         sync input port cmdResponseIn: Fw.CmdResponse
 
+        @ Command to Get Command Loss Data
+        sync command GET_COMMAND_LOSS_DATA
+
         @ Port for forwarding non-recognized packet types
         @ Ownership of the buffer is retained by the AuthenticationRouter, meaning receiving
         @ components should either process data synchronously, or copy the data if needed
@@ -38,6 +44,12 @@ module Svc {
 
         @ Port for deallocating buffers
         output port bufferDeallocate: Fw.BufferSend
+
+        @ Port to trigger safe mode (e.g., on command loss timeout)
+        output port SetSafeMode: Components.ForceSafeModeWithReason
+
+        @ Port to reset the watchdog timer
+        output port reset_watchdog: Fw.Signal
 
         @ An error occurred while serializing a com buffer
         event SerializationError(
@@ -53,10 +65,38 @@ module Svc {
             severity warning high \
             format "Deserializing packet type failed with status {}"
 
+        @ Getting Command Loss Data
+        event EmitCommandLossData(start_time: U32
+                                current_time: U32
+                                intervel: U32
+                                endtime: U32
+                                status: U32
+                            ) severity activity low \
+            format "Command Loss Start: {}, Current Time: {}, Command Interval {}, Endtime: {}, Command Loss Status: {}"
+
+
+        @ Deleting the File
+        event CommandLossFileDeleteFailure() severity warning low \
+            format "Failed to Delete Command Loss File"
 
         @ An allocation error occurred
         event AllocationError(reason: AllocationReason) severity warning high \
             format "Buffer allocation for {} failed"
+
+        @ Command Loss is Activated
+        event CommandLossFound(duration: U32) severity warning high \
+            format "The Satellite has been put into command loss timing after {} seconds without contact"
+
+        event CommandLossFileInitFailure() severity warning high \
+            format "Command Loss Timer Failed to update most recent time" \
+            throttle 1
+
+        @ Command Loss Time in seconds by Default: one day = 3*60*60*24
+        param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 3*60*60*24, useconds = 0}
+
+        @ File to Read last command loss time from
+        param COMM_LOSS_TIME_START_FILE: string default "/comm_loss_start.bin"
+
 
         ###############################################################################
         # Standard AC Ports for Events

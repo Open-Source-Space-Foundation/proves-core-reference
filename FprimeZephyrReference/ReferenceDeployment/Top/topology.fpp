@@ -5,6 +5,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
+    rateGroup50Hz
     rateGroup10Hz
     rateGroup1Hz
   }
@@ -24,6 +25,7 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
   # Instances used in the topology
   # ----------------------------------------------------------------------
+    instance rateGroup50Hz
     instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
@@ -43,6 +45,7 @@ module ReferenceDeployment {
     instance gpioPayloadBatteryLS
     instance watchdog
     instance rtcManager
+    instance detumbleManager
     instance imuManager
     instance bootloaderTrigger
     instance comDelaySband
@@ -72,15 +75,12 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsSpace
     instance payload
-    instance payload2
     instance cameraHandler
     instance peripheralUartDriver
-    instance cameraHandler2
-    instance peripheralUartDriver2
     instance payloadBufferManager
-    instance payloadBufferManager2
     instance cmdSeq
     instance payloadSeq
+    instance safeModeSeq
     instance startupManager
     instance powerMonitor
     instance ina219SysManager
@@ -114,6 +114,7 @@ module ReferenceDeployment {
     instance drv2605Face3Manager
     instance drv2605Face5Manager
     instance downlinkRepeater
+    instance dropDetector
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -165,6 +166,9 @@ module ReferenceDeployment {
       payloadSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> payloadSeq.cmdResponseIn
 
+      safeModeSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> safeModeSeq.cmdResponseIn
+
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
 
     }
@@ -209,6 +213,11 @@ module ReferenceDeployment {
 
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqDone -> startupManager.completeSequence
+
+      modeManager.runSequence -> safeModeSeq.seqRunIn
+      safeModeSeq.seqDone -> modeManager.completeSequence
+
+
     }
 
     connections CommunicationsUart {
@@ -229,6 +238,10 @@ module ReferenceDeployment {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
+      # Ultra high rate (50Hz) rate group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup50Hz] -> rateGroup50Hz.CycleIn
+      rateGroup50Hz.RateGroupMemberOut[0] -> detumbleManager.run
+
       # High rate (10Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
       rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
@@ -236,18 +249,14 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[2] -> ComCcsdsLora.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[3] -> ComCcsdsSband.aggregator.timeout
       rateGroup10Hz.RateGroupMemberOut[4] -> peripheralUartDriver.schedIn
-      rateGroup10Hz.RateGroupMemberOut[5] -> peripheralUartDriver2.schedIn
       rateGroup10Hz.RateGroupMemberOut[6] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[7] -> cmdSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[8] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[9] -> drv2605Face0Manager.run
-      rateGroup10Hz.RateGroupMemberOut[10] -> drv2605Face1Manager.run
-      rateGroup10Hz.RateGroupMemberOut[11] -> drv2605Face2Manager.run
-      rateGroup10Hz.RateGroupMemberOut[12] -> drv2605Face3Manager.run
-      rateGroup10Hz.RateGroupMemberOut[13] -> drv2605Face5Manager.run
-      rateGroup10Hz.RateGroupMemberOut[14] -> downlinkDelay.run
-      rateGroup10Hz.RateGroupMemberOut[15] -> sband.run
-      rateGroup10Hz.RateGroupMemberOut[16] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[9] -> safeModeSeq.schedIn
+      rateGroup10Hz.RateGroupMemberOut[10] -> downlinkDelay.run
+      rateGroup10Hz.RateGroupMemberOut[11] -> sband.run
+      rateGroup10Hz.RateGroupMemberOut[12] -> comDelaySband.run
+      rateGroup10Hz.RateGroupMemberOut[13] -> dropDetector.schedIn
 
       # Slow rate (1Hz) rate group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
@@ -263,19 +272,19 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[12] -> payloadBufferManager2.schedIn
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[17] -> imuManager.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
+      rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
     }
 
 
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
+      ComCcsdsLora.authenticationRouter.reset_watchdog -> watchdog.stop
     }
 
     connections LoadSwitches {
@@ -329,6 +338,27 @@ module ReferenceDeployment {
       antennaDeployer.burnStop -> burnwire.burnStop
     }
 
+    connections DetumbleManager {
+      detumbleManager.magneticFieldGet -> imuManager.magneticFieldGet
+      detumbleManager.angularVelocityMagnitudeGet -> imuManager.angularVelocityMagnitudeGet
+      detumbleManager.magneticFieldSamplingPeriodGet -> imuManager.magneticFieldSamplingPeriodGet
+
+      detumbleManager.xPlusStart -> drv2605Face0Manager.start
+      detumbleManager.xMinusStart -> drv2605Face1Manager.start
+      detumbleManager.yPlusStart -> drv2605Face2Manager.start
+      detumbleManager.yMinusStart -> drv2605Face3Manager.start
+      detumbleManager.zMinusStart -> drv2605Face5Manager.start
+
+      detumbleManager.xPlusStop -> drv2605Face0Manager.stop
+      detumbleManager.xMinusStop -> drv2605Face1Manager.stop
+      detumbleManager.yPlusStop -> drv2605Face2Manager.stop
+      detumbleManager.yMinusStop -> drv2605Face3Manager.stop
+      detumbleManager.zMinusStop -> drv2605Face5Manager.stop
+
+      detumbleManager.getSystemMode -> modeManager.getMode
+      modeManager.modeChanged -> detumbleManager.systemModeChanged
+    }
+
     connections PayloadCom {
       # PayloadCom <-> UART Driver
       payload.uartForward -> peripheralUartDriver.$send
@@ -344,23 +374,6 @@ module ReferenceDeployment {
       # UART driver allocates/deallocates from BufferManager
       peripheralUartDriver.allocate -> payloadBufferManager.bufferGetCallee
       peripheralUartDriver.deallocate -> payloadBufferManager.bufferSendIn
-    }
-
-     connections PayloadCom2 {
-      # PayloadCom <-> UART Driver
-      payload2.uartForward -> peripheralUartDriver2.$send
-      peripheralUartDriver2.$recv -> payload2.uartDataIn
-
-      # Buffer return path (critical! - matches ComStub pattern)
-      payload2.bufferReturn -> peripheralUartDriver2.recvReturnIn
-
-      # PayloadCom <-> CameraHandler data flow
-      payload2.uartDataOut -> cameraHandler2.dataIn
-      cameraHandler2.commandOut -> payload2.commandIn
-
-      # UART driver allocates/deallocates from BufferManager
-      peripheralUartDriver2.allocate -> payloadBufferManager.bufferGetCallee
-      peripheralUartDriver2.deallocate -> payloadBufferManager.bufferSendIn
     }
 
     connections MyConnectionGraph {
@@ -400,9 +413,6 @@ module ReferenceDeployment {
       fileUplinkCollector.multiOut[0] -> ComCcsdsLora.authenticationRouter.fileBufferReturnIn
     }
 
-
-
-
     connections sysPowerMonitor {
       powerMonitor.sysVoltageGet -> ina219SysManager.voltageGet
       powerMonitor.sysCurrentGet -> ina219SysManager.currentGet
@@ -441,6 +451,9 @@ module ReferenceDeployment {
       # Allows ModeManager to detect unintended reboots
       resetManager.prepareForReboot -> modeManager.prepareForReboot
       watchdog.prepareForReboot -> modeManager.prepareForReboot
+
+      # Ports for Changing the mode - notify both LoRa and UART authentication routers
+      ComCcsdsLora.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
 
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.

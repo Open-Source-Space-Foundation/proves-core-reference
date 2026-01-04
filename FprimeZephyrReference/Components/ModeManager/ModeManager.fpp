@@ -37,6 +37,9 @@ module Components {
         @ Port receiving calls from the rate group (1Hz)
         sync input port run: Svc.Sched
 
+        @ Port receiving completion status of the safe mode sequence
+        sync input port completeSequence: Fw.CmdResponse
+
         @ Port to force safe mode entry (callable by other components)
         @ Accepts SafeModeReason - pass NONE to default to EXTERNAL_REQUEST
         async input port forceSafeMode: Components.ForceSafeModeWithReason
@@ -52,7 +55,10 @@ module Components {
         # ----------------------------------------------------------------------
 
         @ Port to notify other components of mode changes (with current mode)
-        output port modeChanged: Components.SystemModeChanged
+        output port modeChanged: [1] Components.SystemModeChanged
+
+        @ Port for dispatching the safe mode command sequence
+        output port runSequence: Svc.CmdSeqIn
 
         @ Ports to turn on LoadSwitch instances (6 face switches + 2 payload switches)
         output port loadSwitchTurnOn: [8] Fw.Signal
@@ -142,6 +148,23 @@ module Components {
             severity activity high \
             format "Preparing for intentional reboot - setting clean shutdown flag"
 
+
+        @ this->log_ACTIVITY_HI_SafeModeSequenceCompleted();
+        event SafeModeSequenceCompleted() \
+            severity activity high \
+            format "Safe Mode Radio Sequence Completed"
+
+        @ this->log_WARNING_LO_SafeModeSequenceFailed(response);
+        event SafeModeSequenceFailed(
+            response: Fw.CmdResponse @< Response code
+        ) \
+            severity warning low \
+            format "Safe Mode Radio Sequence Failed: {}"
+
+        event SafeModeRequestIgnored() \
+            severity warning low \
+            format "SafeMode Request Ignored: Already in Safe Mode"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -167,6 +190,8 @@ module Components {
 
         @ Debounce time for voltage transitions (seconds)
         param SafeModeDebounceSeconds: U32 default 10
+
+        param SAFEMODE_SEQUENCE_FILE: string default "/radio_enter_safe.bin"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

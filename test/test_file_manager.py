@@ -1,5 +1,5 @@
 """
-file_manager_test.py:
+test_file_manager.py:
 
 Integration tests for the FileManager component.
 
@@ -15,10 +15,6 @@ Tests file handling commands:
 
 import time
 
-import pytest
-from common import proves_send_and_assert_command
-from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-
 file_manager = "FileHandling.fileManager"
 
 # Test directory on the device filesystem
@@ -26,19 +22,7 @@ TEST_DIR = "/test_files"
 TEST_SUBDIR = f"{TEST_DIR}/subdir"
 
 
-@pytest.fixture(autouse=True)
-def cleanup_test_files(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Clean up test files before and after each test"""
-    # Cleanup before test
-    _cleanup_test_directory(fprime_test_api)
-
-    yield
-
-    # Cleanup after test
-    _cleanup_test_directory(fprime_test_api)
-
-
-def _cleanup_test_directory(fprime_test_api: IntegrationTestAPI):
+def _cleanup_test_directory(fprime_test_api):
     """Helper to remove all test files and directories.
 
     Uses send_and_assert_command() with ignoreErrors=True for files (always succeeds),
@@ -75,14 +59,19 @@ def _cleanup_test_directory(fprime_test_api: IntegrationTestAPI):
     fprime_test_api.clear_histories()
 
 
-def test_create_and_remove_directory(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_00_setup(fprime_test_api):
+    """Setup: Clean up any leftover test files from previous runs"""
+    _cleanup_test_directory(fprime_test_api)
+
+
+def test_01_create_and_remove_directory(fprime_test_api):
     """Test creating and removing a directory"""
     # Create directory
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
     fprime_test_api.assert_event(
         f"{file_manager}.CreateDirectorySucceeded",
@@ -91,10 +80,10 @@ def test_create_and_remove_directory(fprime_test_api: IntegrationTestAPI, start_
 
     # Remove directory
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.RemoveDirectory",
         [TEST_DIR],
+        timeout=5,
     )
     fprime_test_api.assert_event(
         f"{file_manager}.RemoveDirectorySucceeded",
@@ -102,22 +91,22 @@ def test_create_and_remove_directory(fprime_test_api: IntegrationTestAPI, start_
     )
 
 
-def test_file_size(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_02_file_size(fprime_test_api):
     """Test getting the size of a file"""
     # First create the test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Use AppendFile to create a file with known content
     # We'll append prmDb.dat to our test file to create it
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/test_file.txt"],
+        timeout=10,
     )
     # File I/O operations may take longer on embedded flash storage
     fprime_test_api.assert_event(
@@ -127,10 +116,10 @@ def test_file_size(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Get file size
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.FileSize",
         [f"{TEST_DIR}/test_file.txt"],
+        timeout=5,
     )
     event = fprime_test_api.assert_event(
         f"{file_manager}.FileSizeSucceeded",
@@ -139,29 +128,32 @@ def test_file_size(fprime_test_api: IntegrationTestAPI, start_gds):
     # Verify size is greater than 0
     assert event.args[1].val > 0, "File size should be greater than 0"
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_move_file(fprime_test_api: IntegrationTestAPI, start_gds):
+
+def test_03_move_file(fprime_test_api):
     """Test moving a file from one location to another"""
     # Create test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Create source file by appending from existing file
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/source.txt"],
+        timeout=10,
     )
 
     # Move file
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.MoveFile",
         [f"{TEST_DIR}/source.txt", f"{TEST_DIR}/moved.txt"],
+        timeout=5,
     )
     fprime_test_api.assert_event(
         f"{file_manager}.MoveFileSucceeded",
@@ -181,39 +173,42 @@ def test_move_file(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Verify destination exists
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.FileSize",
         [f"{TEST_DIR}/moved.txt"],
+        timeout=5,
     )
     fprime_test_api.assert_event(
         f"{file_manager}.FileSizeSucceeded",
         timeout=5,
     )
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_append_file(fprime_test_api: IntegrationTestAPI, start_gds):
+
+def test_04_append_file(fprime_test_api):
     """Test appending one file to another"""
     # Create test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Create first file
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/dest.txt"],
+        timeout=10,
     )
 
     # Get initial size
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.FileSize",
         [f"{TEST_DIR}/dest.txt"],
+        timeout=5,
     )
     initial_event = fprime_test_api.assert_event(
         f"{file_manager}.FileSizeSucceeded",
@@ -223,10 +218,10 @@ def test_append_file(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Append file to itself (doubles the content)
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/dest.txt"],
+        timeout=10,
     )
     # File I/O operations may take longer on embedded flash storage
     fprime_test_api.assert_event(
@@ -236,10 +231,10 @@ def test_append_file(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Verify size increased
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.FileSize",
         [f"{TEST_DIR}/dest.txt"],
+        timeout=5,
     )
     final_event = fprime_test_api.assert_event(
         f"{file_manager}.FileSizeSucceeded",
@@ -251,29 +246,32 @@ def test_append_file(fprime_test_api: IntegrationTestAPI, start_gds):
         f"File size should have increased after append: {initial_size} -> {final_size}"
     )
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_remove_file(fprime_test_api: IntegrationTestAPI, start_gds):
+
+def test_05_remove_file(fprime_test_api):
     """Test removing a file"""
     # Create test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Create file
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/test_file.txt"],
+        timeout=10,
     )
 
     # Remove file
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.RemoveFile",
         [f"{TEST_DIR}/test_file.txt", False],  # ignoreErrors=False
+        timeout=5,
     )
     fprime_test_api.assert_event(
         f"{file_manager}.RemoveFileSucceeded",
@@ -291,29 +289,32 @@ def test_remove_file(fprime_test_api: IntegrationTestAPI, start_gds):
         timeout=5,
     )
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_list_directory(fprime_test_api: IntegrationTestAPI, start_gds):
+
+def test_06_list_directory(fprime_test_api):
     """Test listing directory contents"""
     # Create test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Create a file in the directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/test_file.txt"],
+        timeout=10,
     )
 
     # List directory
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.ListDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Verify listing started
@@ -328,23 +329,24 @@ def test_list_directory(fprime_test_api: IntegrationTestAPI, start_gds):
         timeout=15,
     )
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_remove_directory_not_empty_fails(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
+
+def test_07_remove_directory_not_empty_fails(fprime_test_api):
     """Test that removing a non-empty directory fails"""
     # Create test directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Create a file in the directory
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.AppendFile",
         ["/prmDb.dat", f"{TEST_DIR}/test_file.txt"],
+        timeout=10,
     )
 
     # Try to remove non-empty directory (should fail)
@@ -358,16 +360,17 @@ def test_remove_directory_not_empty_fails(
         timeout=5,
     )
 
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)
 
-def test_remove_file_nonexistent_with_ignore(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
+
+def test_08_remove_file_nonexistent_with_ignore(fprime_test_api):
     """Test that removing a nonexistent file with ignoreErrors=True succeeds"""
     fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.RemoveFile",
         ["/nonexistent_file_12345.txt", True],  # ignoreErrors=True
+        timeout=5,
     )
     # Should succeed without error event
     fprime_test_api.assert_event(
@@ -376,9 +379,7 @@ def test_remove_file_nonexistent_with_ignore(
     )
 
 
-def test_remove_file_nonexistent_without_ignore_fails(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
+def test_09_remove_file_nonexistent_without_ignore_fails(fprime_test_api):
     """Test that removing a nonexistent file with ignoreErrors=False fails"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_command(
@@ -391,15 +392,13 @@ def test_remove_file_nonexistent_without_ignore_fails(
     )
 
 
-def test_create_directory_already_exists_fails(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
+def test_10_create_directory_already_exists_fails(fprime_test_api):
     """Test that creating a directory that already exists fails"""
     # Create directory first
-    proves_send_and_assert_command(
-        fprime_test_api,
+    fprime_test_api.send_and_assert_command(
         f"{file_manager}.CreateDirectory",
         [TEST_DIR],
+        timeout=5,
     )
 
     # Try to create same directory again (should fail)
@@ -412,3 +411,6 @@ def test_create_directory_already_exists_fails(
         f"{file_manager}.DirectoryCreateError",
         timeout=5,
     )
+
+    # Cleanup
+    _cleanup_test_directory(fprime_test_api)

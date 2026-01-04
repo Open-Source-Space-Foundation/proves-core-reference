@@ -1,6 +1,6 @@
 # Components::ImuManager
 
-The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with the LIS2MDL and LSM6DSO sensors via Zephyr drivers to provide acceleration, angular velocity, magnetic field, and temperature measurements. It also supports configuration of sampling frequencies and axis orientation.
+The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with the LIS2MDL and LSM6DSO sensors via Zephyr drivers to provide acceleration, angular velocity, and magnetic field measurements. It also supports configuration of sampling frequencies and axis orientation.
 
 ## Usage Examples
 
@@ -32,6 +32,19 @@ classDiagram
             - accelerationGet_handler(FwIndexType portNum, Fw::Success& condition): Drv::Acceleration
             - angularVelocityGet_handler(FwIndexType portNum, Fw::Success& condition): Drv::AngularVelocity
             - magneticFieldGet_handler(FwIndexType portNum, Fw::Success& condition): Drv::MagneticField
+            - magneticFieldSamplingPeriodGet_handler(FwIndexType portNum, Fw::Success& condition): Fw::TimeIntervalValue
+            - configureSensors(magn: sensor_value&, accel: sensor_value&, gyro: sensor_value&): void
+            - applyAxisOrientation(x: sensor_value&, y: sensor_value&, z: sensor_value&): void
+            - getAccelerometerSamplingFrequency(): sensor_value
+            - getGyroscopeSamplingFrequency(): sensor_value
+            - getLsm6dsoSamplingFrequency(freqParam: Lsm6dsoSamplingFrequency): sensor_value
+            - getMagnetometerSamplingFrequency(): sensor_value
+            - sensorValuesEqual(sv1: sensor_value*, sv2: sensor_value*): bool
+            - m_lis2mdl: const device*
+            - m_lsm6dso: const device*
+            - m_curr_magn_odr: sensor_value
+            - m_curr_gyro_odr: sensor_value
+            - m_curr_accel_odr: sensor_value
         }
     }
     ImuManagerComponentBase <|-- ImuManager : inherits
@@ -39,15 +52,16 @@ classDiagram
 
 ## Port Descriptions
 
-| Name               | Type       | Description                                                |
-| ------------------ | ---------- | ---------------------------------------------------------- |
-| run                | sync input | Scheduler port that triggers sensor data collection        |
-| accelerationGet    | sync input | Port to read the current acceleration                      |
-| angularVelocityGet | sync input | Port to read the current angular velocity                  |
-| magneticFieldGet   | sync input | Port to read the current magnetic field                    |
-| acceleration       | output     | Port for sending accelerationGet calls (unused in current impl) |
-| angularVelocity    | output     | Port for sending angularVelocityGet calls (unused in current impl) |
-| magneticField      | output     | Port for sending magneticFieldGet calls (unused in current impl) |
+| Name                        | Type        | Description                                                |
+| --------------------------- | ----------- | ---------------------------------------------------------- |
+| run                         | sync input  | Scheduler port that triggers sensor data collection        |
+| accelerationGet             | sync input  | Port to read the current acceleration                      |
+| angularVelocityGet          | sync input  | Port to read the current angular velocity                  |
+| magneticFieldGet            | sync input  | Port to read the current magnetic field                    |
+| magneticFieldSamplingPeriodGet | sync input | Port to get the time between magnetic field reads       |
+| acceleration                | output      | Port for sending accelerationGet calls to the LSM6DSO Driver |
+| angularVelocity             | output      | Port for sending angularVelocityGet calls to the LSM6DSO Driver |
+| magneticField               | output      | Port for sending magneticFieldGet calls to the LIS2MDL Manager |
 | timeCaller         | time get   | Port for requesting current system time                    |
 | cmdRegOut          | command reg| Port for sending command registrations                     |
 | cmdIn              | command recv| Port for receiving commands                               |
@@ -69,26 +83,27 @@ classDiagram
 
 ## Telemetry
 
-| Name | Type | Description |
-| --- | --- | --- |
-| AxisOrientation | AxisOrientation | Current axis orientation setting |
-| Acceleration | Drv.Acceleration | Current acceleration in m/s^2 |
-| AngularVelocity | Drv.AngularVelocity | Current angular velocity in rad/s |
-| MagneticField | Drv.MagneticField | Current magnetic field in gauss |
-| Temperature | F64 | Current temperature in degrees Celsius |
+| Name                         | Type                    | Description |
+| ---                          | ---                     | --- |
+| AxisOrientation              | AxisOrientation         | Current axis orientation setting |
+| Acceleration                 | Drv.Acceleration        | Current acceleration in m/s^2 |
+| AngularVelocity              | Drv.AngularVelocity     | Current angular velocity in rad/s |
+| MagneticField                | Drv.MagneticField       | Current magnetic field in gauss |
 | AccelerometerSamplingFrequency | Lsm6dsoSamplingFrequency | Current accelerometer sampling frequency |
-| GyroscopeSamplingFrequency | Lsm6dsoSamplingFrequency | Current gyroscope sampling frequency |
+| GyroscopeSamplingFrequency   | Lsm6dsoSamplingFrequency | Current gyroscope sampling frequency |
 | MagnetometerSamplingFrequency | Lis2mdlSamplingFrequency | Current magnetometer sampling frequency |
 
 ## Events
 
-| Name | Severity | Description |
-| --- | --- | --- |
-| Lis2mdlDeviceNotReady | WARNING_HIGH | LIS2MDL device not ready |
-| Lsm6dsoDeviceNotReady | WARNING_HIGH | LSM6DSO device not ready |
-| AccelerometerSamplingFrequencyNotConfigured | WARNING_HIGH | LSM6DSO accelerometer sampling frequency not configured |
-| GyroscopeSamplingFrequencyNotConfigured | WARNING_HIGH | LSM6DSO gyroscope sampling frequency not configured |
-| MagnetometerSamplingFrequencyNotConfigured | WARNING_HIGH | LIS2MDL magnetometer sampling frequency not configured |
+| Name                                | Severity      | Description |
+| ---                                 | ---           | --- |
+| Lis2mdlDeviceNotReady               | WARNING_HIGH  | LIS2MDL device not ready |
+| Lsm6dsoDeviceNotReady               | WARNING_HIGH  | LSM6DSO device not ready |
+| AccelerometerSamplingFrequencyNotConfigured | WARNING_HIGH  | LSM6DSO accelerometer sampling frequency not configured |
+| GyroscopeSamplingFrequencyNotConfigured     | WARNING_HIGH  | LSM6DSO gyroscope sampling frequency not configured |
+| MagnetometerSamplingFrequencyNotConfigured  | WARNING_HIGH  | LIS2MDL magnetometer sampling frequency not configured |
+| MagnetometerSamplingFrequencyGetFailed      | WARNING_LOW   | Failed to retrieve LIS2MDL magnetometer sampling frequency |
+| MagnetometerSamplingFrequencyZeroHz         | WARNING_LOW   | LIS2MDL magnetometer sampling frequency is set to 0 Hz |
 
 ## Requirements
 

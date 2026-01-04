@@ -16,6 +16,10 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+# Setting specific fprime-gds pre-release for features:
+# - file-uplink-cooldown arg
+# - file-uplink-chunk-size arg
+	@$(UV) pip install fprime-gds==4.1.1a2
 
 
 .PHONY: zephyr-setup
@@ -77,6 +81,11 @@ build-mcuboot: submodules zephyr fprime-venv
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
+test-unit: ## Run unit tests
+	cmake -S tests -B build-gtest -DBUILD_TESTING=ON
+	cmake --build build-gtest
+	ctest --test-dir build-gtest
+
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
@@ -114,7 +123,7 @@ bootloader: uv
 	fi
 
 .PHONY: sync-sequence-number
-sync-sequence-number: uv
+sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
 	@echo "Synchronizing sequence number"
 	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
@@ -124,8 +133,7 @@ clean: ## Remove all gitignored files
 
 ##@ Operations
 
-GDS_COMMAND ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
-GDS_COMMAND_CI ?= $(UV_RUN) fprime-gds -n --dictionary $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json --communication-selection uart --uart-baud 115200 --output-unframed-data --framing-selection authenticate-space-data-link
+GDS_COMMAND ?= $(UV_RUN) fprime-gds
 
 ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
 
@@ -141,8 +149,11 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 .PHONY: gds
 gds: ## Run FPrime GDS
 	@echo "Running FPrime GDS..."
-	@echo "Using UART_DEVICE=$(UART_DEVICE)"
-	@$(GDS_COMMAND) --uart-device $(UART_DEVICE)
+	@if [ -n "$(UART_DEVICE)" ]; then \
+		echo "Using UART_DEVICE=$(UART_DEVICE)"; \
+		$(GDS_COMMAND) --uart-device $(UART_DEVICE); \
+	fi
+	$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
 delete-shadow-gds:

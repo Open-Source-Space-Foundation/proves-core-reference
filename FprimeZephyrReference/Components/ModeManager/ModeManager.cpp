@@ -69,6 +69,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 
             if (this->m_safeModeVoltageCounter >= debounceSeconds) {
                 // Trigger automatic entry into safe mode
+                this->runSafeModeSequence();
                 this->log_WARNING_HI_AutoSafeModeEntry(Components::SafeModeReason::LOW_BATTERY, valid ? voltage : 0.0f);
                 this->enterSafeMode(Components::SafeModeReason::LOW_BATTERY);
                 this->m_safeModeVoltageCounter = 0;  // Reset counter
@@ -124,9 +125,38 @@ void ModeManager ::forceSafeMode_handler(FwIndexType portNum, const Components::
             effectiveReason = Components::SafeModeReason::EXTERNAL_REQUEST;
         }
 
+        this->runSafeModeSequence();
+
         this->enterSafeMode(effectiveReason);
+    } else if (this->m_mode == SystemMode::SAFE_MODE) {
+        this->log_WARNING_LO_SafeModeRequestIgnored();
     }
     // Note: Request ignored if already in SAFE_MODE
+}
+
+void ModeManager ::runSafeModeSequence() {
+    // run the safe mode sequence
+    Fw::ParamValid is_valid;
+    Fw::ParamString safe_mode_sequence = this->paramGet_SAFEMODE_SEQUENCE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    this->runSequence_out(0, safe_mode_sequence);
+}
+
+void ModeManager ::completeSequence_handler(FwIndexType portNum,
+                                            FwOpcodeType opCode,
+                                            U32 cmdSeq,
+                                            const Fw::CmdResponse& response) {
+    (void)portNum;
+    (void)opCode;
+    (void)cmdSeq;
+
+    if (response == Fw::CmdResponse::OK) {
+        // log that sequence completed successfully
+        this->log_ACTIVITY_HI_SafeModeSequenceCompleted();
+    } else {
+        // log that sequence failed
+        this->log_WARNING_LO_SafeModeSequenceFailed(response);
+    }
 }
 
 Components::SystemMode ModeManager ::getMode_handler(FwIndexType portNum) {
@@ -184,6 +214,8 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
         return;
     }
+
+    this->runSafeModeSequence();
 
     // Enter safe mode from NORMAL
     this->log_ACTIVITY_HI_ManualSafeModeEntry();
@@ -290,7 +322,9 @@ void ModeManager ::loadState() {
     // Handle unintended reboot detection AFTER basic state restoration
     // This ensures we enter safe mode due to system fault
     if (unintendedReboot) {
+        // On unintended reboot, re-enter safe mode and run the safe mode sequence
         this->log_WARNING_HI_UnintendedRebootDetected();
+        this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
     }
 
@@ -372,9 +406,12 @@ void ModeManager ::enterSafeMode(Components::SafeModeReason reason) {
     this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
 
     // Notify other components of mode change with new mode value
-    if (this->isConnected_modeChanged_OutputPort(0)) {
-        Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
-        this->modeChanged_out(0, fppMode);
+    Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+    for (FwIndexType i = 0; i < this->getNum_modeChanged_OutputPorts(); i++) {
+        if (!this->isConnected_modeChanged_OutputPort(i)) {
+            continue;
+        }
+        this->modeChanged_out(i, fppMode);
     }
 
     // Save state
