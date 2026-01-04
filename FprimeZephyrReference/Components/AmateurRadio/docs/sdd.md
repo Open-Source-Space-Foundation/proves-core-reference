@@ -9,12 +9,15 @@ Interactions between Radio Amateurs and Sat
 
 ## Commands
 | Name | Description |
-|Repeat_Name|The satelie will repeat back the radio name|
+|---|---|
+|Repeat_Name|The satellite will repeat back the radio name|
+|TELL_JOKE|Returns a random joke via event|
 
 ## Events
 | Name | Description |
-|ReapeatingName|The satelie will broadcast back the radio name and the sat name|
 |---|---|
+|ReapeatingName|The satellite will broadcast back the radio name and the sat name|
+|JokeTold|Outputs a random joke from the jokes list|
 
 ## Telemetry
 | Name | Description |

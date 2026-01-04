@@ -36,6 +36,13 @@ class AmateurRadio final : public AmateurRadioComponentBase {
                                 U32 cmdSeq,           //!< The command sequence number
                                 const Fw::CmdStringArg& radio_name) override;
 
+    //! Handler implementation for command TELL_JOKE
+    //!
+    //! Tells a random satellite-themed joke
+    void TELL_JOKE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq            //!< The command sequence number
+                              ) override;
+
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------

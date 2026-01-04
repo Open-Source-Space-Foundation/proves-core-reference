@@ -5,6 +5,8 @@
 // ======================================================================
 
 #include "FprimeZephyrReference/Components/AmateurRadio/AmateurRadio.hpp"
+#include "FprimeZephyrReference/Components/AmateurRadio/JokesList.hpp"
+#include <zephyr/random/random.h>
 
 #include <string>
 namespace Components {
@@ -13,7 +15,8 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AmateurRadio ::AmateurRadio(const char* const compName) : AmateurRadioComponentBase(compName), m_count_names(0) {}
+AmateurRadio ::AmateurRadio(const char* const compName)
+    : AmateurRadioComponentBase(compName), m_count_names(0) {}
 
 AmateurRadio ::~AmateurRadio() {}
 
@@ -37,6 +40,18 @@ void AmateurRadio ::Repeat_Name_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, cons
     this->log_ACTIVITY_HI_ReapeatingName(radioNameArg, satNameArg);
 
     // Send command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void AmateurRadio ::TELL_JOKE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Get a random joke
+    const FwSizeType jokeIndex = sys_rand32_get() % NUM_JOKES;
+    const char* joke = JOKES[jokeIndex];
+
+    // Log the joke as an event
+    Fw::LogStringArg jokeArg(joke);
+    this->log_ACTIVITY_HI_JokeTold(jokeArg);
+
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
