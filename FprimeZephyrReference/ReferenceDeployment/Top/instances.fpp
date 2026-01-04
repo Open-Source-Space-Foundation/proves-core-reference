@@ -174,8 +174,6 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003B000
 
-  instance amateurRadio: Components.AmateurRadio base id 0x10065000
-
   instance cameraHandler2: Components.CameraHandler base id 0x1003C000
 
   instance peripheralUartDriver2: Zephyr.ZephyrUartDriver base id 0x1003D000
@@ -240,5 +238,6 @@ module ReferenceDeployment {
 
   instance dropDetector: Utilities.DropDetector base id 0x10065000
 
+  instance amateurRadio: Components.AmateurRadio base id 0x10066000
 
 }
