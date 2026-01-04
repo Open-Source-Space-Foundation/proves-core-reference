@@ -1,0 +1,3 @@
+adafruit-circuitpython-rfm==1.0.3
+Adafruit_CircuitPython_MCP230xx
+adafruit-circuitpython-tca9548a @ git+https://github.com/proveskit/Adafruit_CircuitPython_TCA9548A@1.1.0
