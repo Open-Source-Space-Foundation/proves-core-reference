@@ -191,7 +191,7 @@ module Components {
         @ Debounce time for voltage transitions (seconds)
         param SafeModeDebounceSeconds: U32 default 10
 
-        param SAFEMODE_SEQUENCE_FILE: string default "/radio_enter_safe.bin"
+        param SAFEMODE_SEQUENCE_FILE: string default "/seq/radio_enter_safe.bin"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

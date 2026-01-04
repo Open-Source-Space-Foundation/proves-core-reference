@@ -27,7 +27,8 @@ split -d -n $2 $full_file "${full_base}/${full_base}_" || exit 1
 sequence="${full_base}/combine_${full_base}.seq"
 
 echo "; Combine the file parts" > "${sequence}"
-for file in "${full_base}_"*
+for file in "${full_base}/${full_base}_"*
 do
-    echo "R00:00:05 FileHandling.fileManager.AppendFile \"${file}\" \"${full_base}\"" >> "${sequence}"
+    file_base=`basename $file`
+    echo "R00:00:05 FileHandling.fileManager.AppendFile \"/ota/${file_base}\" \"/ota/${full_base}\"" >> "${sequence}"
 done

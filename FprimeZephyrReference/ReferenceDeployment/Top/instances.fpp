@@ -223,18 +223,18 @@ module ReferenceDeployment {
 
   instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10071000
 
-  instance sband : Components.SBand base id 0x10072000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 10
+  #instance sband : Components.SBand base id 0x10072000 \
+  #  queue size Default.QUEUE_SIZE \
+  #  stack size Default.STACK_SIZE \
+  #  priority 10
 
-  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
+  #instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
 
-  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
+  #instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
 
-  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
+  #instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
 
-  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
+  #instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
 
   instance dropDetector: Utilities.DropDetector base id 0x10077000
 

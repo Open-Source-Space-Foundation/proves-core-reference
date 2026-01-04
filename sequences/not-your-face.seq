@@ -1,0 +1,6 @@
+; Turn-off each face in sequence. Note: face4 does not exist
+R00:00:00 ReferenceDeployment.face0LoadSwitch.TURN_OFF
+R00:00:01 ReferenceDeployment.face1LoadSwitch.TURN_OFF
+R00:00:01 ReferenceDeployment.face2LoadSwitch.TURN_OFF
+R00:00:01 ReferenceDeployment.face3LoadSwitch.TURN_OFF
+R00:00:01 ReferenceDeployment.face5LoadSwitch.TURN_OFF

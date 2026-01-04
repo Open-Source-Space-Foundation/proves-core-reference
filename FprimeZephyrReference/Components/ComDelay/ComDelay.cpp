@@ -23,7 +23,7 @@ void ComDelay ::parameterUpdated(FwPrmIdType id) {
     switch (id) {
         case ComDelay::PARAMID_DIVIDER: {
             Fw::ParamValid is_valid;
-            U8 new_divider = this->paramGet_DIVIDER(is_valid);
+            U16 new_divider = this->paramGet_DIVIDER(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_DividerSet(new_divider);
             }
@@ -58,7 +58,7 @@ void ComDelay ::run_handler(FwIndexType portNum, U32 context) {
     // Unless there is corruption, the parameter should always be valid via its default value; however, in the interest
     // of failing-safe and continuing some sort of communication we default the current_divisor to the default value.
     Fw::ParamValid is_valid;
-    U8 current_divisor = this->paramGet_DIVIDER(is_valid);
+    U16 current_divisor = this->paramGet_DIVIDER(is_valid);
 
     // Increment and module the tick count by the divisor
     if ((is_valid == Fw::ParamValid::INVALID) || (is_valid == Fw::ParamValid::UNINIT)) {
