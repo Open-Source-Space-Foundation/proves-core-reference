@@ -58,11 +58,6 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 13
 
-  instance safeModeSeq: Svc.CmdSequencer base id 0x10066000 \
-    queue size Default.QUEUE_SIZE * 2 \
-    stack size Default.STACK_SIZE \
-    priority 13
-
   instance payload: Components.PayloadCom base id 0x10008000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \

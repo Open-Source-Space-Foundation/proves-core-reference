@@ -79,7 +79,6 @@ module ReferenceDeployment {
     instance payloadBufferManager
     instance cmdSeq
     instance payloadSeq
-    instance safeModeSeq
     instance startupManager
     instance powerMonitor
     instance ina219SysManager
@@ -165,9 +164,6 @@ module ReferenceDeployment {
       payloadSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> payloadSeq.cmdResponseIn
 
-      safeModeSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> safeModeSeq.cmdResponseIn
-
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
 
     }
@@ -210,11 +206,6 @@ module ReferenceDeployment {
 
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqDone -> startupManager.completeSequence
-
-      modeManager.runSequence -> safeModeSeq.seqRunIn
-      safeModeSeq.seqDone -> modeManager.completeSequence
-
-
     }
 
     connections CommunicationsUart {
@@ -249,7 +240,6 @@ module ReferenceDeployment {
       rateGroup10Hz.RateGroupMemberOut[6] -> FileHandling.fileManager.schedIn
       rateGroup10Hz.RateGroupMemberOut[7] -> cmdSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[8] -> payloadSeq.schedIn
-      rateGroup10Hz.RateGroupMemberOut[9] -> safeModeSeq.schedIn
       rateGroup10Hz.RateGroupMemberOut[10] -> downlinkDelay.run
       #rateGroup10Hz.RateGroupMemberOut[11] -> sband.run
       #rateGroup10Hz.RateGroupMemberOut[12] -> comDelaySband.run

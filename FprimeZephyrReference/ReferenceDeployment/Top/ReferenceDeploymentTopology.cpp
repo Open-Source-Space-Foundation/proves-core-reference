@@ -78,9 +78,8 @@ void configureTopology() {
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 
-    cmdSeq.allocateBuffer(0, mallocator, 1024);
-    payloadSeq.allocateBuffer(0, mallocator, 1024);
-    safeModeSeq.allocateBuffer(0, mallocator, 1024);
+    cmdSeq.allocateBuffer(0, mallocator, 5 * 1024);
+    payloadSeq.allocateBuffer(0, mallocator, 5 * 1024);
     gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
@@ -199,6 +198,5 @@ void teardownTopology(const TopologyState& state) {
     tearDownComponents(state);
     cmdSeq.deallocateBuffer(mallocator);
     payloadSeq.deallocateBuffer(mallocator);
-    safeModeSeq.deallocateBuffer(mallocator);
 }
 };  // namespace ReferenceDeployment

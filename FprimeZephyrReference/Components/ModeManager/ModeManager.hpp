@@ -44,15 +44,6 @@ class ModeManager : public ModeManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    //! Handler implementation for completeSequence
-    //!
-    //! Port receiving completion status from the safe mode sequence
-    void completeSequence_handler(FwIndexType portNum,             //!< The port number
-                                  FwOpcodeType opCode,             //!< The opcode (unused)
-                                  U32 cmdSeq,                      //!< The command sequence number (unused)
-                                  const Fw::CmdResponse& response  //!< The command response
-                                  ) override;
-
     //! Handler implementation for forceSafeMode
     //!
     //! Port to force safe mode entry (callable by other components)
@@ -112,9 +103,6 @@ class ModeManager : public ModeManagerComponentBase {
 
     //! Turn on components (restore normal operation)
     void turnOnComponents();
-
-    // run the safe mode seauence
-    void runSafeModeSequence();
 
     //! Get current voltage from INA219 system power manager
     //! Queries voltage via the voltageGet output port

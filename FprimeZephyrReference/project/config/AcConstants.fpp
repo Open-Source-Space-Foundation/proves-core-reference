@@ -16,10 +16,10 @@ constant RateGroupDriverRateGroupPorts = 5
 constant CmdDispatcherComponentCommandPorts = 100
 
 @ Used for uplink/sequencer buffer/response ports
-constant CmdDispatcherSequencePorts = 6
+constant CmdDispatcherSequencePorts = 5
 
 @ Used for dispatching sequences to command sequencers
-constant SeqDispatcherSequencerPorts = 3
+constant SeqDispatcherSequencerPorts = 2
 
 @ Used for sizing the command splitter input arrays
 constant CmdSplitterPorts = CmdDispatcherSequencePorts
