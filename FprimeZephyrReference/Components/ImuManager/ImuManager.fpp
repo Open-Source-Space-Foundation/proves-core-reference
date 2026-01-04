@@ -78,7 +78,7 @@ module Components {
         param MAGNETOMETER_SAMPLING_FREQUENCY: Lis2mdlSamplingFrequency default Lis2mdlSamplingFrequency.SF_100Hz id 2
 
         @ Parameter for storing the axis orientation
-        param AXIS_ORIENTATION: AxisOrientation default AxisOrientation.STANDARD id 3
+        param AXIS_ORIENTATION: AxisOrientation default AxisOrientation.ROTATED_90_DEG_CCW id 3
 
         ### Telemetry channels ###
 

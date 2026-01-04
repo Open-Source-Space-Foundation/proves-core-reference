@@ -4,7 +4,7 @@ module Components {
         sync input port run: Svc.Sched
 
         @ The number of light sensors on the ADCS
-        constant numLightSensors = 6
+        constant numLightSensors = 4
 
         @ Port for visible light from the light sensors
         output port visibleLightGet: [numLightSensors] Drv.lightGet

@@ -155,7 +155,6 @@ void setupTopology(const TopologyState& state) {
     tmp112Face1Manager.configure(state.tca9548aDevice, state.muxChannel1Device, state.face1TempDevice, true);
     tmp112Face2Manager.configure(state.tca9548aDevice, state.muxChannel2Device, state.face2TempDevice, true);
     tmp112Face3Manager.configure(state.tca9548aDevice, state.muxChannel3Device, state.face3TempDevice, true);
-    tmp112Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5TempDevice, true);
     tmp112BattCell1Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell1TempDevice, false);
     tmp112BattCell2Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell2TempDevice, false);
     tmp112BattCell3Manager.configure(state.tca9548aDevice, state.muxChannel4Device, state.battCell3TempDevice, false);
@@ -166,16 +165,12 @@ void setupTopology(const TopologyState& state) {
     veml6031Face1Manager.configure(state.tca9548aDevice, state.muxChannel1Device, state.face1LightDevice);
     veml6031Face2Manager.configure(state.tca9548aDevice, state.muxChannel2Device, state.face2LightDevice);
     veml6031Face3Manager.configure(state.tca9548aDevice, state.muxChannel3Device, state.face3LightDevice);
-    veml6031Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5LightDevice);
-    veml6031Face6Manager.configure(state.tca9548aDevice, state.muxChannel6Device, state.face6LightDevice);
-    veml6031Face7Manager.configure(state.tca9548aDevice, state.muxChannel7Device, state.face7LightDevice);
 
     // Configure DRV2605 magnetorquer managers
     drv2605Face0Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face0drv2605Device);
     drv2605Face1Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face1drv2605Device);
     drv2605Face2Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face2drv2605Device);
     drv2605Face3Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face3drv2605Device);
-    drv2605Face5Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face5drv2605Device);
 
     detumbleManager.configure();
 }
