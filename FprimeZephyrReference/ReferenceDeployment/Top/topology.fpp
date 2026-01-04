@@ -477,5 +477,10 @@ module ReferenceDeployment {
 
     }
 
+    connections FatalHandler {
+      CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
+
+    }
+
   }
 }
