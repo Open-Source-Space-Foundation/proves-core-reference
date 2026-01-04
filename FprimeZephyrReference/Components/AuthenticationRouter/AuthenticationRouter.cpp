@@ -72,6 +72,18 @@ void AuthenticationRouter ::CallSafeMode() {
     // Call Safe mode with EXTERNAL_REQUEST reason (command loss is an external component request)
     log_WARNING_HI_CommandLossFileInitFailure_ThrottleClear();
 
+    // Only the Lora is connetcted to the watchdog, so check connections to prevent fault
+    // should never happen bc Sband and UART are not connected to the rate group, but just in case
+    if (this->isConnected_reset_watchdog_OutputPort(0)) {
+        this->reset_watchdog_out(0);
+    }
+
+    // write current time to file
+    this->update_command_loss_start(true);
+
+    // Since it takes 26 seconds for the watchdog to reboot the system, we set safe mode after resetting the watchdog,
+    // it should boot back into safe mode
+
     this->SetSafeMode_out(0, Components::SafeModeReason::EXTERNAL_REQUEST);
 }
 
@@ -194,14 +206,48 @@ Fw::Time AuthenticationRouter ::get_uptime() {
     return time;
 }
 
+void AuthenticationRouter ::GET_COMMAND_LOSS_DATA_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Time current_time = this->getTime();
+    Fw::Time command_loss_start = this->update_command_loss_start();
+    Fw::ParamValid is_valid;
+    Fw::TimeIntervalValue command_loss_period = this->paramGet_COMM_LOSS_TIME(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    Fw::Time command_loss_interval(command_loss_start.getTimeBase(), command_loss_period.get_seconds(),
+                                   command_loss_period.get_useconds());
+    Fw::Time command_loss_end = Fw::Time::add(command_loss_start, command_loss_interval);
+    this->log_ACTIVITY_LO_EmitCommandLossData(command_loss_start.getSeconds(), current_time.getSeconds(),
+                                              command_loss_interval.getSeconds(), command_loss_end.getSeconds(),
+                                              this->m_safeModeCalled);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     Os::ScopeLock lock(this->m_commandLossMutex);
+
+    // Update file with current time and cache it
+    Fw::Time current_time = this->getTime();
+
+    // if current time base if monotonic, we don't want to write it to file, but we still want to update the cached
+    // time and return it this way we never write monotonic time to file, which would be invalid on reboot and if
+    // the system is using monotonic time, we don't consistently return a previously saved workstation time to a
+    // cube stuck on monotonic (ie broken RTC). So we don't write monotonic time to file, but cache it for use in
+    // current session
+
+    if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
+        if (write_to_file) {
+            // Don't write monotonic time to file, but cache it for use in current session
+            this->m_commandLossStartTime = current_time;
+            return current_time;
+        } else {
+            // Return cached time (the time when last command arrived)
+            return this->m_commandLossStartTime;
+        }
+    }
+
     Fw::ParamValid is_valid;
     auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
 
     if (write_to_file) {
-        // Update file with current time and cache it
-        Fw::Time current_time = this->getTime();
         Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
         if (status != Os::File::OP_OK) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
@@ -210,8 +256,11 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
 
         return current_time;
     } else {
-        // Check if we need to load from file (cache is zero/uninitialized)
-        if (this->m_commandLossStartTime == Fw::ZERO_TIME) {
+        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch with the file)
+        // Otherwise we want to read from the cache in case the filesystem is broken
+        // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
+        if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
+            this->m_commandLossStartTime.getTimeBase() != current_time.getTimeBase()) {
             // Read stored time from file, or use current time if file doesn't exist
             Fw::Time time = this->getTime();
             Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);

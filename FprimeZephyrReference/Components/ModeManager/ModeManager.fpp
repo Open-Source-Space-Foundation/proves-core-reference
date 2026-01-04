@@ -107,14 +107,6 @@ module Components {
             severity warning high \
             format "External fault detected - external component forced safe mode"
 
-        @ Event emitted when command validation fails
-        event CommandValidationFailed(
-            cmdName: string size 50 @< Command that failed validation
-            reason: string size 100 @< Reason for failure
-        ) \
-            severity warning low \
-            format "Command {} failed: {}"
-
         @ Event emitted when state persistence fails
         event StatePersistenceFailure(
             operation: string size 20 @< Operation that failed (save/load)
@@ -161,6 +153,9 @@ module Components {
             severity warning low \
             format "Safe Mode Radio Sequence Failed: {}"
 
+        event SafeModeRequestIgnored() \
+            severity warning low \
+            format "SafeMode Request Ignored: Already in Safe Mode"
 
         # ----------------------------------------------------------------------
         # Telemetry
@@ -188,7 +183,7 @@ module Components {
         @ Debounce time for voltage transitions (seconds)
         param SafeModeDebounceSeconds: U32 default 10
 
-        param SAFEMODE_SEQUENCE_FILE: string default "/radio_enter_safe.bin"
+        param SAFEMODE_SEQUENCE_FILE: string default "/seq/radio_enter_safe.bin"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
