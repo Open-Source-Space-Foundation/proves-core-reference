@@ -9,5 +9,12 @@ R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
 
 R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED
 
+; Turn-on each face in sequence. Note: face4 does not exist
+R00:00:00 ReferenceDeployment.face0LoadSwitch.TURN_ON
+R00:00:01 ReferenceDeployment.face1LoadSwitch.TURN_ON
+R00:00:01 ReferenceDeployment.face2LoadSwitch.TURN_ON
+R00:00:01 ReferenceDeployment.face3LoadSwitch.TURN_ON
+R00:00:01 ReferenceDeployment.face5LoadSwitch.TURN_ON
+
 R00:00:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
 R03:00:00 ReferenceDeployment.detumbleManager.SET_MODE, DISABLED
