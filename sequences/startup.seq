@@ -1,3 +1,6 @@
+R00:00:00 CdhCore.events.SET_ID_FILTER, 553684992, ENABLED ; UART APID unexpected sequence count
+R00:00:00 CdhCore.events.SET_ID_FILTER, 570462208, ENABLED ; LORA APID unexpected sequence count
+
 R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
 R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
 
