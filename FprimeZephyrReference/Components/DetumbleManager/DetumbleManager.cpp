@@ -130,12 +130,6 @@ void DetumbleManager ::configure() {
     m_x_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xPlus_shape));
     m_x_plus_magnetorquer.m_width = this->paramGet_X_PLUS_WIDTH(isValid);
     m_x_plus_magnetorquer.m_length = this->paramGet_X_PLUS_LENGTH(isValid);
-    this->tlmWrite_XPlusVoltageParam(m_x_plus_magnetorquer.m_voltage);
-    this->tlmWrite_XPlusResistanceParam(m_x_plus_magnetorquer.m_resistance);
-    this->tlmWrite_XPlusTurnsParam(m_x_plus_magnetorquer.m_turns);
-    this->tlmWrite_XPlusShapeParam(xPlus_shape);
-    this->tlmWrite_XPlusWidthParam(m_x_plus_magnetorquer.m_width);
-    this->tlmWrite_XPlusLengthParam(m_x_plus_magnetorquer.m_length);
 
     // X- Coil
     m_x_minus_magnetorquer.m_voltage = this->paramGet_X_MINUS_VOLTAGE(isValid);
@@ -146,12 +140,6 @@ void DetumbleManager ::configure() {
     m_x_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(xMinus_shape));
     m_x_minus_magnetorquer.m_width = this->paramGet_X_MINUS_WIDTH(isValid);
     m_x_minus_magnetorquer.m_length = this->paramGet_X_MINUS_LENGTH(isValid);
-    this->tlmWrite_XMinusVoltageParam(m_x_minus_magnetorquer.m_voltage);
-    this->tlmWrite_XMinusResistanceParam(m_x_minus_magnetorquer.m_resistance);
-    this->tlmWrite_XMinusTurnsParam(m_x_minus_magnetorquer.m_turns);
-    this->tlmWrite_XMinusShapeParam(xMinus_shape);
-    this->tlmWrite_XMinusWidthParam(m_x_minus_magnetorquer.m_width);
-    this->tlmWrite_XMinusLengthParam(m_x_minus_magnetorquer.m_length);
 
     // Y+ Coil
     m_y_plus_magnetorquer.m_voltage = this->paramGet_Y_PLUS_VOLTAGE(isValid);
@@ -162,12 +150,6 @@ void DetumbleManager ::configure() {
     m_y_plus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yPlus_shape));
     m_y_plus_magnetorquer.m_width = this->paramGet_Y_PLUS_WIDTH(isValid);
     m_y_plus_magnetorquer.m_length = this->paramGet_Y_PLUS_LENGTH(isValid);
-    this->tlmWrite_YPlusVoltageParam(m_y_plus_magnetorquer.m_voltage);
-    this->tlmWrite_YPlusResistanceParam(m_y_plus_magnetorquer.m_resistance);
-    this->tlmWrite_YPlusTurnsParam(m_y_plus_magnetorquer.m_turns);
-    this->tlmWrite_YPlusShapeParam(yPlus_shape);
-    this->tlmWrite_YPlusWidthParam(m_y_plus_magnetorquer.m_width);
-    this->tlmWrite_YPlusLengthParam(m_y_plus_magnetorquer.m_length);
 
     // Y- Coil
     m_y_minus_magnetorquer.m_voltage = this->paramGet_Y_MINUS_VOLTAGE(isValid);
@@ -178,12 +160,6 @@ void DetumbleManager ::configure() {
     m_y_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(yMinus_shape));
     m_y_minus_magnetorquer.m_width = this->paramGet_Y_MINUS_WIDTH(isValid);
     m_y_minus_magnetorquer.m_length = this->paramGet_Y_MINUS_LENGTH(isValid);
-    this->tlmWrite_YMinusVoltageParam(m_y_minus_magnetorquer.m_voltage);
-    this->tlmWrite_YMinusResistanceParam(m_y_minus_magnetorquer.m_resistance);
-    this->tlmWrite_YMinusTurnsParam(m_y_minus_magnetorquer.m_turns);
-    this->tlmWrite_YMinusShapeParam(yMinus_shape);
-    this->tlmWrite_YMinusWidthParam(m_y_minus_magnetorquer.m_width);
-    this->tlmWrite_YMinusLengthParam(m_y_minus_magnetorquer.m_length);
 
     // Z- Coil
     m_z_minus_magnetorquer.m_voltage = this->paramGet_Z_MINUS_VOLTAGE(isValid);
@@ -193,11 +169,6 @@ void DetumbleManager ::configure() {
     CoilShape zMinus_shape = this->paramGet_Z_MINUS_SHAPE(isValid);
     m_z_minus_magnetorquer.m_shape = static_cast<Magnetorquer::CoilShape>(static_cast<CoilShape::T>(zMinus_shape));
     m_z_minus_magnetorquer.m_diameter = this->paramGet_Z_MINUS_DIAMETER(isValid);
-    this->tlmWrite_ZMinusVoltageParam(m_z_minus_magnetorquer.m_voltage);
-    this->tlmWrite_ZMinusResistanceParam(m_z_minus_magnetorquer.m_resistance);
-    this->tlmWrite_ZMinusTurnsParam(m_z_minus_magnetorquer.m_turns);
-    this->tlmWrite_ZMinusShapeParam(zMinus_shape);
-    this->tlmWrite_ZMinusDiameterParam(m_z_minus_magnetorquer.m_diameter);
 }
 
 // ----------------------------------------------------------------------
@@ -224,6 +195,286 @@ void DetumbleManager ::stopMagnetorquers() {
     this->zMinusStop_out(0);
 }
 
+void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case DetumbleManager::PARAMID_BDOT_MAX_THRESHOLD: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_BDOT_MAX_THRESHOLD(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_BdotMaxThresholdParamSet(parameter);
+                this->tlmWrite_BdotMaxThresholdParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_COOLDOWN_DURATION: {
+            Fw::ParamValid is_valid;
+            Fw::TimeIntervalValue parameter = this->paramGet_COOLDOWN_DURATION(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_CooldownDurationParamSet(parameter);
+                this->tlmWrite_CooldownDurationParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_DEADBAND_UPPER_THRESHOLD: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_DEADBAND_UPPER_THRESHOLD(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_DeadbandUpperThresholdParamSet(parameter);
+                this->tlmWrite_DeadbandUpperThresholdParam(parameter);
+            }
+        }
+        case DetumbleManager::PARAMID_DEADBAND_LOWER_THRESHOLD: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_DEADBAND_LOWER_THRESHOLD(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_DeadbandLowerThresholdParamSet(parameter);
+                this->tlmWrite_DeadbandLowerThresholdParam(parameter);
+            }
+        }
+        case DetumbleManager::PARAMID_GAIN: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_GAIN(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_GainParamSet(parameter);
+                this->tlmWrite_GainParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_HYSTERESIS_AXIS: {
+            Fw::ParamValid is_valid;
+            HysteresisAxis parameter = this->paramGet_HYSTERESIS_AXIS(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_HysteresisAxisParamSet(parameter);
+                this->tlmWrite_HysteresisAxisParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_TORQUE_DURATION: {
+            Fw::ParamValid is_valid;
+            Fw::TimeIntervalValue parameter = this->paramGet_TORQUE_DURATION(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_TorqueDurationParamSet(parameter);
+                this->tlmWrite_TorqueDurationParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_MINUS_LENGTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_MINUS_LENGTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XMinusLengthParamSet(parameter);
+                this->tlmWrite_XMinusLengthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_MINUS_RESISTANCE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_MINUS_RESISTANCE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XMinusResistanceParamSet(parameter);
+                this->tlmWrite_XMinusResistanceParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_MINUS_SHAPE: {
+            Fw::ParamValid is_valid;
+            CoilShape parameter = this->paramGet_X_MINUS_SHAPE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XMinusShapeParamSet(parameter);
+                this->tlmWrite_XMinusShapeParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_MINUS_VOLTAGE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_MINUS_VOLTAGE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XMinusVoltageParamSet(parameter);
+                this->tlmWrite_XMinusVoltageParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_MINUS_WIDTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_MINUS_WIDTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XMinusWidthParamSet(parameter);
+                this->tlmWrite_XMinusWidthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_PLUS_LENGTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_PLUS_LENGTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XPlusLengthParamSet(parameter);
+                this->tlmWrite_XPlusLengthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_PLUS_RESISTANCE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_PLUS_RESISTANCE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XPlusResistanceParamSet(parameter);
+                this->tlmWrite_XPlusResistanceParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_PLUS_SHAPE: {
+            Fw::ParamValid is_valid;
+            CoilShape parameter = this->paramGet_X_PLUS_SHAPE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XPlusShapeParamSet(parameter);
+                this->tlmWrite_XPlusShapeParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_PLUS_VOLTAGE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_PLUS_VOLTAGE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XPlusVoltageParamSet(parameter);
+                this->tlmWrite_XPlusVoltageParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_PLUS_WIDTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_PLUS_WIDTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XPlusWidthParamSet(parameter);
+                this->tlmWrite_XPlusWidthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_X_TURNS: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_X_TURNS(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_XTurnsParamSet(parameter);
+                this->tlmWrite_XTurnsParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_MINUS_LENGTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_MINUS_LENGTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YMinusLengthParamSet(parameter);
+                this->tlmWrite_YMinusLengthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_MINUS_RESISTANCE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_MINUS_RESISTANCE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YMinusResistanceParamSet(parameter);
+                this->tlmWrite_YMinusResistanceParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_MINUS_SHAPE: {
+            Fw::ParamValid is_valid;
+            CoilShape parameter = this->paramGet_Y_MINUS_SHAPE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YMinusShapeParamSet(parameter);
+                this->tlmWrite_YMinusShapeParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_MINUS_VOLTAGE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_MINUS_VOLTAGE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YMinusVoltageParamSet(parameter);
+                this->tlmWrite_YMinusVoltageParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_MINUS_WIDTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_MINUS_WIDTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YMinusWidthParamSet(parameter);
+                this->tlmWrite_YMinusWidthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_PLUS_LENGTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_PLUS_LENGTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YPlusLengthParamSet(parameter);
+                this->tlmWrite_YPlusLengthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_PLUS_RESISTANCE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_PLUS_RESISTANCE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YPlusResistanceParamSet(parameter);
+                this->tlmWrite_YPlusResistanceParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_PLUS_SHAPE: {
+            Fw::ParamValid is_valid;
+            CoilShape parameter = this->paramGet_Y_PLUS_SHAPE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YPlusShapeParamSet(parameter);
+                this->tlmWrite_YPlusShapeParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_PLUS_VOLTAGE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_PLUS_VOLTAGE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YPlusVoltageParamSet(parameter);
+                this->tlmWrite_YPlusVoltageParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_PLUS_WIDTH: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_PLUS_WIDTH(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YPlusWidthParamSet(parameter);
+                this->tlmWrite_YPlusWidthParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Y_TURNS: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Y_TURNS(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_YTurnsParamSet(parameter);
+                this->tlmWrite_YTurnsParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Z_MINUS_DIAMETER: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Z_MINUS_DIAMETER(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ZMinusDiameterParamSet(parameter);
+                this->tlmWrite_ZMinusDiameterParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Z_MINUS_RESISTANCE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Z_MINUS_RESISTANCE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ZMinusResistanceParamSet(parameter);
+                this->tlmWrite_ZMinusResistanceParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Z_MINUS_SHAPE: {
+            Fw::ParamValid is_valid;
+            CoilShape parameter = this->paramGet_Z_MINUS_SHAPE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ZMinusShapeParamSet(parameter);
+                this->tlmWrite_ZMinusShapeParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Z_MINUS_VOLTAGE: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Z_MINUS_VOLTAGE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ZMinusVoltageParamSet(parameter);
+                this->tlmWrite_ZMinusVoltageParam(parameter);
+            }
+        } break;
+        case DetumbleManager::PARAMID_Z_TURNS: {
+            Fw::ParamValid is_valid;
+            F64 parameter = this->paramGet_Z_TURNS(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ZTurnsParamSet(parameter);
+                this->tlmWrite_ZTurnsParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 void DetumbleManager ::stateCooldownActions() {
     Fw::ParamValid isValid;
 
@@ -232,7 +483,6 @@ void DetumbleManager ::stateCooldownActions() {
 
     // Get cooldown duration from parameter
     Fw::TimeIntervalValue cooldown_duration_param = this->paramGet_COOLDOWN_DURATION(isValid);
-    this->tlmWrite_CooldownDurationParam(cooldown_duration_param);
 
     // Calculate elapsed torquing duration
     Fw::Time current_time = this->getTime();
@@ -282,9 +532,6 @@ void DetumbleManager ::stateSensingAngularVelocityActions() {
         this->m_strategy_selector.fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec);
     this->m_strategy = static_cast<DetumbleStrategy::T>(detumble_strategy);
 
-    // Telemeter selected strategy
-    this->tlmWrite_DetumbleStrategy(this->m_strategy);
-
     // Perform actions upon exiting SENSING_ANGULAR_VELOCITY state
     this->stateExitSensingAngularVelocityActions(angular_velocity_magnitude_deg_sec);
 }
@@ -296,11 +543,6 @@ void DetumbleManager ::stateEnterSensingAngularVelocityActions() {
     F64 bdot_max_threshold = this->paramGet_BDOT_MAX_THRESHOLD(isValid);
     F64 deadband_upper_threshold = this->paramGet_DEADBAND_UPPER_THRESHOLD(isValid);
     F64 deadband_lower_threshold = this->paramGet_DEADBAND_LOWER_THRESHOLD(isValid);
-
-    // Telemeter thresholds
-    this->tlmWrite_BdotMaxThresholdParam(bdot_max_threshold);
-    this->tlmWrite_DeadbandUpperThresholdParam(deadband_upper_threshold);
-    this->tlmWrite_DeadbandLowerThresholdParam(deadband_lower_threshold);
 
     // Configure strategy selector with updated thresholds
     this->m_strategy_selector.configure(bdot_max_threshold, deadband_upper_threshold, deadband_lower_threshold);
@@ -380,7 +622,6 @@ void DetumbleManager ::stateEnterActuatingBDotActions() {
 
     // Get gain parameter
     F64 gain = this->paramGet_GAIN(isValid);
-    this->tlmWrite_GainParam(gain);
 
     // Get magnetometer sampling period
     Fw::TimeIntervalValue sampling_period = this->magneticFieldSamplingPeriodGet_out(0, condition);
@@ -403,7 +644,6 @@ void DetumbleManager ::stateExitActuatingBDotActions() {
 
     // Get torque duration from parameter
     Fw::TimeIntervalValue torque_duration_param = this->paramGet_TORQUE_DURATION(isValid);
-    this->tlmWrite_TorqueDuration(torque_duration_param);
 
     // Calculate elapsed torquing duration
     Fw::Time current_time = this->getTime();
@@ -423,9 +663,6 @@ void DetumbleManager ::stateExitActuatingBDotActions() {
     // Turn off magnetorquers
     this->stopMagnetorquers();
 
-    // Telemeter actual torque duration
-    this->tlmWrite_TorqueDuration(Fw::TimeIntervalValue(torque_duration.getSeconds(), torque_duration.getUSeconds()));
-
     // Reset torque start time
     this->m_torque_start_time = Fw::ZERO_TIME;
 
@@ -438,7 +675,6 @@ void DetumbleManager ::stateActuatingHysteresisActions() {
 
     // Get axis parameter
     HysteresisAxis axis = this->paramGet_HYSTERESIS_AXIS(isValid);
-    this->tlmWrite_HysteresisAxisParam(axis);
 
     // Perform torqueing action
     switch (axis) {

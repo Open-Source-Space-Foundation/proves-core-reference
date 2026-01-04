@@ -184,6 +184,110 @@ module Components {
         @ Event for reporting angular velocity retrieval failure
         event AngularVelocityRetrievalFailed() severity warning low format "Failed to retrieve angular velocity." throttle 5
 
+        ### Events for parameter changes ###
+
+        @ Event when BDOT_MAX_THRESHOLD parameter is set
+        event BdotMaxThresholdParamSet(value: F64) severity activity high format "BDOT_MAX_THRESHOLD parameter set to {} deg/s."
+
+        @ Event when COOLDOWN_DURATION parameter is set
+        event CooldownDurationParamSet(value: Fw.TimeIntervalValue) severity activity high format "COOLDOWN_DURATION parameter set to {}."
+
+        @ Event when DEADBAND_UPPER_THRESHOLD parameter is set
+        event DeadbandUpperThresholdParamSet(value: F64) severity activity high format "DEADBAND_UPPER_THRESHOLD parameter set to {} deg/s."
+
+        @ Event when DEADBAND_LOWER_THRESHOLD parameter is set
+        event DeadbandLowerThresholdParamSet(value: F64) severity activity high format "DEADBAND_LOWER_THRESHOLD parameter set to {} deg/s."
+
+        @ Event when GAIN parameter is set
+        event GainParamSet(value: F64) severity activity high format "GAIN parameter set to {}."
+
+        @ Event when HYSTERESIS_AXIS parameter is set
+        event HysteresisAxisParamSet(value: HysteresisAxis) severity activity high format "HYSTERESIS_AXIS parameter set to {}."
+
+        @ Event when TORQUE_DURATION parameter is set
+        event TorqueDurationParamSet(value: Fw.TimeIntervalValue) severity activity high format "TORQUE_DURATION parameter set to {}."
+
+        @ Event when X_MINUS_LENGTH parameter is set
+        event XMinusLengthParamSet(value: F64) severity activity high format "X_MINUS_LENGTH parameter set to {} m."
+
+        @ Event when X_MINUS_RESISTANCE parameter is set
+        event XMinusResistanceParamSet(value: F64) severity activity high format "X_MINUS_RESISTANCE parameter set to {} Ω."
+
+        @ Event when X_MINUS_SHAPE parameter is set
+        event XMinusShapeParamSet(value: CoilShape) severity activity high format "X_MINUS_SHAPE parameter set to {}."
+
+        @ Event when X_MINUS_VOLTAGE parameter is set
+        event XMinusVoltageParamSet(value: F64) severity activity high format "X_MINUS_VOLTAGE parameter set to {} V."
+
+        @ Event when X_MINUS_WIDTH parameter is set
+        event XMinusWidthParamSet(value: F64) severity activity high format "X_MINUS_WIDTH parameter set to {} m."
+
+        @ Event when X_PLUS_LENGTH parameter is set
+        event XPlusLengthParamSet(value: F64) severity activity high format "X_PLUS_LENGTH parameter set to {} m."
+
+        @ Event when X_PLUS_RESISTANCE parameter is set
+        event XPlusResistanceParamSet(value: F64) severity activity high format "X_PLUS_RESISTANCE parameter set to {} Ω."
+
+        @ Event when X_PLUS_SHAPE parameter is set
+        event XPlusShapeParamSet(value: CoilShape) severity activity high format "X_PLUS_SHAPE parameter set to {}."
+
+        @ Event when X_PLUS_VOLTAGE parameter is set
+        event XPlusVoltageParamSet(value: F64) severity activity high format "X_PLUS_VOLTAGE parameter set to {} V."
+
+        @ Event when X_PLUS_WIDTH parameter is set
+        event XPlusWidthParamSet(value: F64) severity activity high format "X_PLUS_WIDTH parameter set to {} m."
+
+        @ Event when X_TURNS parameter is set
+        event XTurnsParamSet(value: F64) severity activity high format "X_TURNS parameter set to {}."
+
+        @ Event when Y_MINUS_LENGTH parameter is set
+        event YMinusLengthParamSet(value: F64) severity activity high format "Y_MINUS_LENGTH parameter set to {} m."
+
+        @ Event when Y_MINUS_RESISTANCE parameter is set
+        event YMinusResistanceParamSet(value: F64) severity activity high format "Y_MINUS_RESISTANCE parameter set to {} Ω."
+
+        @ Event when Y_MINUS_SHAPE parameter is set
+        event YMinusShapeParamSet(value: CoilShape) severity activity high format "Y_MINUS_SHAPE parameter set to {}."
+
+        @ Event when Y_MINUS_VOLTAGE parameter is set
+        event YMinusVoltageParamSet(value: F64) severity activity high format "Y_MINUS_VOLTAGE parameter set to {} V."
+
+        @ Event when Y_MINUS_WIDTH parameter is set
+        event YMinusWidthParamSet(value: F64) severity activity high format "Y_MINUS_WIDTH parameter set to {} m."
+
+        @ Event when Y_PLUS_LENGTH parameter is set
+        event YPlusLengthParamSet(value: F64) severity activity high format "Y_PLUS_LENGTH parameter set to {} m."
+
+        @ Event when Y_PLUS_RESISTANCE parameter is set
+        event YPlusResistanceParamSet(value: F64) severity activity high format "Y_PLUS_RESISTANCE parameter set to {} Ω."
+
+        @ Event when Y_PLUS_SHAPE parameter is set
+        event YPlusShapeParamSet(value: CoilShape) severity activity high format "Y_PLUS_SHAPE parameter set to {}."
+
+        @ Event when Y_PLUS_VOLTAGE parameter is set
+        event YPlusVoltageParamSet(value: F64) severity activity high format "Y_PLUS_VOLTAGE parameter set to {} V."
+
+        @ Event when Y_PLUS_WIDTH parameter is set
+        event YPlusWidthParamSet(value: F64) severity activity high format "Y_PLUS_WIDTH parameter set to {} m."
+
+        @ Event when Y_TURNS parameter is set
+        event YTurnsParamSet(value: F64) severity activity high format "Y_TURNS parameter set to {}."
+
+        @ Event when Z_MINUS_DIAMETER parameter is set
+        event ZMinusDiameterParamSet(value: F64) severity activity high format "Z_MINUS_DIAMETER parameter set to {} m."
+
+        @ Event when Z_MINUS_RESISTANCE parameter is set
+        event ZMinusResistanceParamSet(value: F64) severity activity high format "Z_MINUS_RESISTANCE parameter set to {} Ω."
+
+        @ Event when Z_MINUS_SHAPE parameter is set
+        event ZMinusShapeParamSet(value: CoilShape) severity activity high format "Z_MINUS_SHAPE parameter set to {}."
+
+        @ Event when Z_MINUS_VOLTAGE parameter is set
+        event ZMinusVoltageParamSet(value: F64) severity activity high format "Z_MINUS_VOLTAGE parameter set to {} V."
+
+        @ Event when Z_TURNS parameter is set
+        event ZTurnsParamSet(value: F64) severity activity high format "Z_TURNS parameter set to {}."
+
         ### Telemetry ###
 
         @ Current operating mode
@@ -258,6 +362,9 @@ module Components {
         @ X- coil shape
         telemetry XMinusShapeParam: CoilShape
 
+        @ X coils turns
+        telemetry XTurnsParam: F64
+
         @ Y+ coil voltage (V)
         telemetry YPlusVoltageParam: F64
 
@@ -294,6 +401,9 @@ module Components {
         @ Y- coil shape
         telemetry YMinusShapeParam: CoilShape
 
+        @ Y axis coil turns
+        telemetry YTurnsParam: F64
+
         @ Z- coil voltage (V)
         telemetry ZMinusVoltageParam: F64
 
@@ -308,6 +418,9 @@ module Components {
 
         @ Z- coil shape
         telemetry ZMinusShapeParam: CoilShape
+
+        @ Z axis coil turns
+        telemetry ZTurnsParam: F64
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
