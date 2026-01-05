@@ -2,8 +2,7 @@ R00:00:00 CdhCore.events.SET_ID_FILTER, 570462208, ENABLED ; LORA APID unexpecte
 R00:00:00 CdhCore.events.SET_ID_FILTER, 570445824, ENABLED ; Invalid Length (SpacePacketDeframer)
 R00:00:00 CdhCore.events.SET_ID_FILTER, 570425344, ENABLED ; Lora QueueOverflow
 
-R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
-R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
+R00:45:00 ReferenceDeployment.antennaDeployer.DEPLOY
 
 ; UPDATE ARM PARAMETERS
 R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SET FALSE
