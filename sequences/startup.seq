@@ -1,5 +1,6 @@
 R00:00:00 CdhCore.events.SET_ID_FILTER, 570462208, ENABLED ; LORA APID unexpected sequence count
-R00:00:00 CdhCore.events.SET_ID_FILTER, 553668608, ENABLED ; Invalid Length (SpacePacketDeframer)
+R00:00:00 CdhCore.events.SET_ID_FILTER, 570445824, ENABLED ; Invalid Length (SpacePacketDeframer)
+R00:00:00 CdhCore.events.SET_ID_FILTER, 570425344, ENABLED ; Lora QueueOverflow
 
 R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
 R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
@@ -12,12 +13,8 @@ R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
 
 R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED
 
-; Turn-on each face in sequence. Note: face4 does not exist
-R00:00:00 ReferenceDeployment.face0LoadSwitch.TURN_ON
-R00:00:01 ReferenceDeployment.face1LoadSwitch.TURN_ON
-R00:00:01 ReferenceDeployment.face2LoadSwitch.TURN_ON
-R00:00:01 ReferenceDeployment.face3LoadSwitch.TURN_ON
-R00:00:01 ReferenceDeployment.face5LoadSwitch.TURN_ON
+; Exit Safe Mode should turn on faces
+R00:00:00 ReferenceDeployment.modeManager.EXIT_SAFE_MODE
 
 R00:00:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
 R03:00:00 ReferenceDeployment.detumbleManager.SET_MODE, DISABLED
