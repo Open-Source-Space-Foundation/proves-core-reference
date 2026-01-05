@@ -45,7 +45,7 @@ module Components {
         param QUIESCENCE_START_FILE: string default "/quiescence_start.bin"
 
         @ Path to the start-up sequence file
-        param STARTUP_SEQUENCE_FILE: string default "/startup.bin"
+        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin"
 
         @ File to store the boot count
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
