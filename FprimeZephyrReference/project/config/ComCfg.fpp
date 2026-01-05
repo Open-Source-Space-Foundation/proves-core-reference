@@ -9,7 +9,7 @@ constant SIZE_OF_FwPacketDescriptorType = 2  @< Size of FwPacketDescriptorType i
 module ComCfg {
 
     @ Spacecraft ID (10 bits) for CCSDS Data Link layer
-    dictionary constant SpacecraftId = 0x1754  @ Year of Columbia University founding
+    dictionary constant SpacecraftId = 0x0002
 
     @ Fixed size of CCSDS TM frames
     dictionary constant TmFrameFixedSize = 248  # Needs to be at least COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize) + 1
