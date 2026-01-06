@@ -32,3 +32,12 @@ do
     file_base=`basename $file`
     echo "R00:00:05 FileHandling.fileManager.AppendFile \"/ota/${file_base}\" \"/ota/${full_base}\"" >> "${sequence}"
 done
+
+drop_sequence="${full_base}/drop_${full_base}.seq"
+echo "; Check dropped packets for each file" > "${drop_sequence}"
+
+for file in "${full_base}/${full_base}_"*
+do
+    file_base=`basename $file`
+    echo "R00:00:05 ReferenceDeployment.dropDetector.DETECT_DROPS \"/ota/${file_base}\" 204" >> "${drop_sequence}"
+done
