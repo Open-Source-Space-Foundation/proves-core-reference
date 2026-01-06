@@ -1,12 +1,8 @@
-R00:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Spreading Factor To 8"
+R05:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
 R00:00:00 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_8
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Changing Downlink Delays"
 R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 299
 R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 29
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Setting Coding Rate"
 R00:00:00 ReferenceDeployment.lora.CODING_RATE_PRM_SET, CR_4_5
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Setting Bandwidths"
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET, BW_125_KHZ
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SET, BW_125_KHZ
-R00:00:00 ReferenceDeployment.lora.TRANSMIT, ENABLED
+R00:00:01 ReferenceDeployment.lora.TRANSMIT, ENABLED
