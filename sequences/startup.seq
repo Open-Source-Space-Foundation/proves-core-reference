@@ -2,12 +2,12 @@ R00:00:00 CdhCore.events.SET_ID_FILTER, 570462208, ENABLED ; LORA APID unexpecte
 R00:00:00 CdhCore.events.SET_ID_FILTER, 570445824, ENABLED ; Invalid Length (SpacePacketDeframer)
 R00:00:00 CdhCore.events.SET_ID_FILTER, 570425344, ENABLED ; Lora QueueOverflow
 
-R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
-R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
+R00:0:10 ReferenceDeployment.antennaDeployer.DEPLOY
 
 ; UPDATE ARM PARAMETERS
 R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SET FALSE
-R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SAVE
+; Exit Safe Mode should turn on faces
+R00:00:00 ReferenceDeployment.modeManager.EXIT_SAFE_MODE
 
 R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
 

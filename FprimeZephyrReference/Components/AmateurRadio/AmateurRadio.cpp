@@ -33,7 +33,7 @@ void AmateurRadio ::Repeat_Name_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, cons
 
     // Emit event
     Fw::LogStringArg radioNameArg(radio_name.toChar());
-    Fw::LogStringArg satNameArg("Sat1");
+    Fw::LogStringArg satNameArg("PROVES-ALCYONE");
     this->log_ACTIVITY_HI_ReapeatingName(radioNameArg, satNameArg);
 
     // Send command response

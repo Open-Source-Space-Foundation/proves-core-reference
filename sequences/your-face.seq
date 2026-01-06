@@ -3,4 +3,3 @@ R00:00:00 ReferenceDeployment.face0LoadSwitch.TURN_ON
 R00:00:01 ReferenceDeployment.face1LoadSwitch.TURN_ON
 R00:00:01 ReferenceDeployment.face2LoadSwitch.TURN_ON
 R00:00:01 ReferenceDeployment.face3LoadSwitch.TURN_ON
-R00:00:01 ReferenceDeployment.face5LoadSwitch.TURN_ON
