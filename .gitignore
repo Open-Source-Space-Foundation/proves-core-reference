@@ -42,3 +42,8 @@ UploadsFilesystem/AuthenticateFiles/spi_dict.txt
 Framing/src/sequence_number.bin
 
 lib/fprime-extras/
+
+# CircuitPython passthrough
+/circuit-python-passthrough/firmware.uf2
+/circuit-python-passthrough/lib/
+/circuit-python-passthrough/tools/

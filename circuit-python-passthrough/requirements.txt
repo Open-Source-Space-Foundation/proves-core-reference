@@ -1,0 +1,4 @@
+adafruit-circuitpython-rfm9x==2.2.22
+adafruit-circuitpython-rfm==1.0.3
+Adafruit_CircuitPython_MCP230xx==2.5.19
+proves-circuitpython-sx1280 @ git+https://github.com/proveskit/CircuitPython_SX1280@1.0.3
