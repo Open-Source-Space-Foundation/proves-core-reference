@@ -176,6 +176,18 @@ framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
 	@ cd Framing && $(UV_RUN) pip install -e .
 
+.PHONY: copy-secrets
+copy-secrets:
+	@if [ -z "$(SECRETS_DIR)" ]; then \
+		echo "Error: Must pass valid secrets dir. Usage: make copy-secrets SECRETS_DIR=dir"; \
+		exit 1; \
+	fi
+	@mkdir -p ./keys/
+	@cp $(SECRETS_DIR)/proves.pem ./keys/
+	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./FprimeZephyrReference/Components/Authenticate/
+	@echo "Copied secret files 🤫"
+
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
