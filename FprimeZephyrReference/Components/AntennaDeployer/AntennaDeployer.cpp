@@ -250,13 +250,6 @@ void AntennaDeployer ::logBurnSignalCount() {
 bool AntennaDeployer ::readDeploymentState() {
     const char* path_str = DEPLOYED_STATE_FILE_PATH;
 
-    bool armed = this->paramGet_ARMED(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    if (!armed) {
-        // If not armed, always return deployed
-        return true;
-    }
-
     Os::File file;
     Os::File::Status status = file.open(path_str, Os::File::OPEN_READ);
     if (status != Os::File::OP_OK) {
