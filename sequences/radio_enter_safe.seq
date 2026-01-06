@@ -9,4 +9,4 @@ R00:00:00 ReferenceDeployment.lora.CODING_RATE_PRM_SET, CR_4_5
 R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Setting Bandwidths"
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET, BW_125_KHZ
 R00:00:00 ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SET, BW_125_KHZ
-R00:00:00 ReferenceDeployment.lora.TRANSMIT, ENABLED
+R05:00:00 ReferenceDeployment.lora.TRANSMIT, ENABLED
