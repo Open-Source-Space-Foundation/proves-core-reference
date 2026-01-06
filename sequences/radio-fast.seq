@@ -4,11 +4,11 @@ R00:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
 R00:00:01 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_7
 R00:00:01 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET, BW_500_KHZ
 R00:00:01 ReferenceDeployment.lora.TRANSMIT, ENABLED
-R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 0
-R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 0
+R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 19
+R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 1
 
 ; Allow 15mins to "CANCEL" at higher data throughput
-R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING "Wait 15mins before resetting"
+R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING "Waiting 15mins before resetting"
 R00:15:00 CdhCore.cmdDisp.CMD_NO_OP_STRING "Resetting communications"
 
 ; Reset the comm stack
