@@ -18,5 +18,5 @@ R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED
 ; Exit Safe Mode should turn on faces
 R00:00:00 ReferenceDeployment.modeManager.EXIT_SAFE_MODE
 
-R00:00:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
+R00:05:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
 R03:00:00 ReferenceDeployment.detumbleManager.SET_MODE, DISABLED

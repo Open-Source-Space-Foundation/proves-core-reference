@@ -163,14 +163,12 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid is_valid;
 
     // On the first call, update the boot count, set the quiescence start time, and dispatch the start-up sequence
-    if (this->m_boot_count == 0) {
-        this->m_boot_count = this->update_boot_count();
-        this->m_quiescence_start = this->update_quiescence_start();
+    this->m_boot_count = this->update_boot_count();
+    this->m_quiescence_start = this->update_quiescence_start();
 
-        Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
-        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-        this->runSequence_out(0, first_sequence);
-    }
+    Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    this->runSequence_out(0, first_sequence);
 
     // Calculate the quiescence end time based on the quiescence period parameter
     Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
