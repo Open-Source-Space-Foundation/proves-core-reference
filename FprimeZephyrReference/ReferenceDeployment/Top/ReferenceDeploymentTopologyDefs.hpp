@@ -138,6 +138,7 @@ struct TopologyState {
     const device* muxChannel5Device;              //!< Multiplexer channel 5 device
     const device* muxChannel6Device;              //!< Multiplexer channel 5 device
     const device* muxChannel7Device;              //!< Multiplexer channel 7 device
+    int storagePartitionId;                       //!< Storage partition ID
 
     // Face devices
     //! Temperature sensors
