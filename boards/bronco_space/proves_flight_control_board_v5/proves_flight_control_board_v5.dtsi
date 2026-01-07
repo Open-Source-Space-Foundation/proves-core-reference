@@ -90,7 +90,7 @@ zephyr_udc0: &usbd {
         };
 
         storage_partition: partition@400000 {
-            label = "storage";
+            label = "storage_partition";
             reg = <0x400000 0xC00000>;
         };
     };

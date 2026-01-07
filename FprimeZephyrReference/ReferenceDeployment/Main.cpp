@@ -12,7 +12,9 @@
 #include <zephyr/drivers/haptics.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/fs/fs.h>
 #include <zephyr/kernel.h>
+#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/printk.h>
 
 // Devices
@@ -56,6 +58,7 @@ const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
 const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
+const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 
 int main(int argc, char* argv[]) {
     //
@@ -86,6 +89,7 @@ int main(int argc, char* argv[]) {
     inputs.muxChannel5Device = mux_channel_5;
     inputs.muxChannel6Device = mux_channel_6;
     inputs.muxChannel7Device = mux_channel_7;
+    inputs.storagePartitionId = storage_partition_id;
 
     // Face Board device bindings
     // TMP112 temperature sensor devices
