@@ -85,6 +85,10 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Turn the magnetorquers off based on the provided values
     void stopMagnetorquers();
 
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     //! Actions to perform in the COOLDOWN state
     void stateCooldownActions();
 
