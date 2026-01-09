@@ -196,6 +196,8 @@ zephyr_udc0: &usbd {
 		label = "TCA9548A";
 		reset-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
 		i2c-mux-idle-disconnect;
+		clock-frequency = <400000>;
+		cq-size = <24>; // num sensors + 20%
 
 		mux_channel_0: i2c_mux@0 {
 			compatible = "ti,tca9548a-channel";
