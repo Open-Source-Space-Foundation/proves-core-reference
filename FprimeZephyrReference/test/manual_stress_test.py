@@ -164,7 +164,9 @@ def run_three_sequencers(api: IntegrationTestAPI):
     send_command(api, f"{CMD_SEQ}.CS_RUN", ["/seq/startup.bin", "NO_BLOCK"])
 
     print("Starting payloadSeq with camera_handler_1.seq...")
-    send_command(api, f"{PAYLOAD_SEQ}.CS_RUN", ["/seq/camera_handler_1.bin", "NO_BLOCK"])
+    send_command(
+        api, f"{PAYLOAD_SEQ}.CS_RUN", ["/seq/camera_handler_1.bin", "NO_BLOCK"]
+    )
 
     print("Starting safeModeSeq with radio-fast.seq...")
     send_command(api, f"{SAFE_MODE_SEQ}.CS_RUN", ["/seq/radio-fast.bin", "NO_BLOCK"])
@@ -257,7 +259,9 @@ OTA Flow:
     if crc.lower() != "skip":
         try:
             crc_int = int(crc, 16)
-            print(f"\nUpdating from /update/zephyr.signed.bin with CRC {hex(crc_int)}...")
+            print(
+                f"\nUpdating from /update/zephyr.signed.bin with CRC {hex(crc_int)}..."
+            )
             send_command(
                 api,
                 f"{UPDATER}.UPDATE_IMAGE_FROM",
@@ -551,7 +555,9 @@ def test_state_persistence(api: IntegrationTestAPI):
     if initial_count is not None and final_count is not None:
         expected = initial_count + 3
         if final_count == expected:
-            print(f"   [PASS] Counter incremented by 3 ({initial_count} -> {final_count})")
+            print(
+                f"   [PASS] Counter incremented by 3 ({initial_count} -> {final_count})"
+            )
         else:
             print(f"   [FAIL] Expected {expected}, got {final_count}")
 
@@ -592,18 +598,21 @@ def main():
 
         # Build command-line style arguments for the parser
         cli_args = [
-            "--dictionary", str(dict_path),
-            "--logs", str(logs_path),
-            "--file-storage-directory", str(deployment),
-            "--tts-port", str(gds_port),
-            "--tts-addr", "localhost",
+            "--dictionary",
+            str(dict_path),
+            "--logs",
+            str(logs_path),
+            "--file-storage-directory",
+            str(deployment),
+            "--tts-port",
+            str(gds_port),
+            "--tts-addr",
+            "localhost",
         ]
 
         pipeline_parser = StandardPipelineParser()
         args, _, *_ = pipeline_parser.parse_args(
-            StandardPipelineParser.CONSTITUENTS,
-            arguments=cli_args,
-            client=True
+            StandardPipelineParser.CONSTITUENTS, arguments=cli_args, client=True
         )
         pipeline = pipeline_parser.pipeline_factory(args)
 
