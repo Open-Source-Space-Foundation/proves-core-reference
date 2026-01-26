@@ -28,6 +28,7 @@ static constexpr U32 kBypassOpCodes[] = {
     0x01000000,  // no op
     0x2200B000,  // get sequence number
     0x10065000   // amateurRadio.TELL_JOKE
+    0x10065000   // amateur name
 };
 constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 

@@ -72,6 +72,7 @@ module ReferenceDeployment {
     instance face5LoadSwitch
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
+    instance fsFormat
     instance fsSpace
     instance payload
     instance cameraHandler
@@ -474,6 +475,11 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[5] -> face5LoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
+
+    }
+
+    connections FatalHandler {
+      CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
 
     }
 
