@@ -27,50 +27,47 @@ module ReferenceDeployment {
   # Active component instances
   # ----------------------------------------------------------------------
 
-  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
+
+  instance rateGroup50Hz: Svc.ActiveRateGroup base id 0x10001000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 1
+
+  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 2
 
-  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
+  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10003000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 3
-
-  instance rateGroup1_6Hz: Svc.ActiveRateGroup base id 0x10003000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 4
-
-  instance rateGroup1_10Hz: Svc.ActiveRateGroup base id 0x10004000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 5
-
-  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
-    queue size Default.QUEUE_SIZE * 2 \
-    stack size Default.STACK_SIZE \
-    priority 15
-
-  instance prmDb: Svc.PrmDb base id 0x10007000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 14
-
-  instance payload: Components.PayloadCom base id 0x10008000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 10
-
-  instance payload2: Components.PayloadCom base id 0x10009000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 11
 
   instance modeManager: Components.ModeManager base id 0x1000A000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
     priority 4
+
+  instance cmdSeq: Svc.CmdSequencer base id 0x10006000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 12
+
+  instance payloadSeq: Svc.CmdSequencer base id 0x10062000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 13
+
+  instance safeModeSeq: Svc.CmdSequencer base id 0x10066000 \
+    queue size Default.QUEUE_SIZE * 2 \
+    stack size Default.STACK_SIZE \
+    priority 13
+
+  instance payload: Components.PayloadCom base id 0x10008000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 13
+
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -114,15 +111,15 @@ module ReferenceDeployment {
 
   instance antennaDeployer: Components.AntennaDeployer base id 0x10022000
 
-  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x10023000
+  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x10023000
 
-  instance gpioface0LS: Zephyr.ZephyrGpioDriver base id 0x10024000
+  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x10024000
 
-  instance gpioface1LS: Zephyr.ZephyrGpioDriver base id 0x10025000
+  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x10025000
 
-  instance gpioface2LS: Zephyr.ZephyrGpioDriver base id 0x10026000
+  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x10026000
 
-  instance gpioface3LS: Zephyr.ZephyrGpioDriver base id 0x10027000
+  instance gpioface4LS: Zephyr.ZephyrGpioDriver base id 0x10027000
 
   instance gpioface5LS: Zephyr.ZephyrGpioDriver base id 0x10028000
 
@@ -183,31 +180,7 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003B000
 
-  instance cameraHandler2: Components.CameraHandler base id 0x1003C000
-
-  instance peripheralUartDriver2: Zephyr.ZephyrUartDriver base id 0x1003D000
-
-  instance payloadBufferManager2: Svc.BufferManager base id 0x1003E000 \
-  {
-    phase Fpp.ToCpp.Phases.configObjects """
-    Svc::BufferManager::BufferBins bins;
-    """
-    phase Fpp.ToCpp.Phases.configComponents """
-    memset(&ConfigObjects::ReferenceDeployment_payloadBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_payloadBufferManager::bins));
-    // UART RX buffers for camera data streaming (4 KB, 2 buffers for ping-pong)
-    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].bufferSize = 4 * 1024;
-    ConfigObjects::ReferenceDeployment_payloadBufferManager::bins.bins[0].numBuffers = 2;
-    ReferenceDeployment::payloadBufferManager.setup(
-        1,  // manager ID
-        0,  // store ID
-        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
-        ConfigObjects::ReferenceDeployment_payloadBufferManager::bins
-    );
-    """
-    phase Fpp.ToCpp.Phases.tearDownComponents """
-    ReferenceDeployment::payloadBufferManager.cleanup();
-    """
-  }
+  instance amateurRadio: Components.AmateurRadio base id 0x10065000
 
   # Thermal Management System
   instance thermalManager: Components.ThermalManager base id 0x10041000
@@ -238,11 +211,33 @@ module ReferenceDeployment {
   instance drv2605Face3Manager: Drv.Drv2605Manager base id 0x10058000
   instance drv2605Face5Manager: Drv.Drv2605Manager base id 0x10059000
 
+  instance detumbleManager: Components.DetumbleManager base id 0x1005A000
   instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
   instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 
-  instance payloadSeq: Svc.CmdSequencer base id 0x10062000 \
-    queue size Default.QUEUE_SIZE * 2 \
-    stack size Default.STACK_SIZE \
-    priority 15
+  instance loraRetry: Svc.ComRetry base id 0x10063000
+
+  instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
+
+  instance comDelaySband: Components.ComDelay base id 0x10070000
+
+  instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10071000
+
+  #instance sband : Components.SBand base id 0x10072000 \
+  #  queue size Default.QUEUE_SIZE \
+  #  stack size Default.STACK_SIZE \
+  #  priority 10
+
+  #instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
+
+  #instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
+
+  #instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
+
+  #instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
+
+  instance dropDetector: Utilities.DropDetector base id 0x10077000
+
+  instance fsFormat: Components.FsFormat base id 0x10078000
+
 }

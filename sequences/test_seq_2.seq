@@ -1,0 +1,6 @@
+R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Running Test Seq 2!!!!!!!!....."
+R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Successfully Started SEQ 2"
+R00:00:05 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Successfully Started SEQ 2"
+R00:00:05 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Successfully Started SEQ 2"
+R00:00:05 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Successfully Started SEQ 2"
+R00:00:05 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Successfully Started SEQ 2"

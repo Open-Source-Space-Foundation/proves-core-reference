@@ -19,5 +19,6 @@ module Drv {
         x: F64 @< Magnetic field in gauss in the X direction.
         y: F64 @< Magnetic field in gauss in the Y direction.
         z: F64 @< Magnetic field in gauss in the Z direction.
+        timestamp: Fw.TimeValue @< Time the magnetic field reading was taken.
     }
 }

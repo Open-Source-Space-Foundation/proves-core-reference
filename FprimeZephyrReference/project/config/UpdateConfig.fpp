@@ -21,8 +21,8 @@ module Update {
     }
 
     module Priorities {
-        constant updater = 14 # Updater does real-time tasks; higher priority
-        constant worker  = 15 # Worker does slow-running tasks; lower priority
+        constant updater = 11 # Updater does real-time tasks; higher priority
+        constant worker  = 14 # Worker does slow-running tasks; lower priority
     }
 
     instance worker: Components.FlashWorker base id BASE_ID + 0x1000 \

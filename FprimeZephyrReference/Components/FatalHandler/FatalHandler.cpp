@@ -14,8 +14,6 @@
 #include <Fw/FPrimeBasicTypes.hpp>
 #include <Fw/Logger/Logger.hpp>
 
-#include <zephyr/sys/reboot.h>
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -26,15 +24,9 @@ FatalHandler ::FatalHandler(const char* const compName) : FatalHandlerComponentB
 
 FatalHandler ::~FatalHandler() {}
 
-void FatalHandler::reboot() {
-    // Otherwise, use Zephyr to reboot the system
-    sys_reboot(SYS_REBOOT_COLD);
-}
-
 void FatalHandler::FatalReceive_handler(const FwIndexType portNum, FwEventIdType Id) {
     Fw::Logger::log("FATAL %" PRI_FwEventIdType " handled.\n", Id);
-    Os::Task::delay(Fw::TimeInterval(1, 0));  // Delay to allow log to be processed
-    this->reboot();                           // Reboot the system
+    this->stopWatchdog_out(0);
 }
 
 }  // namespace Components

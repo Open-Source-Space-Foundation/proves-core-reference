@@ -1,27 +1,24 @@
 # ======================================================================
 # FPP file for configuration of the communications stack
-#
-# The only reason to modify these definitions is if you are writing your own
-# Framer/Deframer implementations and need more contextual data than what is
-# defined
 # ======================================================================
 
 @ The width of packet descriptors when they are serialized by the framework
-type FwPacketDescriptorType = U16
+dictionary type FwPacketDescriptorType = U16
 constant SIZE_OF_FwPacketDescriptorType = 2  @< Size of FwPacketDescriptorType in bytes
 
 module ComCfg {
 
-    # Needed in dictionary:
-    # - spacecraftId
-    # - TmFrameFixedSize
-    # - potentially APID enum ?
-    constant SpacecraftId = 0x0044    # Spacecraft ID (10 bits)
-    constant TmFrameFixedSize = 248   # Needs to be at least COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize) + 1
+    @ Spacecraft ID (10 bits) for CCSDS Data Link layer
+    dictionary constant SpacecraftId = 0x0044
+
+    @ Fixed size of CCSDS TM frames
+    dictionary constant TmFrameFixedSize = 248  # Needs to be at least COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize) + 1
+
+    @ Aggregation buffer for ComAggregator component
     constant AggregationSize = TmFrameFixedSize - 6 - 6 - 1 - 2  # 2 header (6) + 1 idle byte + 2 trailer bytes
 
     @ APIDs are 11 bits in the Space Packet protocol, so we use U16. Max value 7FF
-    enum Apid : FwPacketDescriptorType {
+    dictionary enum Apid : FwPacketDescriptorType {
         # APIDs prefixed with FW are reserved for F Prime and need to be present
         # in the enumeration. Their values can be changed
         FW_PACKET_COMMAND        = 0x0000  @< Command packet type - incoming
@@ -43,6 +40,7 @@ module ComCfg {
         apid: Apid                  @< 11 bits APID in CCSDS
         sequenceCount: U16          @< 14 bit Sequence count - sequence count is incremented per APID
         vcId: U8                    @< 6 bit Virtual Channel ID - used for TC and TM
+        authenticated: bool        @< Whether the packet has been authenticated
     } default {
         comQueueIndex = 0
         apid = Apid.FW_PACKET_UNKNOWN

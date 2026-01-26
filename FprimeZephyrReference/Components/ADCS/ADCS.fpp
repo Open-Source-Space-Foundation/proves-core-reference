@@ -3,8 +3,11 @@ module Components {
     passive component ADCS {
         sync input port run: Svc.Sched
 
+        @ The number of light sensors on the ADCS
+        constant numLightSensors = 6
+
         @ Port for visible light from the light sensors
-        output port visibleLightGet: [6] Drv.lightGet
+        output port visibleLightGet: [numLightSensors] Drv.lightGet
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

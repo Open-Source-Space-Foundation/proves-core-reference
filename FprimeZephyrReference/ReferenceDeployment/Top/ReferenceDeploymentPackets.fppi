@@ -6,6 +6,7 @@ telemetry packets ReferenceDeploymentPackets {
   # 3 - Satellite Meta Data
   # 4 - Payload Meta Data
   # 5 - Health and Status
+  # 6 - Parameters
   ########################################
 
   packet Beacon id 1 group 1 {
@@ -22,6 +23,14 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.ina219SolManager.Power
     ReferenceDeployment.powerMonitor.TotalPowerConsumption
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
+
+    # Communications Data
+    # ComCcsdsSband.authenticatesband.CurrentSequenceNumber
+    ComCcsdsLora.authenticatelora.CurrentSequenceNumber
+    ComCcsdsUart.authenticate.CurrentSequenceNumber
+
+    lora.BytesReceived
+
   }
 
   ### Live Satellite Sensor Data Packets ###
@@ -31,15 +40,17 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.Acceleration
     ReferenceDeployment.imuManager.AngularVelocity
     ReferenceDeployment.imuManager.MagneticField
-    ReferenceDeployment.imuManager.Temperature
     ReferenceDeployment.imuManager.AccelerometerSamplingFrequency
     ReferenceDeployment.imuManager.GyroscopeSamplingFrequency
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
-  packet LoRa id 8 group 2 {
+  packet Radio id 8 group 2 {
     lora.LastRssi
     lora.LastSnr
+    lora.BytesSent
+#    sband.LastRssi
+#    sband.LastSnr
   }
 
   packet PowerMonitor id 11 group 2 {
@@ -86,6 +97,12 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
   }
 
+  packet Detumble id 15 group 3 {
+    ReferenceDeployment.detumbleManager.Mode
+    ReferenceDeployment.detumbleManager.State
+    ReferenceDeployment.detumbleManager.DetumbleStrategy
+  }
+
   ### Payload Meta Data Packets ###
 
   packet CameraDebug id 14 group 4 {
@@ -99,14 +116,15 @@ telemetry packets ReferenceDeploymentPackets {
 
   ### Health and Status Packets ###
   packet Health id 2 group 5 {
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
+    ComCcsdsLora.comQueue.comQueueDepth
+    ComCcsdsLora.commsBufferManager.HiBuffs
+#    ComCcsdsSband.comQueue.comQueueDepth
+#    ComCcsdsSband.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
+    ReferenceDeployment.rateGroup50Hz.RgMaxTime
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_6Hz.RgMaxTime
-    ReferenceDeployment.rateGroup1_10Hz.RgMaxTime
     ReferenceDeployment.startupManager.QuiescenceEndTime
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
@@ -115,27 +133,115 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
+    ComCcsdsLora.commsBufferManager.NoBuffs
+    #ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
-    payloadBufferManager2.NoBuffs
+    ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_6Hz.RgCycleSlips
-    ReferenceDeployment.rateGroup1_10Hz.RgCycleSlips
   }
 
 
   packet HealthAuxiliary id 4 group 5 {
-    ComCcsds.comQueue.buffQueueDepth
+    ComCcsdsLora.comQueue.buffQueueDepth
+#    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
-    payloadBufferManager2.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
   packet FileSystem id 5 group 5 {
     fsSpace.FreeSpace
     fsSpace.TotalSpace
+  }
+
+  packet Authenticate id 6 group 5 {
+    #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
+    ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
+    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+
+    #ComCcsdsSband.authenticatesband.RejectedPacketsCount
+    ComCcsdsLora.authenticatelora.RejectedPacketsCount
+    ComCcsdsUart.authenticate.RejectedPacketsCount
+
+    #ComCcsdsSband.authenticationRouter.ByPassedRouter
+    ComCcsdsLora.authenticationRouter.ByPassedRouter
+    ComCcsdsUart.authenticationRouter.ByPassedRouter
+
+    #ComCcsdsSband.authenticationRouter.PassedRouter
+    ComCcsdsLora.authenticationRouter.PassedRouter
+    ComCcsdsUart.authenticationRouter.PassedRouter
+
+    #ComCcsdsSband.authenticationRouter.FailedRouter
+    ComCcsdsLora.authenticationRouter.FailedRouter
+    ComCcsdsUart.authenticationRouter.FailedRouter
+
+    ReferenceDeployment.amateurRadio.count_names
+
+  }
+
+  packet DetumblePerformance id 16 group 5 {
+    ReferenceDeployment.detumbleManager.TorqueDuration
+    ReferenceDeployment.detumbleManager.TimeBetweenMagneticFieldReadings
+  }
+
+  packet DetumbleParams id 17 group 6 {
+    ReferenceDeployment.detumbleManager.GainParam
+    ReferenceDeployment.detumbleManager.BdotMaxThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandUpperThresholdParam
+    ReferenceDeployment.detumbleManager.DeadbandLowerThresholdParam
+    ReferenceDeployment.detumbleManager.CooldownDurationParam
+    ReferenceDeployment.detumbleManager.TorqueDurationParam
+    ReferenceDeployment.detumbleManager.HysteresisAxisParam
+  }
+
+  packet DetumbleXPlusCoilParams id 18 group 6 {
+    # X+ coil parameters
+    ReferenceDeployment.detumbleManager.XPlusVoltageParam
+    ReferenceDeployment.detumbleManager.XPlusResistanceParam
+    ReferenceDeployment.detumbleManager.XPlusTurnsParam
+    ReferenceDeployment.detumbleManager.XPlusLengthParam
+    ReferenceDeployment.detumbleManager.XPlusWidthParam
+    ReferenceDeployment.detumbleManager.XPlusShapeParam
+  }
+
+  packet DetumbleXMinusCoilParams id 19 group 6 {
+    # X- coil parameters
+    ReferenceDeployment.detumbleManager.XMinusVoltageParam
+    ReferenceDeployment.detumbleManager.XMinusResistanceParam
+    ReferenceDeployment.detumbleManager.XMinusTurnsParam
+    ReferenceDeployment.detumbleManager.XMinusLengthParam
+    ReferenceDeployment.detumbleManager.XMinusWidthParam
+    ReferenceDeployment.detumbleManager.XMinusShapeParam
+  }
+
+  packet DetumbleYPlusCoilParams id 20 group 6 {
+    # Y+ coil parameters
+    ReferenceDeployment.detumbleManager.YPlusVoltageParam
+    ReferenceDeployment.detumbleManager.YPlusResistanceParam
+    ReferenceDeployment.detumbleManager.YPlusTurnsParam
+    ReferenceDeployment.detumbleManager.YPlusLengthParam
+    ReferenceDeployment.detumbleManager.YPlusWidthParam
+    ReferenceDeployment.detumbleManager.YPlusShapeParam
+  }
+
+  packet DetumbleYMinusCoilParams id 21 group 6 {
+    # Y- coil parameters
+    ReferenceDeployment.detumbleManager.YMinusVoltageParam
+    ReferenceDeployment.detumbleManager.YMinusResistanceParam
+    ReferenceDeployment.detumbleManager.YMinusTurnsParam
+    ReferenceDeployment.detumbleManager.YMinusLengthParam
+    ReferenceDeployment.detumbleManager.YMinusWidthParam
+    ReferenceDeployment.detumbleManager.YMinusShapeParam
+  }
+
+  packet DetumbleZMinusCoilParams id 22 group 6 {
+    # Z- coil parameters
+    ReferenceDeployment.detumbleManager.ZMinusVoltageParam
+    ReferenceDeployment.detumbleManager.ZMinusResistanceParam
+    ReferenceDeployment.detumbleManager.ZMinusTurnsParam
+    ReferenceDeployment.detumbleManager.ZMinusDiameterParam
+    ReferenceDeployment.detumbleManager.ZMinusShapeParam
   }
 
 } omit {
@@ -170,6 +276,11 @@ telemetry packets ReferenceDeploymentPackets {
   ReferenceDeployment.payloadSeq.CS_CommandsExecuted
   ReferenceDeployment.payloadSeq.CS_SequencesCompleted
   ReferenceDeployment.payloadSeq.CS_Errors
+  ReferenceDeployment.safeModeSeq.CS_LoadCommands
+  ReferenceDeployment.safeModeSeq.CS_CancelCommands
+  ReferenceDeployment.safeModeSeq.CS_CommandsExecuted
+  ReferenceDeployment.safeModeSeq.CS_SequencesCompleted
+  ReferenceDeployment.safeModeSeq.CS_Errors
   FileHandling.fileUplink.FilesReceived
   FileHandling.fileUplink.PacketsReceived
   FileHandling.fileDownlink.FilesSent
@@ -186,31 +297,23 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
 
-  ComCcsds.commsBufferManager.EmptyBuffs
+  ComCcsdsLora.commsBufferManager.EmptyBuffs
+#  ComCcsdsSband.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
-  payloadBufferManager2.EmptyBuffs
 
-  ComCcsds.commsBufferManager.TotalBuffs
-  ComCcsds.commsBufferManager.CurrBuffs
+  ComCcsdsLora.commsBufferManager.TotalBuffs
+  ComCcsdsLora.commsBufferManager.CurrBuffs
+#  ComCcsdsSband.commsBufferManager.TotalBuffs
+#  ComCcsdsSband.commsBufferManager.CurrBuffs
+
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
-  payloadBufferManager2.TotalBuffs
-  payloadBufferManager2.CurrBuffs
 
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
-
-
-  # Moved to omit as this is specific to Alcyone Build
-  ReferenceDeployment.cameraHandler2.BytesReceived
-  ReferenceDeployment.cameraHandler2.ExpectedSize
-  ReferenceDeployment.cameraHandler2.IsReceiving
-  ReferenceDeployment.cameraHandler2.FileOpen
-  ReferenceDeployment.cameraHandler2.FileErrorCount
-  ReferenceDeployment.cameraHandler2.ImagesSaved
 
 }

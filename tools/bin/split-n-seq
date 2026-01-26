@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Check argument count
+if (( $# != 2 ))
+then
+    echo "[ERROR] Must supply number of output files" 1>&2
+    echo "Usage:" 1>&2
+    echo "    $0 <file> <number-of-files>" 1>&2
+    exit 1
+fi
+
+# Confirm file exists
+if [ ! -f ${1} ]
+then
+    echo "[ERROR] '$i' does not exist" 1>&2
+    echo "Usage:" 1>&2
+    echo "    $0 <file> <number-of-files>" 1>&2
+    exit 1
+fi
+full_file="${1}"
+full_base="$(basename "${full_file}")"
+
+# Split the file
+mkdir -p "${full_base}"
+split -d -n $2 $full_file "${full_base}/${full_base}_" || exit 1
+
+sequence="${full_base}/combine_${full_base}.seq"
+
+echo "; Combine the file parts" > "${sequence}"
+for file in "${full_base}/${full_base}_"*
+do
+    file_base=`basename $file`
+    echo "R00:00:05 FileHandling.fileManager.AppendFile \"/ota/${file_base}\" \"/ota/${full_base}\"" >> "${sequence}"
+done
+
+drop_sequence="${full_base}/drop_${full_base}.seq"
+echo "; Check dropped packets for each file" > "${drop_sequence}"
+
+for file in "${full_base}/${full_base}_"*
+do
+    file_base=`basename $file`
+    echo "R00:00:05 ReferenceDeployment.dropDetector.DETECT_DROPS \"/ota/${file_base}\" 204" >> "${drop_sequence}"
+done

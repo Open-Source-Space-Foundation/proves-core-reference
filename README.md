@@ -56,6 +56,11 @@ Now you want to install the firmware to the board.
 cp build-artifacts/zephyr.uf2 [path-to-your-board]
 ```
 
+If this is your first time running the gds, you must create the authentication plug:
+```shell
+make framer-plugin
+```
+
 Finally, run the fprime-gds.
 ```shell
 make gds
@@ -126,12 +131,6 @@ make build-mcuboot
 Once built, upload `mcuboot.uf2` like normally done.
 
 Then build proves-core-reference like normal. This will put `bootable.uf2` inside of the current directory. Ensure you upload this file to the board instead of `build-artifacts/zephyr.uf2`.
-
-
-Before, you currently need to run
-
-``` pip install git+https://github.com/LeStarch/fprime-gds@5b02709  ``` (makes UART buffer not overrun but adding sleeps to file upload in gds)
-
 
 When you run the gds,
 

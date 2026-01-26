@@ -9,8 +9,8 @@ from datetime import datetime
 import pytest
 from common import proves_send_and_assert_command
 from fprime.common.models.serialize.numerical_types import F32Type
-from fprime.common.models.serialize.time_type import TimeType
 from fprime_gds.common.data_types.event_data import EventData
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 veml6031Face0Manager = "ReferenceDeployment.veml6031Face0Manager"
@@ -28,7 +28,9 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_get_visible_light(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get visible light"""
-    start: TimeType = TimeType().set_datetime(datetime.now())
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
 
     # Send command to get visible light
     proves_send_and_assert_command(

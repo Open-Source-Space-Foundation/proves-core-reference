@@ -214,7 +214,8 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
     this->ensureBurnwireStopped();
     this->logBurnSignalCount();
 
-    if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS) {
+    if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS ||
+        result == Components::DeployResult::DEPLOY_RESULT_FAILED) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
 
         // Mark antenna as deployed by writing state file
