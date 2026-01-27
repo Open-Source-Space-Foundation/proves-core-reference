@@ -15,6 +15,12 @@ Usage:
 Prerequisites:
     - Board connected via USB, firmware flashed
     - GDS running: make gds
+
+Note:
+    Standalone GDS client pipelines can send commands but may not receive
+    events/telemetry via ZMQ. This script uses fire-and-forget commands
+    with time-based waits (same pattern as manual_stress_test.py). For
+    real-time event observation, watch the GDS GUI.
 """
 
 import os
@@ -38,6 +44,8 @@ RECONNECT_TIMEOUT = 30  # seconds to poll CMD_NO_OP waiting for GDS reconnect
 # Format triggers asserts then a watchdog reset (~26s watchdog timeout)
 # plus time to actually reboot and reformat, so allow plenty of margin.
 FORMAT_TIMEOUT = 60
+# Time to wait for a command to complete on the board
+CMD_WAIT = 2
 
 
 # ---------------------------------------------------------------------------
@@ -45,32 +53,25 @@ FORMAT_TIMEOUT = 60
 # ---------------------------------------------------------------------------
 
 
-def send_command(api: IntegrationTestAPI, command: str, args: list = None):
-    """Send a command and print result."""
-    if args is None:
-        args = []
+def get_telemetry_value(api: IntegrationTestAPI, channel: str, timeout: int = 5):
+    """Try to read a telemetry channel value. Returns value or None.
+
+    Standalone ZMQ client pipelines often cannot receive events/telemetry,
+    so this always uses try/except with graceful fallback.
+    """
     try:
-        api.send_command(command, args)
-        print(f"  [OK] {command}")
-        return True
-    except Exception as e:
-        print(f"  [FAIL] {command}: {e}")
-        return False
-
-
-def send_and_assert(
-    api: IntegrationTestAPI, command: str, args: list = None, timeout: int = 10
-):
-    """Send a command and assert it completed."""
-    if args is None:
-        args = []
-    api.send_and_assert_command(command, args, timeout=timeout)
+        result = api.assert_telemetry(channel, timeout=timeout)
+        return result.get_val()
+    except Exception:
+        return None
 
 
 def wait_for_reconnect(api: IntegrationTestAPI):
-    """Poll CMD_NO_OP until GDS reconnects after a board reset.
+    """Wait for board to reboot and GDS to reconnect after a reset.
 
-    Mirrors the pattern from FprimeZephyrReference/test/int/conftest.py.
+    Sends CMD_NO_OP in a loop. Since standalone clients may not receive
+    events, we use a time-based approach: send NO_OPs and assume the board
+    is back once USB re-enumerates (~10s) and we can send without exception.
     """
     print(f"    Waiting {REBOOT_SLEEP}s for USB re-enumeration...")
     time.sleep(REBOOT_SLEEP)
@@ -79,9 +80,11 @@ def wait_for_reconnect(api: IntegrationTestAPI):
     deadline = time.time() + RECONNECT_TIMEOUT
     while time.time() < deadline:
         try:
-            api.send_and_assert_command(f"{CMD_DISPATCH}.CMD_NO_OP", timeout=5)
-            print("    GDS reconnected.")
-            api.clear_histories()
+            api.send_command(f"{CMD_DISPATCH}.CMD_NO_OP")
+            # If send_command succeeds, the transport layer is connected.
+            # Wait a moment for the board to fully initialize.
+            time.sleep(2)
+            print("    GDS transport reconnected.")
             return True
         except Exception:
             time.sleep(1)
@@ -98,100 +101,78 @@ def cold_reset(api: IntegrationTestAPI):
 
 
 def check_fs_mounted(api: IntegrationTestAPI):
-    """Verify filesystem is mounted by checking FsSpace telemetry.
+    """Check FsSpace telemetry to verify filesystem is mounted.
 
-    FsSpace runs on the 1Hz rate group, so values should appear quickly.
-    Returns (free_space, total_space) or (None, None) on failure.
+    Returns (free_space, total_space) or (None, None) if telemetry
+    is unavailable (common for standalone clients).
     """
     print("    Checking FsSpace telemetry...")
-    try:
-        free = api.assert_telemetry(f"{FS_SPACE}.FreeSpace", timeout=5)
-        total = api.assert_telemetry(f"{FS_SPACE}.TotalSpace", timeout=5)
-        free_val = free.get_val()
-        total_val = total.get_val()
+    free_val = get_telemetry_value(api, f"{FS_SPACE}.FreeSpace")
+    total_val = get_telemetry_value(api, f"{FS_SPACE}.TotalSpace")
+    if free_val is not None and total_val is not None:
         print(f"    FreeSpace={free_val}  TotalSpace={total_val}")
         if total_val > 0 and free_val >= 0:
             return free_val, total_val
         print("    [FAIL] Invalid space values — filesystem may not be mounted")
         return None, None
-    except Exception as e:
-        print(f"    [FAIL] FsSpace check failed: {e}")
-        return None, None
+    print("    [INFO] Telemetry not available (check GDS GUI for FsSpace values)")
+    return None, None
 
 
 def check_root_listing(api: IntegrationTestAPI):
-    """Verify root directory can be listed (filesystem mountable)."""
+    """Send ListDirectory / command and wait. Returns True (optimistic).
+
+    Since standalone clients may not receive events, this sends the command
+    and waits for it to complete. Check GDS GUI for ListDirectory events.
+    """
     print("    Listing root directory /...")
-    api.clear_histories()
-    try:
-        api.send_and_assert_command(f"{FILE_MANAGER}.ListDirectory", ["/"], timeout=10)
-        api.assert_event(f"{FILE_MANAGER}.ListDirectoryStarted", timeout=5)
-        api.assert_event(f"{FILE_MANAGER}.ListDirectorySucceeded", timeout=15)
-        print("    Root listing succeeded.")
-        return True
-    except Exception as e:
-        print(f"    [FAIL] Root listing failed: {e}")
-        return False
+    api.send_command(f"{FILE_MANAGER}.ListDirectory", ["/"])
+    time.sleep(CMD_WAIT)
+    print("    Root listing command sent (check GDS GUI for results).")
+    return True
 
 
 def check_directory_listing(api: IntegrationTestAPI, path: str):
-    """List a directory and print results. Returns True if listing succeeded."""
+    """Send ListDirectory command. Returns True (optimistic)."""
     print(f"    Listing directory {path}...")
-    api.clear_histories()
-    try:
-        api.send_and_assert_command(f"{FILE_MANAGER}.ListDirectory", [path], timeout=10)
-        api.assert_event(f"{FILE_MANAGER}.ListDirectoryStarted", timeout=5)
-        api.assert_event(f"{FILE_MANAGER}.ListDirectorySucceeded", timeout=15)
-        print(f"    Directory listing for {path} succeeded.")
-        return True
-    except Exception as e:
-        print(f"    [WARN] Directory listing for {path} failed: {e}")
-        return False
+    api.send_command(f"{FILE_MANAGER}.ListDirectory", [path])
+    time.sleep(CMD_WAIT)
+    print(f"    Directory listing command sent for {path}.")
+    return True
 
 
 def check_file_size(api: IntegrationTestAPI, path: str):
-    """Get file size. Returns size (int) or None if file doesn't exist."""
-    api.clear_histories()
-    try:
-        api.send_and_assert_command(f"{FILE_MANAGER}.FileSize", [path], timeout=5)
-        event = api.assert_event(f"{FILE_MANAGER}.FileSizeSucceeded", timeout=5)
-        size = event.args[1].val
-        print(f"    FileSize({path}) = {size}")
-        return size
-    except Exception:
-        print(f"    FileSize({path}) — file not found or error")
-        return None
+    """Send FileSize command. Returns None (events may not be received).
+
+    Watch GDS GUI for FileSizeSucceeded or FileSizeError events.
+    """
+    api.send_command(f"{FILE_MANAGER}.FileSize", [path])
+    time.sleep(CMD_WAIT)
+    print(f"    FileSize({path}) command sent (check GDS GUI for result).")
+    return None
 
 
 def check_file_crc(api: IntegrationTestAPI, path: str):
-    """Calculate CRC of a file. Returns CRC value or None."""
-    api.clear_histories()
-    try:
-        api.send_and_assert_command(f"{FILE_MANAGER}.CalculateCrc", [path], timeout=10)
-        event = api.assert_event(f"{FILE_MANAGER}.CalculateCrcSucceeded", timeout=10)
-        crc = event.args[1].val
-        print(f"    CRC({path}) = {crc:#010x}")
-        return crc
-    except Exception:
-        print(f"    CRC({path}) — failed or file not found")
-        return None
+    """Send CalculateCrc command. Returns None (events may not be received)."""
+    api.send_command(f"{FILE_MANAGER}.CalculateCrc", [path])
+    time.sleep(CMD_WAIT)
+    print(f"    CalculateCrc({path}) command sent (check GDS GUI for result).")
+    return None
 
 
 def run_health_checks(api: IntegrationTestAPI, label: str = ""):
-    """Run all post-reset health checks. Returns True if filesystem is healthy."""
+    """Run post-reset health checks by sending diagnostic commands.
+
+    Since standalone clients may not receive events, this sends commands
+    and reports what it can. The user should watch the GDS GUI for full results.
+    """
     print(f"\n  === Post-Reset Health Checks{' (' + label + ')' if label else ''} ===")
-    healthy = True
 
-    free, total = check_fs_mounted(api)
-    if free is None:
-        healthy = False
+    check_fs_mounted(api)
+    check_root_listing(api)
 
-    if not check_root_listing(api):
-        healthy = False
-
-    status = "PASS" if healthy else "FAIL — filesystem may be corrupted"
-    print(f"  === Health: {status} ===\n")
-    return healthy
+    print("  === Health check commands sent (verify results in GDS GUI) ===\n")
+    return True
 
 
 def format_filesystem(api: IntegrationTestAPI):
@@ -201,11 +182,13 @@ def format_filesystem(api: IntegrationTestAPI):
     the watchdog to fire plus time to actually reboot and reformat.
     """
     print("    Formatting filesystem with FsFormat.FORMAT...")
-    print(f"    (waiting up to {FORMAT_TIMEOUT}s — includes watchdog reset cycle)")
-    api.clear_histories()
-    api.send_and_assert_command(f"{FS_FORMAT}.FORMAT", timeout=FORMAT_TIMEOUT)
-    api.assert_event(f"{FS_FORMAT}.FileSystemFormatted", timeout=FORMAT_TIMEOUT)
-    print("    Filesystem formatted successfully.")
+    print(f"    (waiting {FORMAT_TIMEOUT}s — includes watchdog reset cycle)")
+    api.send_command(f"{FS_FORMAT}.FORMAT")
+    time.sleep(FORMAT_TIMEOUT)
+    print("    Format command sent. Board should have rebooted.")
+    print("    Waiting for reconnect...")
+    wait_for_reconnect(api)
+    print("    Format complete (verify in GDS GUI).")
 
 
 def ensure_clean_state(api: IntegrationTestAPI):
@@ -220,20 +203,19 @@ def ensure_clean_state(api: IntegrationTestAPI):
         api.send_command(f"{FILE_MANAGER}.RemoveFile", [f"{TEST_DIR}/{fname}", True])
     api.send_command(f"{FILE_MANAGER}.RemoveDirectory", [f"{TEST_DIR}/new_dir"])
     api.send_command(f"{FILE_MANAGER}.RemoveDirectory", [TEST_DIR])
-    time.sleep(0.5)
+    time.sleep(CMD_WAIT)
 
-    api.clear_histories()
-    api.send_and_assert_command(
-        f"{FILE_MANAGER}.CreateDirectory", [TEST_DIR], timeout=5
-    )
-    api.assert_event(f"{FILE_MANAGER}.CreateDirectorySucceeded", timeout=5)
+    api.send_command(f"{FILE_MANAGER}.CreateDirectory", [TEST_DIR])
+    time.sleep(CMD_WAIT)
+    print(f"    Test directory {TEST_DIR} created.")
 
 
 def recover_if_needed(api: IntegrationTestAPI):
-    """Check filesystem health and format if corrupted. Returns True if recovery happened."""
-    healthy = run_health_checks(api)
-    if not healthy:
-        print("    Filesystem corrupted — reformatting to continue testing...")
+    """Run health checks and offer to format if needed."""
+    run_health_checks(api)
+    resp = input("    Filesystem OK? (y=continue / n=format): ").strip().lower()
+    if resp == "n":
+        print("    Reformatting to continue testing...")
         format_filesystem(api)
         return True
     return False
@@ -250,21 +232,19 @@ def test_health_check(api: IntegrationTestAPI):
     print("HEALTH CHECK")
     print("=" * 60)
 
-    print("\nVerifying board connection...")
+    print("\nSending CMD_NO_OP to verify board connection...")
     try:
-        api.send_and_assert_command(f"{CMD_DISPATCH}.CMD_NO_OP", timeout=10)
-        print("  Board is responding to commands.")
+        api.send_command(f"{CMD_DISPATCH}.CMD_NO_OP")
+        time.sleep(CMD_WAIT)
+        print("  CMD_NO_OP sent (check GDS GUI for OpCodeCompleted).")
     except Exception as e:
-        print(f"  [FAIL] Board not responding: {e}")
+        print(f"  [FAIL] Could not send command: {e}")
         return
 
-    healthy = run_health_checks(api)
-    if healthy:
-        print("  Filesystem is healthy.")
-    else:
-        resp = input("  Filesystem unhealthy. Format now? (y/n): ").strip().lower()
-        if resp == "y":
-            format_filesystem(api)
+    run_health_checks(api)
+    resp = input("  Format filesystem? (y/n): ").strip().lower()
+    if resp == "y":
+        format_filesystem(api)
 
 
 def test_reset_during_file_create(api: IntegrationTestAPI):
@@ -283,18 +263,12 @@ def test_reset_during_file_create(api: IntegrationTestAPI):
         return
 
     print("\n  Step 2: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        size = check_file_size(api, target)
-        if size is not None:
-            print(f"  Result: File exists with size {size} (may be partial)")
-            check_file_crc(api, target)
-        else:
-            print("  Result: File does not exist (write was interrupted before commit)")
-        check_directory_listing(api, TEST_DIR)
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print("  Checking if file survived the reset:")
+    check_file_size(api, target)
+    check_file_crc(api, target)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI: does the file exist? Is it partial?")
 
     print("\n  [DONE] Reset During File Create complete.")
 
@@ -309,15 +283,11 @@ def test_reset_during_file_append(api: IntegrationTestAPI):
     target = f"{TEST_DIR}/append_target.txt"
 
     print("\n  Step 1: Create initial file")
-    api.clear_histories()
-    send_and_assert(api, f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
-    api.assert_event(f"{FILE_MANAGER}.AppendFileSucceeded", timeout=10)
-    initial_size = check_file_size(api, target)
-    initial_crc = check_file_crc(api, target)
-    if initial_crc:
-        print(f"  Initial file: size={initial_size}, crc={initial_crc:#010x}")
-    else:
-        print(f"  Initial file: size={initial_size}")
+    api.send_command(f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
+    time.sleep(CMD_WAIT)
+    print("  Initial file created (check GDS GUI for AppendFileSucceeded).")
+    check_file_size(api, target)
+    check_file_crc(api, target)
 
     print("\n  Step 2: Send AppendFile (to existing file) + immediate COLD_RESET")
     api.send_command(f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
@@ -326,26 +296,12 @@ def test_reset_during_file_append(api: IntegrationTestAPI):
         return
 
     print("\n  Step 3: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        final_size = check_file_size(api, target)
-        if final_size is not None:
-            if final_size == initial_size:
-                print(
-                    f"  Result: File unchanged (size={final_size}) — append was not committed"
-                )
-            elif initial_size is not None and final_size > initial_size:
-                print(
-                    f"  Result: File grew ({initial_size} -> {final_size}) — partial or full append"
-                )
-            else:
-                print(f"  Result: File size={final_size} (unexpected)")
-            check_file_crc(api, target)
-        else:
-            print("  Result: File no longer exists — data loss")
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print("  Checking file state after reset:")
+    check_file_size(api, target)
+    check_file_crc(api, target)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI: did the file grow, stay same, or disappear?")
 
     print("\n  [DONE] Reset During File Append complete.")
 
@@ -366,17 +322,11 @@ def test_reset_during_directory_create(api: IntegrationTestAPI):
         return
 
     print("\n  Step 2: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        exists = check_directory_listing(api, new_dir)
-        if exists:
-            print("  Result: Directory was created successfully before reset")
-        else:
-            print("  Result: Directory does not exist (creation was interrupted)")
-        check_directory_listing(api, TEST_DIR)
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print("  Checking if directory survived the reset:")
+    check_directory_listing(api, new_dir)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI: does the directory exist?")
 
     print("\n  [DONE] Reset During Directory Create complete.")
 
@@ -391,11 +341,10 @@ def test_reset_during_file_delete(api: IntegrationTestAPI):
     target = f"{TEST_DIR}/delete_me.txt"
 
     print("\n  Step 1: Create file to delete")
-    api.clear_histories()
-    send_and_assert(api, f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
-    api.assert_event(f"{FILE_MANAGER}.AppendFileSucceeded", timeout=10)
-    initial_size = check_file_size(api, target)
-    print(f"  File created with size={initial_size}")
+    api.send_command(f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
+    time.sleep(CMD_WAIT)
+    print("  File created (check GDS GUI for AppendFileSucceeded).")
+    check_file_size(api, target)
 
     print("\n  Step 2: Send RemoveFile + immediate COLD_RESET")
     api.send_command(f"{FILE_MANAGER}.RemoveFile", [target, False])
@@ -404,19 +353,11 @@ def test_reset_during_file_delete(api: IntegrationTestAPI):
         return
 
     print("\n  Step 3: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        final_size = check_file_size(api, target)
-        if final_size is not None:
-            print(
-                f"  Result: File still exists (size={final_size}) — delete was interrupted"
-            )
-        else:
-            print("  Result: File was deleted before reset completed")
-        check_directory_listing(api, TEST_DIR)
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print("  Checking if file survived the reset:")
+    check_file_size(api, target)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI: does the file still exist or was it deleted?")
 
     print("\n  [DONE] Reset During File Delete complete.")
 
@@ -440,19 +381,12 @@ def test_rapid_writes_then_reset(api: IntegrationTestAPI):
         return
 
     print("\n  Step 2: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        size = check_file_size(api, target)
-        if size is not None:
-            print(f"  Result: File exists with size={size}")
-            print(f"  (Expected 0 to {num_writes} appends worth of data)")
-            check_file_crc(api, target)
-        else:
-            print("  Result: File does not exist")
-        check_directory_listing(api, TEST_DIR)
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print(f"  Checking file state after {num_writes} rapid writes + reset:")
+    check_file_size(api, target)
+    check_file_crc(api, target)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI for file state.")
 
     print("\n  [DONE] Rapid Writes + Reset complete.")
 
@@ -468,15 +402,15 @@ def test_large_file_write_then_reset(api: IntegrationTestAPI):
     total_appends = 10
     reset_after = 5
 
-    print(f"\n  Step 1: Build file with {reset_after} confirmed appends")
+    print(f"\n  Step 1: Build file with {reset_after} appends")
     for i in range(reset_after):
-        api.clear_histories()
-        send_and_assert(api, f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
-        api.assert_event(f"{FILE_MANAGER}.AppendFileSucceeded", timeout=10)
-        print(f"    Append {i + 1}/{reset_after} confirmed")
+        api.send_command(f"{FILE_MANAGER}.AppendFile", ["/prmDb.dat", target])
+        time.sleep(CMD_WAIT)
+        print(f"    Append {i + 1}/{reset_after} sent")
 
-    size_before = check_file_size(api, target)
-    crc_before = check_file_crc(api, target)
+    print("  Checking file state before additional writes:")
+    check_file_size(api, target)
+    check_file_crc(api, target)
 
     remaining = total_appends - reset_after
     print(f"\n  Step 2: Send {remaining} more AppendFile commands + COLD_RESET")
@@ -488,36 +422,12 @@ def test_large_file_write_then_reset(api: IntegrationTestAPI):
         return
 
     print("\n  Step 3: Post-reset checks")
-    recovered = recover_if_needed(api)
-
-    if not recovered:
-        size_after = check_file_size(api, target)
-        crc_after = check_file_crc(api, target)
-
-        if size_after is not None and size_before is not None:
-            if size_after == size_before:
-                print(
-                    f"  Result: File unchanged ({size_before} bytes) — no unconfirmed writes persisted"
-                )
-            elif size_after > size_before:
-                print(
-                    f"  Result: File grew ({size_before} -> {size_after} bytes) — some unconfirmed writes persisted"
-                )
-            else:
-                print(
-                    f"  Result: File SHRUNK ({size_before} -> {size_after} bytes) — data corruption"
-                )
-
-            if crc_before is not None and crc_after is not None:
-                if crc_before == crc_after:
-                    print("  CRC unchanged — confirmed data intact")
-                else:
-                    print("  CRC changed — file content modified")
-        elif size_after is None:
-            print("  Result: File no longer exists — data loss")
-        check_directory_listing(api, TEST_DIR)
-    else:
-        print("  Result: Filesystem was corrupted and reformatted")
+    recover_if_needed(api)
+    print("  Checking file state after partial write + reset:")
+    check_file_size(api, target)
+    check_file_crc(api, target)
+    check_directory_listing(api, TEST_DIR)
+    print("  Check GDS GUI: compare file size/CRC before vs after reset.")
 
     print("\n  [DONE] Large File Write + Reset complete.")
 
@@ -552,25 +462,19 @@ def test_varied_timing_resets(api: IntegrationTestAPI):
             results.append((delay, "RECONNECT_FAILED"))
             continue
 
-        free, total = check_fs_mounted(api)
-        if free is None:
-            result = "CORRUPTED"
-            print("    Filesystem corrupted — reformatting...")
-            format_filesystem(api)
-        else:
-            root_ok = check_root_listing(api)
-            if not root_ok:
-                result = "CORRUPTED"
-                format_filesystem(api)
-            else:
-                size = check_file_size(api, target)
-                if size is not None:
-                    result = f"FILE_EXISTS (size={size})"
-                else:
-                    result = "FILE_ABSENT"
+        check_fs_mounted(api)
+        check_root_listing(api)
+        check_file_size(api, target)
 
-        results.append((delay, result))
-        print(f"    Result: {result}")
+        result = input("    Result? (ok/corrupted/reconnect_failed): ").strip().lower()
+        if result == "corrupted":
+            print("    Reformatting...")
+            format_filesystem(api)
+            results.append((delay, "CORRUPTED"))
+        elif result == "reconnect_failed":
+            results.append((delay, "RECONNECT_FAILED"))
+        else:
+            results.append((delay, "OK"))
 
     print("\n  === Timing Results Summary ===")
     for delay, result in results:
