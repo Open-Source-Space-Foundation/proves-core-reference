@@ -58,7 +58,9 @@ def send_command(api: IntegrationTestAPI, command: str, args: list = None):
         return False
 
 
-def send_and_assert(api: IntegrationTestAPI, command: str, args: list = None, timeout: int = 10):
+def send_and_assert(
+    api: IntegrationTestAPI, command: str, args: list = None, timeout: int = 10
+):
     """Send a command and assert it completed."""
     if args is None:
         args = []
@@ -208,15 +210,22 @@ def format_filesystem(api: IntegrationTestAPI):
 
 def ensure_clean_state(api: IntegrationTestAPI):
     """Ensure test directory exists and is clean."""
-    for fname in ["test_file.txt", "append_target.txt", "delete_me.txt",
-                   "rapid_write.txt", "large_file.txt"]:
+    for fname in [
+        "test_file.txt",
+        "append_target.txt",
+        "delete_me.txt",
+        "rapid_write.txt",
+        "large_file.txt",
+    ]:
         api.send_command(f"{FILE_MANAGER}.RemoveFile", [f"{TEST_DIR}/{fname}", True])
     api.send_command(f"{FILE_MANAGER}.RemoveDirectory", [f"{TEST_DIR}/new_dir"])
     api.send_command(f"{FILE_MANAGER}.RemoveDirectory", [TEST_DIR])
     time.sleep(0.5)
 
     api.clear_histories()
-    api.send_and_assert_command(f"{FILE_MANAGER}.CreateDirectory", [TEST_DIR], timeout=5)
+    api.send_and_assert_command(
+        f"{FILE_MANAGER}.CreateDirectory", [TEST_DIR], timeout=5
+    )
     api.assert_event(f"{FILE_MANAGER}.CreateDirectorySucceeded", timeout=5)
 
 
@@ -323,9 +332,13 @@ def test_reset_during_file_append(api: IntegrationTestAPI):
         final_size = check_file_size(api, target)
         if final_size is not None:
             if final_size == initial_size:
-                print(f"  Result: File unchanged (size={final_size}) — append was not committed")
+                print(
+                    f"  Result: File unchanged (size={final_size}) — append was not committed"
+                )
             elif initial_size is not None and final_size > initial_size:
-                print(f"  Result: File grew ({initial_size} -> {final_size}) — partial or full append")
+                print(
+                    f"  Result: File grew ({initial_size} -> {final_size}) — partial or full append"
+                )
             else:
                 print(f"  Result: File size={final_size} (unexpected)")
             check_file_crc(api, target)
@@ -396,7 +409,9 @@ def test_reset_during_file_delete(api: IntegrationTestAPI):
     if not recovered:
         final_size = check_file_size(api, target)
         if final_size is not None:
-            print(f"  Result: File still exists (size={final_size}) — delete was interrupted")
+            print(
+                f"  Result: File still exists (size={final_size}) — delete was interrupted"
+            )
         else:
             print("  Result: File was deleted before reset completed")
         check_directory_listing(api, TEST_DIR)
@@ -481,11 +496,17 @@ def test_large_file_write_then_reset(api: IntegrationTestAPI):
 
         if size_after is not None and size_before is not None:
             if size_after == size_before:
-                print(f"  Result: File unchanged ({size_before} bytes) — no unconfirmed writes persisted")
+                print(
+                    f"  Result: File unchanged ({size_before} bytes) — no unconfirmed writes persisted"
+                )
             elif size_after > size_before:
-                print(f"  Result: File grew ({size_before} -> {size_after} bytes) — some unconfirmed writes persisted")
+                print(
+                    f"  Result: File grew ({size_before} -> {size_after} bytes) — some unconfirmed writes persisted"
+                )
             else:
-                print(f"  Result: File SHRUNK ({size_before} -> {size_after} bytes) — data corruption")
+                print(
+                    f"  Result: File SHRUNK ({size_before} -> {size_after} bytes) — data corruption"
+                )
 
             if crc_before is not None and crc_after is not None:
                 if crc_before == crc_after:
@@ -679,11 +700,16 @@ def main():
         logs_path.mkdir(parents=True, exist_ok=True)
 
         cli_args = [
-            "--dictionary", str(dict_path),
-            "--logs", str(logs_path),
-            "--file-storage-directory", str(deployment),
-            "--tts-port", str(gds_port),
-            "--tts-addr", "localhost",
+            "--dictionary",
+            str(dict_path),
+            "--logs",
+            str(logs_path),
+            "--file-storage-directory",
+            str(deployment),
+            "--tts-port",
+            str(gds_port),
+            "--tts-addr",
+            "localhost",
         ]
 
         pipeline_parser = StandardPipelineParser()
