@@ -235,6 +235,8 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
     // cube stuck on monotonic (ie broken RTC). So we don't write monotonic time to file, but cache it for use in
     // current session
 
+    // here we do not set first boot, because if we are using monotonic time, we never write to file, so we don't care
+    // about first boot logic
     if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
         if (write_to_file) {
             // Don't write monotonic time to file, but cache it for use in current session
@@ -255,10 +257,11 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
             this->log_WARNING_HI_CommandLossFileInitFailure();
         }
         this->m_commandLossStartTime = current_time;
+        this->m_first_boot = false;  // after first write, we are no longer in first boot
 
         return current_time;
     } else {
-        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch with the file)
+        // Check if we need to load from file (this is the first boot AND cache is emp)
         // Otherwise we want to read from the cache in case the filesystem is broken
         // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
         if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
@@ -267,8 +270,9 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
             Fw::Time time = this->getTime();
             Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-            // On read failure, write the current time to the file for future reads
-            if (status != Os::File::OP_OK) {
+            // On read failure AND if this is the first boot, write the current time to the file for future reads
+            if (status != Os::File::OP_OK && m_first_boot == true) {
+                this->m_first_boot = false;  // if this gets deleted later we dont write again
                 status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
                 if (status != Os::File::OP_OK) {
                     this->log_WARNING_HI_CommandLossFileInitFailure();

@@ -87,6 +87,8 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
 
     //! mutex for command loss file reading and writing
     Os::Mutex m_commandLossMutex;
+
+    std::atomic<bool> m_first_boot{true};
 };
 
 }  // namespace Svc
