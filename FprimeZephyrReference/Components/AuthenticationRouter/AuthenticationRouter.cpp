@@ -261,22 +261,26 @@ Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
 
         return current_time;
     } else {
-        // Check if we need to load from file (this is the first boot AND cache is emp)
-        // Otherwise we want to read from the cache in case the filesystem is broken
-        // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
+        // Check if we need to load from file (cache is empty/uninitialized or timebase mismatch with the file).
+        // Otherwise we want to read from the cache in case the filesystem is broken.
+        // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time).
         if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
             this->m_commandLossStartTime.getTimeBase() != current_time.getTimeBase()) {
             // Read stored time from file, or use current time if file doesn't exist
             Fw::Time time = this->getTime();
             Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
 
-            // On read failure AND if this is the first boot, write the current time to the file for future reads
-            if (status != Os::File::OP_OK && m_first_boot == true) {
-                this->m_first_boot = false;  // if this gets deleted later we dont write again
+            // On read failure AND first boot: write current time to init file for future reads.
+            // Once we've successfully read or written, we never overwrite on later read failures.
+            if (status != Os::File::OP_OK && this->m_first_boot) {
+                this->m_first_boot = false;
                 status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
                 if (status != Os::File::OP_OK) {
                     this->log_WARNING_HI_CommandLossFileInitFailure();
                 }
+            }
+            if (status == Os::File::OP_OK) {
+                this->m_first_boot = false;  // success: we've loaded from file, don't overwrite on later failures
             }
             // Cache the loaded time
             this->m_commandLossStartTime = time;

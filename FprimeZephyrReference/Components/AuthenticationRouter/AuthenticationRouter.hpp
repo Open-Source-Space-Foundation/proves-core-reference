@@ -88,6 +88,8 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     //! mutex for command loss file reading and writing
     Os::Mutex m_commandLossMutex;
 
+    //! True until we have successfully read from or written to the command-loss time file.
+    //! Used to avoid overwriting the file on transient read failures after initial load.
     std::atomic<bool> m_first_boot{true};
 };
 
