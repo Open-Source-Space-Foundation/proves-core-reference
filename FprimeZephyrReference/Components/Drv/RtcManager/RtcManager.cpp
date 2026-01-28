@@ -69,6 +69,15 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
              this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
 }
 
+void RtcManager ::completeSequence_handler(FwIndexType portNum,
+                                           FwOpcodeType opCode,
+                                           U32 cmdSeq,
+                                           const Fw::CmdResponse& response) {
+    // Sequence completion handler - currently no action needed
+    // The sequence will have already canceled the running sequences
+    // This handler is required by the port interface but does not need to do anything
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
@@ -125,6 +134,13 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
+
+    // Trigger safe mode sequence to cancel any running sequences on Command and Payload sequencers
+    // This prevents premature execution of time-based commands after time change
+    if (this->isConnected_runSequence_OutputPort(0)) {
+        Fw::String sequencePath("/seq/cancel_sequencers.bin");
+        this->runSequence_out(0, sequencePath);
+    }
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);

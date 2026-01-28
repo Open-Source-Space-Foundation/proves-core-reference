@@ -215,6 +215,9 @@ module ReferenceDeployment {
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
 
+      rtcManager.runSequence -> safeModeSeq.seqRunIn
+      safeModeSeq.seqDone -> rtcManager.completeSequence
+
 
     }
 

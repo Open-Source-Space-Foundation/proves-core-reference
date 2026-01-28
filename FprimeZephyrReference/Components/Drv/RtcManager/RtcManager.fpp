@@ -73,6 +73,15 @@ module Drv {
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
 
         ###############################################################################
+        # Ports for triggering sequence cancellation on time change                   #
+        ###############################################################################
+        @ Port for running a sequence on the safe mode CmdSequencer
+        output port runSequence: Svc.CmdSeqIn
+
+        @ Port for receiving sequence completion status
+        sync input port completeSequence: Fw.CmdResponse
+
+        ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time

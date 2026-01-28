@@ -54,6 +54,15 @@ class RtcManager final : public RtcManagerComponentBase {
                              Fw::Time& time        //!< Reference to Time object
                              ) override;
 
+    //! Handler implementation for completeSequence
+    //!
+    //! Port to receive sequence completion status
+    void completeSequence_handler(FwIndexType portNum,        //!< The port number
+                                  FwOpcodeType opCode,        //!< The opcode
+                                  U32 cmdSeq,                 //!< The command sequence number
+                                  const Fw::CmdResponse& response  //!< The command response
+                                  ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
