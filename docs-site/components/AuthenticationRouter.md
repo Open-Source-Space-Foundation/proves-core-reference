@@ -7,7 +7,7 @@ As a result of this component writing to the filesystem, this component is activ
 
 2. This component handles authenticated packets. It will check a list of preconfigured opcodes that do not need to be authenticated, will pass those on as well as the things that are authenticated
 
-The `Svc::AuthenticationRouter` component receives F´ packets (as [Fw::Buffer](../../../Fw/Buffer/docs/sdd.md) objects) and routes them to other components through synchronous port calls. The input port of type `Svc.ComDataWithContext` passes this Fw.Buffer object along with optional context data which can help for routing. The current F Prime protocol does not use this context data, but is nevertheless present in the interface for compatibility with other protocols which may for example pass APIDs in the frame headers.
+The `Svc::AuthenticationRouter` component receives F´ packets (as Fw::Buffer objects) and routes them to other components through synchronous port calls. The input port of type `Svc.ComDataWithContext` passes this Fw.Buffer object along with optional context data which can help for routing. The current F Prime protocol does not use this context data, but is nevertheless present in the interface for compatibility with other protocols which may for example pass APIDs in the frame headers.
 
 The `Svc::AuthenticationRouter` component supports `Fw::ComPacketType::FW_PACKET_COMMAND` and `Fw::ComPacketType::FW_PACKET_FILE` packet types. Unknown packet types are forwarded on the `unknownDataOut` port, which a project-specific component can connect to for custom routing.
 
@@ -23,9 +23,7 @@ The `Svc::FprimeRouter` component is used in the uplink stack of many reference 
 
 ### Typical Usage
 
-In the canonical uplink communications stack, `Svc::FprimeRouter` is connected to a [Svc::CmdDispatcher](../../CmdDispatcher/docs/sdd.md) and a [Svc::FileUplink](../../FileUplink/docs/sdd.md) component, to receive Command and File packets respectively.
-
-![uplink_stack](../../FprimeDeframer/docs/img/deframer_uplink_stack.png)
+In the canonical uplink communications stack, `Svc::FprimeRouter` is connected to Svc::CmdDispatcher and Svc::FileUplink components, to receive Command and File packets respectively. See the [F Prime documentation](https://nasa.github.io/fprime/) for more details on these components.
 
 ## Port Descriptions
 

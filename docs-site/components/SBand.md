@@ -4,7 +4,7 @@ Wrapper for the [RadioLib SX1280 driver](https://github.com/jgromes/RadioLib). T
 
 ### Typical Usage
 
-The component should be connected in accordance with the [F Prime communication adapter interface](../../../../lib/fprime/docs/reference/communication-adapter-interface.md).
+The component should be connected in accordance with the [F Prime communication adapter interface](https://nasa.github.io/fprime/UsersGuide/api/python/fprime-gds/html/sources/users_guide/gds-cli.html).
 
 
 ## Port Descriptions
