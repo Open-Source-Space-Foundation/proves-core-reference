@@ -1,0 +1,7 @@
+; Test sequence for RTC cancellation test
+; This sequence has delays so it will be running when RTC time is set
+R00:00:01 ReferenceDeployment.watchdog.STROKE
+R00:00:01 ReferenceDeployment.watchdog.STROKE
+R00:00:01 ReferenceDeployment.watchdog.STROKE
+R00:00:01 ReferenceDeployment.watchdog.STROKE
+R00:00:01 ReferenceDeployment.watchdog.STROKE
