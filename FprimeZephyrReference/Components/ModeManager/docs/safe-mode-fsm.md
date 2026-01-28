@@ -30,10 +30,10 @@ stateDiagram-v2
     
     state NORMAL {
         [*] --> VoltageMonitoring
-        VoltageMonitoring --> VoltageMonitoring: Voltage OK\n(Reset counter)
-        VoltageMonitoring --> LowVoltageDebounce: Voltage < 6.7V\n(Increment counter)
-        LowVoltageDebounce --> VoltageMonitoring: Voltage OK\n(Reset counter)
-        LowVoltageDebounce --> [*]: Counter >= 10s\n(Trigger Safe Mode)
+        VoltageMonitoring --> VoltageMonitoring: Voltage OK<br/>(Reset counter)
+        VoltageMonitoring --> LowVoltageDebounce: Voltage < 6.7V<br/>(Increment counter)
+        LowVoltageDebounce --> VoltageMonitoring: Voltage OK<br/>(Reset counter)
+        LowVoltageDebounce --> [*]: Counter >= 10s<br/>(Trigger Safe Mode)
     }
     
     state SAFE_MODE {
@@ -42,13 +42,13 @@ stateDiagram-v2
         ReasonCheck --> MANUAL_EXIT_Mode: Reason != LOW_BATTERY
         
         LOW_BATTERY_Mode --> RecoveryMonitoring
-        RecoveryMonitoring --> RecoveryMonitoring: Voltage < 8.0V\n(Reset counter)
-        RecoveryMonitoring --> VoltageRecoveryDebounce: Voltage > 8.0V\n(Increment counter)
-        VoltageRecoveryDebounce --> RecoveryMonitoring: Voltage < 8.0V\n(Reset counter)
-        VoltageRecoveryDebounce --> [*]: Counter >= 10s\n(Auto-Exit)
+        RecoveryMonitoring --> RecoveryMonitoring: Voltage < 8.0V<br/>(Reset counter)
+        RecoveryMonitoring --> VoltageRecoveryDebounce: Voltage > 8.0V<br/>(Increment counter)
+        VoltageRecoveryDebounce --> RecoveryMonitoring: Voltage < 8.0V<br/>(Reset counter)
+        VoltageRecoveryDebounce --> [*]: Counter >= 10s<br/>(Auto-Exit)
         
-        MANUAL_EXIT_Mode --> MANUAL_EXIT_Mode: Waiting for\nEXIT_SAFE_MODE\ncommand
-        MANUAL_EXIT_Mode --> [*]: EXIT_SAFE_MODE\ncommand received
+        MANUAL_EXIT_Mode --> MANUAL_EXIT_Mode: Waiting for<br/>EXIT_SAFE_MODE<br/>command
+        MANUAL_EXIT_Mode --> [*]: EXIT_SAFE_MODE<br/>command received
     }
 ```
 
