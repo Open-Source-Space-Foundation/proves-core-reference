@@ -213,6 +213,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.XMinusLengthParam
     ReferenceDeployment.detumbleManager.XMinusWidthParam
     ReferenceDeployment.detumbleManager.XMinusShapeParam
+    ReferenceDeployment.detumbleManager.XTurnsParam
   }
 
   packet DetumbleYPlusCoilParams id 20 group 6 {
@@ -233,6 +234,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.YMinusLengthParam
     ReferenceDeployment.detumbleManager.YMinusWidthParam
     ReferenceDeployment.detumbleManager.YMinusShapeParam
+    ReferenceDeployment.detumbleManager.YTurnsParam
   }
 
   packet DetumbleZMinusCoilParams id 22 group 6 {
@@ -242,6 +244,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.ZMinusTurnsParam
     ReferenceDeployment.detumbleManager.ZMinusDiameterParam
     ReferenceDeployment.detumbleManager.ZMinusShapeParam
+    ReferenceDeployment.detumbleManager.ZTurnsParam
   }
 
 } omit {
