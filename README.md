@@ -2,6 +2,10 @@
 
 This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/).
 
+## Documentation
+
+📚 **[Component Software Design Documents (SDDs)](https://open-source-space-foundation.github.io/proves-core-reference/)** - Browse detailed design documentation for all components.
+
 ## System Requirements
 - F Prime System Requirements listed [here](https://fprime.jpl.nasa.gov/latest/docs/getting-started/installing-fprime/#system-requirements)
 - Zephyr dependencies listed [here](https://docs.zephyrproject.org/latest/develop/getting_started/index.html#install-dependencies) (NOTE: Only complete the install dependencies step, as we run through the rest of the steps in this readme.)
