@@ -36,7 +36,7 @@ https://open-source-space-foundation.github.io/proves-core-reference/
 
 ## Updating Documentation
 
-The SDD files are copied from their original locations in `FprimeZephyrReference/` to `docs-site/components/`. 
+The SDD files are copied from their original locations in `FprimeZephyrReference/` to `docs-site/components/`.
 
 To update the documentation:
 
