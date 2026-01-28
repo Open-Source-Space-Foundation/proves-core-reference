@@ -73,13 +73,11 @@ module Drv {
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
 
         ###############################################################################
-        # Ports for triggering sequence cancellation on time change                   #
+        # Port for canceling sequences on time change                                 #
         ###############################################################################
-        @ Port for running a sequence on the safeModeSeq CmdSequencer instance (shared with ModeManager)
-        output port runSequence: Svc.CmdSeqIn
-
-        @ Port for receiving sequence completion status (may receive callbacks for both RTC and ModeManager sequences)
-        sync input port completeSequence: Fw.CmdResponse
+        @ Port for canceling running sequences when RTC time is set
+        @ Connected to seqCancelIn ports of Command and Payload sequencers
+        output port cancelSequences: [2] Svc.CmdSeqCancel
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

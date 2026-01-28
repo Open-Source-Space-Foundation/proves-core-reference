@@ -1,6 +1,0 @@
-; Cancel all running sequences on Command and Payload sequencers
-; This sequence is triggered when RTC time is set to prevent premature execution
-; of time-based commands
-
-R00:00:00 ReferenceDeployment.cmdSeq.CS_CANCEL
-R00:00:00 ReferenceDeployment.payloadSeq.CS_CANCEL

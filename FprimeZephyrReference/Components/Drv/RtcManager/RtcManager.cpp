@@ -69,30 +69,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
              this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
 }
 
-void RtcManager ::completeSequence_handler(FwIndexType portNum,
-                                           FwOpcodeType opCode,
-                                           U32 cmdSeq,
-                                           const Fw::CmdResponse& response) {
-    // Sequence completion handler for cancel_sequencers sequence
-    // Note: This handler receives callbacks from safeModeSeq which is shared with ModeManager
-    // We cannot definitively determine if this completion is for our sequence or ModeManager's
-    // However, we can log the status for diagnostic purposes
-    (void)portNum;
-    (void)opCode;
-    (void)cmdSeq;
-
-    // Log sequence completion status for diagnostic purposes
-    // This may be triggered by either RTC's cancel sequence or ModeManager's safe mode sequence
-    if (response == Fw::CmdResponse::OK) {
-        // Sequence completed successfully - no action needed
-        // The running sequences have been canceled
-    } else {
-        // Sequence failed - log for diagnostic purposes
-        // Note: This may not be our sequence, but log anyway for visibility
-        Fw::Logger::log("RtcManager: Sequence completion reported failure\n");
-    }
-}
-
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
@@ -150,12 +126,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
-    // Trigger cancel_sequencers sequence to cancel any running sequences on Command and Payload sequencers
+    // Cancel any running sequences on Command and Payload sequencers
     // This prevents premature execution of time-based commands after time change
-    // Note: Uses safeModeSeq which is shared with ModeManager
-    if (this->isConnected_runSequence_OutputPort(0)) {
-        Fw::CmdStringArg sequencePath("/seq/cancel_sequencers.bin");
-        this->runSequence_out(0, sequencePath);
+    // Port index 0 = cmdSeq, port index 1 = payloadSeq
+    if (this->isConnected_cancelSequences_OutputPort(0)) {
+        this->cancelSequences_out(0);
+    }
+    if (this->isConnected_cancelSequences_OutputPort(1)) {
+        this->cancelSequences_out(1);
     }
 
     // Send command response
