@@ -21,18 +21,16 @@ cd proves-core-reference
 make
 ```
 
-## Running the code
+### Bootloader (MCUBoot)
+If you have a brand new flight controller board (or are switching a board back to F Prime from CircuitPython) you will need to first install the MCUBoot Bootloader. Skip this step if you are already running F Prime on the board at V1.0.0+.
 
-Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
-```shell
-make generate
-```
-
-Then, and every time you change code, run
+Build the MCUBoot bootloader:
 
 ```shell
-make build
+make build-mcuboot
 ```
+
+This creates a bootloader with two partitions (slots) so the system can swap between images for over-the-air updates.
 
 ### Find the path to your board
 
@@ -49,6 +47,41 @@ Check the letter said to be the mount (ex /d/) and then the name of the removabl
 For Linux:
 ```shell
 findmnt
+```
+
+
+#### Copy/flash the bootloader to the board
+
+The bootloader build outputs `mcuboot.uf2` at the repo root Put the board into UF2 bootloader mode (so it mounts as a USB drive), then copy it onto the mounted drive:
+
+```shell
+cp mcuboot.uf2 [path-to-your-board]
+```
+
+#### Copy the signing key used by the bootloader
+
+MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
+
+For the default (development) key bundled with MCUBoot:
+
+```shell
+mkdir -p keys
+cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
+```
+
+If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
+
+## Running the code
+
+Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
+```shell
+make generate
+```
+
+Then, and every time you change code, run
+
+```shell
+make build
 ```
 
 Now you want to install the firmware to the board.
