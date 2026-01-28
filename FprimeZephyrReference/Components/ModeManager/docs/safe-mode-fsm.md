@@ -221,7 +221,7 @@ struct PersistentState {
     U8 cleanShutdown;        // Clean shutdown flag (1 = clean, 0 = unclean)
 };
 ```
-Stored at: `/mode_state.bin` (8 bytes)
+Stored at: `/mode_state.bin` (size is architecture-dependent due to struct padding, typically 8-12 bytes)
 
 ## Testing Validation
 
