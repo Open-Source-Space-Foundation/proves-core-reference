@@ -1,0 +1,105 @@
+site_name: PROVES Core Reference - Software Design Documents
+site_url: https://open-source-space-foundation.github.io/proves-core-reference/
+site_description: Software Design Documents for PROVES Core Reference components
+site_author: Open Source Space Foundation
+repo_name: Open-Source-Space-Foundation/proves-core-reference
+repo_url: https://github.com/Open-Source-Space-Foundation/proves-core-reference
+
+docs_dir: docs-site
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: indigo
+      accent: indigo
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+      primary: indigo
+      accent: indigo
+
+plugins:
+  - search
+  - tags
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.mark
+  - attr_list
+  - tables
+
+nav:
+  - Home: index.md
+  - Component SDDs:
+      - Core Components:
+          - ADCS: components/ADCS.md
+          - Mode Manager: components/ModeManager.md
+          - Startup Manager: components/StartupManager.md
+          - Reset Manager: components/ResetManager.md
+          - Watchdog: components/Watchdog.md
+          - Bootloader Trigger: components/BootloaderTrigger.md
+          - Detumble Manager: components/DetumbleManager.md
+      - Communication Components:
+          - Amateur Radio: components/AmateurRadio.md
+          - S-Band: components/SBand.md
+          - Com CCSDS UART: components/ComCcsdsUart.md
+          - Com CCSDS S-Band: components/ComCcsdsSband.md
+          - Payload Com: components/PayloadCom.md
+          - Com Delay: components/ComDelay.md
+      - Hardware Components:
+          - Antenna Deployer: components/AntennaDeployer.md
+          - Burnwire: components/Burnwire.md
+          - Camera Handler: components/CameraHandler.md
+          - Load Switch: components/LoadSwitch.md
+      - Sensor Components:
+          - IMU Manager: components/ImuManager.md
+          - Power Monitor: components/PowerMonitor.md
+          - Thermal Manager: components/ThermalManager.md
+      - Driver Components:
+          - Drv2605 Manager: components/Drv2605Manager.md
+          - Ina219 Manager: components/Ina219Manager.md
+          - RTC Manager: components/RtcManager.md
+          - Tmp112 Manager: components/Tmp112Manager.md
+          - Veml6031 Manager: components/Veml6031Manager.md
+      - Storage Components:
+          - Flash Worker: components/FlashWorker.md
+          - Fs Format: components/FsFormat.md
+          - Fs Space: components/FsSpace.md
+          - Null Prm Db: components/NullPrmDb.md
+      - Security Components:
+          - Authenticate: components/Authenticate.md
+          - Authentication Router: components/AuthenticationRouter.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Open-Source-Space-Foundation

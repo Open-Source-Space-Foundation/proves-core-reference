@@ -11,6 +11,9 @@ build-fprime-*
 # Zephyr workspace
 lib/zephyr-workspace/*
 
+# MkDocs
+/site/
+
 # Misc
 /venv/
 /keys/
