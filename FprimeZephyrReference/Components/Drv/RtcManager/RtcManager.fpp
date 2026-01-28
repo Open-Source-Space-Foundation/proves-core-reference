@@ -77,7 +77,7 @@ module Drv {
         ###############################################################################
         @ Port for canceling running sequences when RTC time is set
         @ Connected to seqCancelIn ports of Command, Payload, and SafeMode sequencers
-        output port cancelSequences: Svc.CmdSeqCancel
+        output port cancelSequences: [3] Svc.CmdSeqCancel
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
