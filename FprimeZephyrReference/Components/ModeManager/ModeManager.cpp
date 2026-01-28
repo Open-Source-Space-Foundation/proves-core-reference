@@ -265,6 +265,8 @@ void ModeManager ::loadState() {
                 if (this->m_mode == SystemMode::SAFE_MODE) {
                     // Turn off non-critical components to match safe mode state
                     this->turnOffNonCriticalComponents();
+                    // run radio safe to match default safe params
+                    this->runSafeModeSequence();
 
                     // Log that we're restoring safe mode (not entering it fresh)
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
