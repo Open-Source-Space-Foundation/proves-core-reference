@@ -58,7 +58,6 @@ markdown_extensions:
   - tables
 
 nav:
-  - Home: index.md
   - Component SDDs:
       - Core Components:
           - ADCS: components/ADCS.md
@@ -73,6 +72,7 @@ nav:
           - S-Band: components/SBand.md
           - Com CCSDS UART: components/ComCcsdsUart.md
           - Com CCSDS S-Band: components/ComCcsdsSband.md
+          - Com CCSDS LoRa: components/ComCcsdsLora.md
           - Payload Com: components/PayloadCom.md
           - Com Delay: components/ComDelay.md
       - Hardware Components:

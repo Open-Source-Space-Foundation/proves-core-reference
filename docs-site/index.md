@@ -14,7 +14,7 @@ The documentation is organized into the following categories:
 System-level components that manage the overall operation and state of the spacecraft: [ADCS](components/ADCS.md), [Mode Manager](components/ModeManager.md), [Startup Manager](components/StartupManager.md), [Reset Manager](components/ResetManager.md), [Watchdog](components/Watchdog.md), [Bootloader Trigger](components/BootloaderTrigger.md), [Detumble Manager](components/DetumbleManager.md)
 
 ### [Communication Components](components/AmateurRadio.md)
-Components that handle various communication protocols and interfaces: [Amateur Radio](components/AmateurRadio.md), [S-Band](components/SBand.md), [Com CCSDS UART](components/ComCcsdsUart.md), [Com CCSDS S-Band](components/ComCcsdsSband.md), [Payload Com](components/PayloadCom.md), [Com Delay](components/ComDelay.md)
+Components that handle various communication protocols and interfaces: [Amateur Radio](components/AmateurRadio.md), [S-Band](components/SBand.md), [Com CCSDS UART](components/ComCcsdsUart.md), [Com CCSDS S-Band](components/ComCcsdsSband.md), [Com CCSDS LoRa](components/ComCcsdsLora.md), [Payload Com](components/PayloadCom.md), [Com Delay](components/ComDelay.md)
 
 ### [Hardware Components](components/AntennaDeployer.md)
 Components that interface with physical hardware devices and actuators: [Antenna Deployer](components/AntennaDeployer.md), [Burnwire](components/Burnwire.md), [Camera Handler](components/CameraHandler.md), [Load Switch](components/LoadSwitch.md)

@@ -56,6 +56,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp FprimeZephyrReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
 	@cp FprimeZephyrReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
 	@cp FprimeZephyrReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
+	@cp FprimeZephyrReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
 	@cp FprimeZephyrReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
 	@cp FprimeZephyrReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
 	@# Copy Core Components
@@ -90,7 +91,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp FprimeZephyrReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
 	@# Copy images
 	@find FprimeZephyrReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
-	@echo "✓ Synced 31 component SDDs and images"
+	@echo "✓ Synced 32 component SDDs and images"
 
 .PHONY: docs-serve
 docs-serve: uv ## Serve MkDocs documentation site locally
