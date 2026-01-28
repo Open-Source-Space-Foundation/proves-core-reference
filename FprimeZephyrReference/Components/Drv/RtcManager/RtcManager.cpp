@@ -138,7 +138,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Trigger safe mode sequence to cancel any running sequences on Command and Payload sequencers
     // This prevents premature execution of time-based commands after time change
     if (this->isConnected_runSequence_OutputPort(0)) {
-        Fw::String sequencePath("/seq/cancel_sequencers.bin");
+        Fw::CmdStringArg sequencePath("/seq/cancel_sequencers.bin");
         this->runSequence_out(0, sequencePath);
     }
 
