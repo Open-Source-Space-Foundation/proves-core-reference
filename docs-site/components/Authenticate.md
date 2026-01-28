@@ -223,13 +223,6 @@ will take the first key in spi_dict and write it to AuthDefaultKey.h. This is re
 
 By default, the plugin also reads the first line in the spi_dict file, but you can change that parameter if you want to change the spi index
 
-## Enabling AUthenticate
-
-to enable authenticate, check the file AuthenticateCfg.hpp
-
-if AUTHENTICATE_ENABLED = 1, then authentication is enabled, and you have to make sure to run the plugin
-If AUTHENTICATE_ENABLED = 0, then authentication is disabled and you must NOT run the plugin
-
 ## Plugin
 
 To Run the Plugin, first activate the fprime-venv

@@ -5,11 +5,10 @@ Component that deploys the antenna and activates the burnwire
 
 ## Requirements
 Add requirements in the chart below
-
 | Name | Description | Validation |
 |---|---|---|
 |AD0001|The Antenna Deployer shall attempt to redeploy the burnwire if the armed parameter is set| Unit Testing|
-|AD0002|The antenna deployer shall attempt to deploy| Unit Testing|
+|AD0002|The antenna deployer shall attempt to deploy
 |AD0003|The Antenna Deployer shall broadcast an event every time it tries to deploy | Unit Testing|
 |AD0004|The Antenna Deployer shall broadcast an event when it successfully deploys | Unit Testing|
 |AD0005|The Antenna Deployer shall carry a count of the amount of times it has tried to deploy attached to the Telemetry | Unit Testing|
@@ -36,9 +35,7 @@ Add a class diagram here
 
 ## Component States
 Add component states in the chart below
-
 | Name | Description |
-|------|-------------|
 |deploy_count|Keeps track of how many deploys happened |
 
 ## Sequence Diagrams
@@ -69,20 +66,16 @@ Add sequence diagrams here
 
 
 ## Telemetry
-
 | Name | Description |
-|------|-------------|
 |DeployCount|Reports the amount of time the antenna has tried to deploy|
 
 ## Unit Tests
 Add unit test descriptions in the chart below
-
 | Name | Description | Output | Coverage |
 |---|---|---|---|
 
 
 ## Change Log
-
 | Date | Description |
-|------|-------------|
-| TBD | Initial Draft |
+|---|---|
+|---| Initial Draft |

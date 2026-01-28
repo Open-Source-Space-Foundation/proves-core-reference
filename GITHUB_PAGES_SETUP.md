@@ -62,3 +62,13 @@ mkdocs build
 ```
 
 The built site will be in the `site/` directory.
+
+## Updating Documentation
+
+When component SDD files are updated in their original locations, sync them to the documentation site:
+
+```bash
+make docs-sync
+```
+
+This copies all SDD files and images from `FprimeZephyrReference/` to `docs-site/components/`. After syncing, review the changes and fix any broken links or formatting issues before committing.

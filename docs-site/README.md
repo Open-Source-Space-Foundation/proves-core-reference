@@ -38,11 +38,24 @@ https://open-source-space-foundation.github.io/proves-core-reference/
 
 The SDD files are copied from their original locations in `FprimeZephyrReference/` to `docs-site/components/`.
 
-To update the documentation:
+To update the documentation after making changes to component SDDs:
 
+```bash
+# Sync all SDD files from components to docs-site
+make docs-sync
+```
+
+This will:
+- Copy all 31 component SDD files from `FprimeZephyrReference/` to `docs-site/components/`
+- Copy all images from component `docs/img/` directories to `docs-site/components/img/`
+
+**Note**: After syncing, you may need to fix any broken links or formatting issues in the copied files before committing. See the commit history for examples of common fixes needed (e.g., updating F Prime documentation links to point to online resources).
+
+Manual update process:
 1. Edit the original SDD files in their component directories
-2. Run the copy script to sync changes to `docs-site/components/`
-3. Commit and push changes
+2. Run `make docs-sync` to copy changes to `docs-site/components/`
+3. Review and fix any broken links or formatting issues
+4. Commit and push changes
 
 ## Configuration
 
