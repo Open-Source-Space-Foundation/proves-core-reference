@@ -27,8 +27,7 @@ If you have a brand new flight controller board (or are switching a board back t
 Build the MCUBoot bootloader:
 
 ```shell
-make mcu-boot
-# (same as: make build-mcuboot)
+make build-mcuboot
 ```
 
 This creates a bootloader with two partitions (slots) so the system can swap between images for over-the-air updates.
