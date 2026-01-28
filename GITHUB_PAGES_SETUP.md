@@ -41,10 +41,11 @@ If the deployment fails:
 To preview the documentation locally:
 
 ```bash
-# Install dependencies
-pip install -r requirements-docs.txt
+# Using Make (recommended)
+make docs-serve
 
-# Serve the documentation (with live reload)
+# Or using pip and mkdocs directly
+pip install -r requirements-docs.txt
 mkdocs serve
 
 # Visit http://127.0.0.1:8000 in your browser
@@ -53,6 +54,10 @@ mkdocs serve
 To build the static site:
 
 ```bash
+# Using Make
+make docs-build
+
+# Or using mkdocs directly
 mkdocs build
 ```
 

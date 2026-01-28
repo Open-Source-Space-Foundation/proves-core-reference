@@ -15,14 +15,14 @@ This directory contains the MkDocs documentation site for PROVES Core Reference 
 To build the documentation locally:
 
 ```bash
-# Install dependencies
+# Using Make (recommended)
+make docs-serve  # Start local development server at http://127.0.0.1:8000
+make docs-build  # Build static site to ./site directory
+
+# Or using pip and mkdocs directly
 pip install -r requirements-docs.txt
-
-# Build the site
-mkdocs build
-
-# Serve the site locally for preview
-mkdocs serve
+mkdocs serve     # Start development server
+mkdocs build     # Build static site
 ```
 
 The built site will be in the `site/` directory.

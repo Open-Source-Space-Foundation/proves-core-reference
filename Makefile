@@ -43,6 +43,17 @@ pre-commit-install: uv ## Install pre-commit hooks
 fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
+##@ Documentation
+
+.PHONY: docs-serve
+docs-serve: uv ## Serve MkDocs documentation site locally
+	@echo "Starting MkDocs server at http://127.0.0.1:8000"
+	@$(UVX) --from mkdocs-material mkdocs serve
+
+.PHONY: docs-build
+docs-build: uv ## Build MkDocs documentation site
+	@$(UVX) --from mkdocs-material mkdocs build
+
 .PHONY: generate
 generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
