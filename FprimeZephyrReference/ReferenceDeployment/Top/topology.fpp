@@ -216,8 +216,9 @@ module ReferenceDeployment {
       safeModeSeq.seqDone -> modeManager.completeSequence
 
       # RTC time change cancels running sequences
-      rtcManager.cancelSequences[0] -> cmdSeq.seqCancelIn
-      rtcManager.cancelSequences[1] -> payloadSeq.seqCancelIn
+      rtcManager.cancelSequences -> cmdSeq.seqCancelIn
+      rtcManager.cancelSequences -> payloadSeq.seqCancelIn
+      rtcManager.cancelSequences -> safeModeSeq.seqCancelIn
 
 
     }

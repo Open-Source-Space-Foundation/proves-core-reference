@@ -98,6 +98,12 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Store current time for logging
     Fw::Time time_before_set = this->getTime();
 
+    // Cancel any running sequences BEFORE setting time
+    // This prevents premature execution of time-based commands after time change
+    if (this->isConnected_cancelSequences_OutputPort(0)) {
+        this->cancelSequences_out(0);
+    }
+
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
         .tm_sec = static_cast<int>(t.get_Second()),
@@ -125,16 +131,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
-
-    // Cancel any running sequences on Command and Payload sequencers
-    // This prevents premature execution of time-based commands after time change
-    // Port index 0 = cmdSeq, port index 1 = payloadSeq
-    if (this->isConnected_cancelSequences_OutputPort(0)) {
-        this->cancelSequences_out(0);
-    }
-    if (this->isConnected_cancelSequences_OutputPort(1)) {
-        this->cancelSequences_out(1);
-    }
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
