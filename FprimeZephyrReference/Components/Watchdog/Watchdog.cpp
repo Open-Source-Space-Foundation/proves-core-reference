@@ -46,7 +46,7 @@ void Watchdog ::start_handler(FwIndexType portNum) {
 }
 
 void Watchdog ::stop_handler(FwIndexType portNum) {
-    // Stop the wathis->prepareForReboot_out(0);tchdog
+    // Stop the watchdog
 
     this->m_run = false;
 

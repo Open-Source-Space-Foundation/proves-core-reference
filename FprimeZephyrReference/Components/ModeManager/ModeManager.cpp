@@ -313,9 +313,11 @@ void ModeManager ::loadState() {
     // Handle unintended reboot detection AFTER basic state restoration
     // This ensures we enter safe mode due to system fault
     if (unintendedReboot) {
-        // On unintended reboot, re-enter safe mode and run the safe mode sequence
+        // On unintended reboot, enter safe mode and run the safe mode sequence
+        // (e.g., to reset radio parameters and enforce any transmit delay policy)
         this->log_WARNING_HI_UnintendedRebootDetected();
         this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
+        this->runSafeModeSequence();
     }
 
     // Clear clean shutdown flag for next boot detection
