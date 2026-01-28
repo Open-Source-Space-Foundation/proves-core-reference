@@ -22,6 +22,7 @@ make
 ```
 
 ### Bootloader (MCUBoot)
+If you have a brand new flight controller board (or are switching a board back to F Prime from CircuitPython) you will need to first install the MCUBoot Bootloader. Skip this step if you are already running F Prime on the board at V1.0.0+.
 
 Build the MCUBoot bootloader:
 
