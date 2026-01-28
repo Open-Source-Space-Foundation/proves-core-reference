@@ -75,10 +75,10 @@ module Drv {
         ###############################################################################
         # Ports for triggering sequence cancellation on time change                   #
         ###############################################################################
-        @ Port for running a sequence on the safe mode CmdSequencer
+        @ Port for running a sequence on the safeModeSeq CmdSequencer instance (shared with ModeManager)
         output port runSequence: Svc.CmdSeqIn
 
-        @ Port for receiving sequence completion status
+        @ Port for receiving sequence completion status (may receive callbacks for both RTC and ModeManager sequences)
         sync input port completeSequence: Fw.CmdResponse
 
         ###############################################################################
