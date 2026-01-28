@@ -182,3 +182,8 @@ sequenceDiagram
 - **Debounce**: Configurable consecutive samples prevent spurious transitions
 - **Reason tracking**: Only LOW_BATTERY allows auto-recovery; other reasons require manual EXIT_SAFE_MODE
 - **Mode query**: Both pull (getMode) and push (modeChanged) patterns supported
+
+## Additional Documentation
+
+For a comprehensive finite state machine diagram documenting all Safe Mode entry and exit transitions, see:
+- [Safe Mode Finite State Machine](../../FprimeZephyrReference/Components/ModeManager/docs/safe-mode-fsm.md)
