@@ -178,6 +178,8 @@ void setupTopology(const TopologyState& state) {
     drv2605Face5Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face5drv2605Device);
 
     detumbleManager.configure();
+
+    fsFormat.configure(state.storagePartitionId);
 }
 
 void startRateGroups() {

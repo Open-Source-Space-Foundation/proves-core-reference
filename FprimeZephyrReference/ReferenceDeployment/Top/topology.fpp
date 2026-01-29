@@ -72,6 +72,7 @@ module ReferenceDeployment {
     instance face5LoadSwitch
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
+    instance fsFormat
     instance fsSpace
     instance payload
     instance cameraHandler
