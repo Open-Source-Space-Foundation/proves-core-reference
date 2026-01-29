@@ -161,68 +161,66 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
-def test_04_sequence_cancellation_on_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_04_sequence_cancellation_on_time_set(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
     """Test that running sequences are canceled when RTC time is set
-    
+
     This test verifies the behavior described in issue #282:
     - Start dummy sequences on cmdSeq and payloadSeq
     - Set the RTC time
     - Assert that CS_SequenceCanceled events are emitted for both sequencers
     """
-    
+
     # Clear histories to start fresh
     fprime_test_api.clear_histories()
-    
+
     # Start test sequences on cmdSeq and payloadSeq
     # These sequences have delays so they'll be running when we set the time
     print("Starting test sequence on cmdSeq...")
     fprime_test_api.send_and_assert_command(
-        f"{cmdSeq}.CS_RUN",
-        ["/seq/test_rtc_cancel.bin", "NO_BLOCK"],
-        timeout=5
+        f"{cmdSeq}.CS_RUN", ["/seq/test_rtc_cancel.bin", "NO_BLOCK"], timeout=5
     )
-    
+
     print("Starting test sequence on payloadSeq...")
     fprime_test_api.send_and_assert_command(
-        f"{payloadSeq}.CS_RUN",
-        ["/seq/test_rtc_cancel.bin", "NO_BLOCK"],
-        timeout=5
+        f"{payloadSeq}.CS_RUN", ["/seq/test_rtc_cancel.bin", "NO_BLOCK"], timeout=5
     )
-    
+
     # Wait a moment to ensure sequences are running
     time.sleep(0.5)
-    
+
     # Clear histories before setting time so we can check for cancel events
     fprime_test_api.clear_histories()
-    
+
     # Set the RTC time - this should trigger sequence cancellation
     print("Setting RTC time (should cancel sequences)...")
     curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
     set_time(fprime_test_api, curiosity_landing)
-    
+
     # Assert that we see CS_SequenceCanceled or CS_NoSequenceActive events
     # The sequences should be canceled before the time is actually set
     print("Checking for sequence cancellation events...")
-    
+
     # Get all events after the TIME_SET command
     events = fprime_test_api.get_event_test_history()
-    
+
     # Look for CS_SequenceCanceled events from cmdSeq or payloadSeq
     # Or CS_NoSequenceActive if the sequence already completed (which is also valid)
     cancel_events = [
-        e for e in events 
-        if "CS_SequenceCanceled" in str(e.get_template().get_name()) 
+        e
+        for e in events
+        if "CS_SequenceCanceled" in str(e.get_template().get_name())
         or "CS_NoSequenceActive" in str(e.get_template().get_name())
     ]
-    
+
     # We should see at least one cancellation event (could be 2 if both sequences were running)
     # or NoSequenceActive events if sequences completed before cancellation
     assert len(cancel_events) >= 1, (
         f"Expected to see CS_SequenceCanceled or CS_NoSequenceActive events, "
         f"but got: {[str(e.get_template().get_name()) for e in events]}"
     )
-    
+
     print(f"Found {len(cancel_events)} sequence cancellation/status events")
     for event in cancel_events:
         print(f"  - {event.get_template().get_name()}")
-

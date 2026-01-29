@@ -1,5 +1,3 @@
 ; Test sequence for RTC cancellation test
 ; This sequence has a long delay to occupy the sequencer when RTC time is set
-; Using a simple TRANSMIT command that exists and is safe to call
-R00:01:00 ReferenceDeployment.lora.TRANSMIT, ENABLED
-
+R00:01:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Hello World!"
