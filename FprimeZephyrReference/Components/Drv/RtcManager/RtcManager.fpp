@@ -73,6 +73,13 @@ module Drv {
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
 
         ###############################################################################
+        # Port for canceling sequences on time change                                 #
+        ###############################################################################
+        @ Port for canceling running sequences when RTC time is set
+        @ Connected to seqCancelIn ports of Command, Payload, and SafeMode sequencers
+        output port cancelSequences: [3] Svc.CmdSeqCancel
+
+        ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
         @ Port for requesting the current time
