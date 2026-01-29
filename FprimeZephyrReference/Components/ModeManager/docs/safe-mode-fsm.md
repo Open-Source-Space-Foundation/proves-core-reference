@@ -68,14 +68,20 @@ The ModeManager can enter SAFE_MODE from NORMAL mode through multiple triggers, 
 
 #### Entry Actions
 When entering SAFE_MODE, the ModeManager:
-1. Executes the safe mode radio sequence (`/seq/radio_enter_safe.bin`)
+1. Executes the safe mode radio sequence (`/seq/enter_safe.bin`)
 2. Sets `m_mode = SAFE_MODE`
 3. Increments `m_safeModeEntryCount` (persisted)
 4. Sets `m_safeModeReason` to the trigger reason
-5. Emits `EnteringSafeMode` event with reason string
+5. Emits one or more events:
+   - `EnteringSafeMode(reason: string)` - Severity: WARNING_HI (always emitted with reason string)
+   - `AutoSafeModeEntry(reason: SafeModeReason, voltage: F32)` - Severity: WARNING_HI (for LOW_BATTERY trigger)
+   - `UnintendedRebootDetected()` - Severity: WARNING_HI (for SYSTEM_FAULT at boot)
+   - `ManualSafeModeEntry()` - Severity: ACTIVITY_HI (for FORCE_SAFE_MODE command)
+   - `ExternalFaultDetected()` - Severity: WARNING_HI (for forceSafeMode port call)
 6. Turns OFF all 8 load switches via `loadSwitchTurnOff` ports
-7. Notifies other components via `modeChanged` port
-8. Saves state to persistent storage (`/mode_state.bin`)
+7. Notifies other components via `modeChanged` port with SAFE_MODE value
+8. Executes safe mode sequence via `runSequence` port (may emit `SafeModeSequenceCompleted` or `SafeModeSequenceFailed`)
+9. Saves state to persistent storage (`/mode_state.bin`)
 
 ### Exit Transitions: SAFE_MODE → NORMAL
 
@@ -90,10 +96,12 @@ Exit from SAFE_MODE depends on the `SafeModeReason`:
 When exiting SAFE_MODE, the ModeManager:
 1. Sets `m_mode = NORMAL`
 2. Clears `m_safeModeReason = NONE`
-3. Emits `ExitingSafeMode` (manual) or `AutoSafeModeExit` (auto-recovery) event
+3. Emits exit event:
+   - `ExitingSafeMode()` - Severity: ACTIVITY_HI (manual EXIT_SAFE_MODE command)
+   - `AutoSafeModeExit(voltage: F32)` - Severity: ACTIVITY_HI (auto-recovery for LOW_BATTERY)
 4. Turns ON face load switches (0-5) via `loadSwitchTurnOn` ports
    - **Note**: Payload switches (6-7) remain OFF, requiring separate commands
-5. Notifies other components via `modeChanged` port
+5. Notifies other components via `modeChanged` port with NORMAL value
 6. Saves state to persistent storage
 
 ### Boot-Time State Restoration
@@ -168,23 +176,6 @@ Only `LOW_BATTERY` reason allows automatic recovery. Other reasons require manua
 | `GROUND_COMMAND` | ❌ No | Operator explicitly commanded safe mode; requires operator approval to exit |
 | `EXTERNAL_REQUEST` | ❌ No | Another component detected a fault; requires component-specific recovery |
 | `LORA` | ❌ No | Communication fault may indicate antenna deployment issue or ground station unavailability |
-
-## Event Notifications
-
-### Entry Events
-- `EnteringSafeMode(reason: string)` - Severity: WARNING_HI
-- `AutoSafeModeEntry(reason: SafeModeReason, voltage: F32)` - Severity: WARNING_HI (for LOW_BATTERY)
-- `UnintendedRebootDetected()` - Severity: WARNING_HI (for SYSTEM_FAULT at boot)
-- `ManualSafeModeEntry()` - Severity: ACTIVITY_HI (for FORCE_SAFE_MODE command)
-- `ExternalFaultDetected()` - Severity: WARNING_HI (for forceSafeMode port call)
-
-### Exit Events
-- `ExitingSafeMode()` - Severity: ACTIVITY_HI (manual command)
-- `AutoSafeModeExit(voltage: F32)` - Severity: ACTIVITY_HI (auto-recovery)
-
-### Sequence Events
-- `SafeModeSequenceCompleted()` - Severity: ACTIVITY_HI (radio sequence succeeded)
-- `SafeModeSequenceFailed(response: CmdResponse)` - Severity: WARNING_LO (radio sequence failed)
 
 ## Telemetry Channels
 
