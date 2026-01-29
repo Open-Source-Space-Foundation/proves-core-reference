@@ -8,10 +8,10 @@ This document describes the finite state machine (FSM) for the ModeManager compo
 stateDiagram-v2
     [*] --> NORMAL: System Boot (clean shutdown)
     [*] --> SAFE_MODE: System Boot (unintended reboot)
-    
+
     NORMAL --> SAFE_MODE: Entry Trigger
     SAFE_MODE --> NORMAL: Exit Trigger
-    
+
     note right of NORMAL
         Active Components:
         - All 6 face load switches ON
@@ -19,7 +19,7 @@ stateDiagram-v2
         - Voltage monitoring active
         - SafeModeReason = NONE
     end note
-    
+
     note right of SAFE_MODE
         Protected State:
         - All 8 load switches OFF
@@ -27,7 +27,7 @@ stateDiagram-v2
         - SafeModeReason tracks cause
         - Safe mode sequence executed
     end note
-    
+
     state NORMAL {
         [*] --> VoltageMonitoring
         VoltageMonitoring --> VoltageMonitoring: Voltage OK<br/>(Reset counter)
@@ -35,18 +35,18 @@ stateDiagram-v2
         LowVoltageDebounce --> VoltageMonitoring: Voltage OK<br/>(Reset counter)
         LowVoltageDebounce --> [*]: Counter >= 10s<br/>(Trigger Safe Mode)
     }
-    
+
     state SAFE_MODE {
         [*] --> ReasonCheck
         ReasonCheck --> LOW_BATTERY_Mode: Reason = LOW_BATTERY
         ReasonCheck --> MANUAL_EXIT_Mode: Reason != LOW_BATTERY
-        
+
         LOW_BATTERY_Mode --> RecoveryMonitoring
         RecoveryMonitoring --> RecoveryMonitoring: Voltage < 8.0V<br/>(Reset counter)
         RecoveryMonitoring --> VoltageRecoveryDebounce: Voltage > 8.0V<br/>(Increment counter)
         VoltageRecoveryDebounce --> RecoveryMonitoring: Voltage < 8.0V<br/>(Reset counter)
         VoltageRecoveryDebounce --> [*]: Counter >= 10s<br/>(Auto-Exit)
-        
+
         MANUAL_EXIT_Mode --> MANUAL_EXIT_Mode: Waiting for<br/>EXIT_SAFE_MODE<br/>command
         MANUAL_EXIT_Mode --> [*]: EXIT_SAFE_MODE<br/>command received
     }
