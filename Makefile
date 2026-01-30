@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr generate-if-needed build
+all: submodules fprime-venv zephyr copy-keys generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -131,6 +131,10 @@ generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
 	fi
 	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
+.PHONY: copy-keys
+copy-keys:
+	@mkdir -p keys
+	@cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
 
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot
