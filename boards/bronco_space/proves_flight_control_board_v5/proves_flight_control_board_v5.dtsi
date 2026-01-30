@@ -60,7 +60,17 @@ zephyr_udc0: &usbd {
 
 &qmi {
 	status = "okay";
+	/* APS1604M-3SQR 16Mbit (2MB) PSRAM on QSPI CS0 - no Zephyr driver yet */
+	psram0: psram@0 {
+		compatible = "aps,aps1604m";
+		reg = <0 DT_SIZE_M(2)>;          /* CS0, 16Mbit = 2MB per datasheet */
+		spi-max-frequency = <84000000>;  /* Max for quad SPI per datasheet */
+		status = "disabled";            /* Enable when driver/binding exists */
+
+	};
 };
+
+
 
 &flash0 {
     reg = <0x10000000 DT_SIZE_M(4)>;
