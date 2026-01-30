@@ -1,0 +1,19 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  APMemory APS1604M 16Mbit (2MB) QSPI PSRAM.
+  Typically used as a child of a QSPI/flash controller (e.g. raspberrypi,pico-flash-controller).
+
+compatible: "aps,aps1604m"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+    description: Chip-select (address) and size in bytes (address-cells, size-cells from parent).
+
+  spi-max-frequency:
+    type: int
+    description: Maximum SPI/QSPI clock frequency in Hz (e.g. 84000000 for 84 MHz).

@@ -65,7 +65,7 @@ zephyr_udc0: &usbd {
 		compatible = "aps,aps1604m";
 		reg = <0 DT_SIZE_M(2)>;          /* CS0, 16Mbit = 2MB per datasheet */
 		spi-max-frequency = <84000000>;  /* Max for quad SPI per datasheet */
-		status = "disabled";            /* Enable when driver/binding exists */
+		status = "okay";            /* Enable when driver/binding exists */
 
 	};
 };
