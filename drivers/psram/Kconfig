@@ -1,0 +1,23 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+
+config PSRAM_APS1604M
+	bool "APMemory APS1604M QSPI PSRAM"
+	default y
+	depends on DT_HAS_APS_APS1604M_ENABLED
+	help
+	  Enable driver for APMemory APS1604M 16Mbit (2MB) QSPI PSRAM.
+
+config PSRAM_INIT_PRIORITY
+	int "PSRAM driver init priority"
+	default 70
+	depends on PSRAM_APS1604M
+	help
+	  Init priority for the APS1604M PSRAM driver.
+
+config PSRAM_LOG_LEVEL
+	int "APS1604M PSRAM log level"
+	default 3
+	depends on PSRAM_APS1604M
+	help
+	  Log level for the APS1604M driver (0-4).

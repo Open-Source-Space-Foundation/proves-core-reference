@@ -22,6 +22,11 @@ endif()
 
 project(fprime-zephyr-reference C CXX)
 
+# Out-of-tree Zephyr drivers (e.g. APS1604M PSRAM) — sources added to app
+if (NOT BUILD_TESTING)
+	target_sources(app PRIVATE drivers/psram/aps1604m.c)
+endif()
+
 # Disable F´ framework/autocoder/app unit tests; we use our own GoogleTests in tests/
 set(FPRIME_ENABLE_FRAMEWORK_UTS OFF CACHE BOOL "" FORCE)
 set(FPRIME_ENABLE_AUTOCODER_UTS OFF CACHE BOOL "" FORCE)

@@ -8,6 +8,7 @@
 
 menu "Zephyr"
 source "Kconfig.zephyr"
+rsource "drivers/psram/Kconfig"
 endmenu
 
 module = APP
