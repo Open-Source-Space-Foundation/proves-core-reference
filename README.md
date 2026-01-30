@@ -101,7 +101,7 @@ If you regenerate/replace the bootloader (or switch computers and flash a bootlo
 ```shell
 make copy-keys
 ```
-You also want to make sure the key the gds runs with is the same as the key on the board. For that, you want to make sure the key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h match
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 
