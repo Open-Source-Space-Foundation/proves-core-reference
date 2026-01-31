@@ -7,11 +7,10 @@ It parses component definitions, type definitions, and telemetry packet specific
 to provide a comprehensive data budget report.
 
 Usage:
-    python3 tools/data_budget.py [--output OUTPUT_FILE]
+    python3 tools/data_budget.py [--verbose]
 """
 
 import argparse
-import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -503,13 +502,15 @@ class DataBudgetAnalyzer:
         )
         self.types['Success'] = self.types['Fw.Success']
 
-    def generate_report(self, output_file: Optional[str] = None):
+    def generate_report(self, verbose: bool = False):
         """Generate a comprehensive data budget report"""
         lines = []
-        lines.append("=" * 80)
-        lines.append("F PRIME TELEMETRY DATA BUDGET REPORT")
-        lines.append("=" * 80)
-        lines.append("")
+        
+        if verbose:
+            lines.append("=" * 80)
+            lines.append("F PRIME TELEMETRY DATA BUDGET REPORT")
+            lines.append("=" * 80)
+            lines.append("")
         
         # Summary statistics
         total_channels = len(self.telemetry_channels)
@@ -524,89 +525,90 @@ class DataBudgetAnalyzer:
         lines.append(f"Total Telemetry Packets: {len(self.telemetry_packets)}")
         lines.append("")
         
-        # Telemetry channels by component
-        lines.append("TELEMETRY CHANNELS BY COMPONENT")
-        lines.append("-" * 80)
-        lines.append(f"{'Component':<30} {'Channel':<30} {'Type':<20} {'Size (bytes)':<12}")
-        lines.append("-" * 80)
-        
-        # Group channels by component
-        channels_by_component = {}
-        for channel_path, channel in sorted(self.telemetry_channels.items()):
-            if channel.component not in channels_by_component:
-                channels_by_component[channel.component] = []
-            channels_by_component[channel.component].append((channel_path, channel))
-        
-        for component in sorted(channels_by_component.keys()):
-            for channel_path, channel in sorted(channels_by_component[component]):
-                size_str = str(channel.size_bytes) if channel.size_bytes is not None else "UNKNOWN"
-                lines.append(f"{channel.component:<30} {channel.name:<30} {channel.type_name:<20} {size_str:<12}")
-        
-        lines.append("")
-        
-        # Telemetry packets
-        lines.append("TELEMETRY PACKETS")
-        lines.append("-" * 80)
-        lines.append(f"{'Packet Name':<25} {'ID':<6} {'Group':<8} {'Channels':<10} {'Total Size (bytes)':<18}")
-        lines.append("-" * 80)
-        
-        total_packet_bytes = 0
-        for packet_name in sorted(self.telemetry_packets.keys()):
-            packet = self.telemetry_packets[packet_name]
-            lines.append(f"{packet.name:<25} {packet.packet_id:<6} {packet.group_id:<8} {len(packet.channels):<10} {packet.total_size_bytes:<18}")
-            total_packet_bytes += packet.total_size_bytes
-        
-        lines.append("-" * 80)
-        lines.append(f"{'TOTAL':<25} {'':<6} {'':<8} {'':<10} {total_packet_bytes:<18}")
-        lines.append("")
-        
-        # Detailed packet breakdown
-        lines.append("DETAILED PACKET BREAKDOWN")
-        lines.append("-" * 80)
-        
-        for packet_name in sorted(self.telemetry_packets.keys()):
-            packet = self.telemetry_packets[packet_name]
-            lines.append(f"\nPacket: {packet.name} (ID: {packet.packet_id}, Group: {packet.group_id})")
-            lines.append(f"  Total Size: {packet.total_size_bytes} bytes")
-            lines.append(f"  Channels ({len(packet.channels)}):")
+        if verbose:
+            # Telemetry channels by component
+            lines.append("TELEMETRY CHANNELS BY COMPONENT")
+            lines.append("-" * 80)
+            lines.append(f"{'Component':<30} {'Channel':<30} {'Type':<20} {'Size (bytes)':<12}")
+            lines.append("-" * 80)
             
-            for channel_path in packet.channels:
-                # Parse the channel path to find the actual channel
-                parts = channel_path.split('.')
-                channel = None
-                type_name = "UNKNOWN"
-                size_str = "UNKNOWN"
+            # Group channels by component
+            channels_by_component = {}
+            for channel_path, channel in sorted(self.telemetry_channels.items()):
+                if channel.component not in channels_by_component:
+                    channels_by_component[channel.component] = []
+                channels_by_component[channel.component].append((channel_path, channel))
+            
+            for component in sorted(channels_by_component.keys()):
+                for channel_path, channel in sorted(channels_by_component[component]):
+                    size_str = str(channel.size_bytes) if channel.size_bytes is not None else "UNKNOWN"
+                    lines.append(f"{channel.component:<30} {channel.name:<30} {channel.type_name:<20} {size_str:<12}")
+            
+            lines.append("")
+            
+            # Telemetry packets
+            lines.append("TELEMETRY PACKETS")
+            lines.append("-" * 80)
+            lines.append(f"{'Packet Name':<25} {'ID':<6} {'Group':<8} {'Channels':<10} {'Total Size (bytes)':<18}")
+            lines.append("-" * 80)
+            
+            total_packet_bytes = 0
+            for packet_name in sorted(self.telemetry_packets.keys()):
+                packet = self.telemetry_packets[packet_name]
+                lines.append(f"{packet.name:<25} {packet.packet_id:<6} {packet.group_id:<8} {len(packet.channels):<10} {packet.total_size_bytes:<18}")
+                total_packet_bytes += packet.total_size_bytes
+            
+            lines.append("-" * 80)
+            lines.append(f"{'TOTAL':<25} {'':<6} {'':<8} {'':<10} {total_packet_bytes:<18}")
+            lines.append("")
+            
+            # Detailed packet breakdown
+            lines.append("DETAILED PACKET BREAKDOWN")
+            lines.append("-" * 80)
+            
+            for packet_name in sorted(self.telemetry_packets.keys()):
+                packet = self.telemetry_packets[packet_name]
+                lines.append(f"\nPacket: {packet.name} (ID: {packet.packet_id}, Group: {packet.group_id})")
+                lines.append(f"  Total Size: {packet.total_size_bytes} bytes")
+                lines.append(f"  Channels ({len(packet.channels)}):")
                 
-                if len(parts) >= 3:
-                    instance_name = parts[1]
-                    channel_name = parts[2]
+                for channel_path in packet.channels:
+                    # Parse the channel path to find the actual channel
+                    parts = channel_path.split('.')
+                    channel = None
+                    type_name = "UNKNOWN"
+                    size_str = "UNKNOWN"
                     
-                    if instance_name in self.instances:
-                        component_type = self.instances[instance_name].component_type
-                        component_channel_key = f"{component_type}.{channel_name}"
+                    if len(parts) >= 3:
+                        instance_name = parts[1]
+                        channel_name = parts[2]
                         
-                        if component_channel_key in self.telemetry_channels:
-                            channel = self.telemetry_channels[component_channel_key]
-                            type_name = channel.type_name
-                            size_str = f"{channel.size_bytes} bytes" if channel.size_bytes is not None else "UNKNOWN"
-                elif len(parts) == 2:
-                    instance_name = parts[0]
-                    channel_name = parts[1]
+                        if instance_name in self.instances:
+                            component_type = self.instances[instance_name].component_type
+                            component_channel_key = f"{component_type}.{channel_name}"
+                            
+                            if component_channel_key in self.telemetry_channels:
+                                channel = self.telemetry_channels[component_channel_key]
+                                type_name = channel.type_name
+                                size_str = f"{channel.size_bytes} bytes" if channel.size_bytes is not None else "UNKNOWN"
+                    elif len(parts) == 2:
+                        instance_name = parts[0]
+                        channel_name = parts[1]
+                        
+                        if instance_name in self.instances:
+                            component_type = self.instances[instance_name].component_type
+                            component_channel_key = f"{component_type}.{channel_name}"
+                            
+                            if component_channel_key in self.telemetry_channels:
+                                channel = self.telemetry_channels[component_channel_key]
+                                type_name = channel.type_name
+                                size_str = f"{channel.size_bytes} bytes" if channel.size_bytes is not None else "UNKNOWN"
                     
-                    if instance_name in self.instances:
-                        component_type = self.instances[instance_name].component_type
-                        component_channel_key = f"{component_type}.{channel_name}"
-                        
-                        if component_channel_key in self.telemetry_channels:
-                            channel = self.telemetry_channels[component_channel_key]
-                            type_name = channel.type_name
-                            size_str = f"{channel.size_bytes} bytes" if channel.size_bytes is not None else "UNKNOWN"
-                
-                lines.append(f"    - {channel_path:<50} {type_name:<20} {size_str}")
+                    lines.append(f"    - {channel_path:<50} {type_name:<20} {size_str}")
+            
+            lines.append("")
         
-        lines.append("")
-        
-        # Bytes per telemetry group
+        # Bytes per telemetry group (always show)
         lines.append("BYTES PER TELEMETRY GROUP")
         lines.append("-" * 80)
         
@@ -643,94 +645,13 @@ class DataBudgetAnalyzer:
         lines.append("-" * 80)
         lines.append(f"{'TOTAL':<8} {'':<35} {'':<10} {total_group_bytes:<18}")
         
-        lines.append("")
-        lines.append("=" * 80)
+        if verbose:
+            lines.append("")
+            lines.append("=" * 80)
         
-        # Output to file or console
+        # Output to console
         report_text = '\n'.join(lines)
-        
-        if output_file:
-            try:
-                with open(output_file, 'w') as f:
-                    f.write(report_text)
-                print(f"\nReport written to: {output_file}")
-            except Exception as e:
-                print(f"Error writing report to {output_file}: {e}", file=sys.stderr)
-                print(report_text)
-        else:
-            print(report_text)
-
-    def generate_json_report(self, output_file: str):
-        """Generate a JSON format report for programmatic consumption"""
-        # Calculate bytes per group
-        bytes_per_group = {}
-        group_descriptions = {
-            1: "Beacon",
-            2: "Live Satellite Sensor Data",
-            3: "Satellite Meta Data",
-            4: "Payload Meta Data",
-            5: "Health and Status",
-            6: "Parameters"
-        }
-        
-        for packet in self.telemetry_packets.values():
-            group_id = packet.group_id
-            if group_id not in bytes_per_group:
-                bytes_per_group[group_id] = {
-                    'group_id': group_id,
-                    'description': group_descriptions.get(group_id, f"Group {group_id}"),
-                    'total_bytes': 0,
-                    'packet_count': 0
-                }
-            bytes_per_group[group_id]['total_bytes'] += packet.total_size_bytes
-            bytes_per_group[group_id]['packet_count'] += 1
-        
-        report = {
-            'summary': {
-                'total_channels': len(self.telemetry_channels),
-                'channels_with_size': sum(1 for ch in self.telemetry_channels.values() if ch.size_bytes is not None),
-                'total_telemetry_bytes': sum(ch.size_bytes for ch in self.telemetry_channels.values() if ch.size_bytes is not None),
-                'total_packets': len(self.telemetry_packets),
-            },
-            'channels': {},
-            'packets': {},
-            'groups': bytes_per_group,
-            'types': {}
-        }
-        
-        # Add channels
-        for channel_path, channel in self.telemetry_channels.items():
-            report['channels'][channel_path] = {
-                'name': channel.name,
-                'type': channel.type_name,
-                'component': channel.component,
-                'size_bytes': channel.size_bytes
-            }
-        
-        # Add packets
-        for packet_name, packet in self.telemetry_packets.items():
-            report['packets'][packet_name] = {
-                'id': packet.packet_id,
-                'group': packet.group_id,
-                'channels': packet.channels,
-                'total_size_bytes': packet.total_size_bytes
-            }
-        
-        # Add types
-        for type_name, type_def in self.types.items():
-            if type_def.kind != 'primitive':  # Skip primitives to reduce clutter
-                report['types'][type_name] = {
-                    'kind': type_def.kind,
-                    'size_bytes': type_def.size_bytes,
-                    'module': type_def.module
-                }
-        
-        try:
-            with open(output_file, 'w') as f:
-                json.dump(report, f, indent=2)
-            print(f"\nJSON report written to: {output_file}")
-        except Exception as e:
-            print(f"Error writing JSON report to {output_file}: {e}", file=sys.stderr)
+        print(report_text)
 
 
 def main():
@@ -741,16 +662,11 @@ def main():
         epilog=__doc__
     )
     parser.add_argument(
-        '--output',
-        '-o',
-        help='Output file for the report (default: print to console)',
-        default=None
-    )
-    parser.add_argument(
-        '--json',
-        '-j',
-        help='Generate JSON format report',
-        default=None
+        '--verbose',
+        '-v',
+        action='store_true',
+        help='Show detailed breakdown (channels, packets, and detailed packet info)',
+        default=False
     )
     parser.add_argument(
         '--project-root',
@@ -768,10 +684,7 @@ def main():
     
     analyzer = DataBudgetAnalyzer(project_root)
     analyzer.analyze()
-    analyzer.generate_report(args.output)
-    
-    if args.json:
-        analyzer.generate_json_report(args.json)
+    analyzer.generate_report(verbose=args.verbose)
     
     return 0
 

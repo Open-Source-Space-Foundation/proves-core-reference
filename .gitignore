@@ -31,10 +31,6 @@ bootable.uf2
 mcuboot.uf2
 /sequences/*.bin
 
-# Data budget reports
-data_budget_report.txt
-data_budget.json
-
 **/__pycache__/
 **/*.egg-info/
 
