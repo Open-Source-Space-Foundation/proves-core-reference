@@ -209,4 +209,59 @@ void StartupManager ::WAIT_FOR_QUIESCENCE_cmdHandler(FwOpcodeType opCode, U32 cm
     this->m_waiting = true;
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void StartupManager ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case StartupManager::PARAMID_ARMED: {
+            Fw::ParamValid is_valid;
+            bool parameter = this->paramGet_ARMED(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_ArmedParamSet(parameter);
+                this->tlmWrite_ArmedParam(parameter);
+            }
+        } break;
+        case StartupManager::PARAMID_QUIESCENCE_TIME: {
+            Fw::ParamValid is_valid;
+            Fw::TimeIntervalValue parameter = this->paramGet_QUIESCENCE_TIME(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_QuiescenceTimeParamSet(parameter);
+                this->tlmWrite_QuiescenceTimeParam(parameter);
+            }
+        } break;
+        case StartupManager::PARAMID_QUIESCENCE_START_FILE: {
+            Fw::ParamValid is_valid;
+            Fw::ParamString parameter;
+            this->paramGet_QUIESCENCE_START_FILE(parameter, is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_QuiescenceStartFileParamSet(parameter);
+                this->tlmWrite_QuiescenceStartFileParam(parameter);
+            }
+        } break;
+        case StartupManager::PARAMID_STARTUP_SEQUENCE_FILE: {
+            Fw::ParamValid is_valid;
+            Fw::ParamString parameter;
+            this->paramGet_STARTUP_SEQUENCE_FILE(parameter, is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_StartupSequenceFileParamSet(parameter);
+                this->tlmWrite_StartupSequenceFileParam(parameter);
+            }
+        } break;
+        case StartupManager::PARAMID_BOOT_COUNT_FILE: {
+            Fw::ParamValid is_valid;
+            Fw::ParamString parameter;
+            this->paramGet_BOOT_COUNT_FILE(parameter, is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_BootCountFileParamSet(parameter);
+                this->tlmWrite_BootCountFileParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components
