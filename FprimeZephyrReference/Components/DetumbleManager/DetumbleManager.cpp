@@ -180,19 +180,39 @@ void DetumbleManager ::startMagnetorquers(I8 x_plus_drive_level,
                                           I8 y_plus_drive_level,
                                           I8 y_minus_drive_level,
                                           I8 z_minus_drive_level) {
-    this->xPlusStart_out(0, x_plus_drive_level);
-    this->xMinusStart_out(0, x_minus_drive_level);
-    this->yPlusStart_out(0, y_plus_drive_level);
-    this->yMinusStart_out(0, y_minus_drive_level);
-    this->zMinusStart_out(0, z_minus_drive_level);
+    if (isConnected_xPlusStart_OutputPort(0)) {
+        this->xPlusStart_out(0, x_plus_drive_level);
+    }
+    if (isConnected_xMinusStart_OutputPort(0)) {
+        this->xMinusStart_out(0, x_minus_drive_level);
+    }
+    if (isConnected_yPlusStart_OutputPort(0)) {
+        this->yPlusStart_out(0, y_plus_drive_level);
+    }
+    if (isConnected_yMinusStart_OutputPort(0)) {
+        this->yMinusStart_out(0, y_minus_drive_level);
+    }
+    if (isConnected_zMinusStart_OutputPort(0)) {
+        this->zMinusStart_out(0, z_minus_drive_level);
+    }
 }
 
 void DetumbleManager ::stopMagnetorquers() {
-    this->xPlusStop_out(0);
-    this->xMinusStop_out(0);
-    this->yPlusStop_out(0);
-    this->yMinusStop_out(0);
-    this->zMinusStop_out(0);
+    if (isConnected_xPlusStop_OutputPort(0)) {
+        this->xPlusStop_out(0);
+    }
+    if (isConnected_xMinusStop_OutputPort(0)) {
+        this->xMinusStop_out(0);
+    }
+    if (isConnected_yPlusStop_OutputPort(0)) {
+        this->yPlusStop_out(0);
+    }
+    if (isConnected_yMinusStop_OutputPort(0)) {
+        this->yMinusStop_out(0);
+    }
+    if (isConnected_zMinusStop_OutputPort(0)) {
+        this->zMinusStop_out(0);
+    }
 }
 
 void DetumbleManager ::parameterUpdated(FwPrmIdType id) {

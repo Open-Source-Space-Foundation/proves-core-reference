@@ -72,6 +72,7 @@ module ReferenceDeployment {
     instance face5LoadSwitch
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
+    instance fsFormat
     instance fsSpace
     instance payload
     instance cameraHandler
@@ -213,6 +214,11 @@ module ReferenceDeployment {
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
+
+      # RTC time change cancels running sequences
+      rtcManager.cancelSequences[0] -> cmdSeq.seqCancelIn
+      rtcManager.cancelSequences[1] -> payloadSeq.seqCancelIn
+      rtcManager.cancelSequences[2] -> safeModeSeq.seqCancelIn
 
 
     }

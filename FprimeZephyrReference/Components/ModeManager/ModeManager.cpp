@@ -265,6 +265,8 @@ void ModeManager ::loadState() {
                 if (this->m_mode == SystemMode::SAFE_MODE) {
                     // Turn off non-critical components to match safe mode state
                     this->turnOffNonCriticalComponents();
+                    // run radio safe to match default safe params
+                    this->runSafeModeSequence();
 
                     // Log that we're restoring safe mode (not entering it fresh)
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
@@ -311,10 +313,11 @@ void ModeManager ::loadState() {
     // Handle unintended reboot detection AFTER basic state restoration
     // This ensures we enter safe mode due to system fault
     if (unintendedReboot) {
-        // On unintended reboot, re-enter safe mode and run the safe mode sequence
+        // On unintended reboot, enter safe mode and run the safe mode sequence
+        // (e.g., to reset radio parameters and enforce any transmit delay policy)
         this->log_WARNING_HI_UnintendedRebootDetected();
-        this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
+        this->runSafeModeSequence();
     }
 
     // Clear clean shutdown flag for next boot detection

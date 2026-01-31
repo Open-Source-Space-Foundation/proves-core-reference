@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr generate-if-needed build
+all: submodules fprime-venv zephyr copy-keys generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -43,6 +43,65 @@ pre-commit-install: uv ## Install pre-commit hooks
 fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
+##@ Documentation
+
+.PHONY: docs-sync
+docs-sync: ## Sync SDD files from components to docs-site
+	@echo "Syncing SDD files to docs-site/components..."
+	@mkdir -p docs-site/components/img
+	@# Copy ADCS
+	@cp FprimeZephyrReference/Components/ADCS/docs/sdd.md docs-site/components/ADCS.md
+	@# Copy Communication Components
+	@cp FprimeZephyrReference/Components/AmateurRadio/docs/sdd.md docs-site/components/AmateurRadio.md
+	@cp FprimeZephyrReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
+	@cp FprimeZephyrReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
+	@cp FprimeZephyrReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
+	@cp FprimeZephyrReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
+	@cp FprimeZephyrReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
+	@cp FprimeZephyrReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
+	@# Copy Core Components
+	@cp FprimeZephyrReference/Components/ModeManager/docs/sdd.md docs-site/components/ModeManager.md
+	@cp FprimeZephyrReference/Components/StartupManager/docs/sdd.md docs-site/components/StartupManager.md
+	@cp FprimeZephyrReference/Components/ResetManager/docs/sdd.md docs-site/components/ResetManager.md
+	@cp FprimeZephyrReference/Components/Watchdog/docs/sdd.md docs-site/components/Watchdog.md
+	@cp FprimeZephyrReference/Components/BootloaderTrigger/docs/sdd.md docs-site/components/BootloaderTrigger.md
+	@cp FprimeZephyrReference/Components/DetumbleManager/docs/sdd.md docs-site/components/DetumbleManager.md
+	@# Copy Hardware Components
+	@cp FprimeZephyrReference/Components/AntennaDeployer/docs/sdd.md docs-site/components/AntennaDeployer.md
+	@cp FprimeZephyrReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
+	@cp FprimeZephyrReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
+	@cp FprimeZephyrReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
+	@# Copy Sensor Components
+	@cp FprimeZephyrReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
+	@cp FprimeZephyrReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
+	@cp FprimeZephyrReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
+	@# Copy Driver Components
+	@cp FprimeZephyrReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
+	@cp FprimeZephyrReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
+	@cp FprimeZephyrReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
+	@cp FprimeZephyrReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md
+	@cp FprimeZephyrReference/Components/Drv/Veml6031Manager/docs/sdd.md docs-site/components/Veml6031Manager.md
+	@# Copy Storage Components
+	@cp FprimeZephyrReference/Components/FlashWorker/docs/sdd.md docs-site/components/FlashWorker.md
+	@cp FprimeZephyrReference/Components/FsFormat/docs/sdd.md docs-site/components/FsFormat.md
+	@cp FprimeZephyrReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
+	@cp FprimeZephyrReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
+	@# Copy Security Components
+	@cp FprimeZephyrReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
+	@cp FprimeZephyrReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
+	@# Copy images
+	@find FprimeZephyrReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
+	@echo "✓ Synced 32 component SDDs and images"
+
+.PHONY: docs-serve
+docs-serve: uv ## Serve MkDocs documentation site locally
+	@echo "Starting MkDocs server at http://127.0.0.1:8000"
+	@$(UVX) --from mkdocs-material mkdocs serve
+
+.PHONY: docs-build
+docs-build: uv ## Build MkDocs documentation site
+	@$(UVX) --from mkdocs-material mkdocs build
+
 .PHONY: generate
 generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
@@ -72,6 +131,10 @@ generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
 	fi
 	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
+.PHONY: copy-keys
+copy-keys:
+	@mkdir -p keys
+	@cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
 
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot
@@ -175,6 +238,18 @@ DoL_test:
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
 	@ cd Framing && $(UV_RUN) pip install -e .
+
+.PHONY: copy-secrets
+copy-secrets:
+	@if [ -z "$(SECRETS_DIR)" ]; then \
+		echo "Error: Must pass valid secrets dir. Usage: make copy-secrets SECRETS_DIR=dir"; \
+		exit 1; \
+	fi
+	@mkdir -p ./keys/
+	@cp $(SECRETS_DIR)/proves.pem ./keys/
+	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./FprimeZephyrReference/Components/Authenticate/
+	@echo "Copied secret files 🤫"
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk

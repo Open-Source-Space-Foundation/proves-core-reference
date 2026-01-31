@@ -2,6 +2,10 @@
 
 This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/).
 
+## Documentation
+
+📚 **[Component Software Design Documents (SDDs)](https://open-source-space-foundation.github.io/proves-core-reference/)** - Browse detailed design documentation for all components.
+
 ## System Requirements
 - F Prime System Requirements listed [here](https://fprime.jpl.nasa.gov/latest/docs/getting-started/installing-fprime/#system-requirements)
 - Zephyr dependencies listed [here](https://docs.zephyrproject.org/latest/develop/getting_started/index.html#install-dependencies) (NOTE: Only complete the install dependencies step, as we run through the rest of the steps in this readme.)
@@ -21,18 +25,16 @@ cd proves-core-reference
 make
 ```
 
-## Running the code
+### Bootloader (MCUBoot)
+If you have a brand new flight controller board (or are switching a board back to F Prime from CircuitPython) you will need to first install the MCUBoot Bootloader. Skip this step if you are already running F Prime on the board at V1.0.0+.
 
-Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
-```shell
-make generate
-```
-
-Then, and every time you change code, run
+Build the MCUBoot bootloader:
 
 ```shell
-make build
+make build-mcuboot
 ```
+
+This creates a bootloader with two partitions (slots) so the system can swap between images for over-the-air updates.
 
 ### Find the path to your board
 
@@ -51,6 +53,28 @@ For Linux:
 findmnt
 ```
 
+
+#### Copy/flash the bootloader to the board
+
+The bootloader build outputs `mcuboot.uf2` at the repo root Put the board into UF2 bootloader mode (so it mounts as a USB drive), then copy it onto the mounted drive:
+
+```shell
+cp mcuboot.uf2 [path-to-your-board]
+```
+
+## Running the code
+
+Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
+```shell
+make generate
+```
+
+Then, and every time you change code, run
+
+```shell
+make build
+```
+
 Now you want to install the firmware to the board.
 ```shell
 cp build-artifacts/zephyr.uf2 [path-to-your-board]
@@ -65,6 +89,19 @@ Finally, run the fprime-gds.
 ```shell
 make gds
 ```
+
+#### Ensuring your authentication/signing is correct
+
+The Makefile will ensure the authentication is correct if you run the code on the same computer you flash on. However, if you switch from a computer that compiled the code you will likely have issues with authentication. Here are some things you may encounter
+
+MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
+
+If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
+
+```shell
+make copy-keys
+```
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 

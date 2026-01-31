@@ -238,4 +238,6 @@ module ReferenceDeployment {
 
   instance dropDetector: Utilities.DropDetector base id 0x10077000
 
+  instance fsFormat: Components.FsFormat base id 0x10078000
+
 }

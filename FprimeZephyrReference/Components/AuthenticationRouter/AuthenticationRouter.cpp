@@ -26,7 +26,9 @@ constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the
 // Example: "00000001" for opcode 0x00000001
 static constexpr U32 kBypassOpCodes[] = {
     0x01000000,  // no op
-    0x2200B000   // get sequence number
+    0x2200B000,  // get sequence number
+    0x10065000,  // amateurRadio.TELL_JOKE
+    0x10065000   // amateur name
 };
 constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
@@ -222,62 +224,22 @@ void AuthenticationRouter ::GET_COMMAND_LOSS_DATA_cmdHandler(FwOpcodeType opCode
 }
 
 Fw::Time AuthenticationRouter ::update_command_loss_start(bool write_to_file) {
+    // Lock the mutex to prevent multiple threads from updating the command loss start time simultaneously
     Os::ScopeLock lock(this->m_commandLossMutex);
 
-    // Update file with current time and cache it
     Fw::Time current_time = this->getTime();
 
-    // if current time base if monotonic, we don't want to write it to file, but we still want to update the cached
-    // time and return it this way we never write monotonic time to file, which would be invalid on reboot and if
-    // the system is using monotonic time, we don't consistently return a previously saved workstation time to a
-    // cube stuck on monotonic (ie broken RTC). So we don't write monotonic time to file, but cache it for use in
-    // current session
-
-    if (current_time.getTimeBase() == TimeBase::TB_PROC_TIME) {
-        if (write_to_file) {
-            // Don't write monotonic time to file, but cache it for use in current session
-            this->m_commandLossStartTime = current_time;
-            return current_time;
-        } else {
-            // Return cached time (the time when last command arrived)
-            return this->m_commandLossStartTime;
-        }
-    }
-
-    Fw::ParamValid is_valid;
-    auto time_file = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
-
-    if (write_to_file) {
-        Os::File::Status status = Utilities::FileHelper::writeToFile(time_file.toChar(), current_time);
-        if (status != Os::File::OP_OK) {
-            this->log_WARNING_HI_CommandLossFileInitFailure();
-        }
+    // If writing (command received), reset the timer to current time
+    // On boot, m_commandLossStartTime starts at ZERO_TIME, so first command will set it
+    // Also reset if timebase changed (can't compare times with different timebases)
+    bool changed_time_base = this->m_commandLossStartTime.getTimeBase() != current_time.getTimeBase();
+    if (write_to_file || this->m_commandLossStartTime == Fw::ZERO_TIME || changed_time_base) {
         this->m_commandLossStartTime = current_time;
-
         return current_time;
-    } else {
-        // Check if we need to load from file (cache is zero/uninitialized or timebase mismatch with the file)
-        // Otherwise we want to read from the cache in case the filesystem is broken
-        // Also invalidate cache if timebase changed (e.g., system switched from monotonic to workstation time)
-        if (this->m_commandLossStartTime == Fw::ZERO_TIME ||
-            this->m_commandLossStartTime.getTimeBase() != current_time.getTimeBase()) {
-            // Read stored time from file, or use current time if file doesn't exist
-            Fw::Time time = this->getTime();
-            Os::File::Status status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
-
-            // On read failure, write the current time to the file for future reads
-            if (status != Os::File::OP_OK) {
-                status = Utilities::FileHelper::writeToFile(time_file.toChar(), time);
-                if (status != Os::File::OP_OK) {
-                    this->log_WARNING_HI_CommandLossFileInitFailure();
-                }
-            }
-            // Cache the loaded time
-            this->m_commandLossStartTime = time;
-        }
-        // Return cached time
-        return this->m_commandLossStartTime;
     }
+
+    // If reading (checking timer), return the stored start time
+    return this->m_commandLossStartTime;
 }
 
 void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::Buffer& fwBuffer) {

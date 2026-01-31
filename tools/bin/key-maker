@@ -1,0 +1,7 @@
+#!/bin/bash
+ROOT="$(cd $(dirname $BASH_SOURCE)/../..; pwd)"
+
+mkdir -p "${ROOT}/keys"
+
+imgtool keygen -k "${ROOT}/keys/proves.pem" -t rsa-2048
+imgtool getpub -k "${ROOT}/keys/proves.pem" > "${ROOT}/keys/proves.pub.pem"

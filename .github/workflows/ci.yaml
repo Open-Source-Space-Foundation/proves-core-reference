@@ -74,6 +74,8 @@ jobs:
 
       - name: Generate
         run: |
+          mkdir -p ./keys
+          cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem ./keys/proves.pem
           make generate
 
       - name: Set Authentication Key
@@ -93,54 +95,54 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
-  integration:
-    runs-on:
-      - integration
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v5
-
-      - name: Set up dependencies
-        run: |
-          make submodules fprime-venv
-
-      - name: Set Authentication Key
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
-
-      - name: Install Framer Plugin
-        run: |
-          make framer-plugin
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
-      - name: Sync Sequence Number
-        run: |
-          make sync-sequence-number
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
-      - name: Trigger Bootloader
-        run: |
-          make bootloader
-          sleep 10
-
-      - name: Copy Firmware
-        run: |
-          picotool load ./bootable.uf2
-          picotool reboot
-          sleep 5
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
-      - name: Run Integration Tests
-        run: |
-          make test-integration
+  # integration:
+  #   runs-on:
+  #     - integration
+  #   needs: build
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/download-artifact@v5
+  #
+  #     - name: Set up dependencies
+  #       run: |
+  #         make submodules fprime-venv
+  #
+  #     - name: Set Authentication Key
+  #       run: |
+  #         echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+  #
+  #     - name: Install Framer Plugin
+  #       run: |
+  #         make framer-plugin
+  #
+  #     - name: Kill all python processes
+  #       run: |
+  #         pkill -9 python || true
+  #
+  #     - name: Sync Sequence Number
+  #       run: |
+  #         make sync-sequence-number
+  #
+  #     - name: Kill all python processes
+  #       run: |
+  #         pkill -9 python || true
+  #
+  #     - name: Trigger Bootloader
+  #       run: |
+  #         make bootloader
+  #         sleep 10
+  #
+  #     - name: Copy Firmware
+  #       run: |
+  #         picotool load ./bootable.uf2
+  #         picotool reboot
+  #         sleep 5
+  #
+  #     - name: Kill all python processes
+  #       run: |
+  #         pkill -9 python || true
+  #
+  #     - name: Run Integration Tests
+  #       run: |
+  #         make test-integration

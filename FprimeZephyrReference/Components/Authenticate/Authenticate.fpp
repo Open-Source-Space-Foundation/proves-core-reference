@@ -39,9 +39,11 @@ module Components {
 
         event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication" throttle 2
 
-        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 14 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}" throttle 2
+        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 13 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}" throttle 2
 
-        event CryptoComputationError(status: U32) severity warning high id 13 format "Crypto Computation Error: {}" throttle 2
+        event CryptoComputationError(status: U32) severity warning high id 14 format "Crypto Computation Error: {}" throttle 2
+
+        event PacketRejected() severity warning high id 15 format "Packet Rejected" throttle 2
 
 
         # @ Ports for packet authentication

@@ -61,6 +61,7 @@ U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
 }
 
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
+    this->log_WARNING_HI_PacketRejected();
     U32 newCount = this->m_rejectedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_RejectedPacketsCount(newCount);
     contextOut.set_authenticated(0);
