@@ -43,6 +43,23 @@ pre-commit-install: uv ## Install pre-commit hooks
 fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
+.PHONY: data-budget
+data-budget: ## Analyze telemetry data budget (raw bytes per channel/packet)
+	@echo "Analyzing telemetry data budget..."
+	@python3 tools/data_budget.py
+
+.PHONY: data-budget-report
+data-budget-report: ## Generate data budget report to file
+	@echo "Generating data budget report..."
+	@python3 tools/data_budget.py --output data_budget_report.txt
+	@echo "Report saved to: data_budget_report.txt"
+
+.PHONY: data-budget-json
+data-budget-json: ## Generate data budget report in JSON format
+	@echo "Generating JSON data budget report..."
+	@python3 tools/data_budget.py --json data_budget.json
+	@echo "JSON report saved to: data_budget.json"
+
 ##@ Documentation
 
 .PHONY: docs-sync
