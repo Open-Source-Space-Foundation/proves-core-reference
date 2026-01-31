@@ -310,4 +310,36 @@ bool ImuManager ::sensorValuesEqual(struct sensor_value* sv1, struct sensor_valu
     return (sv1->val1 == sv2->val1) && (sv1->val2 == sv2->val2);
 }
 
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void ImuManager ::GET_ACCELERATION_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    Drv::Acceleration acceleration = this->accelerationGet_handler(0, condition);
+
+    this->log_ACTIVITY_LO_AccelerationData(acceleration.get_x(), acceleration.get_y(), acceleration.get_z());
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void ImuManager ::GET_ANGULAR_VELOCITY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    Drv::AngularVelocity angularVelocity = this->angularVelocityGet_handler(0, condition);
+
+    this->log_ACTIVITY_LO_AngularVelocityData(angularVelocity.get_x(), angularVelocity.get_y(),
+                                              angularVelocity.get_z());
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void ImuManager ::GET_MAGNETIC_FIELD_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::Success condition;
+    Drv::MagneticField magneticField = this->magneticFieldGet_handler(0, condition);
+
+    this->log_ACTIVITY_LO_MagneticFieldData(magneticField.get_x(), magneticField.get_y(), magneticField.get_z());
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 }  // namespace Components
