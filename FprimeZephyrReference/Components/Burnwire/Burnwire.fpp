@@ -26,6 +26,11 @@ module Components {
             severity activity low \
             format "Burnwire Burned for {} Seconds"
 
+        @ Event when SAFETY_TIMER parameter is set
+        event SafetyTimerParamSet(value: U32) \
+            severity activity high \
+            format "SAFETY_TIMER parameter set to {} seconds."
+
         @ Port getting start signal
         sync input port burnStart: Fw.Signal
 
@@ -40,6 +45,9 @@ module Components {
 
         # @ SAFETY_TIMER parameter is the maximum time that the burn component will run
         param SAFETY_TIMER: U32 default 10
+
+        @ SAFETY_TIMER parameter value
+        telemetry SafetyTimerParam: U32
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
