@@ -149,12 +149,12 @@ BYTES PER TELEMETRY GROUP
 --------------------------------------------------------------------------------
 Group    Description                         Packets    Total Size (bytes)
 --------------------------------------------------------------------------------
-1        Beacon                              1          65                
-2        Live Satellite Sensor Data          4          168               
-3        Satellite Meta Data                 3          120               
-4        Payload Meta Data                   1          18                
-5        Health and Status                   6          49                
-6        Parameters                          6          296               
+1        Beacon                              1          65
+2        Live Satellite Sensor Data          4          168
+3        Satellite Meta Data                 3          120
+4        Payload Meta Data                   1          18
+5        Health and Status                   6          49
+6        Parameters                          6          296
 --------------------------------------------------------------------------------
 TOTAL                                                   716
 ```
