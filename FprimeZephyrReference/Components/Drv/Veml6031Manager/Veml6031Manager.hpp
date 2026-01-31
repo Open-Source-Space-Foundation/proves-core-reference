@@ -38,6 +38,10 @@ class Veml6031Manager final : public Veml6031ManagerComponentBase {
     void configure(const struct device* tca, const struct device* mux, const struct device* dev);
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
