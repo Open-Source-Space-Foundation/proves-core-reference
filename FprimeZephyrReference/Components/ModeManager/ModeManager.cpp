@@ -265,8 +265,10 @@ void ModeManager ::loadState() {
                 if (this->m_mode == SystemMode::SAFE_MODE) {
                     // Turn off non-critical components to match safe mode state
                     this->turnOffNonCriticalComponents();
+
+                    // TODO: commented out because this crashes the board on boot
                     // run radio safe to match default safe params
-                    this->runSafeModeSequence();
+                    // this->runSafeModeSequence();
 
                     // Log that we're restoring safe mode (not entering it fresh)
                     Fw::LogStringArg reasonStr("State restored from persistent storage");
@@ -317,7 +319,9 @@ void ModeManager ::loadState() {
         // (e.g., to reset radio parameters and enforce any transmit delay policy)
         this->log_WARNING_HI_UnintendedRebootDetected();
         this->enterSafeMode(Components::SafeModeReason::SYSTEM_FAULT);
-        this->runSafeModeSequence();
+
+        // TODO: commented out because this crashes the board on boot if ran
+        // this->runSafeModeSequence();
     }
 
     // Clear clean shutdown flag for next boot detection
