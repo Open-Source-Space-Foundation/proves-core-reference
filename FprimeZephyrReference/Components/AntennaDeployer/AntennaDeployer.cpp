@@ -316,4 +316,40 @@ void AntennaDeployer ::writeDeploymentState(bool deployed) {
     }
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void AntennaDeployer ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case AntennaDeployer::PARAMID_RETRY_DELAY_SEC: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_RETRY_DELAY_SEC(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_RetryDelaySecParamSet(parameter);
+                this->tlmWrite_RetryDelaySecParam(parameter);
+            }
+        } break;
+        case AntennaDeployer::PARAMID_MAX_DEPLOY_ATTEMPTS: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_MAX_DEPLOY_ATTEMPTS(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_MaxDeployAttemptsParamSet(parameter);
+                this->tlmWrite_MaxDeployAttemptsParam(parameter);
+            }
+        } break;
+        case AntennaDeployer::PARAMID_BURN_DURATION_SEC: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_BURN_DURATION_SEC(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_BurnDurationSecParamSet(parameter);
+                this->tlmWrite_BurnDurationSecParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components

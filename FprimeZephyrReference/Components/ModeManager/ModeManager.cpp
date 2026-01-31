@@ -495,4 +495,49 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
     return 0.0f;
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void ModeManager ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case ModeManager::PARAMID_SAFEMODEENTRYVOLTAGE: {
+            Fw::ParamValid is_valid;
+            F32 parameter = this->paramGet_SafeModeEntryVoltage(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SafeModeEntryVoltageParamSet(parameter);
+                this->tlmWrite_SafeModeEntryVoltageParam(parameter);
+            }
+        } break;
+        case ModeManager::PARAMID_SAFEMODERECOVERYVOLTAGE: {
+            Fw::ParamValid is_valid;
+            F32 parameter = this->paramGet_SafeModeRecoveryVoltage(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SafeModeRecoveryVoltageParamSet(parameter);
+                this->tlmWrite_SafeModeRecoveryVoltageParam(parameter);
+            }
+        } break;
+        case ModeManager::PARAMID_SAFEMODEDEBOUNCESECONDS: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_SafeModeDebounceSeconds(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SafeModeDebounceSecondsParamSet(parameter);
+                this->tlmWrite_SafeModeDebounceSecondsParam(parameter);
+            }
+        } break;
+        case ModeManager::PARAMID_SAFEMODE_SEQUENCE_FILE: {
+            Fw::ParamValid is_valid;
+            Fw::ParamString parameter;
+            this->paramGet_SAFEMODE_SEQUENCE_FILE(parameter, is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SafemodeSequenceFileParamSet(parameter);
+                this->tlmWrite_SafemodeSequenceFileParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components

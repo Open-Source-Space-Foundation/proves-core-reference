@@ -310,4 +310,48 @@ bool ImuManager ::sensorValuesEqual(struct sensor_value* sv1, struct sensor_valu
     return (sv1->val1 == sv2->val1) && (sv1->val2 == sv2->val2);
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void ImuManager ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case ImuManager::PARAMID_ACCELEROMETER_SAMPLING_FREQUENCY: {
+            Fw::ParamValid is_valid;
+            Lsm6dsoSamplingFrequency parameter = this->paramGet_ACCELEROMETER_SAMPLING_FREQUENCY(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_AccelerometerSamplingFrequencyParamSet(parameter);
+                this->tlmWrite_AccelerometerSamplingFrequencyParam(parameter);
+            }
+        } break;
+        case ImuManager::PARAMID_GYROSCOPE_SAMPLING_FREQUENCY: {
+            Fw::ParamValid is_valid;
+            Lsm6dsoSamplingFrequency parameter = this->paramGet_GYROSCOPE_SAMPLING_FREQUENCY(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_GyroscopeSamplingFrequencyParamSet(parameter);
+                this->tlmWrite_GyroscopeSamplingFrequencyParam(parameter);
+            }
+        } break;
+        case ImuManager::PARAMID_MAGNETOMETER_SAMPLING_FREQUENCY: {
+            Fw::ParamValid is_valid;
+            Lis2mdlSamplingFrequency parameter = this->paramGet_MAGNETOMETER_SAMPLING_FREQUENCY(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_MagnetometerSamplingFrequencyParamSet(parameter);
+                this->tlmWrite_MagnetometerSamplingFrequencyParam(parameter);
+            }
+        } break;
+        case ImuManager::PARAMID_AXIS_ORIENTATION: {
+            Fw::ParamValid is_valid;
+            AxisOrientation parameter = this->paramGet_AXIS_ORIENTATION(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_AxisOrientationParamSet(parameter);
+                this->tlmWrite_AxisOrientationParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components
