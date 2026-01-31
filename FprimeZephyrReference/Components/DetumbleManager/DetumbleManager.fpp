@@ -299,6 +299,9 @@ module Components {
         @ Selected detumble strategy
         telemetry DetumbleStrategy: DetumbleStrategy
 
+        @ Angular velocity magnitude (deg/s)
+        telemetry AngularVelocityMagnitude: F64
+
         @ Maximum angular velocity where BDot should be used (deg/s)
         telemetry BdotMaxThresholdParam: F64
 

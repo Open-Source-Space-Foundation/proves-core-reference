@@ -547,6 +547,8 @@ void DetumbleManager ::stateSensingAngularVelocityActions() {
     }
     this->log_WARNING_LO_AngularVelocityRetrievalFailed_ThrottleClear();
 
+    this->tlmWrite_AngularVelocityMagnitude(angular_velocity_magnitude_deg_sec);
+
     // Select detumble strategy based on angular velocity
     StrategySelector::Strategy detumble_strategy =
         this->m_strategy_selector.fromAngularVelocityMagnitude(angular_velocity_magnitude_deg_sec);
