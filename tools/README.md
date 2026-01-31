@@ -101,6 +101,22 @@ For each packet, shows:
 - The full path to each channel (e.g., `ReferenceDeployment.imuManager.Acceleration`)
 - The type and size of each channel
 
+#### Bytes Per Telemetry Group
+
+Shows a summary of data usage by telemetry group:
+- **Group**: Group ID number (1-6)
+- **Description**: Purpose of the group (Beacon, Live Satellite Sensor Data, etc.)
+- **Packets**: Number of packets in the group
+- **Total Size (bytes)**: Sum of all packet sizes in the group
+
+Telemetry groups organize packets by function:
+1. **Beacon** - Essential health data transmitted frequently
+2. **Live Satellite Sensor Data** - Real-time sensor readings
+3. **Satellite Meta Data** - Configuration and state information
+4. **Payload Meta Data** - Payload-specific information
+5. **Health and Status** - System health monitoring data
+6. **Parameters** - Configuration parameters
+
 ### Type Sizes
 
 The tool recognizes F Prime primitive types and their serialized sizes:

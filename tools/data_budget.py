@@ -605,6 +605,45 @@ class DataBudgetAnalyzer:
                 lines.append(f"    - {channel_path:<50} {type_name:<20} {size_str}")
         
         lines.append("")
+        
+        # Bytes per telemetry group
+        lines.append("BYTES PER TELEMETRY GROUP")
+        lines.append("-" * 80)
+        
+        # Group descriptions (from ReferenceDeploymentPackets.fppi)
+        group_descriptions = {
+            1: "Beacon",
+            2: "Live Satellite Sensor Data",
+            3: "Satellite Meta Data",
+            4: "Payload Meta Data",
+            5: "Health and Status",
+            6: "Parameters"
+        }
+        
+        # Calculate bytes per group
+        bytes_per_group = {}
+        for packet in self.telemetry_packets.values():
+            group_id = packet.group_id
+            if group_id not in bytes_per_group:
+                bytes_per_group[group_id] = 0
+            bytes_per_group[group_id] += packet.total_size_bytes
+        
+        # Display group summary
+        lines.append(f"{'Group':<8} {'Description':<35} {'Packets':<10} {'Total Size (bytes)':<18}")
+        lines.append("-" * 80)
+        
+        total_group_bytes = 0
+        for group_id in sorted(bytes_per_group.keys()):
+            group_desc = group_descriptions.get(group_id, f"Group {group_id}")
+            packet_count = sum(1 for p in self.telemetry_packets.values() if p.group_id == group_id)
+            group_bytes = bytes_per_group[group_id]
+            total_group_bytes += group_bytes
+            lines.append(f"{group_id:<8} {group_desc:<35} {packet_count:<10} {group_bytes:<18}")
+        
+        lines.append("-" * 80)
+        lines.append(f"{'TOTAL':<8} {'':<35} {'':<10} {total_group_bytes:<18}")
+        
+        lines.append("")
         lines.append("=" * 80)
         
         # Output to file or console
@@ -623,6 +662,29 @@ class DataBudgetAnalyzer:
 
     def generate_json_report(self, output_file: str):
         """Generate a JSON format report for programmatic consumption"""
+        # Calculate bytes per group
+        bytes_per_group = {}
+        group_descriptions = {
+            1: "Beacon",
+            2: "Live Satellite Sensor Data",
+            3: "Satellite Meta Data",
+            4: "Payload Meta Data",
+            5: "Health and Status",
+            6: "Parameters"
+        }
+        
+        for packet in self.telemetry_packets.values():
+            group_id = packet.group_id
+            if group_id not in bytes_per_group:
+                bytes_per_group[group_id] = {
+                    'group_id': group_id,
+                    'description': group_descriptions.get(group_id, f"Group {group_id}"),
+                    'total_bytes': 0,
+                    'packet_count': 0
+                }
+            bytes_per_group[group_id]['total_bytes'] += packet.total_size_bytes
+            bytes_per_group[group_id]['packet_count'] += 1
+        
         report = {
             'summary': {
                 'total_channels': len(self.telemetry_channels),
@@ -632,6 +694,7 @@ class DataBudgetAnalyzer:
             },
             'channels': {},
             'packets': {},
+            'groups': bytes_per_group,
             'types': {}
         }
         
