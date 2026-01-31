@@ -42,6 +42,9 @@ module Components {
         @ Port for sending events to downlink
         event port logOut
 
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
+
         @ Port to return the value of a parameter
         param get port prmGetOut
 
