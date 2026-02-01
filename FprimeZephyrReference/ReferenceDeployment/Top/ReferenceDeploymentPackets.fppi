@@ -299,6 +299,24 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face0Manager.GainParam
     ReferenceDeployment.veml6031Face0Manager.IntegrationTimeParam
     ReferenceDeployment.veml6031Face0Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face1Manager.GainParam
+    ReferenceDeployment.veml6031Face1Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face1Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face2Manager.GainParam
+    ReferenceDeployment.veml6031Face2Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face2Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face3Manager.GainParam
+    ReferenceDeployment.veml6031Face3Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face3Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face5Manager.GainParam
+    ReferenceDeployment.veml6031Face5Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face5Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face6Manager.GainParam
+    ReferenceDeployment.veml6031Face6Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face6Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face7Manager.GainParam
+    ReferenceDeployment.veml6031Face7Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face7Manager.EffectivePhotodiodeSizeParam
   }
 
   # SBand is currently commented out in the deployment
@@ -380,5 +398,10 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
+
+  # Face4 Veml6031Manager parameters are omitted (following same pattern as VisibleLight)
+  ReferenceDeployment.veml6031Face4Manager.GainParam
+  ReferenceDeployment.veml6031Face4Manager.IntegrationTimeParam
+  ReferenceDeployment.veml6031Face4Manager.EffectivePhotodiodeSizeParam
 
 }
