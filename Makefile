@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr copy-keys generate-if-needed build
+all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
