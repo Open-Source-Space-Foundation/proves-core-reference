@@ -44,8 +44,8 @@ fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
 
 .PHONY: data-budget
-data-budget: ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
-	@python3 tools/data_budget.py $(if $(VERBOSE),--verbose,)
+data-budget: fprime-venv ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
+	@$(UV_RUN) python3 tools/data_budget.py $(if $(VERBOSE),--verbose,)
 
 ##@ Documentation
 

@@ -52,17 +52,11 @@ python3 tools/data_budget.py --project-root /path/to/project
 
 ### Understanding the Output
 
-#### Summary Section
-
-```
-SUMMARY
---------------------------------------------------------------------------------
-### Understanding the Output
-
 #### Summary Section (Always Shown)
 
-```
+```text
 SUMMARY
+--------------------------------------------------------------------------------
 Total Telemetry Channels: 83
 Channels with Known Size: 83
 Total Telemetry Data: 607 bytes
