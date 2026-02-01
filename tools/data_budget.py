@@ -74,6 +74,7 @@ class TelemetryPacket:
     group_id: int
     channels: List[str] = field(default_factory=list)  # List of channel paths
     total_size_bytes: int = 0
+    unresolved_channels: List[str] = field(default_factory=list)  # Channels that couldn't be resolved
 
 
 class DataBudgetAnalyzer:
@@ -97,20 +98,15 @@ class DataBudgetAnalyzer:
 
     def find_fpp_files(self) -> List[Path]:
         """Find all FPP files in the project"""
-        fpp_files = []
+        fpp_files: List[Path] = []
 
-        # Search in main component directories
-        components_dir = self.project_root / "FprimeZephyrReference" / "Components"
-        if components_dir.exists():
-            fpp_files.extend(components_dir.rglob("*.fpp"))
-
-        # Search in deployment directory
-        deployment_dir = (
-            self.project_root / "FprimeZephyrReference" / "ReferenceDeployment"
-        )
-        if deployment_dir.exists():
-            fpp_files.extend(deployment_dir.rglob("*.fpp"))
-            fpp_files.extend(deployment_dir.rglob("*.fppi"))
+        # Search across the entire FprimeZephyrReference tree so that
+        # instances/types defined in other top-level directories (e.g.
+        # communications components) are also discovered.
+        reference_root = self.project_root / "FprimeZephyrReference"
+        if reference_root.exists():
+            fpp_files.extend(reference_root.rglob("*.fpp"))
+            fpp_files.extend(reference_root.rglob("*.fppi"))
 
         return fpp_files
 
@@ -267,6 +263,9 @@ class DataBudgetAnalyzer:
             print(f"Warning: Could not read {fpp_path}: {e}", file=sys.stderr)
             return
 
+        # Reset module context for each file
+        self.current_module = None
+
         # Try to extract component name from path or content
         component_name = fpp_path.stem
 
@@ -279,10 +278,9 @@ class DataBudgetAnalyzer:
             if module_match:
                 self.current_module = module_match
 
-            # Check for module closing
+            # Check for module closing - reset module context
             if re.match(r"\s*\}", line) and self.current_module:
-                # Don't immediately clear module - might be nested
-                pass
+                self.current_module = None
 
             # Parse component declaration to get name
             comp_match = re.match(
@@ -381,15 +379,17 @@ class DataBudgetAnalyzer:
             elif (
                 current_packet and not line.startswith("#") and not line.startswith("}")
             ):
-                # Channel references look like: ReferenceDeployment.component.ChannelName
-                channel_match = re.match(
-                    r"([A-Za-z0-9_.]+)\.([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)", line
-                )
-                if channel_match:
-                    component = channel_match.group(2)
-                    channel_name = channel_match.group(3)
-                    channel_path = f"{component}.{channel_name}"
-                    current_packet.channels.append(channel_path)
+                # Channel references can be:
+                # - 3-segment: ReferenceDeployment.component.ChannelName
+                # - 2-segment: component.ChannelName or instance.ChannelName
+                # - May contain $ for special instances like CdhCore.$health.PingLateWarnings
+                # Parse by splitting on dots and extracting components
+                if line and not line.isspace():
+                    # Remove any trailing comments or whitespace
+                    clean_line = line.split("#")[0].strip()
+                    if clean_line:
+                        # Store the full path as-is for later resolution
+                        current_packet.channels.append(clean_line)
 
             # End of packet definition
             if current_packet and line.startswith("}"):
@@ -407,11 +407,19 @@ class DataBudgetAnalyzer:
         """Calculate total size for each telemetry packet"""
         for packet in self.telemetry_packets.values():
             total_size = 0
+            packet.unresolved_channels = []
+            
             for channel_path in packet.channels:
+                resolved = False
                 # Try to find the channel
-                # Format is typically: ReferenceDeployment.instanceName.ChannelName
+                # Format can be:
+                # - 3+ segments: ReferenceDeployment.instanceName.ChannelName
+                # - 2 segments: instanceName.ChannelName
+                # - May contain special chars like $ in CdhCore.$health.PingLateWarnings
                 parts = channel_path.split(".")
+                
                 if len(parts) >= 3:
+                    # Try 3-segment format: deployment.instance.channel
                     instance_name = parts[1]
                     channel_name = parts[2]
 
@@ -424,13 +432,17 @@ class DataBudgetAnalyzer:
                             channel = self.telemetry_channels[component_channel_key]
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
-                    else:
+                                resolved = True
+                    
+                    if not resolved:
                         # Try direct match (for instances from other deployments/subtopologies)
                         direct_key = f"{instance_name}.{channel_name}"
                         if direct_key in self.telemetry_channels:
                             channel = self.telemetry_channels[direct_key]
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
+                                resolved = True
+                                
                 elif len(parts) == 2:
                     # Format: instanceName.ChannelName (no deployment prefix)
                     instance_name = parts[0]
@@ -444,6 +456,19 @@ class DataBudgetAnalyzer:
                             channel = self.telemetry_channels[component_channel_key]
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
+                                resolved = True
+                    
+                    if not resolved:
+                        # Try direct lookup by the path as-is
+                        if channel_path in self.telemetry_channels:
+                            channel = self.telemetry_channels[channel_path]
+                            if channel.size_bytes is not None:
+                                total_size += channel.size_bytes
+                                resolved = True
+                
+                # Track unresolved channels
+                if not resolved:
+                    packet.unresolved_channels.append(channel_path)
 
             packet.total_size_bytes = total_size
 
@@ -550,6 +575,14 @@ class DataBudgetAnalyzer:
         lines.append(f"Channels with Known Size: {channels_with_size}")
         lines.append(f"Total Telemetry Data: {total_tlm_bytes} bytes")
         lines.append(f"Total Telemetry Packets: {len(self.telemetry_packets)}")
+        
+        # Show warning if there are unresolved channels
+        total_unresolved = sum(len(p.unresolved_channels) for p in self.telemetry_packets.values())
+        if total_unresolved > 0:
+            lines.append(f"WARNING: {total_unresolved} unresolved channel references")
+            if not verbose:
+                lines.append("  (Use VERBOSE=1 to see details)")
+        
         lines.append("")
 
         if verbose:
@@ -660,6 +693,12 @@ class DataBudgetAnalyzer:
                                 )
 
                     lines.append(f"    - {channel_path:<50} {type_name:<20} {size_str}")
+                
+                # Show unresolved channels if any
+                if packet.unresolved_channels:
+                    lines.append(f"  Unresolved Channels ({len(packet.unresolved_channels)}):")
+                    for unresolved in packet.unresolved_channels:
+                        lines.append(f"    ! {unresolved}")
 
             lines.append("")
 

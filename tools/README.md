@@ -8,11 +8,12 @@ The Data Budget Tool (`data_budget.py`) analyzes F Prime telemetry definitions t
 
 ### Features
 
-- **Automatic FPP Parsing**: Parses all `.fpp` and `.fppi` files to extract telemetry channel definitions
+- **Automatic FPP Parsing**: Parses all `.fpp` and `.fppi` files in the `FprimeZephyrReference` directory to extract telemetry channel definitions
 - **Type Size Calculation**: Calculates serialized sizes for primitive types, structs, enums, and arrays
 - **Packet Analysis**: Analyzes telemetry packets to show total byte usage per packet
 - **Group Summary**: Aggregates packet sizes by telemetry group
 - **Compact Output**: By default shows only summary and group totals; use verbose mode for full details
+- **Unresolved Channel Tracking**: Reports channels that couldn't be resolved (e.g., from F Prime framework components)
 
 ### Usage
 
