@@ -280,7 +280,7 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet ComDelayParams id 28 group 6 {
-    ComCcsdsLora.comDelay.DividerParam
+    ReferenceDeployment.downlinkDelay.DividerParam
   }
 
   packet AuthenticateParams id 29 group 6 {
@@ -301,12 +301,13 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face0Manager.EffectivePhotodiodeSizeParam
   }
 
-  packet SBandParams id 32 group 6 {
-    sband.DataRateParam
-    sband.CodingRateParam
-    sband.BandwidthTxParam
-    sband.BandwidthRxParam
-  }
+  # SBand is currently commented out in the deployment
+  #packet SBandParams id 32 group 6 {
+  #  sband.DataRateParam
+  #  sband.CodingRateParam
+  #  sband.BandwidthTxParam
+  #  sband.BandwidthRxParam
+  #}
 
 } omit {
   CdhCore.cmdDisp.CommandErrors
