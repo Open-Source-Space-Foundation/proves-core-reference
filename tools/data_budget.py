@@ -74,7 +74,9 @@ class TelemetryPacket:
     group_id: int
     channels: List[str] = field(default_factory=list)  # List of channel paths
     total_size_bytes: int = 0
-    unresolved_channels: List[str] = field(default_factory=list)  # Channels that couldn't be resolved
+    unresolved_channels: List[str] = field(
+        default_factory=list
+    )  # Channels that couldn't be resolved
 
 
 class DataBudgetAnalyzer:
@@ -408,7 +410,7 @@ class DataBudgetAnalyzer:
         for packet in self.telemetry_packets.values():
             total_size = 0
             packet.unresolved_channels = []
-            
+
             for channel_path in packet.channels:
                 resolved = False
                 # Try to find the channel
@@ -417,7 +419,7 @@ class DataBudgetAnalyzer:
                 # - 2 segments: instanceName.ChannelName
                 # - May contain special chars like $ in CdhCore.$health.PingLateWarnings
                 parts = channel_path.split(".")
-                
+
                 if len(parts) >= 3:
                     # Try 3-segment format: deployment.instance.channel
                     instance_name = parts[1]
@@ -433,7 +435,7 @@ class DataBudgetAnalyzer:
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
                                 resolved = True
-                    
+
                     if not resolved:
                         # Try direct match (for instances from other deployments/subtopologies)
                         direct_key = f"{instance_name}.{channel_name}"
@@ -442,7 +444,7 @@ class DataBudgetAnalyzer:
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
                                 resolved = True
-                                
+
                 elif len(parts) == 2:
                     # Format: instanceName.ChannelName (no deployment prefix)
                     instance_name = parts[0]
@@ -457,7 +459,7 @@ class DataBudgetAnalyzer:
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
                                 resolved = True
-                    
+
                     if not resolved:
                         # Try direct lookup by the path as-is
                         if channel_path in self.telemetry_channels:
@@ -465,7 +467,7 @@ class DataBudgetAnalyzer:
                             if channel.size_bytes is not None:
                                 total_size += channel.size_bytes
                                 resolved = True
-                
+
                 # Track unresolved channels
                 if not resolved:
                     packet.unresolved_channels.append(channel_path)
@@ -575,14 +577,16 @@ class DataBudgetAnalyzer:
         lines.append(f"Channels with Known Size: {channels_with_size}")
         lines.append(f"Total Telemetry Data: {total_tlm_bytes} bytes")
         lines.append(f"Total Telemetry Packets: {len(self.telemetry_packets)}")
-        
+
         # Show warning if there are unresolved channels
-        total_unresolved = sum(len(p.unresolved_channels) for p in self.telemetry_packets.values())
+        total_unresolved = sum(
+            len(p.unresolved_channels) for p in self.telemetry_packets.values()
+        )
         if total_unresolved > 0:
             lines.append(f"WARNING: {total_unresolved} unresolved channel references")
             if not verbose:
                 lines.append("  (Use VERBOSE=1 to see details)")
-        
+
         lines.append("")
 
         if verbose:
@@ -693,10 +697,12 @@ class DataBudgetAnalyzer:
                                 )
 
                     lines.append(f"    - {channel_path:<50} {type_name:<20} {size_str}")
-                
+
                 # Show unresolved channels if any
                 if packet.unresolved_channels:
-                    lines.append(f"  Unresolved Channels ({len(packet.unresolved_channels)}):")
+                    lines.append(
+                        f"  Unresolved Channels ({len(packet.unresolved_channels)}):"
+                    )
                     for unresolved in packet.unresolved_channels:
                         lines.append(f"    ! {unresolved}")
 
