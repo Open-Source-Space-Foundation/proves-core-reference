@@ -233,8 +233,7 @@ void StartupManager ::parameterUpdated(FwPrmIdType id) {
         } break;
         case StartupManager::PARAMID_QUIESCENCE_START_FILE: {
             Fw::ParamValid is_valid;
-            Fw::ParamString parameter;
-            this->paramGet_QUIESCENCE_START_FILE(parameter, is_valid);
+            Fw::ParamString parameter = this->paramGet_QUIESCENCE_START_FILE(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_QuiescenceStartFileParamSet(parameter);
                 this->tlmWrite_QuiescenceStartFileParam(parameter);
@@ -242,8 +241,7 @@ void StartupManager ::parameterUpdated(FwPrmIdType id) {
         } break;
         case StartupManager::PARAMID_STARTUP_SEQUENCE_FILE: {
             Fw::ParamValid is_valid;
-            Fw::ParamString parameter;
-            this->paramGet_STARTUP_SEQUENCE_FILE(parameter, is_valid);
+            Fw::ParamString parameter = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_StartupSequenceFileParamSet(parameter);
                 this->tlmWrite_StartupSequenceFileParam(parameter);
@@ -251,8 +249,7 @@ void StartupManager ::parameterUpdated(FwPrmIdType id) {
         } break;
         case StartupManager::PARAMID_BOOT_COUNT_FILE: {
             Fw::ParamValid is_valid;
-            Fw::ParamString parameter;
-            this->paramGet_BOOT_COUNT_FILE(parameter, is_valid);
+            Fw::ParamString parameter = this->paramGet_BOOT_COUNT_FILE(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_BootCountFileParamSet(parameter);
                 this->tlmWrite_BootCountFileParam(parameter);

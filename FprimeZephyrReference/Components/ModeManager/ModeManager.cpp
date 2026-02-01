@@ -527,8 +527,7 @@ void ModeManager ::parameterUpdated(FwPrmIdType id) {
         } break;
         case ModeManager::PARAMID_SAFEMODE_SEQUENCE_FILE: {
             Fw::ParamValid is_valid;
-            Fw::ParamString parameter;
-            this->paramGet_SAFEMODE_SEQUENCE_FILE(parameter, is_valid);
+            Fw::ParamString parameter = this->paramGet_SAFEMODE_SEQUENCE_FILE(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_SafemodeSequenceFileParamSet(parameter);
                 this->tlmWrite_SafemodeSequenceFileParam(parameter);

@@ -262,8 +262,7 @@ void AuthenticationRouter ::parameterUpdated(FwPrmIdType id) {
         } break;
         case AuthenticationRouter::PARAMID_COMM_LOSS_TIME_START_FILE: {
             Fw::ParamValid is_valid;
-            Fw::ParamString parameter;
-            this->paramGet_COMM_LOSS_TIME_START_FILE(parameter, is_valid);
+            Fw::ParamString parameter = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_CommLossTimeStartFileParamSet(parameter);
                 this->tlmWrite_CommLossTimeStartFileParam(parameter);
