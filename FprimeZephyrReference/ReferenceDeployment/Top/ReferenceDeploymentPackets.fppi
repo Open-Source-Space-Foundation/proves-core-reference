@@ -250,8 +250,6 @@ telemetry packets ReferenceDeploymentPackets {
   packet StartupManagerParams id 23 group 6 {
     ReferenceDeployment.startupManager.ArmedParam
     ReferenceDeployment.startupManager.QuiescenceTimeParam
-    ReferenceDeployment.startupManager.QuiescenceStartFileParam
-    ReferenceDeployment.startupManager.StartupSequenceFileParam
     ReferenceDeployment.startupManager.BootCountFileParam
   }
 
@@ -314,9 +312,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face6Manager.GainParam
     ReferenceDeployment.veml6031Face6Manager.IntegrationTimeParam
     ReferenceDeployment.veml6031Face6Manager.EffectivePhotodiodeSizeParam
-    ReferenceDeployment.veml6031Face7Manager.GainParam
-    ReferenceDeployment.veml6031Face7Manager.IntegrationTimeParam
-    ReferenceDeployment.veml6031Face7Manager.EffectivePhotodiodeSizeParam
   }
 
   # SBand is currently commented out in the deployment
@@ -399,9 +394,11 @@ telemetry packets ReferenceDeploymentPackets {
 
   ReferenceDeployment.watchdog.WatchdogTransitions
 
-  # Face4 Veml6031Manager parameters are omitted (following same pattern as VisibleLight)
-  ReferenceDeployment.veml6031Face4Manager.GainParam
-  ReferenceDeployment.veml6031Face4Manager.IntegrationTimeParam
-  ReferenceDeployment.veml6031Face4Manager.EffectivePhotodiodeSizeParam
+  ReferenceDeployment.startupManager.QuiescenceStartFileParam
+  ReferenceDeployment.startupManager.StartupSequenceFileParam
+
+  ReferenceDeployment.veml6031Face7Manager.GainParam
+  ReferenceDeployment.veml6031Face7Manager.IntegrationTimeParam
+  ReferenceDeployment.veml6031Face7Manager.EffectivePhotodiodeSizeParam
 
 }
