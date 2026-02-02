@@ -5,7 +5,3 @@ semver
 tqdm
 -r lib/fprime/requirements.txt
 -r lib/zephyr-workspace/zephyr/scripts/requirements.txt
-# Override fprime-gds version for features:
-# - file-uplink-cooldown arg
-# - file-uplink-chunk-size arg
-fprime-gds==4.1.1a2

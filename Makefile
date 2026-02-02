@@ -10,6 +10,9 @@ help: ## Display this help.
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
 	@git submodule update --init --recursive
+	@echo "Applying fprime-gds version patch..."
+	@cd lib/fprime && git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null || \
+		(git apply ../../patches/fprime-gds-version.patch && echo "✓ Applied fprime-gds version patch")
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
