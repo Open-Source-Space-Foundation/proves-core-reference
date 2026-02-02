@@ -29,7 +29,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 
 class Colors:
@@ -125,13 +125,15 @@ class TestRunner:
         cmd = self.build_pytest_command()
 
         # Show command being run
-        cmd_str = ' '.join(cmd)
+        cmd_str = " ".join(cmd)
         if len(cmd_str) > 120:
             # Truncate long commands for readability
             display_cmd = cmd_str[:117] + "..."
         else:
             display_cmd = cmd_str
-        print(f"\n{Colors.OKCYAN}[{iteration}/{self.iterations}]{Colors.ENDC} {display_cmd}")
+        print(
+            f"\n{Colors.OKCYAN}[{iteration}/{self.iterations}]{Colors.ENDC} {display_cmd}"
+        )
 
         try:
             result = subprocess.run(
@@ -154,9 +156,14 @@ class TestRunner:
 
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
-            print(f"{Colors.FAIL}✗ TIMEOUT{Colors.ENDC} ({duration:.2f}s) - exceeded {self.timeout}s limit")
+            print(
+                f"{Colors.FAIL}✗ TIMEOUT{Colors.ENDC} ({duration:.2f}s) - exceeded {self.timeout}s limit"
+            )
             return TestResult(
-                iteration, False, duration, f"Test execution timed out after {self.timeout} seconds"
+                iteration,
+                False,
+                duration,
+                f"Test execution timed out after {self.timeout} seconds",
             )
         except Exception as e:
             duration = time.time() - start_time
@@ -167,7 +174,9 @@ class TestRunner:
         """Save detailed failure logs"""
         timestamp = result.timestamp.strftime("%Y%m%d_%H%M%S")
         test_name = self.test_name or "all_tests"
-        log_file = self.log_dir / f"{test_name}_failure_iter{result.iteration}_{timestamp}.log"
+        log_file = (
+            self.log_dir / f"{test_name}_failure_iter{result.iteration}_{timestamp}.log"
+        )
 
         with open(log_file, "w") as f:
             f.write(f"Test: {test_name}\n")
@@ -175,7 +184,7 @@ class TestRunner:
             f.write(f"Timestamp: {result.timestamp}\n")
             f.write(f"Duration: {result.duration:.2f}s\n")
             f.write(f"\n{'=' * 80}\n")
-            f.write(f"OUTPUT:\n")
+            f.write("OUTPUT:\n")
             f.write(f"{'=' * 80}\n\n")
             f.write(result.output)
 
@@ -236,7 +245,7 @@ class TestRunner:
 
         print(f"Success rate: {rate_color}{success_rate:.1f}%{Colors.ENDC}")
 
-        print(f"\nDuration statistics:")
+        print("\nDuration statistics:")
         print(f"  Average: {avg_duration:.2f}s")
         print(f"  Min: {min_duration:.2f}s")
         print(f"  Max: {max_duration:.2f}s")
@@ -381,11 +390,15 @@ Examples:
     # Check if GDS should be stopped (warn user)
     print(f"\n{Colors.WARNING}⚠ IMPORTANT:{Colors.ENDC}")
     print("Integration tests automatically start their own GDS instance.")
-    print(f"{Colors.FAIL}STOP any manually running GDS to avoid conflicts!{Colors.ENDC}")
+    print(
+        f"{Colors.FAIL}STOP any manually running GDS to avoid conflicts!{Colors.ENDC}"
+    )
     print("\nMake sure:")
     print(f"  1. {Colors.OKGREEN}Board is connected via USB{Colors.ENDC}")
     print(f"  2. {Colors.OKGREEN}Firmware is flashed and running{Colors.ENDC}")
-    print(f"  3. {Colors.FAIL}No GDS is running manually{Colors.ENDC} (tests start their own)")
+    print(
+        f"  3. {Colors.FAIL}No GDS is running manually{Colors.ENDC} (tests start their own)"
+    )
     print("\nPress Enter to continue or Ctrl+C to abort...")
     try:
         input()
@@ -403,7 +416,9 @@ Examples:
             "imu_manager_test",
         ]
 
-        print(f"\n{Colors.BOLD}{Colors.HEADER}Running Known Flaky Tests (Issue #138){Colors.ENDC}")
+        print(
+            f"\n{Colors.BOLD}{Colors.HEADER}Running Known Flaky Tests (Issue #138){Colors.ENDC}"
+        )
         print(f"Tests: {', '.join(known_flaky_tests)}")
         print(f"Iterations per test: {args.iterations}")
         print(f"{'=' * 80}\n")
@@ -447,7 +462,9 @@ Examples:
 
         # Print overall summary
         print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 80}{Colors.ENDC}")
-        print(f"{Colors.BOLD}{Colors.HEADER}OVERALL SUMMARY - All Known Flaky Tests{Colors.ENDC}")
+        print(
+            f"{Colors.BOLD}{Colors.HEADER}OVERALL SUMMARY - All Known Flaky Tests{Colors.ENDC}"
+        )
         print(f"{Colors.BOLD}{Colors.HEADER}{'=' * 80}{Colors.ENDC}\n")
 
         for test_name, results in all_results.items():
@@ -460,7 +477,9 @@ Examples:
                 rate_color = Colors.FAIL
 
             print(f"{test_name}:")
-            print(f"  Passed: {Colors.OKGREEN}{results['passed']}/{results['total']}{Colors.ENDC}")
+            print(
+                f"  Passed: {Colors.OKGREEN}{results['passed']}/{results['total']}{Colors.ENDC}"
+            )
             print(f"  Success rate: {rate_color}{rate:.1f}%{Colors.ENDC}")
 
         print(f"\n{Colors.BOLD}Logs saved in: logs/flaky_tests/{Colors.ENDC}")
