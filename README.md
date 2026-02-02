@@ -77,7 +77,7 @@ make build
 
 Now you want to install the firmware to the board.
 ```shell
-cp build-artifacts/zephyr.uf2 [path-to-your-board]
+cp bootable.uf2 [path-to-your-board]
 ```
 
 If this is your first time running the gds, you must create the authentication plug:
@@ -120,6 +120,23 @@ To run a single integration test file, set `TEST` to the filename (with or witho
 make test-integration TEST=mode_manager_test
 make test-integration TEST=mode_manager_test.py
 ```
+
+### Testing for Flaky Tests
+
+To debug intermittent test failures (see [Issue #138](https://github.com/Open-Source-Space-Foundation/proves-core-reference/issues/138)), use the flaky test runner:
+
+```sh
+# Clean up any stuck GDS processes first
+make delete-shadow-gds
+
+# Run all known flaky tests multiple times
+python3 FprimeZephyrReference/test/int/run_flaky_tests.py --known-flaky --iterations 10
+
+# Run a specific test 20 times
+python3 FprimeZephyrReference/test/int/run_flaky_tests.py --test antenna_deployer_test --iterations 20 --timeout 60
+```
+
+See [FLAKY_TEST_RUNNER.md](FprimeZephyrReference/test/int/FLAKY_TEST_RUNNER.md) for detailed documentation.
 
 ## Running The Radio With CircuitPython
 

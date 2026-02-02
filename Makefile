@@ -176,6 +176,22 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
 
+.PHONY: test-flaky
+test-flaky: uv ## Run integration tests multiple times to detect flakiness (TEST=<name> ITERATIONS=<N>)
+	@ITERATIONS=$${ITERATIONS:-10}; \
+	TEST_ARG=""; \
+	if [ -n "$(TEST)" ]; then \
+		TEST_ARG="--test $(TEST)"; \
+	fi; \
+	$(UV_RUN) python3 FprimeZephyrReference/test/int/run_flaky_tests.py \
+		$$TEST_ARG --iterations $$ITERATIONS
+
+.PHONY: test-known-flaky
+test-known-flaky: uv ## Run all known flaky tests from issue #138 (ITERATIONS=<N>)
+	@ITERATIONS=$${ITERATIONS:-10}; \
+	$(UV_RUN) python3 FprimeZephyrReference/test/int/run_flaky_tests.py \
+		--known-flaky --iterations $$ITERATIONS
+
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:
@@ -223,10 +239,12 @@ gds: ## Run FPrime GDS
 	$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
-delete-shadow-gds:
-	@echo "Deleting shadow GDS..."
-	@$(UV_RUN) pkill -9 -f fprime_gds
-	@$(UV_RUN) pkill -9 -f fprime-gds
+delete-shadow-gds: ## Kill all GDS processes (useful before running integration tests)
+	@echo "Killing all GDS processes..."
+	@pkill -9 -f "fprime-gds\|fprime_gds" 2>/dev/null || true
+	@killall -9 Python python3 2>/dev/null || true
+	@sleep 1
+	@echo "✓ All GDS processes stopped"
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
