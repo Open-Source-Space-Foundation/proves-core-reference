@@ -13,3 +13,5 @@ This patch updates the `fprime-gds` version requirement in `lib/fprime/requireme
 The patch is automatically applied by the `make submodules` target to ensure version consistency and eliminate the version mismatch warning.
 
 **Application:** This patch is applied automatically when running `make submodules` (or `make` which includes that target).
+
+**Note:** After applying this patch, `git status` will show `lib/fprime` as modified. This is expected and should **not** be committed. The patched state is reapplied automatically on each `make submodules` run.
