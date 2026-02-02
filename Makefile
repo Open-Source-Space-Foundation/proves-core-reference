@@ -11,9 +11,16 @@ help: ## Display this help.
 submodules: ## Initialize and update git submodules
 	@git submodule update --init --recursive
 	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && (git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null && \
-		git apply ../../patches/fprime-gds-version.patch && \
-		echo "✓ Applied fprime-gds version patch") || echo "⚠ Patch already applied or not needed"
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-gds-version.patch && \
+			echo "✓ Applied fprime-gds version patch"; \
+		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
