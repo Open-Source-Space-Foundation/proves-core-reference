@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr copy-keys generate-if-needed build
+all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -114,7 +114,7 @@ docs-build: uv ## Build MkDocs documentation site
 	@$(UVX) --from mkdocs-material mkdocs build
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -142,8 +142,7 @@ generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
 	fi
 	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
-.PHONY: copy-keys
-copy-keys:
+keys/proves.pem:
 	@mkdir -p keys
 	@cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
 
