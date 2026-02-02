@@ -15,7 +15,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
 
     # Essential Sensor Data
-    ReferenceDeployment.imuManager.AngularVelocity
+    ReferenceDeployment.detumbleManager.AngularVelocityMagnitude
 
     # Power Data
     ReferenceDeployment.ina219SysManager.Voltage
