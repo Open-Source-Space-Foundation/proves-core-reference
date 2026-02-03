@@ -38,7 +38,7 @@ class StartupManager final : public StartupManagerComponentBase {
     //! \warning this function will modify the boot count file on disk.
     //!
     //! \return The updated boot count
-    FwSizeType update_boot_count();
+    FwSizeType get_boot_count(bool increment);
 
     //! \brief get and possibly initialize the quiescence start time
     //!
@@ -84,6 +84,13 @@ class StartupManager final : public StartupManagerComponentBase {
     void WAIT_FOR_QUIESCENCE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                         U32 cmdSeq            //!< The command sequence number
                                         ) override;
+
+    //! Handler implementation for command GET_BOOT_COUNT
+    //!
+    //! Command to output the current boot count
+    void GET_BOOT_COUNT_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                   U32 cmdSeq            //!< The command sequence number
+                                   ) override;
 
   private:
     Fw::Time m_quiescence_start;   //!< Time of the start of the quiescence wait
