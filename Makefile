@@ -1,5 +1,5 @@
 .PHONY: all
-all: submodules fprime-venv zephyr generate-if-needed build
+all: submodules fprime-venv zephyr copy-keys generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
@@ -10,23 +10,16 @@ help: ## Display this help.
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+# Setting specific fprime-gds pre-release for features:
+# - file-uplink-cooldown arg
+# - file-uplink-chunk-size arg
+	@$(UV) pip install fprime-gds==4.1.1a2
 
 
 .PHONY: zephyr-setup
@@ -114,7 +107,7 @@ docs-build: uv ## Build MkDocs documentation site
 	@$(UVX) --from mkdocs-material mkdocs build
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -142,7 +135,8 @@ generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
 	fi
 	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
-keys/proves.pem:
+.PHONY: copy-keys
+copy-keys:
 	@mkdir -p keys
 	@cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
 
@@ -181,22 +175,6 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
-
-.PHONY: test-flaky
-test-flaky: uv ## Run integration tests multiple times to detect flakiness (TEST=<name> ITERATIONS=<N>)
-	@ITERATIONS=$${ITERATIONS:-10}; \
-	TEST_ARG=""; \
-	if [ -n "$(TEST)" ]; then \
-		TEST_ARG="--test $(TEST)"; \
-	fi; \
-	$(UV_RUN) python3 FprimeZephyrReference/test/int/run_flaky_tests.py \
-		$$TEST_ARG --iterations $$ITERATIONS
-
-.PHONY: test-known-flaky
-test-known-flaky: uv ## Run all known flaky tests from issue #138 (ITERATIONS=<N>)
-	@ITERATIONS=$${ITERATIONS:-10}; \
-	$(UV_RUN) python3 FprimeZephyrReference/test/int/run_flaky_tests.py \
-		--known-flaky --iterations $$ITERATIONS
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
@@ -245,12 +223,10 @@ gds: ## Run FPrime GDS
 	$(GDS_COMMAND)
 
 .PHONY: delete-shadow-gds
-delete-shadow-gds: ## Kill all GDS processes (useful before running integration tests)
-	@echo "Killing all GDS processes..."
-	@pkill -9 -f "fprime-gds\|fprime_gds" 2>/dev/null || true
-	@killall -9 Python python3 2>/dev/null || true
-	@sleep 1
-	@echo "✓ All GDS processes stopped"
+delete-shadow-gds:
+	@echo "Deleting shadow GDS..."
+	@$(UV_RUN) pkill -9 -f fprime_gds
+	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
