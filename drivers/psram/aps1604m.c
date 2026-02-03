@@ -14,9 +14,37 @@
 
 LOG_MODULE_REGISTER(aps1604m, CONFIG_PSRAM_LOG_LEVEL);
 
+/* APS1604M instruction set */
+#define APS1604M_CMD_READ 0x03U       // Read Memory Code
+#define APS1604M_CMD_FAST_READ 0x0BU  // Fast Read Memory Code
+#define ASP1604M_CMD_READ_QUAD 0xEBU  // Quad Read Memory Code
+
+#define APS1604M_CMD_WRITE 0x02U       // Write Memory Code
+#define APS1604M_CMD_WRITE_QUAD 0x38U  // Quad Write Memory Code
+
+#define APS1604M_CMD_WRAPPED_READ 0x8BU   // Wrapped Read Memory Code
+#define APS1604M_CMD_WRAPPED_WRITE 0x82U  // Wrapped Write Memory Code
+
+#define APS1604M_CMD_REGISTER_READ 0xB5U   // Register Read Memory Code
+#define APS1604M_CMD_REGISTER_WRITE 0xB1U  // Register Write Memory Code
+
+#define APS1604M_CMD_ENTER_QUAD_MODE 0x35U  // Enter Quad Mode
+#define APS1604M_CMD_EXIT_QUAD_MODE 0xF5U   // Exit Quad Mode
+
+#define APS1604M_CMD_RESET_ENABLE 0x66U  // Reset Enable
+#define APS1604M_CMD_RESET 0x99U         // Reset
+
+#define APS1604M_CMD_BURST_LENGTH_TOGGLE 0xC0U  // Burst Length Toggle
+#define APS1604M_CMD_READ_ID 0x9FU              // Read ID
+
 struct aps1604m_config {
     size_t size_bytes;
     uint32_t spi_max_frequency;
+    bool readonly;
+};
+
+struct aps1604m_data {
+    struct k_mutex lock;
 };
 
 struct aps1604m_data {
