@@ -43,6 +43,11 @@ class LoadSwitch final : public LoadSwitchComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
+    //! Handler implementation for command GET_IS_ON
+    void GET_IS_ON_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq            //!< The command sequence number
+                              ) override;
+
     //! Handler implementation for turnOn
     void turnOn_handler(FwIndexType portNum  //!< The port number
                         ) override;

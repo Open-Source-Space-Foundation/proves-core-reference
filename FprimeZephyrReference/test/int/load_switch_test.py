@@ -8,7 +8,7 @@ import time
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 ON = "ON"
@@ -39,22 +39,23 @@ def turn_off(fprime_test_api: IntegrationTestAPI):
 
 
 def get_is_on(fprime_test_api: IntegrationTestAPI) -> str:
-    """Helper function to request packet and get fresh IsOn telemetry"""
+    """Helper function to get load switch state via command and event"""
+    fprime_test_api.clear_histories()
+
     proves_send_and_assert_command(
         fprime_test_api,
-        "CdhCore.tlmSend.SEND_PKT",
-        ["10"],
+        f"{loadswitch}.GET_IS_ON",
     )
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{loadswitch}.IsOn", start="NOW", timeout=3
-    )
-    return result.get_val()
+
+    result: EventData = fprime_test_api.assert_event(f"{loadswitch}.IsOn", timeout=3)
+
+    return result.args[0].val
 
 
 def test_01_loadswitch_telemetry_and_events(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
-    """Test that we can read IsOn telemetry as well as a toggle on / off event."""
+    """Test that we can read IsOn state as well as a toggle on / off event."""
     value = get_is_on(fprime_test_api)
     assert value in (ON, OFF), f"IsOn should be {ON} or {OFF}, got {value}"
 
@@ -66,16 +67,16 @@ def test_01_loadswitch_telemetry_and_events(
     # Confirm Load-Switch turned ON
     fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[ON], timeout=2)
 
-    # Confirm telemetry IsOn is 1
+    # Confirm IsOn is ON
     value = get_is_on(fprime_test_api)
     assert value == ON, f"Expected IsOn = {ON} after TURN_ON, got {value}"
 
-    # Send turn_on command
+    # Send turn_off command
     turn_off(fprime_test_api)
 
     # Confirm Load-Switch turned OFF
     fprime_test_api.assert_event(f"{loadswitch}.StatusChanged", args=[OFF], timeout=2)
 
-    # Confirm telemetry IsOn is 0
+    # Confirm IsOn is OFF
     value = get_is_on(fprime_test_api)
     assert value == OFF, f"Expected IsOn = {OFF} after TURN_OFF, got {value}"

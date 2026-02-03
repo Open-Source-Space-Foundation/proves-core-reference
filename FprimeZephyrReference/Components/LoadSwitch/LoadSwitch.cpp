@@ -44,6 +44,12 @@ void LoadSwitch ::TURN_OFF_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void LoadSwitch ::GET_IS_ON_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Fw::On state = this->getLoadSwitchState();
+    this->log_ACTIVITY_LO_IsOn(state);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------

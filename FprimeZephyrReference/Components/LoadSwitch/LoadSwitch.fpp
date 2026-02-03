@@ -13,11 +13,17 @@ module Components {
         @ Command to turn the load switch off
         sync command TURN_OFF()
 
+        @ Command to get load switch state
+        sync command GET_IS_ON()
+
         @ Telemetry channel for load switch state
         telemetry IsOn: Fw.On
 
         @ Event for reporting load switch state change
         event StatusChanged($state: Fw.On) severity activity high id 1 format "Load switch state changed to {}"
+
+        @ Event for outputting current load switch state
+        event IsOn($state: Fw.On) severity activity low format "Current load switch state: {}"
 
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
