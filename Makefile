@@ -176,6 +176,10 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
 
+.PHONY: test-interactive
+test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
+	@$(UV_RUN) python FprimeZephyrReference/test/run_interactive_tests.py $(ARGS)
+
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:

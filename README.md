@@ -120,20 +120,20 @@ make test-integration TEST=mode_manager_test.py
 
 ### Testing for Flaky Tests
 
-To debug intermittent test failures (see [Issue #138](https://github.com/Open-Source-Space-Foundation/proves-core-reference/issues/138)), use the flaky test runner:
+To debug intermittent integration test failures, use the interactive test runner to run tests multiple times:
 
 ```sh
-# Clean up any stuck GDS processes first
-make delete-shadow-gds
+# Interactive mode - select tests with arrow keys
+make test-interactive
 
-# Run all known flaky tests multiple times
-python3 FprimeZephyrReference/test/int/run_flaky_tests.py --known-flaky --iterations 10
+# Run specific tests multiple times
+make test-interactive ARGS="--tests watchdog_test --cycles 10"
 
-# Run a specific test 20 times
-python3 FprimeZephyrReference/test/int/run_flaky_tests.py --test antenna_deployer_test --iterations 20 --timeout 60
+# Run all tests
+make test-interactive ARGS="--all --cycles 20"
 ```
 
-See [FLAKY_TEST_RUNNER.md](FprimeZephyrReference/test/int/FLAKY_TEST_RUNNER.md) for detailed documentation.
+The runner automatically detects flaky tests and shows detailed statistics.
 
 ## Running The Radio With CircuitPython
 
