@@ -2,8 +2,10 @@
  * Copyright (c) 2025
  * SPDX-License-Identifier: Apache-2.0
  *
- * Minimal driver skeleton for APMemory APS1604M QSPI PSRAM.
- * TO DO::: Fill in actual QSPI/SPI FOR RP2350 THIS IS A STUB FOR COMPILING!!!!!!!!!!!!!!!!!!!!!!!
+ * APMemory APS1604M 16Mbit (2MB) QSPI PSRAM driver.
+ *
+ * Datasheet: power-ramp 150µs (board); driver adds 200µs before first SPI access.
+ * Address A[20:0]; Enter Quad (0x35) in init for quad read/write.
  */
 
 #define DT_DRV_COMPAT aps_aps1604m
@@ -99,8 +101,26 @@ static int aps1604m_reset(const struct device* dev) {
     }
 
     k_mutex_unlock(&data->lock);
-    // Wait for device to complete reset (datasheet: 150µs + reset; 100ms is safe).
+    /* Wait for device to complete reset (datasheet: 150µs + reset; 100ms is safe). */
     k_sleep(K_MSEC(100));
+    return 0;
+}
+
+static int aps1604m_enter_quad_mode(const struct device* dev) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t cmd = APS1604M_CMD_ENTER_QUAD_MODE;
+    const struct spi_buf tx_buf = {.buf = &cmd, .len = 1};
+    const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
+    int err;
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_write_dt(&cfg->spi, &tx);
+    k_mutex_unlock(&data->lock);
+    if (err < 0) {
+        LOG_ERR("Enter Quad Mode failed %d", err);
+        return err;
+    }
     return 0;
 }
 
@@ -117,7 +137,11 @@ static int aps1604m_init(const struct device* dev) {
         }
     }
 
-    // check if the SPI bus is ready
+    /* Datasheet: from power ramp to end of 150µs, CLK low, CE# high, SI/SO/SIO low.
+     * Ensure we're past that before first SPI access (e.g. if init runs soon after power-up).
+     */
+    k_busy_wait(200);
+
     if (!spi_is_ready_dt(&cfg->spi)) {
         LOG_ERR("SPI bus not ready");
         return -EINVAL;
@@ -129,10 +153,16 @@ static int aps1604m_init(const struct device* dev) {
         return err;
     }
 
-    // read the device ID
     err = aps1604m_rdid(dev);
     if (err < 0) {
         LOG_ERR("Failed to initialize device, RDID check failed (err %d)", err);
+        return err;
+    }
+
+    /* Device powers up in SPI mode; send Enter Quad (0x35) so quad read/write work. */
+    err = aps1604m_enter_quad_mode(dev);
+    if (err < 0) {
+        LOG_ERR("Enter Quad Mode failed (err %d)", err);
         return err;
     }
 
