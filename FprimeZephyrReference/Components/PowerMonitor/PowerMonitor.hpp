@@ -47,6 +47,11 @@ class PowerMonitor final : public PowerMonitorComponentBase {
                                            U32 cmdSeq            //!< The command sequence number
                                            ) override;
 
+    //! Handler implementation for GET_TOTAL_POWER
+    void GET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq            //!< The command sequence number
+                                    ) override;
+
     // ----------------------------------------------------------------------
     // Helper methods
     // ----------------------------------------------------------------------
