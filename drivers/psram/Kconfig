@@ -21,3 +21,13 @@ config PSRAM_LOG_LEVEL
 	depends on PSRAM_APS1604M
 	help
 	  Log level for the APS1604M driver (0-4).
+
+config PSRAM_APS1604M_RAW_TEST
+	bool "Run raw PSRAM test (write then read over SPI, no driver)"
+	default n
+	depends on SPI
+	help
+	  At APPLICATION init: write 4 bytes at address 0, then read 4 bytes back.
+	  Use to see what happens when talking to the chip (no full driver).
+	  Requires PSRAM on an SPI bus: add -DOVERLAY=psram_spi_test.overlay and
+	  wire PSRAM to SPI0 CS1 (or edit overlay for your SPI/CS).

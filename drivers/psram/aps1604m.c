@@ -47,10 +47,6 @@ struct aps1604m_data {
     struct k_mutex lock;
 };
 
-struct aps1604m_data {
-    /* Add runtime state (e.g. lock, cache) when you implement read/write */
-};
-
 static int aps1604m_init(const struct device* dev) {
     const struct aps1604m_config* cfg = dev->config;
 
