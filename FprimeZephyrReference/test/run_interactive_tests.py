@@ -237,10 +237,10 @@ def get_cycle_count() -> Optional[int]:
     """Prompt user for number of cycles"""
     while True:
         try:
-            cycles_input = input("\nNumber of cycles to run (default: 1): ").strip()
+            cycles_input = input("\nNumber of cycles to run (default: 3): ").strip()
 
             if not cycles_input:
-                return 1
+                return 3
 
             cycles = int(cycles_input)
 
@@ -529,9 +529,9 @@ Examples:
     parser.add_argument(
         "--cycles",
         type=int,
-        default=1,
+        default=3,
         metavar="N",
-        help="Number of cycles to run each test (default: 1)",
+        help="Number of cycles to run each test (default: 3)",
     )
 
     parser.add_argument(
