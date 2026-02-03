@@ -10,16 +10,23 @@ help: ## Display this help.
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
 	@git submodule update --init --recursive
+	@echo "Applying fprime-gds version patch..."
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-gds-version.patch && \
+			echo "✓ Applied fprime-gds version patch"; \
+		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
-# Setting specific fprime-gds pre-release for features:
-# - file-uplink-cooldown arg
-# - file-uplink-chunk-size arg
-	@$(UV) pip install fprime-gds==4.1.1a2
 
 
 .PHONY: zephyr-setup
@@ -42,6 +49,10 @@ pre-commit-install: uv ## Install pre-commit hooks
 .PHONY: fmt
 fmt: pre-commit-install ## Lint and format files
 	@$(UVX) pre-commit run --all-files
+
+.PHONY: data-budget
+data-budget: fprime-venv ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
+	@$(UV_RUN) python3 tools/data_budget.py $(if $(VERBOSE),--verbose,)
 
 ##@ Documentation
 
@@ -103,7 +114,7 @@ docs-build: uv ## Build MkDocs documentation site
 	@$(UVX) --from mkdocs-material mkdocs build
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr generate-auth-key ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -131,6 +142,9 @@ generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
 	fi
 	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
+keys/proves.pem:
+	@mkdir -p keys
+	@cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
 
 SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_mcuboot
 .PHONY: build-mcuboot

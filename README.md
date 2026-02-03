@@ -62,19 +62,6 @@ The bootloader build outputs `mcuboot.uf2` at the repo root Put the board into U
 cp mcuboot.uf2 [path-to-your-board]
 ```
 
-#### Copy the signing key used by the bootloader
-
-MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
-
-For the default (development) key bundled with MCUBoot:
-
-```shell
-mkdir -p keys
-cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem keys/proves.pem
-```
-
-If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
-
 ## Running the code
 
 Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
@@ -102,6 +89,16 @@ Finally, run the fprime-gds.
 ```shell
 make gds
 ```
+
+#### Ensuring your authentication/signing is correct
+
+The Makefile will ensure the authentication is correct if you run the code on the same computer you flash on. However, if you switch from a computer that compiled the code you will likely have issues with authentication. Here are some things you may encounter
+
+MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
+
+If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
+
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 
