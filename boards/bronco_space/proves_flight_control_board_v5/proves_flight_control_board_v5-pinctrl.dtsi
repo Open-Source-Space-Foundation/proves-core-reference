@@ -1,4 +1,5 @@
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h>
+#include "proves_flight_control_board_v5-qspi-pinctrl.h"
 
 &pinctrl {
 	spi0_default: spi0_default {
@@ -39,6 +40,17 @@
 		group2 {
 			pinmux = <SPI1_RX_P12>;
 			input-enable;
+		};
+	};
+
+	qspi_default: qspi_default {
+		group1 {
+			pinmux =  <QSPI_SD0_P57>, <QSPI_SD1_P59>,
+				 <QSPI_SD2_P58>, <QSPI_SD3_P55>;
+			input-enable;
+		};
+		group2 {
+			pinmux = <QSPI_SCK_P56>;
 		};
 	};
 	i2c0_default: i2c0_default {

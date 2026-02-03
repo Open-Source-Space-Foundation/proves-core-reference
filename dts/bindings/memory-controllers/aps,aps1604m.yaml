@@ -7,13 +7,26 @@ description: |
 
 compatible: "aps,aps1604m"
 
-include: base.yaml
+include: [base.yaml, pinctrl-device.yaml]
 
 properties:
   reg:
     required: true
     description: Chip-select (address) and size in bytes (address-cells, size-cells from parent).
 
+  cs-gpios:
+    type: phandle-array
+    description: |
+      Chip select GPIO for this device (e.g. CE#). When the parent controller
+      does not drive CS, the driver uses this pin to assert/deassert around transfers.
+      Typically one entry, e.g. cs-gpios = <&gpio0 8 GPIO_ACTIVE_LOW>.
+
   spi-max-frequency:
     type: int
     description: Maximum SPI/QSPI clock frequency in Hz (e.g. 84000000 for 84 MHz).
+
+  size:
+    type: int
+    description: |
+      Memory size in bytes. Use when parent has no size-cells (e.g. under SPI bus
+      where reg is only chip-select). For APS1604M use 2097152 (2MB).
