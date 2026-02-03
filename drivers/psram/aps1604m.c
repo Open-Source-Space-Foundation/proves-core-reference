@@ -9,6 +9,8 @@
 #define DT_DRV_COMPAT aps_aps1604m
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/pinctrl.h>
+#include <zephyr/drivers/spi.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -17,7 +19,7 @@ LOG_MODULE_REGISTER(aps1604m, CONFIG_PSRAM_LOG_LEVEL);
 /* APS1604M instruction set */
 #define APS1604M_CMD_READ 0x03U       // Read Memory Code
 #define APS1604M_CMD_FAST_READ 0x0BU  // Fast Read Memory Code
-#define ASP1604M_CMD_READ_QUAD 0xEBU  // Quad Read Memory Code
+#define APS1604M_CMD_READ_QUAD 0xEBU  // Quad Read Memory Code (
 
 #define APS1604M_CMD_WRITE 0x02U       // Write Memory Code
 #define APS1604M_CMD_WRITE_QUAD 0x38U  // Quad Write Memory Code
@@ -57,9 +59,10 @@ static inline uint8_t build_mr0(uint8_t dq, uint8_t zou) {
 }
 
 struct aps1604m_config {
+    struct spi_dt_spec spi;
     size_t size_bytes;
     uint32_t spi_max_frequency;
-    bool readonly;
+    const struct pinctrl_dev_config* pcfg;
 };
 
 struct aps1604m_data {
@@ -106,6 +109,14 @@ static int aps1604m_init(const struct device* dev) {
     struct aps1604m_data* data = dev->data;
     int err;
 
+    if (cfg->pcfg != NULL) {
+        err = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
+        if (err < 0) {
+            LOG_ERR("pinctrl apply failed %d", err);
+            return err;
+        }
+    }
+
     // check if the SPI bus is ready
     if (!spi_is_ready_dt(&cfg->spi)) {
         LOG_ERR("SPI bus not ready");
@@ -118,31 +129,193 @@ static int aps1604m_init(const struct device* dev) {
         return err;
     }
 
-    // read the device ID, to implement later
-    // err = aps1604m_rdid(dev);
-    // if (err < 0) {
-    //     LOG_ERR("Failed to initialize device, RDID check failed (err %d)", err);
-    //     return err;
-    // }
+    // read the device ID
+    err = aps1604m_rdid(dev);
+    if (err < 0) {
+        LOG_ERR("Failed to initialize device, RDID check failed (err %d)", err);
+        return err;
+    }
 
     return 0;
 }
 
-/* Optional: expose size for other code until you add a full API */
-size_t aps1604m_get_size(const struct device* dev) {
+/*
+ * APS1604M command sequence (datasheet): opcode (1 byte) + 3-byte address (A[20:0], MSB first) + data.
+ * 2MB = 21-bit address; READ 0x03 / WRITE 0x02. Quad commands (0xEB/0x38) may have dummy cycles per datasheet.
+ */
+
+static int aps1604m_regular_read(const struct device* dev, off_t offset, void* buf, size_t len) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t cmd[4];
+    int err;
+
+    if (offset + len > cfg->size_bytes || len == 0) {
+        return -EINVAL;
+    }
+
+    cmd[0] = APS1604M_CMD_READ;
+    cmd[1] = (offset >> 16) & 0xFF;
+    cmd[2] = (offset >> 8) & 0xFF;
+    cmd[3] = offset & 0xFF;
+
+    const struct spi_buf tx_buf = {.buf = cmd, .len = sizeof(cmd)};
+    const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
+    const struct spi_buf rx_bufs[2] = {
+        {.buf = NULL, .len = sizeof(cmd)},
+        {.buf = buf, .len = len},
+    };
+    const struct spi_buf_set rx = {.buffers = rx_bufs, .count = ARRAY_SIZE(rx_bufs)};
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_transceive_dt(&cfg->spi, &tx, &rx);
+    k_mutex_unlock(&data->lock);
+
+    if (err < 0) {
+        LOG_ERR("read failed %d", err);
+    }
+    return err;
+}
+
+static int aps1604m_regular_write(const struct device* dev, off_t offset, const void* buf, size_t len) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t cmd[4];
+    int err;
+
+    if (offset + len > cfg->size_bytes || len == 0) {
+        return -EINVAL;
+    }
+
+    cmd[0] = APS1604M_CMD_WRITE;
+    cmd[1] = (offset >> 16) & 0xFF;
+    cmd[2] = (offset >> 8) & 0xFF;
+    cmd[3] = offset & 0xFF;
+
+    const struct spi_buf tx_bufs[2] = {
+        {.buf = cmd, .len = sizeof(cmd)},
+        {.buf = (void*)buf, .len = len},
+    };
+    const struct spi_buf_set tx = {.buffers = tx_bufs, .count = ARRAY_SIZE(tx_bufs)};
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_write_dt(&cfg->spi, &tx);
+    k_mutex_unlock(&data->lock);
+
+    if (err < 0) {
+        LOG_ERR("write failed %d", err);
+    }
+    return err;
+}
+
+/* Quad read: 0xEB + 3-byte addr + dummy (check datasheet) then data. Standard SPI API is single/dual;
+ * full quad often needs SoC QSPI (e.g. RP2350 QMI). Stub sends cmd+addr and receives; controller must support quad.
+ */
+static int aps1604m_quad_read(const struct device* dev, off_t offset, void* buf, size_t len) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t cmd[4];
+    int err;
+
+    if (offset + len > cfg->size_bytes || len == 0) {
+        return -EINVAL;
+    }
+
+    cmd[0] = APS1604M_CMD_READ_QUAD;
+    cmd[1] = (offset >> 16) & 0xFF;
+    cmd[2] = (offset >> 8) & 0xFF;
+    cmd[3] = offset & 0xFF;
+
+    const struct spi_buf tx_buf = {.buf = cmd, .len = sizeof(cmd)};
+    const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
+    const struct spi_buf rx_bufs[2] = {
+        {.buf = NULL, .len = sizeof(cmd)},
+        {.buf = buf, .len = len},
+    };
+    const struct spi_buf_set rx = {.buffers = rx_bufs, .count = ARRAY_SIZE(rx_bufs)};
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_transceive_dt(&cfg->spi, &tx, &rx);
+    k_mutex_unlock(&data->lock);
+
+    if (err < 0) {
+        LOG_ERR("quad read failed %d", err);
+    }
+    return err;
+}
+
+/* Quad write: 0x38 + 3-byte addr + data. Controller must drive quad data lines if in quad mode. */
+static int aps1604m_quad_write(const struct device* dev, off_t offset, const void* buf, size_t len) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t cmd[4];
+    int err;
+
+    if (offset + len > cfg->size_bytes || len == 0) {
+        return -EINVAL;
+    }
+
+    cmd[0] = APS1604M_CMD_WRITE_QUAD;
+    cmd[1] = (offset >> 16) & 0xFF;
+    cmd[2] = (offset >> 8) & 0xFF;
+    cmd[3] = offset & 0xFF;
+
+    const struct spi_buf tx_bufs[2] = {
+        {.buf = cmd, .len = sizeof(cmd)},
+        {.buf = (void*)buf, .len = len},
+    };
+    const struct spi_buf_set tx = {.buffers = tx_bufs, .count = ARRAY_SIZE(tx_bufs)};
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_write_dt(&cfg->spi, &tx);
+    k_mutex_unlock(&data->lock);
+
+    if (err < 0) {
+        LOG_ERR("quad write failed %d", err);
+    }
+    return err;
+}
+
+static int aps1604_size(const struct device* dev) {
     const struct aps1604m_config* cfg = dev->config;
     return cfg->size_bytes;
 }
 
-#define APS1604M_INIT(inst)                                                                                       \
-    static struct aps1604m_data aps1604m_data_##inst;                                                             \
-                                                                                                                  \
-    static const struct aps1604m_config aps1604m_config_##inst = {                                                \
-        .size_bytes = DT_INST_REG_SIZE(inst),                                                                     \
-        .spi_max_frequency = DT_INST_PROP_OR(inst, spi_max_frequency, 84000000),                                  \
-    };                                                                                                            \
-                                                                                                                  \
-    DEVICE_DT_INST_DEFINE(inst, aps1604m_init, NULL, &aps1604m_data_##inst, &aps1604m_config_##inst, POST_KERNEL, \
+static int aps1604m_rdid(const struct device* dev) {
+    const struct aps1604m_config* cfg = dev->config;
+    struct aps1604m_data* data = dev->data;
+    uint8_t id[4];
+    uint8_t cmd = APS1604M_CMD_READ_ID;
+    int err;
+
+    const struct spi_buf tx_buf = {.buf = &cmd, .len = sizeof(cmd)};
+    const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
+    const struct spi_buf rx_buf = {.buf = id, .len = sizeof(id)};
+    const struct spi_buf_set rx = {.buffers = &rx_buf, .count = 1};
+
+    k_mutex_lock(&data->lock, K_FOREVER);
+    err = spi_transceive_dt(&cfg->spi, &tx, &rx);
+    k_mutex_unlock(&data->lock);
+
+    if (err < 0) {
+        LOG_ERR("RDID failed %d", err);
+        return err;
+    }
+
+    LOG_INF("APS1604M RDID: %02X %02X %02X %02X", id[0], id[1], id[2], id[3]);
+    return 0;
+}
+
+#define APS1604M_INIT(inst)                                                                                        \
+    PINCTRL_DT_INST_DEFINE(inst);                                                                                  \
+    static struct aps1604m_data aps1604m_data_##inst;                                                              \
+    static const struct aps1604m_config aps1604m_config_##inst = {                                                 \
+        .spi = SPI_DT_SPEC_INST_GET(inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8)),                \
+        .size_bytes = DT_INST_REG_SIZE(inst) ? DT_INST_REG_SIZE(inst) : DT_INST_PROP_OR(inst, size, DT_SIZE_M(2)), \
+        .spi_max_frequency = DT_INST_PROP_OR(inst, spi_max_frequency, 84000000),                                   \
+        .pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                                                              \
+    };                                                                                                             \
+    DEVICE_DT_INST_DEFINE(inst, aps1604m_init, NULL, &aps1604m_data_##inst, &aps1604m_config_##inst, POST_KERNEL,  \
                           CONFIG_PSRAM_INIT_PRIORITY, NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(APS1604M_INIT)
