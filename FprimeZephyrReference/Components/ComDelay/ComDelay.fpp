@@ -1,5 +1,5 @@
 module Components {
-    constant DEFAULT_DIVIDER = 30
+    constant DEFAULT_DIVIDER = 299 # On a 1Hz input, outputs every 30s
     @ A component to delay com status until some further point
     passive component ComDelay {
         @ Rate schedule port used to trigger radio transmission
@@ -12,10 +12,10 @@ module Components {
         output port comStatusOut: Fw.SuccessCondition
 
         @ Divider of the incoming rate tick
-        param DIVIDER: U8 default DEFAULT_DIVIDER # Start slow i.e. on a 1S tick, transmit every 30S
+        param DIVIDER: U16 default DEFAULT_DIVIDER # Start slow i.e. on a 1S tick, transmit every 30S
 
         @ Divider set event
-        event DividerSet(divider: U8) severity activity high \
+        event DividerSet(divider: U16) severity activity high \
             format "Set divider to: {}"
 
         ###############################################################################

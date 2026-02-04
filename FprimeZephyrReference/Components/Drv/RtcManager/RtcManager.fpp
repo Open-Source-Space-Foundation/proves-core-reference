@@ -26,9 +26,6 @@ module Drv {
             t: Drv.TimeData @< Set the time
         ) opcode 0
 
-        @ TEST_UNCONFIGURE_DEVICE command to unconfigure the RTC device. Used for testing RTC failover to monotonic time since boot.
-        sync command TEST_UNCONFIGURE_DEVICE() opcode 1
-
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
         ##############################################################################
@@ -74,6 +71,13 @@ module Drv {
         event SecondValidationFailed(
             second: U32 @< The invalid second
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
+
+        ###############################################################################
+        # Port for canceling sequences on time change                                 #
+        ###############################################################################
+        @ Port for canceling running sequences when RTC time is set
+        @ Connected to seqCancelIn ports of Command, Payload, and SafeMode sequencers
+        output port cancelSequences: [3] Svc.CmdSeqCancel
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

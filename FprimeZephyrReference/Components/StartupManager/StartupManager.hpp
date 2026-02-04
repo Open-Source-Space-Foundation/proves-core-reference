@@ -50,6 +50,10 @@ class StartupManager final : public StartupManagerComponentBase {
     //! \return The quiescence start time
     Fw::Time update_quiescence_start();
 
+    // \brief get the system uptime
+    //!
+    Fw::Time get_uptime();
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports

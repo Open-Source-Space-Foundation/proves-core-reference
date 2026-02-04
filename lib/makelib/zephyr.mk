@@ -14,13 +14,13 @@ clean-zephyr: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export cle
 
 .PHONY: zephyr-config
 zephyr-config: fprime-venv ## Configure west
-	@test -f ../.west/config || { \
+	@test -f .west/config || { \
 		$(WEST) init --local .; \
 	}
 
 .PHONY: clean-zephyr-config
 clean-zephyr-config: ## Remove west configuration
-	rm -rf ../.west
+	rm -rf .west
 
 .PHONY: zephyr-workspace
 zephyr-workspace: fprime-venv ## Setup Zephyr bootloader, modules, and tools directories

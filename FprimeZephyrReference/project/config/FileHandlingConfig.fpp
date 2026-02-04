@@ -10,22 +10,22 @@ module FileHandlingConfig {
     }
 
     module StackSizes {
-        constant fileUplink    = 8 * 1024
-        constant fileDownlink  = 8 * 1024
-        constant fileManager   = 8 * 1024
-        constant prmDb         = 8 * 1024
+        constant fileUplink    = 4 * 1024
+        constant fileDownlink  = 4 * 1024
+        constant fileManager   = 4 * 1024
+        constant prmDb         = 4 * 1024
     }
 
     module Priorities {
-        constant fileUplink    = 11
-        constant fileDownlink  = 12
-        constant fileManager   = 13
-        constant prmDb         = 14
+        constant fileUplink    = 9
+        constant fileDownlink  = 9
+        constant prmDb         = 10
+        constant fileManager   = 15
     }
 
     # File downlink configuration constants
     module DownlinkConfig {
-        constant timeout        = 1000         # File downlink timeout in ms
+        constant timeout        = 5000         # File downlink timeout in ms
         constant cooldown       = 1000         # File downlink cooldown in ms
         constant cycleTime      = 1000         # File downlink cycle time in ms
         constant fileQueueDepth = 3           # File downlink queue depth

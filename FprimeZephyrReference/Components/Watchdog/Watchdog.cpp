@@ -38,12 +38,16 @@ void Watchdog ::start_handler(FwIndexType portNum) {
     // Start the watchdog
     this->m_run = true;
 
+    // Write initial telemetry value to ensure it's available immediately
+    this->tlmWrite_WatchdogTransitions(this->m_transitions);
+
     // Report watchdog started
     this->log_ACTIVITY_HI_WatchdogStart();
 }
 
 void Watchdog ::stop_handler(FwIndexType portNum) {
     // Stop the watchdog
+
     this->m_run = false;
 
     // Report watchdog stopped
@@ -64,8 +68,8 @@ void Watchdog ::START_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void Watchdog ::STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // call stop handler
+    this->prepareForReboot_out(0);
     this->stop_handler(0);
-
     // Provide command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

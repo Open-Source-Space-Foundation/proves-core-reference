@@ -11,7 +11,7 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName) {}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {}
 
 RtcManager ::~RtcManager() {}
 
@@ -28,11 +28,10 @@ void RtcManager ::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
-    // Get microseconds from system clock cycles
-    // Note: RV3028 does not provide sub-second precision, so this is
-    // just an approximation based on system cycles.
-    // FPrime expects microseconds in the range [0, 999999]
-    uint32_t useconds = k_cyc_to_us_near32(k_cycle_get_32()) % 1000000;
+    // Get system uptime
+    int64_t t = k_uptime_get();
+    U32 seconds_since_boot = static_cast<U32>(t / 1000);
+    U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
@@ -46,8 +45,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         }
 
         // Use monotonic time as fallback
-        uint32_t seconds = k_uptime_seconds();
-        time.set(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
+        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
 
@@ -60,14 +58,15 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Convert to time_t (seconds since epoch)
     errno = 0;
-    time_t seconds = timeutil_timegm(time_tm);
+    U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
     if (errno == ERANGE) {
         Fw::Logger::log("RTC returned invalid time");
         return;
     }
 
     // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(seconds), static_cast<U32>(useconds));
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time,
+             this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
 }
 
 // ----------------------------------------------------------------------
@@ -99,6 +98,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Store current time for logging
     Fw::Time time_before_set = this->getTime();
 
+    // Cancel any running sequences
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
         .tm_sec = static_cast<int>(t.get_Second()),
@@ -128,13 +135,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void RtcManager ::TEST_UNCONFIGURE_DEVICE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Unconfigure the RTC device by setting m_dev to nullptr
-    this->m_dev = nullptr;
-
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

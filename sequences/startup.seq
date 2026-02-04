@@ -1,10 +1,23 @@
-R00:00:00 ReferenceDeployment.startupManager.WAIT_FOR_QUIESCENCE
-R00:00:00 ReferenceDeployment.antennaDeployer.DEPLOY
+R00:00:10 CdhCore.events.SET_ID_FILTER, 570462208, ENABLED ; LORA APID unexpected sequence count
+R00:00:00 CdhCore.events.SET_ID_FILTER, 570445824, ENABLED ; Invalid Length (SpacePacketDeframer)
+R00:00:00 CdhCore.events.SET_ID_FILTER, 570425344, ENABLED ; Lora QueueOverflow
+R00:00:00 CdhCore.events.SET_ID_FILTER, 268439553, ENABLED ; RateGroupSlip (50)
+R00:00:00 CdhCore.events.SET_ID_FILTER, 268443649, ENABLED ; RateGroupSlip (10)
 
-; UPDATE ARM PARAMETERS
-R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SET FALSE
-R00:00:00 ReferenceDeployment.startupManager.ARMED_PRM_SAVE
+R00:45:00 ReferenceDeployment.antennaDeployer.DEPLOY
+R00:00:00 ReferenceDeployment.lora.TRANSMIT, DISABLED
+R00:00:00 ReferenceDeployment.lora.DATA_RATE_PRM_SET, SF_8
+R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 299
+R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 29
+R00:00:00 ReferenceDeployment.lora.CODING_RATE_PRM_SET, CR_4_5
+R00:00:00 ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET, BW_125_KHZ
+R00:00:00 ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SET, BW_125_KHZ
 
-R00:00:00 FileHandling.prmDb.PRM_SAVE_FILE
 
 R00:00:00 ReferenceDeployment.lora.TRANSMIT ENABLED
+
+; Exit Safe Mode should turn on faces
+R00:00:00 ReferenceDeployment.modeManager.EXIT_SAFE_MODE
+
+R00:05:00 ReferenceDeployment.detumbleManager.SET_MODE, AUTO
+R03:00:00 ReferenceDeployment.detumbleManager.SET_MODE, DISABLED

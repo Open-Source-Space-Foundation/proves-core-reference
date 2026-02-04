@@ -43,13 +43,24 @@ class LoadSwitch final : public LoadSwitchComponentBase {
                              U32 cmdSeq            //!< The command sequence number
                              ) override;
 
+    //! Handler implementation for turnOn
+    void turnOn_handler(FwIndexType portNum  //!< The port number
+                        ) override;
+
+    //! Handler implementation for turnOff
+    void turnOff_handler(FwIndexType portNum  //!< The port number
+                         ) override;
+
     // ----------------------------------------------------------------------
-    // Handler implementations for typed input ports
+    // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for Reset
-    void Reset_handler(FwIndexType portNum  //!< The port number
-                       ) override;
+    //! Set the load switch state (common implementation for commands and ports)
+    void setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
+    );
+
+    //! Get current load switch state
+    Fw::On getLoadSwitchState();  //<! Get the current state (ON or OFF)
 };
 
 }  // namespace Components
