@@ -6,6 +6,8 @@
 
 #include "FprimeZephyrReference/Components/ResetManager/ResetManager.hpp"
 
+#include <Os/Task.hpp>
+
 #include <zephyr/sys/reboot.h>
 
 namespace Components {
@@ -28,6 +30,10 @@ void ResetManager ::coldReset_handler(FwIndexType portNum) {
 
 void ResetManager ::warmReset_handler(FwIndexType portNum) {
     this->handleWarmReset();
+}
+
+void ResetManager ::radioReset_handler(FwIndexType portNum) {
+    this->handleRadioReset();
 }
 
 // ----------------------------------------------------------------------
@@ -87,14 +93,20 @@ void ResetManager ::handleRadioReset() {
     // Log the radio reset event
     this->log_ACTIVITY_HI_INITIATE_RADIO_RESET();
 
-    // Pull radio reset line LOW (active low) to reset the radio
-    this->radioResetOut_out(0, Fw::Logic::LOW);
+    // Only toggle GPIO if port is connected (allows testing without hardware)
+    if (this->isConnected_radioResetOut_OutputPort(0)) {
+        // Pull radio reset line LOW (active low reset)
+        this->radioResetOut_out(0, Fw::Logic::LOW);
 
-    // Hold reset for a short time (implementation could add a delay if needed)
-    // For now, we'll just pulse it low then high
+        // Hold reset for minimum duration (50ms is safe for most radio modules)
+        Os::Task::delay(Fw::TimeInterval(0, 50000));  // 0 seconds, 50000 microseconds = 50ms
 
-    // Release reset line (set back to HIGH)
-    this->radioResetOut_out(0, Fw::Logic::HIGH);
+        // Release reset line HIGH
+        this->radioResetOut_out(0, Fw::Logic::HIGH);
+
+        // Allow radio time to reinitialize (100ms typical)
+        Os::Task::delay(Fw::TimeInterval(0, 100000));  // 0 seconds, 100000 microseconds = 100ms
+    }
 }
 
 }  // namespace Components

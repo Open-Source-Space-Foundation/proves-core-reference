@@ -72,6 +72,9 @@ module Components {
         @ Radio Module Reset GPIO
         output port resetSend: Drv.GpioWrite
 
+        @ Port to request radio reset from fault manager
+        output port resetRequest: Fw.Signal
+
         @ S-Band TX Enable GPIO (separate from reset)
         output port txEnable: Drv.GpioWrite
 

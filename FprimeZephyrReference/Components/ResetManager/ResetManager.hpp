@@ -41,6 +41,12 @@ class ResetManager final : public ResetManagerComponentBase {
     void warmReset_handler(FwIndexType portNum  //!< The port number
                            ) override;
 
+    //! Handler implementation for radioReset
+    //!
+    //! Port to invoke a radio reset
+    void radioReset_handler(FwIndexType portNum  //!< The port number
+                            ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands

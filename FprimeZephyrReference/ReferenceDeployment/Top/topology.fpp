@@ -293,6 +293,8 @@ module ReferenceDeployment {
 
     connections RadioReset {
       resetManager.radioResetOut -> gpioRadioReset.gpioWrite
+      # Automatic radio reset request (uncomment when sband is enabled)
+      #sband.resetRequest -> resetManager.radioReset
     }
 
     connections LoadSwitches {
