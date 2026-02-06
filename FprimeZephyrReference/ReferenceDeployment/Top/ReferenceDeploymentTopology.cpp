@@ -117,6 +117,10 @@ void setupTopology(const TopologyState& state) {
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 
+    printk("Running PSRAM test\n");
+    // aps1604m_test(DEVICE_DT_GET(DT_NODELABEL(psram0)));
+    printk("PSRAM test completed\n");
+
     // Try to configure the RTC device first because all other components need time
     rtcManager.configure(state.rtcDevice);
 
@@ -184,7 +188,7 @@ void setupTopology(const TopologyState& state) {
 
 void startRateGroups() {
     timer.configure(BASE_RATEGROUP_PERIOD_MS);
-    timer.start();
+    print timer.start();
     while (1) {
         timer.cycle();
     }

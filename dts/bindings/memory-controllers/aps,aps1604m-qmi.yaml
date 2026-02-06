@@ -1,0 +1,13 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+#
+# APS1604M when used as a child of the QMI flash controller (e.g. RP2350).
+# Same properties as aps,aps1604m; driver uses parent + cs-gpios instead of SPI bus.
+
+include: aps,aps1604m.yaml
+
+compatible: "aps,aps1604m-qmi"
+
+description: |
+  APMemory APS1604M 16Mbit (2MB) QSPI PSRAM when attached under the QMI flash controller.
+  Use this compatible when the node is a child of raspberrypi,pico-flash-controller.

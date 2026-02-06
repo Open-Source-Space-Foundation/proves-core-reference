@@ -18,6 +18,7 @@ if (FPRIME_PLATFORM STREQUAL "Zephyr")
             ${FPRIME_CURRENT_MODULE}
         SOURCES
             "${CMAKE_CURRENT_LIST_DIR}/Main.cpp"
+            "${CMAKE_CURRENT_LIST_DIR}/../../drivers/psram/aps1604m_test.c"
         DEPENDS
             ${FPRIME_CURRENT_MODULE}_Top
     )

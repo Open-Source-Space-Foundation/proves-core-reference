@@ -4,9 +4,10 @@
 config PSRAM_APS1604M
 	bool "APMemory APS1604M QSPI PSRAM"
 	default y
-	depends on DT_HAS_APS_APS1604M_ENABLED
+	depends on DT_HAS_APS_APS1604M_ENABLED || DT_HAS_APS_APS1604M_QMI_ENABLED
 	help
 	  Enable driver for APMemory APS1604M 16Mbit (2MB) QSPI PSRAM.
+	  Supports only QMI flash controller (aps,aps1604m-qmi). SPI-bus instances are not supported.
 
 config PSRAM_INIT_PRIORITY
 	int "PSRAM driver init priority"

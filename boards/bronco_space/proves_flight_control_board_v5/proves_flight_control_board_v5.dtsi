@@ -63,7 +63,7 @@ zephyr_udc0: &usbd {
 	status = "okay";
 	/* APS1604M-3SQR: 16Mbit (2MB) PSRAM. CE#=GPIO8 active low; CLK/SIO applied via pinctrl in driver. */
 	psram0: psram@0 {
-		compatible = "aps,aps1604m";
+		compatible = "aps,aps1604m-qmi";
 		reg = <0 DT_SIZE_M(2)>;          /* CS0, 16Mbit = 2MB per datasheet */
 		spi-max-frequency = <84000000>;  /* Max for quad SPI per datasheet */
 		cs-gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
