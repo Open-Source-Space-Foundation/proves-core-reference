@@ -57,8 +57,7 @@ fprime-gds -n --dictionary ./build-artifacts/zephyr/fprime-zephyr-deployment/dic
 
 
 ## Any Issues?
-Refer to the [additional resources][additional-resources] section in the main README file for potential fixes.
+Refer to the [additional resources](../additional-resources/troubleshooting.md) for potential fixes.
 
 <!-- Links -->
 [board-list]: ../additional-resources/board-list.md
-[additional-resources]: ../../README.md#additional-resources

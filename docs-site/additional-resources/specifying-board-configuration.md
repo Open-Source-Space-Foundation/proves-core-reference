@@ -58,5 +58,5 @@ CONFIG_USB_DEVICE_PID=<PID>
 # Return to the [Initial Setup Documentation][initial-setup]
 
 <!-- Links -->
-[initial-setup]: ../main-content/initial-setup.md
+[initial-setup]: ../getting-started/initial-setup.md
 [custom-board-config]: https://docs.zephyrproject.org/latest/hardware/porting/board_porting.html

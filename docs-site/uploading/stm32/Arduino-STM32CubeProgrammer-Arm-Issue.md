@@ -63,4 +63,4 @@ The script should look like this:
 
 # Return to the [STM32 Uploading Guide][stm32]
 
-[stm32]: ../uploading/stm32.md
+[stm32]: stm32.md
