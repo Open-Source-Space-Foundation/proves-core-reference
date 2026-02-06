@@ -10,8 +10,11 @@ PROVES Core Reference is a reference software implementation combining F Prime (
 
 ### [Getting Started](getting-started/initial-setup.md)
 Step-by-step guides to set up your development environment, build the firmware, and flash it to your board:
-- [Initial Setup](getting-started/initial-setup.md) - Clone the repository and set up dependencies
-- [Build, Flash, and Run](getting-started/build-flash-run.md) - Build and deploy the firmware
+
+- [Initial Setup](getting-started/initial-setup.md) 
+- Clone the repository and set up dependencies
+- [Build, Flash, and Run](getting-started/build-flash-run.md) 
+- Build and deploy the firmware
 
 ### Component Software Design Documents (SDDs)
 
@@ -45,7 +48,9 @@ Board-specific instructions for flashing firmware:
 
 ### [Additional Resources](additional-resources/board-list.md)
 Troubleshooting guides and additional configuration information:
-- [Board List](additional-resources/board-list.md) - Tested boards and their configurations
+
+- [Board List](additional-resources/board-list.md) 
+- Tested boards and their configurations
 - [Specifying Board Configuration](additional-resources/specifying-board-configuration.md)
 - [Troubleshooting](additional-resources/troubleshooting.md)
 - [WSL Notes](additional-resources/wsl-notes.md)

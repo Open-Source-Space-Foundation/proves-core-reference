@@ -7,4 +7,4 @@ command-line-options:
   frame-size: 248
   framing-selection: authenticate-space-data-link
   file-uplink-cooldown: 0.400
-  file-uplink-chunk-size: 204
+  file-uplink-chunk-size: 64
