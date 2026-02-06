@@ -12,9 +12,10 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- What type of documentation needs attention? -->
 <!-- Options: -->
 <!-- - README.md -->
-<!-- - Setup/Installation Guide (docs/main-content/) -->
-<!-- - Board-Specific Documentation (docs/additional-resources/) -->
-<!-- - Component Documentation (SDDs) -->
+<!-- - Setup/Installation Guide (docs-site/getting-started/) -->
+<!-- - Board-Specific Documentation (docs-site/additional-resources/) -->
+<!-- - Uploading Firmware Guide (docs-site/uploading/) -->
+<!-- - Component Documentation (SDDs in docs-site/components/) -->
 <!-- - Build/Integration Guide -->
 <!-- - Testing Documentation -->
 <!-- - Code Comments -->
@@ -26,7 +27,7 @@ Thanks for helping improve our documentation! Please provide details about what 
 ## Documentation Location
 
 <!-- Path or URL to the documentation that needs updating -->
-<!-- Example: docs/main-content/initial-setup.md or FprimeZephyrReference/Components/MagnetorquerManager/README.md -->
+<!-- Example: docs-site/getting-started/initial-setup.md or FprimeZephyrReference/Components/MagnetorquerManager/README.md -->
 
 ## Issue Type
 

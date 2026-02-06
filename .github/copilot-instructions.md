@@ -189,9 +189,11 @@ boards/               # Custom board definitions
     ├── proves_flight_control_board_v5c/    # Variant C (LED on GPIO 24)
     └── proves_flight_control_board_v5d/    # Variant D (standard configuration)
 
-docs/
-├── main-content/     # Setup and build documentation
-└── additional-resources/  # Board-specific guides, troubleshooting
+docs-site/
+├── getting-started/     # Setup and build documentation
+├── additional-resources/  # Board-specific guides, troubleshooting
+├── uploading/           # Board-specific firmware upload instructions
+└── components/          # Component SDD documentation
 ```
 
 ### Key Architecture Points
@@ -345,7 +347,7 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 make bootloader
 ```
 
-This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs/additional-resources/board-list.md`.
+This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs-site/additional-resources/board-list.md`.
 
 ### Issue: Integration tests fail to connect
 
@@ -368,7 +370,7 @@ This automatically detects if the board is already in bootloader mode and trigge
   sh ~/Library/Arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh \
     -i swd -f build-artifacts/zephyr/zephyr.hex -c /dev/cu.usbmodem142203
   ```
-- See `docs/additional-resources/board-list.md` for tested boards
+- See `docs-site/additional-resources/board-list.md` for tested boards
 
 ## File Modification Guidelines
 
@@ -548,6 +550,6 @@ These instructions are comprehensive and validated. **Only search for additional
 
 - Instructions are incomplete for your specific task
 - You encounter errors not covered in "Common Issues"
-- You need board-specific flashing instructions (see docs/)
+- You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
