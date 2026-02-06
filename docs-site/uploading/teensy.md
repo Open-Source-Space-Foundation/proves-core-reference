@@ -10,16 +10,16 @@ These steps were tested for the following boards:
 1. Follow the `teensy_loader_cli` installation guide [here][teensy-loader-cli-guide]
 2. If needed, add the `teensy_loader_cli` to the PATH.
 
-> [!NOTE]
-> Mac users can install the `teensy_loader_cli` using homebrew.
-> To install using homebrew, run the following command:
-> ```zsh
-> brew install teensy_loader_cli
-> ```
+!!! note
+    Mac users can install the `teensy_loader_cli` using homebrew.
+    To install using homebrew, run the following command:
+    ```zsh
+    brew install teensy_loader_cli
+    ```
 
 ## Flashing the Board
 ```sh
-# In fprime-zephyr-reference
+# In proves-core-reference
 
 # Teensy 4.1
 teensy_loader_cli -v -mmcu=TEENSY41 -w build-fprime-automatic-zephyr/zephyr/zephyr.hex
