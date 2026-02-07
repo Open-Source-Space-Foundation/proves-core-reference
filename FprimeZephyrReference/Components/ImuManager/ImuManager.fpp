@@ -103,6 +103,18 @@ module Components {
         @ Temetry channel for magnetometer sampling frequency
         telemetry MagnetometerSamplingFrequency: Lis2mdlSamplingFrequency
 
+        @ ACCELEROMETER_SAMPLING_FREQUENCY parameter value
+        telemetry AccelerometerSamplingFrequencyParam: Lsm6dsoSamplingFrequency
+
+        @ GYROSCOPE_SAMPLING_FREQUENCY parameter value
+        telemetry GyroscopeSamplingFrequencyParam: Lsm6dsoSamplingFrequency
+
+        @ MAGNETOMETER_SAMPLING_FREQUENCY parameter value
+        telemetry MagnetometerSamplingFrequencyParam: Lis2mdlSamplingFrequency
+
+        @ AXIS_ORIENTATION parameter value
+        telemetry AxisOrientationParam: AxisOrientation
+
         ### Events ###
 
         @ Event for reporting LIS2MDL not ready error
@@ -125,6 +137,18 @@ module Components {
 
         @ Event to report LIS2MDL magnetometer sampling frequency of 0 Hz
         event MagnetometerSamplingFrequencyZeroHz() severity warning low format "LIS2MDL magnetometer sampling frequency is set to 0 Hz" throttle 5
+
+        @ Event when ACCELEROMETER_SAMPLING_FREQUENCY parameter is set
+        event AccelerometerSamplingFrequencyParamSet(value: Lsm6dsoSamplingFrequency) severity activity high format "ACCELEROMETER_SAMPLING_FREQUENCY parameter set to {}."
+
+        @ Event when GYROSCOPE_SAMPLING_FREQUENCY parameter is set
+        event GyroscopeSamplingFrequencyParamSet(value: Lsm6dsoSamplingFrequency) severity activity high format "GYROSCOPE_SAMPLING_FREQUENCY parameter set to {}."
+
+        @ Event when MAGNETOMETER_SAMPLING_FREQUENCY parameter is set
+        event MagnetometerSamplingFrequencyParamSet(value: Lis2mdlSamplingFrequency) severity activity high format "MAGNETOMETER_SAMPLING_FREQUENCY parameter set to {}."
+
+        @ Event when AXIS_ORIENTATION parameter is set
+        event AxisOrientationParamSet(value: AxisOrientation) severity activity high format "AXIS_ORIENTATION parameter set to {}."
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

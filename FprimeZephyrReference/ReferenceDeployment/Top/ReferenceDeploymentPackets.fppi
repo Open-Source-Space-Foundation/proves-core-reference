@@ -247,6 +247,81 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.ZTurnsParam
   }
 
+  packet StartupManagerParams id 23 group 6 {
+    ReferenceDeployment.startupManager.ArmedParam
+    ReferenceDeployment.startupManager.QuiescenceTimeParam
+    ReferenceDeployment.startupManager.BootCountFileParam
+  }
+
+  packet ModeManagerParams id 24 group 6 {
+    ReferenceDeployment.modeManager.SafeModeEntryVoltageParam
+    ReferenceDeployment.modeManager.SafeModeRecoveryVoltageParam
+    ReferenceDeployment.modeManager.SafeModeDebounceSecondsParam
+    ReferenceDeployment.modeManager.SafemodeSequenceFileParam
+  }
+
+  packet ImuManagerParams id 25 group 6 {
+    ReferenceDeployment.imuManager.AccelerometerSamplingFrequencyParam
+    ReferenceDeployment.imuManager.GyroscopeSamplingFrequencyParam
+    ReferenceDeployment.imuManager.MagnetometerSamplingFrequencyParam
+    ReferenceDeployment.imuManager.AxisOrientationParam
+  }
+
+  packet AntennaDeployerParams id 26 group 6 {
+    ReferenceDeployment.antennaDeployer.RetryDelaySecParam
+    ReferenceDeployment.antennaDeployer.MaxDeployAttemptsParam
+    ReferenceDeployment.antennaDeployer.BurnDurationSecParam
+  }
+
+  packet BurnwireParams id 27 group 6 {
+    ReferenceDeployment.burnwire.SafetyTimerParam
+  }
+
+  packet ComDelayParams id 28 group 6 {
+    ReferenceDeployment.downlinkDelay.DividerParam
+  }
+
+  packet AuthenticateParams id 29 group 6 {
+    ComCcsdsLora.authenticatelora.SeqNumWindowParam
+    ComCcsdsUart.authenticate.SeqNumWindowParam
+  }
+
+  packet AuthenticationRouterParams id 30 group 6 {
+    ComCcsdsLora.authenticationRouter.CommLossTimeParam
+    ComCcsdsLora.authenticationRouter.CommLossTimeStartFileParam
+    ComCcsdsUart.authenticationRouter.CommLossTimeParam
+    ComCcsdsUart.authenticationRouter.CommLossTimeStartFileParam
+  }
+
+  packet Veml6031ManagerParams id 31 group 6 {
+    ReferenceDeployment.veml6031Face0Manager.GainParam
+    ReferenceDeployment.veml6031Face0Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face0Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face1Manager.GainParam
+    ReferenceDeployment.veml6031Face1Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face1Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face2Manager.GainParam
+    ReferenceDeployment.veml6031Face2Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face2Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face3Manager.GainParam
+    ReferenceDeployment.veml6031Face3Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face3Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face5Manager.GainParam
+    ReferenceDeployment.veml6031Face5Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face5Manager.EffectivePhotodiodeSizeParam
+    ReferenceDeployment.veml6031Face6Manager.GainParam
+    ReferenceDeployment.veml6031Face6Manager.IntegrationTimeParam
+    ReferenceDeployment.veml6031Face6Manager.EffectivePhotodiodeSizeParam
+  }
+
+  # SBand is currently commented out in the deployment
+  #packet SBandParams id 32 group 6 {
+  #  sband.DataRateParam
+  #  sband.CodingRateParam
+  #  sband.BandwidthTxParam
+  #  sband.BandwidthRxParam
+  #}
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
@@ -318,5 +393,12 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   ReferenceDeployment.watchdog.WatchdogTransitions
+
+  ReferenceDeployment.startupManager.QuiescenceStartFileParam
+  ReferenceDeployment.startupManager.StartupSequenceFileParam
+
+  ReferenceDeployment.veml6031Face7Manager.GainParam
+  ReferenceDeployment.veml6031Face7Manager.IntegrationTimeParam
+  ReferenceDeployment.veml6031Face7Manager.EffectivePhotodiodeSizeParam
 
 }

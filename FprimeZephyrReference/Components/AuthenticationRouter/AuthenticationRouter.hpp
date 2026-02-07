@@ -25,6 +25,10 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
     ~AuthenticationRouter();
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for user-defined typed input ports
     // ----------------------------------------------------------------------

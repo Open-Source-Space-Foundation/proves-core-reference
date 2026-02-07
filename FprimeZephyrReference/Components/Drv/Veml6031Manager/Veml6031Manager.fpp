@@ -102,6 +102,26 @@ module Drv {
         @ Event for reporting visible light lux
         event VisibleLight(lux: F32) severity activity high format "Visible light: {} lux"
 
+        @ Event when GAIN parameter is set
+        event GainParamSet(value: GAIN) severity activity high format "GAIN parameter set to {}."
+
+        @ Event when INTEGRATION_TIME parameter is set
+        event IntegrationTimeParamSet(value: IT) severity activity high format "INTEGRATION_TIME parameter set to {}."
+
+        @ Event when EFFECTIVE_PHOTODIODE_SIZE parameter is set
+        event EffectivePhotodiodeSizeParamSet(value: DIV4) severity activity high format "EFFECTIVE_PHOTODIODE_SIZE parameter set to {}."
+
+        #### Telemetry for parameters ####
+
+        @ GAIN parameter value
+        telemetry GainParam: GAIN
+
+        @ INTEGRATION_TIME parameter value
+        telemetry IntegrationTimeParam: IT
+
+        @ EFFECTIVE_PHOTODIODE_SIZE parameter value
+        telemetry EffectivePhotodiodeSizeParam: DIV4
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

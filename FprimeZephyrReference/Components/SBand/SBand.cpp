@@ -329,4 +329,48 @@ void SBand ::deferredTransmitCmd_internalInterfaceHandler(const SBandTransmitSta
     }
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void SBand ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case SBand::PARAMID_DATA_RATE: {
+            Fw::ParamValid is_valid;
+            SBandDataRate parameter = this->paramGet_DATA_RATE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_DataRateParamSet(parameter);
+                this->tlmWrite_DataRateParam(parameter);
+            }
+        } break;
+        case SBand::PARAMID_CODING_RATE: {
+            Fw::ParamValid is_valid;
+            SBandCodingRate parameter = this->paramGet_CODING_RATE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_CodingRateParamSet(parameter);
+                this->tlmWrite_CodingRateParam(parameter);
+            }
+        } break;
+        case SBand::PARAMID_BANDWIDTH_TX: {
+            Fw::ParamValid is_valid;
+            SBandBandwidth parameter = this->paramGet_BANDWIDTH_TX(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_BandwidthTxParamSet(parameter);
+                this->tlmWrite_BandwidthTxParam(parameter);
+            }
+        } break;
+        case SBand::PARAMID_BANDWIDTH_RX: {
+            Fw::ParamValid is_valid;
+            SBandBandwidth parameter = this->paramGet_BANDWIDTH_RX(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_BandwidthRxParamSet(parameter);
+                this->tlmWrite_BandwidthRxParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components

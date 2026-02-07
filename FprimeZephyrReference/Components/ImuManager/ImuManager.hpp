@@ -33,6 +33,10 @@ class ImuManager final : public ImuManagerComponentBase {
     void configure(const struct device* lis2mdl, const struct device* lsm6dso);
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------

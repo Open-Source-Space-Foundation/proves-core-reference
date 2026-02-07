@@ -252,4 +252,40 @@ Fw::Success Veml6031Manager ::configureSensorAttributes(sensor_channel chan) {
     return Fw::Success::SUCCESS;
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void Veml6031Manager ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case Veml6031Manager::PARAMID_GAIN: {
+            Fw::ParamValid is_valid;
+            GAIN parameter = this->paramGet_GAIN(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_GainParamSet(parameter);
+                this->tlmWrite_GainParam(parameter);
+            }
+        } break;
+        case Veml6031Manager::PARAMID_INTEGRATION_TIME: {
+            Fw::ParamValid is_valid;
+            IT parameter = this->paramGet_INTEGRATION_TIME(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_IntegrationTimeParamSet(parameter);
+                this->tlmWrite_IntegrationTimeParam(parameter);
+            }
+        } break;
+        case Veml6031Manager::PARAMID_EFFECTIVE_PHOTODIODE_SIZE: {
+            Fw::ParamValid is_valid;
+            DIV4 parameter = this->paramGet_EFFECTIVE_PHOTODIODE_SIZE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_EffectivePhotodiodeSizeParamSet(parameter);
+                this->tlmWrite_EffectivePhotodiodeSizeParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Drv

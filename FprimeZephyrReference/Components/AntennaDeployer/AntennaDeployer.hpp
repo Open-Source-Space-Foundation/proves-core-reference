@@ -25,6 +25,10 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     ~AntennaDeployer();
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations
     // ----------------------------------------------------------------------

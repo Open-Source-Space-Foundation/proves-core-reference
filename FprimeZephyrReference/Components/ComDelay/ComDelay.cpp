@@ -26,6 +26,7 @@ void ComDelay ::parameterUpdated(FwPrmIdType id) {
             U16 new_divider = this->paramGet_DIVIDER(is_valid);
             if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
                 this->log_ACTIVITY_HI_DividerSet(new_divider);
+                this->tlmWrite_DividerParam(new_divider);
             }
         } break;
         default:

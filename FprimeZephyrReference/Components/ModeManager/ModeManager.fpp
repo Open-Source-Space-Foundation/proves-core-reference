@@ -157,6 +157,26 @@ module Components {
             severity warning low \
             format "SafeMode Request Ignored: Already in Safe Mode"
 
+        @ Event when SafeModeEntryVoltage parameter is set
+        event SafeModeEntryVoltageParamSet(value: F32) \
+            severity activity high \
+            format "SafeModeEntryVoltage parameter set to {} V."
+
+        @ Event when SafeModeRecoveryVoltage parameter is set
+        event SafeModeRecoveryVoltageParamSet(value: F32) \
+            severity activity high \
+            format "SafeModeRecoveryVoltage parameter set to {} V."
+
+        @ Event when SafeModeDebounceSeconds parameter is set
+        event SafeModeDebounceSecondsParamSet(value: U32) \
+            severity activity high \
+            format "SafeModeDebounceSeconds parameter set to {} seconds."
+
+        @ Event when SAFEMODE_SEQUENCE_FILE parameter is set
+        event SafemodeSequenceFileParamSet(value: string) \
+            severity activity high \
+            format "SAFEMODE_SEQUENCE_FILE parameter set to '{}'."
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -184,6 +204,18 @@ module Components {
         param SafeModeDebounceSeconds: U32 default 10
 
         param SAFEMODE_SEQUENCE_FILE: string default "/seq/enter_safe.bin"
+
+        @ SafeModeEntryVoltage parameter value
+        telemetry SafeModeEntryVoltageParam: F32
+
+        @ SafeModeRecoveryVoltage parameter value
+        telemetry SafeModeRecoveryVoltageParam: F32
+
+        @ SafeModeDebounceSeconds parameter value
+        telemetry SafeModeDebounceSecondsParam: U32
+
+        @ SAFEMODE_SEQUENCE_FILE parameter value
+        telemetry SafemodeSequenceFileParam: string
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

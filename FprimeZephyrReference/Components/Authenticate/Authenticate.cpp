@@ -350,4 +350,24 @@ void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void Authenticate ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case Authenticate::PARAMID_SEQ_NUM_WINDOW: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_SEQ_NUM_WINDOW(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SeqNumWindowParamSet(parameter);
+                this->tlmWrite_SeqNumWindowParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components

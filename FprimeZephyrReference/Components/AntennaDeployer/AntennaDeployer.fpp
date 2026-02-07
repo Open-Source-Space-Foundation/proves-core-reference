@@ -73,6 +73,21 @@ module Components {
           severity warning high \
           format "File operation failed: {} on file {}"
 
+        @ Event when RETRY_DELAY_SEC parameter is set
+        event RetryDelaySecParamSet(value: U32) \
+          severity activity high \
+          format "RETRY_DELAY_SEC parameter set to {} seconds."
+
+        @ Event when MAX_DEPLOY_ATTEMPTS parameter is set
+        event MaxDeployAttemptsParamSet(value: U32) \
+          severity activity high \
+          format "MAX_DEPLOY_ATTEMPTS parameter set to {}."
+
+        @ Event when BURN_DURATION_SEC parameter is set
+        event BurnDurationSecParamSet(value: U32) \
+          severity activity high \
+          format "BURN_DURATION_SEC parameter set to {} seconds."
+
         ######################################################################
         # Ports
         ######################################################################
@@ -96,6 +111,15 @@ module Components {
 
         @ Duration (seconds) for which to hold each burn attempt before issuing STOP
         param BURN_DURATION_SEC: U32 default 8
+
+        @ RETRY_DELAY_SEC parameter value
+        telemetry RetryDelaySecParam: U32
+
+        @ MAX_DEPLOY_ATTEMPTS parameter value
+        telemetry MaxDeployAttemptsParam: U32
+
+        @ BURN_DURATION_SEC parameter value
+        telemetry BurnDurationSecParam: U32
 
         ########################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, Parameters

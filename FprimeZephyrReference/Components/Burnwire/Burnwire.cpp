@@ -81,4 +81,24 @@ void Burnwire ::STOP_BURNWIRE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void Burnwire ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case Burnwire::PARAMID_SAFETY_TIMER: {
+            Fw::ParamValid is_valid;
+            U32 parameter = this->paramGet_SAFETY_TIMER(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_SafetyTimerParamSet(parameter);
+                this->tlmWrite_SafetyTimerParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Components

@@ -91,11 +91,25 @@ module Svc {
             format "Command Loss Timer Failed to update most recent time" \
             throttle 1
 
+        @ Event when COMM_LOSS_TIME parameter is set
+        event CommLossTimeParamSet(value: Fw.TimeIntervalValue) severity activity high \
+            format "COMM_LOSS_TIME parameter set to {}."
+
+        @ Event when COMM_LOSS_TIME_START_FILE parameter is set
+        event CommLossTimeStartFileParamSet(value: string) severity activity high \
+            format "COMM_LOSS_TIME_START_FILE parameter set to '{}'."
+
         @ Command Loss Time in seconds by Default: one day = 3*60*60*24
         param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 3*60*60*24, useconds = 0}
 
         @ File to Read last command loss time from
         param COMM_LOSS_TIME_START_FILE: string default "/comm_loss_start.bin"
+
+        @ COMM_LOSS_TIME parameter value
+        telemetry CommLossTimeParam: Fw.TimeIntervalValue
+
+        @ COMM_LOSS_TIME_START_FILE parameter value
+        telemetry CommLossTimeStartFileParam: string
 
 
         ###############################################################################

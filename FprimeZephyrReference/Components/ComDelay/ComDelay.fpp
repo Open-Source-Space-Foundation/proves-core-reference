@@ -14,6 +14,9 @@ module Components {
         @ Divider of the incoming rate tick
         param DIVIDER: U16 default DEFAULT_DIVIDER # Start slow i.e. on a 1S tick, transmit every 30S
 
+        @ DIVIDER parameter value
+        telemetry DividerParam: U16
+
         @ Divider set event
         event DividerSet(divider: U16) severity activity high \
             format "Set divider to: {}"
@@ -38,6 +41,9 @@ module Components {
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Port to return the value of a parameter
         param get port prmGetOut
