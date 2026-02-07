@@ -76,6 +76,13 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
 
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
+
+            // Request reset if this is an unknown error (-1)
+            if (state == RADIOLIB_ERR_UNKNOWN) {
+                if (this->isConnected_resetRequest_OutputPort(0)) {
+                    this->resetRequest_out(0);
+                }
+            }
         } else {
             Fw::Buffer buffer = this->allocate_out(0, static_cast<FwSizeType>(len));
             if (buffer.isValid()) {
@@ -101,6 +108,13 @@ void SBand ::deferredRxHandler_internalInterfaceHandler() {
         state = radio->startReceive(RADIOLIB_SX128X_RX_TIMEOUT_INF);
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
+
+            // Request reset if this is an unknown error (-1)
+            if (state == RADIOLIB_ERR_UNKNOWN) {
+                if (this->isConnected_resetRequest_OutputPort(0)) {
+                    this->resetRequest_out(0);
+                }
+            }
         }
     }
 
@@ -125,6 +139,14 @@ void SBand ::deferredTxHandler_internalInterfaceHandler(const Fw::Buffer& data, 
         int16_t state = this->m_rlb_radio.transmit(data.getData(), data.getSize());
         if (state != RADIOLIB_ERR_NONE) {
             this->log_WARNING_HI_RadioLibFailed(state);
+
+            // Request reset if this is an unknown error (-1)
+            if (state == RADIOLIB_ERR_UNKNOWN) {
+                if (this->isConnected_resetRequest_OutputPort(0)) {
+                    this->resetRequest_out(0);
+                }
+            }
+
             returnStatus = Fw::Success::FAILURE;
         } else {
             returnStatus = Fw::Success::SUCCESS;
@@ -181,6 +203,14 @@ SBand::Status SBand ::enableRx() {
     int16_t state = radio->standby();
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
+
+        // Request reset if this is an unknown error (-1)
+        if (state == RADIOLIB_ERR_UNKNOWN) {
+            if (this->isConnected_resetRequest_OutputPort(0)) {
+                this->resetRequest_out(0);
+            }
+        }
+
         return Status::ERROR;
     }
 
@@ -230,6 +260,14 @@ SBand::Status SBand ::enableTx() {
     int16_t state = radio->standby();
     if (state != RADIOLIB_ERR_NONE) {
         this->log_WARNING_HI_RadioLibFailed(state);
+
+        // Request reset if this is an unknown error (-1)
+        if (state == RADIOLIB_ERR_UNKNOWN) {
+            if (this->isConnected_resetRequest_OutputPort(0)) {
+                this->resetRequest_out(0);
+            }
+        }
+
         return Status::ERROR;
     }
 

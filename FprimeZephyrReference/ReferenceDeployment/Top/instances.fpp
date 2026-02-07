@@ -240,4 +240,6 @@ module ReferenceDeployment {
 
   instance fsFormat: Components.FsFormat base id 0x10078000
 
+  instance gpioRadioReset: Zephyr.ZephyrGpioDriver base id 0x10040000
+
 }

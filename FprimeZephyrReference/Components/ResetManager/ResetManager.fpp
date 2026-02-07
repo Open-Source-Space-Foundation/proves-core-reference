@@ -8,11 +8,17 @@ module Components {
         @ Command to initiate a warm reset
         sync command WARM_RESET()
 
+        @ Command to reset the radio module
+        sync command RESET_RADIO()
+
         @ Event indicating that a cold reset has been initiated
         event INITIATE_COLD_RESET() severity activity high id 0 format "Initiating cold reset"
 
         @ Event indicating that a warm reset has been initiated
         event INITIATE_WARM_RESET() severity activity high id 1 format "Initiating warm reset"
+
+        @ Event indicating that a radio reset has been initiated
+        event INITIATE_RADIO_RESET() severity activity high id 2 format "Initiating radio reset"
 
         @ Port to invoke a cold reset
         sync input port coldReset: Fw.Signal
@@ -20,8 +26,14 @@ module Components {
         @ Port to invoke a warm reset
         sync input port warmReset: Fw.Signal
 
+        @ Port to invoke a radio reset
+        sync input port radioReset: Fw.Signal
+
         @ Port to notify ModeManager before reboot (sets clean shutdown flag)
         output port prepareForReboot: Fw.Signal
+
+        @ Port to control radio reset GPIO
+        output port radioResetOut: Drv.GpioWrite
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
