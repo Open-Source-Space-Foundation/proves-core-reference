@@ -77,7 +77,7 @@ make build
 
 Now you want to install the firmware to the board.
 ```shell
-cp build-artifacts/zephyr.uf2 [path-to-your-board]
+cp bootable.uf2 [path-to-your-board]
 ```
 
 If this is your first time running the gds, you must create the authentication plug:
@@ -117,6 +117,23 @@ To run a single integration test file, set `TEST` to the filename (with or witho
 make test-integration TEST=mode_manager_test
 make test-integration TEST=mode_manager_test.py
 ```
+
+### Testing for Flaky Tests
+
+To debug intermittent integration test failures, use the interactive test runner to run tests multiple times:
+
+```sh
+# Interactive mode - select tests with arrow keys
+make test-interactive
+
+# Run specific tests multiple times
+make test-interactive ARGS="--tests watchdog_test --cycles 10"
+
+# Run all tests
+make test-interactive ARGS="--all --cycles 20"
+```
+
+The runner automatically detects flaky tests and shows detailed statistics.
 
 ## Running The Radio With CircuitPython
 
