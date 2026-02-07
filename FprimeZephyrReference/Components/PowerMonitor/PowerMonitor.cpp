@@ -61,6 +61,11 @@ void PowerMonitor ::RESET_TOTAL_GENERATION_cmdHandler(FwOpcodeType opCode, U32 c
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void PowerMonitor ::GET_TOTAL_POWER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->log_ACTIVITY_LO_TotalPowerConsumptionReading(this->m_totalPower_mWh);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Helper method implementations
 // ----------------------------------------------------------------------

@@ -82,6 +82,25 @@ class ImuManager final : public ImuManagerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    // ----------------------------------------------------------------------
+    // Handler implementations for commands
+    // ----------------------------------------------------------------------
+
+    //! Handler implementation for GET_ACCELERATION
+    //!
+    //! Command to get the current acceleration
+    void GET_ACCELERATION_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+
+    //! Handler implementation for GET_ANGULAR_VELOCITY
+    //!
+    //! Command to get the current angular velocity
+    void GET_ANGULAR_VELOCITY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+
+    //! Handler implementation for GET_MAGNETIC_FIELD
+    //!
+    //! Command to get the current magnetic field
+    void GET_MAGNETIC_FIELD_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) override;
+
   private:
     // ----------------------------------------------------------------------
     //  Private helper methods

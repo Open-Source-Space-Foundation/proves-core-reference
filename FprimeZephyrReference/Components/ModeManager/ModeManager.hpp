@@ -87,6 +87,16 @@ class ModeManager : public ModeManagerComponentBase {
                                    U32 cmdSeq            //!< The command sequence number
                                    ) override;
 
+    //! Handler implementation for command GET_CURRENT_MODE
+    void GET_CURRENT_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                     U32 cmdSeq            //!< The command sequence number
+                                     ) override;
+
+    //! Handler implementation for command GET_SAFE_MODE_REASON
+    void GET_SAFE_MODE_REASON_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                         U32 cmdSeq            //!< The command sequence number
+                                         ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods

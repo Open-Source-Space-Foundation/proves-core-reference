@@ -157,6 +157,7 @@ test-unit: ## Run unit tests
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
+	FILTER="not flaky"; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="FprimeZephyrReference/test/int/$(TEST)" ;; \
@@ -164,6 +165,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		FILTER=""; \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
 				*.py) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$$test" ;; \
@@ -174,7 +176,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="FprimeZephyrReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")

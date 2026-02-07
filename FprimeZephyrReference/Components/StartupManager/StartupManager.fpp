@@ -13,11 +13,17 @@ module Components {
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
 
+        @ Command to output the current boot count
+        sync command GET_BOOT_COUNT()
+
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType
 
         @ Telemetry for quiescence end time
         telemetry QuiescenceEndTime: Fw.TimeValue update on change
+
+        @ Event emitted when getting boot count
+        event CurrentBootCount(i: I64) severity activity low format "Current boot count: {}"
 
         @ Event emitted when failing to update the boot count file
         event BootCountUpdateFailure() severity warning low \
