@@ -143,6 +143,16 @@ jobs:
         run: |
           pkill -9 python || true
 
+      - name: Start GDS
+        run: |
+          nohup make gds-integration &
+          echo $! > server.pid
+
       - name: Run Integration Tests
         run: |
           make test-integration
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          kill $(cat server.pid)
