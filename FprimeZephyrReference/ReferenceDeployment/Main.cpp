@@ -5,6 +5,8 @@
 // ======================================================================
 // Used to access topology functions
 
+#include <lib/sparkfun-pico/sparkfun_pico/sfe_psram_zephyr.h>
+
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
 #include <zephyr/device.h>
@@ -60,6 +62,33 @@ const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 
+/* APS1604M instruction set */
+#define APS1604M_CMD_READ 0x03U       // Read Memory Code
+#define APS1604M_CMD_FAST_READ 0x0BU  // Fast Read Memory Code
+#define APS1604M_CMD_READ_QUAD 0xEBU  // Quad Read Memory Code (
+
+#define APS1604M_CMD_WRITE 0x02U       // Write Memory Code
+#define APS1604M_CMD_WRITE_QUAD 0x38U  // Quad Write Memory Code
+
+#define APS1604M_CMD_WRAPPED_READ 0x8BU   // Wrapped Read Memory Code
+#define APS1604M_CMD_WRAPPED_WRITE 0x82U  // Wrapped Write Memory Code
+
+#define APS1604M_CMD_REGISTER_READ 0xB5U   // Register Read Memory Code
+#define APS1604M_CMD_REGISTER_WRITE 0xB1U  // Register Write Memory Code
+
+#define APS1604M_CMD_ENTER_QUAD_MODE 0x35U  // Enter Quad Mode
+#define APS1604M_CMD_EXIT_QUAD_MODE 0xF5U   // Exit Quad Mode
+
+#define APS1604M_CMD_RESET_ENABLE 0x66U  // Reset Enable
+#define APS1604M_CMD_RESET 0x99U         // Reset
+
+#define APS1604M_CMD_BURST_LENGTH_TOGGLE 0xC0U  // Burst Length Toggle
+#define APS1604M_CMD_READ_ID 0x9FU
+
+// For the Board PROVES its GPIO 8
+// remember this could be device tree for later clarification and use of the same pin for other boards
+#define SFE_RP2350_XIP_CSI_PIN 8
+
 int main(int argc, char* argv[]) {
     //
     // This sleep is necessary to allow the USB CDC ACM interface to initialize before
@@ -68,65 +97,78 @@ int main(int argc, char* argv[]) {
 
     Os::init();
 
-    // Object for communicating state to the topology
-    ReferenceDeployment::TopologyState inputs;
-    // inputs.spi0Device = spi0;
-
-    // Flight Control Board device bindings
-    inputs.ina219SysDevice = ina219Sys;
-    inputs.ina219SolDevice = ina219Sol;
-    inputs.loraDevice = lora;
-    inputs.uartDevice = serial;
-    inputs.lsm6dsoDevice = lsm6dso;
-    inputs.lis2mdlDevice = lis2mdl;
-    inputs.rtcDevice = rtc;
-    inputs.tca9548aDevice = tca9548a;
-    inputs.muxChannel0Device = mux_channel_0;
-    inputs.muxChannel1Device = mux_channel_1;
-    inputs.muxChannel2Device = mux_channel_2;
-    inputs.muxChannel3Device = mux_channel_3;
-    inputs.muxChannel4Device = mux_channel_4;
-    inputs.muxChannel5Device = mux_channel_5;
-    inputs.muxChannel6Device = mux_channel_6;
-    inputs.muxChannel7Device = mux_channel_7;
-    inputs.storagePartitionId = storage_partition_id;
-
-    // Face Board device bindings
-    // TMP112 temperature sensor devices
-    inputs.face0TempDevice = face0_temp_sens;
-    inputs.face1TempDevice = face1_temp_sens;
-    inputs.face2TempDevice = face2_temp_sens;
-    inputs.face3TempDevice = face3_temp_sens;
-    inputs.face5TempDevice = face5_temp_sens;
-    inputs.battCell1TempDevice = batt_cell1_temp_sens;
-    inputs.battCell2TempDevice = batt_cell2_temp_sens;
-    inputs.battCell3TempDevice = batt_cell3_temp_sens;
-    inputs.battCell4TempDevice = batt_cell4_temp_sens;
-    // Light sensor devices
-    inputs.face0LightDevice = face0_light_sens;
-    inputs.face1LightDevice = face1_light_sens;
-    inputs.face2LightDevice = face2_light_sens;
-    inputs.face3LightDevice = face3_light_sens;
-    inputs.face5LightDevice = face5_light_sens;
-    inputs.face6LightDevice = face6_light_sens;
-    inputs.face7LightDevice = face7_light_sens;
-    // Magnetorquer devices
-    inputs.face0drv2605Device = face0_drv2605;
-    inputs.face1drv2605Device = face1_drv2605;
-    inputs.face2drv2605Device = face2_drv2605;
-    inputs.face3drv2605Device = face3_drv2605;
-    inputs.face5drv2605Device = face5_drv2605;
-    inputs.baudRate = 115200;
-
-    // For the uart peripheral config
-    inputs.peripheralBaudRate = 115200;  // Minimum is 19200
-    inputs.peripheralUart = peripheral_uart;
-    inputs.peripheralBaudRate2 = 115200;  // Minimum is 19200
-    inputs.peripheralUart2 = peripheral_uart1;
-
-    // Setup, cycle, and teardown topology
-    ReferenceDeployment::setupTopology(inputs);
-    ReferenceDeployment::startRateGroups();  // Program loop
-    ReferenceDeployment::teardownTopology(inputs);
+    printk("Hello World\n");
+    // Initialize the PSRAM
+    size_t size;
+    size = sfe_setup_psram(SFE_RP2350_XIP_CSI_PIN);
+    if (size == 0) {
+        printk("Failed to initialize PSRAM\n");
+        return 1;
+    }
+    printk("PSRAM initialized\n");
+    printk("PSRAM size: %d\n", size);
     return 0;
 }
+
+// Object for communicating state to the topology
+//     ReferenceDeployment::TopologyState inputs;
+//     // inputs.spi0Device = spi0;
+
+//     // Flight Control Board device bindings
+//     inputs.ina219SysDevice = ina219Sys;
+//     inputs.ina219SolDevice = ina219Sol;
+//     inputs.loraDevice = lora;
+//     inputs.uartDevice = serial;
+//     inputs.lsm6dsoDevice = lsm6dso;
+//     inputs.lis2mdlDevice = lis2mdl;
+//     inputs.rtcDevice = rtc;
+//     inputs.tca9548aDevice = tca9548a;
+//     inputs.muxChannel0Device = mux_channel_0;
+//     inputs.muxChannel1Device = mux_channel_1;
+//     inputs.muxChannel2Device = mux_channel_2;
+//     inputs.muxChannel3Device = mux_channel_3;
+//     inputs.muxChannel4Device = mux_channel_4;
+//     inputs.muxChannel5Device = mux_channel_5;
+//     inputs.muxChannel6Device = mux_channel_6;
+//     inputs.muxChannel7Device = mux_channel_7;
+//     inputs.storagePartitionId = storage_partition_id;
+
+//     // Face Board device bindings
+//     // TMP112 temperature sensor devices
+//     inputs.face0TempDevice = face0_temp_sens;
+//     inputs.face1TempDevice = face1_temp_sens;
+//     inputs.face2TempDevice = face2_temp_sens;
+//     inputs.face3TempDevice = face3_temp_sens;
+//     inputs.face5TempDevice = face5_temp_sens;
+//     inputs.battCell1TempDevice = batt_cell1_temp_sens;
+//     inputs.battCell2TempDevice = batt_cell2_temp_sens;
+//     inputs.battCell3TempDevice = batt_cell3_temp_sens;
+//     inputs.battCell4TempDevice = batt_cell4_temp_sens;
+//     // Light sensor devices
+//     inputs.face0LightDevice = face0_light_sens;
+//     inputs.face1LightDevice = face1_light_sens;
+//     inputs.face2LightDevice = face2_light_sens;
+//     inputs.face3LightDevice = face3_light_sens;
+//     inputs.face5LightDevice = face5_light_sens;
+//     inputs.face6LightDevice = face6_light_sens;
+//     inputs.face7LightDevice = face7_light_sens;
+//     // Magnetorquer devices
+//     inputs.face0drv2605Device = face0_drv2605;
+//     inputs.face1drv2605Device = face1_drv2605;
+//     inputs.face2drv2605Device = face2_drv2605;
+//     inputs.face3drv2605Device = face3_drv2605;
+//     inputs.face5drv2605Device = face5_drv2605;
+//     inputs.baudRate = 115200;
+
+//     // For the uart peripheral config
+//     inputs.peripheralBaudRate = 115200;  // Minimum is 19200
+//     inputs.peripheralUart = peripheral_uart;
+//     inputs.peripheralBaudRate2 = 115200;  // Minimum is 19200
+//     inputs.peripheralUart2 = peripheral_uart1;
+
+//     // Setup, cycle, and teardown topology
+//     ReferenceDeployment::setupTopology(inputs);
+//     ReferenceDeployment::startRateGroups();  // Program loop
+//     ReferenceDeployment::teardownTopology(inputs);
+//     return 0;
+//}

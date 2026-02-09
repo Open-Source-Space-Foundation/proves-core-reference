@@ -60,3 +60,14 @@ if (BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# use our own allocator
+
+# the following enables the system malloc/free to be wrapped
+set(SKIP_PICO_MALLOC 1)
+
+# the following enables wrapping in sparkfun_pico builds
+set(SFE_PICO_ALLOC_WRAP 1)
+
+# the following enables the system malloc/free to be wrapped during compilation
+add_definitions(-DSFE_PICO_ALLOC_WRAP)

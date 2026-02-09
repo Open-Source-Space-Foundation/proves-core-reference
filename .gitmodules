@@ -13,3 +13,6 @@
 [submodule "lib/fprime-extras"]
 	path = lib/fprime-extras
 	url = https://github.com/LeStarch/fprime-extras
+[submodule "lib/sparkfun-pico"]
+	path = lib/sparkfun-pico
+	url = https://github.com/sparkfun/sparkfun-pico/

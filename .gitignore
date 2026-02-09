@@ -45,6 +45,7 @@ UploadsFilesystem/AuthenticateFiles/spi_dict.txt
 Framing/src/sequence_number.bin
 
 lib/fprime-extras/
+lib/sparkfun-pico/
 
 # CircuitPython passthrough
 /circuit-python-passthrough/firmware.uf2
