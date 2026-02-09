@@ -77,7 +77,7 @@ make build
 
 Now you want to install the firmware to the board.
 ```shell
-cp build-artifacts/zephyr.uf2 [path-to-your-board]
+cp bootable.uf2 [path-to-your-board]
 ```
 
 If this is your first time running the gds, you must create the authentication plug:
@@ -98,9 +98,6 @@ MCUBoot only boots images that are **signed with the same key** the bootloader i
 
 If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
 
-```shell
-make copy-keys
-```
 You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
@@ -120,6 +117,23 @@ To run a single integration test file, set `TEST` to the filename (with or witho
 make test-integration TEST=mode_manager_test
 make test-integration TEST=mode_manager_test.py
 ```
+
+### Testing for Flaky Tests
+
+To debug intermittent integration test failures, use the interactive test runner to run tests multiple times:
+
+```sh
+# Interactive mode - select tests with arrow keys
+make test-interactive
+
+# Run specific tests multiple times
+make test-interactive ARGS="--tests watchdog_test --cycles 10"
+
+# Run all tests
+make test-interactive ARGS="--all --cycles 20"
+```
+
+The runner automatically detects flaky tests and shows detailed statistics.
 
 ## Running The Radio With CircuitPython
 

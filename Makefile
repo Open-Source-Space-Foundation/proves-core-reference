@@ -10,23 +10,16 @@ help: ## Display this help.
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+# Setting specific fprime-gds pre-release for features:
+# - file-uplink-cooldown arg
+# - file-uplink-chunk-size arg
+	@$(UV) pip install fprime-gds==4.1.1a2
 
 
 .PHONY: zephyr-setup
@@ -184,6 +177,10 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
+
+.PHONY: test-interactive
+test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
+	@$(UV_RUN) python FprimeZephyrReference/test/run_interactive_tests.py $(ARGS)
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
