@@ -186,4 +186,4 @@ sequenceDiagram
 ## Additional Documentation
 
 For a comprehensive finite state machine diagram documenting all Safe Mode entry and exit transitions, see:
-- [Safe Mode Finite State Machine](../../FprimeZephyrReference/Components/ModeManager/docs/safe-mode-fsm.md)
+- [Safe Mode Finite State Machine](safe-mode-fsm.md)
