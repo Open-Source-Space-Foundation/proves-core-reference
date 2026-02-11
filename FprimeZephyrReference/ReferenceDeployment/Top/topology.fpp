@@ -43,6 +43,7 @@ module ReferenceDeployment {
     instance gpioface5LS
     instance gpioPayloadPowerLS
     instance gpioPayloadBatteryLS
+    instance gpioRadioReset
     instance watchdog
     instance rtcManager
     instance detumbleManager
@@ -288,6 +289,12 @@ module ReferenceDeployment {
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
       ComCcsdsLora.authenticationRouter.reset_watchdog -> watchdog.stop
+    }
+
+    connections RadioReset {
+      resetManager.radioResetOut -> gpioRadioReset.gpioWrite
+      # Automatic radio reset request (uncomment when sband is enabled)
+      #sband.resetRequest -> resetManager.radioReset
     }
 
     connections LoadSwitches {

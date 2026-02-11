@@ -41,6 +41,12 @@ class ResetManager final : public ResetManagerComponentBase {
     void warmReset_handler(FwIndexType portNum  //!< The port number
                            ) override;
 
+    //! Handler implementation for radioReset
+    //!
+    //! Port to invoke a radio reset
+    void radioReset_handler(FwIndexType portNum  //!< The port number
+                            ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -60,6 +66,13 @@ class ResetManager final : public ResetManagerComponentBase {
                                U32 cmdSeq            //!< The command sequence number
                                ) override;
 
+    //! Handler implementation for command RESET_RADIO
+    //!
+    //! Command to reset the radio module
+    void RESET_RADIO_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                U32 cmdSeq            //!< The command sequence number
+                                ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -70,6 +83,9 @@ class ResetManager final : public ResetManagerComponentBase {
 
     //! Handler for warm reset
     void handleWarmReset();
+
+    //! Handler for radio reset
+    void handleRadioReset();
 };
 
 }  // namespace Components
