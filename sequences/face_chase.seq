@@ -1,6 +1,5 @@
 ; Chase sequence: each face ON for 1.000s
-; Start next face 0.200s before previous face turns OFF (200ms overlap)
-; Faces available: 0,1,2,3,5 (face4 not present)
+; Faces available: 0,1,2,3,4,5
 
 R00:00:00.000 ReferenceDeployment.face0LoadSwitch.TURN_ON
 R00:00:01.000 ReferenceDeployment.face0LoadSwitch.TURN_OFF
@@ -13,6 +12,9 @@ R00:00:01.000 ReferenceDeployment.face2LoadSwitch.TURN_OFF
 
 R00:00:00.000 ReferenceDeployment.face3LoadSwitch.TURN_ON
 R00:00:01.000 ReferenceDeployment.face3LoadSwitch.TURN_OFF
+
+R00:00:00.000 ReferenceDeployment.face4LoadSwitch.TURN_ON
+R00:00:01.000 ReferenceDeployment.face4LoadSwitch.TURN_OFF
 
 R00:00:00.000 ReferenceDeployment.face5LoadSwitch.TURN_ON
 R00:00:01.000 ReferenceDeployment.face5LoadSwitch.TURN_OFF
