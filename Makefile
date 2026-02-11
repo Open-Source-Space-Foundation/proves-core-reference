@@ -234,11 +234,6 @@ delete-shadow-gds:
 	@$(UV_RUN) pkill -9 -f fprime_gds
 	@$(UV_RUN) pkill -9 -f fprime-gds
 
-.PHONY: gds-integration
-gds-integration: framer-plugin
-	@echo "Using UART_DEVICE=$(UART_DEVICE)"
-	@$(GDS_COMMAND) --gui=none
-
 .PHONY: DoL_test
 DoL_test:
 	@echo "make sure passthrough GDS is running"
