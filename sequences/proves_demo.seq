@@ -1,3 +1,10 @@
 R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Starting Demo Sequence!"
 
 R00:00:05 ReferenceDeployment.payloadSeq.CS_RUN, "//seq/face_chase.bin", BLOCK
+R00:00:00 ReferenceDeployment.payloadSeq.CS_RUN, "//seq/face_chase.bin", BLOCK
+R00:00:00 ReferenceDeployment.payloadSeq.CS_RUN, "//seq/face_chase.bin", BLOCK
+R00:00:00 ReferenceDeployment.payloadSeq.CS_RUN, "//seq/face_chase.bin", BLOCK
+
+; Approximately 30 seconds
+
+R00:00:30 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Deploying Antennas!"
