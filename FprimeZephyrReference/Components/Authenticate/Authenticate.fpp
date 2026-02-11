@@ -45,6 +45,9 @@ module Components {
 
         event PacketRejected() severity warning high id 15 format "Packet Rejected" throttle 2
 
+        @ Event when SEQ_NUM_WINDOW parameter is set
+        event SeqNumWindowParamSet(value: U32) severity activity high format "SEQ_NUM_WINDOW parameter set to {}."
+
 
         # @ Ports for packet authentication
 
@@ -61,6 +64,9 @@ module Components {
         sync input port dataReturnIn: Svc.ComDataWithContext
 
         param SEQ_NUM_WINDOW : U32 default 50000
+
+        @ SEQ_NUM_WINDOW parameter value
+        telemetry SeqNumWindowParam: U32
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

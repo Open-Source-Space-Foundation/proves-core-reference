@@ -55,6 +55,10 @@ class StartupManager final : public StartupManagerComponentBase {
     Fw::Time get_uptime();
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------

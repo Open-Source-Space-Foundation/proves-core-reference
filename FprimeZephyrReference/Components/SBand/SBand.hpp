@@ -37,6 +37,10 @@ class SBand final : public SBandComponentBase {
     using SBandComponentBase::spiSend_out;
 
   private:
+    //! Parameter update handler
+    void parameterUpdated(FwPrmIdType id  //!< The parameter ID
+                          ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------

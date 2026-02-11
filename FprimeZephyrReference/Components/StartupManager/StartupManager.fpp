@@ -35,6 +35,26 @@ module Components {
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
             ) severity warning low format "Start-up sequence failed with response code {}"
 
+        @ Event when ARMED parameter is set
+        event ArmedParamSet(value: bool) severity activity high \
+            format "ARMED parameter set to {}."
+
+        @ Event when QUIESCENCE_TIME parameter is set
+        event QuiescenceTimeParamSet(value: Fw.TimeIntervalValue) severity activity high \
+            format "QUIESCENCE_TIME parameter set to {}."
+
+        @ Event when QUIESCENCE_START_FILE parameter is set
+        event QuiescenceStartFileParamSet(value: string) severity activity high \
+            format "QUIESCENCE_START_FILE parameter set to '{}'."
+
+        @ Event when STARTUP_SEQUENCE_FILE parameter is set
+        event StartupSequenceFileParamSet(value: string) severity activity high \
+            format "STARTUP_SEQUENCE_FILE parameter set to '{}'."
+
+        @ Event when BOOT_COUNT_FILE parameter is set
+        event BootCountFileParamSet(value: string) severity activity high \
+            format "BOOT_COUNT_FILE parameter set to '{}'."
+
         @ Whether the start-up manager is armed to wait for quiescence
         param ARMED: bool default true
 
@@ -49,6 +69,21 @@ module Components {
 
         @ File to store the boot count
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
+
+        @ ARMED parameter value
+        telemetry ArmedParam: bool
+
+        @ QUIESCENCE_TIME parameter value
+        telemetry QuiescenceTimeParam: Fw.TimeIntervalValue
+
+        @ QUIESCENCE_START_FILE parameter value
+        telemetry QuiescenceStartFileParam: string
+
+        @ STARTUP_SEQUENCE_FILE parameter value
+        telemetry StartupSequenceFileParam: string
+
+        @ BOOT_COUNT_FILE parameter value
+        telemetry BootCountFileParam: string
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

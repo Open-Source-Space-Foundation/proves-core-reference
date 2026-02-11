@@ -246,4 +246,32 @@ void AuthenticationRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::
     this->bufferDeallocate_out(0, fwBuffer);
 }
 
+// ----------------------------------------------------------------------
+// Parameter update handler
+// ----------------------------------------------------------------------
+
+void AuthenticationRouter ::parameterUpdated(FwPrmIdType id) {
+    switch (id) {
+        case AuthenticationRouter::PARAMID_COMM_LOSS_TIME: {
+            Fw::ParamValid is_valid;
+            Fw::TimeIntervalValue parameter = this->paramGet_COMM_LOSS_TIME(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_CommLossTimeParamSet(parameter);
+                this->tlmWrite_CommLossTimeParam(parameter);
+            }
+        } break;
+        case AuthenticationRouter::PARAMID_COMM_LOSS_TIME_START_FILE: {
+            Fw::ParamValid is_valid;
+            Fw::ParamString parameter = this->paramGet_COMM_LOSS_TIME_START_FILE(is_valid);
+            if ((is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT)) {
+                this->log_ACTIVITY_HI_CommLossTimeStartFileParamSet(parameter);
+                this->tlmWrite_CommLossTimeStartFileParam(parameter);
+            }
+        } break;
+        default:
+            FW_ASSERT(0);
+            break;  // Fallthrough from assert (static analysis)
+    }
+}
+
 }  // namespace Svc

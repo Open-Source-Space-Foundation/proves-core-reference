@@ -93,6 +93,22 @@ module Components {
         event RadioNotConfigured() severity warning high \
             format "Radio not configured, operation ignored" throttle 3
 
+        @ Event when DATA_RATE parameter is set
+        event DataRateParamSet(value: SBandDataRate) severity activity high \
+            format "DATA_RATE parameter set to {}."
+
+        @ Event when CODING_RATE parameter is set
+        event CodingRateParamSet(value: SBandCodingRate) severity activity high \
+            format "CODING_RATE parameter set to {}."
+
+        @ Event when BANDWIDTH_TX parameter is set
+        event BandwidthTxParamSet(value: SBandBandwidth) severity activity high \
+            format "BANDWIDTH_TX parameter set to {}."
+
+        @ Event when BANDWIDTH_RX parameter is set
+        event BandwidthRxParamSet(value: SBandBandwidth) severity activity high \
+            format "BANDWIDTH_RX parameter set to {}."
+
         @ Last received RSSI (if available)
         telemetry LastRssi: F32 update on change
 
@@ -114,6 +130,18 @@ module Components {
 
         @ Bandwidth for reception
         param BANDWIDTH_RX: SBandBandwidth default SBandBandwidth.BW_406_25_KHZ
+
+        @ DATA_RATE parameter value
+        telemetry DataRateParam: SBandDataRate
+
+        @ CODING_RATE parameter value
+        telemetry CodingRateParam: SBandCodingRate
+
+        @ BANDWIDTH_TX parameter value
+        telemetry BandwidthTxParam: SBandBandwidth
+
+        @ BANDWIDTH_RX parameter value
+        telemetry BandwidthRxParam: SBandBandwidth
 
         ###############################################################################
         # Commands                                                                     #
