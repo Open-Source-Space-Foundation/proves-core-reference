@@ -28,10 +28,10 @@ void RtcManager ::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
-    // Get system uptime
-    int64_t t = k_uptime_get();
-    U32 seconds_since_boot = static_cast<U32>(t / 1000);
-    U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
+    // Get system uptime in useconds
+    int64_t t = k_uptime_ticks();
+    U32 seconds_since_boot = static_cast<U32>(t / 1000000);
+    U32 useconds_since_boot = static_cast<U32>(t % 1000000);
 
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
