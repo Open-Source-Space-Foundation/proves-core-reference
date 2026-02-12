@@ -81,6 +81,7 @@ module ReferenceDeployment {
     instance cmdSeq
     instance payloadSeq
     instance safeModeSeq
+    instance pySeq
     instance startupManager
     instance powerMonitor
     instance ina219SysManager
@@ -168,6 +169,9 @@ module ReferenceDeployment {
 
       safeModeSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> safeModeSeq.cmdResponseIn
+
+      pySeq.cmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> pySeq.cmdResponseIn
 
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
 

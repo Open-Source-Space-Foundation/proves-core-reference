@@ -247,6 +247,11 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.detumbleManager.ZTurnsParam
   }
 
+  packet fpySequencer id 23 group 6 {
+    ReferenceDeployment.pySeq.State
+    ReferenceDeployment.pySeq.SeqPath
+  }
+
 } omit {
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
@@ -319,4 +324,28 @@ telemetry packets ReferenceDeploymentPackets {
 
   ReferenceDeployment.watchdog.WatchdogTransitions
 
+  # fpySequencer Debugs
+
+  ReferenceDeployment.pySeq.SequencesSucceeded
+  ReferenceDeployment.pySeq.SequencesFailed
+  ReferenceDeployment.pySeq.SequencesCancelled
+  ReferenceDeployment.pySeq.StatementsDispatched
+  ReferenceDeployment.pySeq.StatementsFailed
+  ReferenceDeployment.pySeq.LastDirectiveError
+  ReferenceDeployment.pySeq.DirectiveErrorIndex
+  ReferenceDeployment.pySeq.DirectiveErrorId
+
+  ReferenceDeployment.pySeq.Debug_ReachedEndOfFile
+  ReferenceDeployment.pySeq.Debug_NextStatementReadSuccess
+  ReferenceDeployment.pySeq.Debug_NextStatementOpcode
+  ReferenceDeployment.pySeq.Debug_StackSize
+  ReferenceDeployment.pySeq.Debug_NextCmdOpcode
+
+  ReferenceDeployment.pySeq.BreakpointInUse
+  ReferenceDeployment.pySeq.BreakpointIndex
+  ReferenceDeployment.pySeq.BreakOnlyOnceOnBreakpoint
+  ReferenceDeployment.pySeq.BreakBeforeNextLine
+
+  ReferenceDeployment.pySeq.PRM_STATEMENT_TIMEOUT_SECS
+  ReferenceDeployment.pySeq.PRM_FLAG_DEFAULT_EXIT_ON_CMD_FAIL
 }
