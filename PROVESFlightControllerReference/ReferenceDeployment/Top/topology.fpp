@@ -27,6 +27,9 @@ module ReferenceDeployment {
     instance timer
     instance comDriver
 
+    instance gpioWatchdog
+    instance watchdog
+
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
@@ -88,9 +91,19 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
       rateGroup1Hz.RateGroupMemberOut[4] -> ComCcsds.aggregator.timeout
+      rateGroup1Hz.RateGroupMemberOut[5] -> watchdog.run
+    }
+
+    connections Watchdog {
+      watchdog.gpioSet -> gpioWatchdog.gpioWrite
     }
 
     connections ReferenceDeployment {
+
+    }
+
+    connections FatalHandler {
+      CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
 
     }
 

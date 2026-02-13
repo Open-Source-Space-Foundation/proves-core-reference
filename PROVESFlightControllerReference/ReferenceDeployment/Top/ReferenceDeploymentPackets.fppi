@@ -7,6 +7,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsds.commsBufferManager.HiBuffs
     ReferenceDeployment.rateGroup10Hz.RgMaxTime
     ReferenceDeployment.rateGroup1Hz.RgMaxTime
+    ReferenceDeployment.watchdog.WatchdogTransitions
   }
 
   packet HealthWarnings id 2 group 1 {
