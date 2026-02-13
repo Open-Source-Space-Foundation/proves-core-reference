@@ -229,6 +229,17 @@ void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void ModeManager ::GET_CURRENT_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Components::SystemMode fppMode = static_cast<Components::SystemMode::T>(this->m_mode);
+    this->log_ACTIVITY_LO_CurrentModeReading(fppMode);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void ModeManager ::GET_SAFE_MODE_REASON_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    this->log_ACTIVITY_LO_CurrentSafeModeReasonReading(this->m_safeModeReason);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------

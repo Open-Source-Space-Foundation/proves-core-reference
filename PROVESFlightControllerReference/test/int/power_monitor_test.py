@@ -4,12 +4,8 @@ power_monitor_test.py:
 Integration tests for the Power Monitor component.
 """
 
-from datetime import datetime
-
-import pytest
 from common import proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
-from fprime_gds.common.models.serialize.time_type import TimeType
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 ina219SysManager = "ReferenceDeployment.ina219SysManager"
@@ -17,72 +13,98 @@ ina219SolManager = "ReferenceDeployment.ina219SolManager"
 powerMonitor = "ReferenceDeployment.powerMonitor"
 
 
-@pytest.fixture(autouse=True)
-def send_packet(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Fixture to send the power manager packet before each test"""
+def get_voltage(fprime_test_api: IntegrationTestAPI, manager: str) -> float:
+    """Helper function to get voltage via command and event"""
+    fprime_test_api.clear_histories()
+
     proves_send_and_assert_command(
         fprime_test_api,
-        "CdhCore.tlmSend.SEND_PKT",
-        ["11"],
+        f"{manager}.GetVoltage",
     )
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{manager}.VoltageReading", timeout=3
+    )
+
+    return result.args[0].val
+
+
+def get_current(fprime_test_api: IntegrationTestAPI, manager: str) -> float:
+    """Helper function to get current via command and event"""
+    fprime_test_api.clear_histories()
+
     proves_send_and_assert_command(
         fprime_test_api,
-        "CdhCore.tlmSend.SEND_PKT",
-        ["1"],
+        f"{manager}.GetCurrent",
     )
 
+    result: EventData = fprime_test_api.assert_event(
+        f"{manager}.CurrentReading", timeout=3
+    )
 
-def test_01_power_manager_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get power telemetry from INA219 managers"""
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    return result.args[0].val
+
+
+def get_power(fprime_test_api: IntegrationTestAPI, manager: str) -> float:
+    """Helper function to get power via command and event"""
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{manager}.GetPower",
     )
-    sys_voltage: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Voltage", start=start, timeout=65
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{manager}.PowerReading", timeout=3
     )
-    sys_current: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Current", start=start, timeout=65
+
+    return result.args[0].val
+
+
+def get_total_power_consumption(fprime_test_api: IntegrationTestAPI) -> float:
+    """Helper function to get total power consumption via command and event"""
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{powerMonitor}.GET_TOTAL_POWER",
     )
-    _: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Power", start=start, timeout=65
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{powerMonitor}.TotalPowerConsumptionReading", timeout=3
     )
-    sol_voltage: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SolManager}.Voltage", start=start, timeout=65
-    )
-    _: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SolManager}.Current", start=start, timeout=65
-    )
-    _: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SolManager}.Power", start=start, timeout=65
-    )
+
+    return result.args[0].val
+
+
+def test_01_power_manager_readings(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that we can get power readings from INA219 managers"""
+
+    # Get system power readings
+    sys_voltage = get_voltage(fprime_test_api, ina219SysManager)
+    sys_current = get_current(fprime_test_api, ina219SysManager)
+    _ = get_power(fprime_test_api, ina219SysManager)
+
+    # Get solar power readings
+    sol_voltage = get_voltage(fprime_test_api, ina219SolManager)
+    _ = get_current(fprime_test_api, ina219SolManager)
+    _ = get_power(fprime_test_api, ina219SolManager)
 
     # TODO: Fix the power readings once INA219 power calculation is verified
-    sys_voltage_reading: dict[float] = sys_voltage.get_val()
-    sys_current_reading: dict[float] = sys_current.get_val()
-    # sys_power_reading: dict[float] = sys_power.get_val()
-    sol_voltage_reading: dict[float] = sol_voltage.get_val()
-    # sol_current_reading: dict[float] = sol_current.get_val()
-    # sol_power_reading: dict[float] = sol_power.get_val()
-
-    assert sys_voltage_reading != 0, "System voltage reading should be non-zero"
-    assert sys_current_reading != 0, "System current reading should be non-zero"
-    # assert sys_power_reading != 0, "System power reading should be non-zero"
-    assert sol_voltage_reading != 0, "Solar voltage reading should be non-zero"
+    assert sys_voltage != 0, "System voltage reading should be non-zero"
+    assert sys_current != 0, "System current reading should be non-zero"
+    # assert sys_power != 0, "System power reading should be non-zero"
+    assert sol_voltage != 0, "Solar voltage reading should be non-zero"
     # Solar current can be 0.0 in valid scenarios (no sunlight, etc.)
-    # Existence is already verified by assert_telemetry() above
-    # assert sol_current_reading != 0, "Solar current reading should be non-zero"
-    # assert sol_power_reading != 0, "Solar power reading should be non-zero"
+    # Existence is already verified by get_current() above
+    # assert sol_current != 0, "Solar current reading should be non-zero"
+    # assert sol_power != 0, "Solar power reading should be non-zero"
 
 
-def test_02_total_power_consumption_telemetry(
-    fprime_test_api: IntegrationTestAPI, start_gds
-):
-    """Test that TotalPowerConsumption telemetry is being updated"""
-    total_power: ChData = fprime_test_api.assert_telemetry(
-        f"{powerMonitor}.TotalPowerConsumption", start="NOW", timeout=65
-    )
+def test_02_total_power_consumption(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that TotalPowerConsumption is being updated"""
 
-    total_power_reading: float = total_power.get_val()
+    total_power = get_total_power_consumption(fprime_test_api)
 
     # Total power should be non-zero (accumulating over time)
-    assert total_power_reading != 0, "Total power consumption should be non-zero"
+    assert total_power != 0, "Total power consumption should be non-zero"

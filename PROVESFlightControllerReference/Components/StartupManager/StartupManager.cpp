@@ -101,7 +101,7 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     return return_status;
 }
 
-FwSizeType StartupManager ::update_boot_count() {
+FwSizeType StartupManager ::get_boot_count(bool increment) {
     // Read the boot count file path from parameter and assert that it is either valid or the default value
     FwSizeType boot_count = 0;
     Fw::ParamValid is_valid;
@@ -112,7 +112,7 @@ FwSizeType StartupManager ::update_boot_count() {
     // of read failure. Since read will retain the `0` initial value on read failure, we can ignore the error
     // status returned by the read.
     (void)read<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
-    boot_count = FW_MAX(1, boot_count + 1);
+    boot_count = FW_MAX(1, increment ? boot_count + 1 : boot_count);
     // Rewrite the updated boot count back to the file, and on failure emit a warning about the inability to
     // persist the boot count.
     StartupManager::Status status = write<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
@@ -164,7 +164,7 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // On the first call, update the boot count, set the quiescence start time, and dispatch the start-up sequence
     if (this->m_boot_count == 0) {
-        this->m_boot_count = this->update_boot_count();
+        this->m_boot_count = this->get_boot_count(true);
         this->m_quiescence_start = this->update_quiescence_start();
 
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
@@ -207,6 +207,12 @@ void StartupManager ::WAIT_FOR_QUIESCENCE_cmdHandler(FwOpcodeType opCode, U32 cm
     this->m_stored_opcode = opCode;
     this->m_stored_sequence = cmdSeq;
     this->m_waiting = true;
+}
+
+void StartupManager ::GET_BOOT_COUNT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    FwSizeType boot_count = this->get_boot_count(false);
+    this->log_ACTIVITY_LO_CurrentBootCount(static_cast<I64>(boot_count));
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Components

@@ -4,11 +4,11 @@ watchdog_test.py:
 Integration tests for the Watchdog component.
 """
 
-from time import time
+import time
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 watchdog = "ReferenceDeployment.watchdog"
@@ -32,12 +32,19 @@ def start_watchdog(fprime_test_api: IntegrationTestAPI):
 
 
 def get_boot_count(fprime_test_api: IntegrationTestAPI) -> int:
-    """Helper function to request packet and get fresh BootCount telemetry"""
+    """Helper function to get boot count via command and event"""
+    fprime_test_api.clear_histories()
 
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{startup_manager}.BootCount", start="NOW", timeout=3
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{startup_manager}.GET_BOOT_COUNT",
     )
-    return result.get_val()
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{startup_manager}.CurrentBootCount", timeout=3
+    )
+
+    return result.args[0].val
 
 
 def test_01_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -56,6 +63,7 @@ def test_01_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds
     fprime_test_api.assert_event("ReferenceDeployment.watchdog.WatchdogStop", timeout=2)
 
 
+@pytest.mark.slow
 def test_02_system_stays_running_with_watchdog(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -78,6 +86,7 @@ def test_02_system_stays_running_with_watchdog(
     )
 
 
+@pytest.mark.slow
 def test_03_system_reboots_without_watchdog(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -98,7 +107,7 @@ def test_03_system_reboots_without_watchdog(
     fprime_test_api.assert_event(f"{watchdog}.WatchdogStop", timeout=2)
 
     # Wait for system to reboot
-    time.sleep(45.0)
+    time.sleep(60.0)
 
     # Check boot count has incremented by 1
     final_boot_count = get_boot_count(fprime_test_api)

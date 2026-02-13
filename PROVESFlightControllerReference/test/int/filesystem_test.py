@@ -13,7 +13,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 fileManager = "FileHandling.fileManager"
 
 
-def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_01_list_directory(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get list the root directory"""
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
