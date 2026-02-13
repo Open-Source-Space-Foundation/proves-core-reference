@@ -188,7 +188,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
-	@$(UV_RUN) python FprimeZephyrReference/test/run_interactive_tests.py $(ARGS)
+	@$(UV_RUN) python PROVESFlightControllerReference/test/run_interactive_tests.py $(ARGS)
 
 .PHONY: bootloader
 bootloader: uv
