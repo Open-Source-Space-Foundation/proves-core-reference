@@ -188,10 +188,10 @@ The ModeManager publishes telemetry every 1Hz via the `run` handler:
 ## Implementation Details
 
 ### File Locations
-- **Component Definition**: `FprimeZephyrReference/Components/ModeManager/ModeManager.fpp`
-- **Implementation**: `FprimeZephyrReference/Components/ModeManager/ModeManager.cpp`
-- **Header**: `FprimeZephyrReference/Components/ModeManager/ModeManager.hpp`
-- **Integration Tests**: `FprimeZephyrReference/test/int/safe_mode_test.py`
+- **Component Definition**: `PROVESFlightControllerReference/Components/ModeManager/ModeManager.fpp`
+- **Implementation**: `PROVESFlightControllerReference/Components/ModeManager/ModeManager.cpp`
+- **Header**: `PROVESFlightControllerReference/Components/ModeManager/ModeManager.hpp`
+- **Integration Tests**: `PROVESFlightControllerReference/test/int/safe_mode_test.py`
 
 ### Key Methods
 - `run_handler()`: 1Hz periodic handler for voltage monitoring and telemetry

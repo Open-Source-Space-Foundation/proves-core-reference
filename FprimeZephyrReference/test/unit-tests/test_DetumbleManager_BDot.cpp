@@ -3,7 +3,7 @@
 #include <array>
 #include <chrono>
 
-#include "FprimeZephyrReference/Components/DetumbleManager/BDot.hpp"
+#include "PROVESFlightControllerReference/Components/DetumbleManager/BDot.hpp"
 
 using Components::BDot;
 

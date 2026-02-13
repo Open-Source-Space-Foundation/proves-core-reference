@@ -1,0 +1,16 @@
+diff --git a/requirements.txt b/requirements.txt
+index 9ca76918e..5d526affa 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -21,7 +21,10 @@ Flask-RESTful==0.3.10
+ fprime-fpl-layout==1.0.3
+ fprime-fpl-write-pic==1.0.3
+ fprime-fpp==3.1.0
+-fprime-gds==4.1.0
++# Modified from 4.1.0 to 4.1.1a2 for features:
++# - file-uplink-cooldown arg
++# - file-uplink-chunk-size arg
++fprime-gds==4.1.1a2
+ fprime-tools==4.1.0
+ fprime-visual==1.0.2
+ gcovr==8.2

@@ -74,13 +74,11 @@ jobs:
 
       - name: Generate
         run: |
-          mkdir -p ./keys
-          cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem ./keys/proves.pem
           make generate
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
 
       - name: Build
         run: |
@@ -110,7 +108,7 @@ jobs:
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |
