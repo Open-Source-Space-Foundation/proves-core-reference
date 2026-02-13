@@ -9,7 +9,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/fprime/googletest googletest
 
 # DetumbleManager Magnetorquer
 add_library(detumble_manager_magnetorquer STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../FprimeZephyrReference/Components/DetumbleManager/Magnetorquer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../PROVESFlightControllerReference/Components/DetumbleManager/Magnetorquer.cpp
 )
 target_include_directories(detumble_manager_magnetorquer PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
@@ -17,7 +17,7 @@ target_include_directories(detumble_manager_magnetorquer PUBLIC
 
 # DetumbleManager StrategySelector
 add_library(detumble_manager_strategy_selector STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../FprimeZephyrReference/Components/DetumbleManager/StrategySelector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../PROVESFlightControllerReference/Components/DetumbleManager/StrategySelector.cpp
 )
 target_include_directories(detumble_manager_strategy_selector PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
@@ -25,7 +25,7 @@ target_include_directories(detumble_manager_strategy_selector PUBLIC
 
 # RtcManager RtcHelper
 add_library(rtc_manager_rtc_helper STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../FprimeZephyrReference/Components/Drv/RtcManager/RtcHelper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.cpp
 )
 target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
@@ -33,7 +33,7 @@ target_include_directories(rtc_manager_rtc_helper PUBLIC
 
 # DetumbleManager BDot
 add_library(detumble_manager_bdot STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../FprimeZephyrReference/Components/DetumbleManager/BDot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../PROVESFlightControllerReference/Components/DetumbleManager/BDot.cpp
 )
 target_include_directories(detumble_manager_bdot PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..

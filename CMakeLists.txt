@@ -43,7 +43,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/lib/fprime/cmake/FPrime.cmake")
 fprime_setup_included_code()
 
 # This includes project-wide objects
-add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/FprimeZephyrReference")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/PROVESFlightControllerReference")
 
 if (FPRIME_USE_POSIX)
     set_target_properties(Drv_Ip PROPERTIES EXCLUDE_FROM_ALL TRUE)

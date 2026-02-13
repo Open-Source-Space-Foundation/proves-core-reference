@@ -1,2 +1,0 @@
-; This is a test sequence with a one minute delay followed by a no-op command
-R00:01:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Hello World!"

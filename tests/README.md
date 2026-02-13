@@ -42,4 +42,4 @@ TEST(MyComponentTest, BasicFunctionality) {
 }
 ```
 
-For integration tests that require F Prime and hardware, see `FprimeZephyrReference/test/int/`.
+For integration tests that require F Prime and hardware, see `PROVESFlightControllerReference/test/int/`.

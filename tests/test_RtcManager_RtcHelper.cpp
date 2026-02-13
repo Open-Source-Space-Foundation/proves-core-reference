@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "FprimeZephyrReference/Components/Drv/RtcManager/RtcHelper.hpp"
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
 
 using Drv::RtcHelper;
 

@@ -27,7 +27,7 @@ Thanks for helping improve our documentation! Please provide details about what 
 ## Documentation Location
 
 <!-- Path or URL to the documentation that needs updating -->
-<!-- Example: docs-site/getting-started/initial-setup.md or FprimeZephyrReference/Components/MagnetorquerManager/README.md -->
+<!-- Example: docs-site/getting-started/initial-setup.md or PROVESFlightControllerReference/Components/MagnetorquerManager/README.md -->
 
 ## Issue Type
 
