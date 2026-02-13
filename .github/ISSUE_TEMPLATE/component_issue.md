@@ -24,7 +24,7 @@ Use this template for issues related to F Prime component design, implementation
 ## Component Location
 
 <!-- Path to the component in the repository -->
-<!-- Example: FprimeZephyrReference/Components/MagnetorquerManager -->
+<!-- Example: PROVESFlightControllerReference/Components/MagnetorquerManager -->
 
 ## Issue Type
 

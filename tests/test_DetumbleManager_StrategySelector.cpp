@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "FprimeZephyrReference/Components/DetumbleManager/StrategySelector.hpp"
+#include "PROVESFlightControllerReference/Components/DetumbleManager/StrategySelector.hpp"
 
 using Components::StrategySelector;
 

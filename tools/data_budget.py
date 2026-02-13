@@ -102,10 +102,10 @@ class DataBudgetAnalyzer:
         """Find all FPP files in the project"""
         fpp_files: List[Path] = []
 
-        # Search across the entire FprimeZephyrReference tree so that
+        # Search across the entire PROVESFlightControllerReference tree so that
         # instances/types defined in other top-level directories (e.g.
         # communications components) are also discovered.
-        reference_root = self.project_root / "FprimeZephyrReference"
+        reference_root = self.project_root / "PROVESFlightControllerReference"
         if reference_root.exists():
             fpp_files.extend(reference_root.rglob("*.fpp"))
             fpp_files.extend(reference_root.rglob("*.fppi"))

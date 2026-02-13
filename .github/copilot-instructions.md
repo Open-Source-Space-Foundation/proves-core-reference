@@ -114,12 +114,12 @@ make gds
 
 # Terminal 2: Run integration tests
 make test-integration
-# This runs: pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+# This runs: pytest PROVESFlightControllerReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 ```
 
 **Test Framework Details**:
 
-- **Location**: `FprimeZephyrReference/test/int/`
+- **Location**: `PROVESFlightControllerReference/test/int/`
 - **Framework**: pytest with fprime-gds testing API
 - **Test Files**:
   - `watchdog_test.py` - Watchdog component integration tests
@@ -161,7 +161,7 @@ requirements.txt       # Python dependencies
 ### Directory Structure
 
 ```
-FprimeZephyrReference/
+PROVESFlightControllerReference/
 ├── Components/        # Custom F Prime components
 │   ├── BootloaderTrigger/
 │   ├── Drv/          # Driver components (IMU, RTC, sensor managers)
@@ -202,7 +202,7 @@ docs-site/
 
 - F Prime components defined in `.fpp` files (autocoded to C++)
 - Zephyr handles RTOS, drivers, and hardware abstraction
-- Main entry point: `FprimeZephyrReference/ReferenceDeployment/Main.cpp`
+- Main entry point: `PROVESFlightControllerReference/ReferenceDeployment/Main.cpp`
   - **Critical**: 3-second sleep before starting to allow USB CDC ACM initialization
 - Build system: CMake with F Prime and Zephyr toolchains
 - Default board: `proves_flight_control_board_v5c/rp2350a/m33` (configurable in `settings.ini`)
@@ -389,9 +389,9 @@ The `ReferenceDeploymentTopology` is the central coordination point for the F Pr
 
 **Key Files**:
 
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main topology implementation
-- `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
-- `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` - Component instances
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main topology implementation
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` - Component instances
 
 **DT_NODE Usage**:
 The topology uses Zephyr Device Tree nodes to access hardware:
@@ -426,13 +426,13 @@ static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), 
 
 ### When modifying topology:
 
-1. Edit `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` for new component instances
-2. Edit `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` for connections
+1. Edit `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` for new component instances
+2. Edit `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` for connections
 3. Run `make generate build`
 
 ### When adding new components:
 
-1. Create component directory under `FprimeZephyrReference/Components/`
+1. Create component directory under `PROVESFlightControllerReference/Components/`
 2. Add `CMakeLists.txt` with `register_fprime_library()` or `register_fprime_module()`
 3. Add component to parent `CMakeLists.txt` with `add_fprime_subdirectory()`
 4. Follow existing component structure (see `Components/Watchdog/` as example)
@@ -444,10 +444,10 @@ The `ReferenceDeploymentTopology` serves as the central coordinator that bridges
 
 **Key Topology Files**:
 
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main implementation
-- `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
-- `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` - Component instances
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyDefs.hpp` - Type definitions
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main implementation
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` - Component instances
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyDefs.hpp` - Type definitions
 
 **DT_NODE Usage Pattern**:
 

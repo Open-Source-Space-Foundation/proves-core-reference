@@ -98,7 +98,7 @@ MCUBoot only boots images that are **signed with the same key** the bootloader i
 
 If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
 
-You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h matches.
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 

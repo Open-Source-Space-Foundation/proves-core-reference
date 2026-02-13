@@ -61,47 +61,47 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@echo "Syncing SDD files to docs-site/components..."
 	@mkdir -p docs-site/components/img
 	@# Copy ADCS
-	@cp FprimeZephyrReference/Components/ADCS/docs/sdd.md docs-site/components/ADCS.md
+	@cp PROVESFlightControllerReference/Components/ADCS/docs/sdd.md docs-site/components/ADCS.md
 	@# Copy Communication Components
-	@cp FprimeZephyrReference/Components/AmateurRadio/docs/sdd.md docs-site/components/AmateurRadio.md
-	@cp FprimeZephyrReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
-	@cp FprimeZephyrReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
-	@cp FprimeZephyrReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
-	@cp FprimeZephyrReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
-	@cp FprimeZephyrReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
-	@cp FprimeZephyrReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
+	@cp PROVESFlightControllerReference/Components/AmateurRadio/docs/sdd.md docs-site/components/AmateurRadio.md
+	@cp PROVESFlightControllerReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
+	@cp PROVESFlightControllerReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
+	@cp PROVESFlightControllerReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
+	@cp PROVESFlightControllerReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
+	@cp PROVESFlightControllerReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
+	@cp PROVESFlightControllerReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
 	@# Copy Core Components
-	@cp FprimeZephyrReference/Components/ModeManager/docs/sdd.md docs-site/components/ModeManager.md
-	@cp FprimeZephyrReference/Components/StartupManager/docs/sdd.md docs-site/components/StartupManager.md
-	@cp FprimeZephyrReference/Components/ResetManager/docs/sdd.md docs-site/components/ResetManager.md
-	@cp FprimeZephyrReference/Components/Watchdog/docs/sdd.md docs-site/components/Watchdog.md
-	@cp FprimeZephyrReference/Components/BootloaderTrigger/docs/sdd.md docs-site/components/BootloaderTrigger.md
-	@cp FprimeZephyrReference/Components/DetumbleManager/docs/sdd.md docs-site/components/DetumbleManager.md
+	@cp PROVESFlightControllerReference/Components/ModeManager/docs/sdd.md docs-site/components/ModeManager.md
+	@cp PROVESFlightControllerReference/Components/StartupManager/docs/sdd.md docs-site/components/StartupManager.md
+	@cp PROVESFlightControllerReference/Components/ResetManager/docs/sdd.md docs-site/components/ResetManager.md
+	@cp PROVESFlightControllerReference/Components/Watchdog/docs/sdd.md docs-site/components/Watchdog.md
+	@cp PROVESFlightControllerReference/Components/BootloaderTrigger/docs/sdd.md docs-site/components/BootloaderTrigger.md
+	@cp PROVESFlightControllerReference/Components/DetumbleManager/docs/sdd.md docs-site/components/DetumbleManager.md
 	@# Copy Hardware Components
-	@cp FprimeZephyrReference/Components/AntennaDeployer/docs/sdd.md docs-site/components/AntennaDeployer.md
-	@cp FprimeZephyrReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
-	@cp FprimeZephyrReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
-	@cp FprimeZephyrReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
+	@cp PROVESFlightControllerReference/Components/AntennaDeployer/docs/sdd.md docs-site/components/AntennaDeployer.md
+	@cp PROVESFlightControllerReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
+	@cp PROVESFlightControllerReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
+	@cp PROVESFlightControllerReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
 	@# Copy Sensor Components
-	@cp FprimeZephyrReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
-	@cp FprimeZephyrReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
-	@cp FprimeZephyrReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
+	@cp PROVESFlightControllerReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
+	@cp PROVESFlightControllerReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
+	@cp PROVESFlightControllerReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
 	@# Copy Driver Components
-	@cp FprimeZephyrReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
-	@cp FprimeZephyrReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
-	@cp FprimeZephyrReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
-	@cp FprimeZephyrReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md
-	@cp FprimeZephyrReference/Components/Drv/Veml6031Manager/docs/sdd.md docs-site/components/Veml6031Manager.md
+	@cp PROVESFlightControllerReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
+	@cp PROVESFlightControllerReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
+	@cp PROVESFlightControllerReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
+	@cp PROVESFlightControllerReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md
+	@cp PROVESFlightControllerReference/Components/Drv/Veml6031Manager/docs/sdd.md docs-site/components/Veml6031Manager.md
 	@# Copy Storage Components
-	@cp FprimeZephyrReference/Components/FlashWorker/docs/sdd.md docs-site/components/FlashWorker.md
-	@cp FprimeZephyrReference/Components/FsFormat/docs/sdd.md docs-site/components/FsFormat.md
-	@cp FprimeZephyrReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
-	@cp FprimeZephyrReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
+	@cp PROVESFlightControllerReference/Components/FlashWorker/docs/sdd.md docs-site/components/FlashWorker.md
+	@cp PROVESFlightControllerReference/Components/FsFormat/docs/sdd.md docs-site/components/FsFormat.md
+	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
+	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
-	@cp FprimeZephyrReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
-	@cp FprimeZephyrReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
+	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
+	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
 	@# Copy images
-	@find FprimeZephyrReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
+	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
 	@echo "✓ Synced 32 component SDDs and images"
 
 .PHONY: docs-serve
@@ -129,7 +129,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -165,19 +165,19 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	TARGETS=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
-			*.py) TARGETS="FprimeZephyrReference/test/int/$(TEST)" ;; \
-			*) TARGETS="FprimeZephyrReference/test/int/$(TEST).py" ;; \
+			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
+			*) TARGETS="PROVESFlightControllerReference/test/int/$(TEST).py" ;; \
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
-				*.py) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$$test" ;; \
-				*) TARGETS="$$TARGETS FprimeZephyrReference/test/int/$${test}_test.py" ;; \
+				*.py) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$$test" ;; \
+				*) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$${test}_test.py" ;; \
 			esac; \
 		done; \
 	else \
-		TARGETS="FprimeZephyrReference/test/int"; \
+		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
@@ -188,7 +188,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
-	@$(UV_RUN) python FprimeZephyrReference/test/run_interactive_tests.py $(ARGS)
+	@$(UV_RUN) python PROVESFlightControllerReference/test/run_interactive_tests.py $(ARGS)
 
 .PHONY: bootloader
 bootloader: uv
@@ -196,13 +196,13 @@ bootloader: uv
 		echo "RP2350 already in bootloader mode - skipping trigger"; \
 	else \
 		echo "RP2350 not in bootloader mode - triggering bootloader"; \
-		$(UV_RUN) pytest FprimeZephyrReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
+		$(UV_RUN) pytest PROVESFlightControllerReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
 	fi
 
 .PHONY: sync-sequence-number
 sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
 	@echo "Synchronizing sequence number"
-	@$(UV_RUN) pytest FprimeZephyrReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -262,7 +262,7 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./FprimeZephyrReference/Components/Authenticate/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
 	@echo "Copied secret files 🤫"
 
 include lib/makelib/build-tools.mk

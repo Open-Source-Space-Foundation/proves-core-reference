@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "FprimeZephyrReference/Components/DetumbleManager/Magnetorquer.hpp"
+#include "PROVESFlightControllerReference/Components/DetumbleManager/Magnetorquer.hpp"
 
 using Components::Magnetorquer;
 
