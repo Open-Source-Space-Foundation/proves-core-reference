@@ -74,8 +74,6 @@ jobs:
 
       - name: Generate
         run: |
-          mkdir -p ./keys
-          cp lib/zephyr-workspace/bootloader/mcuboot/root-rsa-2048.pem ./keys/proves.pem
           make generate
 
       - name: Set Authentication Key
