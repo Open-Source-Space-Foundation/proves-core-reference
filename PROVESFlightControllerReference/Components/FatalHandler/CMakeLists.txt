@@ -1,0 +1,9 @@
+register_fprime_module(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/FatalHandler.fpp"
+    SOURCES
+        "${CMAKE_CURRENT_LIST_DIR}/FatalHandler.cpp"
+    DEPENDS
+        Os
+        Fw_Logger
+)
