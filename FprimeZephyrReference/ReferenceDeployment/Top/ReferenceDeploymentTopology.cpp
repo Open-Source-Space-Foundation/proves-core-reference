@@ -188,7 +188,8 @@ void setupTopology(const TopologyState& state) {
 
 void startRateGroups() {
     timer.configure(BASE_RATEGROUP_PERIOD_MS);
-    print timer.start();
+    timer.start();
+    printk("Timer started\n");
     while (1) {
         timer.cycle();
     }

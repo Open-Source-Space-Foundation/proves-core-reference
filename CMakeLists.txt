@@ -43,6 +43,11 @@ include("${CMAKE_CURRENT_LIST_DIR}/lib/fprime/cmake/FPrime.cmake")
 # NOTE: register custom targets between these two lines
 fprime_setup_included_code()
 
+# Pico SDK path for Zephyr RP2350 PSRAM driver (hardware/* headers). Export PICO_SDK_PATH or pass -DPICO_SDK_PATH=...
+if(NOT DEFINED CACHE{PICO_SDK_PATH})
+    set(PICO_SDK_PATH "$ENV{PICO_SDK_PATH}" CACHE PATH "Path to Raspberry Pi Pico SDK (for PSRAM hardware headers)")
+endif()
+
 # This includes project-wide objects
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/FprimeZephyrReference")
 
@@ -71,3 +76,6 @@ set(SFE_PICO_ALLOC_WRAP 1)
 
 # the following enables the system malloc/free to be wrapped during compilation
 add_definitions(-DSFE_PICO_ALLOC_WRAP)
+
+#pico sdk
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/lib/sparkfun-pico")

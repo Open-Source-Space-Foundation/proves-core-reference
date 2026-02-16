@@ -10,6 +10,7 @@
 #include <FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.hpp>
 
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/haptics.h>
 #include <zephyr/drivers/i2c.h>
@@ -85,9 +86,8 @@ const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 #define APS1604M_CMD_BURST_LENGTH_TOGGLE 0xC0U  // Burst Length Toggle
 #define APS1604M_CMD_READ_ID 0x9FU
 
-// For the Board PROVES its GPIO 8
-// remember this could be device tree for later clarification and use of the same pin for other boards
-#define SFE_RP2350_XIP_CSI_PIN 8
+/* PSRAM CS pin: from devicetree psram0  */
+#define PSRAM_CS_PIN DT_GPIO_PIN(DT_NODELABEL(psram0), cs_gpios)
 
 int main(int argc, char* argv[]) {
     //
@@ -100,7 +100,9 @@ int main(int argc, char* argv[]) {
     printk("Hello World\n");
     // Initialize the PSRAM
     size_t size;
-    size = sfe_setup_psram(SFE_RP2350_XIP_CSI_PIN);
+    printk("PSRAM CS pin: %d\n", PSRAM_CS_PIN);
+    size = sfe_setup_psram(PSRAM_CS_PIN);
+    printk("PSRAM size: %d\n", size);
     if (size == 0) {
         printk("Failed to initialize PSRAM\n");
         return 1;

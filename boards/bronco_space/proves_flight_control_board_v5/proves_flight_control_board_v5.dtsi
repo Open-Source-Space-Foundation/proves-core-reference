@@ -67,8 +67,6 @@ zephyr_udc0: &usbd {
 		reg = <0 DT_SIZE_M(2)>;          /* CS0, 16Mbit = 2MB per datasheet */
 		spi-max-frequency = <84000000>;  /* Max for quad SPI per datasheet */
 		cs-gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
-		pinctrl-0 = <&qspi_default>;
-		pinctrl-names = "default";
 		status = "okay";
 	};
 };
