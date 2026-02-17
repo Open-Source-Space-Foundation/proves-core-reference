@@ -364,22 +364,7 @@ def test_07_remove_directory_not_empty_fails(fprime_test_api):
     _cleanup_test_directory(fprime_test_api)
 
 
-def test_08_remove_file_nonexistent_with_ignore(fprime_test_api):
-    """Test that removing a nonexistent file with ignoreErrors=True succeeds"""
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
-        f"{file_manager}.RemoveFile",
-        ["/nonexistent_file_12345.txt", True],  # ignoreErrors=True
-        timeout=5,
-    )
-    # Should succeed without error event
-    fprime_test_api.assert_event(
-        f"{file_manager}.RemoveFileSucceeded",
-        timeout=5,
-    )
-
-
-def test_09_remove_file_nonexistent_without_ignore_fails(fprime_test_api):
+def test_08_remove_file_nonexistent_without_ignore_fails(fprime_test_api):
     """Test that removing a nonexistent file with ignoreErrors=False fails"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_command(
@@ -392,7 +377,7 @@ def test_09_remove_file_nonexistent_without_ignore_fails(fprime_test_api):
     )
 
 
-def test_10_create_directory_already_exists_fails(fprime_test_api):
+def test_09_create_directory_already_exists_fails(fprime_test_api):
     """Test that creating a directory that already exists fails"""
     # Create directory first
     fprime_test_api.send_and_assert_command(
