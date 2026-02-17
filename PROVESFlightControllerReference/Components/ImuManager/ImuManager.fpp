@@ -126,6 +126,26 @@ module Components {
         @ Event to report LIS2MDL magnetometer sampling frequency of 0 Hz
         event MagnetometerSamplingFrequencyZeroHz() severity warning low format "LIS2MDL magnetometer sampling frequency is set to 0 Hz" throttle 5
 
+        @ Event to report acceleration data
+        event AccelerationData(x: F64, y: F64, z: F64) severity activity low format "Acceleration: x={} m/s^2, y={} m/s^2, z={} m/s^2"
+
+        @ Event to report angular velocity data
+        event AngularVelocityData(x: F64, y: F64, z: F64) severity activity low format "Angular Velocity: x={} rad/s, y={} rad/s, z={} rad/s"
+
+        @ Event to report magnetic field data
+        event MagneticFieldData(x: F64, y: F64, z: F64) severity activity low format "Magnetic Field: x={} gauss, y={} gauss, z={} gauss"
+
+        ### Commands ###
+
+        @ Command to get the current acceleration
+        sync command GET_ACCELERATION()
+
+        @ Command to get the current angular velocity
+        sync command GET_ANGULAR_VELOCITY()
+
+        @ Command to get the current magnetic field
+        sync command GET_MAGNETIC_FIELD()
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

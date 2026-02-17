@@ -4,7 +4,7 @@ safe_mode_test.py:
 Integration tests for the ModeManager component (Normal <-> Safe mode transitions).
 
 Tests cover:
-- CurrentSafeModeReason telemetry verification
+- CurrentSafeModeReason verification via command/event
 - Safe mode reason tracking (GROUND_COMMAND, LOW_BATTERY, SYSTEM_FAULT)
 - Auto safe mode entry due to low voltage (manual test - requires voltage control)
 - Auto safe mode exit/recovery when voltage > 8V (manual test - requires voltage control)
@@ -35,18 +35,12 @@ import time
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 logger = logging.getLogger(__name__)
 
 component = "ReferenceDeployment.modeManager"
-
-# Telemetry packet IDs for CdhCore.tlmSend.SEND_PKT command
-MODE_TELEMETRY_PACKET_ID = (
-    "2"  # ModeManager telemetry (CurrentMode, SafeModeReason, etc.)
-)
-VOLTAGE_TELEMETRY_PACKET_ID = "1"  # PowerMonitor telemetry (includes INA219 voltage)
 
 # Voltage thresholds (must match ModeManager.hpp constants)
 SAFE_MODE_ENTRY_VOLTAGE = 6.7  # Volts - threshold for entering safe mode from NORMAL
@@ -54,12 +48,48 @@ SAFE_MODE_RECOVERY_VOLTAGE = 8.0  # Volts - threshold for auto-recovery from saf
 SAFE_MODE_DEBOUNCE_SECONDS = 10  # Consecutive seconds for safe mode transitions
 
 # SafeModeReason enum values (must match ModeManager.fpp)
-SAFE_MODE_REASON_NONE = 0
-SAFE_MODE_REASON_LOW_BATTERY = 1
-SAFE_MODE_REASON_SYSTEM_FAULT = 2
-SAFE_MODE_REASON_GROUND_COMMAND = 3
-SAFE_MODE_REASON_EXTERNAL_REQUEST = 4
-SAFE_MODE_REASON_LORA = 5
+SAFE_MODE_REASON_NONE = "NONE"
+SAFE_MODE_REASON_LOW_BATTERY = "LOW_BATTERY"
+SAFE_MODE_REASON_SYSTEM_FAULT = "SYSTEM_FAULT"
+SAFE_MODE_REASON_GROUND_COMMAND = "GROUND_COMMAND"
+SAFE_MODE_REASON_EXTERNAL_REQUEST = "EXTERNAL_REQUEST"
+SAFE_MODE_REASON_LORA = "LORA"
+
+# Mode enum values
+MODE_SAFE_MODE = "SAFE_MODE"
+MODE_NORMAL = "NORMAL"
+
+
+def get_current_mode(fprime_test_api: IntegrationTestAPI) -> str:
+    """Helper function to get current mode via command and event"""
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{component}.GET_CURRENT_MODE",
+    )
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{component}.CurrentModeReading", timeout=5
+    )
+
+    return result.args[0].val
+
+
+def get_safe_mode_reason(fprime_test_api: IntegrationTestAPI) -> str:
+    """Helper function to get safe mode reason via command and event"""
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{component}.GET_SAFE_MODE_REASON",
+    )
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{component}.CurrentSafeModeReasonReading", timeout=5
+    )
+
+    return result.args[0].val
 
 
 @pytest.fixture(autouse=True)
@@ -69,23 +99,15 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
     Ensures clean NORMAL state with explicit verification.
     """
     # Check current mode before setup
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    current_mode = mode_result.get_val()
+    current_mode = get_current_mode(fprime_test_api)
 
     # If in SAFE_MODE, exit to NORMAL
-    if current_mode == 1:  # SAFE_MODE
+    if current_mode == MODE_SAFE_MODE:
         logger.info("Setup: Component in SAFE_MODE, exiting to NORMAL...")
 
         # Get safe mode reason for diagnostics
-        reason_result: ChData = fprime_test_api.assert_telemetry(
-            f"{component}.CurrentSafeModeReason", timeout=5
-        )
-        logger.info(f"Setup: Safe mode reason = {reason_result.get_val()}")
+        reason = get_safe_mode_reason(fprime_test_api)
+        logger.info(f"Setup: Safe mode reason = {reason}")
 
         try:
             proves_send_and_assert_command(
@@ -96,36 +118,23 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
             logger.info("Setup: Successfully exited safe mode")
         except Exception as e:
             pytest.fail(
-                f"Setup failed: Cannot exit safe mode (reason: {reason_result.get_val()}). "
-                f"Error: {e}"
+                f"Setup failed: Cannot exit safe mode (reason: {reason}). Error: {e}"
             )
 
     # Clear histories AFTER state initialization
     fprime_test_api.clear_histories()
 
     # Verify we're in NORMAL mode before test starts
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    final_mode: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    if final_mode.get_val() != 2:  # Not NORMAL
-        pytest.fail(
-            f"Setup failed: Expected NORMAL mode (2), got {final_mode.get_val()}"
-        )
+    final_mode = get_current_mode(fprime_test_api)
+    if final_mode != MODE_NORMAL:
+        pytest.fail(f"Setup failed: Expected NORMAL mode, got {final_mode}")
 
     yield
 
     # Teardown: Return to NORMAL state for next test
     try:
-        proves_send_and_assert_command(
-            fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-        )
-        mode_result: ChData = fprime_test_api.assert_telemetry(
-            f"{component}.CurrentMode", timeout=5
-        )
-        if mode_result.get_val() == 1:  # In SAFE_MODE
+        mode = get_current_mode(fprime_test_api)
+        if mode == MODE_SAFE_MODE:
             proves_send_and_assert_command(
                 fprime_test_api,
                 f"{component}.EXIT_SAFE_MODE",
@@ -137,7 +146,7 @@ def setup_and_teardown(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 # ==============================================================================
-# SafeModeReason Telemetry Tests
+# SafeModeReason Tests
 # ==============================================================================
 
 
@@ -145,35 +154,21 @@ def test_safe_01_initial_safe_mode_reason_is_none(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
     """
-    Test that CurrentSafeModeReason telemetry is NONE when not in safe mode.
+    Test that CurrentSafeModeReason is NONE when not in safe mode.
     """
     # Ensure we're in NORMAL mode
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
+    mode = get_current_mode(fprime_test_api)
 
-    if mode_result.get_val() != 2:
+    if mode != MODE_NORMAL:
         # Not in NORMAL mode, skip test
         pytest.skip("Not in NORMAL mode - cannot verify initial reason")
 
     # Verify safe mode reason is NONE
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
-    )
-    reason_val = reason_result.get_val()
+    reason = get_safe_mode_reason(fprime_test_api)
 
-    # Handle both numeric and string representations
-    if isinstance(reason_val, str):
-        assert "NONE" in reason_val.upper(), (
-            f"Safe mode reason should be NONE, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_NONE, (
-            f"Safe mode reason should be NONE (0), got {reason_val}"
-        )
+    assert SAFE_MODE_REASON_NONE in str(reason).upper(), (
+        f"Safe mode reason should be NONE, got {reason}"
+    )
 
 
 def test_safe_02_ground_command_sets_reason(
@@ -188,14 +183,11 @@ def test_safe_02_ground_command_sets_reason(
     Precondition: Must start in NORMAL mode
     """
     # Verify precondition (defense in depth)
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode = fprime_test_api.assert_telemetry(f"{component}.CurrentMode", timeout=5)
-    if mode.get_val() != 2:
+    mode = get_current_mode(fprime_test_api)
+    if mode != MODE_NORMAL:
         pytest.fail(
-            f"Test precondition failed: Must start in NORMAL mode (2), "
-            f"currently in mode {mode.get_val()}"
+            f"Test precondition failed: Must start in NORMAL mode, "
+            f"currently in mode {mode}"
         )
 
     # Enter safe mode via ground command
@@ -219,22 +211,11 @@ def test_safe_02_ground_command_sets_reason(
     )
 
     # Verify safe mode reason is GROUND_COMMAND
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
-    )
-    reason_val = reason_result.get_val()
+    reason = get_safe_mode_reason(fprime_test_api)
 
-    if isinstance(reason_val, str):
-        assert "GROUND_COMMAND" in reason_val.upper(), (
-            f"Safe mode reason should be GROUND_COMMAND, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_GROUND_COMMAND, (
-            f"Safe mode reason should be GROUND_COMMAND (3), got {reason_val}"
-        )
+    assert SAFE_MODE_REASON_GROUND_COMMAND in str(reason).upper(), (
+        f"Safe mode reason should be GROUND_COMMAND, got {reason}"
+    )
 
 
 def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -246,13 +227,8 @@ def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_g
     time.sleep(2)
 
     # Verify in safe mode with reason set
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE"
 
     # Exit safe mode
     proves_send_and_assert_command(
@@ -263,22 +239,11 @@ def test_safe_03_exit_clears_reason(fprime_test_api: IntegrationTestAPI, start_g
     time.sleep(2)
 
     # Verify reason is cleared to NONE
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
-    )
-    reason_val = reason_result.get_val()
+    reason = get_safe_mode_reason(fprime_test_api)
 
-    if isinstance(reason_val, str):
-        assert "NONE" in reason_val.upper(), (
-            f"Safe mode reason should be NONE after exit, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_NONE, (
-            f"Safe mode reason should be NONE (0) after exit, got {reason_val}"
-        )
+    assert SAFE_MODE_REASON_NONE in str(reason).upper(), (
+        f"Safe mode reason should be NONE after exit, got {reason}"
+    )
 
 
 def test_safe_04_no_auto_recovery_for_ground_command(
@@ -296,13 +261,8 @@ def test_safe_04_no_auto_recovery_for_ground_command(
     time.sleep(2)
 
     # Verify in safe mode with GROUND_COMMAND reason
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE"
 
     fprime_test_api.clear_histories()
 
@@ -313,13 +273,8 @@ def test_safe_04_no_auto_recovery_for_ground_command(
     time.sleep(SAFE_MODE_DEBOUNCE_SECONDS + 3)
 
     # Verify still in safe mode
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, (
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, (
         "Should still be in SAFE_MODE (no auto-recovery for GROUND_COMMAND reason)"
     )
 
@@ -347,7 +302,7 @@ def test_safe_05_auto_entry_low_voltage(fprime_test_api: IntegrationTestAPI, sta
     1. Ensure in NORMAL mode
     2. Lower battery voltage below SAFE_MODE_ENTRY_VOLTAGE (6.7V) for SAFE_MODE_DEBOUNCE_SECONDS
     3. Verify AutoSafeModeEntry event is emitted with reason=LOW_BATTERY
-    4. Verify mode changes to SAFE_MODE (1)
+    4. Verify mode changes to SAFE_MODE
     5. Verify CurrentSafeModeReason = LOW_BATTERY
 
     Expected behavior:
@@ -358,13 +313,8 @@ def test_safe_05_auto_entry_low_voltage(fprime_test_api: IntegrationTestAPI, sta
     - All 8 load switches turned OFF
     """
     # Ensure in NORMAL mode
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 2, "Should start in NORMAL mode"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_NORMAL, "Should start in NORMAL mode"
 
     fprime_test_api.clear_histories()
 
@@ -377,28 +327,15 @@ def test_safe_05_auto_entry_low_voltage(fprime_test_api: IntegrationTestAPI, sta
     # Verify AutoSafeModeEntry event
     fprime_test_api.assert_event(f"{component}.AutoSafeModeEntry", timeout=5)
 
-    # Verify mode is SAFE_MODE (1)
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE after low voltage"
+    # Verify mode is SAFE_MODE
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE after low voltage"
 
     # Verify reason is LOW_BATTERY
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
+    reason = get_safe_mode_reason(fprime_test_api)
+    assert SAFE_MODE_REASON_LOW_BATTERY in str(reason).upper(), (
+        f"Safe mode reason should be LOW_BATTERY, got {reason}"
     )
-    reason_val = reason_result.get_val()
-    if isinstance(reason_val, str):
-        assert "LOW_BATTERY" in reason_val.upper(), (
-            f"Safe mode reason should be LOW_BATTERY, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_LOW_BATTERY, (
-            f"Safe mode reason should be LOW_BATTERY (1), got {reason_val}"
-        )
 
 
 @pytest.mark.skip(
@@ -412,7 +349,7 @@ def test_safe_06_auto_recovery_voltage(fprime_test_api: IntegrationTestAPI, star
     1. Enter safe mode with LOW_BATTERY reason (use test_safe_05 first or simulate)
     2. Raise battery voltage above SAFE_MODE_RECOVERY_VOLTAGE (8.0V) for SAFE_MODE_DEBOUNCE_SECONDS
     3. Verify AutoSafeModeExit event is emitted with recovered voltage
-    4. Verify mode changes to NORMAL (2)
+    4. Verify mode changes to NORMAL
     5. Verify CurrentSafeModeReason = NONE
 
     Expected behavior:
@@ -426,29 +363,13 @@ def test_safe_06_auto_recovery_voltage(fprime_test_api: IntegrationTestAPI, star
     # In real testing, run test_safe_05 first or manually set up the state
 
     # Verify in safe mode with LOW_BATTERY reason
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE"
 
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
-    )
-    reason_val = reason_result.get_val()
+    reason = get_safe_mode_reason(fprime_test_api)
     # Skip if not LOW_BATTERY reason
-    if isinstance(reason_val, str):
-        if "LOW_BATTERY" not in reason_val.upper():
-            pytest.skip(
-                "Safe mode reason is not LOW_BATTERY - auto-recovery won't work"
-            )
-    else:
-        if reason_val != SAFE_MODE_REASON_LOW_BATTERY:
-            pytest.skip(
-                "Safe mode reason is not LOW_BATTERY - auto-recovery won't work"
-            )
+    if SAFE_MODE_REASON_LOW_BATTERY not in str(reason).upper():
+        pytest.skip("Safe mode reason is not LOW_BATTERY - auto-recovery won't work")
 
     fprime_test_api.clear_histories()
 
@@ -461,28 +382,15 @@ def test_safe_06_auto_recovery_voltage(fprime_test_api: IntegrationTestAPI, star
     # Verify AutoSafeModeExit event
     fprime_test_api.assert_event(f"{component}.AutoSafeModeExit", timeout=5)
 
-    # Verify mode is NORMAL (2)
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 2, "Should be in NORMAL mode after recovery"
+    # Verify mode is NORMAL
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_NORMAL, "Should be in NORMAL mode after recovery"
 
     # Verify reason is cleared to NONE
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
+    reason = get_safe_mode_reason(fprime_test_api)
+    assert SAFE_MODE_REASON_NONE in str(reason).upper(), (
+        f"Safe mode reason should be NONE after recovery, got {reason}"
     )
-    reason_val = reason_result.get_val()
-    if isinstance(reason_val, str):
-        assert "NONE" in reason_val.upper(), (
-            f"Safe mode reason should be NONE after recovery, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_NONE, (
-            f"Safe mode reason should be NONE (0) after recovery, got {reason_val}"
-        )
 
 
 @pytest.mark.skip(reason="Requires reboot - run manually with power cycle")
@@ -496,7 +404,7 @@ def test_safe_07_unintended_reboot_detection(
     1. Ensure in NORMAL mode
     2. Power cycle the board WITHOUT using COLD_RESET or WARM_RESET commands
     3. On boot, verify UnintendedRebootDetected event is emitted
-    4. Verify mode is SAFE_MODE (1)
+    4. Verify mode is SAFE_MODE
     5. Verify CurrentSafeModeReason = SYSTEM_FAULT
     6. Verify auto-recovery does NOT work (must use EXIT_SAFE_MODE)
 
@@ -520,27 +428,14 @@ def test_safe_07_unintended_reboot_detection(
         pytest.skip("No UnintendedRebootDetected event - board may have booted cleanly")
 
     # Verify in safe mode
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 1, "Should be in SAFE_MODE after unintended reboot"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE after unintended reboot"
 
     # Verify reason is SYSTEM_FAULT
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
+    reason = get_safe_mode_reason(fprime_test_api)
+    assert SAFE_MODE_REASON_SYSTEM_FAULT in str(reason).upper(), (
+        f"Safe mode reason should be SYSTEM_FAULT, got {reason}"
     )
-    reason_val = reason_result.get_val()
-    if isinstance(reason_val, str):
-        assert "SYSTEM_FAULT" in reason_val.upper(), (
-            f"Safe mode reason should be SYSTEM_FAULT, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_SYSTEM_FAULT, (
-            f"Safe mode reason should be SYSTEM_FAULT (2), got {reason_val}"
-        )
 
 
 @pytest.mark.skip(reason="Requires reboot - run manually to verify clean shutdown")
@@ -564,13 +459,8 @@ def test_safe_08_clean_reboot_no_safe_mode(
     - Mode restored from persistent state
     """
     # Ensure in NORMAL mode before reboot
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 2, "Should be in NORMAL mode before reboot"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_NORMAL, "Should be in NORMAL mode before reboot"
 
     # Issue reboot command (this will disconnect GDS)
     logger.info("Issuing COLD_RESET command - GDS will disconnect")
@@ -595,24 +485,11 @@ def test_safe_08_clean_reboot_no_safe_mode(
     )
 
     # Verify in NORMAL mode
-    proves_send_and_assert_command(
-        fprime_test_api, "CdhCore.tlmSend.SEND_PKT", [MODE_TELEMETRY_PACKET_ID]
-    )
-    mode_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentMode", timeout=5
-    )
-    assert mode_result.get_val() == 2, "Should be in NORMAL mode after clean reboot"
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_NORMAL, "Should be in NORMAL mode after clean reboot"
 
     # Verify reason is NONE
-    reason_result: ChData = fprime_test_api.assert_telemetry(
-        f"{component}.CurrentSafeModeReason", timeout=5
+    reason = get_safe_mode_reason(fprime_test_api)
+    assert SAFE_MODE_REASON_NONE in str(reason).upper(), (
+        f"Safe mode reason should be NONE after clean reboot, got {reason}"
     )
-    reason_val = reason_result.get_val()
-    if isinstance(reason_val, str):
-        assert "NONE" in reason_val.upper(), (
-            f"Safe mode reason should be NONE after clean reboot, got {reason_val}"
-        )
-    else:
-        assert reason_val == SAFE_MODE_REASON_NONE, (
-            f"Safe mode reason should be NONE (0) after clean reboot, got {reason_val}"
-        )

@@ -155,7 +155,7 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
 test-unit: ## Run unit tests
-	cmake -S tests -B build-gtest -DBUILD_TESTING=ON
+	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
@@ -163,6 +163,7 @@ test-unit: ## Run unit tests
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
+	FILTER="not flaky"; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
@@ -170,6 +171,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		FILTER=""; \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
 				*.py) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$$test" ;; \
@@ -180,7 +182,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:

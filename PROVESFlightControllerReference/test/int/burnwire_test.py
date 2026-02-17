@@ -8,12 +8,28 @@ import time
 
 import pytest
 from common import proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
+from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 ina219SysManager = "ReferenceDeployment.ina219SysManager"
 
 burnwire = "ReferenceDeployment.burnwire"
+
+
+def get_system_power(fprime_test_api: IntegrationTestAPI) -> float:
+    """Helper function to get system power via command and event"""
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{ina219SysManager}.GetPower",
+    )
+
+    result: EventData = fprime_test_api.assert_event(
+        f"{ina219SysManager}.PowerReading", timeout=5
+    )
+
+    return result.args[0].val
 
 
 @pytest.fixture(autouse=True)
@@ -47,22 +63,12 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     time.sleep(1)  # Allow some time for power increase
 
     try:
-        proves_send_and_assert_command(
-            fprime_test_api,
-            "CdhCore.tlmSend.SEND_PKT",
-            ["10"],
-        )
+        system_power = get_system_power(fprime_test_api)
 
-        system_power: ChData = fprime_test_api.assert_telemetry(
-            f"{ina219SysManager}.Power", start="NOW", timeout=2
-        )
-
-        assert system_power.get_val() > 1, (
+        assert system_power > 1, (
             "System power should be greater than 1 Watt when burnwire is ON"
         )
 
-    except Exception as e:
-        raise e
     finally:
         # Ensure burnwire is stopped
         proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
