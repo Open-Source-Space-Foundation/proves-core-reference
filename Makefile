@@ -155,7 +155,7 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 
 test-unit: ## Run unit tests
-	cmake -S FprimeZephyrReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
+	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
