@@ -89,7 +89,6 @@ module ReferenceDeployment {
     instance fileUplinkCollector
     instance modeManager
     instance adcs
-    instance tlmLogger
 
     # Face Board Instances
     instance thermalManager
@@ -116,8 +115,6 @@ module ReferenceDeployment {
     instance drv2605Face5Manager
     instance downlinkRepeater
     instance dropDetector
-
-    instance picoTempManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -149,10 +146,9 @@ module ReferenceDeployment {
       #comSplitterEvents.comOut-> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
       CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
-      comSplitterTelemetry.comOut[0] -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      comSplitterTelemetry.comOut[0] -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      
 
       # Router to Command Dispatcher
       ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
@@ -212,8 +208,8 @@ module ReferenceDeployment {
       loraRetry.comStatusOut -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
+
       startupManager.runSequence -> cmdSeq.seqRunIn
-      cmdSeq.seqStartOut -> startupManager.sequenceStarted
       cmdSeq.seqDone -> startupManager.completeSequence
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
@@ -286,7 +282,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
       rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
-
     }
 
 
@@ -439,7 +434,6 @@ module ReferenceDeployment {
       thermalManager.battCellTempGet[1] -> tmp112BattCell2Manager.temperatureGet
       thermalManager.battCellTempGet[2] -> tmp112BattCell3Manager.temperatureGet
       thermalManager.battCellTempGet[3] -> tmp112BattCell4Manager.temperatureGet
-      thermalManager.picoTempGet -> picoTempManager.picoTemperatureGet
     }
 
     connections adcs {

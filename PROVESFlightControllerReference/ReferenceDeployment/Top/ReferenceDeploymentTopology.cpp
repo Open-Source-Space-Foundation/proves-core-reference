@@ -140,7 +140,7 @@ void setupTopology(const TopologyState& state) {
     // };
     //    spiDriver.configure(state.spi0Device, cfg);
     //    sband.configureRadio();
-
+    
     // UART from the board to the payload
     peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
     imuManager.configure(state.lis2mdlDevice, state.lsm6dsoDevice);
