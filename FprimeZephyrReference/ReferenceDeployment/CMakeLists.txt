@@ -21,4 +21,6 @@ if (FPRIME_PLATFORM STREQUAL "Zephyr")
         DEPENDS
             ${FPRIME_CURRENT_MODULE}_Top
     )
+   # Link PSRAM init (sfe_psram_zephyr) so sfe_setup_psram is available from Main.cpp
+   target_link_libraries(app PRIVATE sparkfun_pico_sfe_psram_zephyr)
 endif()
