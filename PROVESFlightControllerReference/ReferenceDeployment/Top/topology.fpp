@@ -152,7 +152,7 @@ module ReferenceDeployment {
       comSplitterTelemetry.comOut[0] -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       comSplitterTelemetry.comOut[0] -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      
+      comSplitterTelemetry.comOut[1] -> tlmLogger.comIn
 
       # Router to Command Dispatcher
       ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
@@ -492,6 +492,10 @@ module ReferenceDeployment {
     connections FatalHandler {
       CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
 
+    }
+
+    connections TelemetryLogging {
+      
     }
 
   }
