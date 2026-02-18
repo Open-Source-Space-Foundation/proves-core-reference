@@ -15,4 +15,4 @@
 	url = https://github.com/LeStarch/fprime-extras
 [submodule "lib/sparkfun-pico"]
 	path = lib/sparkfun-pico
-	url = https://github.com/sparkfun/sparkfun-pico/
+	url = https://github.com/ineskhou/sparkfun-pico.git
