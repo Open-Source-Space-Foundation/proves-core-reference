@@ -68,6 +68,10 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 13
 
+  instance tlmLogger: Svc.ComLogger base id 0x10009000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 14
 
   # ----------------------------------------------------------------------
   # Queued component instances

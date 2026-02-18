@@ -89,7 +89,6 @@ module ReferenceDeployment {
     instance fileUplinkCollector
     instance modeManager
     instance adcs
-    instance tlmLogger
 
     # Face Board Instances
     instance thermalManager
@@ -147,10 +146,9 @@ module ReferenceDeployment {
       #comSplitterEvents.comOut-> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
 
       CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
-      comSplitterTelemetry.comOut[0] -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      comSplitterTelemetry.comOut[0] -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      
 
       # Router to Command Dispatcher
       ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
