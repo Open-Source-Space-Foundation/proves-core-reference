@@ -116,6 +116,8 @@ module ReferenceDeployment {
     instance downlinkRepeater
     instance dropDetector
 
+    instance picoTempManager
+
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
