@@ -28,7 +28,7 @@ void PicoTempManager::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void PicoTempManager ::run_handler(FwIndexType portNum, U32 context) {
-    Fw::Success condition = FW::Success;
+    Fw::Success condition = Fw::Success::FAILURE;
     F64 temperature = this->getPicoTemperature(condition);
     if (condition != Fw::Success::SUCCESS) {
         return;

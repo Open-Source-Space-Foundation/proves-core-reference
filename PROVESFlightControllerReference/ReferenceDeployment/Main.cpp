@@ -58,7 +58,7 @@ const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
 const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
-const struct device* die_temp = DEVICE_DT_GET(DT_NODELABEL(die_temp));
+const struct device* die_temp = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(die_temp));
 const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 
 int main(int argc, char* argv[]) {

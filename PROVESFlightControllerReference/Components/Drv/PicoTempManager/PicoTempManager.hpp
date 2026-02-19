@@ -7,6 +7,7 @@
 #ifndef Drv_PicoTempManager_HPP
 #define Drv_PicoTempManager_HPP
 
+#include "Fw/Types/SuccessEnumAc.hpp"
 #include "PROVESFlightControllerReference/Components/Drv/PicoTempManager/PicoTempManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
