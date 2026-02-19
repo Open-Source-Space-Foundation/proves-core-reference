@@ -12,7 +12,7 @@ module Drv {
 
         #### Telemetry ####
         @ Telemetry channel for temperature in degrees Celsius
-        telemetry picoTemperature: F64
+        telemetry PicoTemperature: F64
 
         @ Event for reporting not ready error
         event DeviceNotReady() severity warning low format "Device not ready" throttle 5

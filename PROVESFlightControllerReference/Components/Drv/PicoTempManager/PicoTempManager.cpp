@@ -28,15 +28,12 @@ void PicoTempManager::configure(const struct device* dev) {
 // ----------------------------------------------------------------------
 
 void PicoTempManager ::run_handler(FwIndexType portNum, U32 context) {
-    Fw::Success condition;
+    Fw::Success condition = FW::Success;
     F64 temperature = this->getPicoTemperature(condition);
     if (condition != Fw::Success::SUCCESS) {
-        this->log_WARNING_LO_TemperatureReadFailed();
         return;
     }
-    this->log_WARNING_LO_TemperatureReadFailed_ThrottleClear();
-
-    this->tlmWrite_Temperature(temperature);
+    this->tlmWrite_PicoTemperature(temperature);
 }
 
 // ----------------------------------------------------------------------
@@ -44,13 +41,13 @@ void PicoTempManager ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void PicoTempManager ::GetPicoTemperature_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    Fw::Success condition;
+    Fw::Success condition = Fw::Success::FAILURE;
     F64 temperature = this->getPicoTemperature(condition);
     if (condition != Fw::Success::SUCCESS) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
-    this->log_ACTIVITY_HI_Temperature(temperature);
+    this->log_ACTIVITY_HI_PicoTemperature(temperature);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -89,23 +86,24 @@ Fw::Success PicoTempManager ::initializeDevice() {
         this->deinitializeDevice();
         return Fw::Success::FAILURE;
     }
+    this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
+    return Fw::Success::SUCCESS;
 }
 
 F64 PicoTempManager ::getPicoTemperature(Fw::Success& condition) {
     if (!this->isDeviceInitialized()) {
-        condition = Fw::Success::FAILURE;
         return 0.0;
     }
     struct sensor_value temp_val;
     int rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_DIE_TEMP, &temp_val);
-    if (rc < 0) {
-        this->log_WARNING_LO_TemperatureReadFailed(rc);
-        condition = Fw::Success::FAILURE;
+    if (rc != 0) {
+        this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0.0;
     }
+    this->log_WARNING_LO_SensorChannelGetFailed_ThrottleClear();
     F64 temp = sensor_value_to_double(&temp_val);
     condition = Fw::Success::SUCCESS;
     return temp;
 }
 
-// namespace Drv
+}  // namespace Drv
