@@ -16,3 +16,6 @@
 [submodule "lib/sparkfun-pico"]
 	path = lib/sparkfun-pico
 	url = https://github.com/ineskhou/sparkfun-pico.git
+[submodule "lib/pico-sdk"]
+	path = lib/pico-sdk
+	url = https://github.com/raspberrypi/pico-sdk.git
