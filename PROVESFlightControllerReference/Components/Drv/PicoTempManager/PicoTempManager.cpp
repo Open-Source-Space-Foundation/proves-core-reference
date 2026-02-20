@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  PicoTempManager.cpp
-// \author jcowley04
 // \brief  cpp file for PicoTempManager component implementation class
 // ======================================================================
 
@@ -87,6 +86,24 @@ Fw::Success PicoTempManager ::initializeDevice() {
         return Fw::Success::FAILURE;
     }
     this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
+    return Fw::Success::SUCCESS;
+}
+
+Fw::Success PicoTempManager ::deinitializeDevice() {
+    if (!this->m_dev) {
+        this->log_WARNING_LO_DeviceNil();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_LO_DeviceNil_ThrottleClear();
+
+    if (!this->m_dev->state) {
+        this->log_WARNING_LO_DeviceStateNil();
+        return Fw::Success::FAILURE;
+    }
+    this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
+
+    this->m_dev->state->initialized = false;
+    this->m_dev->state->init_res = 0;
     return Fw::Success::SUCCESS;
 }
 

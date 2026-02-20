@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  PicoTempManager.hpp
-// \author jcowley04
 // \brief  hpp file for PicoTempManager component implementation class
 // ======================================================================
 
