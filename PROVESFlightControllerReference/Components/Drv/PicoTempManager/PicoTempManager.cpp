@@ -61,7 +61,7 @@ F64 PicoTempManager ::getPicoTemperature(Fw::Success& condition) {
     }
     this->log_WARNING_LO_DeviceNotReady_ThrottleClear();
 
-    int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_DIE_TEMP);
+    int rc = sensor_sample_fetch(this->m_dev);
     if (rc != 0) {
         this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
