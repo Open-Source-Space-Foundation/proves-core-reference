@@ -54,65 +54,22 @@ void PicoTempManager ::GetPicoTemperature_cmdHandler(FwOpcodeType opCode, U32 cm
 // Private helper methods
 // ----------------------------------------------------------------------
 
-bool PicoTempManager ::isDeviceInitialized() {
-    if (!this->m_dev) {
-        this->log_WARNING_LO_DeviceNil();
-        return false;
-    }
-    this->log_WARNING_LO_DeviceNil_ThrottleClear();
-
-    if (!this->m_dev->state) {
-        this->log_WARNING_LO_DeviceStateNil();
-        return false;
-    }
-    this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
-
-    return this->m_dev->state->initialized;
-}
-
-Fw::Success PicoTempManager ::initializeDevice() {
-    if (this->isDeviceInitialized()) {
-        if (!device_is_ready(this->m_dev)) {
-            this->log_WARNING_LO_DeviceNotReady();
-            return Fw::Success::FAILURE;
-        }
-        this->log_WARNING_LO_DeviceNotReady_ThrottleClear();
-        return Fw::Success::SUCCESS;
-    }
-    int rc = device_init(this->m_dev);
-    if (rc < 0) {
-        this->log_WARNING_LO_DeviceInitFailed(rc);
-        this->deinitializeDevice();
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_DeviceInitFailed_ThrottleClear();
-    return Fw::Success::SUCCESS;
-}
-
-Fw::Success PicoTempManager ::deinitializeDevice() {
-    if (!this->m_dev) {
-        this->log_WARNING_LO_DeviceNil();
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_DeviceNil_ThrottleClear();
-
-    if (!this->m_dev->state) {
-        this->log_WARNING_LO_DeviceStateNil();
-        return Fw::Success::FAILURE;
-    }
-    this->log_WARNING_LO_DeviceStateNil_ThrottleClear();
-
-    this->m_dev->state->initialized = false;
-    this->m_dev->state->init_res = 0;
-    return Fw::Success::SUCCESS;
-}
-
 F64 PicoTempManager ::getPicoTemperature(Fw::Success& condition) {
-    if (!this->isDeviceInitialized()) {
-        return 0.0;
+    if (!device_is_ready(this->m_dev)) {
+        this->log_WARNING_LO_DeviceNotReady();
+        return 0;
     }
+    this->log_WARNING_LO_DeviceNotReady_ThrottleClear();
+
+    int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_DIE_TEMP);
+    if (rc != 0) {
+        this->log_WARNING_LO_SensorSampleFetchFailed(rc);
+        return 0;
+    }
+    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
+
     struct sensor_value temp_val;
-    int rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_DIE_TEMP, &temp_val);
+    rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_DIE_TEMP, &temp_val);
     if (rc != 0) {
         this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0.0;

@@ -112,6 +112,10 @@ zephyr_udc0: &usbd {
 	status = "okay";
 };
 
+&adc {
+	status = "okay";
+};
+
 &uart0 {
     status = "okay";
     pinctrl-0 = <&uart0_default>;
