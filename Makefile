@@ -270,7 +270,7 @@ copy-secrets:
 .PHONY: make-ci-spacecraft-id
 make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds - NOTE: Linux Only Command
 	@echo "Generating unique spacecraft ID for CI build..."
-	sed -i 's/SpacecraftId = 0x0043/SpacecraftId = 0x0044/' PROVESFlightControllerReference/project/config/ComCfg.fpp
+	sed -i 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
