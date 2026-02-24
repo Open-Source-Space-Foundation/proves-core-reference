@@ -267,6 +267,13 @@ copy-secrets:
 	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
 	@echo "Copied secret files 🤫"
 
+.PHONY: make-ci-spacecraft-id
+make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
+	@echo "Generating unique spacecraft ID for CI build..."
+	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
+	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
+	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk
 include lib/makelib/zephyr.mk
