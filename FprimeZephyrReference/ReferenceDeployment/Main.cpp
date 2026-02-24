@@ -17,8 +17,11 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/fs/fs.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/printk.h>
+
+LOG_MODULE_REGISTER(main);
 
 // Devices
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
@@ -90,24 +93,37 @@ const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 #define PSRAM_CS_PIN DT_GPIO_PIN(DT_NODELABEL(psram0), cs_gpios)
 
 int main(int argc, char* argv[]) {
+    printk("main() started\n");
+    LOG_INF("main() started");
     //
-    // This sleep is necessary to allow the USB CDC ACM interface to initialize before
-    // the application starts writing to it.
-    k_sleep(K_MSEC(3000));
-
+    // Brief delay to allow USB CDC ACM to be ready; was 3000ms (watchdog could fire first).
+    k_sleep(K_MSEC(500));
+    LOG_INF("USB CDC ACM ready");
     Os::init();
-
+    LOG_INF("Os initialized");
     printk("Hello World\n");
     // Initialize the PSRAM
+
+    LOG_INF("Initializing PSRAM in 5 seconds");
+    k_sleep(K_MSEC(5000));
+
     size_t size;
     printk("PSRAM CS pin: %d\n", PSRAM_CS_PIN);
+    LOG_INF("PSRAM CS pin: %d", PSRAM_CS_PIN);
+    k_sleep(K_MSEC(5000));
+
     size = sfe_setup_psram(PSRAM_CS_PIN);
+
+    LOG_INF("PSRAM size: %d", size);
+    k_sleep(K_MSEC(5000));
+
     printk("PSRAM size: %d\n", size);
     if (size == 0) {
         printk("Failed to initialize PSRAM\n");
         return 1;
     }
     printk("PSRAM initialized\n");
+    LOG_INF("PSRAM initialized");
     printk("PSRAM size: %d\n", size);
     return 0;
 }

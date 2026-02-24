@@ -53,6 +53,12 @@
 			pinmux = <QSPI_SCK_P56>;
 		};
 	};
+	/* PSRAM CS: GPIO8 as XIP_CS1 (QMI hardware chip select). */
+	qmi_psram_cs: qmi_psram_cs {
+		group1 {
+			pinmux = <XIP_CS1_P8>;
+		};
+	};
 	i2c0_default: i2c0_default {
 		group1 {
 			pinmux = <I2C0_SCL_P25>, <I2C0_SDA_P24>;

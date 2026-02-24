@@ -110,7 +110,7 @@ zephyr_udc0: &usbd {
 };
 
 &wdt0 {
-	status = "okay";
+	status = "disabled";  /* Prevent reboot loop before main(); re-enable when app feeds WDT */
 };
 
 &gpio0 {
