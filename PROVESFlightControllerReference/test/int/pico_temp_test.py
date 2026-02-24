@@ -16,7 +16,7 @@ picoTempManager = "ReferenceDeployment.PicoTempManager"
 
 
 def test_01_get_pico_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that we can get temperature"""
+    """Test that we can get pico temperature"""
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
@@ -24,7 +24,7 @@ def test_01_get_pico_temperature(fprime_test_api: IntegrationTestAPI, start_gds)
     # Send command to get pico temperature
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{picoTempManager}.GetTemperature",
+        f"{picoTempManager}.GetPicoTemperature",
     )
     result: EventData = fprime_test_api.assert_event(
         f"{picoTempManager}.PicoTemperature", start=start, timeout=2
