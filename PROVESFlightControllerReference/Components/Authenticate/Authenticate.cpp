@@ -65,6 +65,9 @@ void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextO
     U32 newCount = this->m_rejectedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_RejectedPacketsCount(newCount);
     contextOut.set_authenticated(0);
+
+    // if the packet is rejected AND it is not a radio amateur
+
     this->dataOut_out(0, data, contextOut);
 }
 
