@@ -1,6 +1,6 @@
 #include "ComCcsdsSubtopologyConfig.hpp"
 
-#include "MemoryAllocation.hpp"
+#include <config/MemoryAllocation.hpp>
 
 namespace ComCcsds {
 namespace Allocation {
