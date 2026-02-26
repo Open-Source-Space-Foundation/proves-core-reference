@@ -1,7 +1,7 @@
 #ifndef COMCCSDSSUBTOPOLOGY_CONFIG_HPP
 #define COMCCSDSSUBTOPOLOGY_CONFIG_HPP
 
-#include "Fw/Types/MemAllocator.hpp"
+#include "MemoryAllocation.hpp"
 
 namespace ComCcsds {
 namespace Allocation {
