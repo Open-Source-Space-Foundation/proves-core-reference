@@ -38,6 +38,7 @@ mcuboot.uf2
 _codeql_detected_source_root
 
 # Generated authentication files (generated at build time)
+PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
 FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h
 spi
 # Generated spi_dict.txt

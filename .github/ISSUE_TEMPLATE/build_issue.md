@@ -53,7 +53,7 @@ Use this template for issues related to building, compiling, linking, or integra
 ## Relevant CMakeLists.txt Snippet
 <!-- If the issue relates to CMake configuration, paste the relevant section -->
 ```cmake
-# From FprimeZephyrReference/Components/MyComponent/CMakeLists.txt
+# From PROVESFlightControllerReference/Components/MyComponent/CMakeLists.txt
 # Paste relevant CMake code here
 ```
 

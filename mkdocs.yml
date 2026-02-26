@@ -58,10 +58,15 @@ markdown_extensions:
   - tables
 
 nav:
+  - Home: index.md
+  - Getting Started:
+      - Initial Setup: getting-started/initial-setup.md
+      - Build, Flash, and Run: getting-started/build-flash-run.md
   - Component SDDs:
       - Core Components:
           - ADCS: components/ADCS.md
           - Mode Manager: components/ModeManager.md
+          - Safe Mode FSM: components/safe-mode-fsm.md
           - Startup Manager: components/StartupManager.md
           - Reset Manager: components/ResetManager.md
           - Watchdog: components/Watchdog.md
@@ -98,6 +103,10 @@ nav:
       - Security Components:
           - Authenticate: components/Authenticate.md
           - Authentication Router: components/AuthenticationRouter.md
+  - Additional Resources:
+      - Troubleshooting: additional-resources/troubleshooting.md
+      - WSL Notes: additional-resources/wsl-notes.md
+      - Self-Hosted Runner Setup: additional-resources/self-hosted-runner-setup.md
 
 extra:
   social:

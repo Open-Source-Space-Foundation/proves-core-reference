@@ -1,12 +1,22 @@
 # PROVES Core Reference - Software Design Documents
 
-Welcome to the PROVES Core Reference Software Design Documents (SDDs) site. This documentation provides detailed design information for all components in the PROVES Core Reference implementation.
+Welcome to the PROVES Core Reference documentation site. This documentation provides comprehensive information for working with PROVES Core Reference, from getting started to detailed component design documents.
 
 ## Overview
 
 PROVES Core Reference is a reference software implementation combining F Prime (NASA's flight software framework) with Zephyr RTOS to create firmware for embedded flight control boards. The project targets ARM Cortex-M microcontrollers, specifically RP2350 (Raspberry Pi Pico 2) and STM32 boards.
 
-## Component Categories
+## Documentation Sections
+
+### [Getting Started](getting-started/initial-setup.md)
+Step-by-step guides to set up your development environment, build the firmware, and flash it to your board:
+
+- [Initial Setup](getting-started/initial-setup.md)
+- Clone the repository and set up dependencies
+- [Build, Flash, and Run](getting-started/build-flash-run.md)
+- Build and deploy the firmware
+
+### Component Software Design Documents (SDDs)
 
 The documentation is organized into the following categories:
 
@@ -30,6 +40,16 @@ Components that manage persistent storage and filesystem operations: [Flash Work
 
 ### [Security Components](components/Authenticate.md)
 Components that handle authentication and security features: [Authenticate](components/Authenticate.md), [Authentication Router](components/AuthenticationRouter.md)
+
+### [Additional Resources](additional-resources/board-list.md)
+Troubleshooting guides and additional configuration information:
+
+- [Board List](additional-resources/board-list.md)
+- Tested boards and their configurations
+- [Specifying Board Configuration](additional-resources/specifying-board-configuration.md)
+- [Troubleshooting](additional-resources/troubleshooting.md)
+- [WSL Notes](additional-resources/wsl-notes.md)
+- [Self-Hosted Runner Setup](additional-resources/self-hosted-runner-setup.md)
 
 ## Navigation
 

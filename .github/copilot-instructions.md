@@ -114,12 +114,12 @@ make gds
 
 # Terminal 2: Run integration tests
 make test-integration
-# This runs: pytest FprimeZephyrReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+# This runs: pytest PROVESFlightControllerReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 ```
 
 **Test Framework Details**:
 
-- **Location**: `FprimeZephyrReference/test/int/`
+- **Location**: `PROVESFlightControllerReference/test/int/`
 - **Framework**: pytest with fprime-gds testing API
 - **Test Files**:
   - `watchdog_test.py` - Watchdog component integration tests
@@ -161,7 +161,7 @@ requirements.txt       # Python dependencies
 ### Directory Structure
 
 ```
-FprimeZephyrReference/
+PROVESFlightControllerReference/
 ├── Components/        # Custom F Prime components
 │   ├── BootloaderTrigger/
 │   ├── Drv/          # Driver components (IMU, RTC, sensor managers)
@@ -189,9 +189,11 @@ boards/               # Custom board definitions
     ├── proves_flight_control_board_v5c/    # Variant C (LED on GPIO 24)
     └── proves_flight_control_board_v5d/    # Variant D (standard configuration)
 
-docs/
-├── main-content/     # Setup and build documentation
-└── additional-resources/  # Board-specific guides, troubleshooting
+docs-site/
+├── getting-started/     # Setup and build documentation
+├── additional-resources/  # Board-specific guides, troubleshooting
+├── uploading/           # Board-specific firmware upload instructions
+└── components/          # Component SDD documentation
 ```
 
 ### Key Architecture Points
@@ -200,7 +202,7 @@ docs/
 
 - F Prime components defined in `.fpp` files (autocoded to C++)
 - Zephyr handles RTOS, drivers, and hardware abstraction
-- Main entry point: `FprimeZephyrReference/ReferenceDeployment/Main.cpp`
+- Main entry point: `PROVESFlightControllerReference/ReferenceDeployment/Main.cpp`
   - **Critical**: 3-second sleep before starting to allow USB CDC ACM initialization
 - Build system: CMake with F Prime and Zephyr toolchains
 - Default board: `proves_flight_control_board_v5c/rp2350a/m33` (configurable in `settings.ini`)
@@ -345,7 +347,7 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 make bootloader
 ```
 
-This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs/additional-resources/board-list.md`.
+This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs-site/additional-resources/board-list.md`.
 
 ### Issue: Integration tests fail to connect
 
@@ -368,7 +370,7 @@ This automatically detects if the board is already in bootloader mode and trigge
   sh ~/Library/Arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh \
     -i swd -f build-artifacts/zephyr/zephyr.hex -c /dev/cu.usbmodem142203
   ```
-- See `docs/additional-resources/board-list.md` for tested boards
+- See `docs-site/additional-resources/board-list.md` for tested boards
 
 ## File Modification Guidelines
 
@@ -387,9 +389,9 @@ The `ReferenceDeploymentTopology` is the central coordination point for the F Pr
 
 **Key Files**:
 
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main topology implementation
-- `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
-- `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` - Component instances
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main topology implementation
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` - Component instances
 
 **DT_NODE Usage**:
 The topology uses Zephyr Device Tree nodes to access hardware:
@@ -424,13 +426,13 @@ static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), 
 
 ### When modifying topology:
 
-1. Edit `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` for new component instances
-2. Edit `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` for connections
+1. Edit `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` for new component instances
+2. Edit `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` for connections
 3. Run `make generate build`
 
 ### When adding new components:
 
-1. Create component directory under `FprimeZephyrReference/Components/`
+1. Create component directory under `PROVESFlightControllerReference/Components/`
 2. Add `CMakeLists.txt` with `register_fprime_library()` or `register_fprime_module()`
 3. Add component to parent `CMakeLists.txt` with `add_fprime_subdirectory()`
 4. Follow existing component structure (see `Components/Watchdog/` as example)
@@ -442,10 +444,10 @@ The `ReferenceDeploymentTopology` serves as the central coordinator that bridges
 
 **Key Topology Files**:
 
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main implementation
-- `FprimeZephyrReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
-- `FprimeZephyrReference/ReferenceDeployment/Top/instances.fpp` - Component instances
-- `FprimeZephyrReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyDefs.hpp` - Type definitions
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopology.cpp` - Main implementation
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/topology.fpp` - FPP topology definition
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/instances.fpp` - Component instances
+- `PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentTopologyDefs.hpp` - Type definitions
 
 **DT_NODE Usage Pattern**:
 
@@ -548,6 +550,6 @@ These instructions are comprehensive and validated. **Only search for additional
 
 - Instructions are incomplete for your specific task
 - You encounter errors not covered in "Common Issues"
-- You need board-specific flashing instructions (see docs/)
+- You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
