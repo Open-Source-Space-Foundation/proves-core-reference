@@ -20,7 +20,13 @@ static const char* const ANTENNA_DIR_PATH = "//antenna";
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {
+AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {}
+
+AntennaDeployer ::~AntennaDeployer() {}
+
+void AntennaDeployer ::init(FwEnumStoreType instance) {
+    AntennaDeployerComponentBase::init(instance);
+
     // Create //antenna directory if it doesn't exist
     Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(ANTENNA_DIR_PATH, false);
     if (dirStatus != Os::FileSystem::OP_OK) {
@@ -58,8 +64,6 @@ AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerC
         }
     }
 }
-
-AntennaDeployer ::~AntennaDeployer() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports

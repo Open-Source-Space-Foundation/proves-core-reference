@@ -24,6 +24,10 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     //! Destroy AntennaDeployer object
     ~AntennaDeployer();
 
+    //! Initialize the component
+    void init(FwEnumStoreType instance = 0  //!< Instance ID
+    );
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations
