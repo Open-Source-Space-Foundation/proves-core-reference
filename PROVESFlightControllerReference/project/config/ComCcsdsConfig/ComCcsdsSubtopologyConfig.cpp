@@ -1,10 +1,17 @@
 #include "ComCcsdsSubtopologyConfig.hpp"
 
-#include <config/MemoryAllocation.hpp>
-
-namespace ComCcsds {
+namespace ComCcsdsSband {
 namespace Allocation {
-Fw::ZephyrKmallocAllocator allocatorInstance;
-Fw::MemAllocator& memAllocator = allocatorInstance;
+// This instance can be changed to use a different allocator in the ComCcsdsSband Subtopology
+Fw::MallocAllocator mallocatorInstance;
+Fw::MemAllocator& memAllocator = mallocatorInstance;
 }  // namespace Allocation
-}  // namespace ComCcsds
+}  // namespace ComCcsdsSband
+
+namespace ComCcsdsLora {
+namespace Allocation {
+// This instance can be changed to use a different allocator in the ComCcsdsLora Subtopology
+Fw::MallocAllocator mallocatorInstance;
+Fw::MemAllocator& memAllocator = mallocatorInstance;
+}  // namespace Allocation
+}  // namespace ComCcsdsLora

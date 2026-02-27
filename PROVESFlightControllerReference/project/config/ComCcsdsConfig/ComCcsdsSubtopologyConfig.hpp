@@ -1,12 +1,18 @@
 #ifndef COMCCSDSSUBTOPOLOGY_CONFIG_HPP
 #define COMCCSDSSUBTOPOLOGY_CONFIG_HPP
 
-#include "Fw/Types/MemAllocator.hpp"
+#include "Fw/Types/MallocAllocator.hpp"
 
-namespace ComCcsds {
+namespace ComCcsdsSband {
 namespace Allocation {
 extern Fw::MemAllocator& memAllocator;
 }
-}  // namespace ComCcsds
+}  // namespace ComCcsdsSband
+
+namespace ComCcsdsLora {
+namespace Allocation {
+extern Fw::MemAllocator& memAllocator;
+}
+}  // namespace ComCcsdsLora
 
 #endif
