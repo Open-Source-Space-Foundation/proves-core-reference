@@ -62,6 +62,10 @@ zephyr_udc0: &usbd {
 	status = "okay";
 };
 
+// &rng {
+// 	status = "okay";
+// };
+
 &flash0 {
     reg = <0x10000000 DT_SIZE_M(4)>;
     partitions {
