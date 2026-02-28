@@ -24,7 +24,7 @@ constexpr const int SECURITY_TRAILER_LENGTH = 16;
 constexpr const int SPI_DEFAULT = 0;
 constexpr const U8 OP_CODE_LENGTH = 4;    // F Prime opcodes are 32-bit (4 bytes)
 constexpr const U8 OP_CODE_START = 2;     // Opcode starts at byte offset 2 in the packet buffer
-constexpr const U8 SPACEPACKETSTART = 0;  // Space Packets start at byte offset 0 in the packet buffer
+constexpr const U8 SPACEPACKETSTART = 6;  // Space Packets start at byte offset 0 in the packet buffer
 constexpr const U8 SPACEPACKETEND = 0;    // need to read the code and fiyre it outmak
 
 static constexpr U32 kBypassOpCodes[] = {
@@ -68,6 +68,17 @@ U32 Authenticate::readSequenceNumber(const char* filepath) {
 
 bool Authenticate::ByPassAuth(U8* packetBuffer, FwSizeType dataLength) {
     // we want to get the packet buffer, by removing what is inside the next step, the spacedataframer
+
+    if (packetBuffer == nullptr) {
+        return false;
+    }
+    if (dataLength < SPACEPACKETSTART) {
+        return false;
+    }
+
+    // remove the space packet header
+    packetBuffer += SPACEPACKETSTART;
+    dataLength -= SPACEPACKETSTART;
 
     // Check bounds before extracting
     if (dataLength < (OP_CODE_START + OP_CODE_LENGTH)) {
