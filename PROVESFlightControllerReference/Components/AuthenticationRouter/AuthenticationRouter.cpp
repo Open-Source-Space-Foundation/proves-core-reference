@@ -18,10 +18,6 @@
 #include "config/ApidEnumAc.hpp"
 #include <zephyr/drivers/rtc.h>
 
-// List of opcodes (as hex strings) that bypass authentication
-// Format: 8 hex characters (4 bytes = 32-bit opcode)
-// Example: "00000001" for opcode 0x00000001
-
 namespace Svc {
 
 // ----------------------------------------------------------------------
