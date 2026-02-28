@@ -22,6 +22,18 @@ constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 constexpr const int SECURITY_HEADER_LENGTH = 6;
 constexpr const int SECURITY_TRAILER_LENGTH = 16;
 constexpr const int SPI_DEFAULT = 0;
+constexpr const U8 OP_CODE_LENGTH = 4;    // F Prime opcodes are 32-bit (4 bytes)
+constexpr const U8 OP_CODE_START = 2;     // Opcode starts at byte offset 2 in the packet buffer
+constexpr const U8 SPACEPACKETSTART = 0;  // Space Packets start at byte offset 0 in the packet buffer
+constexpr const U8 SPACEPACKETEND = 0;    // need to read the code and fiyre it outmak
+
+static constexpr U32 kBypassOpCodes[] = {
+    0x01000000,  // no op
+    0x2200B000,  // get sequence number
+    0x10065000,  // amateurRadio.TELL_JOKE
+    0x10065000   // amateur name
+};
+constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
 // TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
@@ -54,6 +66,34 @@ U32 Authenticate::readSequenceNumber(const char* filepath) {
     return value;
 }
 
+bool Authenticate::ByPassAuth(U8* packetBuffer, FwSizeType dataLength) {
+    // we want to get the packet buffer, by removing what is inside the next step, the spacedataframer
+
+    // Check bounds before extracting
+    if (dataLength < (OP_CODE_START + OP_CODE_LENGTH)) {
+        return false;
+    }
+
+    // Extract opcode bytes
+
+    U8 opCodeBytes[OP_CODE_LENGTH];
+
+    std::memcpy(opCodeBytes, packetBuffer + OP_CODE_START, OP_CODE_LENGTH);
+
+    // Combine opcode bytes into a single 32-bit value for comparison
+    const U32 opCode = (static_cast<U32>(opCodeBytes[0]) << 24) | (static_cast<U32>(opCodeBytes[1]) << 16) |
+                       (static_cast<U32>(opCodeBytes[2]) << 8) | static_cast<U32>(opCodeBytes[3]);
+
+    // Check if opcode matches any in the bypass list
+    for (size_t i = 0; i < kBypassOpCodeCount; i++) {
+        if (opCode == kBypassOpCodes[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
     // Copy value to buffer to avoid type punning
     Utilities::FileHelper::writeToFile(filepath, value);
@@ -66,9 +106,9 @@ void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextO
     this->tlmWrite_RejectedPacketsCount(newCount);
     contextOut.set_authenticated(0);
 
-    // if the packet is rejected AND it is not a radio amateur
+    // if the packet is rejected we no longer pass it down the comm stack
 
-    this->dataOut_out(0, data, contextOut);
+    this->dataReturnOut_out(0, data, contextOut);
 }
 
 Authenticate ::~Authenticate() {}
@@ -286,7 +326,12 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // Validate HMAC - compute over security header + payload, compare with trailer
     bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
 
-    if (!hmacValid) {
+    // passing just the payload in here
+    bool bypassAuth =
+        this->ByPassAuth(data.getData() + SECURITY_HEADER_LENGTH,
+                         data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);  // make a function here
+
+    if (!hmacValid && !bypassAuth) {
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         this->rejectPacket(data, contextOut);
         return;

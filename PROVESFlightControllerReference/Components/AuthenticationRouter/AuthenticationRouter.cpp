@@ -18,19 +18,9 @@
 #include "config/ApidEnumAc.hpp"
 #include <zephyr/drivers/rtc.h>
 
-constexpr const U8 OP_CODE_LENGTH = 4;  // F Prime opcodes are 32-bit (4 bytes)
-constexpr const U8 OP_CODE_START = 2;   // Opcode starts at byte offset 2 in the packet buffer
-
 // List of opcodes (as hex strings) that bypass authentication
 // Format: 8 hex characters (4 bytes = 32-bit opcode)
 // Example: "00000001" for opcode 0x00000001
-static constexpr U32 kBypassOpCodes[] = {
-    0x01000000,  // no op
-    0x2200B000,  // get sequence number
-    0x10065000,  // amateurRadio.TELL_JOKE
-    0x10065000   // amateur name
-};
-constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
 namespace Svc {
 
@@ -45,30 +35,6 @@ AuthenticationRouter ::~AuthenticationRouter() {}
 // ----------------------------------------------------------------------
 // Handler implementations for user-defined typed input ports
 // ----------------------------------------------------------------------
-
-bool AuthenticationRouter::BypassesAuthentification(Fw::Buffer& packetBuffer) {
-    // Check bounds before extracting
-    if (packetBuffer.getSize() < (OP_CODE_START + OP_CODE_LENGTH)) {
-        return false;
-    }
-
-    // Extract opcode bytes
-    U8 opCodeBytes[OP_CODE_LENGTH];
-    std::memcpy(opCodeBytes, packetBuffer.getData() + OP_CODE_START, OP_CODE_LENGTH);
-
-    // Combine opcode bytes into a single 32-bit value for comparison
-    const U32 opCode = (static_cast<U32>(opCodeBytes[0]) << 24) | (static_cast<U32>(opCodeBytes[1]) << 16) |
-                       (static_cast<U32>(opCodeBytes[2]) << 8) | static_cast<U32>(opCodeBytes[3]);
-
-    // Check if opcode matches any in the bypass list
-    for (size_t i = 0; i < kBypassOpCodeCount; i++) {
-        if (opCode == kBypassOpCodes[i]) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 void AuthenticationRouter ::CallSafeMode() {
     // Call Safe mode with EXTERNAL_REQUEST reason (command loss is an external component request)
@@ -92,16 +58,6 @@ void AuthenticationRouter ::CallSafeMode() {
 void AuthenticationRouter ::dataIn_handler(FwIndexType portNum,
                                            Fw::Buffer& packetBuffer,
                                            const ComCfg::FrameContext& context) {
-    // Check if the OpCodes are in the OpCode list
-    // TODO
-    bool bypasses = this->BypassesAuthentification(packetBuffer);
-
-    // the packet was not authenticated
-    if (context.get_authenticated() == 0 && !bypasses) {
-        this->dataReturnOut_out(0, packetBuffer, context);
-        return;
-    }
-
     this->update_command_loss_start(true);
     // Reset safe mode flag when a new command is received
     this->m_safeModeCalled = false;
