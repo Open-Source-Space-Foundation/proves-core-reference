@@ -165,6 +165,8 @@ struct TopologyState {
     const device* face2drv2605Device;
     const device* face3drv2605Device;
     const device* face5drv2605Device;
+
+    const device* dieTempDevice;
 };
 
 namespace PingEntries = ::PingEntries;
