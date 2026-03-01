@@ -9,7 +9,7 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
-#include <Fw/Types/MallocAllocator.hpp>
+#include <ComCcsdsConfig/ComCcsdsSubtopologyConfig.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
@@ -33,9 +33,6 @@ static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
-
-// Instantiate a malloc allocator for cmdSeq buffer allocation
-Fw::MallocAllocator mallocator;
 
 constexpr FwSizeType BASE_RATEGROUP_PERIOD_MS = 1;  // 1Khz
 
@@ -78,9 +75,9 @@ void configureTopology() {
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 
-    cmdSeq.allocateBuffer(0, mallocator, 1024);
-    payloadSeq.allocateBuffer(0, mallocator, 1024);
-    safeModeSeq.allocateBuffer(0, mallocator, 1024);
+    cmdSeq.allocateBuffer(0, ComCcsds::Allocation::memAllocator, 1024);
+    payloadSeq.allocateBuffer(0, ComCcsds::Allocation::memAllocator, 1024);
+    safeModeSeq.allocateBuffer(0, ComCcsds::Allocation::memAllocator, 1024);
     gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
@@ -199,8 +196,8 @@ void teardownTopology(const TopologyState& state) {
     stopTasks(state);
     freeThreads(state);
     tearDownComponents(state);
-    cmdSeq.deallocateBuffer(mallocator);
-    payloadSeq.deallocateBuffer(mallocator);
-    safeModeSeq.deallocateBuffer(mallocator);
+    cmdSeq.deallocateBuffer(ComCcsds::Allocation::memAllocator);
+    payloadSeq.deallocateBuffer(ComCcsds::Allocation::memAllocator);
+    safeModeSeq.deallocateBuffer(ComCcsds::Allocation::memAllocator);
 }
 };  // namespace ReferenceDeployment
