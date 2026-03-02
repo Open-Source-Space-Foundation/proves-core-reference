@@ -75,10 +75,11 @@ Then, and every time you change code, run
 make build
 ```
 
-Now you want to install the firmware onto the board.
+Now you want to install the firmware onto the board. To do so, put the board into bootloader mode, then run
 ```shell
 cp bootable.uf2 [path-to-your-board]
 ```
+Run ```make generate build``` and reflash bootable.uf2 onto the board anytime you change code.
 
 If this is your first time running the gds, you must create the authentication plug:
 ```shell
