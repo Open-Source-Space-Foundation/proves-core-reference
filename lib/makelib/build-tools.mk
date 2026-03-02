@@ -17,6 +17,6 @@ UVX ?= $(UV_DIR)/uvx
 .PHONY: uv
 uv: $(UV) ## Download uv
 $(UV): $(TOOLS_DIR)
-	@test -s $(UV) || { mkdir -p $(UV_DIR); curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | UV_INSTALL_DIR=$(UV_DIR) sh > /dev/null; }
+	@test -s $(UV) || { mkdir -p $(UV_DIR); curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | UV_UNMANAGED_INSTALL=$(UV_DIR) sh > /dev/null; }
 
 UV_RUN ?= $(UV) run --active
