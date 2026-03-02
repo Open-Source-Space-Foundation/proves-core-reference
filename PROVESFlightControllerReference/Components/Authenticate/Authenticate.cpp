@@ -364,12 +364,11 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     U32 expectedSeqNum = this->sequenceNumber.load();
 
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
-    if (!sequenceNumberValid && !bypassAuth) {
+    if ((!bypassAuth && !sequenceNumberValid)) {
         this->rejectPacket(data, contextOut);
         return;
     }
 
-    // increment the stored sequence number
     U32 newSequenceNumber = sequenceNumber + 1;
     this->sequenceNumber.store(newSequenceNumber);
     this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, newSequenceNumber);
