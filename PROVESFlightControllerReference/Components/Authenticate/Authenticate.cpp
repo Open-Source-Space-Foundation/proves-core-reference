@@ -364,7 +364,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     U32 expectedSeqNum = this->sequenceNumber.load();
 
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
-    if (!sequenceNumberValid) {
+    if (!sequenceNumberValid && !bypassAuth) {
         this->rejectPacket(data, contextOut);
         return;
     }
