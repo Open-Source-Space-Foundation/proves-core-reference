@@ -338,9 +338,8 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
 
     // passing just the payload in here
-    bool bypassAuth =
-        this->ByPassAuth(data.getData() + SECURITY_HEADER_LENGTH,
-                         data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);  
+    bool bypassAuth = this->ByPassAuth(data.getData() + SECURITY_HEADER_LENGTH,
+                                       data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
 
     if (!hmacValid && !bypassAuth) {
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
