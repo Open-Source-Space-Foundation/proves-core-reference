@@ -71,6 +71,8 @@ class Authenticate final : public AuthenticateComponentBase {
 
     bool validateSequenceNumber(U32 received, U32 expected);
 
+    bool ByPassAuth(U8* packetBuffer, FwSizeType dataLength);
+
     bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
 
     bool validateHMAC(const U8* data, FwSizeType dataLength, const Fw::String& key, const U8* securityTrailer);
