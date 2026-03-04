@@ -58,10 +58,6 @@ class AuthenticationRouter final : public AuthenticationRouterComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
-    //! Checks whether or not the opcode of the packet is in the list of
-    //! opcodes that bypassauthentification
-    bool BypassesAuthentification(Fw::Buffer& packetBuffer);
-
     //! Calls safemode when command loss time expires
     void CallSafeMode();
 
