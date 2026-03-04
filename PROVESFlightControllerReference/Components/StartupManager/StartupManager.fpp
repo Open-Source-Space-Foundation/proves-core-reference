@@ -7,9 +7,6 @@ module Components {
         @ Port for sending sequence dispatches
         output port runSequence: Svc.CmdSeqIn
 
-        @ Port for receiving the status of the start-up sequence
-        @ sync input port completeSequence: Fw.CmdResponse
-
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
 
