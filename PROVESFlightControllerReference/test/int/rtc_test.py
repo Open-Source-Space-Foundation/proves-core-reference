@@ -27,6 +27,7 @@ ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
 safeModeSeq = "ReferenceDeployment.safeModeSeq"
+fileManager = "FileHandling.fileManager"
 
 
 @pytest.fixture(autouse=True)
@@ -90,6 +91,7 @@ def uplink_sequence_and_await_completion(
             msg = f"Failed to generate sequence binary from {sequence_path}: {exc}"
             fprime_test_api.__log(msg, TestLogger.RED)
             raise
+        fprime_test_api.send_command(f"{fileManager}.CreateDirectory", ["/seq"])
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
@@ -168,9 +170,9 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     updated_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert time has increased
-    assert updated_time > initial_time, (
-        f"Time should increase. Initial: {initial_time}, Updated: {updated_time}"
-    )
+    assert updated_time > initial_time, f"Time should increase. Initial: {
+        initial_time
+    }, Updated: {updated_time}"
 
 
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
