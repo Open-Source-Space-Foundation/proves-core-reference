@@ -60,11 +60,11 @@ class StartupManager final : public StartupManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Handler implementation for completeSequence
-    void completeSequence_handler(FwIndexType portNum,             //!< The port number
-                                  FwOpcodeType opCode,             //!< Command Op Code
-                                  U32 cmdSeq,                      //!< Command Sequence
-                                  const Fw::CmdResponse& response  //!< The command response argument
-                                  ) override;
+    // void completeSequence_handler(FwIndexType portNum,             //!< The port number
+    //                               FwOpcodeType opCode,             //!< Command Op Code
+    //                               U32 cmdSeq,                      //!< Command Sequence
+    //                               const Fw::CmdResponse& response  //!< The command response argument
+    //                               ) override;
 
     //! Handler implementation for run
     //!

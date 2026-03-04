@@ -210,7 +210,7 @@ module ReferenceDeployment {
 
 
       startupManager.runSequence -> cmdSeq.seqRunIn
-      cmdSeq.seqDone -> startupManager.completeSequence
+      # cmdSeq.seqDone -> startupManager.completeSequence
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
