@@ -58,6 +58,7 @@ const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
 const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
+const struct device* die_temp = DEVICE_DT_GET(DT_NODELABEL(die_temp));
 const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 
 int main(int argc, char* argv[]) {
@@ -102,6 +103,8 @@ int main(int argc, char* argv[]) {
     inputs.battCell2TempDevice = batt_cell2_temp_sens;
     inputs.battCell3TempDevice = batt_cell3_temp_sens;
     inputs.battCell4TempDevice = batt_cell4_temp_sens;
+    // Pico temperature sensor device
+    inputs.dieTempDevice = die_temp;
     // Light sensor devices
     inputs.face0LightDevice = face0_light_sens;
     inputs.face1LightDevice = face1_light_sens;
