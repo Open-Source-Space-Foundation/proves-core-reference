@@ -168,7 +168,6 @@ void setupTopology(const TopologyState& state) {
     veml6031Face3Manager.configure(state.tca9548aDevice, state.muxChannel3Device, state.face3LightDevice);
     veml6031Face5Manager.configure(state.tca9548aDevice, state.muxChannel5Device, state.face5LightDevice);
     veml6031Face6Manager.configure(state.tca9548aDevice, state.muxChannel6Device, state.face6LightDevice);
-    veml6031Face7Manager.configure(state.tca9548aDevice, state.muxChannel7Device, state.face7LightDevice);
 
     // Configure DRV2605 magnetorquer managers
     drv2605Face0Manager.configure(state.tca9548aDevice, state.muxChannel0Device, state.face0drv2605Device);

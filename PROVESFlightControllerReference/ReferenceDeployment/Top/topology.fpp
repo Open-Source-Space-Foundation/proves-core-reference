@@ -107,7 +107,6 @@ module ReferenceDeployment {
     instance veml6031Face3Manager
     instance veml6031Face5Manager
     instance veml6031Face6Manager
-    instance veml6031Face7Manager
     instance drv2605Face0Manager
     instance drv2605Face1Manager
     instance drv2605Face2Manager

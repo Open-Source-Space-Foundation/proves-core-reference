@@ -68,7 +68,6 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.veml6031Face3Manager.VisibleLight
     ReferenceDeployment.veml6031Face5Manager.VisibleLight
     ReferenceDeployment.veml6031Face6Manager.VisibleLight
-    ReferenceDeployment.veml6031Face7Manager.VisibleLight
   }
 
   ### Satellite Meta Data Packets ###

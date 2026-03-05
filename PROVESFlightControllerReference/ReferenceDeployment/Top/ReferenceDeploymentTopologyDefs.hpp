@@ -137,7 +137,6 @@ struct TopologyState {
     const device* muxChannel4Device;              //!< Multiplexer channel 4 device
     const device* muxChannel5Device;              //!< Multiplexer channel 5 device
     const device* muxChannel6Device;              //!< Multiplexer channel 5 device
-    const device* muxChannel7Device;              //!< Multiplexer channel 7 device
     int storagePartitionId;                       //!< Storage partition ID
 
     // Face devices
@@ -158,7 +157,6 @@ struct TopologyState {
     const device* face3LightDevice;  //!< Light sensor device for cube face 3
     const device* face5LightDevice;  //!< Light sensor device for cube face 5
     const device* face6LightDevice;  //!< Light sensor device for cube face 6
-    const device* face7LightDevice;  //!< Light sensor device for cube face 7
     //! Magnetorquers
     const device* face0drv2605Device;
     const device* face1drv2605Device;

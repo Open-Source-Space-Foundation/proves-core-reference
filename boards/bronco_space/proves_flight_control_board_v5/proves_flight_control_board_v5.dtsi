@@ -457,23 +457,6 @@ zephyr_udc0: &usbd {
 			};
 
 		};
-
-		// Top cap
-		mux_channel_7: i2c_mux@7 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_7";
-			reg = <7>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			// TODO add top cap temp sensor (it's not a TMP112)
-			face7_light_sens: light@29 {
-				compatible = "vishay,veml6031";
-				reg = <0x29>;
-				status = "okay";
-				label = "FACE7_VEML6031";
-				zephyr,deferred-init;
-			};
-		};
 	};
 };
 

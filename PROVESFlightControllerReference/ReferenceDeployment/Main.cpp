@@ -36,7 +36,6 @@ const struct device* mux_channel_3 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_3));
 const struct device* mux_channel_4 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_4));
 const struct device* mux_channel_5 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_5));
 const struct device* mux_channel_6 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_6));
-const struct device* mux_channel_7 = DEVICE_DT_GET(DT_NODELABEL(mux_channel_7));
 const struct device* face0_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face0_temp_sens));
 const struct device* face1_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face1_temp_sens));
 const struct device* face2_temp_sens = DEVICE_DT_GET(DT_NODELABEL(face2_temp_sens));
@@ -52,7 +51,6 @@ const struct device* face2_light_sens = DEVICE_DT_GET(DT_NODELABEL(face2_light_s
 const struct device* face3_light_sens = DEVICE_DT_GET(DT_NODELABEL(face3_light_sens));
 const struct device* face5_light_sens = DEVICE_DT_GET(DT_NODELABEL(face5_light_sens));
 const struct device* face6_light_sens = DEVICE_DT_GET(DT_NODELABEL(face6_light_sens));
-const struct device* face7_light_sens = DEVICE_DT_GET(DT_NODELABEL(face7_light_sens));
 const struct device* face0_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face0_drv2605));
 const struct device* face1_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face1_drv2605));
 const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
@@ -88,7 +86,6 @@ int main(int argc, char* argv[]) {
     inputs.muxChannel4Device = mux_channel_4;
     inputs.muxChannel5Device = mux_channel_5;
     inputs.muxChannel6Device = mux_channel_6;
-    inputs.muxChannel7Device = mux_channel_7;
     inputs.storagePartitionId = storage_partition_id;
 
     // Face Board device bindings
@@ -109,7 +106,6 @@ int main(int argc, char* argv[]) {
     inputs.face3LightDevice = face3_light_sens;
     inputs.face5LightDevice = face5_light_sens;
     inputs.face6LightDevice = face6_light_sens;
-    inputs.face7LightDevice = face7_light_sens;
     // Magnetorquer devices
     inputs.face0drv2605Device = face0_drv2605;
     inputs.face1drv2605Device = face1_drv2605;
