@@ -203,6 +203,9 @@ zephyr_udc0: &usbd {
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face0_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -240,6 +243,9 @@ zephyr_udc0: &usbd {
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face1_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -277,6 +283,9 @@ zephyr_udc0: &usbd {
 			reg = <2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face2_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -314,6 +323,9 @@ zephyr_udc0: &usbd {
 			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face3_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -352,6 +364,10 @@ zephyr_udc0: &usbd {
 			reg = <4>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
+
 			batt_cell1_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
 				reg = <0x48>;
@@ -389,6 +405,9 @@ zephyr_udc0: &usbd {
 			reg = <5>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face5_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -427,6 +446,9 @@ zephyr_udc0: &usbd {
 			reg = <6>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
 
 			face6_temp_sens: tmp112@48 {
 				compatible = "ti,tmp112";
@@ -465,6 +487,10 @@ zephyr_udc0: &usbd {
 			reg = <7>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <400000>;
+			sq-size = <8>;
+			cq-size = <8>;
+
 			// TODO add top cap temp sensor (it's not a TMP112)
 			face7_light_sens: light@29 {
 				compatible = "vishay,veml6031";
