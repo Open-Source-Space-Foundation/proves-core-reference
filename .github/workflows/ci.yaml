@@ -30,7 +30,8 @@ jobs:
                 'Integration tests are manual for this PR.',
                 '',
                 '- Maintainers can trigger integration by commenting `!integration` on this PR.',
-                '- Integration will run only after a successful `build` and when build `artifacts` are available.'
+                '- Integration will run only after a successful `build` and when build `artifacts` are available.',
+                '- **PLEASE** ensure your code at least boots on local hardware first, as certain changes can brick CI.'
               ].join('\n')
             });
 
