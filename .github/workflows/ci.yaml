@@ -172,6 +172,9 @@ jobs:
       actions: read
       contents: read
       pull-requests: read
+    runs-on:
+      - integration
+    steps:
       - name: Authorize request and resolve PR details
         id: pr
         uses: actions/github-script@v7
