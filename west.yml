@@ -17,7 +17,7 @@ manifest:
     # Zephyr RTOS core
     - name: zephyr
       repo-path: zephyr
-      revision: 9d9a8ef
+      revision: 03b7df7
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
