@@ -2,12 +2,40 @@ name: ci
 
 on:
   pull_request:
+  issue_comment:
+    types:
+      - created
   push:
     branches:
       - main
 
 jobs:
+  integration-instructions:
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post integration instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: [
+                'Integration tests are manual for this PR.',
+                '',
+                '- Maintainers can trigger integration by commenting `!integration` on this PR.',
+                '- Integration will run only after a successful `build` and when build `artifacts` are available.'
+              ].join('\n')
+            });
+
   lint:
+    if: github.event_name != 'issue_comment'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +45,7 @@ jobs:
           make fmt
 
   unit-test:
+    if: github.event_name != 'issue_comment'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +65,7 @@ jobs:
           make test-unit
 
   build:
+    if: github.event_name != 'issue_comment'
     runs-on: deathstar
     steps:
       - uses: actions/checkout@v4
@@ -98,13 +128,89 @@ jobs:
           retention-days: 30
 
   integration:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '!integration') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     runs-on:
       - integration
-    needs: build
     steps:
+      - name: Resolve PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.issue.number;
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number });
+            core.setOutput('head_sha', pr.data.head.sha);
+
+      - name: Resolve successful build run with artifacts
+        id: build_run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const headSha = '${{ steps.pr.outputs.head_sha }}';
+
+            const runsResponse = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'ci.yaml',
+              event: 'pull_request',
+              head_sha: headSha,
+              per_page: 50
+            });
+
+            const successfulRun = runsResponse.data.workflow_runs.find(
+              (run) => run.conclusion === 'success'
+            );
+
+            if (!successfulRun) {
+              core.setFailed(
+                `No successful pull_request CI run found for commit ${headSha}. Wait for build to pass before requesting integration.`
+              );
+              return;
+            }
+
+            const artifactsResponse = await github.rest.actions.listWorkflowRunArtifacts({
+              owner,
+              repo,
+              run_id: successfulRun.id
+            });
+
+            const buildArtifact = artifactsResponse.data.artifacts.find(
+              (artifact) => artifact.name === 'artifacts' && !artifact.expired
+            );
+
+            if (!buildArtifact) {
+              core.setFailed(
+                `Successful CI run ${successfulRun.id} does not have a valid 'artifacts' upload from build.`
+              );
+              return;
+            }
+
+            core.setOutput('run_id', successfulRun.id.toString());
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.head_sha }}
 
       - uses: actions/download-artifact@v5
+        with:
+          name: artifacts
+          run-id: ${{ steps.build_run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
 
       - name: Set up dependencies
         run: |
