@@ -59,6 +59,13 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     configureSensorAttributes(SENSOR_CHAN_LIGHT);  // ignore return value for now
 
+    /*
+    proposed fix
+     if (this->configureSensorAttributes(SENSOR_CHAN_LIGHT) != Fw::Success::SUCCESS) {
+         this->log_WARNING_LO_SensorAttrConfigFailed();
+         return 0;
+     }
+     */
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_LIGHT);
     if (rc != 0) {
         this->log_WARNING_LO_SensorSampleFetchFailed(rc);
