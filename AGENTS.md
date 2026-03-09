@@ -109,28 +109,6 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
-**Interactive Test Selection**:
-
-```bash
-make test-interactive          # Launch interactive test menu
-make test-interactive ARGS="--all --cycles 10"  # CLI mode
-```
-
-**Integration Test Workflow**:
-Integration tests require a two-terminal setup with the GDS (Ground Data System) running:
-
-```bash
-# Terminal 1: Start GDS (Ground Data System)
-make gds
-# This starts fprime-gds with:
-# - Dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
-# - Communication: UART at 115200 baud
-# - Output: Unframed data mode
-
-# Terminal 2: Run integration tests
-make test-integration
-# This runs: pytest PROVESFlightControllerReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
-```
 
 **Test Framework Details**:
 
