@@ -9,6 +9,8 @@
 
 #include "PROVESFlightControllerReference/Components/Drv/Veml6031Manager/Veml6031Manager.hpp"
 
+#include <zephyr/sys/printk.h>
+
 namespace Drv {
 
 // ----------------------------------------------------------------------
@@ -71,7 +73,9 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
         this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
-    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
+    // create way to manual throttle
+
+    // this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
 
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_LIGHT, &val);
@@ -101,6 +105,12 @@ void Veml6031Manager ::GetVisibleLight_cmdHandler(FwOpcodeType opCode, U32 cmdSe
         return;
     }
     this->log_ACTIVITY_HI_VisibleLight(lux);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Veml6031Manager ::ClearThrottle_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // TODO
+    this->log_WARNING_LO_SensorSampleFetchFailed_ThrottleClear();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 

@@ -69,6 +69,11 @@ class Veml6031Manager final : public Veml6031ManagerComponentBase {
                                     U32 cmdSeq            //!< The command sequence number
                                     ) override;
 
+    //! Handler implementation for command ClearThrottle
+    void ClearThrottle_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                  U32 cmdSeq            //!< The command sequence number
+                                  ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods

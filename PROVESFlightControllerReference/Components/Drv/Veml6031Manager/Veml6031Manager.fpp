@@ -46,6 +46,8 @@ module Drv {
         @ Command to get the visible light measurement in lux
         sync command GetVisibleLight()
 
+        sync command ClearThrottle()
+
         #### Telemetry ####
         @ Telemetry for the illuminance in the visible spectrum, in lux
         telemetry VisibleLight: F32
