@@ -84,6 +84,10 @@ jobs:
         run: |
           echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
 
+      - name: Build MCUBoot
+        run: |
+          make build-mcuboot
+
       - name: Build
         run: |
           make build
@@ -93,7 +97,9 @@ jobs:
         with:
           name: artifacts
           path: |
+            mcuboot.elf
             bootable.uf2
+            bootable.signed.hex
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
