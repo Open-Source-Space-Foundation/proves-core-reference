@@ -7,6 +7,14 @@
 
 #include <Fw/Types/Assert.hpp>
 
+namespace {
+// Temperature thresholds in degrees Celsius
+constexpr F64 FACE_TEMP_LOWER_THRESHOLD = -20.0;
+constexpr F64 FACE_TEMP_UPPER_THRESHOLD = 60.0;
+constexpr F64 BATT_CELL_TEMP_LOWER_THRESHOLD = -20.0;
+constexpr F64 BATT_CELL_TEMP_UPPER_THRESHOLD = 60.0;
+}  // namespace
+
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -26,12 +34,22 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
-        this->faceTempGet_out(i, condition);
+        F64 temperature = this->faceTempGet_out(i, condition);
+        if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
+            this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
+        } else if (temperature > FACE_TEMP_UPPER_THRESHOLD) {
+            this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
+        }
     }
 
     // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
-        this->battCellTempGet_out(i, condition);
+        F64 temperature = this->battCellTempGet_out(i, condition);
+        if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
+            this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
+        } else if (temperature > BATT_CELL_TEMP_UPPER_THRESHOLD) {
+            this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
+        }
     }
 }
 
