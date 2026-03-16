@@ -2,6 +2,19 @@ module Components {
     @ Thermal Manager Component for F Prime FSW framework.
     @ Orchestrates temperature sensor readings from 11 TMP112 sensors
     passive component ThermalManager {
+        ### Parameters ###
+        @ Parameter for face temperature lower threshold in °C
+        param FACE_TEMP_LOWER_THRESHOLD: F64 default -20.0 id 0
+
+        @ Parameter for face temperature upper threshold in °C
+        param FACE_TEMP_UPPER_THRESHOLD: F64 default 60.0 id 1
+
+        @ Parameter for battery cell temperature lower threshold in °C
+        param BATT_CELL_TEMP_LOWER_THRESHOLD: F64 default -20.0 id 2
+
+        @ Parameter for battery cell temperature upper threshold in °C
+        param BATT_CELL_TEMP_UPPER_THRESHOLD: F64 default 60.0 id 3
+
         sync input port run: Svc.Sched
 
         @ The number of face temperature sensors
@@ -45,7 +58,22 @@ module Components {
         @ Port for emitting events
         event port logOut
 
+        @ Port for getting parameters
+        param get port prmGetOut
+
+        @ Port for setting parameters
+        param set port prmSetOut
+
         @ Port for emitting text events
         text event port logTextOut
+
+        @ Port for sending command registrations
+        command reg port cmdRegOut
+
+        @ Port for receiving commands
+        command recv port cmdIn
+
+        @ Port for sending command responses
+        command resp port cmdResponseOut
     }
 }

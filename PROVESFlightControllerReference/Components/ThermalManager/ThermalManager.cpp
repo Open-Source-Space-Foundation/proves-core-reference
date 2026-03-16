@@ -7,14 +7,6 @@
 
 #include <Fw/Types/Assert.hpp>
 
-namespace {
-// Temperature thresholds in degrees Celsius
-constexpr F64 FACE_TEMP_LOWER_THRESHOLD = -20.0;
-constexpr F64 FACE_TEMP_UPPER_THRESHOLD = 60.0;
-constexpr F64 BATT_CELL_TEMP_LOWER_THRESHOLD = -20.0;
-constexpr F64 BATT_CELL_TEMP_UPPER_THRESHOLD = 60.0;
-}  // namespace
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -31,13 +23,14 @@ ThermalManager::~ThermalManager() {}
 
 void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     Fw::Success condition;
+    Fw::ParamValid param_valid;
 
     // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
         F64 temperature = this->faceTempGet_out(i, condition);
-        if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
+        if (temperature < this->paramGet_FACE_TEMP_LOWER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
-        } else if (temperature > FACE_TEMP_UPPER_THRESHOLD) {
+        } else if (temperature > this->paramGet_FACE_TEMP_UPPER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
         }
     }
@@ -45,9 +38,9 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
         F64 temperature = this->battCellTempGet_out(i, condition);
-        if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
+        if (temperature < this->paramGet_BATT_CELL_TEMP_LOWER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
-        } else if (temperature > BATT_CELL_TEMP_UPPER_THRESHOLD) {
+        } else if (temperature > this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
         }
     }
