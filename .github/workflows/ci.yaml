@@ -124,11 +124,11 @@ jobs:
 
       - name: Install MCUBoot
         run: |
-          ~/openocd/src/openocd -s tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
+          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
 
       - name: Install Flight Software
         run: |
-          ~/openocd/src/openocd -s tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
+          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
 
       - name: Kill all python processes
         run: |
