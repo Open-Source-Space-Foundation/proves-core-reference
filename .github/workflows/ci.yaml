@@ -70,8 +70,6 @@ jobs:
 
       - name: Install Zephyr Python Dependencies
         run: |
-          make zephyr-python-deps
-
       - name: Change to CI Spacecraft ID
         run: |
           make make-ci-spacecraft-id
@@ -124,6 +122,14 @@ jobs:
         run: |
           make framer-plugin
 
+      - name: Install MCUBoot
+        run: |
+          ~/openocd/src/openocd -s tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
+
+      - name: Install Flight Software
+        run: |
+          ~/openocd/src/openocd -s tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
+
       - name: Kill all python processes
         run: |
           pkill -9 python || true
@@ -131,21 +137,6 @@ jobs:
       - name: Sync Sequence Number
         run: |
           make sync-sequence-number
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
-      - name: Trigger Bootloader
-        run: |
-          make bootloader
-          sleep 10
-
-      - name: Copy Firmware
-        run: |
-          picotool load ./bootable.uf2
-          picotool reboot
-          sleep 5
 
       - name: Kill all python processes
         run: |
