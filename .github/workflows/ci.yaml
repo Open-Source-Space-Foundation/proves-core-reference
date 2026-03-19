@@ -138,7 +138,7 @@ jobs:
 
       - name: Sync Sequence Number
         run: |
-          make sync-sequence-number
+          make sync-sequence-number UART_DEVICE=/dev/ttyBOARD
 
       - name: Kill all python processes
         run: |
