@@ -2,22 +2,30 @@ module Drv {
     @ RTC alarm manager component
     active component AlarmManager {
 
-        # CMD to set alarms
+        @ internal port for wakeups
+        internal port InternalAlarm(ID: U32)
+
+        @ CMD to set alarms
         async command SET_ALARM(
             seconds: U32 @ "Seconds of the timestamp"
             nanoseconds: U32 @ "Nanoseconds part of the timestamp"
             ID: U32 @ "ID to indentify an alarm"
         )
 
-        event ALARM_TRIGGER(ID: U32) \ 
-            severity activity high \
-            format "Alarm %u has triggered"
+        @ event to log alarm triggers
+        event ALARM_TRIGGER(ID: U32) severity activity high format "Alarm %u has triggered"
 
-        # input sched port
+        @ input sched port
         sync input port SchedIn: Svc.Sched
 
-        # outgoing alarm port
+        @ outgoing alarm port
         sync input port Alarm: Svc.Sched
+
+        @telemeter the number of times an alarm triggered
+        telemetry AlarmCount: U32
+
+        @telemeter the state of the CPU (sleep or normal)
+        telemetry CPUstate: U32
 
         ##############################################################################
         #### Uncomment the following examples to start customizing your component ####
