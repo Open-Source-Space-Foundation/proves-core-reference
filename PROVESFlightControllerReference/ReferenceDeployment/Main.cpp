@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     k_sleep(K_MSEC(3000));
 
     Os::init();
-
+    
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
     // inputs.spi0Device = spi0;
@@ -131,5 +131,7 @@ int main(int argc, char* argv[]) {
     ReferenceDeployment::setupTopology(inputs);
     ReferenceDeployment::startRateGroups();  // Program loop
     ReferenceDeployment::teardownTopology(inputs);
+
+    
     return 0;
 }

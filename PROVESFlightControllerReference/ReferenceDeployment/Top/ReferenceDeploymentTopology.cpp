@@ -13,6 +13,7 @@
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
+#include <Os/FileSystem.hpp>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
@@ -66,6 +67,8 @@ U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGr
  * desired, but is extracted here for clarity.
  */
 void configureTopology() {
+    // Os::FileSystem::CreateDirectory("logs");
+    // Os::FileSystem::createDirectory("/logs");
     FileHandling::prmDb.configure("/prmDb.dat");
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
@@ -140,7 +143,7 @@ void setupTopology(const TopologyState& state) {
     // };
     //    spiDriver.configure(state.spi0Device, cfg);
     //    sband.configureRadio();
-    tlmLogger.init_log_file("/Tlm", 1024 * 30, true);
+    tlmLogger.init_log_file("/logs/tlm", 1024 * 30, true); 
     // UART from the board to the payload
     peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
     imuManager.configure(state.lis2mdlDevice, state.lsm6dsoDevice);
