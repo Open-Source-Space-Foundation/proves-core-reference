@@ -109,7 +109,7 @@ zephyr_udc0: &usbd {
 };
 
 &die_temp {
-	// io-channels = <&adc 8>;
+	io-channels = <&adc 4>;
 	status = "okay";
 };
 
