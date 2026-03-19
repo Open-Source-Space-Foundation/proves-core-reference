@@ -205,11 +205,8 @@ bootloader: uv
 
 .PHONY: sync-sequence-number
 sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
-	@echo "Synchronizing sequence number"
-	@if [ -z "$(UART_DEVICE)"]; then \
-		@$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
-	fi
-	@$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment --uart-device $(UART_DEVICE)
+	@echo "Synchronizing sequence number; ensure you have the GDS open."
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files

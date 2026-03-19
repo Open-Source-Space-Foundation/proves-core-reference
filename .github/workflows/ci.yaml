@@ -136,18 +136,14 @@ jobs:
         run: |
           pkill -9 python || true
 
-      - name: Sync Sequence Number
-        run: |
-          make sync-sequence-number UART_DEVICE=/dev/ttyBOARD
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
       - name: Start GDS
         run: |
           nohup make gds-integration &
           echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make sync-sequence-number
 
       - name: Run Integration Tests
         run: |
