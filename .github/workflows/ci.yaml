@@ -143,9 +143,9 @@ jobs:
       - name: Reboot Integration Cube
         if: env.KORAD_CONTROL == 'true'
         run: |
-          uv run ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
           sleep 5
-          uv run ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
 
       - name: Kill all python processes
         run: |
