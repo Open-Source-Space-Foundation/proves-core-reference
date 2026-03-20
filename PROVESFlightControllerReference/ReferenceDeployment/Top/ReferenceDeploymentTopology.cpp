@@ -179,6 +179,8 @@ void setupTopology(const TopologyState& state) {
 
     detumbleManager.configure();
 
+    picoTempManager.configure(state.dieTempDevice);
+
     fsFormat.configure(state.storagePartitionId);
 }
 
