@@ -10,7 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Lint
         run: |
@@ -19,7 +19,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -38,7 +38,7 @@ jobs:
   build:
     runs-on: deathstar
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -116,9 +116,9 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
 
       - name: Set up dependencies
         run: |
