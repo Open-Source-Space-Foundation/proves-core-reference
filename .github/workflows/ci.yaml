@@ -70,7 +70,7 @@ jobs:
 
       - name: Install Zephyr Python Dependencies
         run: |
-            make zephyr-python-deps
+          make zephyr-python-deps
 
       - name: Change to CI Spacecraft ID
         run: |
