@@ -67,6 +67,29 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
+    //! Handler implementation for command ALARM_SET
+    //!
+    //! ALARM_SET command to set an alarm on the RTC
+    void ALARM_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq,           //!< The command sequence number
+                              Fw::TimeValue t       //!< Time to set the alarm for
+                              ) override;
+
+    //! Handler implementation for command ALARM_CANCEL
+    //!
+    //! ALARM_CANCEL command to cancel any set alarms on the RTC
+    void ALARM_CANCEL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                 U32 cmdSeq,           //!< The command sequence number
+                                 U32 ID                //!< ID of the alarm to cancel
+                                 ) override;
+
+    //! Handler implementation for command ALARM_LIST
+    //!
+    //! ALARM_LIST command to list all set alarms on the RTC
+    void ALARM_LIST_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
