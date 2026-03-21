@@ -83,7 +83,7 @@ make build
 - Command: `make generate`
 
 ### Linting & Formatting
-
+**IMPORTANT**: The linter must be run before every commit.
 ```bash
 # Run all pre-commit checks (REQUIRED before committing)
 make fmt
@@ -114,10 +114,6 @@ Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-t
 
 - **Location**: `PROVESFlightControllerReference/test/int/`
 - **Framework**: pytest with fprime-gds testing API
-- **Test Files**:
-  - `watchdog_test.py` - Watchdog component integration tests
-  - `imu_manager_test.py` - IMU Manager component tests
-  - `rtc_test.py` - RTC Manager component tests
 - **API**: Uses `IntegrationTestAPI` for sending commands and asserting events/telemetry
 - **Communication**: Tests communicate with the board via GDS over UART
 
@@ -235,43 +231,6 @@ docs-site/
 - Build system: CMake with F Prime and Zephyr toolchains
 - Default board: `proves_flight_control_board_v5d/rp2350a/m33` (configurable in `settings.ini`)
 
-## Board Variations & Hardware Configuration
-
-### Available Board Versions
-
-The project supports multiple variants of the PROVES Flight Control Board, all based on the RP2350 (Raspberry Pi Pico 2) microcontroller:
-
-**Base Board (`proves_flight_control_board_v5`)**:
-
-- Common hardware definition shared by all variants
-- Defines sensors: LSM6DSO (IMU), LIS2MDL (magnetometer), INA219 (current sensor)
-- LoRa radio: SX1276 with SPI interface
-- RTC: RV3028 with I2C interface
-- USB CDC ACM for console communication
-- Watchdog LED on GPIO 23 (base configuration)
-
-**Variant C (`proves_flight_control_board_v5c`)**:
-
-- **Key Difference**: Watchdog LED moved to GPIO 24
-- LoRa DIO pins: GPIO 13 and GPIO 12 (different from base)
-- USB Product ID: "PROVES Flight Control Board v5c"
-- As we develop, probably other differences will be noticed
-
-**Variant D (`proves_flight_control_board_v5d`)**:
-
-- **Key Difference**: Uses base board configuration (LED on GPIO 23)
-- LoRa DIO pins: GPIO 14 and GPIO 13 (base configuration)
-- USB Product ID: "PROVES Flight Control Board v5d"
-- Most similar to the original v5 design
-- **Default Board**: This is the default in `settings.ini`
-
-### Board Selection
-
-- **Default**: Set in `settings.ini` (`BOARD=proves_flight_control_board_v5d/rp2350a/m33`)
-- **Override**: Use CMake option `-DBOARD=<board_name>/<soc>/<core>`
-- **Available SOCs**: `rp2350a` (Raspberry Pi Pico 2)
-- **Available Cores**: `m33` (ARM Cortex-M33)
-
 **Component Types**:
 
 - `.fpp` files: F Prime component definitions (autocoded)
@@ -334,22 +293,6 @@ make pre-commit-install # Install pre-commit hooks
 make minimize-uv-cache # Minimize UV cache (CI optimization)
 ```
 
-**Zephyr-Specific Targets** (from `lib/makelib/zephyr.mk`):
-
-```bash
-make zephyr            # Complete Zephyr setup (config + workspace + export + deps + SDK)
-make zephyr-config     # Configure west
-make zephyr-workspace  # Setup Zephyr bootloader, modules, and tools
-make zephyr-export     # Export Zephyr environment variables
-make zephyr-python-deps # Install Zephyr Python dependencies
-make zephyr-sdk        # Install Zephyr SDK
-make clean-zephyr      # Remove all Zephyr build files
-make clean-zephyr-config    # Remove west configuration
-make clean-zephyr-workspace # Remove Zephyr bootloader, modules, and tools
-make clean-zephyr-export    # Remove Zephyr exported files
-make clean-zephyr-sdk      # Remove Zephyr SDK
-```
-
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
 **Jobs**:
@@ -380,16 +323,6 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 
 **Solution**: Run `make clean` followed by `make generate build`.
 
-### Issue: USB device not detected on board
-
-**Workaround**: The board may need to be put into bootloader mode. Use the new bootloader target:
-
-```bash
-make bootloader
-```
-
-This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs-site/additional-resources/board-list.md`.
-
 ### Issue: Integration tests fail to connect
 
 **Solution**: Ensure GDS is running (`make gds`) and board is connected. Check serial port in GDS output.
@@ -397,21 +330,6 @@ This automatically detects if the board is already in bootloader mode and trigge
 ### Issue: Build times out (>2 minutes)
 
 **Solution**: First build takes 3-5 minutes. Subsequent builds are faster (~30 seconds). Use `timeout: 300` for initial builds.
-
-### Issue: Flashing firmware to board
-
-**Different boards require different methods**:
-
-- **RP2040/RP2350**: Copy `.uf2` file to board's USB mass storage
-  ```bash
-  cp build-artifacts/zephyr.uf2 /Volumes/RPI-RP2  # macOS
-  ```
-- **STM32**: Use STM32CubeProgrammer via SWD
-  ```bash
-  sh ~/Library/Arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh \
-    -i swd -f build-artifacts/zephyr/zephyr.hex -c /dev/cu.usbmodem142203
-  ```
-- See `docs-site/additional-resources/board-list.md` for tested boards
 
 ## File Modification Guidelines
 
