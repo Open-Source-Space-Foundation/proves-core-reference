@@ -83,7 +83,7 @@ make build
 - Command: `make generate`
 
 ### Linting & Formatting
-
+**IMPORTANT**: The linter must be run before every commit.
 ```bash
 # Run all pre-commit checks (REQUIRED before committing)
 make fmt
@@ -101,30 +101,19 @@ This runs:
 
 ### Testing Framework
 
-**Integration Test Workflow**:
-Integration tests require a two-terminal setup with the GDS (Ground Data System) running:
+**Unit Tests**:
 
 ```bash
-# Terminal 1: Start GDS (Ground Data System)
-make gds
-# This starts fprime-gds with:
-# - Dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
-# - Communication: UART at 115200 baud
-# - Output: Unframed data mode
-
-# Terminal 2: Run integration tests
-make test-integration
-# This runs: pytest PROVESFlightControllerReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+make test-unit
 ```
+
+Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
+
 
 **Test Framework Details**:
 
 - **Location**: `PROVESFlightControllerReference/test/int/`
 - **Framework**: pytest with fprime-gds testing API
-- **Test Files**:
-  - `watchdog_test.py` - Watchdog component integration tests
-  - `imu_manager_test.py` - IMU Manager component tests
-  - `rtc_test.py` - RTC Manager component tests
 - **API**: Uses `IntegrationTestAPI` for sending commands and asserting events/telemetry
 - **Communication**: Tests communicate with the board via GDS over UART
 
@@ -153,7 +142,7 @@ settings.ini           # F Prime project settings (default board, toolchain)
 west.yml               # Zephyr workspace manifest
 Kconfig                # Zephyr configuration options
 prj.conf               # Zephyr project configuration (USB, I2C, SPI, etc.)
-fprime-gds.yaml        # GDS command-line defaults
+fprime-gds.yml         # GDS command-line defaults
 requirements.txt       # Python dependencies
 .python-version        # Python version requirement (3.13)
 ```
@@ -163,11 +152,40 @@ requirements.txt       # Python dependencies
 ```
 PROVESFlightControllerReference/
 ├── Components/        # Custom F Prime components
-│   ├── BootloaderTrigger/
-│   ├── Drv/          # Driver components (IMU, RTC, sensor managers)
-│   ├── FatalHandler/
-│   ├── DetumbleManager/
-│   └── Watchdog/
+│   ├── ADCS/          # Attitude Determination and Control System
+│   ├── AmateurRadio/  # Amateur radio communication
+│   ├── AntennaDeployer/ # Antenna deployment mechanism
+│   ├── Authenticate/  # HMAC-based command authentication
+│   ├── AuthenticationRouter/ # Authentication routing
+│   ├── BootloaderTrigger/ # Bootloader mode entry
+│   ├── Burnwire/      # Burnwire deployment mechanism
+│   ├── CameraHandler/ # Camera management
+│   ├── ComDelay/      # Communication delay management
+│   ├── DetumbleManager/ # Magnetic detumble control
+│   ├── Drv/           # Driver components (IMU, RTC, sensor managers)
+│   │   ├── Drv2605Manager/ # Haptic driver
+│   │   ├── Ina219Manager/  # Current/power monitor driver
+│   │   ├── RtcManager/     # RTC driver
+│   │   ├── Tmp112Manager/  # Temperature sensor driver
+│   │   └── Veml6031Manager/ # Light sensor driver
+│   ├── FatalHandler/  # System error handling
+│   ├── FlashWorker/   # Flash memory management
+│   ├── FsFormat/      # Filesystem formatting
+│   ├── FsSpace/       # Filesystem space monitoring
+│   ├── ImuManager/    # LSM6DSO 6-axis IMU management
+│   ├── LoadSwitch/    # Power load switch control
+│   ├── ModeManager/   # Spacecraft mode management
+│   ├── NullPrmDb/     # No-op parameter database
+│   ├── PayloadCom/    # Payload communication
+│   ├── PowerMonitor/  # Power system monitoring
+│   ├── ResetManager/  # System reset management
+│   ├── SBand/         # S-Band radio communication
+│   ├── StartupManager/ # Startup sequence management
+│   ├── ThermalManager/ # Thermal monitoring and control
+│   └── Watchdog/      # Hardware watchdog with LED indication
+├── ComCcsdsLora/      # CCSDS LoRa communication framing
+├── ComCcsdsSband/     # CCSDS S-Band communication framing
+├── ComCcsdsUart/      # CCSDS UART communication framing
 ├── ReferenceDeployment/
 │   ├── Main.cpp      # Application entry point
 │   └── Top/          # Topology definition
@@ -181,6 +199,7 @@ PROVESFlightControllerReference/
 lib/
 ├── fprime/           # F Prime framework (39MB, git submodule)
 ├── fprime-zephyr/    # F Prime-Zephyr integration (368KB, git submodule)
+├── fprime-extras/    # Additional F Prime libraries
 └── zephyr-workspace/ # Zephyr RTOS (404MB, git submodule)
 
 boards/               # Custom board definitions
@@ -189,6 +208,11 @@ boards/               # Custom board definitions
     ├── proves_flight_control_board_v5c/    # Variant C (LED on GPIO 24)
     └── proves_flight_control_board_v5d/    # Variant D (standard configuration)
 
+bootloader/           # MCUBoot bootloader configuration
+Framing/              # F Prime framing/deframing plugin (pip installable)
+sequences/            # F Prime command sequences (.seq files)
+scripts/              # Utility scripts (key generation, etc.)
+tools/                # Development and analysis tools (see tools/README.md)
 docs-site/
 ├── getting-started/     # Setup and build documentation
 ├── additional-resources/  # Board-specific guides, troubleshooting
@@ -205,44 +229,7 @@ docs-site/
 - Main entry point: `PROVESFlightControllerReference/ReferenceDeployment/Main.cpp`
   - **Critical**: 3-second sleep before starting to allow USB CDC ACM initialization
 - Build system: CMake with F Prime and Zephyr toolchains
-- Default board: `proves_flight_control_board_v5c/rp2350a/m33` (configurable in `settings.ini`)
-
-## Board Variations & Hardware Configuration
-
-### Available Board Versions
-
-The project supports multiple variants of the PROVES Flight Control Board, all based on the RP2350 (Raspberry Pi Pico 2) microcontroller:
-
-**Base Board (`proves_flight_control_board_v5`)**:
-
-- Common hardware definition shared by all variants
-- Defines sensors: LSM6DSO (IMU), LIS2MDL (magnetometer), INA219 (current sensor)
-- LoRa radio: SX1276 with SPI interface
-- RTC: RV3028 with I2C interface
-- USB CDC ACM for console communication
-- Watchdog LED on GPIO 23 (base configuration)
-
-**Variant C (`proves_flight_control_board_v5c`)**:
-
-- **Key Difference**: Watchdog LED moved to GPIO 24
-- LoRa DIO pins: GPIO 13 and GPIO 12 (different from base)
-- USB Product ID: "PROVES Flight Control Board v5c"
-- As we develop, probably other differences will be noticed
-
-**Variant D (`proves_flight_control_board_v5d`)**:
-
-- **Key Difference**: Uses base board configuration (LED on GPIO 23)
-- LoRa DIO pins: GPIO 14 and GPIO 13 (base configuration)
-- USB Product ID: "PROVES Flight Control Board v5d"
-- Most similar to the original v5 design
-- **Default Board**: This is the default in `settings.ini`
-
-### Board Selection
-
-- **Default**: Set in `settings.ini` (`BOARD=proves_flight_control_board_v5d/rp2350a/m33`)
-- **Override**: Use CMake option `-DBOARD=<board_name>/<soc>/<core>`
-- **Available SOCs**: `rp2350a` (Raspberry Pi Pico 2)
-- **Available Cores**: `m33` (ARM Cortex-M33)
+- Default board: `proves_flight_control_board_v5d/rp2350a/m33` (configurable in `settings.ini`)
 
 **Component Types**:
 
@@ -277,36 +264,33 @@ build-artifacts/
 make help              # Show all available targets
 make submodules        # Initialize git submodules
 make fprime-venv       # Create Python virtual environment
-make zephyr      # Set up Zephyr workspace and ARM toolchain
+make zephyr            # Set up Zephyr workspace and ARM toolchain (from lib/makelib/zephyr.mk)
+make zephyr-setup      # Conditional Zephyr setup (skips if already set up)
 make generate          # Generate F Prime build cache (force)
 make generate-if-needed # Generate only if build directory missing
 make build             # Build firmware (runs generate-if-needed)
+make build-mcuboot     # Build firmware with MCUBoot bootloader signing
+make generate-auth-key # Generate AuthDefaultKey.h with a random HMAC key
 make fmt               # Run linters and formatters (pre-commit)
+make data-budget       # Analyze telemetry data budget (use VERBOSE=1 for details)
+make docs-sync         # Sync component SDD files to docs-site/components/
+make docs-serve        # Serve MkDocs documentation site locally (http://127.0.0.1:8000)
+make docs-build        # Build MkDocs documentation site
 make gds               # Start F Prime Ground Data System
 make gds-integration   # Start GDS without GUI (for CI)
-make test-integration  # Run integration tests
+make framer-plugin     # Build and install the CCSDS framing plugin
+make sequence SEQ=<name> # Compile a sequence file from sequences/ directory
+make sync-sequence-number # Synchronize GDS/flight sequence number
+make test-unit         # Run unit tests (CMake/CTest based)
+make test-integration  # Run integration tests (requires connected board)
+make test-interactive  # Run interactive test selection (use ARGS= for CLI mode)
 make bootloader        # Trigger bootloader mode on RP2350
+make copy-secrets SECRETS_DIR=<dir> # Copy signing keys and auth key to repo
+make make-ci-spacecraft-id # Generate unique spacecraft ID for CI builds
 make clean             # Remove all gitignored files
 make uv                # Download UV package manager
 make pre-commit-install # Install pre-commit hooks
-make download-bin      # Download binary tools (internal)
 make minimize-uv-cache # Minimize UV cache (CI optimization)
-```
-
-**Zephyr-Specific Targets** (from `lib/makelib/zephyr.mk`):
-
-```bash
-make zephyr            # Complete Zephyr setup (config + workspace + export + deps + SDK)
-make zephyr-config     # Configure west
-make zephyr-workspace  # Setup Zephyr bootloader, modules, and tools
-make zephyr-export     # Export Zephyr environment variables
-make zephyr-python-deps # Install Zephyr Python dependencies
-make zephyr-sdk        # Install Zephyr SDK
-make clean-zephyr      # Remove all Zephyr build files
-make clean-zephyr-config    # Remove west configuration
-make clean-zephyr-workspace # Remove Zephyr bootloader, modules, and tools
-make clean-zephyr-export    # Remove Zephyr exported files
-make clean-zephyr-sdk      # Remove Zephyr SDK
 ```
 
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
@@ -339,16 +323,6 @@ make clean-zephyr-sdk      # Remove Zephyr SDK
 
 **Solution**: Run `make clean` followed by `make generate build`.
 
-### Issue: USB device not detected on board
-
-**Workaround**: The board may need to be put into bootloader mode. Use the new bootloader target:
-
-```bash
-make bootloader
-```
-
-This automatically detects if the board is already in bootloader mode and triggers it if needed. See board-specific guides in `docs-site/additional-resources/board-list.md`.
-
 ### Issue: Integration tests fail to connect
 
 **Solution**: Ensure GDS is running (`make gds`) and board is connected. Check serial port in GDS output.
@@ -356,21 +330,6 @@ This automatically detects if the board is already in bootloader mode and trigge
 ### Issue: Build times out (>2 minutes)
 
 **Solution**: First build takes 3-5 minutes. Subsequent builds are faster (~30 seconds). Use `timeout: 300` for initial builds.
-
-### Issue: Flashing firmware to board
-
-**Different boards require different methods**:
-
-- **RP2040/RP2350**: Copy `.uf2` file to board's USB mass storage
-  ```bash
-  cp build-artifacts/zephyr.uf2 /Volumes/RPI-RP2  # macOS
-  ```
-- **STM32**: Use STM32CubeProgrammer via SWD
-  ```bash
-  sh ~/Library/Arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh \
-    -i swd -f build-artifacts/zephyr/zephyr.hex -c /dev/cu.usbmodem142203
-  ```
-- See `docs-site/additional-resources/board-list.md` for tested boards
 
 ## File Modification Guidelines
 
@@ -510,14 +469,52 @@ When creating components that need hardware access:
 
 ### Component Architecture
 
-The project includes several custom F Prime components:
+The project includes a comprehensive set of custom F Prime components organized by function:
 
-- **Watchdog**: Hardware watchdog management with LED indication
-- **IMU Manager**: LSM6DSO 6-axis IMU sensor management
-- **LIS2MDL Manager**: 3-axis magnetometer management
-- **RTC Manager**: RV3028 real-time clock management
-- **Bootloader Trigger**: Bootloader mode entry functionality
-- **Fatal Handler**: System error handling and recovery
+**ADCS & Control**:
+- **ADCS**: Attitude determination and control system
+- **DetumbleManager**: Magnetic detumble control
+
+**Communication**:
+- **AmateurRadio**: Amateur radio (LoRa) management
+- **SBand**: S-Band radio management
+- **ComCcsdsLora / ComCcsdsSband / ComCcsdsUart**: CCSDS framing layers for each link
+- **ComDelay**: Communication delay management
+- **PayloadCom**: Payload communication interface
+
+**Core System**:
+- **ModeManager**: Spacecraft operating mode management
+- **StartupManager**: Startup sequence and boot count
+- **ResetManager**: System reset and watchdog management
+- **Watchdog**: Hardware watchdog with LED indication
+- **FatalHandler**: System error handling and recovery
+- **BootloaderTrigger**: Bootloader mode entry for firmware updates
+
+**Hardware Drivers (Drv/)**:
+- **ImuManager**: LSM6DSO 6-axis IMU sensor management
+- **Drv2605Manager**: Haptic feedback driver
+- **Ina219Manager**: INA219 current/power monitor
+- **RtcManager**: RV3028 real-time clock management
+- **Tmp112Manager**: TMP112 temperature sensor
+- **Veml6031Manager**: VEML6031 ambient light sensor
+
+**Hardware Control**:
+- **AntennaDeployer**: Antenna deployment mechanism
+- **Burnwire**: Burnwire deployment control
+- **CameraHandler**: Camera management
+- **LoadSwitch**: Power load switch control
+- **PowerMonitor**: Power system monitoring
+- **ThermalManager**: Thermal monitoring and control
+
+**Storage**:
+- **FlashWorker**: Flash memory read/write management
+- **FsFormat**: Filesystem formatting
+- **FsSpace**: Filesystem space monitoring
+- **NullPrmDb**: No-op parameter database (for systems without persistent storage)
+
+**Security**:
+- **Authenticate**: HMAC-based command authentication
+- **AuthenticationRouter**: Routes authenticated vs. unauthenticated commands
 
 ### Development Environment
 
@@ -533,6 +530,7 @@ The repository uses three main submodules:
 
 - `lib/fprime/` - F Prime framework (NASA's flight software framework)
 - `lib/fprime-zephyr/` - F Prime-Zephyr integration layer
+- `lib/fprime-extras/` - Additional F Prime libraries
 - `lib/zephyr-workspace/` - Zephyr RTOS workspace
 
 ### Configuration Files
@@ -540,9 +538,61 @@ The repository uses three main submodules:
 - `settings.ini` - F Prime project settings and default board
 - `prj.conf` - Zephyr project configuration (USB, I2C, SPI, sensors)
 - `CMakePresets.json` - CMake presets for different build configurations
-- `fprime-gds.yaml` - GDS command-line defaults
+- `fprime-gds.yml` - GDS command-line defaults
 - `cpplint.cfg` - C++ linting configuration
 - `.clang-format` - C/C++ formatting rules
+
+### Development Tools (`tools/`)
+
+The `tools/` directory contains development and analysis tools. See `tools/README.md` for full documentation.
+
+**Data Budget Tool** (`tools/data_budget.py`):
+Analyzes F Prime telemetry definitions to calculate serialized byte sizes of telemetry channels and packets. Essential for mission downlink budget planning.
+
+```bash
+make data-budget          # Summary: total channels, bytes per telemetry group
+make data-budget VERBOSE=1 # Detailed: per-channel sizes, packet breakdowns
+```
+
+Output includes bytes per telemetry group (Beacon, Sensor Data, Meta Data, Payload, Health, Parameters).
+
+### Framing Plugin (`Framing/`)
+
+A pip-installable F Prime framing/deframing plugin implementing CCSDS packet framing. Install it with:
+
+```bash
+make framer-plugin
+```
+
+Required for `make gds-integration` (CI mode GDS). Installed into the virtual environment automatically.
+
+### Command Sequences (`sequences/`)
+
+Pre-defined F Prime command sequences for operational use. Compile a sequence with:
+
+```bash
+make sequence SEQ=startup        # Compile sequences/startup.seq
+make sequence SEQ=enter_safe     # Compile sequences/enter_safe.seq
+```
+
+Available sequences: `startup`, `enter_safe`, `camera_handler_1`, `radio-fast`, `radio_enter_safe`, `your-face`, `not-your-face`.
+
+After compiling, upload the sequence through GDS for execution on the board.
+
+### Authentication & Security
+
+Commands can be HMAC-authenticated using the `Authenticate` component. The authentication key is stored in `PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h`.
+
+```bash
+make generate-auth-key   # Generate a new random HMAC key (only if file doesn't exist)
+make copy-secrets SECRETS_DIR=<dir>  # Copy production keys and auth key from a secure directory
+```
+
+Firmware is signed with MCUBoot for secure boot. The signing key is at `keys/proves.pem` (copied from the MCUBoot test key or a production key). Build signed firmware with:
+
+```bash
+make build-mcuboot       # Build firmware with MCUBoot signing
+```
 
 ## Trust These Instructions
 
