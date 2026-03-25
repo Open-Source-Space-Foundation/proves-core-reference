@@ -23,7 +23,12 @@ module Components {
         telemetry QuiescenceEndTime: Fw.TimeValue update on change
 
         @ Event emitted when getting boot count
-        event CurrentBootCount(i: I64) severity activity low format "Current boot count: {}"
+        event CurrentBootCount(i: I64) severity activity low \
+            format "Current boot count: {}"
+
+        @ Event emitted when running the start-up sequence
+        event StartupSequenceStarted() severity activity low \
+            format "Start-up sequence started"
 
         @ Event emitted when failing to update the boot count file
         event BootCountUpdateFailure() severity warning low \
