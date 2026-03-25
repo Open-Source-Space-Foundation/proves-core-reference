@@ -210,12 +210,21 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
         this->log_WARNING_HI_AlarmNotCanceled(ID, 0);
     }
 
-    // TODO
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // TODO
+    //check if present, if so log its info.
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
+
+    if(alarmPresent == 0) {
+        //convert alarm time and log it
+        time_t alarm_time_seconds = mktime(reinterpret_cast<struct tm*>(&this->m_alarm_time));
+        Fw::TimeValue alarm_time_value;
+        alarm_time_value.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(alarm_time_seconds), 0);
+        log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, alarm_time_value);
+    }
+
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
