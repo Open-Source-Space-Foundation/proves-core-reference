@@ -72,7 +72,7 @@ class RtcManager final : public RtcManagerComponentBase {
     //! ALARM_SET command to set an alarm on the RTC
     void ALARM_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                               U32 cmdSeq,           //!< The command sequence number
-                              Fw::TimeValue t       //!< Time to set the alarm for
+                              Drv::TimeData t       //!< Time to set the alarm for
                               ) override;
 
     //! Handler implementation for command ALARM_CANCEL
@@ -106,12 +106,14 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
     const struct device* m_dev;             //!< The initialized Zephyr RTC device
     RtcHelper m_rtcHelper;                  //!< Helper for RTC operations
+    bool time_is_set = false;               //!< Whether the time has been set at least once since boot
 
     //rtc alarm members
 
     U16 curr_alarm_id;                      //!< The ID of the alarm present on hardware
     U16 curr_mask;                          //!< The mask of the alarm present on hardware
     struct rtc_time m_alarm_time;           //!< Current alarm's time settings 
+    bool alarm_set;                         //!< Alarm present on hardware or not
 };
 
 }  // namespace Drv

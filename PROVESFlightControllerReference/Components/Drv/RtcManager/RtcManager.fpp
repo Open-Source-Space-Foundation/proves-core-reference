@@ -36,7 +36,7 @@ module Drv {
 
         @ ALARM_SET command to set an alarm on the RTC
         sync command ALARM_SET(
-            t: Fw.TimeValue @< Time to set the alarm for
+            t: Drv.TimeData @< Time to set the alarm for
         )
 
         @ ALARM_CANCEL command to cancel any set alarms on the RTC
@@ -94,12 +94,12 @@ module Drv {
         @ AlarmSet event indicates that the alarm was set successfully
         event AlarmSet(
             ID: U16 @< ID of the set alarm
-            t: Fw.TimeValue @< Time for the set alarm
+            t: Drv.TimeData @< Time for the set alarm
         ) severity activity high id 11 format "Alarm set on RTC with ID {}, time: {}"
 
         @ AlarmNotSet event indicates that the alarm was not set successfully
         event AlarmNotSet(
-            t: Fw.TimeValue @< Time for the alarm that was not set
+            t: Drv.TimeData @< Time for the alarm that was not set
             rc: U32 @< Return code from the RTC driver
         ) severity warning high id 12 format "Alarm not set on RTC for time: {}, return code: {}"
 

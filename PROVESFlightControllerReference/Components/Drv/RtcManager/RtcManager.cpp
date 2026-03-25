@@ -151,25 +151,25 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK); 
+
+    //time has now been set, allows alarms to function
+    this->time_is_set = true;
 }
 
 // Alarm manager
-void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::TimeValue t) {
+void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
 
     //check if alarm is already present or not if it isn't ..
     //use this_>m_dev to refer to the device
     int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
     
-    if((alarmPresent == 0)) {
-
-        //time conversion from seconds to valid alarm time
-        time_t current_time_seconds = t.get_seconds();
-        struct tm* time_tm = gmtime(&current_time_seconds);
+    if((alarmPresent == 0) && this->time_is_set) {
         
-        this->m_alarm_time.tm_min = time_tm->tm_min;
-        this->m_alarm_time.tm_hour = time_tm->tm_hour;
-        this->m_alarm_time.tm_mday = time_tm->tm_mday;
+        //populate alarm time
+        this->m_alarm_time.tm_min = t.get_Minute();
+        this->m_alarm_time.tm_hour = t.get_Hour();
+        this->m_alarm_time.tm_mday = t.get_Day();
 
         //generate a random ID and ensure it is not equivalent to one being held
         do {
@@ -185,6 +185,9 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::Time
         //log success
         this->log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, t);
 
+        //mark as true so we know alarm was set
+        this->alarm_set = true;
+
     } else {
         //if alarm IS present handle it
         //log failure
@@ -197,13 +200,14 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::Time
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
-    int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
 
     //check if it's present
-    if((alarmPresent == 0)) {
+    if(this->alarm_set && this->time_is_set) {
         //set mask to 0 to cancel alarm
         this->curr_mask = 0;
         rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
+
+        this->alarm_set = false;
         this->log_ACTIVITY_HI_AlarmCanceled(ID);
     } else {
         //handle no alarm case
@@ -217,11 +221,17 @@ void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     //check if present, if so log its info.
     int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
 
-    if(alarmPresent == 0) {
+    if((alarmPresent == 0) && this->time_is_set) {
         //convert alarm time and log it
         time_t alarm_time_seconds = mktime(reinterpret_cast<struct tm*>(&this->m_alarm_time));
-        Fw::TimeValue alarm_time_value;
-        alarm_time_value.set(TimeBase::TB_WORKSTATION_TIME, 0, static_cast<U32>(alarm_time_seconds), 0);
+        Drv::TimeData alarm_time_value(
+            this->m_alarm_time.tm_year + 1900,
+            this->m_alarm_time.tm_mon + 1,
+            this->m_alarm_time.tm_mday,
+            this->m_alarm_time.tm_hour,
+            this->m_alarm_time.tm_min,
+            this->m_alarm_time.tm_sec
+        );
         log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, alarm_time_value);
     }
 
