@@ -30,6 +30,8 @@ Framing/uv.lock
 /sequences/*.bin
 /.cache/
 *.uf2
+*.hex
+*.elf
 
 **/__pycache__/
 **/*.egg-info/
