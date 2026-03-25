@@ -4,12 +4,15 @@
 // ======================================================================
 
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManager.hpp"
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
+
 #include <errno.h>
-#include <zephyr/syscalls/rtc.h>
-#include <random>
+
 #include <cstdint>
+#include <random>
+
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/syscalls/rtc.h>
 
 namespace Drv {
 
@@ -18,14 +21,12 @@ namespace Drv {
 // ----------------------------------------------------------------------
 
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
-    //alarm mask and time value struct initialization
+    // alarm mask and time value struct initialization
 
-    //the fields of mask to pay attention to (no triggers for month or year)
-    this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | 
-                    RTC_ALARM_TIME_MASK_HOUR | 
-                    RTC_ALARM_TIME_MASK_MINUTE;
+    // the fields of mask to pay attention to (no triggers for month or year)
+    this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
 
-    //alarm time inintialization
+    // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
 
@@ -151,47 +152,43 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK); 
-
-    //time has now been set, allows alarms to function
-    this->time_is_set = true;
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 // Alarm manager
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
-
-    //check if alarm is already present or not if it isn't ..
-    //use this_>m_dev to refer to the device
+    // check if alarm is already present or not if it isn't ..
+    // use this_>m_dev to refer to the device
     int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
-    
-    if((alarmPresent == 0) && this->time_is_set) {
-        
-        //populate alarm time
+
+    if (alarmPresent == 0) {
+        // populate alarm time
         this->m_alarm_time.tm_min = t.get_Minute();
         this->m_alarm_time.tm_hour = t.get_Hour();
         this->m_alarm_time.tm_mday = t.get_Day();
 
-        //generate a random ID and ensure it is not equivalent to one being held
-        do {
-            std::random_device randy;
-            std::mt19937 gen(randy());
-            std::uniform_int_distribution<int> distrib(0, 65536);
-            int randInt = distrib(gen);
-            uint16_t ID = static_cast<uint16_t>(randInt);
-            this->curr_alarm_id = ID;
-        } while (false);
+        this->curr_alarm_id = 0;
 
-        rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
-        //log success
+        int rc = rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
+        if (rc != 0) {
+            // log failure
+            this->log_WARNING_HI_AlarmNotSet(t, rc);
+
+            // indicate no return code (user error)
+            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+            return;
+        }
+
+        // log success
         this->log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, t);
 
-        //mark as true so we know alarm was set
+        // mark as true so we know alarm was set
         this->alarm_set = true;
 
     } else {
-        //if alarm IS present handle it
-        //log failure
-        //indicate no return code (user error)
+        // if alarm IS present handle it
+        // log failure
+        // indicate no return code (user error)
         this->log_WARNING_HI_AlarmNotSet(t, 0);
     }
 
@@ -200,17 +197,16 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
-
-    //check if it's present
-    if(this->alarm_set && this->time_is_set) {
-        //set mask to 0 to cancel alarm
+    // check if it's present
+    if (this->alarm_set) {
+        // set mask to 0 to cancel alarm
         this->curr_mask = 0;
         rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
 
         this->alarm_set = false;
         this->log_ACTIVITY_HI_AlarmCanceled(ID);
     } else {
-        //handle no alarm case
+        // handle no alarm case
         this->log_WARNING_HI_AlarmNotCanceled(ID, 0);
     }
 
@@ -218,20 +214,15 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
 }
 
 void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    //check if present, if so log its info.
+    // check if present, if so log its info.
     int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
 
-    if((alarmPresent == 0) && this->time_is_set) {
-        //convert alarm time and log it
+    if (alarmPresent == 0) {
+        // convert alarm time and log it
         time_t alarm_time_seconds = mktime(reinterpret_cast<struct tm*>(&this->m_alarm_time));
-        Drv::TimeData alarm_time_value(
-            this->m_alarm_time.tm_year + 1900,
-            this->m_alarm_time.tm_mon + 1,
-            this->m_alarm_time.tm_mday,
-            this->m_alarm_time.tm_hour,
-            this->m_alarm_time.tm_min,
-            this->m_alarm_time.tm_sec
-        );
+        Drv::TimeData alarm_time_value(this->m_alarm_time.tm_year + 1900, this->m_alarm_time.tm_mon + 1,
+                                       this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,
+                                       this->m_alarm_time.tm_min, this->m_alarm_time.tm_sec);
         log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, alarm_time_value);
     }
 
