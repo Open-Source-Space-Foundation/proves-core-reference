@@ -151,12 +151,9 @@ void StartupManager ::completeSequence_handler(FwIndexType portNum,
                                                FwOpcodeType opCode,
                                                U32 cmdSeq,
                                                const Fw::CmdResponse& response) {
-    // Respond to the completion status of the start-up sequence
-    if (response == Fw::CmdResponse::OK) {
-        this->log_ACTIVITY_LO_StartupSequenceFinished();
-    } else {
-        this->log_WARNING_LO_StartupSequenceFailed(response);
-    }
+    // Emits a redudant message indicating the start-up sequence has started on the first completeSequence call
+    this->log_ACTIVITY_LO_StartupSequenceStarted();
+    this->cmdResponse_out(opCode, cmdSeq, response);
 }
 
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
