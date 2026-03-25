@@ -80,7 +80,7 @@ class RtcManager final : public RtcManagerComponentBase {
     //! ALARM_CANCEL command to cancel any set alarms on the RTC
     void ALARM_CANCEL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                  U32 cmdSeq,           //!< The command sequence number
-                                 U32 ID                //!< ID of the alarm to cancel
+                                 U16 ID                //!< ID of the alarm to cancel
                                  ) override;
 
     //! Handler implementation for command ALARM_LIST
@@ -106,6 +106,12 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
     const struct device* m_dev;             //!< The initialized Zephyr RTC device
     RtcHelper m_rtcHelper;                  //!< Helper for RTC operations
+
+    //rtc alarm members
+
+    U16 curr_alarm_id;                      //!< The ID of the alarm present on hardware
+    U16 curr_mask;                          //!< The mask of the alarm present on hardware
+    struct rtc_time m_alarm_time;           //!< Current alarm's time settings 
 };
 
 }  // namespace Drv

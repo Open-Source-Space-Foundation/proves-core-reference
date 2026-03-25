@@ -15,7 +15,7 @@ module Drv {
     port TimeSet(t: TimeData)
     port TimeGet -> U32
     port AlarmSet(t: Fw.TimeValue) -> U32
-    port AlarmCancel(ID: U32) -> U32
+    port AlarmCancel(ID: U16) -> U32
     port AlarmTriggered() -> U32
 }
 
@@ -41,7 +41,7 @@ module Drv {
 
         @ ALARM_CANCEL command to cancel any set alarms on the RTC
         sync command ALARM_CANCEL(
-            ID: U32 @< ID of the alarm to cancel
+            ID: U16 @< ID of the alarm to cancel
         )
 
         @ ALARM_LIST command to list all set alarms on the RTC
@@ -93,7 +93,7 @@ module Drv {
 
         @ AlarmSet event indicates that the alarm was set successfully
         event AlarmSet(
-            ID: U32 @< ID of the set alarm
+            ID: U16 @< ID of the set alarm
             t: Fw.TimeValue @< Time for the set alarm
         ) severity activity high id 11 format "Alarm set on RTC with ID {}, time: {}"
 
@@ -105,17 +105,17 @@ module Drv {
 
         @ AlarmTriggered event indicates that an alarm was triggered
         event AlarmTriggered(
-            ID: U32 @< ID of the triggered alarm
+            ID: U16 @< ID of the triggered alarm
         ) severity activity high id 13 format "Alarm with ID {} triggered"
 
         @ AlarmCanceled event indicates that an alarm was canceled successfully
         event AlarmCanceled(
-            ID: U32 @< ID of the canceled alarm
+            ID: U16 @< ID of the canceled alarm
         ) severity activity high id 14 format "Alarm with ID {} canceled"
 
         @ AlarmNotCanceled event indicates that an alarm was not canceled successfully
         event AlarmNotCanceled(
-            ID: U32 @< ID of the alarm that was not canceled
+            ID: U16 @< ID of the alarm that was not canceled
             rc: U32 @< Return code from the RTC driver
         ) severity warning high id 15 format "Alarm with ID {} not canceled, return code: {}"
 

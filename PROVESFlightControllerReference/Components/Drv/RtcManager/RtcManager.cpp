@@ -4,6 +4,12 @@
 // ======================================================================
 
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManager.hpp"
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <errno.h>
+#include <zephyr/syscalls/rtc.h>
+#include <random>
+#include <cstdint>
 
 namespace Drv {
 
@@ -11,7 +17,17 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
+    //alarm mask and time value struct initialization
+
+    //the fields of mask to pay attention to (no triggers for month or year)
+    this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | 
+                    RTC_ALARM_TIME_MASK_HOUR | 
+                    RTC_ALARM_TIME_MASK_MINUTE;
+
+    //alarm time inintialization
+    memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
+}
 
 RtcManager ::~RtcManager() {}
 
@@ -138,12 +154,62 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+// Alarm manager
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Fw::TimeValue t) {
+
+    //check if alarm is already present or not if it isn't ..
+    //use this_>m_dev to refer to the device
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
+    
+    if((alarmPresent == 0)) {
+
+        //time conversion from seconds to valid alarm time
+        time_t current_time_seconds = t.get_seconds();
+        struct tm* time_tm = gmtime(&current_time_seconds);
+        
+        this->m_alarm_time.tm_min = time_tm->tm_min;
+        this->m_alarm_time.tm_hour = time_tm->tm_hour;
+        this->m_alarm_time.tm_mday = time_tm->tm_mday;
+
+        //generate a random ID and ensure it is not equivalent to one being held
+        do {
+            std::random_device randy;
+            std::mt19937 gen(randy());
+            std::uniform_int_distribution<int> distrib(0, 65536);
+            int randInt = distrib(gen);
+            uint16_t ID = static_cast<uint16_t>(randInt);
+            this->curr_alarm_id = ID;
+        } while (false);
+
+        rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
+        //log success
+        this->log_ACTIVITY_HI_AlarmSet(this->curr_alarm_id, t);
+
+    } else {
+        //if alarm IS present handle it
+        //log failure
+        //indicate no return code (user error)
+        this->log_WARNING_HI_AlarmNotSet(t, 0);
+    }
+
     // TODO
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 ID) {
+void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, this->curr_alarm_id, &this->curr_mask, &this->m_alarm_time);
+
+    //check if it's present
+    if((alarmPresent == 0)) {
+        //set mask to 0 to cancel alarm
+        this->curr_mask = 0;
+        rtc_alarm_set_time(this->m_dev, this->curr_alarm_id, this->curr_mask, &this->m_alarm_time);
+        this->log_ACTIVITY_HI_AlarmCanceled(ID);
+    } else {
+        //handle no alarm case
+        this->log_WARNING_HI_AlarmNotCanceled(ID, 0);
+    }
+
     // TODO
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
