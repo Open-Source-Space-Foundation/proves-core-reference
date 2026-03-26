@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 from common import cmdDispatch, proves_send_and_assert_command
-from fprime_gds.common.data_types.ch_data import ChData
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.logger.test_logger import TestLogger
 from fprime_gds.common.models.serialize.numerical_types import U32Type
@@ -28,6 +27,7 @@ ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
 safeModeSeq = "ReferenceDeployment.safeModeSeq"
+fileManager = "FileHandling.fileManager"
 
 
 @pytest.fixture(autouse=True)
@@ -91,6 +91,7 @@ def uplink_sequence_and_await_completion(
             msg = f"Failed to generate sequence binary from {sequence_path}: {exc}"
             fprime_test_api.__log(msg, TestLogger.RED)
             raise
+        fprime_test_api.send_command(f"{fileManager}.CreateDirectory", ["/seq"])
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
@@ -137,32 +138,41 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
-    # Fetch initial time
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Voltage", timeout=3
+    # Send a no-op command and get the time from the resulting event
+    fprime_test_api.clear_histories()
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{cmdDispatch}.CMD_NO_OP",
+    )
+    result: EventData = fprime_test_api.assert_event(
+        f"{cmdDispatch}.NoOpReceived", timeout=3
     )
 
     # Convert FPrime time to datetime
-    fp_time: TimeType = result.time
+    fp_time: TimeType = result.get_time()
     initial_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Wait for time to increment
     fprime_test_api.clear_histories()
     time.sleep(2.0)
 
-    # Fetch updated time
-    result: ChData = fprime_test_api.assert_telemetry(
-        f"{ina219SysManager}.Voltage", timeout=3
+    # Send another no-op command and get the updated time
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{cmdDispatch}.CMD_NO_OP",
+    )
+    result: EventData = fprime_test_api.assert_event(
+        f"{cmdDispatch}.NoOpReceived", timeout=3
     )
 
     # Convert FPrime time to datetime
-    fp_time: TimeType = result.time
+    fp_time: TimeType = result.get_time()
     updated_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert time has increased
-    assert updated_time > initial_time, (
-        f"Time should increase. Initial: {initial_time}, Updated: {updated_time}"
-    )
+    assert updated_time > initial_time, f"Time should increase. Initial: {
+        initial_time
+    }, Updated: {updated_time}"
 
 
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):

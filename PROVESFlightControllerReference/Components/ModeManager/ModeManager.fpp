@@ -81,6 +81,12 @@ module Components {
         @ Only succeeds if currently in safe mode
         sync command EXIT_SAFE_MODE()
 
+        @ Command to get the current system mode
+        sync command GET_CURRENT_MODE()
+
+        @ Command to get the current safe mode reason
+        sync command GET_SAFE_MODE_REASON()
+
         # ----------------------------------------------------------------------
         # Events
         # ----------------------------------------------------------------------
@@ -156,6 +162,16 @@ module Components {
         event SafeModeRequestIgnored() \
             severity warning low \
             format "SafeMode Request Ignored: Already in Safe Mode"
+
+        @ Event for reporting current mode
+        event CurrentModeReading(mode: SystemMode) \
+            severity activity low \
+            format "Current mode: {}"
+
+        @ Event for reporting current safe mode reason
+        event CurrentSafeModeReasonReading(reason: SafeModeReason) \
+            severity activity low \
+            format "Current safe mode reason: {}"
 
         # ----------------------------------------------------------------------
         # Telemetry

@@ -126,6 +126,7 @@ generate-if-needed:
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
+	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
 
 ##@ Authentication Keys
 
@@ -153,9 +154,10 @@ build-mcuboot: submodules zephyr fprime-venv
 
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
+	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
 test-unit: ## Run unit tests
-	cmake -S tests -B build-gtest -DBUILD_TESTING=ON
+	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
@@ -163,6 +165,7 @@ test-unit: ## Run unit tests
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
+	FILTER="not flaky"; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
@@ -170,6 +173,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		FILTER=""; \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
 				*.py) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$$test" ;; \
@@ -180,7 +184,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
@@ -201,8 +205,8 @@ bootloader: uv
 
 .PHONY: sync-sequence-number
 sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
-	@echo "Synchronizing sequence number"
-	@$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@echo "Synchronizing sequence number; ensure you have the GDS open."
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -240,8 +244,7 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
-	@echo "Using UART_DEVICE=$(UART_DEVICE)"
-	@$(GDS_COMMAND) --gui=none
+	@$(GDS_COMMAND) --gui=none --uart-device=/dev/ttyBOARD
 
 .PHONY: DoL_test
 DoL_test:
@@ -264,6 +267,13 @@ copy-secrets:
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
 	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
 	@echo "Copied secret files 🤫"
+
+.PHONY: make-ci-spacecraft-id
+make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
+	@echo "Generating unique spacecraft ID for CI build..."
+	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
+	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
+	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
 
 include lib/makelib/build-tools.mk
 include lib/makelib/ci.mk

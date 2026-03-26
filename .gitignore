@@ -27,9 +27,11 @@ lib/zephyr-workspace/*
 build
 settings.ini
 Framing/uv.lock
-bootable.uf2
-mcuboot.uf2
 /sequences/*.bin
+/.cache/
+*.uf2
+*.hex
+*.elf
 
 **/__pycache__/
 **/*.egg-info/
