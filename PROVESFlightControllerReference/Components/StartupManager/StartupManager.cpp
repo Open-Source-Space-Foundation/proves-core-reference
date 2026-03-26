@@ -147,13 +147,16 @@ Fw::Time StartupManager ::get_uptime() {
     return time;
 }
 
+void StartupManager ::sequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {}
+
 void StartupManager ::completeSequence_handler(FwIndexType portNum,
                                                FwOpcodeType opCode,
                                                U32 cmdSeq,
                                                const Fw::CmdResponse& response) {
     // Emits a redudant message indicating the start-up sequence has started on the first completeSequence call
-    this->log_ACTIVITY_LO_StartupSequenceStarted();
-    this->cmdResponse_out(opCode, cmdSeq, response);
+    // this->log_ACTIVITY_LO_StartupSequenceStarted();
+    // this->cmdResponse_out(opCode, cmdSeq, response);
+
 }
 
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {

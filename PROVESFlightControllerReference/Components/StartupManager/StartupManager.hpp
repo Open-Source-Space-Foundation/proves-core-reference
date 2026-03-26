@@ -66,6 +66,12 @@ class StartupManager final : public StartupManagerComponentBase {
                                   const Fw::CmdResponse& response  //!< The command response argument
                                   ) override;
 
+    //! Handler implementation for sequenceStarted
+    void sequenceStarted_handler(FwIndexType portNum,              //!< The port number
+                                 const Fw::StringBase& fileName    //!< The file path for start-up sequence
+                                 ) override;
+
+
     //! Handler implementation for run
     //!
     //! Check RTC time diff

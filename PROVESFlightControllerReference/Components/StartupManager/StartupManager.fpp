@@ -10,6 +10,9 @@ module Components {
         @ Port for receiving the status of the start-up sequence
         sync input port completeSequence: Fw.CmdResponse
 
+        @ Port for receiving the indication that the start-up sequence has started
+        sync input port sequenceStarted: Svc.CmdSeqIn
+
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
 
