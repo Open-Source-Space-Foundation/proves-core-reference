@@ -30,12 +30,14 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
         F64 temperature = this->faceTempGet_out(i, condition);
         if (temperature < this->paramGet_FACE_TEMP_LOWER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
-        } else {
+        } else if (temperature >
+                   this->paramGet_FACE_TEMP_LOWER_THRESHOLD(param_valid) + ThermalManager::DEBOUNCE_ERROR) {
             this->log_WARNING_LO_FaceTemperatureBelowThreshold_ThrottleClear();
         }
         if (temperature > this->paramGet_FACE_TEMP_UPPER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
-        } else {
+        } else if (temperature <
+                   this->paramGet_FACE_TEMP_UPPER_THRESHOLD(param_valid) - ThermalManager::DEBOUNCE_ERROR) {
             this->log_WARNING_LO_FaceTemperatureAboveThreshold_ThrottleClear();
         }
     }
@@ -45,12 +47,14 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
         F64 temperature = this->battCellTempGet_out(i, condition);
         if (temperature < this->paramGet_BATT_CELL_TEMP_LOWER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
-        } else {
+        } else if (temperature >
+                   this->paramGet_BATT_CELL_TEMP_LOWER_THRESHOLD(param_valid) + ThermalManager::DEBOUNCE_ERROR) {
             this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold_ThrottleClear();
         }
         if (temperature > this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid)) {
             this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
-        } else {
+        } else if (temperature <
+                   this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid) - ThermalManager::DEBOUNCE_ERROR) {
             this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
         }
     }

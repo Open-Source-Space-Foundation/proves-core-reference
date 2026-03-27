@@ -33,25 +33,25 @@ module Components {
         event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
             format "Face temperature below threshold: Sensor {} at {} °C" \
-            throttle 5
+            throttle 1
 
         @ Event for face temperature reading above threshold
         event FaceTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
             format "Face temperature above threshold: Sensor {} at {} °C" \
-            throttle 5
+            throttle 1
 
         @ Event for battery cell temperature reading below threshold
         event BatteryCellTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
             format "Battery cell temperature below threshold: Sensor {} at {} °C" \
-            throttle 5
+            throttle 1
 
         @ Event for battery cell temperature reading above threshold
         event BatteryCellTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
             format "Battery cell temperature above threshold: Sensor {} at {} °C" \
-            throttle 5
+            throttle 1
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
