@@ -20,31 +20,38 @@ module Components {
         @ The number of face temperature sensors
         constant numFaceTempSensors = 5
 
+        @ The number of battery cell temperature sensors
+        constant numBattCellTempSensors = 4
+
         @ Port for face temperature sensors
         output port faceTempGet: [numFaceTempSensors] Drv.temperatureGet
 
         @ Port for battery cell temperature sensors
-        output port battCellTempGet: [4] Drv.temperatureGet
+        output port battCellTempGet: [numBattCellTempSensors] Drv.temperatureGet
 
         @ Event for face temperature reading below threshold
         event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
-            format "Face temperature below threshold: Sensor {} at {} °C"
+            format "Face temperature below threshold: Sensor {} at {} °C" \
+            throttle 5
 
         @ Event for face temperature reading above threshold
         event FaceTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
-            format "Face temperature above threshold: Sensor {} at {} °C"
+            format "Face temperature above threshold: Sensor {} at {} °C" \
+            throttle 5
 
         @ Event for battery cell temperature reading below threshold
         event BatteryCellTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
-            format "Battery cell temperature below threshold: Sensor {} at {} °C"
+            format "Battery cell temperature below threshold: Sensor {} at {} °C" \
+            throttle 5
 
         @ Event for battery cell temperature reading above threshold
         event BatteryCellTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
             severity warning low \
-            format "Battery cell temperature above threshold: Sensor {} at {} °C"
+            format "Battery cell temperature above threshold: Sensor {} at {} °C" \
+            throttle 5
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
