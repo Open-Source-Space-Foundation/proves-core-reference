@@ -24,10 +24,10 @@ def test_01_get_pico_temperature(fprime_test_api: IntegrationTestAPI, start_gds)
     # Send command to get pico temperature
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{picoTempManager}.picoTemperature",
+        f"{picoTempManager}.PicoTemperature",
     )
     result: EventData = fprime_test_api.assert_event(
-        f"{picoTempManager}.picoTemperature", start=start, timeout=2
+        f"{picoTempManager}.PicoTemperature", start=start, timeout=2
     )
 
     assert result is not None
