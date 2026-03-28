@@ -109,12 +109,12 @@ zephyr_udc0: &usbd {
 };
 
 &die_temp {
-	io-channels = <&adc 4>;
 	status = "okay";
 };
 
 &adc {
-	// pinctrl-0 = <&adc_default>;
+	pinctrl-0 = <&adc_default>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
