@@ -12,7 +12,7 @@ from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
-picoTempManager = "ReferenceDeployment.PicoTempManager"
+picoTempManager = "ReferenceDeployment.picoTempManager"
 
 
 def test_01_get_pico_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -24,10 +24,10 @@ def test_01_get_pico_temperature(fprime_test_api: IntegrationTestAPI, start_gds)
     # Send command to get pico temperature
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{picoTempManager}.GetPicoTemperature",
+        f"{picoTempManager}.picoTemperature",
     )
     result: EventData = fprime_test_api.assert_event(
-        f"{picoTempManager}.PicoTemperature", start=start, timeout=2
+        f"{picoTempManager}.picoTemperature", start=start, timeout=2
     )
 
     assert result is not None
