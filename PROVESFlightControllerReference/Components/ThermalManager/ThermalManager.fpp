@@ -4,13 +4,13 @@ module Components {
     passive component ThermalManager {
         ### Parameters ###
         @ Parameter for face temperature lower threshold in °C
-        param FACE_TEMP_LOWER_THRESHOLD: F64 default -20.0 id 0
+        param FACE_TEMP_LOWER_THRESHOLD: F64 default -40.0 id 0
 
         @ Parameter for face temperature upper threshold in °C
         param FACE_TEMP_UPPER_THRESHOLD: F64 default 60.0 id 1
 
         @ Parameter for battery cell temperature lower threshold in °C
-        param BATT_CELL_TEMP_LOWER_THRESHOLD: F64 default -20.0 id 2
+        param BATT_CELL_TEMP_LOWER_THRESHOLD: F64 default 5.0 id 2
 
         @ Parameter for battery cell temperature upper threshold in °C
         param BATT_CELL_TEMP_UPPER_THRESHOLD: F64 default 60.0 id 3
