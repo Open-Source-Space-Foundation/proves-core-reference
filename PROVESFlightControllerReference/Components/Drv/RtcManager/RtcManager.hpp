@@ -109,7 +109,6 @@ class RtcManager final : public RtcManagerComponentBase {
 
     // rtc alarm members
 
-    U16 curr_alarm_id;             //!< The ID of the alarm present on hardware
     U16 curr_mask;                 //!< The mask of the alarm present on hardware
     struct rtc_time m_alarm_time;  //!< Current alarm's time settings
     bool alarm_set;                //!< Alarm present on hardware or not
