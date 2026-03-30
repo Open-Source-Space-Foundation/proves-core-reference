@@ -158,8 +158,9 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 // Alarm manager
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // check if alarm is already present or not if it isn't ..
-    // use this_>m_dev to refer to the device
-    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &this->curr_mask, &this->m_alarm_time);
+    // use this_>m_dev to refer to the device]
+    uint16_t mask = this->curr_mask;
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     if (alarmPresent == 0) {
         // populate alarm time
@@ -195,7 +196,10 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
     // check if it's present
-    if (this->alarm_set) {
+    uint16_t mask = this->curr_mask;
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+
+    if (rc == 0) {
         // set mask to 0 to cancel alarm
         this->curr_mask = 0;
         rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
@@ -213,7 +217,8 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
 
 void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // check if present, if so log its info.
-    int rc = rtc_alarm_get_time(this->m_dev, 0, &this->curr_mask, &this->m_alarm_time);
+    uint16_t mask = this->curr_mask;
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     if (rc == 0) {
         //check the current mask to see if an alarm is active
