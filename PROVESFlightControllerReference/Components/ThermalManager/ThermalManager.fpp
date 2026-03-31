@@ -29,6 +29,9 @@ module Components {
         @ Port for battery cell temperature sensors
         output port battCellTempGet: [numBattCellTempSensors] Drv.temperatureGet
 
+        @ Port for Pico temperature sensor
+        output port picoTempGet: Drv.picoTemperatureGet
+
         @ Event for face temperature reading below threshold
         event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
             severity warning low \

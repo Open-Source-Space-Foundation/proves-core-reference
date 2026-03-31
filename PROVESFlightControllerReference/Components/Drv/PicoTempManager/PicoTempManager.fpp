@@ -1,10 +1,14 @@
 module Drv {
+    port picoTemperatureGet(ref condition: Fw.Success) -> F64
+}
+
+module Drv {
     @ Manager for the RP2350's built in temperature sensor
     passive component PicoTempManager {
 
         #### Ports ####
-        @ Run loop
-        sync input port run: Svc.Sched
+        @ Port to read the die temperature in degrees Celsius
+        sync input port picoTemperatureGet: picoTemperatureGet
 
         #### Commands ####
         @ Command to get the temperature in degrees Celsius

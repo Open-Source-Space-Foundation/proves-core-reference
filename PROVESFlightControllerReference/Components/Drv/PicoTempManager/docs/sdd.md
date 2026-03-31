@@ -4,18 +4,18 @@ The PicoTempManager component interfaces with the RP2350 microcontroller's built
 
 ## Usage Examples
 
-The PicoTempManager component is designed to be called periodically or on demand to collect and return sensor data. It operates as a passive component that responds to scheduler ticks and command requests.
+The PicoTempManager component is designed to be called on-demand to return die temperature sensor data. It operates as a passive component that responds to input port calls.
 
 ### Typical Usage
 
 1. The component is instantiated and initialized during system startup.
-2. The scheduler calls the input port: `run` periodically.
+2. A manager (such as ThermalManager) calls the input port: `picoTemperatureGet`.
 3. On each call, the component:
    - Checks if the device is initialized and ready.
    - Fetches fresh sensor samples from the die temperature sensor.
    - Writes telemetry data.
-   - Reports temperature via events.
-4. Alternatively, the `GetPicoTemperature` command can be sent on demand to immediately fetch and report the current temperature.
+   - Returns the temperature value in degrees Celsius via the output.
+4. Alternatively, the `GetPicoTemperature` command can be sent to immediately fetch and report the current temperature.
 
 ## Class Diagram
 
@@ -30,7 +30,7 @@ classDiagram
             + PicoTempManager(const char* compName)
             + ~PicoTempManager()
             + configure(const struct device* dev)
-            - run_handler(FwIndexType portNum, U32 context): void
+            - picoTemperatureGet_handler(FwIndexType portNum, Fw::Success& condition): F64
             - GetPicoTemperature_cmdHandler(FwOpcodeType opCode, U32 cmdSeq): void
             - getPicoTemperature(Fw::Success& condition): F64
         }
@@ -40,29 +40,29 @@ classDiagram
 
 ## Port Descriptions
 
-| Name           | Type         | Description                                                                                               |
-| -------------- | ------------ | --------------------------------------------------------------------------------------------------------- |
-| run            | sync input   | Scheduler port that triggers periodic temperature sampling. Called by the scheduler at regular intervals. |
-| timeCaller     | time get     | Port for requesting the current time                                                                      |
-| cmdRegOut      | command reg  | Port for sending command registrations                                                                    |
-| cmdIn          | command recv | Port for receiving commands                                                                               |
-| cmdResponseOut | command resp | Port for sending command responses                                                                        |
-| logTextOut     | text event   | Port for sending textual representation of events                                                         |
-| logOut         | event        | Port for sending events to downlink                                                                       |
-| tlmOut         | telemetry    | Port for sending telemetry channels to downlink                                                           |
+| Name               | Type         | Description                                                                                                |
+| ------------------ | ------------ | ---------------------------------------------------------------------------------------------------------- |
+| picoTemperatureGet | sync input   | Port to read the die temperature in degrees Celsius. Returns F64 temperature and Success condition output. |
+| timeCaller         | time get     | Port for requesting the current time                                                                       |
+| cmdRegOut          | command reg  | Port for sending command registrations                                                                     |
+| cmdIn              | command recv | Port for receiving commands                                                                                |
+| cmdResponseOut     | command resp | Port for sending command responses                                                                         |
+| logTextOut         | text event   | Port for sending textual representation of events                                                          |
+| logOut             | event        | Port for sending events to downlink                                                                        |
+| tlmOut             | telemetry    | Port for sending telemetry channels to downlink                                                            |
 
 ## Sequence Diagrams
 
-### Periodic Temperature Reading (run port)
+### On-Demand Temperature Reading (picoTemperatureGet port)
 
 ```mermaid
 sequenceDiagram
-    participant Scheduler
+    participant Manager
     participant PicoTempManager
     participant Zephyr Sensor API
     participant RP2350 Die Temp Sensor
 
-    Scheduler-->>PicoTempManager: Call run
+    Manager-->>PicoTempManager: Call picoTemperatureGet
     PicoTempManager->>PicoTempManager: Check Device Ready
     PicoTempManager->>Zephyr Sensor API: Fetch sensor sample (SENSOR_CHAN_DIE_TEMP)
     Zephyr Sensor API->>RP2350 Die Temp Sensor: Read temperature register
@@ -71,28 +71,7 @@ sequenceDiagram
     PicoTempManager->>Zephyr Sensor API: Get channel value
     Zephyr Sensor API->>PicoTempManager: Return value
     PicoTempManager->>PicoTempManager: Write Telemetry (PicoTemperature)
-    PicoTempManager-->>Scheduler: Return
-```
-
-### GetPicoTemperature command
-
-```mermaid
-sequenceDiagram
-    participant Commander
-    participant PicoTempManager
-    participant Zephyr Sensor API
-    participant RP2350 Die Temp Sensor
-
-    Commander-->>PicoTempManager: Send GetPicoTemperature command
-    PicoTempManager->>PicoTempManager: Check Device Ready
-    PicoTempManager->>Zephyr Sensor API: Fetch sensor sample (SENSOR_CHAN_DIE_TEMP)
-    Zephyr Sensor API->>RP2350 Die Temp Sensor: Read temperature register
-    RP2350 Die Temp Sensor->>Zephyr Sensor API: Return raw data
-    Zephyr Sensor API->>PicoTempManager: Return sample
-    PicoTempManager->>Zephyr Sensor API: Get channel value
-    Zephyr Sensor API->>PicoTempManager: Return value
-    PicoTempManager->>PicoTempManager: Send PicoTemperature event
-    PicoTempManager-->>Commander: Return command response (OK)
+    PicoTempManager-->>Manager: Return temperature (F64)
 ```
 
 ## Commands
@@ -121,12 +100,13 @@ sequenceDiagram
 
 ## Requirements
 
-| Name                          | Description                                                                           | Validation                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Periodic Temperature Reading  | The component shall read the die temperature sensor on each scheduler tick (run port) | Verify telemetry is updated periodically as expected                                           |
-| On-Demand Temperature Reading | The component shall provide a command interface to read temperature on demand         | Verify GetPicoTemperature command returns current temperature                                  |
-| Temperature Units             | The component shall return temperature in degrees Celsius                             | Verify output matches sensor datasheet specifications                                          |
-| Error Handling                | The component shall log appropriate error events when sensor operations fail          | Verify events are logged for device not ready, sample fetch failures, and channel get failures |
+| Name                        | Description                                                                                | Validation                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| On-Demand Temperature Read  | The component shall read die temperature when picoTemperatureGet port is called            | Verify output matches sensor datasheet specifications                |
+| Command Temperature Reading | The component shall provide a command interface to read temperature on demand              | Verify GetPicoTemperature command returns current temperature        |
+| Temperature Units           | The component shall return temperature in degrees Celsius                                  | Verify output matches sensor datasheet specifications                |
+| Error Handling              | The component shall log appropriate error events when sensor operations fail               | Verify events logged for device not ready, sample fetch, channel get |
+| Port Return Value           | The component shall return the temperature value and success condition via the output port | Verify return value is used by calling component                     |
 
 ## Change Log
 

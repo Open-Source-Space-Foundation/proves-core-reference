@@ -40,12 +40,10 @@ class PicoTempManager final : public PicoTempManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for run
-    //!
-    //! Run loop
-    void run_handler(FwIndexType portNum,  //!< The port number
-                     U32 context           //!< The call order
-                     ) override;
+    //! Port handler for getting the die temperature in degrees Celsius
+    F64 picoTemperatureGet_handler(FwIndexType portNum,    //!< The port number
+                                   Fw::Success& condition  //!< The call order
+                                   ) override;
 
   private:
     // ----------------------------------------------------------------------

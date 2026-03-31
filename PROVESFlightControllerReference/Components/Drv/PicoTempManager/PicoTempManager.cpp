@@ -26,13 +26,14 @@ void PicoTempManager::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void PicoTempManager ::run_handler(FwIndexType portNum, U32 context) {
-    Fw::Success condition = Fw::Success::FAILURE;
+F64 PicoTempManager ::picoTemperatureGet_handler(FwIndexType portNum, Fw::Success& condition) {
+    condition = Fw::Success::FAILURE;
     F64 temperature = this->getPicoTemperature(condition);
     if (condition != Fw::Success::SUCCESS) {
-        return;
+        return 0;
     }
     this->tlmWrite_PicoTemperature(temperature);
+    return temperature;
 }
 
 // ----------------------------------------------------------------------

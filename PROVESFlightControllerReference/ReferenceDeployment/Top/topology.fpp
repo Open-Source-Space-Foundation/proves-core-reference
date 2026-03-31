@@ -284,7 +284,6 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
       rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
-      rateGroup1Hz.RateGroupMemberOut[20] -> picoTempManager.run
 
     }
 
@@ -438,6 +437,7 @@ module ReferenceDeployment {
       thermalManager.battCellTempGet[1] -> tmp112BattCell2Manager.temperatureGet
       thermalManager.battCellTempGet[2] -> tmp112BattCell3Manager.temperatureGet
       thermalManager.battCellTempGet[3] -> tmp112BattCell4Manager.temperatureGet
+      thermalManager.picoTempGet -> picoTempManager.picoTemperatureGet
     }
 
     connections adcs {
