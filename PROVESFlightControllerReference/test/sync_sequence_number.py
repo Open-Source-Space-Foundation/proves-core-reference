@@ -6,8 +6,6 @@ the F' component and the framing plugin by reading it from the component
 and writing it to a file used by the plugin.
 """
 
-import os
-import subprocess
 import time
 
 import pytest
@@ -17,12 +15,8 @@ from int.common import cmdDispatch, proves_send_and_assert_command
 
 
 @pytest.fixture(scope="session", autouse=True)
-def start_gds(fprime_test_api_session: IntegrationTestAPI):
-    """Fixture to start GDS
-
-    GDS is used to send commands and receive events
-    """
-    process = subprocess.Popen(["make", "gds-integration"], cwd=os.getcwd())
+def check_gds(fprime_test_api_session: IntegrationTestAPI):
+    """Fixture to check GDS is running"""
 
     gds_working = False
     timeout_time = time.time() + 30
@@ -38,7 +32,6 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     assert gds_working
 
     yield
-    process.kill()
 
 
 def test_sync_sequence_number(fprime_test_api: IntegrationTestAPI):

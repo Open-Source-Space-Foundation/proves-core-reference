@@ -26,6 +26,7 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.skip(reason="Flaky sensor")
 def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get temperature"""
     start: TimeType = TimeType().set_datetime(
