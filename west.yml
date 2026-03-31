@@ -28,7 +28,6 @@ manifest:
           - hal_rpi_pico  # Raspberry Pi Pico HAL (REQUIRED for RP2040/RP2350)
           - picolibc   # C library
           - mbedtls    # Crypto library
-          - tinycrypt  # Lightweight crypto library
           - mcuboot    # Bootloader support
           - fatfs      # FatFS (file system) support
           - hal_st     # Required for certain sensors
@@ -77,13 +76,6 @@ manifest:
     - name: tf-psa-crypto
       revision: 6820f1dadc67c289d2dc63aec495519c9d589d8e
       path: lib/zephyr-workspace/modules/crypto/mbedtls/tf-psa-crypto
-      groups:
-        - crypto
-
-    # TODO(nateinaction): tinycrypt is no longer in zephyr upstream west.yml. Do we still need it?
-    - name: tinycrypt
-      revision: 1012a3ebee18c15ede5efc8332ee2fc37817670f
-      path: lib/zephyr-workspace/modules/crypto/tinycrypt
       groups:
         - crypto
 
