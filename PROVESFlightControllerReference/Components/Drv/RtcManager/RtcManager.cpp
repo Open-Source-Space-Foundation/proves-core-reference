@@ -200,7 +200,7 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
     uint16_t mask = this->curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    if (rc == 0) {
+    if (rc == 0 && !(this->alarm_set)) {
         // set mask to 0 to cancel alarm
         this->curr_mask = 0;
         rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
