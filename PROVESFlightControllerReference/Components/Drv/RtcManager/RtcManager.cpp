@@ -23,11 +23,14 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
     // alarm mask and time value struct initialization
 
-    // the fields of mask to pay attention to (no triggers for month or year)
-    this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
+    // match to timedata
+    this->curr_mask = RTC_ALARM_TIME_MASK_YEAR | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_SECOND;
 
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
+
+    //alarm set
+    this->alarm_set = false;
 }
 
 RtcManager ::~RtcManager() {}
@@ -158,15 +161,17 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 // Alarm manager
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // check if alarm is already present or not if it isn't ..
-    // use this_>m_dev to refer to the device]
-    uint16_t mask = this->curr_mask;
-    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+    // use this->m_dev to refer to the device]
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &this->curr_mask, &this->m_alarm_time);
 
-    if (alarmPresent == 0) {
+    if (alarmPresent != 0 || this->curr_mask == 0) {
         // populate alarm time
+        this->m_alarm_time.tm_sec = t.get_Second();
         this->m_alarm_time.tm_min = t.get_Minute();
         this->m_alarm_time.tm_hour = t.get_Hour();
         this->m_alarm_time.tm_mday = t.get_Day();
+        this->m_alarm_time.tm_mon = t.get_Month() - 1;     
+        this->m_alarm_time.tm_year = t.get_Year() - 1900;
 
         int rc = rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
         if (rc != 0) {
@@ -177,10 +182,9 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         }
 
         // log success
-        this->log_ACTIVITY_HI_AlarmSet(0, t);
-
-        // mark as true so we know alarm was set
         this->alarm_set = true;
+        this->log_ACTIVITY_HI_AlarmSet(0, t);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 
     } else {
         // if alarm IS present handle it
@@ -189,9 +193,6 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         this->log_WARNING_HI_AlarmNotSet(t, 0);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
     }
-
-    // TODO
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
@@ -223,7 +224,7 @@ void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     if (rc == 0) {
         //check the current mask to see if an alarm is active
         
-        if(curr_mask > 0){
+        if(this->alarm_set){
             // convert alarm time and log it
             Drv::TimeData alarm_time_value(this->m_alarm_time.tm_year + 1900, this->m_alarm_time.tm_mon + 1,
                                         this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,
