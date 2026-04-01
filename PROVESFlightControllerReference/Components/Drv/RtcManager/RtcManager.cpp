@@ -23,9 +23,7 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
     // alarm mask and time value struct initialization
 
-    // match to timedata DO NOT CHANGE IF YOU ARE SETTING this->curr_mask YOU ARE DOING SOMETHING WRONG!!!
-    //this->curr_mask = RTC_ALARM_TIME_MASK_YEAR | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_SECOND;
-    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->curr_mask);
+    //this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
 
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
@@ -42,6 +40,8 @@ RtcManager ::~RtcManager() {}
 
 void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
+    // match to timedata DO NOT CHANGE IF YOU ARE SETTING this->curr_mask YOU ARE DOING SOMETHING WRONG!!!
+    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->curr_mask);
 }
 
 // ----------------------------------------------------------------------
@@ -163,6 +163,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // check if alarm is already present or not if it isn't ..
     // use this->m_dev to refer to the device]
+
     uint16_t mask = this->curr_mask;
     int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
@@ -174,6 +175,14 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         this->m_alarm_time.tm_mday = t.get_Day();
         this->m_alarm_time.tm_mon = t.get_Month() - 1;     
         this->m_alarm_time.tm_year = t.get_Year() - 1900;
+
+        //assure alarm is at a future point in time
+        struct rtc_time c_time;
+        rtc_get_time(this->m_dev, &c_time);
+        timeutil_timegm(rtc_time_to_tm(&c_time));
+        if(false){
+            //TODO
+        }
 
         int rc = rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
         if (rc != 0) {
