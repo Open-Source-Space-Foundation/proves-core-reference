@@ -23,8 +23,9 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
     // alarm mask and time value struct initialization
 
-    // match to timedata
-    this->curr_mask = RTC_ALARM_TIME_MASK_YEAR | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_SECOND;
+    // match to timedata DO NOT CHANGE IF YOU ARE SETTING this->curr_mask YOU ARE DOING SOMETHING WRONG!!!
+    //this->curr_mask = RTC_ALARM_TIME_MASK_YEAR | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_SECOND;
+    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->curr_mask);
 
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
@@ -162,9 +163,10 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
     // check if alarm is already present or not if it isn't ..
     // use this->m_dev to refer to the device]
-    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &this->curr_mask, &this->m_alarm_time);
+    uint16_t mask = this->curr_mask;
+    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    if (alarmPresent != 0 || this->curr_mask == 0) {
+    if (alarmPresent != 0 || mask == 0) {
         // populate alarm time
         this->m_alarm_time.tm_sec = t.get_Second();
         this->m_alarm_time.tm_min = t.get_Minute();
@@ -200,10 +202,10 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
     uint16_t mask = this->curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    if (rc == 0 && !(this->alarm_set)) {
+    if (rc == 0 && this->alarm_set) {
         // set mask to 0 to cancel alarm
-        this->curr_mask = 0;
-        rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
+        mask = 0;
+        rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
 
         this->alarm_set = false;
         this->log_ACTIVITY_HI_AlarmCanceled(ID);
