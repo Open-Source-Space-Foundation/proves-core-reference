@@ -178,10 +178,13 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
 
         //assure alarm is at a future point in time
         struct rtc_time c_time;
+        struct rtc_time a_time = this->m_alarm_time;
         rtc_get_time(this->m_dev, &c_time);
-        timeutil_timegm(rtc_time_to_tm(&c_time));
-        if(false){
-            //TODO
+        int c_epoch = timeutil_timegm(rtc_time_to_tm(&c_time));
+        int a_epoch = timeutil_timegm(rtc_time_to_tm(&a_time));
+        if(a_epoch <= c_epoch){
+            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+            return;
         }
 
         int rc = rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
