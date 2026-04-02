@@ -16,7 +16,7 @@ module Drv {
     port TimeGet -> U32
     port AlarmSet(t: Fw.TimeValue) -> U32
     port AlarmCancel(ID: U16) -> U32
-    port AlarmTriggered() -> U32
+    port AlarmTriggered()
 }
 
 module Drv {

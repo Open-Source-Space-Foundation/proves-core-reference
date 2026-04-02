@@ -95,6 +95,10 @@ class RtcManager final : public RtcManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
+    static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
+
+    void alarm_callback_t(const struct device* dev, uint16_t id);
+
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 

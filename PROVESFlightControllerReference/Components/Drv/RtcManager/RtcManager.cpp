@@ -11,6 +11,7 @@
 #include <random>
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/rtc.h>
 #include <zephyr/kernel.h>
 #include <zephyr/syscalls/rtc.h>
 
@@ -23,13 +24,10 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
     // alarm mask and time value struct initialization
 
-    //this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
+    // this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
 
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
-
-    //alarm set
-    this->alarm_set = false;
 }
 
 RtcManager ::~RtcManager() {}
@@ -40,8 +38,18 @@ RtcManager ::~RtcManager() {}
 
 void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
-    // match to timedata DO NOT CHANGE IF YOU ARE SETTING this->curr_mask YOU ARE DOING SOMETHING WRONG!!!
+
+    // match to timedata this is constant after being updated here, do not change
     rtc_alarm_get_supported_fields(this->m_dev, 0, &this->curr_mask);
+
+    uint16_t postmask = this->curr_mask;
+    int st = rtc_alarm_get_time(this->m_dev, 0, &postmask, &this->m_alarm_time);
+    // alarm set (change to a retrieval with rtc_alarm_get_time)
+    if (postmask > 0) {
+        this->alarm_set = true;
+    } else {
+        this->alarm_set = false;
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -173,16 +181,16 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         this->m_alarm_time.tm_min = t.get_Minute();
         this->m_alarm_time.tm_hour = t.get_Hour();
         this->m_alarm_time.tm_mday = t.get_Day();
-        this->m_alarm_time.tm_mon = t.get_Month() - 1;     
+        this->m_alarm_time.tm_mon = t.get_Month() - 1;
         this->m_alarm_time.tm_year = t.get_Year() - 1900;
 
-        //assure alarm is at a future point in time
+        // assure alarm is at a future point in time
         struct rtc_time c_time;
         struct rtc_time a_time = this->m_alarm_time;
         rtc_get_time(this->m_dev, &c_time);
-        int c_epoch = timeutil_timegm(rtc_time_to_tm(&c_time));
-        int a_epoch = timeutil_timegm(rtc_time_to_tm(&a_time));
-        if(a_epoch <= c_epoch){
+        int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
+        int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
+        if (a_seconds <= c_seconds) {
             this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
@@ -191,9 +199,13 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         if (rc != 0) {
             // log failure
             this->log_WARNING_HI_AlarmNotSet(t, rc);
+            this->log_WARNING_HI_AlarmNotSet(t, 0);
             this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
+
+        // callback to trigger upon alarm trigger
+        rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
 
         // log success
         this->alarm_set = true;
@@ -207,6 +219,21 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         this->log_WARNING_HI_AlarmNotSet(t, 0);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
     }
+}
+
+void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* user_data) {
+    // Reconstruct the object pointer from user_data
+    RtcManager* instance = static_cast<RtcManager*>(user_data);
+    if (instance != nullptr) {
+        instance->alarm_callback_t(dev, id);
+    }
+}
+
+void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
+    // this->log_ACTIVITY_HI_AlarmTriggered(id);
+    // for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
+    //     this->alarmTriggered_out(i);
+    // }
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
@@ -236,25 +263,24 @@ void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     if (rc == 0) {
-        //check the current mask to see if an alarm is active
-        
-        if(this->alarm_set){
+        // check the current mask to see if an alarm is active
+
+        if (this->alarm_set) {
             // convert alarm time and log it
             Drv::TimeData alarm_time_value(this->m_alarm_time.tm_year + 1900, this->m_alarm_time.tm_mon + 1,
-                                        this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,
-                                        this->m_alarm_time.tm_min, this->m_alarm_time.tm_sec);
+                                           this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,
+                                           this->m_alarm_time.tm_min, this->m_alarm_time.tm_sec);
             log_ACTIVITY_HI_AlarmSet(0, alarm_time_value);
         } else {
-            //no alarms likely needs it's own event but this is okay for now
+            // no alarms likely needs it's own event but this is okay for now
             Drv::TimeData alarm_none;
             this->log_WARNING_HI_AlarmNotSet(alarm_none, 0);
         }
 
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
     } else {
-        //indicates hardware error
+        // indicates hardware error
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-
     }
 }
 
