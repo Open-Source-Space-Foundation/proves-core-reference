@@ -15,6 +15,32 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
 
+#### `ALARM_SET` Command Usage
+1. The component is instantiated and initialized during system startup
+2. A ground station sends a `ALARM_SET` command with the desired time
+3. On each command, the component:
+    - Validates that the alarm is at a future date
+    - Emits 'AlarmNotSet' if time is not valid or if an alarm is already present
+    - Sets the time to the RTC alarm if validation passes
+    - Emits a `AlarmSet` event with the previous time if the alarm is set successfully
+    - Emits a `AlarmNotSet` event if the alarm is not set successfully
+
+#### `ALARM_CANCEL` Command Usage
+1. A ground station sends a `ALARM_CANCEL` command with the desired alarm ID to cancel
+2. On each command, the component:
+    - Validates that an alarm exists
+    - Emits 'AlarmNotCanceled' if an alarm is already present
+    - Cancels the present alarm if it is present on the system
+    - Emits a `AlarmCanceled` event with the previous time if the alarm is canceled successfully
+    - Emits a `AlarmNotCanceled` event if the alarm is not canceled successfully
+
+#### `ALARM_LIST` Command Usage
+1. A ground station sends a `ALARM_LIST` command
+2. On each command, the component:
+    - Validates that an alarm exists
+    - Emits 'AlarmNotSet' if no alarm is present
+    - Emits 'AlarmSet' if an alarm is present and returns it's information to the ground station
+
 #### `timeGetPort` Port Usage
 1. The component is instantiated and initialized during system startup
 2. In a deployment topology, a `time connection` relation is made to sync FPrime's internal clock
@@ -84,7 +110,7 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
 | TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
-| AlarmSet | Emitted when alarm is succesfully set |
+| AlarmSet | Emitted when alarm is successfully set |
 | AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
 | AlarmTriggered | Emitted when an alarm fires |
 | AlarmCanceled | Emitted when an alarm is canceled |
