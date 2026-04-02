@@ -230,10 +230,13 @@ void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* u
 }
 
 void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
-    // this->log_ACTIVITY_HI_AlarmTriggered(id);
-    // for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
-    //     this->alarmTriggered_out(i);
-    // }
+    this->log_ACTIVITY_HI_AlarmTriggered(id);
+    for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
+        if (!this->isConnected_alarmTriggered_OutputPort(i)) {
+            continue;
+        }
+        this->alarmTriggered_out(i);
+    }
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
