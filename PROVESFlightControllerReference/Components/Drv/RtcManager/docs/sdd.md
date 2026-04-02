@@ -68,18 +68,27 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | Name | Description |
 |---|---|
 | timeGetPort | Time port for FPrime topology connection to get the time from the RTC |
+| alarmTriggered | Output port to keep track of when an alarm triggers |
 
 ## Commands
 | Name | Description |
 |---|---|
 | TIME_SET | Sets the time on the RTC with validation of all time fields |
+| ALARM_SET | Sets the RTC alarm with as much precision as hardware allows |
+| ALARM_CANCEL | Cancels the current alarm |
+| ALARM_LIST | Responds with info about the current set alarm |
 
 ## Events
 | Name | Description |
 |---|---|
 | DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
-| TimeNotSet | Emitted on unsuccessful time set |
+| TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
+| AlarmSet | Emitted when alarm is succesfully set |
+| AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
+| AlarmTriggered | Emitted when an alarm fires |
+| AlarmCanceled | Emitted when an alarm is canceled |
+| AlarmNotCanceled | Emitted when an alarm cannot be canceled |
 | YearValidationFailed | Emitted when provided year is invalid (should be >= 1900) |
 | MonthValidationFailed | Emitted when provided month is invalid (should be [1-12]) |
 | DayValidationFailed | Emitted when provided day is invalid (should be [1-31]) |
