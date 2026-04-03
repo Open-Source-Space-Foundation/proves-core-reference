@@ -83,11 +83,8 @@ sequenceDiagram
 ## Events
 
 | Name                    | Description                                |
-| ----------------------- | ------------------------------------------ |
-| DeviceNotReady          | Die temperature device not ready           |
-| DeviceInitFailed        | Die temperature initialization failed      |
-| DeviceNil               | Die temperature device is nil              |
-| DeviceStateNil          | Die temperature device state is nil        |
+| ----------------------- | ------------------------------------------ | --- |
+| DeviceNotReady          | Die temperature device not ready           |     |
 | SensorSampleFetchFailed | Die temperature sensor sample fetch failed |
 | SensorChannelGetFailed  | Die temperature sensor channel get failed  |
 | PicoTemperature         | Die temperature reading in degrees Celsius |

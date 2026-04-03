@@ -21,15 +21,6 @@ module Drv {
         @ Event for reporting not ready error
         event DeviceNotReady() severity warning low format "Device not ready" throttle 5
 
-        @ Event for reporting initialization failure
-        event DeviceInitFailed(ret: I32) severity warning low format "Initialization failed with return code: {}" throttle 5
-
-        @ Event for reporting nil device error
-        event DeviceNil() severity warning low format "Device is nil" throttle 5
-
-        @ Event for reporting nil state error
-        event DeviceStateNil() severity warning low format "Device state is nil" throttle 5
-
         @ Event for reporting sensor fetch failure
         event SensorSampleFetchFailed(ret: I32) severity warning low format "Sensor fetch failed with return code: {}" throttle 5
 

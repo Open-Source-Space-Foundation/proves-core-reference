@@ -62,15 +62,6 @@ class PicoTempManager final : public PicoTempManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
-    //! Initialize the die_temp device
-    Fw::Success initializeDevice();
-
-    //! Deinitialize the die_temp device
-    Fw::Success deinitializeDevice();
-
-    //! Check if the die_temp device is initialized
-    bool isDeviceInitialized();
-
     //! Get the temperature in degrees Celsius from the die_temp device
     F64 getPicoTemperature(Fw::Success& condition);
 
