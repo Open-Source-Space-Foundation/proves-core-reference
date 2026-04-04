@@ -147,15 +147,25 @@ Fw::Time StartupManager ::get_uptime() {
     return time;
 }
 
+void StartupManager ::sequenceStarted_handler(FwIndexType portNum, 
+                                              const Fw::StringBase& fileName) {
+    // Reads in the file name of the start-up sequence from the sequenceStarted port and logs it. 
+    this->m_sequence_file = fileName;
+}
+
 void StartupManager ::completeSequence_handler(FwIndexType portNum,
                                                FwOpcodeType opCode,
                                                U32 cmdSeq,
                                                const Fw::CmdResponse& response) {
-    // Respond to the completion status of the start-up sequence
-    if (response == Fw::CmdResponse::OK) {
-        this->log_ACTIVITY_LO_StartupSequenceFinished();
-    } else {
-        this->log_WARNING_LO_StartupSequenceFailed(response);
+    // Emits a log event indicating the completion of the start-up sequence, and whether it was successful or not 
+    // based on the information in m_sequence_file and the command response.
+
+    if (this->m_sequence_file == "//seq/startup.bin") {
+        if (response == Fw::CmdResponse::OK) {
+            this->log_ACTIVITY_LO_StartupSequenceFinished();
+        } else {
+            this->log_WARNING_LO_StartupSequenceFailed(response);
+        }
     }
 }
 
