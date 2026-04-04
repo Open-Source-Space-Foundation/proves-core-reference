@@ -14,6 +14,9 @@ module Drv {
 module Drv {
     port TimeSet(t: TimeData)
     port TimeGet -> U32
+    port AlarmSet(t: Fw.TimeValue) -> U32
+    port AlarmCancel(ID: U16) -> U32
+    port AlarmTriggered()
 }
 
 module Drv {
@@ -21,14 +24,30 @@ module Drv {
     passive component RtcManager {
         import Svc.Time
 
+        ### COMMANDS ###
+
+        # Alarm zephyr docs: https://docs.zephyrproject.org/latest/doxygen/html/group__rtc__interface.html#ga531c379c437a91df44a45e95063700e8
+        # When setting an alarm we should generate an ID and return it as an event
+
         @ TIME_SET command to set the time on the RTC
         sync command TIME_SET(
             t: Drv.TimeData @< Set the time
-        ) opcode 0
+        )
 
-        ##############################################################################
-        #### Uncomment the following examples to start customizing your component ####
-        ##############################################################################
+        @ ALARM_SET command to set an alarm on the RTC
+        sync command ALARM_SET(
+            t: Drv.TimeData @< Time to set the alarm for
+        )
+
+        @ ALARM_CANCEL command to cancel any set alarms on the RTC
+        sync command ALARM_CANCEL(
+            ID: U16 @< ID of the alarm to cancel
+        )
+
+        @ ALARM_LIST command to list all set alarms on the RTC
+        sync command ALARM_LIST()
+
+        ### EVENTS ###
 
         @ DeviceNotReady event indicates that the RTC is not ready
         event DeviceNotReady() severity warning high id 0 format "RTC not ready" throttle 1
@@ -72,12 +91,42 @@ module Drv {
             second: U32 @< The invalid second
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
 
-        ###############################################################################
-        # Port for canceling sequences on time change                                 #
-        ###############################################################################
+        @ AlarmSet event indicates that the alarm was set successfully
+        event AlarmSet(
+            ID: U16 @< ID of the set alarm
+            t: Drv.TimeData @< Time for the set alarm
+        ) severity activity high id 11 format "Alarm set on RTC with ID {}, time: {}"
+
+        @ AlarmNotSet event indicates that the alarm was not set successfully
+        event AlarmNotSet(
+            t: Drv.TimeData @< Time for the alarm that was not set
+            rc: U32 @< Return code from the RTC driver
+        ) severity warning high id 12 format "Alarm not set on RTC for time: {}, return code: {}"
+
+        @ AlarmTriggered event indicates that an alarm was triggered
+        event AlarmTriggered(
+            ID: U16 @< ID of the triggered alarm
+        ) severity activity high id 13 format "Alarm with ID {} triggered"
+
+        @ AlarmCanceled event indicates that an alarm was canceled successfully
+        event AlarmCanceled(
+            ID: U16 @< ID of the canceled alarm
+        ) severity activity high id 14 format "Alarm with ID {} canceled"
+
+        @ AlarmNotCanceled event indicates that an alarm was not canceled successfully
+        event AlarmNotCanceled(
+            ID: U16 @< ID of the alarm that was not canceled
+            rc: U32 @< Return code from the RTC driver
+        ) severity warning high id 15 format "Alarm with ID {} not canceled, return code: {}"
+
+        ### PORTS ###
+
         @ Port for canceling running sequences when RTC time is set
         @ Connected to seqCancelIn ports of Command, Payload, and SafeMode sequencers
         output port cancelSequences: [3] Svc.CmdSeqCancel
+
+        @ Port to indicate an alarm was triggered
+        output port alarmTriggered: [1] Drv.AlarmTriggered
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

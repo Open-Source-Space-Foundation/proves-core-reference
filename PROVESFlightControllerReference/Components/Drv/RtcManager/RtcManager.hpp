@@ -67,10 +67,37 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
+    //! Handler implementation for command ALARM_SET
+    //!
+    //! ALARM_SET command to set an alarm on the RTC
+    void ALARM_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq,           //!< The command sequence number
+                              Drv::TimeData t       //!< Time to set the alarm for
+                              ) override;
+
+    //! Handler implementation for command ALARM_CANCEL
+    //!
+    //! ALARM_CANCEL command to cancel any set alarms on the RTC
+    void ALARM_CANCEL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                 U32 cmdSeq,           //!< The command sequence number
+                                 U16 ID                //!< ID of the alarm to cancel
+                                 ) override;
+
+    //! Handler implementation for command ALARM_LIST
+    //!
+    //! ALARM_LIST command to list all set alarms on the RTC
+    void ALARM_LIST_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+
+    static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
+
+    void alarm_callback_t(const struct device* dev, uint16_t id);
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
@@ -83,6 +110,12 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_console_throttled;  //!< Counter for console throttle
     const struct device* m_dev;             //!< The initialized Zephyr RTC device
     RtcHelper m_rtcHelper;                  //!< Helper for RTC operations
+
+    // rtc alarm members
+
+    U16 curr_mask;                 //!< The mask of the alarm present on hardware
+    struct rtc_time m_alarm_time;  //!< Current alarm's time settings
+    bool alarm_set;                //!< Alarm present on hardware or not
 };
 
 }  // namespace Drv
