@@ -304,10 +304,10 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
-def test_07_rtc_alarm_set_and_cancel_validation(
+def test_07_rtc_alarm_cancel_no_alarm_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
-    """Test that the alarm set and cancel commands properly validate and enforce their logic"""
+    """Test alarm cancellation when no alarm is set"""
 
     # Clear histories
     fprime_test_api.clear_histories()
