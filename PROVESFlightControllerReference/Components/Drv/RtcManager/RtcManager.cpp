@@ -40,18 +40,8 @@ void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
 
     // match to timedata this is constant after being updated here, do not change
-    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->curr_mask);
-
-    uint16_t postmask = this->curr_mask;
-    int st = rtc_alarm_get_time(this->m_dev, 0, &postmask, &this->m_alarm_time);
-    // alarm set (change to a retrieval with rtc_alarm_get_time)
-    if (postmask > 0) {
-        this->alarm_set = true;
-    } else {
-        this->alarm_set = false;
-    }
+    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->m_curr_mask);
 }
-
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
@@ -172,57 +162,50 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     // check if alarm is already present or not if it isn't ..
     // use this->m_dev to refer to the device]
 
-    uint16_t mask = this->curr_mask;
+    uint16_t mask = this->m_curr_mask;
     int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    // if alarm is already set, return an error
+    // if alarm is already set, return an EALREADY error
     if (alarmPresent == 0 && mask != 0) {
         this->log_WARNING_HI_AlarmNotSet(t, EALREADY);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
-        // populate alarm time
-        this->m_alarm_time.tm_sec = t.get_Second();
-        this->m_alarm_time.tm_min = t.get_Minute();
-        this->m_alarm_time.tm_hour = t.get_Hour();
-        this->m_alarm_time.tm_mday = t.get_Day();
-        this->m_alarm_time.tm_mon = t.get_Month() - 1;
-        this->m_alarm_time.tm_year = t.get_Year() - 1900;
+    // populate alarm time
+    this->m_alarm_time.tm_sec = t.get_Second();
+    this->m_alarm_time.tm_min = t.get_Minute();
+    this->m_alarm_time.tm_hour = t.get_Hour();
+    this->m_alarm_time.tm_mday = t.get_Day();
+    this->m_alarm_time.tm_mon = t.get_Month() - 1;
+    this->m_alarm_time.tm_year = t.get_Year() - 1900;
 
-        // assure alarm is at a future point in time
-        struct rtc_time c_time;
-        struct rtc_time a_time = this->m_alarm_time;
-        rtc_get_time(this->m_dev, &c_time);
-        int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
-        int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
-        if (a_seconds <= c_seconds) {
-            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-            return;
-        }
-
-        int rc = rtc_alarm_set_time(this->m_dev, 0, this->curr_mask, &this->m_alarm_time);
-        if (rc != 0) {
-            // log failure
-            this->log_WARNING_HI_AlarmNotSet(t, rc);
-            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-            return;
-        }
-
-        // callback to trigger upon alarm trigger
-        rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
-
-        // log success
-        this->alarm_set = true;
-        this->log_ACTIVITY_HI_AlarmSet(0, t);
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-
-    } else {
-        // if alarm IS present handle it
-        // log failure
-        // indicate no return code (user error)
-        this->log_WARNING_HI_AlarmNotSet(t, 0);
+    // assure alarm is at a future point in time
+    struct rtc_time c_time;
+    struct rtc_time a_time = this->m_alarm_time;
+    rtc_get_time(this->m_dev, &c_time);
+    int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
+    int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
+    if (a_seconds <= c_seconds) {
+        this->log_WARNING_HI_AlarmNotSet(t, 22);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
     }
+
+    int rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmNotSet(t, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    // callback to trigger upon alarm trigger
+    rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
+
+    // log success
+    this->alarm_set = true;
+    this->log_ACTIVITY_HI_AlarmSet(0, t);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* user_data) {
@@ -234,6 +217,7 @@ void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* u
 }
 
 void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
+    // actual callback
     this->log_ACTIVITY_HI_AlarmTriggered(id);
     for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
         if (!this->isConnected_alarmTriggered_OutputPort(i)) {
@@ -241,11 +225,14 @@ void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
         }
         this->alarmTriggered_out(i);
     }
+    // cancel the alarm, so it won't go off repeatedly.
+    uint16_t mask = 0;
+    rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
     // check if it's present
-    uint16_t mask = this->curr_mask;
+    uint16_t mask = this->m_curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     if (rc == 0 && this->alarm_set) {
@@ -266,13 +253,13 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
 
 void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // check if present, if so log its info.
-    uint16_t mask = this->curr_mask;
+    uint16_t mask = this->m_curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     if (rc == 0) {
         // check the current mask to see if an alarm is active
 
-        if (this->alarm_set) {
+        if (mask > 0) {
             // convert alarm time and log it
             Drv::TimeData alarm_time_value(this->m_alarm_time.tm_year + 1900, this->m_alarm_time.tm_mon + 1,
                                            this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,

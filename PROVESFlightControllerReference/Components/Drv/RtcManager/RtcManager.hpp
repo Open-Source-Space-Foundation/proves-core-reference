@@ -95,8 +95,10 @@ class RtcManager final : public RtcManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
+    // Alarm callback kicker method. Must be static but cannot reference this in a static context
     static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
 
+    // Actual alarm callback, for triggering events
     void alarm_callback_t(const struct device* dev, uint16_t id);
 
     //! Validate time data
@@ -113,9 +115,8 @@ class RtcManager final : public RtcManagerComponentBase {
 
     // rtc alarm members
 
-    U16 curr_mask;                 //!< The mask of the alarm present on hardware
+    U16 m_curr_mask;               //!< The mask of the alarm present on hardware
     struct rtc_time m_alarm_time;  //!< Current alarm's time settings
-    bool alarm_set;                //!< Alarm present on hardware or not
 };
 
 }  // namespace Drv
