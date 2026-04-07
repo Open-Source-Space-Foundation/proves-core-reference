@@ -203,7 +203,6 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
 
     // log success
-    this->alarm_set = true;
     this->log_ACTIVITY_HI_AlarmSet(0, t);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -235,12 +234,11 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
     uint16_t mask = this->m_curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    if (rc == 0 && this->alarm_set) {
+    if (rc == 0 && mask != 0) {
         // set mask to 0 to cancel alarm
         mask = 0;
         rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
 
-        this->alarm_set = false;
         this->log_ACTIVITY_HI_AlarmCanceled(ID);
     } else {
         // handle no alarm case
