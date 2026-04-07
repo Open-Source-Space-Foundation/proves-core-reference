@@ -95,6 +95,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.tmp112BattCell2Manager.Temperature
     ReferenceDeployment.tmp112BattCell3Manager.Temperature
     ReferenceDeployment.tmp112BattCell4Manager.Temperature
+    ReferenceDeployment.picoTempManager.PicoTemperature
   }
 
   packet Detumble id 15 group 3 {
