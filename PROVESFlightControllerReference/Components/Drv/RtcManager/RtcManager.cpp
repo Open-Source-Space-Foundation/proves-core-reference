@@ -199,7 +199,6 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         if (rc != 0) {
             // log failure
             this->log_WARNING_HI_AlarmNotSet(t, rc);
-            this->log_WARNING_HI_AlarmNotSet(t, 0);
             this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }

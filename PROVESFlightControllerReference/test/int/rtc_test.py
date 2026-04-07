@@ -361,3 +361,36 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Assert that we receive an AlarmNotSet event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Ensure that double setting an alarm will result in a rejection from the system"""
+    # Set an alarm for 5 seconds in the future
+    alarm_time = datetime.now(timezone.utc) + timedelta(seconds=5)
+    alarm_time_data = dict(
+        Year=alarm_time.year,
+        Month=alarm_time.month,
+        Day=alarm_time.day,
+        Hour=alarm_time.hour,
+        Minute=alarm_time.minute,
+        Second=alarm_time.second,
+    )
+    alarm_time_data_str = json.dumps(alarm_time_data)
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    # Assert that we receive an AlarmSet event within 10 seconds
+    fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
+
+    # Double set the alarm
+    alarm_time = datetime.now(timezone.utc) + timedelta(seconds=5)
+    alarm_time_data = dict(
+        Year=alarm_time.year,
+        Month=alarm_time.month,
+        Day=alarm_time.day,
+        Hour=alarm_time.hour,
+        Minute=alarm_time.minute,
+        Second=alarm_time.second,
+    )
+    alarm_time_data_str = json.dumps(alarm_time_data)
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    # Assert that we receive an AlarmNotSet event within 10 seconds
+    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
