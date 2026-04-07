@@ -22,6 +22,11 @@ endif()
 
 project(fprime-zephyr-reference C CXX)
 
+# Enable Zephyr Pico hardware_adc library
+zephyr_include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/zephyr-workspace/modules/hal/rpi_pico/src/rp2_common/hardware_adc/include
+)
+
 # Disable F´ framework/autocoder/app unit tests; we use our own GoogleTests in tests/
 set(FPRIME_ENABLE_FRAMEWORK_UTS OFF CACHE BOOL "" FORCE)
 set(FPRIME_ENABLE_AUTOCODER_UTS OFF CACHE BOOL "" FORCE)
