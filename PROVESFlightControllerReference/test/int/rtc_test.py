@@ -276,6 +276,10 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     # Assert that we receive an AlarmTriggered event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.AlarmTriggered", timeout=10)
 
+    # make sure the alarm is gone
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
 
 # cancellation test
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):

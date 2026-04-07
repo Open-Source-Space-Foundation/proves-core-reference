@@ -85,8 +85,10 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | An alarm is set and then an event is emitted when the alarm triggers | Integration test |
 | RtcManager-006 | An alarm is set and then canceled, an event is emitted when the alarm is canceled | Integration test |
-| RtcManager-007 | An alarm with an impossible time is set and an event is emitted when the alarm cannot be set | Integration test |
+| RtcManager-007 | An alarm cancel command is sent when no alarm is present and an event is emitted | Integration test |
 | RtcManager-008 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
+| RtcManager-009 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
+| RtcManager-010 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 
 
 ## Port Descriptions
