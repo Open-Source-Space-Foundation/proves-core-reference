@@ -59,6 +59,9 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
             this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
         }
     }
+
+    // Pico temp sensor
+    this->picoTempGet_out(0, condition);
 }
 
 }  // namespace Components
