@@ -175,7 +175,12 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     uint16_t mask = this->curr_mask;
     int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
-    if (alarmPresent != 0 || mask == 0) {
+    // if alarm is already set, return an error
+    if (alarmPresent == 0 && mask != 0) {
+        this->log_WARNING_HI_AlarmNotSet(t, EALREADY);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
         // populate alarm time
         this->m_alarm_time.tm_sec = t.get_Second();
         this->m_alarm_time.tm_min = t.get_Minute();
