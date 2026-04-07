@@ -26,7 +26,7 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
-	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/pyyaml-override.txt
 
 
 .PHONY: zephyr-setup
@@ -211,6 +211,49 @@ sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
+
+##@ YAMCS
+
+.PHONY: yamcs-dict
+yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-artifacts; run 'make build' first)
+	@mkdir -p yamcs/yamcs-data/mdb
+	@DICT=$$(find build-artifacts -name "*TopologyDictionary.json" | head -1); \
+	  if [ -z "$$DICT" ]; then echo "Error: run 'make build' first"; exit 1; fi; \
+	  echo "Generating XTCE from $$DICT"; \
+	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
+	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
+
+.PHONY: yamcs
+yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
+	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+	@echo "Starting YAMCS (requires Java 11+)..."
+	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
+	FPRIME_GDS_CONFIG_PATH=$(shell pwd)/yamcs/fprime-gds.yml \
+	$(UV_RUN) fprime-yamcs \
+	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
+	    --no-app \
+	    --communication-selection none \
+	    --no-convert-dictionary \
+	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
+	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
+	@sleep 3
+	@echo "Starting serial adapter on $(UART_DEVICE)..."
+	$(UV_RUN) python tools/yamcs/proves_adapter.py \
+	    --mode serial \
+	    --uart-device $(UART_DEVICE) \
+	    --uart-baud 115200
+
+.PHONY: yamcs-server
+yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
+	docker compose -f yamcs/docker-compose.yml up
+
+.PHONY: yamcs-adapter-tcp
+yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_PORT=, YAMCS_HOST=)
+	$(UV_RUN) python tools/yamcs/proves_adapter.py \
+	    --mode tcp \
+	    --tcp-host $(GS_HOST) \
+	    --tcp-port $(GS_PORT) \
+	    --yamcs-host $(YAMCS_HOST)
 
 ##@ Operations
 
