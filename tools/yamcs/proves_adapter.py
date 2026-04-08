@@ -19,6 +19,24 @@ import sys
 import threading
 from pathlib import Path
 
+# Flush stdout on every print so diagnostic messages appear immediately even
+# when the adapter is run as a background process or piped to a log file.
+sys.stdout.reconfigure(line_buffering=True)
+
+# ---------------------------------------------------------------------------
+# CRC16-CCITT (CCSDS standard: poly 0x1021, init 0xFFFF, no reflection)
+# ---------------------------------------------------------------------------
+
+
+def _crc16_ccitt(data: bytes) -> int:
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021 if crc & 0x8000 else crc << 1) & 0xFFFF
+    return crc
+
+
 # Allow importing authenticate_plugin from the Framing package without installing it.
 sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 
@@ -32,19 +50,88 @@ from authenticate_plugin import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
-def _forward_tm_serial(ser, tm_sock, yamcs_host: str, tm_port: int, frame_length: int):
+def _serial_read_exact(ser, n: int) -> bytes:
+    """Read exactly n bytes from serial, blocking until all bytes are available."""
+    buf = b""
+    while len(buf) < n:
+        chunk = ser.read(n - len(buf))
+        if chunk:
+            buf += chunk
+    return buf
+
+
+def _sync_serial_frame(ser, frame_length: int, sync_header: bytes) -> bytes:
+    """Scan the serial stream for a valid frame boundary and return the first complete frame.
+
+    The OS serial buffer may contain a partial frame from before the adapter
+    started (or the header bytes may appear in payload data as a false positive).
+    Scan byte by byte: each time the header pattern is found, read a full candidate
+    frame and validate its CRC. Only accept when the CRC is correct.
+    """
+    print(f"[TM] Searching for frame sync (header={sync_header.hex(' ')})...")
+    header_len = len(sync_header)
+    window = b""
+    attempts = 0
+    while True:
+        b = ser.read(1)
+        if not b:
+            continue
+        window = (window + b)[-header_len:]
+        if window != sync_header:
+            continue
+        # Candidate sync point — read the rest of the frame and validate CRC.
+        remainder = _serial_read_exact(ser, frame_length - header_len)
+        frame = sync_header + remainder
+        if _crc16_ccitt(frame[:-2]) == int.from_bytes(frame[-2:], "big"):
+            print(f"[TM] Frame sync acquired (after {attempts} false positives).")
+            return frame
+        # CRC mismatch — false positive, keep scanning from the next byte.
+        attempts += 1
+        window = b""  # reset window so we re-scan from inside the false frame
+
+
+def _forward_tm_serial(
+    ser,
+    tm_sock,
+    yamcs_host: str,
+    tm_port: int,
+    frame_length: int,
+    spacecraft_id: int = 68,
+    vc_id: int = 1,
+):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP."""
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
+    # Compute the expected first 2 bytes of the CCSDS TM primary header:
+    # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
+    word0 = (spacecraft_id << 4) | (vc_id << 1)
+    sync_header = bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])
+
+    # Scan to the first frame boundary before entering the steady-state read loop.
+    frame = _sync_serial_frame(ser, frame_length, sync_header)
+    tm_sock.sendto(frame, (yamcs_host, tm_port))
+    frames_sent = 1
+    crc_errors = 0
+
     while True:
         # Accumulate bytes until a complete frame is assembled. pyserial's
-        # read(n) with a short timeout may return fewer than n bytes, so loop
-        # until we have exactly frame_length bytes before forwarding.
-        buf = b""
-        while len(buf) < frame_length:
-            chunk = ser.read(frame_length - len(buf))
-            if chunk:
-                buf += chunk
-        tm_sock.sendto(buf, (yamcs_host, tm_port))
+        # read(n) with a short timeout may return fewer than n bytes.
+        frame = _serial_read_exact(ser, frame_length)
+
+        # Validate CRC in steady state to detect alignment drift (serial glitches,
+        # board reset, USB hiccup, etc.).  Re-sync byte-by-byte on failure rather
+        # than forwarding bad data to YAMCS and staying permanently misaligned.
+        if _crc16_ccitt(frame[:-2]) != int.from_bytes(frame[-2:], "big"):
+            crc_errors += 1
+            print(
+                f"[TM] CRC error in steady state (#{crc_errors} after {frames_sent} "
+                f"good frames) — first 6 bytes: {frame[:6].hex(' ')} — resyncing..."
+            )
+            frame = _sync_serial_frame(ser, frame_length, sync_header)
+            frames_sent = 0
+            crc_errors = 0
+
+        tm_sock.sendto(frame, (yamcs_host, tm_port))
+        frames_sent += 1
 
 
 def _forward_tm_tcp(
@@ -138,12 +225,24 @@ def parse_args():
         help="HMAC key as hex string (no 0x prefix). Defaults to key from AuthDefaultKey.h.",
     )
 
-    # Frame size
+    # Frame size and CCSDS identifiers
     p.add_argument(
         "--frame-length",
         type=int,
         default=248,
         help="TM frame length in bytes (must match TmFrameFixedSize / YAMCS frameLength)",
+    )
+    p.add_argument(
+        "--spacecraft-id",
+        type=int,
+        default=68,
+        help="CCSDS spacecraft ID (10-bit, used for frame sync header)",
+    )
+    p.add_argument(
+        "--vc-id",
+        type=int,
+        default=1,
+        help="CCSDS virtual channel ID (3-bit, used for frame sync header)",
     )
 
     return p.parse_args()
@@ -173,7 +272,15 @@ def main():
 
         tm_thread = threading.Thread(
             target=_forward_tm_serial,
-            args=(ser, tm_sock, args.yamcs_host, args.yamcs_tm_port, args.frame_length),
+            args=(
+                ser,
+                tm_sock,
+                args.yamcs_host,
+                args.yamcs_tm_port,
+                args.frame_length,
+                args.spacecraft_id,
+                args.vc_id,
+            ),
             daemon=True,
         )
         tc_thread = threading.Thread(

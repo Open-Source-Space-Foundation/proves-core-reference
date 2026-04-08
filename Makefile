@@ -39,6 +39,10 @@ fprime-venv: uv ## Create a virtual environment
 	  else \
 	    echo "❌ Error: Unable to apply fprime-yamcs patch. Run 'ls $$TARGET' to check."; exit 1; \
 	  fi
+	@echo "Applying fprime-yamcs-events CPU fix..."
+	@EVENTS_PROC=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/events/processor.py 2>/dev/null | head -1); \
+	  if [ -z "$$EVENTS_PROC" ]; then echo "⚠ events processor not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-events-cpu-fix.py "$$EVENTS_PROC"
 
 
 .PHONY: zephyr-setup
@@ -235,9 +239,24 @@ yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-ar
 	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
 	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
 
+.PHONY: yamcs-stop
+yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
+	@echo "Stopping YAMCS processes..."
+	@pkill -f 'proves_adapter.py' 2>/dev/null && echo "  stopped serial adapter" || true
+	@pkill -f 'fprime-yamcs-events' 2>/dev/null && echo "  stopped fprime-yamcs-events" || true
+	@pkill -f 'fprime_yamcs' 2>/dev/null && echo "  stopped fprime-yamcs wrapper" || true
+	@pkill -f 'mvn.*yamcs' 2>/dev/null && echo "  stopped Maven yamcs runner" || true
+	@pkill -f 'org.yamcs.YamcsServer' 2>/dev/null && echo "  stopped YAMCS server" || true
+	@i=0; while pgrep -f 'org.yamcs.YamcsServer' > /dev/null 2>&1; do \
+	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
+	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
+	    pkill -9 -f 'org.yamcs.YamcsServer' 2>/dev/null; break; fi; done
+	@echo "Done."
+
 .PHONY: yamcs
 yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
 	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+	@$(MAKE) yamcs-stop
 	@echo "Starting YAMCS (requires Java 11+)..."
 	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
 	FPRIME_GDS_CONFIG_PATH=$(shell pwd)/yamcs/fprime-gds.yml \
@@ -252,7 +271,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."
-	$(UV_RUN) python tools/yamcs/proves_adapter.py \
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
 	    --uart-device $(UART_DEVICE) \
 	    --uart-baud 115200
@@ -263,7 +282,7 @@ yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote de
 
 .PHONY: yamcs-adapter-tcp
 yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_PORT=, YAMCS_HOST=)
-	$(UV_RUN) python tools/yamcs/proves_adapter.py \
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode tcp \
 	    --tcp-host $(GS_HOST) \
 	    --tcp-port $(GS_PORT) \
