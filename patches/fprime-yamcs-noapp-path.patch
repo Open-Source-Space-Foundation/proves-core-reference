@@ -1,0 +1,22 @@
+diff --git a/fprime_yamcs/__main__.py b/fprime_yamcs/__main__.py
+--- a/fprime_yamcs/__main__.py
++++ b/fprime_yamcs/__main__.py
+@@ -147,6 +147,9 @@ def launch_yamcs(parsed_args):
+     environment = os.environ.copy()
+     environment["FPRIME_DICTIONARY"] = parsed_args.dictionary
+     environment["FPRIME_YAMCS_INSTANCE"] = parsed_args.yamcs_events_instance
++    # Ensure the venv bin (fprime-yamcs-events, etc.) is on PATH for Java subprocesses
++    venv_bin = str(Path(sys.executable).parent)
++    environment["PATH"] = venv_bin + os.pathsep + environment.get("PATH", "")
+
+     print(f"[INFO] Using FPRIME_DICTIONARY: {environment['FPRIME_DICTIONARY']}")
+     print(f"[INFO] Using FPRIME_YAMCS_INSTANCE: {environment['FPRIME_YAMCS_INSTANCE']}")
+@@ -205,7 +208,9 @@ def main():
+         if parsed_args.yamcs_events_instance is None:
+             parsed_args.yamcs_events_instance = events_instance
+-        processes = [launcher(parsed_args) for launcher in [launch_app, launch_yamcs]]
++        launchers = [] if getattr(parsed_args, "noapp", False) else [launch_app]
++        launchers.append(launch_yamcs)
++        processes = [launcher(parsed_args) for launcher in launchers]
+         print("[INFO] F Prime/YAMCS is now running. CTRL-C to shutdown all components.")
+         processes[-1].wait()

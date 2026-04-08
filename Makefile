@@ -24,9 +24,21 @@ submodules: ## Initialize and update git submodules
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
+FPRIME_YAMCS_MAIN ?= $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/__main__.py
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
 	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/pyyaml-override.txt
+	@echo "Applying fprime-yamcs noapp/path patch..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping patch"; exit 0; fi; \
+	  PATCH_DIR=$$(dirname $$TARGET); \
+	  if grep -q 'venv_bin = str(Path(sys.executable).parent)' $$TARGET; then \
+	    echo "⚠ fprime-yamcs patch already applied"; \
+	  elif patch --dry-run -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch > /dev/null 2>&1; then \
+	    patch -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch && echo "✓ Applied fprime-yamcs patch"; \
+	  else \
+	    echo "❌ Error: Unable to apply fprime-yamcs patch. Run 'ls $$TARGET' to check."; exit 1; \
+	  fi
 
 
 .PHONY: zephyr-setup
