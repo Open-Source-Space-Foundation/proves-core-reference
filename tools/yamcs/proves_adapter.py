@@ -103,39 +103,99 @@ def _forward_tm_serial(
     spacecraft_id: int = 68,
     vc_id: int = 1,
 ):
-    """Read fixed-length TM frames from serial and forward to YAMCS via UDP."""
+    """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
+
+    The FSW may interleave console/debug text (e.g. ``[Os::...]``) on the same
+    UART as CCSDS TM frames.  Rather than reading exactly *frame_length* bytes
+    and hoping they form a clean frame, we maintain a rolling buffer and scan for
+    the 2-byte sync header.  When found, we validate the CRC — if it passes the
+    frame is forwarded; if it fails the candidate is discarded and scanning
+    continues.  This makes the adapter resilient to arbitrary non-frame data on
+    the serial link without losing the frame that immediately follows.
+    """
+    import time
+
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
     # Compute the expected first 2 bytes of the CCSDS TM primary header:
     # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
     word0 = (spacecraft_id << 4) | (vc_id << 1)
     sync_header = bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])
 
-    # Scan to the first frame boundary before entering the steady-state read loop.
-    frame = _sync_serial_frame(ser, frame_length, sync_header)
-    tm_sock.sendto(frame, (yamcs_host, tm_port))
-    frames_sent = 1
-    crc_errors = 0
+    buf = bytearray()
+    frames_sent = 0
+    last_vc_count = -1  # not yet known
+    vc_frame_gaps = 0
+    junk_bytes = 0
+    stats_time = time.monotonic()
+
+    print(f"[TM] Scanning for frames (sync header={sync_header.hex(' ')})...")
 
     while True:
-        # Accumulate bytes until a complete frame is assembled. pyserial's
-        # read(n) with a short timeout may return fewer than n bytes.
-        frame = _serial_read_exact(ser, frame_length)
+        # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
+        chunk = ser.read(max(1, ser.in_waiting or 1))
+        if not chunk:
+            continue
+        buf.extend(chunk)
 
-        # Validate CRC in steady state to detect alignment drift (serial glitches,
-        # board reset, USB hiccup, etc.).  Re-sync byte-by-byte on failure rather
-        # than forwarding bad data to YAMCS and staying permanently misaligned.
-        if _crc16_ccitt(frame[:-2]) != int.from_bytes(frame[-2:], "big"):
-            crc_errors += 1
+        # Scan the buffer for complete, CRC-valid frames.
+        while True:
+            # Find the sync header in the buffer.
+            idx = buf.find(sync_header)
+            if idx == -1:
+                # No sync header anywhere — discard everything except the last
+                # byte (which could be the first byte of a future sync header).
+                if len(buf) > 1:
+                    junk_bytes += len(buf) - 1
+                    del buf[: len(buf) - 1]
+                break
+
+            # Discard any non-frame bytes before the sync header.
+            if idx > 0:
+                junk_bytes += idx
+                del buf[:idx]
+
+            # Need a full frame to validate.
+            if len(buf) < frame_length:
+                break  # wait for more data
+
+            candidate = bytes(buf[:frame_length])
+            if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
+                # Valid frame — forward it.
+                del buf[:frame_length]
+
+                # VC frame count gap detection (byte 3 of TM primary header).
+                vc_count = candidate[3]
+                if last_vc_count >= 0:
+                    expected_vc = (last_vc_count + 1) & 0xFF
+                    if vc_count != expected_vc:
+                        gap = (vc_count - last_vc_count) & 0xFF
+                        vc_frame_gaps += gap - 1
+                        print(
+                            f"[TM] VC frame gap: expected {expected_vc}, "
+                            f"got {vc_count} ({gap - 1} frame(s) lost)"
+                        )
+                last_vc_count = vc_count
+
+                tm_sock.sendto(candidate, (yamcs_host, tm_port))
+                frames_sent += 1
+            else:
+                # CRC mismatch — sync header was a false positive (or the
+                # frame was corrupted by interleaved text).  Skip past the
+                # 2 sync-header bytes and keep scanning from the next byte.
+                del buf[:2]
+
+        # Periodic stats every 30 seconds.
+        now = time.monotonic()
+        if now - stats_time >= 30.0:
+            elapsed = now - stats_time
+            rate = frames_sent / elapsed if elapsed else 0
             print(
-                f"[TM] CRC error in steady state (#{crc_errors} after {frames_sent} "
-                f"good frames) — first 6 bytes: {frame[:6].hex(' ')} — resyncing..."
+                f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s, "
+                f"{vc_frame_gaps} gap(s), {junk_bytes} junk bytes skipped"
             )
-            frame = _sync_serial_frame(ser, frame_length, sync_header)
+            stats_time = now
             frames_sent = 0
-            crc_errors = 0
-
-        tm_sock.sendto(frame, (yamcs_host, tm_port))
-        frames_sent += 1
+            junk_bytes = 0
 
 
 def _forward_tm_tcp(
@@ -387,6 +447,14 @@ def main():
 
         print(f"[serial] Opening {args.uart_device} @ {args.uart_baud} baud")
         ser = serial.Serial(args.uart_device, args.uart_baud, timeout=0.1)
+
+        # Enlarge the OS receive buffer so burst TM frames from the FSW don't
+        # overflow while the adapter is in the sendto() or CRC-check path.
+        # The default on macOS is only 4 KB (~16 frames at 248 B each).
+        try:
+            ser.set_buffer_size(rx_size=65536)
+        except Exception:
+            pass  # not supported on all platforms; 4 KB default still works
 
         tm_thread = threading.Thread(
             target=_forward_tm_serial,
