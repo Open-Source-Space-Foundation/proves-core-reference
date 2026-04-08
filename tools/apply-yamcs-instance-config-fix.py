@@ -11,7 +11,11 @@ import sys
 path = sys.argv[1]
 content = open(path).read()
 
-if "frameLength: 248" in content and "CfsPacketPreprocessor" in content:
+if (
+    "frameLength: 248" in content
+    and "CfsPacketPreprocessor" in content
+    and "rootContainer" in content
+):
     print("⚠ fprime-yamcs instance config fix already applied")
     sys.exit(0)
 
@@ -47,6 +51,19 @@ fixes = [
         '      restart: "always"\n'
         "      logLevel: INFO\n",
         "",
+    ),
+    # Add rootContainer to tm_realtime stream so XtceTmExtractor knows where to start.
+    # Without this, Mdb.getRootSequenceContainer() returns null (fprime-to-xtce doesn't
+    # set a root in the XTCE), and StreamTmPacketProvider logs a warning and does no
+    # container matching — packets arrive but zero parameters are extracted.
+    (
+        '    - name: "tm_realtime"\n'
+        '      processor: "realtime"\n'
+        '    - name: "tm_dump"\n',
+        '    - name: "tm_realtime"\n'
+        '      processor: "realtime"\n'
+        '      rootContainer: "/ReferenceDeployment|ReferenceDeployment/CCSDSSpacePacket"\n'
+        '    - name: "tm_dump"\n',
     ),
 ]
 
