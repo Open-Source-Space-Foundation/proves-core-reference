@@ -33,7 +33,9 @@ dataLinks:
         ocfPresent: false
         service: "PACKET"
         maxPacketLength: 248
-        packetPreprocessorClassName: com.example.myproject.MyPacketPreprocessor
+        packetPreprocessorClassName: org.yamcs.tctm.cfs.CfsPacketPreprocessor
+        packetPreprocessorArgs:
+          useLocalGenerationTime: true
         stream: "tm_realtime"
 
   - name: UDP_TC_OUT
@@ -48,7 +50,6 @@ dataLinks:
         ocfPresent: false
         service: "PACKET"
         priority: 1
-        commandPostprocessorClassName: com.example.myproject.MyCommandPostprocessor
         stream: "tc_realtime"
         useCop1: false
 

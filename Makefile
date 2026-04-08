@@ -43,6 +43,10 @@ fprime-venv: uv ## Create a virtual environment
 	@EVENTS_PROC=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/events/processor.py 2>/dev/null | head -1); \
 	  if [ -z "$$EVENTS_PROC" ]; then echo "⚠ events processor not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-events-cpu-fix.py "$$EVENTS_PROC"
+	@echo "Applying fprime-yamcs instance config fix..."
+	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
+	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
 
 
 .PHONY: zephyr-setup
