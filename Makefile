@@ -250,7 +250,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
 	@sleep 5
 	@echo "Starting fprime-yamcs-events bridge..."
-	$(UV_RUN) fprime-yamcs-events &
+	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."
 	$(UV_RUN) python tools/yamcs/proves_adapter.py \
 	    --mode serial \

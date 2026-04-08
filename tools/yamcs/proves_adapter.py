@@ -36,9 +36,15 @@ def _forward_tm_serial(ser, tm_sock, yamcs_host: str, tm_port: int, frame_length
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP."""
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
     while True:
-        frame = ser.read(frame_length)
-        if frame:
-            tm_sock.sendto(frame, (yamcs_host, tm_port))
+        # Accumulate bytes until a complete frame is assembled. pyserial's
+        # read(n) with a short timeout may return fewer than n bytes, so loop
+        # until we have exactly frame_length bytes before forwarding.
+        buf = b""
+        while len(buf) < frame_length:
+            chunk = ser.read(frame_length - len(buf))
+            if chunk:
+                buf += chunk
+        tm_sock.sendto(buf, (yamcs_host, tm_port))
 
 
 def _forward_tm_tcp(
