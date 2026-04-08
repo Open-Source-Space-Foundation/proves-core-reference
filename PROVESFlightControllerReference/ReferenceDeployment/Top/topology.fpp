@@ -207,7 +207,7 @@ module ReferenceDeployment {
       lora.comStatusOut -> loraRetry.comStatusIn
       loraRetry.comStatusOut -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
- 
+
       startupManager.runSequence -> cmdSeq.seqRunIn
       cmdSeq.seqStartOut -> startupManager.sequenceStarted
       cmdSeq.seqDone -> startupManager.completeSequence

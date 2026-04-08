@@ -67,10 +67,9 @@ class StartupManager final : public StartupManagerComponentBase {
                                   ) override;
 
     //! Handler implementation for sequenceStarted
-    void sequenceStarted_handler(FwIndexType portNum,              //!< The port number
-                                 const Fw::StringBase& fileName    //!< The file path for start-up sequence
+    void sequenceStarted_handler(FwIndexType portNum,            //!< The port number
+                                 const Fw::StringBase& fileName  //!< The file path for start-up sequence
                                  ) override;
-
 
     //! Handler implementation for run
     //!
