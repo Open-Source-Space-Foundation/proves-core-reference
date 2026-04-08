@@ -236,7 +236,9 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --no-convert-dictionary \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
-	@sleep 3
+	@sleep 5
+	@echo "Starting fprime-yamcs-events bridge..."
+	$(UV_RUN) fprime-yamcs-events &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."
 	$(UV_RUN) python tools/yamcs/proves_adapter.py \
 	    --mode serial \

@@ -1,0 +1,71 @@
+services:
+  - class: org.yamcs.archive.XtceTmRecorder
+  - class: org.yamcs.archive.ParameterRecorder
+  - class: org.yamcs.archive.AlarmRecorder
+  - class: org.yamcs.archive.EventRecorder
+  - class: org.yamcs.archive.ReplayServer
+  - class: org.yamcs.parameter.SystemParametersService
+    args:
+      producers:
+        - fs
+        - jvm
+  - class: org.yamcs.ProcessorCreatorService
+    args:
+      name: realtime
+      type: realtime
+  - class: org.yamcs.archive.CommandHistoryRecorder
+  - class: org.yamcs.parameterarchive.ParameterArchive
+    args:
+      realtimeFiller:
+        enabled: true
+  - class: org.yamcs.plists.ParameterListService
+  - class: org.yamcs.timeline.TimelineService
+dataLinks:
+  - name: UDP_TM_IN
+    class: org.yamcs.tctm.ccsds.UdpTmFrameLink
+    port: 50000
+    frameType: "TM"
+    spacecraftId: 68        # ComCfg.fpp: SpacecraftId = 0x0044
+    frameLength: 248        # ComCfg.fpp: TmFrameFixedSize = 248
+    errorDetection: CRC16
+    virtualChannels:
+      - vcId: 1
+        ocfPresent: false
+        service: "PACKET"
+        maxPacketLength: 248
+        packetPreprocessorClassName: com.example.myproject.MyPacketPreprocessor
+        stream: "tm_realtime"
+
+  - name: UDP_TC_OUT
+    class: org.yamcs.tctm.ccsds.UdpTcFrameLink
+    host: localhost
+    port: 50001
+    spacecraftId: 68
+    maxFrameLength: 248
+    errorDetection: CRC16
+    virtualChannels:
+      - vcId: 1
+        ocfPresent: false
+        service: "PACKET"
+        priority: 1
+        commandPostprocessorClassName: com.example.myproject.MyCommandPostprocessor
+        stream: "tc_realtime"
+        useCop1: false
+
+mdb:
+  - type: xtce
+    args:
+      file: mdb/fprime.xtce.xml
+
+streamConfig:
+  tm:
+    - name: "tm_realtime"
+      processor: "realtime"
+    - name: "tm_dump"
+  cmdHist: ["cmdhist_realtime", "cmdhist_dump"]
+  event: ["events_realtime", "events_dump"]
+  param: ["pp_realtime", "pp_dump", "sys_param", "proc_param"]
+  parameterAlarm: ["alarms_realtime"]
+  tc:
+    - name: "tc_realtime"
+      processor: "realtime"

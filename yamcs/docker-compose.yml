@@ -1,0 +1,10 @@
+services:
+  yamcs:
+    image: yamcs/yamcs:latest
+    ports:
+      - "8090:8090"
+      - "50000:50000/udp"
+      - "50001:50001/udp"
+    volumes:
+      - ./yamcs-data:/yamcs-data:ro
+    command: ["yamcs", "--etc", "/yamcs-data/etc"]
