@@ -495,6 +495,8 @@ class DataBudgetAnalyzer:
 
     def analyze(self):
         """Run the full analysis"""
+        # Progress messages go to stderr so that stdout stays clean when
+        # --diagram writes pure Markdown to stdout.
         print("Analyzing F Prime telemetry data budget...", file=sys.stderr)
 
         # Find and parse all FPP files
