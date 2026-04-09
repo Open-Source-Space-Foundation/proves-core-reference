@@ -22,10 +22,6 @@ namespace Drv {
 // ----------------------------------------------------------------------
 
 RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
-    // alarm mask and time value struct initialization
-
-    // this->curr_mask = RTC_ALARM_TIME_MASK_MONTHDAY | RTC_ALARM_TIME_MASK_HOUR | RTC_ALARM_TIME_MASK_MINUTE;
-
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
@@ -159,8 +155,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
 // Alarm manager
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
-    // check if alarm is already present or not if it isn't ..
-    // use this->m_dev to refer to the device]
+    // retrieve info about current alarm
 
     uint16_t mask = this->m_curr_mask;
     int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
@@ -186,7 +181,7 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
     int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
     if (a_seconds <= c_seconds) {
-        this->log_WARNING_HI_AlarmNotSet(t, 22);
+        this->log_WARNING_HI_AlarmNotSet(t, EINVAL);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }

@@ -386,14 +386,6 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Double set the alarm
     alarm_time = datetime.now(timezone.utc) + timedelta(seconds=5)
-    alarm_time_data = dict(
-        Year=alarm_time.year,
-        Month=alarm_time.month,
-        Day=alarm_time.day,
-        Hour=alarm_time.hour,
-        Minute=alarm_time.minute,
-        Second=alarm_time.second,
-    )
     alarm_time_data_str = json.dumps(alarm_time_data)
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmNotSet event within 10 seconds
