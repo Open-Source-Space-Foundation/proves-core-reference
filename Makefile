@@ -47,6 +47,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs-events opcode-ack fix..."
+	@EVENTS_PROC=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/events/processor.py 2>/dev/null | head -1); \
+	  if [ -z "$$EVENTS_PROC" ]; then echo "⚠ events processor not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-opcode-ack-fix.py "$$EVENTS_PROC"
 
 
 .PHONY: zephyr-setup
@@ -260,6 +264,7 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	  fi; \
 	}; \
 	stop_repo_processes 'proves_adapter.py' 'serial adapter'; \
+	stop_repo_processes 'opcode_ack_bridge.py' 'opcode-ack bridge'; \
 	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
 	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
 	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
@@ -291,6 +296,8 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	@sleep 5
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
+	@echo "Starting OpCode acknowledgement bridge..."
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/opcode_ack_bridge.py --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
