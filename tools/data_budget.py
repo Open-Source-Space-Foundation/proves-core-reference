@@ -8,6 +8,7 @@ to provide a comprehensive data budget report.
 
 Usage:
     python3 tools/data_budget.py [--verbose]
+    python3 tools/data_budget.py --diagram [--output FILE]
 """
 
 import argparse
@@ -15,7 +16,25 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+
+# Wire-framing overhead constants (bytes)
+# CCSDS TM Transfer Frame Primary Header
+_TM_FRAME_HDR_BYTES = 6
+# CCSDS Space Packet Primary Header
+_SPACE_PKT_HDR_BYTES = 6
+# F Prime packet descriptor (U32)
+_FPRIME_DESCRIPTOR_BYTES = 4
+# F Prime telemetry packet ID (U16)
+_FPRIME_PKT_ID_BYTES = 2
+
+# Total framing overhead prepended before telemetry payload
+_FRAMING_OVERHEAD_BYTES = (
+    _TM_FRAME_HDR_BYTES
+    + _SPACE_PKT_HDR_BYTES
+    + _FPRIME_DESCRIPTOR_BYTES
+    + _FPRIME_PKT_ID_BYTES
+)
 
 # F Prime primitive type sizes in bytes (as serialized)
 PRIMITIVE_TYPE_SIZES = {
@@ -476,11 +495,11 @@ class DataBudgetAnalyzer:
 
     def analyze(self):
         """Run the full analysis"""
-        print("Analyzing F Prime telemetry data budget...")
+        print("Analyzing F Prime telemetry data budget...", file=sys.stderr)
 
         # Find and parse all FPP files
         fpp_files = self.find_fpp_files()
-        print(f"Found {len(fpp_files)} FPP files")
+        print(f"Found {len(fpp_files)} FPP files", file=sys.stderr)
 
         # Add common F Prime types that might not be explicitly defined
         self.add_fprime_common_types()
@@ -498,9 +517,11 @@ class DataBudgetAnalyzer:
         # Calculate packet sizes
         self.calculate_packet_sizes()
 
-        print(f"Found {len(self.types)} type definitions")
-        print(f"Found {len(self.telemetry_channels)} telemetry channels")
-        print(f"Found {len(self.telemetry_packets)} telemetry packets")
+        print(f"Found {len(self.types)} type definitions", file=sys.stderr)
+        print(
+            f"Found {len(self.telemetry_channels)} telemetry channels", file=sys.stderr
+        )
+        print(f"Found {len(self.telemetry_packets)} telemetry packets", file=sys.stderr)
 
     def add_fprime_common_types(self):
         """Add common F Prime framework types"""
@@ -549,6 +570,186 @@ class DataBudgetAnalyzer:
             name="Success", kind="enum", size_bytes=4, module="Fw"
         )
         self.types["Success"] = self.types["Fw.Success"]
+
+    def _resolve_channel_details(
+        self, channel_path: str
+    ) -> Tuple[str, str, Optional[int]]:
+        """Resolve a packet channel path to (display_name, type_name, size_bytes).
+
+        Returns ("UNKNOWN", "UNKNOWN", None) when the channel cannot be found.
+        """
+        parts = channel_path.split(".")
+        channel: Optional[TelemetryChannel] = None
+
+        if len(parts) >= 3:
+            instance_name = parts[1]
+            channel_name = parts[2]
+            if instance_name in self.instances:
+                component_type = self.instances[instance_name].component_type
+                channel = self.telemetry_channels.get(
+                    f"{component_type}.{channel_name}"
+                )
+            if channel is None:
+                channel = self.telemetry_channels.get(f"{instance_name}.{channel_name}")
+        elif len(parts) == 2:
+            instance_name = parts[0]
+            channel_name = parts[1]
+            if instance_name in self.instances:
+                component_type = self.instances[instance_name].component_type
+                channel = self.telemetry_channels.get(
+                    f"{component_type}.{channel_name}"
+                )
+            if channel is None:
+                channel = self.telemetry_channels.get(channel_path)
+
+        display_name = parts[-1]
+        if channel is not None:
+            return display_name, channel.type_name, channel.size_bytes
+        return display_name, "UNKNOWN", None
+
+    def generate_markdown_diagrams(self) -> str:
+        """Generate Mermaid packet-beta wire diagrams for every telemetry packet.
+
+        Returns a Markdown string containing, for each packet:
+          - A ``packet-beta`` Mermaid diagram showing the full byte layout
+            (framing headers + telemetry payload fields).
+          - A companion Markdown table with exact byte offsets, types and
+            the F Prime channel path for every field.
+        """
+        # Mermaid packet-beta uses *bit* indices, 32 bits (4 bytes) per row.
+        BITS_PER_BYTE = 8
+
+        group_descriptions = {
+            1: "Beacon",
+            2: "Live Satellite Sensor Data",
+            3: "Satellite Meta Data",
+            4: "Payload Meta Data",
+            5: "Health and Status",
+            6: "Parameters",
+        }
+
+        # Fixed framing header fields prepended to every packet
+        framing_headers: List[Tuple[str, int, str]] = [
+            ("TM Frame Header", _TM_FRAME_HDR_BYTES, "CCSDS TM framing"),
+            ("Space Packet Header", _SPACE_PKT_HDR_BYTES, "CCSDS Space Packet framing"),
+            (
+                "FPrime Descriptor",
+                _FPRIME_DESCRIPTOR_BYTES,
+                "FPrime packet descriptor (U32)",
+            ),
+            ("Pkt ID", _FPRIME_PKT_ID_BYTES, "FPrime telemetry packet ID (U16)"),
+        ]
+
+        lines: List[str] = []
+        lines.append("# Telemetry Packet Wire Diagrams")
+        lines.append("")
+        lines.append(
+            "Each diagram shows the complete byte layout of a telemetry packet on the "
+            "wire, including CCSDS TM framing and F\u00a0Prime packet headers. "
+            "Fields are placed at their exact byte offsets. "
+            "The companion table beneath each diagram lists the byte offset, type and "
+            "F\u00a0Prime channel path for every field."
+        )
+        lines.append("")
+        lines.append(
+            "| Overhead field | Size |\n"
+            "|---|---|\n"
+            f"| CCSDS TM Frame Header | {_TM_FRAME_HDR_BYTES}\u00a0B |\n"
+            f"| CCSDS Space Packet Header | {_SPACE_PKT_HDR_BYTES}\u00a0B |\n"
+            f"| F\u00a0Prime Packet Descriptor | {_FPRIME_DESCRIPTOR_BYTES}\u00a0B |\n"
+            f"| F\u00a0Prime Packet ID | {_FPRIME_PKT_ID_BYTES}\u00a0B |\n"
+            f"| **Total framing overhead** | **{_FRAMING_OVERHEAD_BYTES}\u00a0B** |"
+        )
+        lines.append("")
+
+        sorted_packets = sorted(
+            self.telemetry_packets.values(),
+            key=lambda p: (p.group_id, p.packet_id),
+        )
+
+        for packet in sorted_packets:
+            group_desc = group_descriptions.get(
+                packet.group_id, f"Group {packet.group_id}"
+            )
+            wire_total = packet.total_size_bytes + _FRAMING_OVERHEAD_BYTES
+
+            lines.append(f"## {packet.name}")
+            lines.append("")
+            lines.append(
+                f"**Packet ID:** {packet.packet_id} &nbsp;|&nbsp; "
+                f"**Group:** {packet.group_id} ({group_desc}) &nbsp;|&nbsp; "
+                f"**Payload:** {packet.total_size_bytes}\u00a0B &nbsp;|&nbsp; "
+                f"**Wire total:** {wire_total}\u00a0B"
+            )
+            lines.append("")
+
+            # Build the ordered field list: framing headers then telemetry channels
+            # Each entry is (label_for_diagram, size_bytes, full_description, source)
+            diagram_fields: List[Tuple[str, int]] = []
+            table_rows: List[
+                Tuple[int, str, str, int, str]
+            ] = []  # (offset, name, type, size, source)
+
+            byte_offset = 0
+            for hdr_name, hdr_size, hdr_source in framing_headers:
+                diagram_fields.append((f"{hdr_name} ({hdr_size}B)", hdr_size))
+                table_rows.append((byte_offset, hdr_name, "—", hdr_size, hdr_source))
+                byte_offset += hdr_size
+
+            for channel_path in packet.channels:
+                display_name, type_name, size = self._resolve_channel_details(
+                    channel_path
+                )
+                label = (
+                    f"{display_name} ({size}B)"
+                    if size is not None
+                    else f"{display_name} (?)"
+                )
+                diagram_fields.append((label, size or 0))
+                table_rows.append(
+                    (
+                        byte_offset,
+                        display_name,
+                        type_name,
+                        size if size is not None else -1,
+                        f"`{channel_path}`",
+                    )
+                )
+                if size is not None:
+                    byte_offset += size
+
+            # --- Mermaid packet-beta block (bit-indexed) ---
+            lines.append("```mermaid")
+            lines.append("packet-beta")
+            lines.append(
+                f"title {packet.name} — ID\u00a0{packet.packet_id}, "
+                f"Group\u00a0{packet.group_id} ({group_desc})"
+            )
+
+            bit_offset = 0
+            for label, size_bytes in diagram_fields:
+                if size_bytes <= 0:
+                    continue
+                bit_start = bit_offset
+                bit_end = bit_offset + size_bytes * BITS_PER_BYTE - 1
+                safe_label = label.replace('"', "'")
+                lines.append(f'{bit_start}-{bit_end}: "{safe_label}"')
+                bit_offset = bit_end + 1
+
+            lines.append("```")
+            lines.append("")
+
+            # --- Companion field table ---
+            lines.append("| Byte offset | Field | Type | Size (B) | Source |")
+            lines.append("|---:|---|---|---:|---|")
+            for offset, name, type_name, size, source in table_rows:
+                size_str = str(size) if size >= 0 else "?"
+                lines.append(
+                    f"| {offset} | {name} | {type_name} | {size_str} | {source} |"
+                )
+            lines.append("")
+
+        return "\n".join(lines)
 
     def generate_report(self, verbose: bool = False):
         """Generate a comprehensive data budget report"""
@@ -775,6 +976,20 @@ def main():
         default=False,
     )
     parser.add_argument(
+        "--diagram",
+        "-d",
+        action="store_true",
+        help="Generate Mermaid packet-beta wire diagrams as Markdown instead of the text report",
+        default=False,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        help="Write output to FILE instead of stdout (useful with --diagram)",
+        default=None,
+    )
+    parser.add_argument(
         "--project-root",
         "-p",
         help="Project root directory (default: current directory)",
@@ -790,7 +1005,16 @@ def main():
 
     analyzer = DataBudgetAnalyzer(project_root)
     analyzer.analyze()
-    analyzer.generate_report(verbose=args.verbose)
+
+    if args.diagram:
+        content = analyzer.generate_markdown_diagrams()
+        if args.output:
+            Path(args.output).write_text(content, encoding="utf-8")
+            print(f"Diagrams written to {args.output}", file=sys.stderr)
+        else:
+            print(content)
+    else:
+        analyzer.generate_report(verbose=args.verbose)
 
     return 0
 
