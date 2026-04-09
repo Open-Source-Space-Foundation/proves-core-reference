@@ -1,4 +1,4 @@
-module ReferenceDeployment {
+module Components {
     @ Component for F Prime FSW framework.
     passive component TlmLoggerHelper {
 

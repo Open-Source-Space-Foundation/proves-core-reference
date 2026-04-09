@@ -4,12 +4,12 @@
 // \brief  hpp file for TlmLoggerHelper component implementation class
 // ======================================================================
 
-#ifndef ReferenceDeployment_TlmLoggerHelper_HPP
-#define ReferenceDeployment_TlmLoggerHelper_HPP
+#ifndef Components_TlmLoggerHelper_HPP
+#define Components_TlmLoggerHelper_HPP
 
 #include "PROVESFlightControllerReference/Components/TlmLoggerHelper/TlmLoggerHelperComponentAc.hpp"
 
-namespace ReferenceDeployment {
+namespace Components {
 
 class TlmLoggerHelper final : public TlmLoggerHelperComponentBase {
   public:
@@ -44,8 +44,10 @@ class TlmLoggerHelper final : public TlmLoggerHelperComponentBase {
     void CONNECT_TLM_LOGGER_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                        U32 cmdSeq            //!< The command sequence number
                                        ) override;
+    bool m_connected = false;
 };
 
-}  // namespace ReferenceDeployment
+
+}  // namespace Components
 
 #endif
