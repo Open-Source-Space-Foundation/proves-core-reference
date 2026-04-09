@@ -14,6 +14,7 @@ The Thermal Manager component is designed to be scheduled periodically to trigge
    - Iterates through the connected face temperature sensor ports.
    - Iterates through the connected battery cell temperature sensor ports.
    - Triggers temperature readings for each connected sensor.
+   - Triggers temperature reading from the Pico die temperature sensor.
 
 ## Class Diagram
 
@@ -48,6 +49,7 @@ classDiagram
 | run             | sync input   | Scheduler port that triggers temperature data collection                  |
 | faceTempGet     | output       | Array of ports [5] for getting temperature data from face sensors         |
 | battCellTempGet | output       | Array of ports [4] for getting temperature data from battery cell sensors |
+| picoTempGet     | output       | Port for getting temperature data from Pico die temperature sensor        |
 | timeCaller      | time get     | Port for requesting current system time                                   |
 | tlmOut          | telemetry    | Port for emitting telemetry                                               |
 | logOut          | event        | Port for emitting events                                                  |
@@ -74,6 +76,7 @@ sequenceDiagram
     participant Scheduler
     participant ThermalManager
     participant Tmp112Manager
+    participant PicoTempManager
 
     Scheduler-->>ThermalManager: run
     loop For each face sensor (0-4)
@@ -82,6 +85,7 @@ sequenceDiagram
     loop For each battery cell sensor (0-3)
         ThermalManager->>Tmp112Manager: battCellTempGet
     end
+    ThermalManager->>PicoTempManager: picoTempGet
 ```
 
 ## Requirements
@@ -90,11 +94,13 @@ sequenceDiagram
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Face Temperature Collection    | The component shall trigger data collection from connected face temperature sensors when run is called         | Verify all connected face temperature output ports are called         |
 | Battery Temperature Collection | The component shall trigger data collection from connected battery cell temperature sensors when run is called | Verify all connected battery cell temperature output ports are called |
+| Pico Temperature Collection    | The component shall trigger data collection from the Pico die temperature sensor when run is called            | Verify the Pico temperature output port is called                     |
 | Periodic Operation             | The component shall operate as a scheduled component responding to scheduler calls                             | Verify component responds correctly to scheduler input                |
 
 ## Change Log
 
 | Date       | Description                                                           |
 | ---------- | --------------------------------------------------------------------- |
+| 2026-03-30 | Add Pico die temperature sensor integration                           |
 | 2026-03-30 | Add events for when temperature readings are above/below a threshold. |
 | 2025-12-05 | Initial Thermal Manager component SDD                                 |
