@@ -11,7 +11,7 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcHelper ::RtcHelper() {}
+RtcHelper ::RtcHelper() : m_last_seen_seconds(0U), m_useconds_offset(0U) {}
 
 RtcHelper ::~RtcHelper() {}
 

@@ -98,25 +98,27 @@ classDiagram
         }
         class RtcManager {
             - m_dev: device*
+            - m_rtcHelper: RtcHelper
             - m_rtcNotReadyConsoleThrottled: atomic~bool~
             - m_rtcGetTimeFailedConsoleThrottled: atomic~bool~
             - m_rtcInvalidTimeConsoleThrottled: atomic~bool~
 
-            + RtcManager(char* compName)
+            + RtcManager(const char* const compName)
             + ~RtcManager()
             + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
-            - void logRtcNotReady_Throttled()
-            - void logRtcNotReady_ThrottleClear()
-            - void logRtcGetTimeFailed_Throttled(int rc)
-            - void logRtcGetTimeFailed_ThrottleClear()
-            - void logRtcInvalidTime_Throttled()
-            - void logRtcInvalidTime_ThrottleClear()
+            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t)
+            - void log_LOG_RtcNotReady()
+            - void log_LOG_RtcNotReady_ThrottleClear()
+            - void log_LOG_RtcGetTimeFailed(int rc)
+            - void log_LOG_RtcGetTimeFailed_ThrottleClear()
+            - void log_LOG_RtcInvalidTime()
+            - void log_LOG_RtcInvalidTime_ThrottleClear()
             - bool timeDataIsValid(Drv::TimeData t)
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
+    RtcManager *-- RtcHelper : uses
 ```
 
 ### RTC Helper Class Diagram
@@ -124,12 +126,12 @@ classDiagram
 classDiagram
     namespace Drv {
         class RtcHelper {
-            -m_last_seen_seconds: uint32_t
-            -m_useconds_offset: uint32_t
+            - m_last_seen_seconds: uint32_t = 0
+            - m_useconds_offset: uint32_t = 0
 
-            +RtcHelper()
-            +~RtcHelper()
-            +rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t) uint32_t
+            + RtcHelper()
+            + ~RtcHelper()
+            + uint32_t rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t)
         }
     }
 ```
@@ -271,3 +273,4 @@ sequenceDiagram
 | 2025-9-18 | Initial RTC Manager component |
 | 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
+| 2026-04-09 | Hardening for more consistent behavior |
