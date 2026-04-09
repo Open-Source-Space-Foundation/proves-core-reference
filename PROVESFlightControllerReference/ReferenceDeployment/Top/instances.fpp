@@ -186,6 +186,8 @@ module ReferenceDeployment {
 
   instance amateurRadio: Components.AmateurRadio base id 0x10065000
 
+  instance tlmLoggerHelper: Components.TlmLoggerHelper base id 0x1003C000
+
   # Thermal Management System
   instance thermalManager: Components.ThermalManager base id 0x10041000
   instance tmp112Face0Manager: Drv.Tmp112Manager base id 0x10042000

@@ -90,6 +90,7 @@ module ReferenceDeployment {
     instance modeManager
     instance adcs
     instance tlmLogger
+    instance tlmLoggerHelper
 
     # Face Board Instances
     instance thermalManager
@@ -152,7 +153,8 @@ module ReferenceDeployment {
       comSplitterTelemetry.comOut[0] -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       comSplitterTelemetry.comOut[1] -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
-      comSplitterTelemetry.comOut[2] -> tlmLogger.comIn
+      comSplitterTelemetry.comOut[2] -> tlmLoggerHelper.comIn
+      tlmLoggerHelper.comOut -> tlmLogger.comIn
 
       # Router to Command Dispatcher
       ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
