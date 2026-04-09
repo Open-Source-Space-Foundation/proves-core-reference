@@ -137,6 +137,43 @@ make yamcs-stop
 
 This kills the adapter, event bridge, and JVM, ensuring clean startup on the next `make yamcs` run.
 
+#### Remote Ground Station (Use Case 2)
+
+You can run YAMCS on a remote server while a lightweight relay on a local device (e.g. Raspberry Pi) handles the serial connection to the flight software:
+
+```
+[FSW Board] ──UART──▶ [Ground Station Device (Pi)] ──TCP──▶ [Mission Control Server]
+                         gs_relay.py                           YAMCS + adapter
+```
+
+**On the ground station device** (the machine connected to the FSW via USB/UART):
+
+1. Install pyserial: `pip install pyserial`
+2. Copy the `tools/yamcs/` directory (only `gs_relay.py` and `frame_utils.py` are needed)
+3. Start the relay:
+```shell
+make yamcs-relay UART_DEVICE=/dev/ttyUSB0
+# or directly:
+python tools/yamcs/gs_relay.py --uart-device /dev/ttyUSB0 --listen-port 5000
+```
+
+**On the mission control server** (where YAMCS runs):
+
+1. Start the YAMCS server via Docker:
+```shell
+make yamcs-server
+```
+
+2. In another terminal, start the adapter in TCP mode pointing at the relay:
+```shell
+make yamcs-adapter-tcp GS_HOST=<relay-ip> GS_PORT=5000 YAMCS_HOST=127.0.0.1
+```
+
+The adapter connects to the relay over TCP, receives CRC-validated TM frames, and forwards them to YAMCS via UDP. Commands flow back through the same TCP connection. If the TCP link drops, the adapter automatically reconnects.
+
+> [!NOTE]
+> On Linux, the ground station device user needs to be in the `dialout` group to access the serial port: `sudo usermod -aG dialout $USER`
+
 #### Troubleshooting YAMCS
 
 - **No parameters appearing:** Verify the `rootContainer` in `yamcs-data/mdb/fprime.xtce.xml` matches your deployment (e.g., `ReferenceDeployment`)

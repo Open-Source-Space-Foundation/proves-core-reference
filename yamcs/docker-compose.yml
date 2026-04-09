@@ -7,4 +7,15 @@ services:
       - "50001:50001/udp"
     volumes:
       - ./yamcs-data:/yamcs-data:ro
-    command: ["yamcs", "--etc", "/yamcs-data/etc"]
+    environment:
+      # Where YAMCS sends TC frames.  When the adapter runs on the Docker
+      # host (the typical remote deployment), use "host.docker.internal"
+      # (macOS/Windows) or the host's LAN IP (Linux).
+      - YAMCS_TC_HOST=${YAMCS_TC_HOST:-host.docker.internal}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        cp -r /yamcs-data/etc /tmp/yamcs-etc
+        sed -i "s/host: localhost/host: $${YAMCS_TC_HOST}/" /tmp/yamcs-etc/yamcs.fprime-project.yaml
+        yamcs --etc /tmp/yamcs-etc

@@ -281,8 +281,8 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --uart-baud 115200
 
 .PHONY: yamcs-server
-yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
-	docker compose -f yamcs/docker-compose.yml up
+yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: TC_HOST= for remote adapter)
+	YAMCS_TC_HOST=$(or $(TC_HOST),host.docker.internal) docker compose -f yamcs/docker-compose.yml up
 
 .PHONY: yamcs-adapter-tcp
 yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_PORT=, YAMCS_HOST=)
@@ -291,6 +291,14 @@ yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_
 	    --tcp-host $(GS_HOST) \
 	    --tcp-port $(GS_PORT) \
 	    --yamcs-host $(YAMCS_HOST)
+
+.PHONY: yamcs-relay
+yamcs-relay: ## Start ground station relay on local device (UART_DEVICE=, RELAY_PORT=5000)
+	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+	python tools/yamcs/gs_relay.py \
+	    --uart-device $(UART_DEVICE) \
+	    --uart-baud $(or $(UART_BAUD),115200) \
+	    --listen-port $(or $(RELAY_PORT),5000)
 
 ##@ Operations
 

@@ -8,7 +8,7 @@ authentication header/trailer required by the FSW Authenticate component.
 Use Case 1 (local UART):
     python proves_adapter.py --mode serial --uart-device /dev/ttyUSB0
 
-Use Case 2 (remote TCP, skeleton):
+Use Case 2 (remote TCP via ground station relay):
     python proves_adapter.py --mode tcp --tcp-host <gs-host> --tcp-port 5000 \
         --yamcs-host <server-ip>
 """
@@ -27,20 +27,6 @@ sys.stdout.reconfigure(line_buffering=True)
 # before the import below so authenticate_plugin.py (and fprime_gds) load OK.
 sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 
-# ---------------------------------------------------------------------------
-# CRC16-CCITT (CCSDS standard: poly 0x1021, init 0xFFFF, no reflection)
-# ---------------------------------------------------------------------------
-
-
-def _crc16_ccitt(data: bytes) -> int:
-    crc = 0xFFFF
-    for byte in data:
-        crc ^= byte << 8
-        for _ in range(8):
-            crc = ((crc << 1) ^ 0x1021 if crc & 0x8000 else crc << 1) & 0xFFFF
-    return crc
-
-
 from authenticate_plugin import (  # noqa: E402
     AuthenticateFramer,
     get_default_auth_key_from_header,
@@ -48,50 +34,11 @@ from authenticate_plugin import (  # noqa: E402
 from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E402
     SpaceDataLinkFramerDeframer,
 )
+from frame_utils import compute_sync_header, read_validated_frames  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # TM path helpers
 # ---------------------------------------------------------------------------
-
-
-def _serial_read_exact(ser, n: int) -> bytes:
-    """Read exactly n bytes from serial, blocking until all bytes are available."""
-    buf = b""
-    while len(buf) < n:
-        chunk = ser.read(n - len(buf))
-        if chunk:
-            buf += chunk
-    return buf
-
-
-def _sync_serial_frame(ser, frame_length: int, sync_header: bytes) -> bytes:
-    """Scan the serial stream for a valid frame boundary and return the first complete frame.
-
-    The OS serial buffer may contain a partial frame from before the adapter
-    started (or the header bytes may appear in payload data as a false positive).
-    Scan byte by byte: each time the header pattern is found, read a full candidate
-    frame and validate its CRC. Only accept when the CRC is correct.
-    """
-    print(f"[TM] Searching for frame sync (header={sync_header.hex(' ')})...")
-    header_len = len(sync_header)
-    window = b""
-    attempts = 0
-    while True:
-        b = ser.read(1)
-        if not b:
-            continue
-        window = (window + b)[-header_len:]
-        if window != sync_header:
-            continue
-        # Candidate sync point — read the rest of the frame and validate CRC.
-        remainder = _serial_read_exact(ser, frame_length - header_len)
-        frame = sync_header + remainder
-        if _crc16_ccitt(frame[:-2]) == int.from_bytes(frame[-2:], "big"):
-            print(f"[TM] Frame sync acquired (after {attempts} false positives).")
-            return frame
-        # CRC mismatch — false positive, keep scanning from the next byte.
-        attempts += 1
-        window = b""  # reset window so we re-scan from inside the false frame
 
 
 def _forward_tm_serial(
@@ -105,105 +52,38 @@ def _forward_tm_serial(
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
-    The FSW may interleave console/debug text (e.g. ``[Os::...]``) on the same
-    UART as CCSDS TM frames.  Rather than reading exactly *frame_length* bytes
-    and hoping they form a clean frame, we maintain a rolling buffer and scan for
-    the 2-byte sync header.  When found, we validate the CRC — if it passes the
-    frame is forwarded; if it fails the candidate is discarded and scanning
-    continues.  This makes the adapter resilient to arbitrary non-frame data on
-    the serial link without losing the frame that immediately follows.
+    Uses the rolling-buffer frame reader from ``frame_utils`` which is resilient
+    to FSW console/debug text interleaved on the same UART.
     """
-    import time
-
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
-    # Compute the expected first 2 bytes of the CCSDS TM primary header:
-    # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
-    word0 = (spacecraft_id << 4) | (vc_id << 1)
-    sync_header = bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])
+    sync_header = compute_sync_header(spacecraft_id, vc_id)
 
-    buf = bytearray()
-    frames_sent = 0
-    last_vc_count = -1  # not yet known
-    vc_frame_gaps = 0
-    junk_bytes = 0
-    stats_time = time.monotonic()
+    # ser.read already has the right signature: read(max_bytes) -> bytes.
+    # Use in_waiting to drain the OS buffer efficiently.
+    def _serial_read(max_bytes):
+        return ser.read(max(1, ser.in_waiting or 1))
 
-    print(f"[TM] Scanning for frames (sync header={sync_header.hex(' ')})...")
-
-    while True:
-        # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
-        chunk = ser.read(max(1, ser.in_waiting or 1))
-        if not chunk:
-            continue
-        buf.extend(chunk)
-
-        # Scan the buffer for complete, CRC-valid frames.
-        while True:
-            # Find the sync header in the buffer.
-            idx = buf.find(sync_header)
-            if idx == -1:
-                # No sync header anywhere — discard everything except the last
-                # byte (which could be the first byte of a future sync header).
-                if len(buf) > 1:
-                    junk_bytes += len(buf) - 1
-                    del buf[: len(buf) - 1]
-                break
-
-            # Discard any non-frame bytes before the sync header.
-            if idx > 0:
-                junk_bytes += idx
-                del buf[:idx]
-
-            # Need a full frame to validate.
-            if len(buf) < frame_length:
-                break  # wait for more data
-
-            candidate = bytes(buf[:frame_length])
-            if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                # Valid frame — forward it.
-                del buf[:frame_length]
-
-                # VC frame count gap detection (byte 3 of TM primary header).
-                vc_count = candidate[3]
-                if last_vc_count >= 0:
-                    expected_vc = (last_vc_count + 1) & 0xFF
-                    if vc_count != expected_vc:
-                        gap = (vc_count - last_vc_count) & 0xFF
-                        vc_frame_gaps += gap - 1
-                        print(
-                            f"[TM] VC frame gap: expected {expected_vc}, "
-                            f"got {vc_count} ({gap - 1} frame(s) lost)"
-                        )
-                last_vc_count = vc_count
-
-                tm_sock.sendto(candidate, (yamcs_host, tm_port))
-                frames_sent += 1
-            else:
-                # CRC mismatch — sync header was a false positive (or the
-                # frame was corrupted by interleaved text).  Skip past the
-                # 2 sync-header bytes and keep scanning from the next byte.
-                del buf[:2]
-
-        # Periodic stats every 30 seconds.
-        now = time.monotonic()
-        if now - stats_time >= 30.0:
-            elapsed = now - stats_time
-            rate = frames_sent / elapsed if elapsed else 0
-            print(
-                f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s, "
-                f"{vc_frame_gaps} gap(s), {junk_bytes} junk bytes skipped"
-            )
-            stats_time = now
-            frames_sent = 0
-            junk_bytes = 0
+    for frame, _vc_count in read_validated_frames(
+        _serial_read, frame_length, sync_header
+    ):
+        tm_sock.sendto(frame, (yamcs_host, tm_port))
 
 
 def _forward_tm_tcp(
     tcp_sock, tm_sock, yamcs_host: str, tm_port: int, frame_length: int
 ):
-    """Read fixed-length TM frames from a TCP connection and forward to YAMCS via UDP."""
+    """Read fixed-length TM frames from a TCP connection and forward to YAMCS via UDP.
+
+    Frames arriving from the ground station relay are already CRC-validated,
+    so we just do fixed-length extraction and forward.
+    """
+    import time
+
     print(f"[TM] TCP → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
     buf = b""
+    frames_sent = 0
+    stats_time = time.monotonic()
+
     while True:
         chunk = tcp_sock.recv(4096)
         if not chunk:
@@ -213,6 +93,15 @@ def _forward_tm_tcp(
         while len(buf) >= frame_length:
             frame, buf = buf[:frame_length], buf[frame_length:]
             tm_sock.sendto(frame, (yamcs_host, tm_port))
+            frames_sent += 1
+
+        now = time.monotonic()
+        if now - stats_time >= 30.0:
+            elapsed = now - stats_time
+            rate = frames_sent / elapsed if elapsed else 0
+            print(f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s (TCP)")
+            stats_time = now
+            frames_sent = 0
 
 
 # ---------------------------------------------------------------------------
@@ -476,27 +365,58 @@ def main():
         )
 
     elif args.mode == "tcp":
-        print(f"[tcp] Connecting to ground station at {args.tcp_host}:{args.tcp_port}")
-        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_sock.connect((args.tcp_host, args.tcp_port))
-        print("[tcp] Connected.")
+        print(
+            f"[adapter] Starting in 'tcp' mode. YAMCS at {args.yamcs_host} "
+            f"(TM→:{args.yamcs_tm_port}, TC←:{args.yamcs_tc_port})"
+        )
+        import time
 
-        tm_thread = threading.Thread(
-            target=_forward_tm_tcp,
-            args=(
-                tcp_sock,
-                tm_sock,
-                args.yamcs_host,
-                args.yamcs_tm_port,
-                args.frame_length,
-            ),
-            daemon=True,
-        )
-        tc_thread = threading.Thread(
-            target=_forward_tc_tcp,
-            args=(tc_sock, tcp_sock, auth_framer, sdlink_framer),
-            daemon=True,
-        )
+        reconnect_delay = 5
+        while True:
+            try:
+                print(
+                    f"[tcp] Connecting to ground station at "
+                    f"{args.tcp_host}:{args.tcp_port}"
+                )
+                tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp_sock.connect((args.tcp_host, args.tcp_port))
+                print("[tcp] Connected.")
+            except (ConnectionRefusedError, OSError) as exc:
+                print(
+                    f"[tcp] Connection failed: {exc}. Retrying in {reconnect_delay}s..."
+                )
+                time.sleep(reconnect_delay)
+                continue
+
+            tm_thread = threading.Thread(
+                target=_forward_tm_tcp,
+                args=(
+                    tcp_sock,
+                    tm_sock,
+                    args.yamcs_host,
+                    args.yamcs_tm_port,
+                    args.frame_length,
+                ),
+                daemon=True,
+            )
+            tc_thread = threading.Thread(
+                target=_forward_tc_tcp,
+                args=(tc_sock, tcp_sock, auth_framer, sdlink_framer),
+                daemon=True,
+            )
+
+            tm_thread.start()
+            tc_thread.start()
+            tm_thread.join()
+            tc_thread.join()
+
+            try:
+                tcp_sock.close()
+            except Exception:
+                pass
+            print(f"[tcp] Connection lost. Reconnecting in {reconnect_delay}s...")
+            time.sleep(reconnect_delay)
+        return  # unreachable, but makes the flow clear
 
     print(
         f"[adapter] Starting in '{args.mode}' mode. YAMCS at {args.yamcs_host} (TM→:{args.yamcs_tm_port}, TC←:{args.yamcs_tc_port})"
