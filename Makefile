@@ -246,15 +246,32 @@ yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-ar
 .PHONY: yamcs-stop
 yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
 	@echo "Stopping YAMCS processes..."
-	@pkill -f 'proves_adapter.py' 2>/dev/null && echo "  stopped serial adapter" || true
-	@pkill -f 'fprime-yamcs-events' 2>/dev/null && echo "  stopped fprime-yamcs-events" || true
-	@pkill -f 'fprime_yamcs' 2>/dev/null && echo "  stopped fprime-yamcs wrapper" || true
-	@pkill -f 'mvn.*yamcs' 2>/dev/null && echo "  stopped Maven yamcs runner" || true
-	@pkill -f 'org.yamcs.YamcsServer' 2>/dev/null && echo "  stopped YAMCS server" || true
-	@i=0; while pgrep -f 'org.yamcs.YamcsServer' > /dev/null 2>&1; do \
+	@find_repo_pids() { \
+	  marker="$$1"; \
+	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" 'index($$0, repo) && index($$0, marker) { print $$1 }'; \
+	}; \
+	stop_repo_processes() { \
+	  marker="$$1"; \
+	  label="$$2"; \
+	  pids="$$(find_repo_pids "$$marker" | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	  if [ -n "$$pids" ]; then \
+	    kill $$pids 2>/dev/null || true; \
+	    echo "  stopped $$label"; \
+	  fi; \
+	}; \
+	stop_repo_processes 'proves_adapter.py' 'serial adapter'; \
+	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
+	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
+	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
+	stop_repo_processes 'org.yamcs.YamcsServer' 'YAMCS server'; \
+	i=0; while [ -n "$$(find_repo_pids 'org.yamcs.YamcsServer')" ]; do \
 	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
 	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
-	    pkill -9 -f 'org.yamcs.YamcsServer' 2>/dev/null; break; fi; done
+	    pids="$$(find_repo_pids 'org.yamcs.YamcsServer' | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	    [ -n "$$pids" ] && kill -9 $$pids 2>/dev/null || true; \
+	    break; \
+	  fi; \
+	done
 	@echo "Done."
 
 .PHONY: yamcs

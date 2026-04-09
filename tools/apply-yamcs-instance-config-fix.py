@@ -8,6 +8,12 @@ generic 1024 default to 248 bytes, and removes the ProcessRunner service
 
 import sys
 
+if len(sys.argv) != 2:
+    print(
+        f"Usage: {sys.argv[0]} <path-to-instance-config>",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 path = sys.argv[1]
 content = open(path).read()
 

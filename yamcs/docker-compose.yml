@@ -1,6 +1,6 @@
 services:
   yamcs:
-    image: yamcs/yamcs:latest
+    image: yamcs/yamcs:5.11.7
     ports:
       - "8090:8090"
       - "50000:50000/udp"

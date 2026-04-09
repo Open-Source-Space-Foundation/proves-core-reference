@@ -11,8 +11,8 @@ if "subscription.result()" in content:
     sys.exit(0)
 
 fixed = re.sub(
-    r"# Keep the script running\s*\n\s+while True:\s*\n\s+pass",
-    "# Block until the WebSocket subscription ends (no CPU spin)\n            subscription.result()",
+    r"# Keep the script running\s*\n([ \t]*)while True:\s*\n\1[ \t]+pass",
+    r"# Block until the WebSocket subscription ends (no CPU spin)\n\1subscription.result()",
     content,
 )
 

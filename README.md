@@ -115,7 +115,7 @@ This creates the YAMCS configuration and applies necessary patches (packet prepr
 Then start YAMCS with:
 
 ```shell
-make yamcs
+UART_DEVICE=/dev/ttyXXX make yamcs
 ```
 
 YAMCS starts the following components:
