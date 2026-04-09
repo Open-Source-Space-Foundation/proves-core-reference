@@ -51,7 +51,20 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Get time from RTC
     struct rtc_time time_rtc = {};
-    rtc_get_time(this->m_dev, &time_rtc);
+    int rc = rtc_get_time(this->m_dev, &time_rtc);
+    if (rc != 0) {
+        // Log the error but continue with monotonic time as fallback
+        //
+        // Throttle this message to prevent console flooding and program delays
+        if (!this->m_console_throttled) {
+            this->m_console_throttled = true;
+            Fw::Logger::log("Failed to get time from RTC, error code: %d\n", rtc_get_time);
+        }
+
+        // Use monotonic time as fallback
+        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+        return;
+    }
 
     // Convert to generic tm struct
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
