@@ -11,7 +11,13 @@ namespace Drv {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {}
+RtcManager ::RtcManager(const char* const compName)
+    : RtcManagerComponentBase(compName),
+      m_RtcNotReadyThrottle(false),
+      m_RtcGetTimeFailedThrottle(false),
+      m_RtcInvalidTimeThrottle(false),
+      m_dev(nullptr),
+      m_rtcHelper() {}
 
 RtcManager ::~RtcManager() {}
 
@@ -35,36 +41,25 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
-        // Use logger instead of events since this fn is in a critical path for FPrime
-        // to get time. Events require time, if this method fails an event will fail.
-        //
-        // Throttle this message to prevent console flooding and program delays
-        if (!this->m_console_throttled) {
-            this->m_console_throttled = true;
-            Fw::Logger::log("RTC not ready\n");
-        }
+        this->log_LOG_RtcNotReady();
 
         // Use monotonic time as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
+    this->log_LOG_RtcNotReady_ThrottleClear();
 
     // Get time from RTC
     struct rtc_time time_rtc = {};
     int rc = rtc_get_time(this->m_dev, &time_rtc);
     if (rc != 0) {
-        // Log the error but continue with monotonic time as fallback
-        //
-        // Throttle this message to prevent console flooding and program delays
-        if (!this->m_console_throttled) {
-            this->m_console_throttled = true;
-            Fw::Logger::log("Failed to get time from RTC, error code: %d\n", rtc_get_time);
-        }
+        this->log_LOG_RtcGetTimeFailed(rc);
 
         // Use monotonic time as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
+    this->log_LOG_RtcGetTimeFailed_ThrottleClear();
 
     // Convert to generic tm struct
     struct tm* time_tm = rtc_time_to_tm(&time_rtc);
@@ -73,9 +68,13 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     errno = 0;
     U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
     if (errno == ERANGE) {
-        Fw::Logger::log("RTC returned invalid time");
+        this->log_LOG_RtcInvalidTime();
+
+        // Use monotonic time as fallback
+        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
+    this->log_LOG_RtcInvalidTime_ThrottleClear();
 
     // Set FPrime time object
     time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time,
@@ -111,14 +110,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Store current time for logging
     Fw::Time time_before_set = this->getTime();
 
-    // Cancel any running sequences
-    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
-        if (!this->isConnected_cancelSequences_OutputPort(i)) {
-            continue;
-        }
-        this->cancelSequences_out(i);
-    }
-
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
         .tm_sec = static_cast<int>(t.get_Second()),
@@ -133,9 +124,8 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     };
 
     // Set time on RTC
-    const int status = rtc_set_time(this->m_dev, &time_rtc);
-
-    if (status != 0) {
+    const int rc = rtc_set_time(this->m_dev, &time_rtc);
+    if (rc != 0) {
         // Emit time not set event
         this->log_WARNING_HI_TimeNotSet();
 
@@ -147,8 +137,74 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
+    // Cancel any running sequences
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+// ----------------------------------------------------------------------
+// Private helper methods
+// ----------------------------------------------------------------------
+
+void RtcManager ::log_LOG_RtcNotReady() {
+    // Check throttle value
+    if (this->m_RtcNotReadyThrottle) {
+        return;
+    }
+
+    // Set throttle
+    this->m_RtcNotReadyThrottle = true;
+
+    // Emit the log message
+    Fw::Logger::log("RTC not ready\n");
+}
+
+void RtcManager ::log_LOG_RtcNotReady_ThrottleClear() {
+    // Reset throttle
+    this->m_RtcNotReadyThrottle = false;
+}
+
+void RtcManager ::log_LOG_RtcGetTimeFailed(int rc) {
+    // Check throttle value
+    if (this->m_RtcGetTimeFailedThrottle) {
+        return;
+    }
+
+    // Set throttle
+    this->m_RtcGetTimeFailedThrottle = true;
+
+    // Emit the log message
+    Fw::Logger::log("Failed to get time from RTC, rc = %d\n", rc);
+}
+
+void RtcManager ::log_LOG_RtcGetTimeFailed_ThrottleClear() {
+    // Reset throttle
+    this->m_RtcGetTimeFailedThrottle = false;
+}
+
+void RtcManager ::log_LOG_RtcInvalidTime() {
+    // Check throttle value
+    if (this->m_RtcInvalidTimeThrottle) {
+        return;
+    }
+
+    // Set throttle
+    this->m_RtcInvalidTimeThrottle = true;
+
+    // Emit the log message
+    Fw::Logger::log("RTC returned invalid time\n");
+}
+
+void RtcManager ::log_LOG_RtcInvalidTime_ThrottleClear() {
+    // Reset throttle
+    this->m_RtcInvalidTimeThrottle = false;
 }
 
 bool RtcManager ::timeDataIsValid(Drv::TimeData t) {

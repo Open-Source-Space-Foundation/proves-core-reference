@@ -195,7 +195,9 @@ Fw::Success Drv2605Manager ::deinitializeDevice() {
 }
 
 bool Drv2605Manager ::loadSwitchReady() {
-    return this->m_load_switch_state == Fw::On::ON && this->getTime() >= this->m_load_switch_on_timeout;
+    Fw::Time current_time = this->getTime();
+    int poke = 0;
+    return this->m_load_switch_state == Fw::On::ON && current_time >= this->m_load_switch_on_timeout;
 }
 
 }  // namespace Drv

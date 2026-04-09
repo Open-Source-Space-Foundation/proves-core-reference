@@ -100,6 +100,10 @@ namespace ReferenceDeployment {
 void setupTopology(const TopologyState& state) {
     // Autocoded initialization. Function provided by autocoder.
     initComponents(state);
+
+    // Configure the RTC device early because all other components / tasks need the time primitive
+    rtcManager.configure(state.rtcDevice);
+
     // Autocoded id setup. Function provided by autocoder.
     setBaseIds();
     // Autocoded connection wiring. Function provided by autocoder.
@@ -116,9 +120,6 @@ void setupTopology(const TopologyState& state) {
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
-
-    // Try to configure the RTC device first because all other components need time
-    rtcManager.configure(state.rtcDevice);
 
     // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
     // for over-the-air communications.

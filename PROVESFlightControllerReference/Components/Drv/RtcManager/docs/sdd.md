@@ -98,13 +98,21 @@ classDiagram
         }
         class RtcManager {
             - m_dev: device*
-            - m_console_throttled: atomic~bool~
+            - m_rtcNotReadyConsoleThrottled: atomic~bool~
+            - m_rtcGetTimeFailedConsoleThrottled: atomic~bool~
+            - m_rtcInvalidTimeConsoleThrottled: atomic~bool~
 
             + RtcManager(char* compName)
             + ~RtcManager()
             + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
             - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
+            - void logRtcNotReady_Throttled()
+            - void logRtcNotReady_ThrottleClear()
+            - void logRtcGetTimeFailed_Throttled(int rc)
+            - void logRtcGetTimeFailed_ThrottleClear()
+            - void logRtcInvalidTime_Throttled()
+            - void logRtcInvalidTime_ThrottleClear()
             - bool timeDataIsValid(Drv::TimeData t)
         }
     }
