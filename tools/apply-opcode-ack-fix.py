@@ -16,7 +16,8 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 path = sys.argv[1]
-content = open(path).read()
+with open(path) as f:
+    content = f.read()
 
 SENTINEL = "extra=event_args if event_args else None,"
 
@@ -52,5 +53,6 @@ if fixed == content:
     )
     sys.exit(1)
 
-open(path, "w").write(fixed)
+with open(path, "w") as f:
+    f.write(fixed)
 print("✓ Applied fprime-yamcs-events opcode-ack fix")

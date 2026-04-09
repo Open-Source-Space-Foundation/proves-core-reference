@@ -79,7 +79,7 @@ class OpcodeAckBridge:
         self.yamcs_instance = yamcs_instance
         self._lock = threading.Lock()
         # {fprime_cmd_name: deque([(yamcs_cmd_id, yamcs_cmd_qualified_name)])}
-        self._pending: dict = {}
+        self._pending: dict[str, deque[tuple[str, str]]] = {}
 
         # Build opcode (int) → CmdTemplate mapping from the F Prime GDS dictionary.
         self._opcode_map = self._load_cmd_dict(dictionary_path)
@@ -268,7 +268,9 @@ class OpcodeAckBridge:
             "Press Ctrl-C to stop."
         )
         try:
-            # Block until the WebSocket subscription ends (no CPU spin).
+            # result() blocks until the WebSocket subscription is closed by
+            # the server or by calling subscription.cancel(), avoiding a
+            # busy-wait loop.  A KeyboardInterrupt (Ctrl-C) breaks out cleanly.
             event_sub.result()
         except KeyboardInterrupt:
             logger.info("Shutting down OpCode Ack Bridge.")
