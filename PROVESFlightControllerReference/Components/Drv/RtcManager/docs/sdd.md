@@ -55,14 +55,14 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
 | RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or uptime | Integration test |
-| RtcManager-003 | The RTC Manager logs a warning when the RTC is not ready and falls back to monotonic time | Integration test |
+| RtcManager-003 | In the event of an error retrieving time from the RTC, the RTC Manager returns uptime | Integration test |
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 | RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
-| RtcManager-007 | The RTC Manager provides uptime when the RTC device is unavailable | Integration test |
-| RtcManager-008 | Time increments continuously regardless of RTC availability | Integration test |
-| RtcManager-009 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
-| RtcManager-010 | Time is monotonic | Integration test |
+| RtcManager-007 | Time increments continuously regardless of RTC availability | Integration test |
+| RtcManager-008 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
+| RtcManager-009 | Time is monotonic | Integration test |
+| RtcManager-010 | During a time set command, before the new time is set, RTC Manager informs a sequence cancellation port | Integration test |
 
 ## Port Descriptions
 | Name | Description |
@@ -98,17 +98,27 @@ classDiagram
         }
         class RtcManager {
             - m_dev: device*
-            - m_console_throttled: atomic~bool~
+            - m_rtcHelper: RtcHelper
+            - m_rtcNotReadyConsoleThrottled: atomic~bool~
+            - m_rtcGetTimeFailedConsoleThrottled: atomic~bool~
+            - m_rtcInvalidTimeConsoleThrottled: atomic~bool~
 
-            + RtcManager(char* compName)
+            + RtcManager(const char* const compName)
             + ~RtcManager()
             + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
+            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t)
+            - void log_CONSOLE_RtcNotReady()
+            - void log_CONSOLE_RtcNotReady_ThrottleClear()
+            - void log_CONSOLE_RtcGetTimeFailed(int rc)
+            - void log_CONSOLE_RtcGetTimeFailed_ThrottleClear()
+            - void log_CONSOLE_RtcInvalidTime()
+            - void log_CONSOLE_RtcInvalidTime_ThrottleClear()
             - bool timeDataIsValid(Drv::TimeData t)
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
+    RtcManager *-- RtcHelper : uses
 ```
 
 ### RTC Helper Class Diagram
@@ -116,12 +126,12 @@ classDiagram
 classDiagram
     namespace Drv {
         class RtcHelper {
-            -m_last_seen_seconds: uint32_t
-            -m_useconds_offset: uint32_t
+            - m_last_seen_seconds: uint32_t = 0
+            - m_useconds_offset: uint32_t = 0
 
-            +RtcHelper()
-            +~RtcHelper()
-            +rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t) uint32_t
+            + RtcHelper()
+            + ~RtcHelper()
+            + uint32_t rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t)
         }
     }
 ```
@@ -263,3 +273,4 @@ sequenceDiagram
 | 2025-9-18 | Initial RTC Manager component |
 | 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
+| 2026-04-09 | Hardening for more consistent behavior |
