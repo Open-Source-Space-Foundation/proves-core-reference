@@ -108,12 +108,12 @@ classDiagram
             + void configure(const device* dev)
             - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
             - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t)
-            - void log_LOG_RtcNotReady()
-            - void log_LOG_RtcNotReady_ThrottleClear()
-            - void log_LOG_RtcGetTimeFailed(int rc)
-            - void log_LOG_RtcGetTimeFailed_ThrottleClear()
-            - void log_LOG_RtcInvalidTime()
-            - void log_LOG_RtcInvalidTime_ThrottleClear()
+            - void log_CONSOLE_RtcNotReady()
+            - void log_CONSOLE_RtcNotReady_ThrottleClear()
+            - void log_CONSOLE_RtcGetTimeFailed(int rc)
+            - void log_CONSOLE_RtcGetTimeFailed_ThrottleClear()
+            - void log_CONSOLE_RtcInvalidTime()
+            - void log_CONSOLE_RtcInvalidTime_ThrottleClear()
             - bool timeDataIsValid(Drv::TimeData t)
         }
     }

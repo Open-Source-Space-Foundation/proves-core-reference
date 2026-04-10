@@ -76,22 +76,22 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
 
     //! Log RTC not ready once until throttle is cleared
-    void log_LOG_RtcNotReady();
+    void log_CONSOLE_RtcNotReady();
 
     //! Clear RTC not ready log throttle
-    void log_LOG_RtcNotReady_ThrottleClear();
+    void log_CONSOLE_RtcNotReady_ThrottleClear();
 
     //! Log RTC get time failure once until throttle is cleared
-    void log_LOG_RtcGetTimeFailed(int rc);
+    void log_CONSOLE_RtcGetTimeFailed(int rc);
 
     //! Clear RTC get time failure log throttle
-    void log_LOG_RtcGetTimeFailed_ThrottleClear();
+    void log_CONSOLE_RtcGetTimeFailed_ThrottleClear();
 
     //! Log RTC invalid time once until throttle is cleared
-    void log_LOG_RtcInvalidTime();
+    void log_CONSOLE_RtcInvalidTime();
 
     //! Clear RTC invalid time log throttle
-    void log_LOG_RtcInvalidTime_ThrottleClear();
+    void log_CONSOLE_RtcInvalidTime_ThrottleClear();
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
