@@ -40,7 +40,7 @@ module Drv {
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
         @ TimeNotSet event indicates that the time was not set successfully
-        event TimeNotSet() severity warning high id 4 format "Time not set on RTC"
+        event TimeNotSet(rc: U32) severity warning high id 4 format "Time not set on RTC: {}"
 
         @ YearValidationFailed event indicates that the provided year is invalid
         event YearValidationFailed(

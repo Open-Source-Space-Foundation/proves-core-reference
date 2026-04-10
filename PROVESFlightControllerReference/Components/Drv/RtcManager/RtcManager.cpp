@@ -5,6 +5,8 @@
 
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManager.hpp"
 
+#include <errno.h>
+
 namespace Drv {
 
 // ----------------------------------------------------------------------
@@ -13,11 +15,11 @@ namespace Drv {
 
 RtcManager ::RtcManager(const char* const compName)
     : RtcManagerComponentBase(compName),
+      m_dev(nullptr),
+      m_rtcHelper(),
       m_RtcNotReadyThrottle(false),
       m_RtcGetTimeFailedThrottle(false),
-      m_RtcInvalidTimeThrottle(false),
-      m_dev(nullptr),
-      m_rtcHelper() {}
+      m_RtcInvalidTimeThrottle(false) {}
 
 RtcManager ::~RtcManager() {}
 
@@ -51,7 +53,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 
     // Get time from RTC
     struct rtc_time time_rtc = {};
-    int rc = rtc_get_time(this->m_dev, &time_rtc);
+    const int rc = rtc_get_time(this->m_dev, &time_rtc);
     if (rc != 0) {
         this->log_CONSOLE_RtcGetTimeFailed(rc);
 
@@ -100,7 +102,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Validate time data
     if (!this->timeDataIsValid(t)) {
         // Emit time not set event
-        this->log_WARNING_HI_TimeNotSet();
+        this->log_WARNING_HI_TimeNotSet(EINVAL);
 
         // Send command response
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
@@ -135,7 +137,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     const int rc = rtc_set_time(this->m_dev, &time_rtc);
     if (rc != 0) {
         // Emit time not set event
-        this->log_WARNING_HI_TimeNotSet();
+        this->log_WARNING_HI_TimeNotSet(rc);
 
         // Send command response
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
@@ -171,7 +173,7 @@ void RtcManager ::log_CONSOLE_RtcNotReady_ThrottleClear() {
     this->m_RtcNotReadyThrottle = false;
 }
 
-void RtcManager ::log_CONSOLE_RtcGetTimeFailed(int rc) {
+void RtcManager ::log_CONSOLE_RtcGetTimeFailed(const int rc) {
     // Check throttle value
     if (this->m_RtcGetTimeFailedThrottle) {
         return;
