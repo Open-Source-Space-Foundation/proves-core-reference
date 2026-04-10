@@ -24,6 +24,7 @@ class ThermalManager final : public ThermalManagerComponentBase {
     ~ThermalManager();
 
   private:
+    constexpr static F64 DEBOUNCE_ERROR = 3.0;  //!< Debounce error value for temperature threshold events
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
