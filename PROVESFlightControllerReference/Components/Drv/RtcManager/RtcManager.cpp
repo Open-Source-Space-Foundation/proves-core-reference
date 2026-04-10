@@ -43,7 +43,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
 
-        // Use monotonic time as fallback
+        // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
@@ -55,7 +55,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     if (rc != 0) {
         this->log_CONSOLE_RtcGetTimeFailed(rc);
 
-        // Use monotonic time as fallback
+        // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
@@ -70,7 +70,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     if (errno == ERANGE) {
         this->log_CONSOLE_RtcInvalidTime();
 
-        // Use monotonic time as fallback
+        // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
