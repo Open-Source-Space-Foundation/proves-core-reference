@@ -55,14 +55,14 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
 | RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or uptime | Integration test |
-| RtcManager-003 | The RTC Manager logs a warning when the RTC is not ready and falls back to monotonic time | Integration test |
+| RtcManager-003 | In the event of an error retrieving time from the RTC, the RTC Manager returns uptime | Integration test |
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 | RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
-| RtcManager-007 | The RTC Manager provides uptime when the RTC device is unavailable | Integration test |
-| RtcManager-008 | Time increments continuously regardless of RTC availability | Integration test |
-| RtcManager-009 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
-| RtcManager-010 | Time is monotonic | Integration test |
+| RtcManager-007 | Time increments continuously regardless of RTC availability | Integration test |
+| RtcManager-008 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
+| RtcManager-009 | Time is monotonic | Integration test |
+| RtcManager-010 | During a time set command, before the new time is set, RTC Manager informs a sequence cancellation port | Integration test |
 
 ## Port Descriptions
 | Name | Description |

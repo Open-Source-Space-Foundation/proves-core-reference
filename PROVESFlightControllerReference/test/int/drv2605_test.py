@@ -11,7 +11,6 @@ import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from rtc_test import set_time
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
 ina219SysManager = "ReferenceDeployment.ina219SysManager"
@@ -24,8 +23,6 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
         fprime_test_api,
         "ReferenceDeployment.face0LoadSwitch.TURN_ON",
     )
-    # TEST(nateinaction): No way this works, do not allow me to merge this in...
-    set_time(fprime_test_api)
     yield
     proves_send_and_assert_command(
         fprime_test_api,

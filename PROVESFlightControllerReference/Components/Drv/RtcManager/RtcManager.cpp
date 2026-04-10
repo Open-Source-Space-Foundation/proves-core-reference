@@ -123,6 +123,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
         .tm_isdst = 0,
     };
 
+    // Cancel any running sequences before setting time, as time change may impact their behavior
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
     // Set time on RTC
     const int rc = rtc_set_time(this->m_dev, &time_rtc);
     if (rc != 0) {
@@ -136,14 +144,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
-
-    // Cancel any running sequences
-    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
-        if (!this->isConnected_cancelSequences_OutputPort(i)) {
-            continue;
-        }
-        this->cancelSequences_out(i);
-    }
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
