@@ -110,6 +110,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     // Store current time for logging
     Fw::Time time_before_set = this->getTime();
 
+    // Cancel any running sequences before setting time, as time change may impact their behavior
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
     // Populate rtc_time structure from TimeData
     const struct rtc_time time_rtc = {
         .tm_sec = static_cast<int>(t.get_Second()),
@@ -122,14 +130,6 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
         .tm_yday = 0,
         .tm_isdst = 0,
     };
-
-    // Cancel any running sequences before setting time, as time change may impact their behavior
-    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
-        if (!this->isConnected_cancelSequences_OutputPort(i)) {
-            continue;
-        }
-        this->cancelSequences_out(i);
-    }
 
     // Set time on RTC
     const int rc = rtc_set_time(this->m_dev, &time_rtc);
