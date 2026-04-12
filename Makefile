@@ -248,7 +248,7 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	@echo "Stopping YAMCS processes..."
 	@find_repo_pids() { \
 	  marker="$$1"; \
-	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" 'index($$0, repo) && index($$0, marker) { print $$1 }'; \
+	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" -v self="$$$$" 'index($$0, repo) && index($$0, marker) && $$1+0 != self+0 { print $$1 }'; \
 	}; \
 	stop_repo_processes() { \
 	  marker="$$1"; \
@@ -259,12 +259,21 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	    echo "  stopped $$label"; \
 	  fi; \
 	}; \
-	stop_repo_processes 'proves_adapter.py' 'serial adapter'; \
+	kill_udp_port() { \
+	  port="$$1"; label="$$2"; \
+	  pids="$$(lsof -tiUDP:$$port 2>/dev/null | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	  if [ -n "$$pids" ]; then \
+	    kill $$pids 2>/dev/null || true; \
+	    echo "  stopped $$label (port $$port)"; \
+	  fi; \
+	}; \
+	kill_udp_port 50001 'serial adapter'; \
+	kill_udp_port 50000 'TM UDP sender'; \
 	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
 	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
 	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
 	stop_repo_processes 'org.yamcs.YamcsServer' 'YAMCS server'; \
-	i=0; while [ -n "$$(find_repo_pids 'org.yamcs.YamcsServer')" ]; do \
+	i=0; while lsof -iTCP:8090 -sTCP:LISTEN >/dev/null 2>&1; do \
 	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
 	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
 	    pids="$$(find_repo_pids 'org.yamcs.YamcsServer' | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
