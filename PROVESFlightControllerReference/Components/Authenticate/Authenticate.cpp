@@ -22,10 +22,10 @@ constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
 constexpr const int SECURITY_HEADER_LENGTH = 6;
 constexpr const int SECURITY_TRAILER_LENGTH = 16;
 constexpr const int SPI_DEFAULT = 0;
-constexpr const U8 OP_CODE_LENGTH = 4;    // F Prime opcodes are 32-bit (4 bytes)
-constexpr const U8 OP_CODE_START = 2;     // Opcode starts at byte offset 2 in the packet buffer
-constexpr const U8 SPACEPACKETSTART = 6;  // Space Packets start at byte offset 0 in the packet buffer
-constexpr const U8 SPACEPACKETEND = 0;    // need to read the code and fiyre it outmak
+constexpr const U8 OP_CODE_LENGTH = 4;      // F Prime opcodes are 32-bit (4 bytes)
+constexpr const U8 OP_CODE_START = 2;       // Opcode starts at byte offset 2 in the packet buffer
+constexpr const U8 SPACE_PACKET_START = 6;  // Space Packets start at byte offset 0 in the packet buffer
+constexpr const U8 SPACE_PACKET_END = 0;    // need to read the code and fiyre it outmak
 
 static constexpr U32 kBypassOpCodes[] = {
     0x01000000,  // no op
@@ -33,52 +33,175 @@ static constexpr U32 kBypassOpCodes[] = {
     0x10065000,  // amateurRadio.TELL_JOKE
     0x10065000   // amateur name
 };
-constexpr size_t kBypassOpCodeCount = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
+constexpr size_t kBypassOpCodesArrayLength = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
 // TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
 // TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
 
 namespace Components {
+
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), sequenceNumber(0) {}
+Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), m_sequenceNumber(0) {}
+
+Authenticate ::~Authenticate() {}
+
+// ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
+
+void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    ComCfg::FrameContext contextOut = context;
+    const Fw::String& typeAuthn = DEFAULT_AUTHENTICATION_TYPE;
+    const Fw::String& keyAuthn = DEFAULT_AUTHENTICATION_KEY;
+
+    // Validate buffer size before processing
+    if (data.getSize() < SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    // Extract security header and trailer (without modifying the buffer yet)
+    U8 securityHeader[SECURITY_HEADER_LENGTH];
+    U8 securityTrailer[SECURITY_TRAILER_LENGTH];
+    U32 spi = 0;
+    U32 sequenceNumber = 0;
+
+    // Extract security header (first 6 bytes)
+    std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
+
+    // Extract security trailer (last 16 bytes)
+    std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
+
+    // Extract SPI and sequence number from security header
+    spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
+    sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
+                     (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
+
+    // The data to authenticate is header + payload (everything except the trailer)
+    const U8* dataToAuthenticate = data.getData();
+    const FwSizeType dataToAuthenticateLength = data.getSize() - SECURITY_TRAILER_LENGTH;
+
+    // Validate HMAC - compute over security header + payload, compare with trailer
+    bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, keyAuthn, securityTrailer);
+
+    // passing just the payload in here
+    bool bypassAuth = this->bypassAuth(data.getData() + SECURITY_HEADER_LENGTH,
+                                       data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
+
+    if (!bypassAuth && !hmacValid) {
+        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    // Now strip header and trailer from the buffer for forwarding
+    data.setData(data.getData() + SECURITY_HEADER_LENGTH);
+    data.setSize(data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
+
+    // Assuming SPI 0 as default (no longer reading from spi_dict.txt)
+    // Any other SPI value is invalid and should be rejected
+    if (spi != SPI_DEFAULT) {
+        this->log_WARNING_HI_InvalidSPI(spi);
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    // check the sequence number is valid
+    U32 expectedSeqNum = this->m_sequenceNumber.load();
+
+    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
+    if ((!bypassAuth && !sequenceNumberValid)) {
+        this->rejectPacket(data, contextOut);
+        return;
+    }
+
+    U32 newSequenceNumber = expectedSeqNum + 1;
+    this->m_sequenceNumber = newSequenceNumber;
+    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, newSequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
+
+    U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
+    this->tlmWrite_AuthenticatedPacketsCount(newCount);
+    this->dataOut_out(0, data, contextOut);
+}
+
+void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    this->dataReturnOut_out(0, data, context);
+}
+
+// ----------------------------------------------------------------------
+// Handler implementations for commands
+// ----------------------------------------------------------------------
+
+void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    U32 fileSequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
+
+    this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
+    // Writes the sequence number to the file system
+    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, seq_num);
+
+    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, true);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+// ----------------------------------------------------------------------
+// Public helper methods
+// ----------------------------------------------------------------------
 
 void Authenticate::init(FwEnumStoreType instance) {
-    // call init from the base class
+    // Call init from the base class
     AuthenticateComponentBase::init(instance);
 
-    // init the sequence number
+    // Init the sequence number
     U32 sequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
-
-    this->sequenceNumber.store(sequenceNumber);
+    this->m_sequenceNumber = sequenceNumber;
     this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
 }
 
-// Reading a U32 from a file
+// ----------------------------------------------------------------------
+// Private helper methods
+// ----------------------------------------------------------------------
+
 U32 Authenticate::readSequenceNumber(const char* filepath) {
     U32 value = 0;
     Os::File::Status status = Utilities::FileHelper::readFromFile(filepath, value);
     if (status != Os::File::OP_OK) {
+        // TODO(nateinaction): do we want to set sequence number to 0 if we fail to read it? or should we handle this
+        // differently?
+        // TODO(nateinaction): status of this write is never checked
         Utilities::FileHelper::writeToFile(filepath, value);
     }
     return value;
 }
 
-bool Authenticate::ByPassAuth(U8* packetBuffer, FwSizeType dataLength) {
+U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
+    // Copy value to buffer to avoid type punning
+    // TODO(nateinaction): status of this write is never checked
+    Utilities::FileHelper::writeToFile(filepath, value);
+    // TODO(nateinaction): do we need to return the value? It is passed in as an argument so the caller already has it
+    return value;
+}
+
+bool Authenticate::bypassAuth(U8* packetBuffer, FwSizeType dataLength) {
     // we want to get the packet buffer, by removing what is inside the next step, the spacedataframer
 
     if (packetBuffer == nullptr) {
         return false;
     }
-    if (dataLength < SPACEPACKETSTART) {
+    if (dataLength < SPACE_PACKET_START) {
         return false;
     }
 
     // remove the space packet header
-    packetBuffer += SPACEPACKETSTART;
-    dataLength -= SPACEPACKETSTART;
+    packetBuffer += SPACE_PACKET_START;
+    dataLength -= SPACE_PACKET_START;
 
     // Check bounds before extracting
     if (dataLength < (OP_CODE_START + OP_CODE_LENGTH)) {
@@ -87,28 +210,22 @@ bool Authenticate::ByPassAuth(U8* packetBuffer, FwSizeType dataLength) {
 
     // Extract opcode bytes
 
-    U8 opCodeBytes[OP_CODE_LENGTH];
+    U8 op_code_bytes[OP_CODE_LENGTH];
 
-    std::memcpy(opCodeBytes, packetBuffer + OP_CODE_START, OP_CODE_LENGTH);
+    std::memcpy(op_code_bytes, packetBuffer + OP_CODE_START, OP_CODE_LENGTH);
 
     // Combine opcode bytes into a single 32-bit value for comparison
-    const U32 opCode = (static_cast<U32>(opCodeBytes[0]) << 24) | (static_cast<U32>(opCodeBytes[1]) << 16) |
-                       (static_cast<U32>(opCodeBytes[2]) << 8) | static_cast<U32>(opCodeBytes[3]);
+    const U32 op_code = (static_cast<U32>(op_code_bytes[0]) << 24) | (static_cast<U32>(op_code_bytes[1]) << 16) |
+                        (static_cast<U32>(op_code_bytes[2]) << 8) | static_cast<U32>(op_code_bytes[3]);
 
     // Check if opcode matches any in the bypass list
-    for (size_t i = 0; i < kBypassOpCodeCount; i++) {
-        if (opCode == kBypassOpCodes[i]) {
+    for (size_t i = 0; i < kBypassOpCodesArrayLength; i++) {
+        if (op_code == kBypassOpCodes[i]) {
             return true;
         }
     }
 
     return false;
-}
-
-U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
-    // Copy value to buffer to avoid type punning
-    Utilities::FileHelper::writeToFile(filepath, value);
-    return value;
 }
 
 void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
@@ -121,12 +238,6 @@ void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextO
 
     this->dataReturnOut_out(0, data, contextOut);
 }
-
-Authenticate ::~Authenticate() {}
-
-// ----------------------------------------------------------------------
-// Handler implementations for typed input ports
-// ----------------------------------------------------------------------
 
 bool Authenticate::computeHMAC(const U8* data,
                                const FwSizeType dataLength,
@@ -182,6 +293,7 @@ bool Authenticate::computeHMAC(const U8* data,
     if (status == PSA_SUCCESS) {
         status = psa_hash_update(&innerHash, innerKey, kBlockSize);
     }
+    // TODO(nateinaction): Why is success checked twice here? Why are there two hash updates?
     if (status == PSA_SUCCESS) {
         status = psa_hash_update(&innerHash, data, dataLength);
     }
@@ -228,6 +340,7 @@ bool Authenticate::validateSequenceNumber(U32 received, U32 expected) {
     // validate the sequence number by checking if it is within the window of the expected sequence number
     Fw::ParamValid valid;
     U32 window = paramGet_SEQ_NUM_WINDOW(valid);
+    // TODO(nateinaction): Check param validity and handle case where param is invalid
     /*
      * Compute the difference between received and expected sequence numbers using unsigned
      * 32-bit arithmetic. This handles wraparound correctly due to the well-defined behavior
@@ -235,6 +348,7 @@ bool Authenticate::validateSequenceNumber(U32 received, U32 expected) {
      * then (received - expected) == 3 (modulo 2^32). This is a standard technique for
      * sequence number window validation (see RFC 1982: Serial Number Arithmetic).
      */
+    // TODO(nateinaction): This wraparound behavior is a good candidate for unit testing
     const U32 delta = received - expected;
     if (delta > window) {
         this->log_WARNING_HI_SequenceNumberOutOfWindow(received, expected, window);
@@ -267,143 +381,6 @@ bool Authenticate::validateHMAC(const U8* data,
     bool hmacValid = this->compareHMAC(computedHmac, securityTrailer, kHmacOutputLength);
 
     return hmacValid;
-}
-
-bool Authenticate::validateHeader(Fw::Buffer& data,
-                                  ComCfg::FrameContext& contextOut,
-                                  U8* securityHeader,
-                                  U8* securityTrailer,
-                                  U32& spi,
-                                  U32& sequenceNumber) {
-    // 34 = 12 (data) + 6 (security header) + 16 (security trailer)
-    // some packets will be missed here, because we don't have a clear way to tell if the packet is long because its
-    // authenticating or because its not a valid packet.
-    // later we will change the integration tests to all run on plugins, but for now, only the 12 bytes will be
-    // authenticated.
-
-    // Take the first 6 bytes as the security header
-    std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
-    // increment the pointer to the data to point to the rest of the packet
-    data.setData(data.getData() + SECURITY_HEADER_LENGTH);
-    data.setSize(data.getSize() - SECURITY_HEADER_LENGTH);
-
-    // now we get the footer (last 16 bytes)
-    std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
-    // decrement the size of the data to remove the footer
-    data.setSize(data.getSize() - SECURITY_TRAILER_LENGTH);
-
-    // the first two bytes are the SPI
-    spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
-
-    // the next four bytes are the sequence number
-    sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
-                     (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-
-    return true;
-}
-
-void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    ComCfg::FrameContext contextOut = context;
-    const Fw::String& type_authn = DEFAULT_AUTHENTICATION_TYPE;
-    const Fw::String& key_authn = DEFAULT_AUTHENTICATION_KEY;
-
-    // Validate buffer size before processing
-    if (data.getSize() < SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
-        this->rejectPacket(data, contextOut);
-        return;
-    }
-
-    // Extract security header and trailer (without modifying the buffer yet)
-    U8 securityHeader[SECURITY_HEADER_LENGTH];
-    U8 securityTrailer[SECURITY_TRAILER_LENGTH];
-    U32 spi = 0;
-    U32 sequenceNumber = 0;
-
-    // Extract security header (first 6 bytes)
-    std::memcpy(securityHeader, data.getData(), SECURITY_HEADER_LENGTH);
-
-    // Extract security trailer (last 16 bytes)
-    std::memcpy(securityTrailer, data.getData() + data.getSize() - SECURITY_TRAILER_LENGTH, SECURITY_TRAILER_LENGTH);
-
-    // Extract SPI and sequence number from security header
-    spi = (static_cast<U32>(securityHeader[0]) << 8) | static_cast<U32>(securityHeader[1]);
-    sequenceNumber = (static_cast<U32>(securityHeader[2]) << 24) | (static_cast<U32>(securityHeader[3]) << 16) |
-                     (static_cast<U32>(securityHeader[4]) << 8) | static_cast<U32>(securityHeader[5]);
-
-    // The data to authenticate is header + payload (everything except the trailer)
-    const U8* dataToAuthenticate = data.getData();
-    const FwSizeType dataToAuthenticateLength = data.getSize() - SECURITY_TRAILER_LENGTH;
-
-    // Validate HMAC - compute over security header + payload, compare with trailer
-    bool hmacValid = this->validateHMAC(dataToAuthenticate, dataToAuthenticateLength, key_authn, securityTrailer);
-
-    // passing just the payload in here
-    bool bypassAuth = this->ByPassAuth(data.getData() + SECURITY_HEADER_LENGTH,
-                                       data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
-
-    if (!bypassAuth && !hmacValid) {
-        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
-        this->rejectPacket(data, contextOut);
-        return;
-    }
-
-    // Now strip header and trailer from the buffer for forwarding
-    data.setData(data.getData() + SECURITY_HEADER_LENGTH);
-    data.setSize(data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
-
-    // Assuming SPI 0 as default (no longer reading from spi_dict.txt)
-    // Any other SPI value is invalid and should be rejected
-    if (spi != SPI_DEFAULT) {
-        this->log_WARNING_HI_InvalidSPI(spi);
-        this->rejectPacket(data, contextOut);
-        return;
-    }
-
-    // check the sequence number is valid
-    U32 expectedSeqNum = this->sequenceNumber.load();
-
-    bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
-    if ((!bypassAuth && !sequenceNumberValid)) {
-        this->rejectPacket(data, contextOut);
-        return;
-    }
-
-    U32 newSequenceNumber = expectedSeqNum + 1;
-    this->sequenceNumber.store(newSequenceNumber);
-    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, newSequenceNumber);
-    this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
-
-    U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
-    this->tlmWrite_AuthenticatedPacketsCount(newCount);
-    this->dataOut_out(0, data, contextOut);
-}
-
-void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    this->dataReturnOut_out(0, data, context);
-}
-
-U32 Authenticate ::get_SequenceNumber() {
-    U32 fileSequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
-    return fileSequenceNumber;
-}
-
-// ----------------------------------------------------------------------
-// Handler implementations for commands
-// ----------------------------------------------------------------------
-
-void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    U32 fileSequenceNumber = this->get_SequenceNumber();
-
-    this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-}
-
-void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
-    // Writes the sequence number to the file system
-    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, seq_num);
-
-    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, true);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace Components

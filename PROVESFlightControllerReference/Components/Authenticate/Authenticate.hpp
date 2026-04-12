@@ -27,9 +27,6 @@ class Authenticate final : public AuthenticateComponentBase {
     //! Destroy Authenticate object
     ~Authenticate();
 
-    //! Initialize component
-    void init(FwEnumStoreType instance);
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -38,66 +35,20 @@ class Authenticate final : public AuthenticateComponentBase {
     //! Handler implementation for dataIn
     //!
     //! Port receiving Space Packets from TcDeframer
-    void dataIn_handler(FwIndexType portNum,  //!< The port number
-                        Fw::Buffer& data,
-                        const ComCfg::FrameContext& context) override;
+    void dataIn_handler(FwIndexType portNum,                 //!< The port number
+                        Fw::Buffer& data,                    //!< The buffer containing the packet data
+                        const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+                        ) override;
 
     //! Handler implementation for dataReturnIn
     //!
     //! Port receiving back ownership of buffers sent to dataOut
-    void dataReturnIn_handler(FwIndexType portNum,  //!< The port number
-                              Fw::Buffer& data,
-                              const ComCfg::FrameContext& context) override;
+    void dataReturnIn_handler(FwIndexType portNum,                 //!< The port number
+                              Fw::Buffer& data,                    //!< The buffer being returned
+                              const ComCfg::FrameContext& context  //!< The frame context associated with the buffer
+                              ) override;
 
   private:
-    // function to read a U32 from a file
-    U32 readSequenceNumber(const char* filepath);
-
-    // function to write a U32 to a file
-    U32 writeSequenceNumber(const char* filepath, U32 value);
-
-    struct AuthenticationConfig {
-        Fw::String type;
-        Fw::String key;
-    };
-
-    bool PacketRequiresAuthentication(Fw::Buffer& data, const ComCfg::FrameContext& context);
-
-    bool computeHMAC(const U8* data,
-                     const FwSizeType dataLength,
-                     const Fw::String& key,
-                     U8* output,
-                     FwSizeType outputSize);
-
-    bool validateSequenceNumber(U32 received, U32 expected);
-
-    bool ByPassAuth(U8* packetBuffer, FwSizeType dataLength);
-
-    bool compareHMAC(const U8* expected, const U8* actual, FwSizeType length) const;
-
-    bool validateHMAC(const U8* data, FwSizeType dataLength, const Fw::String& key, const U8* securityTrailer);
-
-    //! Validate and extract security header information
-    //! \param data: Input buffer containing security header + data + security trailer
-    //! \param contextOut: Frame context (modified if packet is rejected)
-    //! \param securityHeader: Output parameter for extracted security header (6 bytes)
-    //! \param securityTrailer: Output parameter for extracted security trailer (16 bytes)
-    //! \param spi: Output parameter for Security Parameter Index
-    //! \param sequenceNumber: Output parameter for sequence number
-    //! \return true if header is valid and extracted, false if packet should be rejected
-    bool validateHeader(Fw::Buffer& data,
-                        ComCfg::FrameContext& contextOut,
-                        U8* securityHeader,
-                        U8* securityTrailer,
-                        U32& spi,
-                        U32& sequenceNumber);
-
-    // function to get the current sequence number
-    U32 get_SequenceNumber();
-
-    // function to reject packets that fail authentication
-    void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
-
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -110,12 +61,72 @@ class Authenticate final : public AuthenticateComponentBase {
     //! Handler implementation for command SET_SEQ_NUM
     void SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                                 U32 cmdSeq,           //!< The command sequence number
-                                U32 seq_num) override;
+                                U32 seqNum            //!< The sequence number to set
+                                ) override;
 
-    std::atomic<U32> sequenceNumber;
-    Os::File m_sequenceNumberFile;
-    std::atomic<U32> m_rejectedPacketsCount;
-    std::atomic<U32> m_authenticatedPacketsCount;
+  public:
+    // ----------------------------------------------------------------------
+    // Public helper methods
+    // ----------------------------------------------------------------------
+
+    //! Initialize component
+    //!
+    //! Loads the sequence number from persistent storage
+    void init(FwEnumStoreType instance  //!< The instance number
+    );
+
+  private:
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    // Loads the sequence number from the specified file path
+    U32 readSequenceNumber(const char* filepath  //!< File path where sequence number is stored
+    );
+
+    //! Writes the sequence number to the specified file path
+    U32 writeSequenceNumber(const char* filepath,  //!< File path where sequence number is stored
+                            U32 value              //!< The sequence number to write
+    );
+
+    //! Ensures that the received sequence number is within the acceptable window of the expected sequence number
+    bool validateSequenceNumber(U32 received,  //!< The received sequence number to validate
+                                U32 expected   //!< The expected sequence number
+    );
+
+    //! Checks if command opcode is in the list of opcodes that are allowed to bypass authentication
+    bool bypassAuth(U8* packetBuffer,      //!< The buffer containing the packet data
+                    FwSizeType dataLength  //!< The length of the packet data
+    );
+
+    //! Compute HMAC of the given data using the provided key
+    bool computeHMAC(const U8* data,  //!< The data to compute HMAC over (should include security header + payload)
+                     const FwSizeType dataLength,  //!< The length of the data
+                     const Fw::String& key,        //!< The key to use for HMAC computation
+                     U8* output,  //!< The buffer where the computed HMAC will be stored (must be at least 16 bytes for
+                                  //!< CCSDS 355.0-B-2)
+                     FwSizeType outputSize  //!< The size of the output buffer
+    );
+
+    //! Validates sent HMAC matches expected HMAC
+    bool compareHMAC(const U8* expected,  //! The expected HMAC value
+                     const U8* actual,    //! The actual HMAC value to compare
+                     FwSizeType length    //!< The length of the HMAC values (should be 16 bytes for CCSDS 355.0-B-2)
+    ) const;
+
+    //! Orchestrates HMAC validation with computeHMAC() and compareHMAC()
+    bool validateHMAC(const U8* data,  //!< The data to compute HMAC over (should include security header + payload)
+                      FwSizeType dataLength,     //! The length of the data
+                      const Fw::String& key,     //!< The key to use for HMAC computation
+                      const U8* securityTrailer  //! The security trailer containing the expected HMAC value
+    );
+
+    //! Reject packet that fails authentication
+    void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
+
+    std::atomic<U32> m_sequenceNumber;             //!< The current sequence number
+    std::atomic<U32> m_rejectedPacketsCount;       //!< Count of rejected packets for telemetry
+    std::atomic<U32> m_authenticatedPacketsCount;  //!< Count of authenticated packets for telemetry
 };
 
 }  // namespace Components
