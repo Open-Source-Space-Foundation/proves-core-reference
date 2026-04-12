@@ -258,4 +258,3 @@ Potential improvements:
 - Event size calculations
 - Comparison between builds to track changes
 - Integration with F Prime dictionary files for validation
-
