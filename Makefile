@@ -275,6 +275,6 @@ make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
 
-include lib/makelib/build-tools.mk
-include lib/makelib/ci.mk
-include lib/makelib/zephyr.mk
+include makelib/build-tools.mk
+include makelib/ci.mk
+include makelib/zephyr.mk
