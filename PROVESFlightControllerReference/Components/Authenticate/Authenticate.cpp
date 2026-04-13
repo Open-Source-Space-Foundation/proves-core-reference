@@ -341,7 +341,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     bool bypassAuth = this->ByPassAuth(data.getData() + SECURITY_HEADER_LENGTH,
                                        data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
 
-    if (!hmacValid && !bypassAuth) {
+    if (!bypassAuth && !hmacValid) {
         this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
         this->rejectPacket(data, contextOut);
         return;
@@ -368,7 +368,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         return;
     }
 
-    U32 newSequenceNumber = sequenceNumber + 1;
+    U32 newSequenceNumber = expectedSeqNum + 1;
     this->sequenceNumber.store(newSequenceNumber);
     this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, newSequenceNumber);
     this->tlmWrite_CurrentSequenceNumber(newSequenceNumber);
