@@ -197,7 +197,7 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     }
 
     // set the alarm
-    int rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
+    rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
 
     // capture the return code for setting the alarm
     if (rc != 0) {
