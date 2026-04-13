@@ -36,7 +36,11 @@ void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
 
     // match to timedata this is constant after being updated here, do not change
-    rtc_alarm_get_supported_fields(this->m_dev, 0, &this->m_curr_mask);
+    int rc = rtc_alarm_get_supported_fields(this->m_dev, 0, &this->m_curr_mask);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+    }
 }
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -232,7 +236,11 @@ void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
     }
     // cancel the alarm, so it won't go off repeatedly.
     uint16_t mask = 0;
-    rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+    int rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+    }
 }
 
 void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
