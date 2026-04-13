@@ -186,7 +186,10 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
         return;
     }
 
+    // set the alarm
     int rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
+
+    // capture the return code for setting the alarm
     if (rc != 0) {
         // log failure
         this->log_WARNING_HI_AlarmHardwareError(0, rc);
@@ -195,7 +198,15 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     }
 
     // callback to trigger upon alarm trigger
-    rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
+    rc = rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
+
+    // capture return code for the callback
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
     // log success
     this->log_ACTIVITY_HI_AlarmSet(0, t);
