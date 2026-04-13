@@ -162,10 +162,10 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     // retrieve info about current alarm
 
     uint16_t mask = this->m_curr_mask;
-    int alarmPresent = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
     // if alarm is already set, return an EALREADY error
-    if (alarmPresent == 0 && mask != 0) {
+    if (rc == 0 && mask != 0) {
         this->log_WARNING_HI_AlarmNotSet(t, EALREADY);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -181,7 +181,13 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Tim
     // assure alarm is at a future point in time
     struct rtc_time c_time;
     struct rtc_time a_time = this->m_alarm_time;
-    rtc_get_time(this->m_dev, &c_time);
+    rc = rtc_get_time(this->m_dev, &c_time);
+    if (rc != 0) {
+        // indicates hardware error
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
     int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
     int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
     if (a_seconds <= c_seconds) {
@@ -258,7 +264,13 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
     if (mask != 0) {
         // set mask to 0 to cancel alarm
         mask = 0;
-        rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+        rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+        if (rc != 0) {
+            // log failure
+            this->log_WARNING_HI_AlarmHardwareError(0, rc);
+            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+            return;
+        }
 
         this->log_ACTIVITY_HI_AlarmCanceled(ID);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
