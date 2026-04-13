@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Authenticate.cpp
-// \author Ines
 // \brief  cpp file for Authenticate component implementation class
 // ======================================================================
 
@@ -15,28 +14,9 @@
 // Include generated header with default key (generated at build time)
 #include "AuthDefaultKey.h"
 
-// Hardcoded Dictionary of Authentication Types
-constexpr const char DEFAULT_AUTHENTICATION_TYPE[] = "HMAC";
-constexpr const char DEFAULT_AUTHENTICATION_KEY[] = AUTH_DEFAULT_KEY;
+// File path for storing the sequence number persistently
+// TODO(nateinaction): Move to parameter
 constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
-constexpr const int SECURITY_HEADER_LENGTH = 6;
-constexpr const int SECURITY_TRAILER_LENGTH = 16;
-constexpr const int SPI_DEFAULT = 0;
-constexpr const U8 OP_CODE_LENGTH = 4;      // F Prime opcodes are 32-bit (4 bytes)
-constexpr const U8 OP_CODE_START = 2;       // Opcode starts at byte offset 2 in the packet buffer
-constexpr const U8 SPACE_PACKET_START = 6;  // Space Packets start at byte offset 0 in the packet buffer
-constexpr const U8 SPACE_PACKET_END = 0;    // need to read the code and fiyre it outmak
-
-static constexpr U32 kBypassOpCodes[] = {
-    0x01000000,  // no op
-    0x2200B000,  // get sequence number
-    0x10065000,  // amateurRadio.TELL_JOKE
-    0x10065000   // amateur name
-};
-constexpr size_t kBypassOpCodesArrayLength = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
-
-// TO DO: ADD TO THE DOWNLINK PATH FOR LORA AND S BAND AS WELL
-// TO DO GIVE THE CHOICE FOR NOT JUST HMAC BUT ALSO OTHER AUTHENTICATION TYPES
 
 namespace Components {
 
@@ -53,13 +33,22 @@ Authenticate ::~Authenticate() {}
 // ----------------------------------------------------------------------
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    ComCfg::FrameContext contextOut = context;
-    const Fw::String& typeAuthn = DEFAULT_AUTHENTICATION_TYPE;
+    // playing
+
+    uint8_t* dataBuffer = data.getData();
+    uint64_t dataSize = data.getSize();
+
+    // old stuff start
+
+    constexpr const char DEFAULT_AUTHENTICATION_KEY[] = AUTH_DEFAULT_KEY;
     const Fw::String& keyAuthn = DEFAULT_AUTHENTICATION_KEY;
+    constexpr const int SECURITY_HEADER_LENGTH = 6;
+    constexpr const int SECURITY_TRAILER_LENGTH = 16;
+    constexpr const int SPI_DEFAULT = 0;
 
     // Validate buffer size before processing
     if (data.getSize() < SECURITY_HEADER_LENGTH + SECURITY_TRAILER_LENGTH) {
-        this->rejectPacket(data, contextOut);
+        this->rejectPacket(data, context);
         return;
     }
 
@@ -92,8 +81,8 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
                                        data.getSize() - SECURITY_HEADER_LENGTH - SECURITY_TRAILER_LENGTH);
 
     if (!bypassAuth && !hmacValid) {
-        this->log_WARNING_HI_InvalidHash(contextOut.get_apid(), spi, sequenceNumber);
-        this->rejectPacket(data, contextOut);
+        this->log_WARNING_HI_InvalidHash(context.get_apid(), spi, sequenceNumber);
+        this->rejectPacket(data, context);
         return;
     }
 
@@ -105,7 +94,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
     // Any other SPI value is invalid and should be rejected
     if (spi != SPI_DEFAULT) {
         this->log_WARNING_HI_InvalidSPI(spi);
-        this->rejectPacket(data, contextOut);
+        this->rejectPacket(data, context);
         return;
     }
 
@@ -114,7 +103,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     bool sequenceNumberValid = this->validateSequenceNumber(sequenceNumber, expectedSeqNum);
     if ((!bypassAuth && !sequenceNumberValid)) {
-        this->rejectPacket(data, contextOut);
+        this->rejectPacket(data, context);
         return;
     }
 
@@ -125,7 +114,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
 
     U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_AuthenticatedPacketsCount(newCount);
-    this->dataOut_out(0, data, contextOut);
+    this->dataOut_out(0, data, context);
 }
 
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
@@ -191,6 +180,15 @@ U32 Authenticate::writeSequenceNumber(const char* filepath, U32 value) {
 
 bool Authenticate::bypassAuth(U8* packetBuffer, FwSizeType dataLength) {
     // we want to get the packet buffer, by removing what is inside the next step, the spacedataframer
+    constexpr const U8 OP_CODE_LENGTH = 4;      // F Prime opcodes are 32-bit (4 bytes)
+    constexpr const U8 OP_CODE_START = 2;       // Opcode starts at byte offset 2 in the packet buffer
+    constexpr const U8 SPACE_PACKET_START = 6;  // Space Packets start at byte offset 0 in the packet buffer
+    static constexpr U32 kBypassOpCodes[] = {
+        0x01000000,  // no op
+        0x2200B000,  // get sequence number
+        0x10065000,  // amateurRadio.TELL_JOKE
+    };
+    constexpr size_t kBypassOpCodesArrayLength = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
 
     if (packetBuffer == nullptr) {
         return false;
@@ -210,17 +208,17 @@ bool Authenticate::bypassAuth(U8* packetBuffer, FwSizeType dataLength) {
 
     // Extract opcode bytes
 
-    U8 op_code_bytes[OP_CODE_LENGTH];
+    U8 opCodeBytes[OP_CODE_LENGTH];
 
-    std::memcpy(op_code_bytes, packetBuffer + OP_CODE_START, OP_CODE_LENGTH);
+    std::memcpy(opCodeBytes, packetBuffer + OP_CODE_START, OP_CODE_LENGTH);
 
     // Combine opcode bytes into a single 32-bit value for comparison
-    const U32 op_code = (static_cast<U32>(op_code_bytes[0]) << 24) | (static_cast<U32>(op_code_bytes[1]) << 16) |
-                        (static_cast<U32>(op_code_bytes[2]) << 8) | static_cast<U32>(op_code_bytes[3]);
+    const U32 opCode = (static_cast<U32>(opCodeBytes[0]) << 24) | (static_cast<U32>(opCodeBytes[1]) << 16) |
+                       (static_cast<U32>(opCodeBytes[2]) << 8) | static_cast<U32>(opCodeBytes[3]);
 
     // Check if opcode matches any in the bypass list
     for (size_t i = 0; i < kBypassOpCodesArrayLength; i++) {
-        if (op_code == kBypassOpCodes[i]) {
+        if (opCode == kBypassOpCodes[i]) {
             return true;
         }
     }
@@ -228,11 +226,14 @@ bool Authenticate::bypassAuth(U8* packetBuffer, FwSizeType dataLength) {
     return false;
 }
 
-void Authenticate::rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut) {
+void Authenticate::rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
     this->log_WARNING_HI_PacketRejected();
     U32 newCount = this->m_rejectedPacketsCount.fetch_add(1) + 1;
     this->tlmWrite_RejectedPacketsCount(newCount);
-    contextOut.set_authenticated(0);
+
+    // Copy the context and set authenticated to false for the rejected packet
+    ComCfg::FrameContext contextOut = context;
+    contextOut.set_authenticated(false);
 
     // if the packet is rejected we no longer pass it down the comm stack
 
@@ -246,6 +247,7 @@ bool Authenticate::computeHMAC(const U8* data,
                                FwSizeType outputSize) {
     constexpr size_t kHmacOutputLength = 16;  // CCSDS 355.0-B-2 specifies 16 bytes
 
+    // TODO(nateinaction): hmmm outputSize < kHmacOutputLength compares two constants both of size 16
     if (output == nullptr || outputSize < kHmacOutputLength) {
         return false;
     }
@@ -290,18 +292,26 @@ bool Authenticate::computeHMAC(const U8* data,
 
     psa_hash_operation_t innerHash = PSA_HASH_OPERATION_INIT;
     status = psa_hash_setup(&innerHash, PSA_ALG_SHA_256);
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&innerHash, innerKey, kBlockSize);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
     }
-    // TODO(nateinaction): Why is success checked twice here? Why are there two hash updates?
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&innerHash, data, dataLength);
+
+    status = psa_hash_update(&innerHash, innerKey, kBlockSize);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
     }
+
+    status = psa_hash_update(&innerHash, data, dataLength);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
+    }
+
     U8 innerHashOutput[32];
     size_t innerHashLen = 0;
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_finish(&innerHash, innerHashOutput, sizeof(innerHashOutput), &innerHashLen);
-    }
+    status = psa_hash_finish(&innerHash, innerHashOutput, sizeof(innerHashOutput), &innerHashLen);
     if (status != PSA_SUCCESS) {
         this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
         return false;
@@ -315,17 +325,26 @@ bool Authenticate::computeHMAC(const U8* data,
 
     psa_hash_operation_t outerHash = PSA_HASH_OPERATION_INIT;
     status = psa_hash_setup(&outerHash, PSA_ALG_SHA_256);
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&outerHash, outerKey, kBlockSize);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
     }
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_update(&outerHash, innerHashOutput, innerHashLen);
+
+    status = psa_hash_update(&outerHash, outerKey, kBlockSize);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
     }
+
+    status = psa_hash_update(&outerHash, innerHashOutput, innerHashLen);
+    if (status != PSA_SUCCESS) {
+        this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
+        return false;
+    }
+
     U8 macOutput[32];
     size_t macOutputLength = 0;
-    if (status == PSA_SUCCESS) {
-        status = psa_hash_finish(&outerHash, macOutput, sizeof(macOutput), &macOutputLength);
-    }
+    status = psa_hash_finish(&outerHash, macOutput, sizeof(macOutput), &macOutputLength);
     if (status != PSA_SUCCESS) {
         this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
         return false;

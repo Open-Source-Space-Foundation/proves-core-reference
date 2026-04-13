@@ -1,6 +1,5 @@
 // ======================================================================
 // \title  Authenticate.hpp
-// \author Ines
 // \brief  hpp file for Authenticate component implementation class
 // ======================================================================
 
@@ -122,7 +121,7 @@ class Authenticate final : public AuthenticateComponentBase {
     );
 
     //! Reject packet that fails authentication
-    void rejectPacket(Fw::Buffer& data, ComCfg::FrameContext& contextOut);
+    void rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& contextOut);
 
     std::atomic<U32> m_sequenceNumber;             //!< The current sequence number
     std::atomic<U32> m_rejectedPacketsCount;       //!< Count of rejected packets for telemetry
