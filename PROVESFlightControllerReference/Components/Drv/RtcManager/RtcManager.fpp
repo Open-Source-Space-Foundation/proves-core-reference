@@ -26,9 +26,6 @@ module Drv {
 
         ### COMMANDS ###
 
-        # Alarm zephyr docs: https://docs.zephyrproject.org/latest/doxygen/html/group__rtc__interface.html#ga531c379c437a91df44a45e95063700e8
-        # When setting an alarm we should generate an ID and return it as an event
-
         @ TIME_SET command to set the time on the RTC
         sync command TIME_SET(
             t: Drv.TimeData @< Set the time
@@ -118,6 +115,12 @@ module Drv {
             ID: U16 @< ID of the alarm that was not canceled
             rc: U32 @< Return code from the RTC driver
         ) severity warning high id 15 format "Alarm with ID {} not canceled, return code: {}"
+
+        @ AlarmHardwareError event indicates hardware issues with the RTC
+        event AlarmHardwareError(
+            ID: U16 @< ID of the alarm that had a hardware error
+            rc: U32 @< Return code from the RTC driver
+        ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
 
         ### PORTS ###
 
