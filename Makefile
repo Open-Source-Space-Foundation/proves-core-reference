@@ -294,7 +294,6 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
 	    --no-app \
 	    --communication-selection none \
-	    --no-convert-dictionary \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
 	@sleep 5
