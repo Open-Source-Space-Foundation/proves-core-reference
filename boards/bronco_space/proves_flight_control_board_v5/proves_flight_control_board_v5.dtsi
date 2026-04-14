@@ -515,6 +515,7 @@ zephyr_udc0: &usbd {
 		reg = <0x52>;
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
 		backup-switch-mode = "direct";
+		alarms-count = <1>;
 		label = "RV3028";
 	};
 	mcp23017: mcp23017@20 {
