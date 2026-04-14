@@ -5,9 +5,69 @@
 
 #include "PacketParser.hpp"
 
+#include <psa/crypto.h>
+
 #include <cstring>
 
+// Include generated header with default key (generated at build time)
+#include "AuthDefaultKey.h"
+
 namespace Components {
+
+constexpr size_t kHmacOutputLength = 16;  // CCSDS 355.0-B-2 specifies 16 bytes
+constexpr size_t kSha256OutputLength = 32;
+constexpr size_t kKeyHexLength = 32;
+constexpr size_t kKeySize = 16;
+
+bool hexToNibble(char ch, uint8_t& nibble) {
+    if (ch >= '0' && ch <= '9') {
+        nibble = static_cast<uint8_t>(ch - '0');
+        return true;
+    }
+    if (ch >= 'a' && ch <= 'f') {
+        nibble = static_cast<uint8_t>(10 + (ch - 'a'));
+        return true;
+    }
+    if (ch >= 'A' && ch <= 'F') {
+        nibble = static_cast<uint8_t>(10 + (ch - 'A'));
+        return true;
+    }
+    return false;
+}
+
+bool parseHexKey(const char* key, uint8_t (&keyBytes)[kKeySize]) {
+    if (key == nullptr) {
+        return false;
+    }
+
+    const char* keyStr = key;
+    if (std::strlen(keyStr) != kKeyHexLength) {
+        return false;
+    }
+
+    for (size_t i = 0; i < kKeyHexLength; i += 2) {
+        uint8_t upper = 0;
+        uint8_t lower = 0;
+        if (!hexToNibble(keyStr[i], upper) || !hexToNibble(keyStr[i + 1], lower)) {
+            return false;
+        }
+        keyBytes[i / 2] = static_cast<uint8_t>((upper << 4) | lower);
+    }
+
+    return true;
+}
+
+psa_status_t importHmacKey(const uint8_t (&keyBytes)[kKeySize], psa_key_usage_t usage, psa_key_id_t& keyId) {
+    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+    psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
+    psa_set_key_bits(&attributes, static_cast<size_t>(kKeySize * 8));
+    psa_set_key_usage_flags(&attributes, usage);
+    psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
+
+    const psa_status_t status = psa_import_key(&attributes, keyBytes, sizeof(keyBytes), &keyId);
+    psa_reset_key_attributes(&attributes);
+    return status;
+}
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -25,6 +85,19 @@ bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
                                 const size_t dataSize,
                                 const uint32_t expectedSequenceNumber,
                                 const uint32_t sequenceNumberWindow) const {
+    // Parse SPI
+    uint32_t spi;
+    if (!this->parseSpi(dataBuffer, dataSize, spi)) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    // If SPI is invalid, no need to parse further
+    if (!this->validateSpi(spi)) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
     // Parse sequence number
     uint32_t sequenceNumber;
     if (!this->parseSequenceNumber(dataBuffer, dataSize, sequenceNumber)) {
@@ -32,10 +105,8 @@ bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
         return false;
     }
 
-    // TODO(nateinaction): Extract sequence number check to new method
     // If sequence number is invalid, no need to parse further
-    const uint32_t delta = sequenceNumber - expectedSequenceNumber;
-    if (delta > sequenceNumberWindow) {
+    if (!this->validateSequenceNumber(expectedSequenceNumber, sequenceNumber, sequenceNumberWindow)) {
         // TODO(nateinaction): Handle failure, maybe pass back custom error?
         return false;
     }
@@ -47,19 +118,9 @@ bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
         return false;
     }
 
-    // TODO(nateinaction): Extract opcode check to new method
     // If opcode allows bypass, no need to parse hmac
-    static constexpr uint32_t kBypassOpCodes[] = {
-        0x01000000,  // no op
-        0x2200B000,  // get sequence number
-        0x10065000,  // amateurRadio.TELL_JOKE
-    };
-    constexpr size_t kBypassOpCodesArrayLength = sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0]);
-
-    for (size_t i = 0; i < kBypassOpCodesArrayLength; i++) {
-        if (opCode == kBypassOpCodes[i]) {
-            return true;
-        }
+    if (this->validateOpCodeBypassAllowed(opCode)) {
+        return true;
     }
 
     // Parse hmac
@@ -69,9 +130,11 @@ bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
         return false;
     }
 
-    // compute hmac
-
-    // compare hmac
+    // if hmac is invalid, reject packet
+    if (!this->validateHmac(dataBuffer, dataSize, hmacTrailer)) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
 
     return true;
 }
@@ -79,6 +142,17 @@ bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
 // ----------------------------------------------------------------------
 //  Private helper methods
 // ----------------------------------------------------------------------
+
+bool PacketParser ::parseSpi(const uint8_t* dataBuffer, const size_t dataSize, uint32_t& spi) const {
+    // Validate header size
+    if (!dataBuffer || dataSize < kHeaderLength)
+        return false;
+
+    // Extract SPI from header bytes 0-1
+    spi = (static_cast<uint32_t>(dataBuffer[0]) << 8) | static_cast<uint32_t>(dataBuffer[1]);
+
+    return true;
+}
 
 bool PacketParser ::parseSequenceNumber(const uint8_t* dataBuffer,
                                         const size_t dataSize,
@@ -127,119 +201,9 @@ bool PacketParser ::parseHmac(const uint8_t* dataBuffer,
     return true;
 }
 
-bool PacketParser ::computeHmac(const uint8_t* dataBuffer,
-                                const size_t dataSize,
-                                std::array<std::uint8_t, kHmacLength>& hmac) const {
-    // TODO(nateinaction): Can this be replaced with psa_mac_compute
-
-    // constexpr size_t kHmacOutputLength = 16;  // CCSDS 355.0-B-2 specifies 16 bytes
-
-    // // TODO(nateinaction): hmmm outputSize < kHmacOutputLength compares two constants both of size 16
-    // if (output == nullptr || outputSize < kHmacOutputLength) {
-    //     return false;
-    // }
-
-    // // Initialize PSA crypto (idempotent, safe to call multiple times)
-    // psa_status_t status = psa_crypto_init();
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // // Parse key from hex string (32 hex characters = 16 bytes)
-    // const char* keyStr = key.toChar();
-    // if (key.length() != 32) {
-    //     this->log_WARNING_HI_InvalidSPI(-1);
-    //     return false;
-    // }
-
-    // // Parse hex string to bytes
-    // constexpr size_t kKeySize = 16;
-    // U8 keyBytes[kKeySize];
-    // for (FwSizeType i = 0; i < 32; i += 2) {
-    //     char byteStr[3] = {keyStr[i], keyStr[i + 1], '\0'};
-    //     keyBytes[i / 2] = static_cast<U8>(std::strtoul(byteStr, nullptr, 16));
-    // }
-
-    // // Implement HMAC-SHA-256 using PSA hash API (RFC 2104)
-    // // HMAC(k, m) = H(k XOR opad || H(k XOR ipad || m))
-    // constexpr size_t kBlockSize = 64;  // SHA-256 block size
-    // constexpr U8 kIpad = 0x36;
-    // constexpr U8 kOpad = 0x5C;
-
-    // // Prepare key: pad with zeros (key is always 16 bytes, which is < 64)
-    // U8 preparedKey[kBlockSize] = {0};
-    // std::memcpy(preparedKey, keyBytes, kKeySize);
-
-    // // Compute inner hash: H(k XOR ipad || m)
-    // U8 innerKey[kBlockSize];
-    // for (size_t i = 0; i < kBlockSize; i++) {
-    //     innerKey[i] = preparedKey[i] ^ kIpad;
-    // }
-
-    // psa_hash_operation_t innerHash = PSA_HASH_OPERATION_INIT;
-    // status = psa_hash_setup(&innerHash, PSA_ALG_SHA_256);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // status = psa_hash_update(&innerHash, innerKey, kBlockSize);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // status = psa_hash_update(&innerHash, data, dataLength);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // U8 innerHashOutput[32];
-    // size_t innerHashLen = 0;
-    // status = psa_hash_finish(&innerHash, innerHashOutput, sizeof(innerHashOutput), &innerHashLen);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // // Compute outer hash: H(k XOR opad || innerHash)
-    // U8 outerKey[kBlockSize];
-    // for (size_t i = 0; i < kBlockSize; i++) {
-    //     outerKey[i] = preparedKey[i] ^ kOpad;
-    // }
-
-    // psa_hash_operation_t outerHash = PSA_HASH_OPERATION_INIT;
-    // status = psa_hash_setup(&outerHash, PSA_ALG_SHA_256);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // status = psa_hash_update(&outerHash, outerKey, kBlockSize);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // status = psa_hash_update(&outerHash, innerHashOutput, innerHashLen);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // U8 macOutput[32];
-    // size_t macOutputLength = 0;
-    // status = psa_hash_finish(&outerHash, macOutput, sizeof(macOutput), &macOutputLength);
-    // if (status != PSA_SUCCESS) {
-    //     this->log_WARNING_HI_CryptoComputationError(static_cast<U32>(status));
-    //     return false;
-    // }
-
-    // // Copy first 16 bytes to output buffer
-    // std::memcpy(output, macOutput, kHmacOutputLength);
-    // return true;
+bool PacketParser ::validateSpi(uint32_t spi) const {
+    // For now we only support SPI 0, which indicates no additional security processing beyond HMAC
+    return spi == 0;
 }
 
 bool PacketParser ::validateSequenceNumber(uint32_t expected, uint32_t actual, uint32_t window) const {
@@ -272,8 +236,47 @@ bool PacketParser ::validateOpCodeBypassAllowed(uint32_t opCode) const {
     return false;
 }
 
-bool PacketParser ::validateHmac(const std::array<std::uint8_t, kHmacLength>& expected,
-                                 const std::array<std::uint8_t, kHmacLength>& actual) const {
-    // TODO(nateinaction): Use psa_mac_verify for constant time comparison to prevent timing attacks
-    return expected == actual;
+bool PacketParser ::validateHmac(const uint8_t* dataBuffer,
+                                 const size_t dataSize,
+                                 const std::array<std::uint8_t, kHmacLength>& expectedHmac) const {
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    uint8_t keyBytes[kKeySize];
+    if (!parseHexKey(AUTH_DEFAULT_KEY, keyBytes)) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    psa_key_id_t keyId = 0;
+    status = importHmacKey(keyBytes, PSA_KEY_USAGE_VERIFY_MESSAGE, keyId);
+    if (status != PSA_SUCCESS) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    uint8_t macOutput[kSha256OutputLength];
+    size_t macOutputLength = 0;
+    status = psa_mac_verify(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256),
+                            dataBuffer - kHmacLength,  // Authenticate over header + body
+                            dataSize - kHmacLength, macOutput, macOutputLength);
+    psa_status_t destroyStatus = psa_destroy_key(keyId);
+    if (destroyStatus != PSA_SUCCESS) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    if (status == PSA_ERROR_INVALID_SIGNATURE) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+    if (status != PSA_SUCCESS) {
+        // TODO(nateinaction): Handle failure, maybe pass back custom error?
+        return false;
+    }
+
+    return true;
 }

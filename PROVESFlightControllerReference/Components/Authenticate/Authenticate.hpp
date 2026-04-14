@@ -88,42 +88,11 @@ class Authenticate final : public AuthenticateComponentBase {
                             U32 value              //!< The sequence number to write
     );
 
-    //! Ensures that the received sequence number is within the acceptable window of the expected sequence number
-    bool validateSequenceNumber(U32 received,  //!< The received sequence number to validate
-                                U32 expected   //!< The expected sequence number
-    );
-
-    //! Checks if command opcode is in the list of opcodes that are allowed to bypass authentication
-    bool bypassAuth(U8* packetBuffer,      //!< The buffer containing the packet data
-                    FwSizeType dataLength  //!< The length of the packet data
-    );
-
-    //! Compute HMAC of the given data using the provided key
-    bool computeHMAC(const U8* data,  //!< The data to compute HMAC over (should include security header + payload)
-                     const FwSizeType dataLength,  //!< The length of the data
-                     const Fw::String& key,        //!< The key to use for HMAC computation
-                     U8* output,  //!< The buffer where the computed HMAC will be stored (must be at least 16 bytes for
-                                  //!< CCSDS 355.0-B-2)
-                     FwSizeType outputSize  //!< The size of the output buffer
-    );
-
-    //! Validates sent HMAC matches expected HMAC
-    bool compareHMAC(const U8* expected,  //! The expected HMAC value
-                     const U8* actual,    //! The actual HMAC value to compare
-                     FwSizeType length    //!< The length of the HMAC values (should be 16 bytes for CCSDS 355.0-B-2)
-    ) const;
-
-    //! Orchestrates HMAC validation with computeHMAC() and compareHMAC()
-    bool validateHMAC(const U8* data,  //!< The data to compute HMAC over (should include security header + payload)
-                      FwSizeType dataLength,     //! The length of the data
-                      const Fw::String& key,     //!< The key to use for HMAC computation
-                      const U8* securityTrailer  //! The security trailer containing the expected HMAC value
-    );
-
     //! Reject packet that fails authentication
     void rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& contextOut);
 
     std::atomic<U32> m_sequenceNumber;             //!< The current sequence number
+    std::atomic<U32> m_sequenceNumberWindow;       //!< The allowed window for sequence number validation
     std::atomic<U32> m_rejectedPacketsCount;       //!< Count of rejected packets for telemetry
     std::atomic<U32> m_authenticatedPacketsCount;  //!< Count of authenticated packets for telemetry
 };
