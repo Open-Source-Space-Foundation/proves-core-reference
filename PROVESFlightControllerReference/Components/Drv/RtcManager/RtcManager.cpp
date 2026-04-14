@@ -5,13 +5,26 @@
 
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManager.hpp"
 
+#include <errno.h>
+
+#include <cstdint>
+#include <random>
+
+#include <zephyr/device.h>
+#include <zephyr/drivers/rtc.h>
+#include <zephyr/kernel.h>
+#include <zephyr/syscalls/rtc.h>
+
 namespace Drv {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {}
+RtcManager ::RtcManager(const char* const compName) : RtcManagerComponentBase(compName), m_rtcHelper() {
+    // alarm time initialization
+    memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
+}
 
 RtcManager ::~RtcManager() {}
 
@@ -21,8 +34,14 @@ RtcManager ::~RtcManager() {}
 
 void RtcManager ::configure(const struct device* dev) {
     this->m_dev = dev;
-}
 
+    // match to timedata this is constant after being updated here, do not change
+    int rc = rtc_alarm_get_supported_fields(this->m_dev, 0, &this->m_curr_mask);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+    }
+}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
@@ -135,6 +154,160 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+// Alarm manager
+void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
+    // retrieve info about current alarm
+
+    uint16_t mask = this->m_curr_mask;
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+
+    // if alarm is already set, return an EALREADY error
+    if (rc == 0 && mask != 0) {
+        this->log_WARNING_HI_AlarmNotSet(t, EALREADY);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+    // populate alarm time
+    this->m_alarm_time.tm_sec = t.get_Second();
+    this->m_alarm_time.tm_min = t.get_Minute();
+    this->m_alarm_time.tm_hour = t.get_Hour();
+    this->m_alarm_time.tm_mday = t.get_Day();
+    this->m_alarm_time.tm_mon = t.get_Month() - 1;
+    this->m_alarm_time.tm_year = t.get_Year() - 1900;
+
+    // assure alarm is at a future point in time
+    struct rtc_time c_time;
+    struct rtc_time a_time = this->m_alarm_time;
+    rc = rtc_get_time(this->m_dev, &c_time);
+    if (rc != 0) {
+        // indicates hardware error
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+    int c_seconds = timeutil_timegm(rtc_time_to_tm(&c_time));
+    int a_seconds = timeutil_timegm(rtc_time_to_tm(&a_time));
+    if (a_seconds <= c_seconds) {
+        this->log_WARNING_HI_AlarmNotSet(t, EINVAL);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    // set the alarm
+    rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
+
+    // capture the return code for setting the alarm
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    // callback to trigger upon alarm trigger
+    rc = rtc_alarm_set_callback(this->m_dev, 0, RtcManager::static_alarm_callback_t, this);
+
+    // capture return code for the callback
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    // log success
+    this->log_ACTIVITY_HI_AlarmSet(0, t);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* user_data) {
+    // Reconstruct the object pointer from user_data
+    RtcManager* instance = static_cast<RtcManager*>(user_data);
+    if (instance != nullptr) {
+        instance->alarm_callback_t(dev, id);
+    }
+}
+
+void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
+    // actual callback
+    this->log_ACTIVITY_HI_AlarmTriggered(id);
+    for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
+        if (!this->isConnected_alarmTriggered_OutputPort(i)) {
+            continue;
+        }
+        this->alarmTriggered_out(i);
+    }
+    // cancel the alarm, so it won't go off repeatedly.
+    uint16_t mask = 0;
+    int rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+    }
+}
+
+void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 ID) {
+    // check if it's present
+    uint16_t mask = this->m_curr_mask;
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+
+    if (rc != 0) {
+        // indicates hardware error
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    if (mask != 0) {
+        // set mask to 0 to cancel alarm
+        mask = 0;
+        rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+        if (rc != 0) {
+            // log failure
+            this->log_WARNING_HI_AlarmHardwareError(0, rc);
+            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+            return;
+        }
+
+        this->log_ACTIVITY_HI_AlarmCanceled(ID);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
+    // handle no alarm case
+    this->log_WARNING_HI_AlarmNotCanceled(ID, 0);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+}
+
+void RtcManager ::ALARM_LIST_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // check if present, if so log its info.
+    uint16_t mask = this->m_curr_mask;
+    int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
+
+    // if the return code is nonzero, log the error.
+    if (rc != 0) {
+        // indicates hardware error
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+    }
+
+    // check the current mask to see if an alarm is active
+    if (mask > 0) {
+        // convert alarm time and log it
+        Drv::TimeData alarm_time_value(this->m_alarm_time.tm_year + 1900, this->m_alarm_time.tm_mon + 1,
+                                       this->m_alarm_time.tm_mday, this->m_alarm_time.tm_hour,
+                                       this->m_alarm_time.tm_min, this->m_alarm_time.tm_sec);
+        log_ACTIVITY_HI_AlarmSet(0, alarm_time_value);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+        return;
+    }
+
+    // no alarm is present, log accordingly.
+    Drv::TimeData alarm_none;
+    this->log_WARNING_HI_AlarmNotSet(alarm_none, 0);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
