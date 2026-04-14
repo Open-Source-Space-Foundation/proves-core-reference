@@ -24,9 +24,29 @@ submodules: ## Initialize and update git submodules
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
+FPRIME_YAMCS_MAIN ?= $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/__main__.py
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
-	@$(UV) pip install --prerelease=allow --requirement requirements.txt
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/pyyaml-override.txt
+	@echo "Applying fprime-yamcs noapp/path patch..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping patch"; exit 0; fi; \
+	  PATCH_DIR=$$(dirname $$TARGET); \
+	  if grep -q 'venv_bin = str(Path(sys.executable).parent)' $$TARGET; then \
+	    echo "⚠ fprime-yamcs patch already applied"; \
+	  elif patch --dry-run -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch > /dev/null 2>&1; then \
+	    patch -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch && echo "✓ Applied fprime-yamcs patch"; \
+	  else \
+	    echo "❌ Error: Unable to apply fprime-yamcs patch. Run 'ls $$TARGET' to check."; exit 1; \
+	  fi
+	@echo "Applying fprime-yamcs-events CPU fix..."
+	@EVENTS_PROC=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/events/processor.py 2>/dev/null | head -1); \
+	  if [ -z "$$EVENTS_PROC" ]; then echo "⚠ events processor not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-events-cpu-fix.py "$$EVENTS_PROC"
+	@echo "Applying fprime-yamcs instance config fix..."
+	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
+	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
 
 
 .PHONY: zephyr-setup
@@ -216,6 +236,91 @@ sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and
 clean: ## Remove all gitignored files
 	git clean -dfX
 
+##@ YAMCS
+
+.PHONY: yamcs-dict
+yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-artifacts; run 'make build' first)
+	@mkdir -p yamcs/yamcs-data/mdb
+	@DICT=$$(find build-artifacts -name "*TopologyDictionary.json" | head -1); \
+	  if [ -z "$$DICT" ]; then echo "Error: run 'make build' first"; exit 1; fi; \
+	  echo "Generating XTCE from $$DICT"; \
+	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
+	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
+
+.PHONY: yamcs-stop
+yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
+	@echo "Stopping YAMCS processes..."
+	@find_repo_pids() { \
+	  marker="$$1"; \
+	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" -v self="$$$$" 'index($$0, repo) && index($$0, marker) && $$1+0 != self+0 { print $$1 }'; \
+	}; \
+	stop_repo_processes() { \
+	  marker="$$1"; \
+	  label="$$2"; \
+	  pids="$$(find_repo_pids "$$marker" | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	  if [ -n "$$pids" ]; then \
+	    kill $$pids 2>/dev/null || true; \
+	    echo "  stopped $$label"; \
+	  fi; \
+	}; \
+	kill_udp_port() { \
+	  port="$$1"; label="$$2"; \
+	  pids="$$(lsof -tiUDP:$$port 2>/dev/null | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	  if [ -n "$$pids" ]; then \
+	    kill $$pids 2>/dev/null || true; \
+	    echo "  stopped $$label (port $$port)"; \
+	  fi; \
+	}; \
+	kill_udp_port 50001 'serial adapter'; \
+	kill_udp_port 50000 'TM UDP sender'; \
+	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
+	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
+	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
+	stop_repo_processes 'org.yamcs.YamcsServer' 'YAMCS server'; \
+	i=0; while lsof -iTCP:8090 -sTCP:LISTEN >/dev/null 2>&1; do \
+	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
+	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
+	    pids="$$(find_repo_pids 'org.yamcs.YamcsServer' | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	    [ -n "$$pids" ] && kill -9 $$pids 2>/dev/null || true; \
+	    break; \
+	  fi; \
+	done
+	@echo "Done."
+
+.PHONY: yamcs
+yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
+	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+	@$(MAKE) yamcs-stop
+	@echo "Starting YAMCS (requires Java 11+)..."
+	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
+	FPRIME_GDS_CONFIG_PATH=$(shell pwd)/yamcs/fprime-gds.yml \
+	$(UV_RUN) fprime-yamcs \
+	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
+	    --no-app \
+	    --communication-selection none \
+	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
+	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
+	@sleep 5
+	@echo "Starting fprime-yamcs-events bridge..."
+	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
+	@echo "Starting serial adapter on $(UART_DEVICE)..."
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
+	    --mode serial \
+	    --uart-device $(UART_DEVICE) \
+	    --uart-baud 115200
+
+.PHONY: yamcs-server
+yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
+	docker compose -f yamcs/docker-compose.yml up
+
+.PHONY: yamcs-adapter-tcp
+yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_PORT=, YAMCS_HOST=)
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
+	    --mode tcp \
+	    --tcp-host $(GS_HOST) \
+	    --tcp-port $(GS_PORT) \
+	    --yamcs-host $(YAMCS_HOST)
+
 ##@ Operations
 
 GDS_COMMAND ?= $(UV_RUN) fprime-gds
@@ -279,6 +384,6 @@ make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
 
-include lib/makelib/build-tools.mk
-include lib/makelib/ci.mk
-include lib/makelib/zephyr.mk
+include makelib/build-tools.mk
+include makelib/ci.mk
+include makelib/zephyr.mk
