@@ -54,46 +54,6 @@ from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E40
 # ---------------------------------------------------------------------------
 
 
-def _serial_read_exact(ser, n: int) -> bytes:
-    """Read exactly n bytes from serial, blocking until all bytes are available."""
-    buf = b""
-    while len(buf) < n:
-        chunk = ser.read(n - len(buf))
-        if chunk:
-            buf += chunk
-    return buf
-
-
-def _sync_serial_frame(ser, frame_length: int, sync_header: bytes) -> bytes:
-    """Scan the serial stream for a valid frame boundary and return the first complete frame.
-
-    The OS serial buffer may contain a partial frame from before the adapter
-    started (or the header bytes may appear in payload data as a false positive).
-    Scan byte by byte: each time the header pattern is found, read a full candidate
-    frame and validate its CRC. Only accept when the CRC is correct.
-    """
-    print(f"[TM] Searching for frame sync (header={sync_header.hex(' ')})...")
-    header_len = len(sync_header)
-    window = b""
-    attempts = 0
-    while True:
-        b = ser.read(1)
-        if not b:
-            continue
-        window = (window + b)[-header_len:]
-        if window != sync_header:
-            continue
-        # Candidate sync point — read the rest of the frame and validate CRC.
-        remainder = _serial_read_exact(ser, frame_length - header_len)
-        frame = sync_header + remainder
-        if _crc16_ccitt(frame[:-2]) == int.from_bytes(frame[-2:], "big"):
-            print(f"[TM] Frame sync acquired (after {attempts} false positives).")
-            return frame
-        # CRC mismatch — false positive, keep scanning from the next byte.
-        attempts += 1
-        window = b""  # reset window so we re-scan from inside the false frame
-
-
 def _forward_tm_serial(
     ser,
     tm_sock,

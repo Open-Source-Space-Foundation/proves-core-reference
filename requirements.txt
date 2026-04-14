@@ -6,6 +6,6 @@ tqdm
 -r lib/fprime/requirements.txt
 -r lib/zephyr-workspace/zephyr/scripts/requirements.txt
 yamcs-client==1.12.1
-fprime-xtce==0.1.0
-fprime-yamcs==0.1.1
+fprime-xtce==0.1.1
+fprime-yamcs==0.1.2
 pyserial>=3.5

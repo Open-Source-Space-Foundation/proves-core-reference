@@ -68,7 +68,7 @@ fixes = [
         '    - name: "tm_dump"\n',
         '    - name: "tm_realtime"\n'
         '      processor: "realtime"\n'
-        '      rootContainer: "/ReferenceDeployment|ReferenceDeployment/CCSDSSpacePacket"\n'
+        '      rootContainer: "/ReferenceDeployment_ReferenceDeployment/CCSDSSpacePacket"\n'
         '    - name: "tm_dump"\n',
     ),
 ]

@@ -252,7 +252,7 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	@echo "Stopping YAMCS processes..."
 	@find_repo_pids() { \
 	  marker="$$1"; \
-	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" 'index($$0, repo) && index($$0, marker) { print $$1 }'; \
+	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" -v self="$$$$" 'index($$0, repo) && index($$0, marker) && $$1+0 != self+0 { print $$1 }'; \
 	}; \
 	stop_repo_processes() { \
 	  marker="$$1"; \
@@ -263,13 +263,22 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	    echo "  stopped $$label"; \
 	  fi; \
 	}; \
-	stop_repo_processes 'proves_adapter.py' 'serial adapter'; \
+	kill_udp_port() { \
+	  port="$$1"; label="$$2"; \
+	  pids="$$(lsof -tiUDP:$$port 2>/dev/null | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
+	  if [ -n "$$pids" ]; then \
+	    kill $$pids 2>/dev/null || true; \
+	    echo "  stopped $$label (port $$port)"; \
+	  fi; \
+	}; \
+	kill_udp_port 50001 'serial adapter'; \
+	kill_udp_port 50000 'TM UDP sender'; \
 	stop_repo_processes 'opcode_ack_bridge.py' 'opcode-ack bridge'; \
 	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
 	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
 	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
 	stop_repo_processes 'org.yamcs.YamcsServer' 'YAMCS server'; \
-	i=0; while [ -n "$$(find_repo_pids 'org.yamcs.YamcsServer')" ]; do \
+	i=0; while lsof -iTCP:8090 -sTCP:LISTEN >/dev/null 2>&1; do \
 	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
 	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
 	    pids="$$(find_repo_pids 'org.yamcs.YamcsServer' | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
@@ -290,7 +299,6 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
 	    --no-app \
 	    --communication-selection none \
-	    --no-convert-dictionary \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
 	@sleep 5
@@ -379,6 +387,6 @@ make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
 
-include lib/makelib/build-tools.mk
-include lib/makelib/ci.mk
-include lib/makelib/zephyr.mk
+include makelib/build-tools.mk
+include makelib/ci.mk
+include makelib/zephyr.mk
