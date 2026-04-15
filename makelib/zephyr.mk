@@ -6,21 +6,23 @@ WEST ?= $(UV_RUN) west
 # UVX runs west without the active virtual environment
 WESTX ?= $(UVX) west
 
+ZEPHYR_PATH ?= lib/zephyr-workspace/zephyr
+ifeq ($(origin SDK_VERSION), undefined)
+SDK_VERSION := $(strip $(shell test -f "$(ZEPHYR_PATH)/SDK_VERSION" && cat "$(ZEPHYR_PATH)/SDK_VERSION"))
+endif
+ZEPHYR_SDK_PATH ?= $(HOME)/zephyr-sdk-$(SDK_VERSION)
+
 .PHONY: zephyr
 zephyr: zephyr-config zephyr-workspace zephyr-export zephyr-python-deps zephyr-sdk
 
 .PHONY: clean-zephyr
-clean-zephyr: clean-zephyr-config clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
+clean-zephyr: clean-zephyr-workspace clean-zephyr-export clean-zephyr-sdk
 
 .PHONY: zephyr-config
 zephyr-config: fprime-venv ## Configure west
 	@test -f .west/config || { \
 		$(WEST) init --local .; \
 	}
-
-.PHONY: clean-zephyr-config
-clean-zephyr-config: ## Remove west configuration
-	rm -rf .west
 
 .PHONY: zephyr-workspace
 zephyr-workspace: fprime-venv ## Setup Zephyr bootloader, modules, and tools directories
@@ -29,7 +31,7 @@ zephyr-workspace: fprime-venv ## Setup Zephyr bootloader, modules, and tools dir
 
 .PHONY: clean-zephyr-workspace
 clean-zephyr-workspace: ## Remove Zephyr bootloader, modules, and tools directories
-	rm -rf ../lib
+	git submodule deinit --all -f
 
 CMAKE_PACKAGES ?= ~/.cmake/packages
 .PHONY: zephyr-export
@@ -44,9 +46,6 @@ zephyr-export: fprime-venv ## Export Zephyr environment variables
 clean-zephyr-export: ## Remove Zephyr exported files
 	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
-ZEPHYR_PATH ?= lib/zephyr-workspace/zephyr
-SDK_VERSION ?= $(shell cat $(ZEPHYR_PATH)/SDK_VERSION)
-ZEPHYR_SDK_PATH ?= ~/zephyr-sdk-$(SDK_VERSION)
 .PHONY: zephyr-sdk
 zephyr-sdk: fprime-venv ## Install Zephyr SDK
 	@test -d $(ZEPHYR_SDK_PATH) || { \

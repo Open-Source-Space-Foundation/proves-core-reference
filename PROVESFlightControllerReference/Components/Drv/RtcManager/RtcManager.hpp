@@ -70,6 +70,29 @@ class RtcManager final : public RtcManagerComponentBase {
                              Drv::TimeData t       //!< Set the time
                              ) override;
 
+    //! Handler implementation for command ALARM_SET
+    //!
+    //! ALARM_SET command to set an alarm on the RTC
+    void ALARM_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                              U32 cmdSeq,           //!< The command sequence number
+                              Drv::TimeData t       //!< Time to set the alarm for
+                              ) override;
+
+    //! Handler implementation for command ALARM_CANCEL
+    //!
+    //! ALARM_CANCEL command to cancel any set alarms on the RTC
+    void ALARM_CANCEL_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                 U32 cmdSeq,           //!< The command sequence number
+                                 U16 ID                //!< ID of the alarm to cancel
+                                 ) override;
+
+    //! Handler implementation for command ALARM_LIST
+    //!
+    //! ALARM_LIST command to list all set alarms on the RTC
+    void ALARM_LIST_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq            //!< The command sequence number
+                               ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -93,6 +116,12 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Clear RTC invalid time log throttle
     void log_CONSOLE_RtcInvalidTime_ThrottleClear();
 
+    //! Alarm callback kicker method. Must be static but cannot reference this in a static context
+    static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
+
+    //! Actual alarm callback, for triggering events
+    void alarm_callback_t(const struct device* dev, uint16_t id);
+
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
@@ -106,6 +135,11 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_RtcNotReadyThrottle;       //!< Throttle for RtcNotReady
     std::atomic<bool> m_RtcGetTimeFailedThrottle;  //!< Throttle for RtcGetTimeFailed
     std::atomic<bool> m_RtcInvalidTimeThrottle;    //!< Throttle for RtcInvalidTime
+
+    // rtc alarm members
+
+    U16 m_curr_mask;               //!< The mask of the alarm present on hardware
+    struct rtc_time m_alarm_time;  //!< Current alarm's time settings
 };
 
 }  // namespace Drv
