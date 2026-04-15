@@ -68,19 +68,19 @@ manifest:
 
     # Crypto libraries (commonly used)
     - name: mbedtls
-      revision: 26158d1c012477e77765d138b26a791db917c881
+      revision: a3e190fe44c78d1ba67f55979e1257328cc7d0d8
       path: lib/zephyr-workspace/modules/crypto/mbedtls
       groups:
         - crypto
 
     - name: tf-psa-crypto
-      revision: 6820f1dadc67c289d2dc63aec495519c9d589d8e
+      revision: dc575a2ddcc8cb16275d24c42a52eaf79ebe2231
       path: lib/zephyr-workspace/modules/crypto/mbedtls/tf-psa-crypto
       groups:
         - crypto
 
     - name: mcuboot
-      revision: cf5810201c84d6e266aeda2abdab80854066ac08
+      revision: ee39e2d694bd827ffd1bebbce2f571a9154e6ec2
       path: lib/zephyr-workspace/bootloader/mcuboot
 
     - name: fatfs
