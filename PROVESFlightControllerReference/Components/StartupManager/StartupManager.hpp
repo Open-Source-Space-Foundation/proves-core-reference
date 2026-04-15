@@ -66,6 +66,11 @@ class StartupManager final : public StartupManagerComponentBase {
                                   const Fw::CmdResponse& response  //!< The command response argument
                                   ) override;
 
+    //! Handler implementation for sequenceStarted
+    void sequenceStarted_handler(FwIndexType portNum,            //!< The port number
+                                 const Fw::StringBase& fileName  //!< The file path for start-up sequence
+                                 ) override;
+
     //! Handler implementation for run
     //!
     //! Check RTC time diff
@@ -98,6 +103,7 @@ class StartupManager final : public StartupManagerComponentBase {
     FwSizeType m_boot_count;       //!< Current boot count
     U32 m_stored_sequence;         //!< Stored sequence number for delayed response
     std::atomic<bool> m_waiting;   //!< Indicates if waiting for quiescence
+    Fw::String m_sequence_file;    //!< The filepath for the sequence last initiated
 };
 
 }  // namespace Components
