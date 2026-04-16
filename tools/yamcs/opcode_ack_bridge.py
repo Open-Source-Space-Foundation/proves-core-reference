@@ -13,15 +13,18 @@ How it works
    pending (issued-but-not-yet-acknowledged) commands keyed by their F Prime
    component.command name.
 3. It also subscribes to YAMCS events and listens for events whose source is
-   ``FPrimeEventProcessor`` and whose type ends with ``OpCodeCompleted``.
+   ``FPrimeEventProcessor`` and whose type ends with ``OpCodeDispatched``
+   or ``OpCodeCompleted``.
 4. On every such event it:
    a. Reads the opcode from ``event.extra["Opcode"]``.
    b. Cross-references the F Prime GDS dictionary (loaded from the topology
       dictionary JSON) to resolve the opcode to the fully-qualified F Prime
       command name (e.g. ``cmdDisp.CMD_NO_OP``).
-   c. Pops the oldest pending YAMCS command with that name from the queue.
-   d. Posts a ``Completed_Status = OK`` acknowledgement via the YAMCS
-      UpdateCommandHistory REST API.
+   c. For OpCodeDispatched: posts ``Acknowledged_Status = OK`` (command was
+      dispatched to the target component).
+   d. For OpCodeCompleted: posts ``CommandComplete_Status = OK`` (populates
+      the YAMCS Completion section) and removes the command from the pending
+      queue.
 
 Usage
 -----
@@ -35,6 +38,7 @@ import os
 import sys
 import threading
 from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -68,10 +72,9 @@ class OpcodeAckBridge:
 
     # Source label set by FPrimeEventProcessor when publishing events.
     EVENT_SOURCE = "FPrimeEventProcessor"
-    # F Prime event type suffix that signals command completion.
+    # F Prime event type suffixes for command lifecycle events.
+    OPCODE_DISPATCHED_SUFFIX = "OpCodeDispatched"
     OPCODE_COMPLETED_SUFFIX = "OpCodeCompleted"
-    # YAMCS command history attribute name for completion stage.
-    ACK_STAGE = "Completed"
 
     def __init__(self, yamcs_url: str, yamcs_instance: str, dictionary_path: str):
         self.yamcs_url = yamcs_url
@@ -141,8 +144,8 @@ class OpcodeAckBridge:
         cmd_id: str = cmdhist.id
         yamcs_name: str = cmdhist.name
 
-        # Skip commands that have already received a Completed acknowledgement.
-        if f"{self.ACK_STAGE}_Status" in (cmdhist.attributes or {}):
+        # Skip commands that have already received a completion acknowledgement.
+        if "CommandComplete_Status" in (cmdhist.attributes or {}):
             return
 
         fprime_name = self._yamcs_to_fprime_name(yamcs_name)
@@ -157,17 +160,25 @@ class OpcodeAckBridge:
                 logger.debug(f"Tracking pending command: {fprime_name!r}  id={cmd_id}")
 
     def _on_event(self, event) -> None:
-        """Recognise OpCodeCompleted YAMCS events and post command acknowledgements."""
+        """Recognise OpCodeDispatched/OpCodeCompleted events and post acks."""
         if event.source != self.EVENT_SOURCE:
             return
-        if not (event.event_type or "").endswith(self.OPCODE_COMPLETED_SUFFIX):
+
+        event_type = event.event_type or ""
+        if event_type.endswith(self.OPCODE_DISPATCHED_SUFFIX):
+            stage = "Acknowledged"
+            pop_pending = False
+        elif event_type.endswith(self.OPCODE_COMPLETED_SUFFIX):
+            stage = "CommandComplete"
+            pop_pending = True
+        else:
             return
 
         extra = event.extra or {}
         opcode_str = extra.get("Opcode")
         if opcode_str is None:
             logger.warning(
-                f"Received OpCodeCompleted event without 'Opcode' in extra — "
+                f"Received {event_type} event without 'Opcode' in extra — "
                 f"ensure tools/apply-opcode-ack-fix.py has been applied. "
                 f"Message: {event.message!r}"
             )
@@ -182,13 +193,13 @@ class OpcodeAckBridge:
         cmd_template = self._opcode_map.get(opcode)
         if cmd_template is None:
             logger.warning(
-                f"OpCodeCompleted for opcode {opcode:#010x} — "
+                f"{event_type} for opcode {opcode:#010x} — "
                 f"opcode not found in F Prime GDS dictionary"
             )
             return
 
         fprime_name: str = cmd_template.get_full_name()
-        logger.info(f"OpCodeCompleted → opcode={opcode:#010x}  command={fprime_name!r}")
+        logger.info(f"{event_type} → opcode={opcode:#010x}  command={fprime_name!r}")
 
         with self._lock:
             queue = self._pending.get(fprime_name)
@@ -199,21 +210,22 @@ class OpcodeAckBridge:
                     "The command may have been issued before this bridge started."
                 )
                 return
-            cmd_id, yamcs_name = queue.popleft()
+            if pop_pending:
+                cmd_id, yamcs_name = queue.popleft()
+            else:
+                cmd_id, yamcs_name = queue[0]
 
-        self._post_completed_ack(cmd_id, yamcs_name)
+        self._post_ack(cmd_id, yamcs_name, stage)
 
     # ------------------------------------------------------------------
     # YAMCS REST API call
     # ------------------------------------------------------------------
 
-    def _post_completed_ack(self, cmd_id: str, yamcs_name: str) -> None:
-        """Post a ``Completed_Status = OK`` attribute to the YAMCS command history.
+    def _post_ack(self, cmd_id: str, yamcs_name: str, stage: str) -> None:
+        """Post a ``{stage}_Status = OK`` attribute to the YAMCS command history.
 
         YAMCS command acknowledgement stages follow the naming convention
-        ``{stage}_Status`` (string) and ``{stage}_Time`` (timestamp).  Setting
-        ``Completed_Status = OK`` marks the command as successfully completed in
-        both the YAMCS UI and the command history archive.
+        ``{stage}_Status`` (string) and ``{stage}_Time`` (timestamp).
         """
         req = commands_service_pb2.UpdateCommandHistoryRequest()
         req.instance = self.yamcs_instance
@@ -221,22 +233,28 @@ class OpcodeAckBridge:
         req.name = yamcs_name
         req.id = cmd_id
 
-        attr = req.attributes.add()
-        attr.name = f"{self.ACK_STAGE}_Status"
-        attr.value.type = yamcs_pb2.Value.STRING
-        attr.value.stringValue = "OK"
+        now = datetime.now(timezone.utc)
+        now_ms = int(now.timestamp() * 1000)
+        now_iso = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-        # The context path is relative to the YAMCS /api root.
+        attr_status = req.attributes.add()
+        attr_status.name = f"{stage}_Status"
+        attr_status.value.type = yamcs_pb2.Value.STRING
+        attr_status.value.stringValue = "OK"
+        attr_status.time = now_ms
+
+        attr_time = req.attributes.add()
+        attr_time.name = f"{stage}_Time"
+        attr_time.value.type = yamcs_pb2.Value.STRING
+        attr_time.value.stringValue = now_iso
+        attr_time.time = now_ms
+
         url = f"/processors/{self.yamcs_instance}/realtime/commandhistory{yamcs_name}"
         try:
             self.yamcs_client.ctx.post_proto(url, data=req.SerializeToString())
-            logger.info(
-                f"✓ Acknowledged {yamcs_name!r} (id={cmd_id}) as {self.ACK_STAGE}=OK"
-            )
+            logger.info(f"✓ {stage}=OK for {yamcs_name!r} (id={cmd_id})")
         except Exception as exc:
-            logger.error(
-                f"Failed to post command acknowledgement for {yamcs_name!r}: {exc}"
-            )
+            logger.error(f"Failed to post {stage} ack for {yamcs_name!r}: {exc}")
 
     # ------------------------------------------------------------------
     # Main loop
