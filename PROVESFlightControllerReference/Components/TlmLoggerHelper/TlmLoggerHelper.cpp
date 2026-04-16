@@ -25,7 +25,7 @@ void TlmLoggerHelper ::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U
     if (!this->m_connected)
         return;
 
-    this->comOut_out(0, data, 0);
+    this->comOut_out(0, data, context);
 }
 
 // ----------------------------------------------------------------------
