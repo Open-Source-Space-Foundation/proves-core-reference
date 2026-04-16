@@ -147,6 +147,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
+	@$(MAKE) yamcs-mdb
 
 ##@ Authentication Keys
 
@@ -242,6 +243,44 @@ yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-ar
 	  echo "Generating XTCE from $$DICT"; \
 	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
 	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
+
+.PHONY: yamcs-mdb
+yamcs-mdb: yamcs-dict ## Build the YAMCS Mission Database (alias for yamcs-dict, runs after build)
+
+.PHONY: yamcs-build-check
+yamcs-build-check: ## Validate YAMCS server boots via docker compose with the current MDB
+	@if [ ! -f yamcs/yamcs-data/mdb/fprime.xtce.xml ]; then \
+	  echo "Error: yamcs/yamcs-data/mdb/fprime.xtce.xml missing — run 'make yamcs-mdb' first"; \
+	  exit 1; \
+	fi
+	@echo "Starting YAMCS server (docker compose)..."
+	@docker compose -f yamcs/docker-compose.yml up -d
+	@echo "Waiting for YAMCS HTTP API on :8090 (up to 90s)..."
+	@i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 90 ]; then \
+	    echo "ERROR: YAMCS did not respond on :8090 within 90s"; \
+	    docker compose -f yamcs/docker-compose.yml logs; \
+	    docker compose -f yamcs/docker-compose.yml down; \
+	    exit 1; \
+	  fi; \
+	  sleep 1; \
+	done
+	@echo "Checking that instance fprime-project is RUNNING..."
+	@if ! curl -fsS http://localhost:8090/api/instances/fprime-project | grep -q '"state": *"RUNNING"'; then \
+	  echo "ERROR: instance fprime-project did not reach RUNNING"; \
+	  curl -sS http://localhost:8090/api/instances/fprime-project || true; \
+	  docker compose -f yamcs/docker-compose.yml logs; \
+	  docker compose -f yamcs/docker-compose.yml down; \
+	  exit 1; \
+	fi
+	@docker compose -f yamcs/docker-compose.yml down
+	@echo "YAMCS build check passed."
+
+.PHONY: test-yamcs
+test-yamcs: fprime-venv ## Run YAMCS round-trip tests (assumes 'make yamcs UART_DEVICE=...' is running)
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/yamcs \
+	  --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: yamcs-stop
 yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
