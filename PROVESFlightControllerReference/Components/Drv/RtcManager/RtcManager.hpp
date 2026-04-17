@@ -6,13 +6,12 @@
 #ifndef Components_RtcManager_HPP
 #define Components_RtcManager_HPP
 
-#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
-#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
-
 #include <Fw/Logger/Logger.hpp>
 #include <atomic>
 #include <cerrno>
 
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>

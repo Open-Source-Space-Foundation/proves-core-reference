@@ -98,7 +98,7 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | RtcManager-014 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
 | RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
-| RtcManager-017 | Errors occuring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
+| RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
 
 
 ## Port Descriptions
