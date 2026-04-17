@@ -6,12 +6,13 @@
 #ifndef Components_RtcManager_HPP
 #define Components_RtcManager_HPP
 
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
+
 #include <Fw/Logger/Logger.hpp>
 #include <atomic>
 #include <cerrno>
 
-#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
-#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
@@ -98,6 +99,12 @@ class RtcManager final : public RtcManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
+    //! Alarm callback kicker method. Must be static but cannot reference this in a static context
+    static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
+
+    //! Actual alarm callback, for triggering events
+    void alarm_callback_t(const struct device* dev, uint16_t id);
+
     //! Log RTC not ready once until throttle is cleared
     void log_CONSOLE_RtcNotReady();
 
@@ -116,12 +123,6 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Clear RTC invalid time log throttle
     void log_CONSOLE_RtcInvalidTime_ThrottleClear();
 
-    //! Alarm callback kicker method. Must be static but cannot reference this in a static context
-    static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
-
-    //! Actual alarm callback, for triggering events
-    void alarm_callback_t(const struct device* dev, uint16_t id);
-
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
@@ -137,7 +138,6 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_RtcInvalidTimeThrottle;    //!< Throttle for RtcInvalidTime
 
     // rtc alarm members
-
     U16 m_curr_mask;               //!< The mask of the alarm present on hardware
     struct rtc_time m_alarm_time;  //!< Current alarm's time settings
 };
