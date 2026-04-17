@@ -56,7 +56,7 @@ module Drv {
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
         @ TimeNotSet event indicates that the time was not set successfully
-        event TimeNotSet(rc: U32) severity warning high id 4 format "Time not set on RTC: {}"
+        event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
 
         @ YearValidationFailed event indicates that the provided year is invalid
         event YearValidationFailed(
@@ -97,7 +97,7 @@ module Drv {
         @ AlarmNotSet event indicates that the alarm was not set successfully
         event AlarmNotSet(
             t: Drv.TimeData @< Time for the alarm that was not set
-            rc: U32 @< Return code from the RTC driver
+            rc: I32 @< Return code from the RTC driver
         ) severity warning high id 12 format "Alarm not set on RTC for time: {}, return code: {}"
 
         @ AlarmTriggered event indicates that an alarm was triggered
@@ -113,13 +113,13 @@ module Drv {
         @ AlarmNotCanceled event indicates that an alarm was not canceled successfully
         event AlarmNotCanceled(
             ID: U16 @< ID of the alarm that was not canceled
-            rc: U32 @< Return code from the RTC driver
+            rc: I32 @< Return code from the RTC driver
         ) severity warning high id 15 format "Alarm with ID {} not canceled, return code: {}"
 
         @ AlarmHardwareError event indicates hardware issues with the RTC
         event AlarmHardwareError(
             ID: U16 @< ID of the alarm that had a hardware error
-            rc: U32 @< Return code from the RTC driver
+            rc: I32 @< Return code from the RTC driver
         ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
 
         ### PORTS ###
