@@ -298,7 +298,7 @@ void RtcManager::static_alarm_callback_t(const device* dev, uint16_t id, void* u
 }
 
 void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
-    // actual callback
+    // Inform downstream components of the alarm trigger
     this->log_ACTIVITY_HI_AlarmTriggered(id);
     for (int i = 0; i < getNum_alarmTriggered_OutputPorts(); i++) {
         if (!this->isConnected_alarmTriggered_OutputPort(i)) {
@@ -306,6 +306,7 @@ void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
         }
         this->alarmTriggered_out(i);
     }
+
     // cancel the alarm, so it won't go off repeatedly.
     uint16_t mask = 0;
     int rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
