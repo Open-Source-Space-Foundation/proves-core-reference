@@ -1,6 +1,9 @@
 # Components::RtcManager
 
-The RTC Manager component interfaces with the Real Time Clock (RTC) to provide time measurements. When the RTC is unavailable, the component automatically fails over to monotonic time (uptime since boot) to ensure continuous system operation.
+The RTC Manager component interfaces with the Real Time Clock (RTC) to provide time measurements. When the RTC is unavailable, the component automatically fails over to monotonic uptime to ensure continuous system operation.
+
+> [!IMPORTANT]
+> The code executed by the RTC Manager’s `timeGetPort` must never call into the eventing system. The timeGetPort is invoked frequently across F Prime and is used by the eventing system itself, any handler code must not use event ports, commands, or telemetry — doing so can cause deadlocks. Log any errors from the `timeGetPort` handler to the console with throttling to prevent flooding and do not allow those errors to cause the handler to fail. If the RTC is unavailable or an error occurs while retrieving time, the component must gracefully fall back to returning a monotonic uptime.
 
 ### Typical Usage
 
@@ -95,6 +98,7 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 | RtcManager-014 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
 | RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
+| RtcManager-017 | Errors occuring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
 
 
 ## Port Descriptions
@@ -220,7 +224,7 @@ sequenceDiagram
     RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_WORKSTATION_TIME`
 ```
 
-#### Failover to Monotonic Time (RTC Unavailable)
+#### Failover to Uptime (RTC Unavailable)
 
 ```mermaid
 sequenceDiagram
@@ -457,7 +461,7 @@ sequenceDiagram
 | Date | Description |
 |---|---|
 | 2025-9-18 | Initial RTC Manager component |
-| 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
+| 2025-11-14 | Added monotonic uptime failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
 | 2026-04-02 | Added basic functionality for setting and canceling RTC alarms |
 | 2026-04-09 | Hardening for more consistent behavior |
