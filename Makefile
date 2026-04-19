@@ -74,6 +74,10 @@ fmt: pre-commit-install ## Lint and format files
 data-budget: fprime-venv ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
 	@$(UV_RUN) python3 tools/data_budget.py $(if $(VERBOSE),--verbose,)
 
+.PHONY: data-diagram
+data-diagram: fprime-venv ## Generate Mermaid packet wire diagrams as Markdown (use OUTPUT=file.md to save to a file)
+	@$(UV_RUN) python3 tools/data_budget.py --diagram $(if $(OUTPUT),--output $(OUTPUT),)
+
 ##@ Documentation
 
 .PHONY: docs-sync
