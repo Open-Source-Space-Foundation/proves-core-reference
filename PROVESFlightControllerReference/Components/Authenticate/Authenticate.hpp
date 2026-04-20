@@ -72,8 +72,7 @@ class Authenticate final : public AuthenticateComponentBase {
     //! Initialize component
     //!
     //! Loads the sequence number from persistent storage
-    void init(FwEnumStoreType instance  //!< The instance number
-    );
+    void configure();
 
   private:
     // ----------------------------------------------------------------------

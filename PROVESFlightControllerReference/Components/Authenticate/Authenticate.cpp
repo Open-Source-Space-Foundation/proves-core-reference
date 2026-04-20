@@ -85,6 +85,9 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
         }
     }
 
+    // Now strip header and trailer from the buffer for forwarding
+    data.setData(data.getData() + PacketParser::kHeaderLength);
+    data.setSize(data.getSize() - PacketParser::kHeaderLength - PacketParser::kHmacLength);
     this->dataOut_out(0, data, contextOut);
 }
 
@@ -133,11 +136,8 @@ void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void Authenticate ::init(FwEnumStoreType instance) {
+void Authenticate ::configure() {
     Fw::ParamValid is_valid;
-
-    // Call init from the base class
-    AuthenticateComponentBase::init(instance);
 
     // Get the file path from the parameter
     this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
@@ -168,12 +168,12 @@ Os::File::Status Authenticate ::readSequenceNumber(U32& value) {
         this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
     }
 
+    // If the sequence number file does not exist, write it to disk with the default value of 0
     if (status != Os::File::DOESNT_EXIST) {
-        return status;
+        return this->writeSequenceNumber(0);
     }
 
-    // If the sequence number file does not exist, write it to disk with the default value of 0
-    return this->writeSequenceNumber(0);
+    return status;
 }
 
 Os::File::Status Authenticate ::writeSequenceNumber(const U32 value) {

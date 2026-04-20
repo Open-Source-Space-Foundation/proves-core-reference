@@ -12,9 +12,9 @@
 namespace Components {
 
 class PacketParser final {
-  private:
+  public:
     // ----------------------------------------------------------------------
-    //  Private constants
+    //  Public constants
     // ----------------------------------------------------------------------
 
     static constexpr size_t kHeaderLength = 6;

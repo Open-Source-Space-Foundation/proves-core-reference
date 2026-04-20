@@ -166,15 +166,16 @@ bool PacketParser ::parseSequenceNumber(const uint8_t* dataBuffer,
 }
 
 bool PacketParser ::parseOpCode(const uint8_t* dataBuffer, const size_t dataLength, uint32_t& opCode) const {
+    constexpr const size_t kSpacePacketHeaderLength = 6;
     constexpr const size_t kOpCodeStart = 2;
     constexpr const size_t kOpCodeLength = 4;
 
     // Validate buffer size
-    if (!dataBuffer || dataLength < kHeaderLength + kOpCodeStart + kOpCodeLength)
+    if (!dataBuffer || dataLength < kHeaderLength + kSpacePacketHeaderLength + kOpCodeStart + kOpCodeLength)
         return false;
 
     // Extract opcode bytes
-    const uint8_t* opCodePtr = dataBuffer + kHeaderLength + kOpCodeStart;
+    const uint8_t* opCodePtr = dataBuffer + kHeaderLength + kSpacePacketHeaderLength + kOpCodeStart;
     opCode = (static_cast<uint32_t>(opCodePtr[0]) << 24) | (static_cast<uint32_t>(opCodePtr[1]) << 16) |
              (static_cast<uint32_t>(opCodePtr[2]) << 8) | static_cast<uint32_t>(opCodePtr[3]);
 
