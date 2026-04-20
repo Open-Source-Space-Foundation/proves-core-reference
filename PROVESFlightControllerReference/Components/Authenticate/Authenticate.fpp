@@ -1,66 +1,80 @@
 module Components {
-    @ String type for hash values
-    type HashString = string size 128
+    @ FPP shadow-enum representing Components::PacketParser::ParseResult
+    enum ParseResult {
+        Ok,                             @< Packet was successfully parsed and authenticated
+        Bypass,                         @< Packet was successfully parsed and bypassed authentication based on OpCode
+        SpiParseError,                  @< SPI could not be parsed from packet
+        SpiValidationError,             @< SPI did not match expected value
+        SequenceNumberParseError,       @< Sequence number could not be parsed from packet
+        SequenceNumberValidationError,  @< Sequence number is outside the acceptable window
+        OpCodeParseError,               @< OpCode could not be parsed from packet
+        HmacParseError,                 @< HMAC could not be parsed from packet
+        HmacValidationError             @< HMAC key did not match expected value
+    }
 
     @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
     passive component Authenticate {
 
-        ##############################################################################
-        #### Uncomment the following examples to start customizing your component ####
-        ##############################################################################
+        ### Commands ###
 
+        @ Command to get the current sequence number
         sync command GET_SEQ_NUM()
 
+        @ Command to set the current sequence number
         sync command SET_SEQ_NUM(seq_num: U32)
 
-        telemetry AuthenticatedPacketsCount : U64
+        ### Telemetry ###
 
-        telemetry RejectedPacketsCount : U64
-
+        @ Telemetry for the current sequence number, updated on each successfully authenticated packet
         telemetry CurrentSequenceNumber : U32
 
-        # @ Events for packet authentication
+        @ Telemetry for the count of bypassed packets, updated on each packet that bypasses authentication based on OpCode
+        telemetry BypassPacketsCount : U32
 
-        event InvalidHash(apid: U32, spi: U32, seqNum: U32) severity warning high id 1 format "Authentication failed: APID={}, SPI={}, SeqNum={}" throttle 2
+        @ Telemetry for the count of rejected packets, updated on each packet that fails authentication
+        telemetry RejectedPacketsCount : U32
 
-        event SequenceNumberOutOfWindow(spi: U32, expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: seq_num={}, Expected={}, Window={}" throttle 2
+        ### Events ###
 
-        event InvalidSPI(spi: U32) severity warning high id 3 format "Invalid SPI received: SPI={}, packet rejected" throttle 2
+        @ SequenceNumberGet returns the current sequence number from the file system in response to a command
+        event SequenceNumberGet(seq_num: U32) severity activity high id 6 format "Sequence number is {}"
 
-        event EmitSequenceNumber(seq_num: U32) severity activity high id 6 format "The current sequence number is {}"
+        @SequenceNumberReadFailed indicates that there was an error reading the sequence number from the file system
+        event SequenceNumberReadFailed(status: Os.FileStatus) severity warning high id 14 format "Failed to read sequence number, error: {}"
 
-        event SetSequenceNumberSuccess(seq_num: U32, status: bool) severity activity high id 7 format "sequence number has been set to {}: {}" throttle 2
+        @ SequenceNumberSet indicates that the sequence number was set to a specified value through a command
+        event SequenceNumberSet(seq_num: U32) severity activity high id 7 format "Sequence number set to {}" throttle 2
 
-        event EmitSpiKey(key: HashString, authType: HashString) severity activity high id 9 format "SPI key is {} type is {}" throttle 2
+        @ SequenceNumberWriteFailed indicates that there was an error writing the sequence number to file
+        event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
 
-        event FileOpenError(error: U32, filename: string size 64) severity warning high id 10 format "File Error with Error {} for file: {}" throttle 2
+        @ SequenceNumberOutOfWindow indicates that a received packet had a sequence number that was outside of the acceptable window
+        event SequenceNumberOutOfWindow(expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: Expected={}, Window={}" throttle 2
 
-        event FoundSPIKey(found: bool) severity activity low id 11 format "Found SPI status: {}" throttle 2
+        @ PacketRejected indicates that a received packet was rejected due to failed authentication or parsing errors
+        event PacketRejected(result: ParseResult) severity warning high id 15 format "Packet Rejected: {}" throttle 2
 
-        event PacketTooShort(packet_size: U32) severity warning high id 12 format "Received packet is too short ({}) to process for authentication" throttle 2
+        ### Parameters ###
 
-        event InvalidHeader(apid: U32, spi: U32, seqNum: U32) severity warning high id 13 format "Invalid header in packet: APID={}, SPI={}, SeqNum={}" throttle 2
+        @ Parameter for the sequence numbers window size, used to prevent replay attacks. The window allows no reuse of previous sequence numbers but allows for new sequence numbers to be accepted within the window size
+        param SEQ_NUM_WINDOW : U32 default 50000
 
-        event CryptoComputationError(status: U32) severity warning high id 14 format "Crypto Computation Error: {}" throttle 2
+        @ Parameter for the file path where the current sequence number is stored
+        param SEQ_NUM_FILE_PATH : string default "//sequence_number.txt"
 
-        event PacketRejected() severity warning high id 15 format "Packet Rejected" throttle 2
-
-
-        # @ Ports for packet authentication
+        ### Ports ###
 
         @ Port receiving Space Packets from TcDeframer
         guarded input port dataIn: Svc.ComDataWithContext
+
+        @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
+        sync input port dataReturnIn: Svc.ComDataWithContext
 
         @ Port forwarding authenticated or non-authenticated packets to SpacePacketDeframer
         output port dataOut: Svc.ComDataWithContext
 
         @ Port returning ownership of invalid/unauthorized packets back to upstream component (TcDeframer)
         output port dataReturnOut: Svc.ComDataWithContext
-
-        @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
-        sync input port dataReturnIn: Svc.ComDataWithContext
-
-        param SEQ_NUM_WINDOW : U32 default 50000
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

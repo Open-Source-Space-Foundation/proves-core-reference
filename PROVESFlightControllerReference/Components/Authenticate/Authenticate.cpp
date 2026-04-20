@@ -14,17 +14,20 @@
 // Include generated header with default key (generated at build time)
 #include "AuthDefaultKey.h"
 
-// File path for storing the sequence number persistently
-// TODO(nateinaction): Move to parameter
-constexpr const char SEQUENCE_NUMBER_PATH[] = "//sequence_number.txt";
-
 namespace Components {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Authenticate ::Authenticate(const char* const compName) : AuthenticateComponentBase(compName), m_sequenceNumber(0) {}
+Authenticate ::Authenticate(const char* const compName)
+    : AuthenticateComponentBase(compName),
+      m_packetParser(PacketParser()),
+      m_sequenceNumberFilePath(),
+      m_sequenceNumber(0),
+      m_sequenceNumberWindow(0),
+      m_bypassPacketsCount(0),
+      m_rejectedPacketsCount(0) {}
 
 Authenticate ::~Authenticate() {}
 
@@ -33,33 +36,56 @@ Authenticate ::~Authenticate() {}
 // ----------------------------------------------------------------------
 
 void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    U8* dataBuffer = data.getData();
-    FwSizeType dataSize = data.getSize();
+    ComCfg::FrameContext contextOut = context;
 
-    int rc =
-        this->m_packetParser.parsePacket(dataBuffer, dataSize, this->m_sequenceNumber, this->m_sequenceNumberWindow);
-    if (rc == PacketParser::PARSE_ERROR) {
-        this->log_WARNING_HI_InvalidHeader(context.get_apid());
-        this->rejectPacket(data, context);
-        return;
-    } else if (rc == PacketParser::CRYPTO_ERROR) {
-        this->log_WARNING_HI_CryptoComputationError(context.get_apid());
-        this->rejectPacket(data, context);
-        return;
-    } else if (rc == PacketParser::REJECT_PACKET) {
-        this->log_WARNING_HI_PacketRejected();
-        this->rejectPacket(data, context);
-        return;
+    PacketParser::ParseResult rc = this->m_packetParser.parsePacket(
+        data.getData(), data.getSize(), this->m_sequenceNumber, this->m_sequenceNumberWindow);
+    switch (rc) {
+        case PacketParser::ParseResult::Ok: {
+            // Telemeter the updated sequence number
+            this->m_sequenceNumber += 1;
+            this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+
+            // Write sequence number to persistent storage
+            Os::File::Status status = this->writeSequenceNumber(this->m_sequenceNumber);
+            if (status != Os::File::OP_OK) {
+                // TODO(nateinaction): Decide what the appropriate behavior should be
+            }
+
+            break;
+        }
+
+        case PacketParser::ParseResult::Bypass: {
+            // Telemeter the updated bypass packet count
+            this->m_bypassPacketsCount += 1;
+            this->tlmWrite_BypassPacketsCount(this->m_bypassPacketsCount);
+
+            break;
+        }
+
+        case PacketParser::ParseResult::SequenceNumberValidationError: {
+            // Log the sequence number validation failure
+            this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
+
+            // fall through
+        }
+
+        default: {
+            // Telemeter the updated rejected packet count
+            this->m_rejectedPacketsCount += 1;
+            this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
+
+            // Log the packet rejection
+            this->log_WARNING_HI_PacketRejected(static_cast<ParseResult::T>(rc));
+
+            // Set frame context authenticated to false
+            contextOut.set_authenticated(false);
+
+            break;
+        }
     }
 
-    this->m_sequenceNumber = this->m_sequenceNumber + 1;
-    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, this->m_sequenceNumber);
-    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
-
-    U32 newCount = this->m_authenticatedPacketsCount.fetch_add(1) + 1;
-    this->tlmWrite_AuthenticatedPacketsCount(newCount);
-
-    this->dataOut_out(0, data, context);
+    this->dataOut_out(0, data, contextOut);
 }
 
 void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
@@ -71,17 +97,35 @@ void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 // ----------------------------------------------------------------------
 
 void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    U32 fileSequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
+    // Read the sequence number from the file system
+    U32 sequenceNumber = 0;
+    Os::File::Status status = this->readSequenceNumber(sequenceNumber);
+    if (status != Os::File::OP_OK) {
+        // Return execution error response
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
-    this->log_ACTIVITY_HI_EmitSequenceNumber(fileSequenceNumber);
+    // Log the successful sequence number get
+    this->log_ACTIVITY_HI_SequenceNumberGet(sequenceNumber);
+
+    // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
-    // Writes the sequence number to the file system
-    this->writeSequenceNumber(SEQUENCE_NUMBER_PATH, seq_num);
+    // Write the sequence number to the file system
+    Os::File::Status status = this->writeSequenceNumber(seq_num);
+    if (status != Os::File::OP_OK) {
+        // Return execution error response
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
-    this->log_ACTIVITY_HI_SetSequenceNumberSuccess(seq_num, true);
+    // Log the successful sequence number set
+    this->log_ACTIVITY_HI_SequenceNumberSet(seq_num);
+
+    // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -90,56 +134,56 @@ void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 
 // ----------------------------------------------------------------------
 
 void Authenticate ::init(FwEnumStoreType instance) {
+    Fw::ParamValid is_valid;
+
     // Call init from the base class
     AuthenticateComponentBase::init(instance);
 
-    // Init the sequence number
-    U32 sequenceNumber = this->readSequenceNumber(SEQUENCE_NUMBER_PATH);
-    this->m_sequenceNumber = sequenceNumber;
+    // Get the file path from the parameter
+    this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
+    // Get the sequence number from the file system
+    U32 sequenceNumber;
+    Os::File::Status status = this->readSequenceNumber(sequenceNumber);
+    FW_ASSERT(status == Os::File::OP_OK);
+
+    // Telemeter the current sequence number
     this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
 
-    // Init the window parameter
-    Fw::ParamValid valid;
-    this->m_sequenceNumberWindow = this->paramGet_SEQ_NUM_WINDOW(valid);
-    // TODO(nateinaction): Check param validity and handle case where param is invalid
+    // Get the sequence number window size from the parameter
+    this->m_sequenceNumberWindow = this->paramGet_SEQ_NUM_WINDOW(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 }
 
 // ----------------------------------------------------------------------
 // Private helper methods
 // ----------------------------------------------------------------------
 
-U32 Authenticate ::readSequenceNumber(const char* filepath) {
-    U32 value = 0;
-    Os::File::Status status = Utilities::FileHelper::readFromFile(filepath, value);
+Os::File::Status Authenticate ::readSequenceNumber(U32& value) {
+    // Read the sequence number from the file system
+    Os::File::Status status = Utilities::FileHelper::readFromFile(this->m_sequenceNumberFilePath.toChar(), value);
     if (status != Os::File::OP_OK) {
-        // TODO(nateinaction): do we want to set sequence number to 0 if we fail to read it? or should we handle this
-        // differently?
-        // TODO(nateinaction): status of this write is never checked
-        Utilities::FileHelper::writeToFile(filepath, value);
+        // Log the failure to read the sequence number
+        this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
     }
-    return value;
+
+    if (status != Os::File::DOESNT_EXIST) {
+        return status;
+    }
+
+    // If the sequence number file does not exist, write it to disk with the default value of 0
+    return this->writeSequenceNumber(0);
 }
 
-U32 Authenticate ::writeSequenceNumber(const char* filepath, U32 value) {
-    // Copy value to buffer to avoid type punning
-    // TODO(nateinaction): status of this write is never checked
-    Utilities::FileHelper::writeToFile(filepath, value);
-    // TODO(nateinaction): do we need to return the value? It is passed in as an argument so the caller already has it
-    return value;
-}
+Os::File::Status Authenticate ::writeSequenceNumber(const U32 value) {
+    Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), value);
+    if (status != Os::File::OP_OK) {
+        // Log the failure to write the default sequence number
+        this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));
+    }
 
-void Authenticate::rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    this->log_WARNING_HI_PacketRejected();
-    U32 newCount = this->m_rejectedPacketsCount.fetch_add(1) + 1;
-    this->tlmWrite_RejectedPacketsCount(newCount);
-
-    // Copy the context and set authenticated to false for the rejected packet
-    ComCfg::FrameContext contextOut = context;
-    contextOut.set_authenticated(false);
-
-    // if the packet is rejected we no longer pass it down the comm stack
-
-    this->dataReturnOut_out(0, data, contextOut);
+    return status;
 }
 
 }  // namespace Components

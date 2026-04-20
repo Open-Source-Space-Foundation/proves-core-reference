@@ -81,62 +81,55 @@ PacketParser ::~PacketParser() {}
 // Public helper methods
 // ----------------------------------------------------------------------
 
-bool PacketParser ::parsePacket(const uint8_t* dataBuffer,
-                                const size_t dataSize,
-                                const uint32_t expectedSequenceNumber,
-                                const uint32_t sequenceNumberWindow) const {
+PacketParser::ParseResult PacketParser ::parsePacket(const uint8_t* dataBuffer,
+                                                     const size_t dataSize,
+                                                     const uint32_t expectedSequenceNumber,
+                                                     const uint32_t sequenceNumberWindow) const {
     // Parse SPI
     uint32_t spi;
     if (!this->parseSpi(dataBuffer, dataSize, spi)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::SpiParseError;
     }
 
     // If SPI is invalid, no need to parse further
     if (!this->validateSpi(spi)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::SpiValidationError;
     }
 
     // Parse sequence number
     uint32_t sequenceNumber;
     if (!this->parseSequenceNumber(dataBuffer, dataSize, sequenceNumber)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::SequenceNumberParseError;
     }
 
     // If sequence number is invalid, no need to parse further
     if (!this->validateSequenceNumber(expectedSequenceNumber, sequenceNumber, sequenceNumberWindow)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::SequenceNumberValidationError;
     }
 
     // Parse opcode
     uint32_t opCode;
     if (!this->parseOpCode(dataBuffer, dataSize, opCode)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::OpCodeParseError;
     }
 
     // If opcode allows bypass, no need to parse hmac
     if (this->validateOpCodeBypassAllowed(opCode)) {
-        return true;
+        return ParseResult::Bypass;
     }
 
     // Parse hmac
-    std::array<std::uint8_t, kHmacLength> hmacTrailer;
+    std::array<uint8_t, kHmacLength> hmacTrailer;
     if (!this->parseHmac(dataBuffer, dataSize, hmacTrailer)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::HmacParseError;
     }
 
     // if hmac is invalid, reject packet
     if (!this->validateHmac(dataBuffer, dataSize, hmacTrailer)) {
-        // TODO(nateinaction): Handle failure, maybe pass back custom error?
-        return false;
+        return ParseResult::HmacValidationError;
     }
 
-    return true;
+    return ParseResult::Ok;
 }
 
 // ----------------------------------------------------------------------
@@ -162,7 +155,7 @@ bool PacketParser ::parseSequenceNumber(const uint8_t* dataBuffer,
         return false;
 
     // Extract security header
-    std::array<std::uint8_t, PacketParser::kHeaderLength> header;
+    std::array<uint8_t, PacketParser::kHeaderLength> header;
     std::memcpy(header.data(), dataBuffer, header.size());
 
     // Extract sequence number from header bytes 2-5
@@ -190,7 +183,7 @@ bool PacketParser ::parseOpCode(const uint8_t* dataBuffer, const size_t dataLeng
 
 bool PacketParser ::parseHmac(const uint8_t* dataBuffer,
                               const size_t dataSize,
-                              std::array<std::uint8_t, PacketParser::kHmacLength>& hmac) const {
+                              std::array<uint8_t, PacketParser::kHmacLength>& hmac) const {
     // Validate buffer size
     if (!dataBuffer || dataSize < kHmacLength)
         return false;
@@ -238,7 +231,7 @@ bool PacketParser ::validateOpCodeBypassAllowed(uint32_t opCode) const {
 
 bool PacketParser ::validateHmac(const uint8_t* dataBuffer,
                                  const size_t dataSize,
-                                 const std::array<std::uint8_t, kHmacLength>& expectedHmac) const {
+                                 const std::array<uint8_t, kHmacLength>& expectedHmac) const {
     psa_status_t status = psa_crypto_init();
     if (status != PSA_SUCCESS) {
         // TODO(nateinaction): Handle failure, maybe pass back custom error?
@@ -280,3 +273,5 @@ bool PacketParser ::validateHmac(const uint8_t* dataBuffer,
 
     return true;
 }
+
+}  // namespace Components

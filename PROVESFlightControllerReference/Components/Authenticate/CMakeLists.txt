@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Authenticate.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/Authenticate.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PacketParser.cpp"
     DEPENDS
         kernel
         FprimeExtras_Utilities_FileHelper

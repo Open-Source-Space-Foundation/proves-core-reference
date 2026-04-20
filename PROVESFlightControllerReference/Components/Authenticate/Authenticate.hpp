@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include "PROVESFlightControllerReference/Components/Authenticate/AuthenticateComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/Authenticate/PacketParser.hpp"
 
 namespace Components {
 
@@ -80,21 +81,24 @@ class Authenticate final : public AuthenticateComponentBase {
     // ----------------------------------------------------------------------
 
     // Loads the sequence number from the specified file path
-    U32 readSequenceNumber(const char* filepath  //!< File path where sequence number is stored
+    Os::File::Status readSequenceNumber(U32& value  //!< The variable to store the read sequence number
     );
 
     //! Writes the sequence number to the specified file path
-    U32 writeSequenceNumber(const char* filepath,  //!< File path where sequence number is stored
-                            U32 value              //!< The sequence number to write
+    Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
     );
 
-    //! Reject packet that fails authentication
-    void rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& contextOut);
+  private:
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
 
-    std::atomic<U32> m_sequenceNumber;             //!< The current sequence number
-    std::atomic<U32> m_sequenceNumberWindow;       //!< The allowed window for sequence number validation
-    std::atomic<U32> m_rejectedPacketsCount;       //!< Count of rejected packets for telemetry
-    std::atomic<U32> m_authenticatedPacketsCount;  //!< Count of authenticated packets for telemetry
+    PacketParser m_packetParser;              //!< Packet parser for authentication validation
+    Fw::String m_sequenceNumberFilePath;      //!< File path where sequence number is stored
+    std::atomic<U32> m_sequenceNumber;        //!< The current sequence number
+    std::atomic<U32> m_sequenceNumberWindow;  //!< The allowed window for sequence number validation
+    std::atomic<U32> m_bypassPacketsCount;    //!< Count of packets that bypass authentication
+    std::atomic<U32> m_rejectedPacketsCount;  //!< Count of rejected packets
 };
 
 }  // namespace Components

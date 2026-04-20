@@ -157,9 +157,9 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Authenticate id 6 group 5 {
-    #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
-    ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
-    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+    #ComCcsdsSband.authenticatesband.BypassPacketsCount
+    ComCcsdsLora.authenticatelora.BypassPacketsCount
+    ComCcsdsUart.authenticate.BypassPacketsCount
 
     #ComCcsdsSband.authenticatesband.RejectedPacketsCount
     ComCcsdsLora.authenticatelora.RejectedPacketsCount

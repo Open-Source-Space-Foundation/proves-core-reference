@@ -6,6 +6,8 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 
 namespace Components {
 
@@ -23,12 +25,17 @@ class PacketParser final {
     //  Public types
     // ----------------------------------------------------------------------
 
-    //! PacketMeta stores information extracted from the packet
-    struct PacketMeta {
-        uint32_t opCode;                                     //!< Op code extracted from the packet body
-        uint32_t sequenceNumber;                             //!< Sequence number extracted from the packet header
-        std::array<std::uint8_t, kHmacLength> hmacTrailer;   //!< HMAC value extracted from the packet trailer
-        std::array<std::uint8_t, kHmacLength> hmacComputed;  //!< HMAC value computed from the packet header and body
+    //! Result of parsing a packet
+    enum class ParseResult {
+        Ok,
+        Bypass,
+        SpiParseError,
+        SpiValidationError,
+        SequenceNumberParseError,
+        SequenceNumberValidationError,
+        OpCodeParseError,
+        HmacParseError,
+        HmacValidationError,
     };
 
   public:
@@ -48,10 +55,10 @@ class PacketParser final {
     // ----------------------------------------------------------------------
 
     //! Parse the packet
-    bool parsePacket(const uint8_t* dataBuffer,              //!< The buffer containing the packet data
-                     const size_t dataSize,                  //!< The size of the packet data
-                     const uint32_t expectedSequenceNumber,  //!< The expected sequence number for validation
-                     const uint32_t sequenceNumberWindow     //!< The allowed window for sequence number validation
+    ParseResult parsePacket(const uint8_t* dataBuffer,              //!< The packet data buffer
+                            const size_t dataSize,                  //!< The packet data size
+                            const uint32_t expectedSequenceNumber,  //!< The expected sequence number
+                            const uint32_t sequenceNumberWindow     //!< The allowed sequence number window
     ) const;
 
   private:
@@ -60,40 +67,48 @@ class PacketParser final {
     // ----------------------------------------------------------------------
 
     //! Parse SPI from the packet header
-    bool parseSpi(const uint8_t* dataBuffer, const size_t dataSize, uint32_t& spi) const;
+    bool parseSpi(const uint8_t* dataBuffer,  //!< The packet data buffer
+                  const size_t dataSize,      //!< The packet data size
+                  uint32_t& spi               //!< The SPI
+    ) const;
 
     //! Parse the sequence number from the packet header
-    bool parseSequenceNumber(const uint8_t* dataBuffer,  //!< The buffer containing the packet data
-                             const size_t dataLength,    //!< The length of the packet data
+    bool parseSequenceNumber(const uint8_t* dataBuffer,  //!< The packet data buffer
+                             const size_t dataLength,    //!< The packet data size
                              uint32_t& sequenceNumber    //!< The sequence number
     ) const;
 
     //! Parse the opcode from the packet body
-    bool parseOpCode(const uint8_t* dataBuffer,  //!< The buffer containing the packet data
-                     const size_t dataLength,    //!< The length of the packet data
+    bool parseOpCode(const uint8_t* dataBuffer,  //!< The packet data buffer
+                     const size_t dataLength,    //!< The packet data size
                      uint32_t& opCode            //!< The opcode
     ) const;
 
     //! Parse the HMAC from the packet trailer
-    bool parseHmac(const uint8_t* dataBuffer,                   //!< The buffer containing the packet data
-                   const size_t dataSize,                       //!< The size of the packet data
-                   std::array<std::uint8_t, kHmacLength>& hmac  //!< The HMAC
+    bool parseHmac(const uint8_t* dataBuffer,              //!< The packet data buffer
+                   const size_t dataSize,                  //!< The packet data size
+                   std::array<uint8_t, kHmacLength>& hmac  //!< The HMAC
     ) const;
 
     //! Validate the SPI value from the packet header
-    bool validateSpi(uint32_t spi) const;
+    bool validateSpi(uint32_t spi  //!< The SPI
+    ) const;
 
     //! Validate the sequence number against the expected value and allowed window
-    bool validateSequenceNumber(uint32_t expected, uint32_t actual, uint32_t window) const;
+    bool validateSequenceNumber(uint32_t expected,  //!< The expected sequence number
+                                uint32_t actual,    //!< The actual sequence number
+                                uint32_t window     //!< The allowed sequence number window
+    ) const;
 
     //! Validate the opcode is allowed to bypass authentication
-    bool validateOpCodeBypassAllowed(uint32_t opCode) const;
+    bool validateOpCodeBypassAllowed(uint32_t opCode  //!< The opcode
+    ) const;
 
     //! Validate the computed HMAC with the expected HMAC from the packet trailer
-    bool validateHmac(const uint8_t* dataBuffer,  //!< The buffer containing the packet data
-                      const size_t dataSize,      //!< The size of the packet data
-                      const std::array<std::uint8_t, kHmacLength>&
-                          expectedHmac  //!< The expected HMAC extracted from the packet trailer
+    bool validateHmac(
+        const uint8_t* dataBuffer,                            //!< The packet data buffer
+        const size_t dataSize,                                //!< The packet data size
+        const std::array<uint8_t, kHmacLength>& expectedHmac  //!< The expected HMAC extracted from the packet trailer
     ) const;
 };
 
