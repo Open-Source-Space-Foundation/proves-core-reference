@@ -31,8 +31,11 @@ def yamcs_client():
     last_error: Exception | None = None
     while time.time() < deadline:
         try:
-            instance = client.get_instance(YAMCS_INSTANCE)
-            if getattr(instance, "state", None) == "RUNNING":
+            instance = next(
+                (i for i in client.list_instances() if i.name == YAMCS_INSTANCE),
+                None,
+            )
+            if instance is not None and getattr(instance, "state", None) == "RUNNING":
                 yield client
                 return
         except Exception as exc:
