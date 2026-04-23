@@ -98,7 +98,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
 	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
+	@cp PROVESFlightControllerReference/Components/PacketProcessor/docs/sdd.md docs-site/components/PacketProcessor.md
 	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
 	@# Copy images
 	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
@@ -130,7 +130,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/PacketProcessor/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -265,7 +265,7 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/PacketProcessor/
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id

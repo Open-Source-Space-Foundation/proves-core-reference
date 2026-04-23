@@ -1,22 +1,22 @@
-# Components::Authenticate
+# Components::PacketProcessor
 
-The Authenticate component verifies the integrity and authenticity of CCSDS command packets using HMAC (Hash-Based Message Authentication Code) in accordance with CCSDS Space Data Link Security Protocol, CCSDS 355.0-B-2 (July 2022). It adds a parameter on the config that goes with every packet that says whether or not the component is authenticated.
+The PacketProcessor component verifies the integrity and authenticity of CCSDS command packets using HMAC (Hash-Based Message Authentication Code) in accordance with CCSDS Space Data Link Security Protocol, CCSDS 355.0-B-2 (July 2022). It adds a parameter on the config that goes with every packet that says whether or not the component is authenticated.
 
 ## Overview
 
-The Authenticate component sits in the uplink communications path between the `TcDeframer` and `SpacePacketDeframer` components. It adds a authenticated tag to the config of each packet before they are deframed and routed to the command dispatcher.  The component implements security features including:
+The PacketProcessor component sits in the uplink communications path between the `TcDeframer` and `SpacePacketDeframer` components. It adds a authenticated tag to the config of each packet before they are deframed and routed to the command dispatcher.  The component implements security features including:
 
 - HMAC-based authentication per CCSDS 355.0-B-2
 - Security Association (SA) management with SPI-based key selection
 - Sequence number validation and anti-replay protection
 
 Connections:
-TcDeFramer.dataOut -> Authenticate.dataIn
-Authenticate->dataOut -> SpacePacketDeframer
-Authenticate->dataReturnOut -> TcDeframer.dataReturnIn
-SpacePacketDeframer.dataReturnOut -> Authenticate.dataReturnIn
+TcDeFramer.dataOut -> PacketProcessor.dataIn
+PacketProcessor->dataOut -> SpacePacketDeframer
+PacketProcessor->dataReturnOut -> TcDeframer.dataReturnIn
+SpacePacketDeframer.dataReturnOut -> PacketProcessor.dataReturnIn
 
-Authenticate is positioned before SpacePacketDeframer because CCSDS 355.0-B-2 specifies HMAC computation over the actual frame header bytes, which requires the header to be present
+PacketProcessor is positioned before SpacePacketDeframer because CCSDS 355.0-B-2 specifies HMAC computation over the actual frame header bytes, which requires the header to be present
 
 ## Packet Format
 
@@ -35,14 +35,14 @@ THIS IS WHAT GOES THROUGH AUTHENTICATE
 
 Now the Security Header and Security Trailer must be inside the data field, as specified by CCSDS 355.0-B-2
 
-Space Packet (received by Authenticate)
+Space Packet (received by PacketProcessor)
 [Security Header 8B]
 [Space Packet Primary Header 6B]
    [Space Packet Data Field]
       [F Prime Command Packet]
 [Security Trailer 8B]
 
-The output from Authenticate:
+The output from PacketProcessor:
 
 Space Packet
    [Space Packet Primary Header 6B]
@@ -146,7 +146,7 @@ fprime-gds --framing authenticate-space-data-link \
 
 ### Uploads to run this code
 
-To run the SPI selection (otherwise the encryption will be the default encryption), you should Uplink the spi_dict.txt file in the AuthenticateFiles folder
+To run the SPI selection (otherwise the encryption will be the default encryption), you should Uplink the spi_dict.txt file in the PacketProcessorFiles folder
 
 ## Requirements
 

@@ -1,9 +1,9 @@
 // ======================================================================
-// \title  Authenticate.cpp
-// \brief  cpp file for Authenticate component implementation class
+// \title  PacketProcessor.cpp
+// \brief  cpp file for PacketProcessor component implementation class
 // ======================================================================
 
-#include "PROVESFlightControllerReference/Components/Authenticate/Authenticate.hpp"
+#include "PROVESFlightControllerReference/Components/PacketProcessor/PacketProcessor.hpp"
 
 #include <psa/crypto.h>
 
@@ -20,28 +20,45 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Authenticate ::Authenticate(const char* const compName)
-    : AuthenticateComponentBase(compName),
-      m_packetParser(PacketParser()),
+PacketProcessor ::PacketProcessor(const char* const compName)
+    : PacketProcessorComponentBase(compName),
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0),
       m_bypassPacketsCount(0),
       m_rejectedPacketsCount(0) {}
 
-Authenticate ::~Authenticate() {}
+PacketProcessor ::~PacketProcessor() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
 
-    PacketParser::ParseResult rc = this->m_packetParser.parsePacket(
-        data.getData(), data.getSize(), this->m_sequenceNumber, this->m_sequenceNumberWindow);
-    switch (rc) {
-        case PacketParser::ParseResult::Ok: {
+    const PacketParser::Result parseResult = parsePacket(data.getData(), data.getSize());
+    if (parseResult.status != PacketParser::Status::Ok) {
+        // Log the packet parsing failure
+        this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
+
+        // Telemeter the updated rejected packet count
+        this->m_rejectedPacketsCount += 1;
+        this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
+
+        // Set frame context authenticated to false
+        contextOut.set_authenticated(false);
+
+        // Since parsing failed, we cannot trust any of the fields in the header, so we should not attempt to use them
+        // for any further processing (e.g. validation or logging)
+        this->dataOut_out(0, data, contextOut);
+        return;
+    }
+
+    PacketValidator::Status validationStatus =
+        validatePacket(parseResult.packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+    switch (validationStatus) {
+        case PacketValidator::Status::Valid: {
             // Telemeter the updated sequence number
             this->m_sequenceNumber += 1;
             this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
@@ -55,7 +72,7 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
             break;
         }
 
-        case PacketParser::ParseResult::Bypass: {
+        case PacketValidator::Status::Bypass: {
             // Telemeter the updated bypass packet count
             this->m_bypassPacketsCount += 1;
             this->tlmWrite_BypassPacketsCount(this->m_bypassPacketsCount);
@@ -63,35 +80,57 @@ void Authenticate ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const 
             break;
         }
 
-        case PacketParser::ParseResult::SequenceNumberValidationError: {
+        case PacketValidator::Status::SequenceNumberOutOfWindow: {
             // Log the sequence number validation failure
             this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
 
-            // fall through
-        }
-
-        default: {
             // Telemeter the updated rejected packet count
             this->m_rejectedPacketsCount += 1;
             this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
 
-            // Log the packet rejection
-            this->log_WARNING_HI_PacketRejected(static_cast<ParseResult::T>(rc));
+            // TODO(nateinaction): Ensure packet is rejected
+            break;
+        }
 
-            // Set frame context authenticated to false
-            contextOut.set_authenticated(false);
+        case PacketValidator::Status::SpiInvalid: {
+            // Log the SPI validation failure
+            this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
 
+            // Telemeter the updated rejected packet count
+            this->m_rejectedPacketsCount += 1;
+            this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
+
+            // TODO(nateinaction): Ensure packet is rejected
             break;
         }
     }
 
+    const PacketAuthenticator::Result authResult =
+        authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac);
+    if (authResult.status != PacketAuthenticator::Status::Authenticated) {
+        // Log the HMAC validation failure
+        this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
+                                                  authResult.psaStatus);
+
+        // Telemeter the updated rejected packet count
+        this->m_rejectedPacketsCount += 1;
+        this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
+
+        // Set frame context authenticated to false
+        contextOut.set_authenticated(false);
+    }
+
+    contextOut.set_authenticated(true);
+
     // Now strip header and trailer from the buffer for forwarding
-    data.setData(data.getData() + PacketParser::kHeaderLength);
-    data.setSize(data.getSize() - PacketParser::kHeaderLength - PacketParser::kHmacLength);
+    data.setData(data.getData() + kHeaderSize);
+    data.setSize(data.getSize() - kHeaderSize - kHmacSize);
     this->dataOut_out(0, data, contextOut);
 }
 
-void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+void PacketProcessor ::dataReturnIn_handler(FwIndexType portNum,
+                                            Fw::Buffer& data,
+                                            const ComCfg::FrameContext& context) {
     this->dataReturnOut_out(0, data, context);
 }
 
@@ -99,7 +138,7 @@ void Authenticate ::dataReturnIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void PacketProcessor ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Read the sequence number from the file system
     U32 sequenceNumber = 0;
     Os::File::Status status = this->readSequenceNumber(sequenceNumber);
@@ -116,7 +155,7 @@ void Authenticate ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
+void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     // Write the sequence number to the file system
     Os::File::Status status = this->writeSequenceNumber(seq_num);
     if (status != Os::File::OP_OK) {
@@ -136,7 +175,7 @@ void Authenticate ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void Authenticate ::configure() {
+void PacketProcessor ::configure() {
     Fw::ParamValid is_valid;
 
     // Get the file path from the parameter
@@ -160,7 +199,7 @@ void Authenticate ::configure() {
 // Private helper methods
 // ----------------------------------------------------------------------
 
-Os::File::Status Authenticate ::readSequenceNumber(U32& value) {
+Os::File::Status PacketProcessor ::readSequenceNumber(U32& value) {
     // Read the sequence number from the file system
     Os::File::Status status = Utilities::FileHelper::readFromFile(this->m_sequenceNumberFilePath.toChar(), value);
     if (status != Os::File::OP_OK) {
@@ -176,7 +215,7 @@ Os::File::Status Authenticate ::readSequenceNumber(U32& value) {
     return status;
 }
 
-Os::File::Status Authenticate ::writeSequenceNumber(const U32 value) {
+Os::File::Status PacketProcessor ::writeSequenceNumber(const U32 value) {
     Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), value);
     if (status != Os::File::OP_OK) {
         // Log the failure to write the default sequence number

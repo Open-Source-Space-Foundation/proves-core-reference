@@ -115,10 +115,6 @@ void setupTopology(const TopologyState& state) {
     // Autocoded parameter loading. Function provided by autocoder.
     loadParameters();
 
-    // Configure authenticate before starting tasks to ensure sequence number is loaded before any commands are handled
-    ComCcsdsUart::authenticate.configure();
-    ComCcsdsLora::authenticatelora.configure();
-
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 

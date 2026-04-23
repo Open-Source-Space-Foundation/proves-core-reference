@@ -16,18 +16,20 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Authenticate.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PacketProcessor.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Authenticate.cpp"
-        "${CMAKE_CURRENT_LIST_DIR}/PacketParser.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Authenticator.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PacketProcessor.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Parser.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Validator.cpp"
     DEPENDS
         kernel
         FprimeExtras_Utilities_FileHelper
 )
 
 # Add mbedTLS include directories for PSA crypto headers
-# F Prime creates targets based on path: PROVESFlightControllerReference_Components_Authenticate
-set(AUTHENTICATE_TARGET "PROVESFlightControllerReference_Components_Authenticate")
+# F Prime creates targets based on path: PROVESFlightControllerReference_Components_PacketProcessor
+set(AUTHENTICATE_TARGET "PROVESFlightControllerReference_Components_PacketProcessor")
 
 # Add mbedTLS include path - check multiple possible locations
 if(DEFINED ZEPHYR_MBEDTLS_MODULE_DIR)
@@ -49,10 +51,10 @@ endif()
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Authenticate.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/PacketProcessor.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticateTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticateTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PacketProcessorTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/PacketProcessorTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

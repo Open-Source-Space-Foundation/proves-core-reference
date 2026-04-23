@@ -54,7 +54,9 @@
             "gdbTarget": "localhost:3333",
             "executable": "${workspaceFolder}/build-artifacts/zephyr.elf",
             "device": "RP2350",
-            "runToEntryPoint": "main"
+            "runToEntryPoint": "main",
+            "armToolchainPath": "/opt/homebrew/Cellar/arm-none-eabi-gdb/17.1/bin/arm-none-eabi-gdb",
+            "gdbPath": "/opt/homebrew/Cellar/arm-none-eabi-gdb/17.1/bin/arm-none-eabi-gdb"
         }
     ]
 }

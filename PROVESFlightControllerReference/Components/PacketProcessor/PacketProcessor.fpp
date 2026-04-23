@@ -1,19 +1,33 @@
 module Components {
-    @ FPP shadow-enum representing Components::PacketParser::ParseResult
-    enum ParseResult {
-        Ok,                             @< Packet was successfully parsed and authenticated
-        Bypass,                         @< Packet was successfully parsed and bypassed authentication based on OpCode
-        SpiParseError,                  @< SPI could not be parsed from packet
-        SpiValidationError,             @< SPI did not match expected value
-        SequenceNumberParseError,       @< Sequence number could not be parsed from packet
-        SequenceNumberValidationError,  @< Sequence number is outside the acceptable window
-        OpCodeParseError,               @< OpCode could not be parsed from packet
-        HmacParseError,                 @< HMAC could not be parsed from packet
-        HmacValidationError             @< HMAC key did not match expected value
+    @ FPP shadow-enum representing Components::PacketAuthenticator::Status
+    enum PacketAuthenticatorStatus {
+        Authenticated,    @< Packet is authenticated
+        InitError,        @< There was an error initializing the authentication process
+        ParseKeyError,    @< There was an error parsing the key from storage
+        ImportKeyError,   @< There was an error importing the authentication key
+        VerifyError,      @< The packet HMAC did not match the expected value
+        DestroyKeyError,  @< There was an error destroying the authentication key
     }
 
+    @ FPP shadow-enum representing Components::PacketParser::Status
+    enum PacketParserStatus {
+        Ok,                        @< Packet was successfully parsed
+        SpiParseError,             @< SPI could not be parsed from packet
+        SequenceNumberParseError,  @< Sequence number could not be parsed from packet
+        OpCodeParseError,          @< OpCode could not be parsed from packet
+        HmacParseError,            @< HMAC could not be parsed from packet
+    }
+
+    # @ FPP shadow-struct representing Components::PacketValidator::Status
+    # enum PacketValidatorStatus {
+    #     Valid,                      @< Packet is valid
+    #     Bypass,                     @< Packet OpCode is allowed to bypass authentication
+    #     SpiInvalid,                 @< SPI did not match expected value
+    #     SequenceNumberOutOfWindow,  @< Sequence number is outside the acceptable window
+    # }
+
     @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
-    passive component Authenticate {
+    passive component PacketProcessor {
 
         ### Commands ###
 
@@ -51,8 +65,14 @@ module Components {
         @ SequenceNumberOutOfWindow indicates that a received packet had a sequence number that was outside of the acceptable window
         event SequenceNumberOutOfWindow(expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: Expected={}, Window={}" throttle 2
 
-        @ PacketRejected indicates that a received packet was rejected due to failed authentication or parsing errors
-        event PacketRejected(result: ParseResult) severity warning high id 15 format "Packet Rejected: {}" throttle 2
+        @ AuthenticationFailed indicates that a received packet failed authentication
+        event AuthenticationFailed(auth_status: PacketAuthenticatorStatus, rc: I32) severity warning high id 1 format "Authentication failed: Status={}, PSA Return Code={}" throttle 2
+
+        @ ParsingFailed indicates that there was an error parsing a received packet
+        event ParsingFailed(parse_status: PacketParserStatus) severity warning high id 3 format "Parsing failed: {}" throttle 2
+
+        @ SpiInvalid indicates that a received packet had an invalid SPI value
+        event SpiInvalid(received: U32) severity warning high id 4 format "SPI invalid: Received {}" throttle 2
 
         ### Parameters ###
 

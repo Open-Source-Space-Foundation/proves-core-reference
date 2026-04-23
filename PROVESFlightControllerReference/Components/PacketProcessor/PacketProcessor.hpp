@@ -1,6 +1,6 @@
 // ======================================================================
-// \title  Authenticate.hpp
-// \brief  hpp file for Authenticate component implementation class
+// \title  PacketProcessor.hpp
+// \brief  hpp file for PacketProcessor component implementation class
 // ======================================================================
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
@@ -9,23 +9,25 @@
 #include <atomic>
 #include <cassert>
 
-#include "PROVESFlightControllerReference/Components/Authenticate/AuthenticateComponentAc.hpp"
-#include "PROVESFlightControllerReference/Components/Authenticate/PacketParser.hpp"
+#include "PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.hpp"
+#include "PROVESFlightControllerReference/Components/PacketProcessor/PacketProcessorComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/PacketProcessor/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/PacketProcessor/Validator.hpp"
 
 namespace Components {
 
-class Authenticate final : public AuthenticateComponentBase {
+class PacketProcessor final : public PacketProcessorComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct Authenticate object
-    Authenticate(const char* const compName  //!< The component name
+    //! Construct PacketProcessor object
+    PacketProcessor(const char* const compName  //!< The component name
     );
 
-    //! Destroy Authenticate object
-    ~Authenticate();
+    //! Destroy PacketProcessor object
+    ~PacketProcessor();
 
   private:
     // ----------------------------------------------------------------------
@@ -92,7 +94,6 @@ class Authenticate final : public AuthenticateComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    PacketParser m_packetParser;              //!< Packet parser for authentication validation
     Fw::String m_sequenceNumberFilePath;      //!< File path where sequence number is stored
     std::atomic<U32> m_sequenceNumber;        //!< The current sequence number
     std::atomic<U32> m_sequenceNumberWindow;  //!< The allowed window for sequence number validation

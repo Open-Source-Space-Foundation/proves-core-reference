@@ -110,7 +110,7 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
-    instance authenticate: Components.Authenticate base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+    instance packetProcessor: Components.PacketProcessor base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
 
     topology FramingSubtopology {
         # Usage Note:
@@ -140,7 +140,7 @@ module ComCcsdsUart {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticate
+        instance packetProcessor
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -174,13 +174,13 @@ module ComCcsdsUart {
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
-            # Authenticate <-> SpacePacketDeframer
-            authenticate.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
+            # PacketProcessor <-> SpacePacketDeframer
+            packetProcessor.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> packetProcessor.dataReturnIn
 
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticate.dataIn
-            authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcDeframer <-> PacketProcessor
+            tcDeframer.dataOut                -> packetProcessor.dataIn
+            packetProcessor.dataReturnOut -> tcDeframer.dataReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
