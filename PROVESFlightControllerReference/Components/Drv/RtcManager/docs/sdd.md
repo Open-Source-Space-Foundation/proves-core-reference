@@ -1,6 +1,9 @@
 # Components::RtcManager
 
-The RTC Manager component interfaces with the Real Time Clock (RTC) to provide time measurements. When the RTC is unavailable, the component automatically fails over to monotonic time (uptime since boot) to ensure continuous system operation.
+The RTC Manager component interfaces with the Real Time Clock (RTC) to provide time measurements. When the RTC is unavailable, the component automatically fails over to monotonic uptime to ensure continuous system operation.
+
+> [!IMPORTANT]
+> The code executed by the RTC Manager’s `timeGetPort` must never call into the eventing system. The timeGetPort is invoked frequently across F Prime and is used by the eventing system itself, any handler code must not use event ports, commands, or telemetry — doing so can cause deadlocks. Log any errors from the `timeGetPort` handler to the console with throttling to prevent flooding and do not allow those errors to cause the handler to fail. If the RTC is unavailable or an error occurs while retrieving time, the component must gracefully fall back to returning a monotonic uptime.
 
 ### Typical Usage
 
@@ -14,6 +17,32 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
     - Emits a `TimeSet` event with the previous time if the time is set successfully
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
+
+#### `ALARM_SET` Command Usage
+1. The component is instantiated and initialized during system startup
+2. A ground station sends a `ALARM_SET` command with the desired time
+3. On each command, the component:
+    - Validates that the alarm is at a future date
+    - Emits 'AlarmNotSet' if time is not valid or if an alarm is already present
+    - Sets the time to the RTC alarm if validation passes
+    - Emits a `AlarmSet` event with the previous time if the alarm is set successfully
+    - Emits a `AlarmNotSet` event if the alarm is not set successfully
+
+#### `ALARM_CANCEL` Command Usage
+1. A ground station sends a `ALARM_CANCEL` command with the desired alarm ID to cancel
+2. On each command, the component:
+    - Validates that an alarm exists
+    - Emits 'AlarmNotCanceled' if an alarm is already present
+    - Cancels the present alarm if it is present on the system
+    - Emits a `AlarmCanceled` event with the previous time if the alarm is canceled successfully
+    - Emits a `AlarmNotCanceled` event if the alarm is not canceled successfully
+
+#### `ALARM_LIST` Command Usage
+1. A ground station sends a `ALARM_LIST` command
+2. On each command, the component:
+    - Validates that an alarm exists
+    - Emits 'AlarmNotSet' if no alarm is present
+    - Emits 'AlarmSet' if an alarm is present and returns it's information to the ground station
 
 #### `timeGetPort` Port Usage
 1. The component is instantiated and initialized during system startup
@@ -55,31 +84,48 @@ This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in f
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
 | RtcManager-002 | The RTC Manager has a port which, when called, returns the time from the RTC or uptime | Integration test |
-| RtcManager-003 | The RTC Manager logs a warning when the RTC is not ready and falls back to monotonic time | Integration test |
+| RtcManager-003 | In the event of an error retrieving time from the RTC, the RTC Manager returns uptime | Integration test |
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 | RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
-| RtcManager-007 | The RTC Manager provides uptime when the RTC device is unavailable | Integration test |
-| RtcManager-008 | Time increments continuously regardless of RTC availability | Integration test |
-| RtcManager-009 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
-| RtcManager-010 | Time is monotonic | Integration test |
+| RtcManager-007 | Time increments continuously regardless of RTC availability | Integration test |
+| RtcManager-008 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
+| RtcManager-009 | Time is monotonic | Integration test |
+| RtcManager-010 | During a time set command, before the new time is set, RTC Manager informs a sequence cancellation port | Integration test |
+| RtcManager-011 | An alarm is set and then an event is emitted when the alarm triggers | Integration test |
+| RtcManager-012 | An alarm is set and then canceled, an event is emitted when the alarm is canceled | Integration test |
+| RtcManager-013 | An alarm cancel command is sent when no alarm is present and an event is emitted | Integration test |
+| RtcManager-014 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
+| RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
+| RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
+| RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
+
 
 ## Port Descriptions
 | Name | Description |
 |---|---|
 | timeGetPort | Time port for FPrime topology connection to get the time from the RTC |
+| alarmTriggered | Output port to keep track of when an alarm triggers |
 
 ## Commands
 | Name | Description |
 |---|---|
 | TIME_SET | Sets the time on the RTC with validation of all time fields |
+| ALARM_SET | Sets the RTC alarm with as much precision as hardware allows |
+| ALARM_CANCEL | Cancels the current alarm |
+| ALARM_LIST | Responds with info about the current set alarm |
 
 ## Events
 | Name | Description |
 |---|---|
 | DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
-| TimeNotSet | Emitted on unsuccessful time set |
+| TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
+| AlarmSet | Emitted when alarm is successfully set |
+| AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
+| AlarmTriggered | Emitted when an alarm fires |
+| AlarmCanceled | Emitted when an alarm is canceled |
+| AlarmNotCanceled | Emitted when an alarm cannot be canceled |
 | YearValidationFailed | Emitted when provided year is invalid (should be >= 1900) |
 | MonthValidationFailed | Emitted when provided month is invalid (should be [1-12]) |
 | DayValidationFailed | Emitted when provided day is invalid (should be [1-31]) |
@@ -97,18 +143,38 @@ classDiagram
             <<Auto-generated>>
         }
         class RtcManager {
-            - m_dev: device*
-            - m_console_throttled: atomic~bool~
+            - m_dev: const device*
+            - m_rtcHelper: RtcHelper
+            - m_RtcNotReadyThrottle: atomic~bool~
+            - m_RtcGetTimeFailedThrottle: atomic~bool~
+            - m_RtcInvalidTimeThrottle: atomic~bool~
+            - m_curr_mask: U16
+            - m_alarm_time: rtc_time
 
-            + RtcManager(char* compName)
+            + RtcManager(const char* const compName)
             + ~RtcManager()
-            + void configure(const device* dev)
-            - void timeGetPort_handler(FwIndexType portNum, Fw::Time& time)
-            - void TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& time)
-            - bool timeDataIsValid(Drv::TimeData t)
+            + configure(dev: const device*) void
+
+            - timeGetPort_handler(portNum: FwIndexType, time: Fw::Time&) void
+
+            - TIME_SET_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, t: Drv::TimeData) void
+            - ALARM_SET_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, t: Drv::TimeData) void
+            - ALARM_CANCEL_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, ID: U16) void
+            - ALARM_LIST_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32) void
+
+            - static_alarm_callback_t(dev: const device*, id: uint16_t, user_data: void*) void$
+            - alarm_callback_t(dev: const device*, id: uint16_t) void
+            - log_CONSOLE_RtcNotReady() void
+            - log_CONSOLE_RtcNotReady_ThrottleClear() void
+            - log_CONSOLE_RtcGetTimeFailed(rc: int) void
+            - log_CONSOLE_RtcGetTimeFailed_ThrottleClear() void
+            - log_CONSOLE_RtcInvalidTime() void
+            - log_CONSOLE_RtcInvalidTime_ThrottleClear() void
+            - timeDataIsValid(t: Drv::TimeData) bool
         }
     }
     RtcManagerComponentBase <|-- RtcManager : inherits
+    RtcManager *-- RtcHelper : uses
 ```
 
 ### RTC Helper Class Diagram
@@ -116,12 +182,12 @@ classDiagram
 classDiagram
     namespace Drv {
         class RtcHelper {
-            -m_last_seen_seconds: uint32_t
-            -m_useconds_offset: uint32_t
+            - m_last_seen_seconds: uint32_t = 0
+            - m_useconds_offset: uint32_t = 0
 
-            +RtcHelper()
-            +~RtcHelper()
-            +rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t) uint32_t
+            + RtcHelper()
+            + ~RtcHelper()
+            + uint32_t rescaleUseconds(current_seconds: uint32_t, current_useconds: uint32_t)
         }
     }
 ```
@@ -158,7 +224,7 @@ sequenceDiagram
     RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_WORKSTATION_TIME`
 ```
 
-#### Failover to Monotonic Time (RTC Unavailable)
+#### Failover to Uptime (RTC Unavailable)
 
 ```mermaid
 sequenceDiagram
@@ -256,10 +322,146 @@ sequenceDiagram
     RTC Manager-->>Ground Station: Command response EXECUTION_ERROR
 ```
 
+### `ALARM_SET` Command
+
+The `ALARM_SET` command is called to set the current time on the RTC alarm. The component validates that the time is in the future before setting the alarm
+
+#### Success
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_SET with Drv::TimeData struct
+    RTC Manager->>RTC Manager: Validate alarm not present on system
+    RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    RTC Manager->>Zephyr RTC API: Set alarm time via rtc_alarm_set_time()
+    Zephyr RTC API->>RTC Sensor: Set rtc alarm time
+    RTC Sensor-->>Zephyr RTC API: Return success
+    Zephyr RTC API-->>RTC Manager: Return success (status = 0)
+    RTC Manager->>Event Log: Emit AlarmSet event (with previous time)
+    RTC Manager-->>Ground Station: Command response OK
+```
+
+#### Failure
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_SET with Drv::TimeData struct
+    RTC Manager->>RTC Manager: Validate alarm not present on system
+    RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    RTC Manager->>Zephyr RTC API: Set alarm time via rtc_alarm_set_time()
+    Zephyr RTC API->>RTC Sensor: Set rtc alarm time
+    RTC Sensor-->>Zephyr RTC API: Return failure
+    Zephyr RTC API-->>RTC Manager: Return failure (nonzero return code)
+    RTC Manager->>Event Log: Emit AlarmNotSet event (with previous time)
+    RTC Manager-->>Ground Station: Command response Execution Error
+```
+
+### `ALARM_CANCEL` Command
+
+The `ALARM_CANCEL` command is called to cancel the RTC alarm. component validates that an alarm is present and can be accessed
+
+#### Success
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_CANCEL with Uint16_t ID
+    RTC Manager->>RTC Manager: Validate alarm is present on system
+    RTC Manager->>Zephyr RTC API: Set alarm mask to 0 via rtc_alarm_set_time()
+    Zephyr RTC API->>RTC Sensor: Set rtc alarm time
+    RTC Sensor-->>Zephyr RTC API: Return success
+    Zephyr RTC API-->>RTC Manager: Return success (status = 0)
+    RTC Manager->>Event Log: Emit AlarmCanceled event (with ID)
+    RTC Manager-->>Ground Station: Command response OK
+```
+
+#### Failure
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_CANCEL with Uint16_t ID
+    RTC Manager->>RTC Manager: Validate alarm is present on system
+    RTC Manager->>Zephyr RTC API: Set alarm mask to 0 via rtc_alarm_set_time()
+    Zephyr RTC API->>RTC Sensor: Set rtc alarm time
+    RTC Sensor-->>Zephyr RTC API: Return Failure
+    Zephyr RTC API-->>RTC Manager: Return Failure (nonzero return code)
+    RTC Manager->>Event Log: Emit AlarmNotCanceled event (with ID)
+    RTC Manager-->>Ground Station: Command response Execution error
+```
+
+### `ALARM_LIST` Command
+
+The `ALARM_LIST` command is called to retrieve information about the rtc alarm's current status
+
+#### Present
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_LIST
+    RTC Manager->>RTC Manager: Determine whether an alarm is present or not with rtc_alarm_get_time()
+    RTC Manager->>Zephyr RTC API: retrieve alarm information (time, ID, mask)
+    Zephyr RTC API->>RTC Sensor: retrieve alarm information (time, ID, mask)
+    RTC Sensor-->>Zephyr RTC API: return mask
+    Zephyr RTC API-->>RTC Manager: return mask and determine whether it is zero
+    RTC Manager->>Event Log: Emit alarmSet event with the information of the present alarm
+    RTC Manager-->>Ground Station: Command response OK
+```
+
+#### Absent
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command ALARM_LIST
+    RTC Manager->>RTC Manager: Determine whether an alarm is present or not with rtc_alarm_get_time()
+    RTC Manager->>Zephyr RTC API: retrieve alarm information (time, ID, mask)
+    Zephyr RTC API->>RTC Sensor: retrieve alarm information (time, ID, mask)
+    RTC Sensor-->>Zephyr RTC API: return mask
+    Zephyr RTC API-->>RTC Manager: return mask and determine whether it is zero
+    RTC Manager->>Event Log: Emit alarmNotSet event
+    RTC Manager-->>Ground Station: Command response OK
+```
+
 ## Change Log
 
 | Date | Description |
 |---|---|
 | 2025-9-18 | Initial RTC Manager component |
-| 2025-11-14 | Added monotonic time failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
+| 2025-11-14 | Added monotonic uptime failover when RTC unavailable, input validation for TIME_SET command, TEST_UNCONFIGURE_DEVICE test command, and console logging for device not ready conditions |
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
+| 2026-04-02 | Added basic functionality for setting and canceling RTC alarms |
+| 2026-04-09 | Hardening for more consistent behavior |
