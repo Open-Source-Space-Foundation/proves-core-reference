@@ -31,6 +31,14 @@ target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# PacketProcessor Parser
+add_library(packet_processor STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Parser.cpp
+)
+target_include_directories(packet_processor PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # DetumbleManager BDot
 add_library(detumble_manager_bdot STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/DetumbleManager/BDot.cpp
@@ -53,6 +61,7 @@ foreach(test_src ${TEST_SOURCES})
         detumble_manager_strategy_selector
         detumble_manager_bdot
         rtc_manager_rtc_helper
+        packet_processor
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})

@@ -11,6 +11,15 @@
 namespace Components {
 namespace {
 
+constexpr const size_t kSpiSize = 2;
+constexpr const size_t kSequenceNumberSize = 4;
+constexpr const size_t kSpacePacketHeaderSize = 6;
+constexpr const size_t kOpCodeStart = 2;
+constexpr const size_t kOpCodeSize = 4;
+constexpr const size_t kHeaderSize = kSpiSize + kSequenceNumberSize;
+constexpr const size_t kMinPacketSize = kHeaderSize + kSpacePacketHeaderSize + kOpCodeStart + kOpCodeSize;
+constexpr const size_t kMinAuthenticatedPacketSize = kMinPacketSize + kHmacSize;
+
 template <typename T>
 struct FieldParseResult {
     PacketParser::Status status;
@@ -19,7 +28,7 @@ struct FieldParseResult {
 
 FieldParseResult<uint32_t> parseSpi(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
-    if (!buffer || size < kHeaderSize) {
+    if (!buffer || size < kSpiSize) {
         return {PacketParser::Status::SpiParseError, 0};
     }
 
@@ -44,17 +53,13 @@ FieldParseResult<uint32_t> parseSequenceNumber(const uint8_t* buffer, const size
 }
 
 FieldParseResult<uint32_t> parseOpCode(const uint8_t* buffer, const size_t size) {
-    constexpr const size_t kSpacePacketHeaderLength = 6;
-    constexpr const size_t kOpCodeStart = 2;
-    constexpr const size_t kOpCodeLength = 4;
-
     // Validate buffer size
-    if (!buffer || size < kHeaderSize + kSpacePacketHeaderLength + kOpCodeStart + kOpCodeLength) {
+    if (!buffer || size < kMinPacketSize) {
         return {PacketParser::Status::OpCodeParseError, 0};
     }
 
     // Extract opcode
-    const uint8_t* opCodePtr = buffer + kHeaderSize + kSpacePacketHeaderLength + kOpCodeStart;
+    const uint8_t* opCodePtr = buffer + kHeaderSize + kSpacePacketHeaderSize + kOpCodeStart;
     const uint32_t opCode = (static_cast<uint32_t>(opCodePtr[0]) << 24) | (static_cast<uint32_t>(opCodePtr[1]) << 16) |
                             (static_cast<uint32_t>(opCodePtr[2]) << 8) | static_cast<uint32_t>(opCodePtr[3]);
 
@@ -63,7 +68,7 @@ FieldParseResult<uint32_t> parseOpCode(const uint8_t* buffer, const size_t size)
 
 FieldParseResult<Hmac> parseHmac(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
-    if (!buffer || size < kHmacSize) {
+    if (!buffer || size < kMinAuthenticatedPacketSize) {
         return {PacketParser::Status::HmacParseError, {}};
     }
 
