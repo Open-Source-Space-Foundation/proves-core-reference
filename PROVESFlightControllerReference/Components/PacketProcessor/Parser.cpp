@@ -5,6 +5,7 @@
 
 #include "Parser.hpp"
 
+#include <cstdint>
 #include <cstring>
 
 namespace Components {

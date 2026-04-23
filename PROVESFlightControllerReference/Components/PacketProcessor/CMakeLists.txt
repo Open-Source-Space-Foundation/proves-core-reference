@@ -29,21 +29,21 @@ register_fprime_library(
 
 # Add mbedTLS include directories for PSA crypto headers
 # F Prime creates targets based on path: PROVESFlightControllerReference_Components_PacketProcessor
-set(AUTHENTICATE_TARGET "PROVESFlightControllerReference_Components_PacketProcessor")
+set(PACKET_PARSER_TARGET "PROVESFlightControllerReference_Components_PacketProcessor")
 
 # Add mbedTLS include path - check multiple possible locations
 if(DEFINED ZEPHYR_MBEDTLS_MODULE_DIR)
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${ZEPHYR_MBEDTLS_MODULE_DIR}/include"
     )
 elseif(DEFINED ZEPHYR_BASE)
     # Use ZEPHYR_BASE which is set by find_package(Zephyr)
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${ZEPHYR_BASE}/../modules/crypto/mbedtls/include"
     )
 else()
     # Final fallback: use relative path from project root
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${CMAKE_SOURCE_DIR}/lib/zephyr-workspace/modules/crypto/mbedtls/include"
     )
 endif()

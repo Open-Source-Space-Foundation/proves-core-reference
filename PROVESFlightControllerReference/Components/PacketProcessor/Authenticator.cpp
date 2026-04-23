@@ -5,6 +5,8 @@
 
 #include "Authenticator.hpp"
 
+#include <psa/crypto.h>
+
 #include <cstring>
 
 // Include generated header with default key (generated at build time)
@@ -67,9 +69,9 @@ psa_status_t importHmacKey(const uint8_t (&keyBytes)[kKeySize], psa_key_usage_t 
 
 }  // namespace
 
-PacketAuthenticator::Result authenticate(const uint8_t* dataBuffer,
-                                         size_t dataSize,
-                                         const std::array<uint8_t, kHmacSize>& hmac) {
+PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
+                                               size_t dataSize,
+                                               const std::array<uint8_t, kHmacSize>& hmac) {
     if (!dataBuffer || dataSize < kHmacSize) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
     }

@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <psa/crypto.h>
-
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -30,8 +28,8 @@ enum class Status {
 
 //! Result of authentication attempt
 struct Result {
-    Status status;           //!< The status of the authentication attempt
-    psa_status_t psaStatus;  //!< The status code returned by the PSA crypto functions
+    Status status;      //!< The status of the authentication attempt
+    int32_t psaStatus;  //!< The status code returned by the PSA crypto functions
 };
 
 }  // namespace PacketAuthenticator
