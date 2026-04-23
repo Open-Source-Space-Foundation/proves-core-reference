@@ -16,7 +16,6 @@ namespace Components {
 namespace {
 
 constexpr size_t kKeyHexLength = 32;
-constexpr size_t kKeySize = 16;
 
 bool hexToNibble(char ch, uint8_t& nibble) {
     if (ch >= '0' && ch <= '9') {
@@ -34,7 +33,7 @@ bool hexToNibble(char ch, uint8_t& nibble) {
     return false;
 }
 
-bool parseHexKey(const char* key, uint8_t (&keyBytes)[kKeySize]) {
+bool parseHexKey(const char* key, uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize]) {
     if (key == nullptr) {
         return false;
     }
@@ -55,10 +54,12 @@ bool parseHexKey(const char* key, uint8_t (&keyBytes)[kKeySize]) {
     return true;
 }
 
-psa_status_t importHmacKey(const uint8_t (&keyBytes)[kKeySize], psa_key_usage_t usage, psa_key_id_t& keyId) {
+psa_status_t importHmacKey(const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize],
+                           psa_key_usage_t usage,
+                           psa_key_id_t& keyId) {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
-    psa_set_key_bits(&attributes, static_cast<size_t>(kKeySize * 8));
+    psa_set_key_bits(&attributes, static_cast<size_t>(Ccsds355_0_B_2_Cmac::kSecurityTrailerSize * 8));
     psa_set_key_usage_flags(&attributes, usage);
     psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
 
@@ -69,10 +70,11 @@ psa_status_t importHmacKey(const uint8_t (&keyBytes)[kKeySize], psa_key_usage_t 
 
 }  // namespace
 
-PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
-                                               size_t dataSize,
-                                               const std::array<uint8_t, kHmacSize>& hmac) {
-    if (!dataBuffer || dataSize < kHmacSize) {
+PacketAuthenticator::Result authenticatePacket(
+    const uint8_t* dataBuffer,
+    size_t dataSize,
+    const std::array<uint8_t, Ccsds355_0_B_2_Cmac::kSecurityTrailerSize>& hmac) {
+    if (!dataBuffer || dataSize < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 
@@ -81,7 +83,7 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
         return PacketAuthenticator::Result{PacketAuthenticator::Status::InitError, status};
     }
 
-    uint8_t keyBytes[kKeySize];
+    uint8_t keyBytes[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize];
     if (!parseHexKey(AUTH_DEFAULT_KEY, keyBytes)) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
     }
@@ -92,8 +94,8 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ImportKeyError, status};
     }
 
-    status = psa_mac_verify(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer, dataSize - kHmacSize, hmac.data(),
-                            hmac.size());
+    status = psa_mac_verify(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer,
+                            dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize, hmac.data(), hmac.size());
 
     const psa_status_t destroyStatus = psa_destroy_key(keyId);
     if (destroyStatus != PSA_SUCCESS) {

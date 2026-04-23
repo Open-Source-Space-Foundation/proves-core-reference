@@ -50,7 +50,7 @@ TEST(PacketParserTest, SpiParseErrorTooSmall) {
 
 TEST(PacketParserTest, OpCodeParseErrorTooShort) {
     // Make size large enough for header (spi + seq) but too short for opcode
-    // opcode parsing requires at least 18 bytes total (kHeaderSize + 6 + 2 + 4)
+    // opcode parsing requires at least 18 bytes total (kSecurityHeaderSize + 6 + 2 + 4)
     // choose 17 to be just below that threshold
     std::vector<uint8_t> buf(17, 0);
 

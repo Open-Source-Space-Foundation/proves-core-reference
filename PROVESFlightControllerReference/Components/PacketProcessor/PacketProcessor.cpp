@@ -123,8 +123,8 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
     contextOut.set_authenticated(true);
 
     // Now strip header and trailer from the buffer for forwarding
-    data.setData(data.getData() + kHeaderSize);
-    data.setSize(data.getSize() - kHeaderSize - kHmacSize);
+    data.setData(data.getData() + Ccsds355_0_B_2_Cmac::kSecurityHeaderSize);
+    data.setSize(data.getSize() - Ccsds355_0_B_2_Cmac::kSecurityHeaderSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize);
     this->dataOut_out(0, data, contextOut);
 }
 
