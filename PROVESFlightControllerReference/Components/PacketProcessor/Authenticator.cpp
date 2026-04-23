@@ -70,10 +70,7 @@ psa_status_t importHmacKey(const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecur
 
 }  // namespace
 
-PacketAuthenticator::Result authenticatePacket(
-    const uint8_t* dataBuffer,
-    size_t dataSize,
-    const std::array<uint8_t, Ccsds355_0_B_2_Cmac::kSecurityTrailerSize>& hmac) {
+PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t dataSize, const Hmac& hmac) {
     if (!dataBuffer || dataSize < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
     }
