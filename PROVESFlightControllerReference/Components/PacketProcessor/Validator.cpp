@@ -8,22 +8,34 @@
 namespace Components {
 namespace {
 
-// TODO(nateinaction): Re-add comments explaining the rationale behind each of these validation checks
+// OpCodes that are allowed to bypass authentication
+// TODO(nateinaction): Describe how to get these OpCodes
+static constexpr uint32_t kBypassOpCodes[] = {
+    0x01000000,  // CdhCore.cmdDisp.CMD_NO_OP
+    0x2100B000,  // ComCcsdsUart.packetProcessor.GET_SEQ_NUM
+    0x2200B000,  // ComCcsdsLora.packetProcessor.GET_SEQ_NUM
+    0x2300B000,  // ComCcsdsSBand.packetProcessor.GET_SEQ_NUM
+    0x10065000,  // ReferenceDeployment.amateurRadio.TELL_JOKE
+};
+
 bool spiValid(uint32_t spi) {
+    // For now we only support SPI 0, which indicates no additional security processing beyond HMAC
     return spi == 0;
 }
 
 bool sequenceNumberInWindow(uint32_t sequenceNumber, uint32_t expectedSequenceNumber, uint32_t sequenceNumberWindow) {
+    /*
+     * Compute the difference between received and expected sequence numbers using unsigned
+     * 32-bit arithmetic. This handles wraparound correctly due to the well-defined behavior
+     * of unsigned integer overflow in C++. For example, if expected=0xFFFFFFFE and received=1,
+     * then (received - expected) == 3 (modulo 2^32). This is a standard technique for
+     * sequence number window validation (see RFC 1982: Serial Number Arithmetic).
+     */
     return (sequenceNumber - expectedSequenceNumber) <= sequenceNumberWindow;
 }
 
 bool opCodeBypassAllowed(uint32_t opCode) {
-    static constexpr uint32_t kBypassOpCodes[] = {
-        0x01000000,  // no op
-        0x2200B000,  // get sequence number
-        0x10065000,  // amateurRadio.TELL_JOKE
-    };
-
+    // Check if the OpCode is in the bypass list
     for (size_t i = 0; i < (sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0])); i++) {
         if (opCode == kBypassOpCodes[i]) {
             return true;
@@ -38,14 +50,17 @@ bool opCodeBypassAllowed(uint32_t opCode) {
 PacketValidator::Status validatePacket(const Packet& packet,
                                        uint32_t expectedSequenceNumber,
                                        uint32_t sequenceNumberWindow) {
+    // Validate SPI
     if (!spiValid(packet.spi)) {
         return PacketValidator::Status::SpiInvalid;
     }
 
+    // Validate sequence number within window
     if (!sequenceNumberInWindow(packet.sequenceNumber, expectedSequenceNumber, sequenceNumberWindow)) {
         return PacketValidator::Status::SequenceNumberOutOfWindow;
     }
 
+    // Check if the packet can bypass authentication based on its OpCode
     if (opCodeBypassAllowed(packet.opCode)) {
         return PacketValidator::Status::Bypass;
     }

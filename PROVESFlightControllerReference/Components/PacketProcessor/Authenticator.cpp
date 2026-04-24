@@ -86,13 +86,19 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t
     }
 
     psa_key_id_t keyId = 0;
-    status = importHmacKey(keyBytes, PSA_KEY_USAGE_VERIFY_MESSAGE, keyId);
+    // Import key allowing both verify and sign so we can compute full MAC
+    // and compare truncated bytes. Some providers restrict psa_mac_compute
+    // to keys with SIGN_MESSAGE usage.
+    status =
+        importHmacKey(keyBytes, (psa_key_usage_t)(PSA_KEY_USAGE_VERIFY_MESSAGE | PSA_KEY_USAGE_SIGN_MESSAGE), keyId);
     if (status != PSA_SUCCESS) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ImportKeyError, status};
     }
 
-    status = psa_mac_verify(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer,
-                            dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize, hmac.data(), hmac.size());
+    unsigned char fullMac[32];
+    size_t macLen = 0;
+    status = psa_mac_compute(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer,
+                             dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize, fullMac, sizeof(fullMac), &macLen);
 
     const psa_status_t destroyStatus = psa_destroy_key(keyId);
     if (destroyStatus != PSA_SUCCESS) {
@@ -101,6 +107,10 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t
 
     if (status != PSA_SUCCESS) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, status};
+    }
+
+    if (macLen < hmac.size() || std::memcmp(fullMac, hmac.data(), hmac.size()) != 0) {
+        return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_SIGNATURE};
     }
 
     return PacketAuthenticator::Result{PacketAuthenticator::Status::Authenticated, PSA_SUCCESS};
