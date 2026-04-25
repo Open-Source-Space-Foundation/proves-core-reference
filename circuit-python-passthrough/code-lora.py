@@ -70,9 +70,7 @@ class Lora(object):
         _, up_bandwidth, dw_bandwidth, _ = RADIO_PARAMS[self._mode]
         print(f"[INFO] Uplink: {self.up_count}, Downlink: {self.dw_count}")
         print(
-            f"[INFO] Spreading factor: {self.rfm95.spreading_factor}, bandwidth up: {
-                up_bandwidth
-            }, bandwidth down: {dw_bandwidth}"
+            f"[INFO] Spreading factor: {self.rfm95.spreading_factor}, bandwidth up: {up_bandwidth}, bandwidth down: {dw_bandwidth}"
         )
 
     @property
