@@ -6,8 +6,9 @@
 #ifndef Components_ThermalManager_HPP
 #define Components_ThermalManager_HPP
 
-#include "PROVESFlightControllerReference/Components/ThermalManager/ThermalManagerComponentAc.hpp"
 #include <vector>
+
+#include "PROVESFlightControllerReference/Components/ThermalManager/ThermalManagerComponentAc.hpp"
 
 namespace Components {
 
