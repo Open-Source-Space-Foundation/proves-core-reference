@@ -13,7 +13,16 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-ThermalManager::ThermalManager(const char* const compName) : ThermalManagerComponentBase(compName) {}
+ThermalManager::ThermalManager(const char* const compName) : ThermalManagerComponentBase(compName) {
+    // Initialize vectors based on runtime port counts
+    const FwIndexType numFaceTempPorts = this->getNum_faceTempGet_OutputPorts();
+    const FwIndexType numBattCellTempPorts = this->getNum_battCellTempGet_OutputPorts();
+
+    m_faceTempBelowActive.resize(numFaceTempPorts, false);
+    m_faceTempAboveActive.resize(numFaceTempPorts, false);
+    m_battCellTempBelowActive.resize(numBattCellTempPorts, false);
+    m_battCellTempAboveActive.resize(numBattCellTempPorts, false);
+}
 
 ThermalManager::~ThermalManager() {}
 
@@ -32,7 +41,16 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
+        // Ensure index is within bounds of our state arrays
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_faceTempBelowActive.size()));
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_faceTempAboveActive.size()));
+
         F64 temperature = this->faceTempGet_out(i, condition);
+
+        // Check if the temperature reading is valid before processing
+        if (condition != Fw::Success::SUCCESS) {
+            continue;
+        }
 
         if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
             if (!this->m_faceTempBelowActive[i]) {
@@ -55,7 +73,16 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
+        // Ensure index is within bounds of our state arrays
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_battCellTempBelowActive.size()));
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_battCellTempAboveActive.size()));
+
         F64 temperature = this->battCellTempGet_out(i, condition);
+
+        // Check if the temperature reading is valid before processing
+        if (condition != Fw::Success::SUCCESS) {
+            continue;
+        }
 
         if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
             if (!this->m_battCellTempBelowActive[i]) {

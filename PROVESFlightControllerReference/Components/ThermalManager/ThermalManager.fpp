@@ -33,22 +33,22 @@ module Components {
         output port picoTempGet: Drv.picoTemperatureGet
 
         @ Event for face temperature reading below threshold
-        event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
+        event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F64) \
             severity warning low \
             format "Face temperature below threshold: Sensor {} at {} °C"
 
         @ Event for face temperature reading above threshold
-        event FaceTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
+        event FaceTemperatureAboveThreshold(sensorId: U32, temperature: F64) \
             severity warning low \
             format "Face temperature above threshold: Sensor {} at {} °C"
 
         @ Event for battery cell temperature reading below threshold
-        event BatteryCellTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
+        event BatteryCellTemperatureBelowThreshold(sensorId: U32, temperature: F64) \
             severity warning low \
             format "Battery cell temperature below threshold: Sensor {} at {} °C"
 
         @ Event for battery cell temperature reading above threshold
-        event BatteryCellTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
+        event BatteryCellTemperatureAboveThreshold(sensorId: U32, temperature: F64) \
             severity warning low \
             format "Battery cell temperature above threshold: Sensor {} at {} °C"
 
