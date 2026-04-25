@@ -95,15 +95,23 @@ module ReferenceDeployment {
 
   instance bootloaderTrigger: Components.BootloaderTrigger base id 0x1001A000
 
-  instance burnwire: Components.Burnwire base id 0x1001B000
+  instance burnwire: Components.Burnwire base id 0x10071000
 
-  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x1001C000
+  instance gpioBurnwire0: Zephyr.ZephyrGpioDriver base id 0x10072000
 
-  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x1001D000
+  instance gpioBurnwire1: Zephyr.ZephyrGpioDriver base id 0x10073000
 
-  instance downlinkDelay: Components.ComDelay base id 0x1001E000
+  instance gpioHeater: Zephyr.ZephyrGpioDriver base id 0x10074000
 
-  instance lora: Zephyr.LoRa base id 0x1001F000
+  instance gpio2b: Zephyr.ZephyrGpioDriver base id 0x10075000
+
+  instance burnwire_deploy2: Components.Burnwire base id 0x10076000
+
+  instance burnwire_heater: Components.Burnwire base id 0x10077000
+
+  instance downlinkDelay: Components.ComDelay base id 0x1001B000
+
+  instance lora: Zephyr.LoRa base id 0x1001C000
 
   instance comSplitterEvents: Svc.ComSplitter base id 0x10020000
 

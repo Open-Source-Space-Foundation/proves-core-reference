@@ -35,6 +35,8 @@ module ReferenceDeployment {
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
+    instance gpio2b
+    instance gpioHeater
     instance gpioface0LS
     instance gpioface1LS
     instance gpioface2LS
@@ -52,6 +54,8 @@ module ReferenceDeployment {
     instance downlinkDelay
     instance telemetryDelay
     instance burnwire
+    instance burnwire_deploy2
+    instance burnwire_heater
     instance antennaDeployer
     instance comSplitterEvents
     instance comSplitterTelemetry
@@ -281,9 +285,11 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
-      rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
-      rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[17] -> burnwire_deploy2.schedIn
+      rateGroup1Hz.RateGroupMemberOut[18] -> burnwire_heater.schedIn
+      rateGroup1Hz.RateGroupMemberOut[19] -> adcs.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsLora.authenticationRouter.run
 
     }
 
@@ -337,6 +343,16 @@ module ReferenceDeployment {
     connections BurnwireGpio {
       burnwire.gpioSet[0] -> gpioBurnwire0.gpioWrite
       burnwire.gpioSet[1] -> gpioBurnwire1.gpioWrite
+    }
+
+    connections BurnwireDeploy2Gpio {
+      burnwire_deploy2.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire_deploy2.gpioSet[1] -> gpio2b.gpioWrite
+    }
+
+    connections BurnwireHeaterGpio {
+      burnwire_heater.gpioSet[0] -> gpioBurnwire0.gpioWrite
+      burnwire_heater.gpioSet[1] -> gpioHeater.gpioWrite
     }
 
     connections AntennaDeployment {

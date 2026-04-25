@@ -17,6 +17,8 @@
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
 static const struct gpio_dt_spec burnwire1Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire1), gpios);
+static const struct gpio_dt_spec deploy2bGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(fire_deploy2_b), gpios);
+static const struct gpio_dt_spec heaterGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(enable_heater), gpios);
 static const struct gpio_dt_spec face0LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face0_enable), gpios);
 static const struct gpio_dt_spec face1LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face1_enable), gpios);
 static const struct gpio_dt_spec face2LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face2_enable), gpios);
@@ -77,6 +79,8 @@ void configureTopology() {
     gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire0.open(burnwire0Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioBurnwire1.open(burnwire1Gpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioHeater.open(heaterGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpio2b.open(deploy2bGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 
     cmdSeq.allocateBuffer(0, mallocator, 1024);
     payloadSeq.allocateBuffer(0, mallocator, 1024);
