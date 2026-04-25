@@ -13,7 +13,16 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-ThermalManager::ThermalManager(const char* const compName) : ThermalManagerComponentBase(compName) {}
+ThermalManager::ThermalManager(const char* const compName) : ThermalManagerComponentBase(compName) {
+    // Initialize vectors based on runtime port counts
+    const FwIndexType numFaceTempPorts = this->getNum_faceTempGet_OutputPorts();
+    const FwIndexType numBattCellTempPorts = this->getNum_battCellTempGet_OutputPorts();
+
+    m_faceTempBelowActive.resize(numFaceTempPorts, false);
+    m_faceTempAboveActive.resize(numFaceTempPorts, false);
+    m_battCellTempBelowActive.resize(numBattCellTempPorts, false);
+    m_battCellTempAboveActive.resize(numBattCellTempPorts, false);
+}
 
 ThermalManager::~ThermalManager() {}
 
@@ -32,31 +41,65 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 
     // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
+        // Ensure index is within bounds of our state arrays
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_faceTempBelowActive.size()));
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_faceTempAboveActive.size()));
+
         F64 temperature = this->faceTempGet_out(i, condition);
-        if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
-            this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
-        } else if (temperature > FACE_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_FaceTemperatureBelowThreshold_ThrottleClear();
+
+        // Check if the temperature reading is valid before processing
+        if (condition != Fw::Success::SUCCESS) {
+            continue;
         }
+
+        if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
+            if (!this->m_faceTempBelowActive[i]) {
+                this->m_faceTempBelowActive[i] = true;
+                this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
+            }
+        } else if (temperature > FACE_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
+            this->m_faceTempBelowActive[i] = false;
+        }
+
         if (temperature > FACE_TEMP_UPPER_THRESHOLD) {
-            this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
+            if (!this->m_faceTempAboveActive[i]) {
+                this->m_faceTempAboveActive[i] = true;
+                this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
+            }
         } else if (temperature < FACE_TEMP_UPPER_THRESHOLD - ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_FaceTemperatureAboveThreshold_ThrottleClear();
+            this->m_faceTempAboveActive[i] = false;
         }
     }
 
     // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
+        // Ensure index is within bounds of our state arrays
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_battCellTempBelowActive.size()));
+        FW_ASSERT(i < static_cast<FwIndexType>(this->m_battCellTempAboveActive.size()));
+
         F64 temperature = this->battCellTempGet_out(i, condition);
-        if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
-            this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
-        } else if (temperature > BATT_CELL_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
-            // this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold_ThrottleClear();
+
+        // Check if the temperature reading is valid before processing
+        if (condition != Fw::Success::SUCCESS) {
+            continue;
         }
+
+        if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
+            if (!this->m_battCellTempBelowActive[i]) {
+                this->m_battCellTempBelowActive[i] = true;
+                this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
+            }
+        } else if (temperature > BATT_CELL_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
+            this->m_battCellTempBelowActive[i] = false;
+        }
+
         if (temperature > BATT_CELL_TEMP_UPPER_THRESHOLD) {
-            this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
+            if (!this->m_battCellTempAboveActive[i]) {
+                this->m_battCellTempAboveActive[i] = true;
+                this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
+            }
         } else if (temperature < BATT_CELL_TEMP_UPPER_THRESHOLD - ThermalManager::DEBOUNCE_ERROR) {
-            // this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
+            this->m_battCellTempAboveActive[i] = false;
         }
     }
 

@@ -6,6 +6,8 @@
 #ifndef Components_ThermalManager_HPP
 #define Components_ThermalManager_HPP
 
+#include <vector>
+
 #include "PROVESFlightControllerReference/Components/ThermalManager/ThermalManagerComponentAc.hpp"
 
 namespace Components {
@@ -24,7 +26,13 @@ class ThermalManager final : public ThermalManagerComponentBase {
     ~ThermalManager();
 
   private:
-    constexpr static F64 DEBOUNCE_ERROR = 3.0;  //!< Debounce error value for temperature threshold events
+    static constexpr F64 DEBOUNCE_ERROR = 3.0;  //!< Debounce error value for temperature threshold events
+
+    std::vector<bool> m_faceTempBelowActive;
+    std::vector<bool> m_faceTempAboveActive;
+    std::vector<bool> m_battCellTempBelowActive;
+    std::vector<bool> m_battCellTempAboveActive;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
