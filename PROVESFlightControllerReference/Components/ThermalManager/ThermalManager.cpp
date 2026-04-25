@@ -33,30 +33,46 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     // Face temp sensors
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
         F64 temperature = this->faceTempGet_out(i, condition);
+
         if (temperature < FACE_TEMP_LOWER_THRESHOLD) {
-            this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
+            if (!this->m_faceTempBelowActive[i]) {
+                this->m_faceTempBelowActive[i] = true;
+                this->log_WARNING_LO_FaceTemperatureBelowThreshold(i, temperature);
+            }
         } else if (temperature > FACE_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_FaceTemperatureBelowThreshold_ThrottleClear();
+            this->m_faceTempBelowActive[i] = false;
         }
+
         if (temperature > FACE_TEMP_UPPER_THRESHOLD) {
-            this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
+            if (!this->m_faceTempAboveActive[i]) {
+                this->m_faceTempAboveActive[i] = true;
+                this->log_WARNING_LO_FaceTemperatureAboveThreshold(i, temperature);
+            }
         } else if (temperature < FACE_TEMP_UPPER_THRESHOLD - ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_FaceTemperatureAboveThreshold_ThrottleClear();
+            this->m_faceTempAboveActive[i] = false;
         }
     }
 
     // Battery cell temp sensors
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
         F64 temperature = this->battCellTempGet_out(i, condition);
+
         if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
-            this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
+            if (!this->m_battCellTempBelowActive[i]) {
+                this->m_battCellTempBelowActive[i] = true;
+                this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
+            }
         } else if (temperature > BATT_CELL_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
-            // this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold_ThrottleClear();
+            this->m_battCellTempBelowActive[i] = false;
         }
+
         if (temperature > BATT_CELL_TEMP_UPPER_THRESHOLD) {
-            this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
+            if (!this->m_battCellTempAboveActive[i]) {
+                this->m_battCellTempAboveActive[i] = true;
+                this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
+            }
         } else if (temperature < BATT_CELL_TEMP_UPPER_THRESHOLD - ThermalManager::DEBOUNCE_ERROR) {
-            // this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
+            this->m_battCellTempAboveActive[i] = false;
         }
     }
 
