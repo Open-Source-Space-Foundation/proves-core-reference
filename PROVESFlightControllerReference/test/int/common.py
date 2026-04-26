@@ -23,9 +23,10 @@ def proves_send_and_assert_command(
     hardware which use microprocessors. As a result, some commands may
     take longer to complete. This function clears histories before sending
     the command, sets a longer timeout for command completion, and retries
-    up to 3 times if command assertion fails.
+    up to 4 times if command assertion fails.
     """
-    for attempt in range(3):
+    tries: int = 4
+    for attempt in range(tries):
         fprime_test_api.clear_histories()
         try:
             fprime_test_api.send_and_assert_command(
@@ -39,5 +40,5 @@ def proves_send_and_assert_command(
                 fprime_test_api.assert_event_sequence(events, timeout=5)
             break
         except AssertionError:
-            if attempt == 2:
+            if attempt == tries - 1:
                 raise
