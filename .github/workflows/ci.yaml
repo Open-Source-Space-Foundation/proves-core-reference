@@ -165,7 +165,7 @@ jobs:
 
       - name: Start GDS
         run: |
-          nohup make gds-integration &
+          nohup make gds-integration UART_DEVICE="${{ env.GDS_PASSTHROUGH }}" &
           echo $! > server.pid
 
       - name: Sync Sequence Number
