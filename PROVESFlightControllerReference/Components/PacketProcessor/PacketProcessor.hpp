@@ -89,6 +89,18 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
     );
 
+    //! Accepts a packet and updates the sequence number
+    void acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+
+    //! Bypasses a packet and updates the bypass packets count
+    void bypassPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+
+    //! Forwards a packet to the output port
+    void forwardPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+
+    //! Rejects a packet and updates the rejected packets count
+    void rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+
   private:
     // ----------------------------------------------------------------------
     // Private member variables

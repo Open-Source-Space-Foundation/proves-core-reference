@@ -10,9 +10,11 @@
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
 #include <iomanip>
+#include <utility>
 
 // Include generated header with default key (generated at build time)
 #include "AuthDefaultKey.h"
+#include "Types.hpp"
 
 namespace Components {
 
@@ -35,97 +37,55 @@ PacketProcessor ::~PacketProcessor() {}
 // ----------------------------------------------------------------------
 
 void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    ComCfg::FrameContext contextOut = context;
-
+    // Parse the packet to extract relevant information for validation and authentication
     const PacketParser::Result parseResult = parsePacket(data.getData(), data.getSize());
+
+    // If there was an error parsing the packet, reject it
     if (parseResult.status != PacketParser::Status::Ok) {
-        // Log the packet parsing failure
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-
-        // Telemeter the updated rejected packet count
-        this->m_rejectedPacketsCount += 1;
-        this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
-
-        // Set frame context authenticated to false
-        contextOut.set_authenticated(false);
-
-        // Since parsing failed, we cannot trust any of the fields in the header, so we should not attempt to use them
-        // for any further processing (e.g. validation or logging)
-        this->dataOut_out(0, data, contextOut);
+        this->rejectPacket(data, context);
         return;
     }
 
+    // Validate the packet to determine if it can bypass authentication, should be rejected, or is eligible for
+    // authentication
     PacketValidator::Status validationStatus =
         validatePacket(parseResult.packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
-    switch (validationStatus) {
-        case PacketValidator::Status::Valid: {
-            // Telemeter the updated sequence number
-            this->m_sequenceNumber += 1;
-            this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
 
-            // Write sequence number to persistent storage
-            Os::File::Status status = this->writeSequenceNumber(this->m_sequenceNumber);
-            if (status != Os::File::OP_OK) {
-                // TODO(nateinaction): Decide what the appropriate behavior should be
-            }
-
-            break;
-        }
-
-        case PacketValidator::Status::Bypass: {
-            // Telemeter the updated bypass packet count
-            this->m_bypassPacketsCount += 1;
-            this->tlmWrite_BypassPacketsCount(this->m_bypassPacketsCount);
-
-            break;
-        }
-
-        case PacketValidator::Status::SequenceNumberOutOfWindow: {
-            // Log the sequence number validation failure
-            this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
-
-            // Telemeter the updated rejected packet count
-            this->m_rejectedPacketsCount += 1;
-            this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
-
-            // TODO(nateinaction): Ensure packet is rejected
-            break;
-        }
-
-        case PacketValidator::Status::SpiInvalid: {
-            // Log the SPI validation failure
-            this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
-
-            // Telemeter the updated rejected packet count
-            this->m_rejectedPacketsCount += 1;
-            this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
-
-            // TODO(nateinaction): Ensure packet is rejected
-            break;
-        }
+    // If the packet can bypass authentication
+    if (validationStatus == PacketValidator::Status::Bypass) {
+        this->bypassPacket(data, context);
+        return;
     }
 
+    // If the packet failed validation due to invalid SPI value, reject it
+    if (validationStatus == PacketValidator::Status::SpiInvalid) {
+        this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
+        this->rejectPacket(data, context);
+        return;
+    }
+
+    // If the packet failed validation due to sequence number being out of the acceptable window, reject it
+    if (validationStatus == PacketValidator::Status::SequenceNumberOutOfWindow) {
+        this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
+        this->rejectPacket(data, context);
+        return;
+    }
+
+    // Authenticate the packet
     const PacketAuthenticator::Result authResult =
         authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac);
+
+    // If the packet failed authentication, reject it
     if (authResult.status != PacketAuthenticator::Status::Authenticated) {
-        // Log the HMAC validation failure
         this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
                                                   authResult.psaStatus);
-
-        // Telemeter the updated rejected packet count
-        this->m_rejectedPacketsCount += 1;
-        this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
-
-        // Set frame context authenticated to false
-        contextOut.set_authenticated(false);
+        this->rejectPacket(data, context);
+        return;
     }
 
-    contextOut.set_authenticated(true);
-
-    // Now strip header and trailer from the buffer for forwarding
-    data.setData(data.getData() + Ccsds355_0_B_2_Cmac::kSecurityHeaderSize);
-    data.setSize(data.getSize() - Ccsds355_0_B_2_Cmac::kSecurityHeaderSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize);
-    this->dataOut_out(0, data, contextOut);
+    // If the packet was successfully authenticated, accept it
+    this->acceptPacket(data, context);
 }
 
 void PacketProcessor ::dataReturnIn_handler(FwIndexType portNum,
@@ -223,6 +183,50 @@ Os::File::Status PacketProcessor ::writeSequenceNumber(const U32 value) {
     }
 
     return status;
+}
+
+void PacketProcessor ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Update the sequence number and write it to disk
+    this->m_sequenceNumber += 1;
+    this->writeSequenceNumber(this->m_sequenceNumber);
+
+    // Write sequence number to persistent storage
+    // intentionally not checking the return value
+    this->writeSequenceNumber(this->m_sequenceNumber);
+
+    // Authenticate the packet
+    ComCfg::FrameContext contextOut = context;
+    contextOut.set_authenticated(true);
+
+    // Forward the packet to the output port
+    this->forwardPacket(data, contextOut);
+}
+
+void PacketProcessor ::bypassPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Telemeter the updated bypass packets count
+    this->m_bypassPacketsCount += 1;
+    this->tlmWrite_BypassPacketsCount(this->m_bypassPacketsCount);
+
+    // Forward the packet to the output port
+    this->forwardPacket(data, context);
+}
+
+void PacketProcessor ::forwardPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Strip header and trailer from the buffer for forwarding
+    data.setData(data.getData() + Ccsds355_0_B_2_Cmac::kSecurityHeaderSize);
+    data.setSize(data.getSize() - Ccsds355_0_B_2_Cmac::kSecurityHeaderSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize);
+
+    // Forward the packet to the output port
+    this->dataOut_out(0, data, context);
+}
+
+void PacketProcessor ::rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    // Telemeter the updated rejected packet count
+    this->m_rejectedPacketsCount += 1;
+    this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
+
+    // Do not forward the packet to the output port
+    this->dataReturnOut_out(0, data, context);
 }
 
 }  // namespace Components

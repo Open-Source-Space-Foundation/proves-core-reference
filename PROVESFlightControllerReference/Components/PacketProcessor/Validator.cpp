@@ -9,7 +9,9 @@ namespace Components {
 namespace {
 
 // OpCodes that are allowed to bypass authentication
-// TODO(nateinaction): Describe how to get these OpCodes
+// To determine the OpCode value for a command, search for the command in
+// build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+// then convert the opcode field value from decimal to hexadecimal
 static constexpr uint32_t kBypassOpCodes[] = {
     0x01000000,  // CdhCore.cmdDisp.CMD_NO_OP
     0x2100B000,  // ComCcsdsUart.packetProcessor.GET_SEQ_NUM
@@ -50,6 +52,11 @@ bool opCodeBypassAllowed(uint32_t opCode) {
 PacketValidator::Status validatePacket(const Packet& packet,
                                        uint32_t expectedSequenceNumber,
                                        uint32_t sequenceNumberWindow) {
+    // Check if the packet can bypass authentication based on its OpCode
+    if (opCodeBypassAllowed(packet.opCode)) {
+        return PacketValidator::Status::Bypass;
+    }
+
     // Validate SPI
     if (!spiValid(packet.spi)) {
         return PacketValidator::Status::SpiInvalid;
@@ -58,11 +65,6 @@ PacketValidator::Status validatePacket(const Packet& packet,
     // Validate sequence number within window
     if (!sequenceNumberInWindow(packet.sequenceNumber, expectedSequenceNumber, sequenceNumberWindow)) {
         return PacketValidator::Status::SequenceNumberOutOfWindow;
-    }
-
-    // Check if the packet can bypass authentication based on its OpCode
-    if (opCodeBypassAllowed(packet.opCode)) {
-        return PacketValidator::Status::Bypass;
     }
 
     return PacketValidator::Status::Valid;
