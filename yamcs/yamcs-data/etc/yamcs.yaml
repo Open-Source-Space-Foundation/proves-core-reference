@@ -7,6 +7,10 @@ services:
         allowOrigin: "*"
         allowCredentials: false
 
+yamcs-web:
+  staticRoot: web
+  tag: CubeSat Ground Control
+
 dataDir: yamcs-data
 
 instances:

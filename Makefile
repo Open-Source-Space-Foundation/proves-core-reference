@@ -234,6 +234,14 @@ clean: ## Remove all gitignored files
 
 ##@ YAMCS
 
+.PHONY: yamcs-ui-install
+yamcs-ui-install: ## Install frontend dependencies for the custom Yamcs UI
+	@cd yamcs-ui && npm install
+
+.PHONY: yamcs-ui-build
+yamcs-ui-build: yamcs-ui-install ## Build the custom Yamcs UI into yamcs/yamcs-data/web
+	@cd yamcs-ui && npm run build
+
 .PHONY: yamcs-dict
 yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-artifacts; run 'make build' first)
 	@mkdir -p yamcs/yamcs-data/mdb
@@ -284,7 +292,7 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	@echo "Done."
 
 .PHONY: yamcs
-yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
+yamcs: fprime-venv yamcs-dict yamcs-ui-build ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
 	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
 	@$(MAKE) yamcs-stop
 	@echo "Starting YAMCS (requires Java 11+)..."
@@ -297,6 +305,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
 	@sleep 5
+	@open http://localhost:8090 >/dev/null 2>&1 || true
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."
@@ -306,7 +315,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --uart-baud 115200
 
 .PHONY: yamcs-server
-yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
+yamcs-server: yamcs-dict yamcs-ui-build ## Start YAMCS server via Docker (Use Case 2: remote deployment)
 	docker compose -f yamcs/docker-compose.yml up
 
 .PHONY: yamcs-adapter-tcp
