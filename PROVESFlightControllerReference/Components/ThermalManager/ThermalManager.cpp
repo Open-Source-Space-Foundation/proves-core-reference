@@ -51,12 +51,12 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
         if (temperature < BATT_CELL_TEMP_LOWER_THRESHOLD) {
             this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold(i, temperature);
         } else if (temperature > BATT_CELL_TEMP_LOWER_THRESHOLD + ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold_ThrottleClear();
+            // this->log_WARNING_LO_BatteryCellTemperatureBelowThreshold_ThrottleClear();
         }
         if (temperature > BATT_CELL_TEMP_UPPER_THRESHOLD) {
             this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold(i, temperature);
         } else if (temperature < BATT_CELL_TEMP_UPPER_THRESHOLD - ThermalManager::DEBOUNCE_ERROR) {
-            this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
+            // this->log_WARNING_LO_BatteryCellTemperatureAboveThreshold_ThrottleClear();
         }
     }
 
