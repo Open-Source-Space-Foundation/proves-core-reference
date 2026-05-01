@@ -46,6 +46,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->rejectPacket(data, context);
         return;
     }
+    this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
     // Validate the packet to determine if it can bypass authentication, should be rejected, or is eligible for
     // authentication
@@ -64,6 +65,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->rejectPacket(data, context);
         return;
     }
+    this->log_WARNING_HI_SpiInvalid_ThrottleClear();
 
     // If the packet failed validation due to sequence number being out of the acceptable window, reject it
     if (validationStatus == PacketValidator::Status::SequenceNumberOutOfWindow) {
@@ -71,6 +73,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->rejectPacket(data, context);
         return;
     }
+    this->log_WARNING_HI_SequenceNumberOutOfWindow_ThrottleClear();
 
     // Authenticate the packet
     const PacketAuthenticator::Result authResult =
@@ -83,6 +86,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->rejectPacket(data, context);
         return;
     }
+    this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
     // If the packet was successfully authenticated, accept it
     this->acceptPacket(data, context);
@@ -138,21 +142,22 @@ void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U
 void PacketProcessor ::configure() {
     Fw::ParamValid is_valid;
 
+    // Get the sequence number window size from the parameter
+    this->m_sequenceNumberWindow = this->paramGet_SEQ_NUM_WINDOW(is_valid);
+    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+
     // Get the file path from the parameter
     this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     // Get the sequence number from the file system
-    U32 sequenceNumber;
+    U32 sequenceNumber = 0;
     Os::File::Status status = this->readSequenceNumber(sequenceNumber);
     FW_ASSERT(status == Os::File::OP_OK);
+    this->m_sequenceNumber = sequenceNumber;
 
     // Telemeter the current sequence number
-    this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
-
-    // Get the sequence number window size from the parameter
-    this->m_sequenceNumberWindow = this->paramGet_SEQ_NUM_WINDOW(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
 }
 
 // ----------------------------------------------------------------------
@@ -166,6 +171,7 @@ Os::File::Status PacketProcessor ::readSequenceNumber(U32& value) {
         // Log the failure to read the sequence number
         this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
     }
+    this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
 
     // If the sequence number file does not exist, write it to disk with the default value of 0
     if (status != Os::File::DOESNT_EXIST) {
@@ -181,6 +187,7 @@ Os::File::Status PacketProcessor ::writeSequenceNumber(const U32 value) {
         // Log the failure to write the default sequence number
         this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));
     }
+    this->log_WARNING_HI_SequenceNumberWriteFailed_ThrottleClear();
 
     return status;
 }

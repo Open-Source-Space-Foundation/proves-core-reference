@@ -18,14 +18,6 @@ module Components {
         HmacParseError,            @< HMAC could not be parsed from packet
     }
 
-    # @ FPP shadow-struct representing Components::PacketValidator::Status
-    # enum PacketValidatorStatus {
-    #     Valid,                      @< Packet is valid
-    #     Bypass,                     @< Packet OpCode is allowed to bypass authentication
-    #     SpiInvalid,                 @< SPI did not match expected value
-    #     SequenceNumberOutOfWindow,  @< Sequence number is outside the acceptable window
-    # }
-
     @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
     passive component PacketProcessor {
 
@@ -54,10 +46,10 @@ module Components {
         event SequenceNumberGet(seq_num: U32) severity activity high id 6 format "Sequence number is {}"
 
         @SequenceNumberReadFailed indicates that there was an error reading the sequence number from the file system
-        event SequenceNumberReadFailed(status: Os.FileStatus) severity warning high id 14 format "Failed to read sequence number, error: {}"
+        event SequenceNumberReadFailed(status: Os.FileStatus) severity warning high id 14 format "Failed to read sequence number, error: {}" throttle 2
 
         @ SequenceNumberSet indicates that the sequence number was set to a specified value through a command
-        event SequenceNumberSet(seq_num: U32) severity activity high id 7 format "Sequence number set to {}" throttle 2
+        event SequenceNumberSet(seq_num: U32) severity activity high id 7 format "Sequence number set to {}"
 
         @ SequenceNumberWriteFailed indicates that there was an error writing the sequence number to file
         event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
