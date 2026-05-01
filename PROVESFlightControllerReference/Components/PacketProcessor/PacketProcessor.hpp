@@ -90,16 +90,24 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     );
 
     //! Accepts a packet and updates the sequence number
-    void acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+    void acceptPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
+                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+    );
 
     //! Bypasses a packet and updates the bypass packets count
-    void bypassPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+    void bypassPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
+                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+    );
 
     //! Forwards a packet to the output port
-    void forwardPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+    void forwardPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
+                       const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+    );
 
     //! Rejects a packet and updates the rejected packets count
-    void rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context);
+    void rejectPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
+                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+    );
 
   private:
     // ----------------------------------------------------------------------
