@@ -15,6 +15,7 @@ The Thermal Manager component is designed to be scheduled periodically to trigge
    - Iterates through the connected battery cell temperature sensor ports.
    - Triggers temperature readings for each connected sensor.
    - Triggers temperature reading from the Pico die temperature sensor.
+   - Evaluates lower/upper threshold conditions per sensor
 
 ## Class Diagram
 
@@ -27,6 +28,7 @@ classDiagram
         class ThermalManager {
             + ThermalManager(const char* compName)
             + ~ThermalManager()
+            - evaluateTemperatureThreshold(FwIndexType idx, F64 temperature, F64 lowerThreshold, F64 upperThreshold, bool& belowActive, bool& aboveActive, LogFn logBelow, LogFn logAbove): void
             - run_handler(FwIndexType portNum, U32 context): void
         }
     }
@@ -99,8 +101,9 @@ sequenceDiagram
 
 ## Change Log
 
-| Date       | Description                                                           |
-| ---------- | --------------------------------------------------------------------- |
-| 2026-03-30 | Add Pico die temperature sensor integration                           |
-| 2026-03-30 | Add events for when temperature readings are above/below a threshold. |
-| 2025-12-05 | Initial Thermal Manager component SDD                                 |
+| Date       | Description                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-01 | Updated threshold handling to use per-sensor state and shared evaluation logic; eliminated global throttle-clear behavior. |
+| 2026-03-30 | Add Pico die temperature sensor integration                                                                                |
+| 2026-03-30 | Add events for when temperature readings are above/below a threshold.                                                      |
+| 2025-12-05 | Initial Thermal Manager component SDD                                                                                      |
