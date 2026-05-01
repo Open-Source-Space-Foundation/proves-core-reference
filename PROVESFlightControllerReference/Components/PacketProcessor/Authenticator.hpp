@@ -34,7 +34,7 @@ struct Result {
 
 }  // namespace PacketAuthenticator
 
-//! authenticate checks the validity of the packet HMAC
+//! Check the validity of the packet HMAC
 PacketAuthenticator::Result authenticatePacket(
     const uint8_t* buffer,  //!< The packet data buffer
     size_t size,            //!< The size of the data buffer
