@@ -95,6 +95,9 @@ Output packet layout (forwarded):
 - Space Packet Primary Header (6 bytes)
 - Space Packet Data Field
 
+### Additional resources
+- [CCSDS 355.0-B-2 CMAC Authentication Standard](https://ccsds.org/Pubs/355x0b2.pdf)
+
 ## Parameters
 
 | Name | Type | Default | Description |
@@ -183,7 +186,7 @@ The default authentication key header is generated at build time from project ke
 | AUTH002-C | The component shall forward bypassed packets without further validation or authentication to the output port. | Inspection |
 | AUTH003 | The component shall validate that the SPI value corresponds to a configured Security Association. | Unit Test |
 | AUTH004 | The component shall validate the received sequence number against the stored sequence number. | Unit Test |
-| AUTH004-A | The component shall reject packets with sequence numbers that are outside the acceptable window and log a SequenceNumberOutOfWindow event. | Unit Test, Inspection |
+| AUTH004-A | The component shall reject packets with sequence numbers that are outside the acceptable window and log an event. | Unit Test, Inspection |
 | AUTH004-B | The component shall increment the stored sequence number only when a packet is fully validated and authenticated | Inspection |
 | AUTH004-C | The component shall allow the sequence number window to be configurable via a parameter. | Inspection |
 | AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16 byte security trailer. | Unit Test |

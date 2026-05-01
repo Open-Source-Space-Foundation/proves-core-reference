@@ -10,8 +10,38 @@ TEST(PacketValidatorTest, ValidPacket) {
     EXPECT_EQ(res, PacketValidator::Status::Valid);
 }
 
-TEST(PacketValidatorTest, BypassOpCode) {
+TEST(PacketValidatorTest, BypassNoOpOpCode) {
     Packet p{0u, 10u, 0x01000000u, {}};  // bypass opcode
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Bypass);
+}
+
+TEST(PacketValidatorTest, BypassUartGetSeqNumOpCode) {
+    Packet p{0u, 10u, 0x2100B000u, {}};  // bypass opcode
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Bypass);
+}
+
+TEST(PacketValidatorTest, BypassLoraGetSeqNumOpCode) {
+    Packet p{0u, 10u, 0x2200B000u, {}};  // bypass opcode
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Bypass);
+}
+
+TEST(PacketValidatorTest, BypassTellJokeOpCode) {
+    Packet p{0u, 10u, 0x10065000u, {}};  // bypass opcode
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Bypass);
+}
+
+TEST(PacketValidatorTest, BypassSpiInvalid) {
+    Packet p{1u, 10u, 0x01000000u, {}};  // non-zero SPI but bypass opcode but bypass opcode
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Bypass);
+}
+
+TEST(PacketValidatorTest, BypassSequenceNumberOutOfWindow) {
+    Packet p{0u, 20u, 0x01000000u, {}};  // sequence 20, expected 10, window 5 but bypass opcode
     auto res = validatePacket(p, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::Bypass);
 }
