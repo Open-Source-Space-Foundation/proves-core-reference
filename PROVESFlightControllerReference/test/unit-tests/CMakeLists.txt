@@ -7,6 +7,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime/googletest goog
 
 # --- Helper Libraries ---
 
+# DetumbleManager BDot
+add_library(detumble_manager_bdot STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/DetumbleManager/BDot.cpp
+)
+target_include_directories(detumble_manager_bdot PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # DetumbleManager Magnetorquer
 add_library(detumble_manager_magnetorquer STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/DetumbleManager/Magnetorquer.cpp
@@ -23,37 +31,37 @@ target_include_directories(detumble_manager_strategy_selector PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# PacketProcessor Parser
+add_library(packet_processor_parser STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Parser.cpp
+)
+target_include_directories(packet_processor_parser PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
+# PacketProcessor Validator
+add_library(packet_processor_validator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Validator.cpp
+)
+target_include_directories(packet_processor_validator PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
+# PacketProcessor Authenticator
+add_library(packet_processor_authenticator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.cpp
+)
+target_include_directories(packet_processor_authenticator PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+    ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
+)
+
 # RtcManager RtcHelper
 add_library(rtc_manager_rtc_helper STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.cpp
 )
 target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-)
-
-# PacketProcessor Parser
-add_library(packet_processor STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Parser.cpp
-)
-target_include_directories(packet_processor PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-)
-
-# PacketProcessor Validator
-add_library(packet_validator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Validator.cpp
-)
-target_include_directories(packet_validator PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-)
-
-# PacketProcessor Authenticator (link against system crypto provider)
-add_library(packet_authenticator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.cpp
-)
-target_include_directories(packet_authenticator PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-    ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
 
 # Find Mbed TLS (we use libmbedcrypto for PSA provider)
@@ -66,22 +74,14 @@ if(NOT MBEDCRYPTO_LIB)
 endif()
 
 if(MBEDTLS_MD_H)
-    target_include_directories(packet_authenticator PUBLIC ${MBEDTLS_MD_H})
+    target_include_directories(packet_processor_authenticator PUBLIC ${MBEDTLS_MD_H})
 endif()
 
 if(PSA_CRYPTO_H)
-    target_include_directories(packet_authenticator PUBLIC ${PSA_CRYPTO_H})
+    target_include_directories(packet_processor_authenticator PUBLIC ${PSA_CRYPTO_H})
 endif()
 
-target_link_libraries(packet_authenticator PUBLIC ${MBEDCRYPTO_LIB})
-
-# DetumbleManager BDot
-add_library(detumble_manager_bdot STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/DetumbleManager/BDot.cpp
-)
-target_include_directories(detumble_manager_bdot PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-)
+target_link_libraries(packet_processor_authenticator PUBLIC ${MBEDCRYPTO_LIB})
 
 # --- Auto-discover and build tests ---
 
@@ -93,13 +93,13 @@ foreach(test_src ${TEST_SOURCES})
     add_executable(${test_name} ${test_src})
     target_link_libraries(${test_name}
         gtest_main
+        detumble_manager_bdot
         detumble_manager_magnetorquer
         detumble_manager_strategy_selector
-        detumble_manager_bdot
+        packet_processor_parser
+        packet_processor_validator
+        packet_processor_authenticator
         rtc_manager_rtc_helper
-        packet_processor
-        packet_validator
-        packet_authenticator
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
