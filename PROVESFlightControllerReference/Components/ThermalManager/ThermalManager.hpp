@@ -28,10 +28,12 @@ class ThermalManager final : public ThermalManagerComponentBase {
     static constexpr U32 NUM_FACE_TEMP_SENSORS = 5;
     static constexpr U32 NUM_BATT_CELL_TEMP_SENSORS = 4;
 
-    bool m_faceTempBelowActive[NUM_FACE_TEMP_SENSORS] = {false};
-    bool m_faceTempAboveActive[NUM_FACE_TEMP_SENSORS] = {false};
-    bool m_battCellTempBelowActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
-    bool m_battCellTempAboveActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
+    bool faceTempBelowThrottleActive[NUM_FACE_TEMP_SENSORS] = {false};
+    bool faceTempAboveThrottleActive[NUM_FACE_TEMP_SENSORS] = {false};
+    bool battCellTempBelowThrottleActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
+    bool battCellTempAboveThrottleActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
+
+    using LogFn = void (ThermalManager::*)(U32, F32) const;
 
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -43,6 +45,21 @@ class ThermalManager final : public ThermalManagerComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Helper function to log temperature threshold events
+    void evaluateTemperatureThreshold(
+        FwIndexType idx,            //!< The sensor index
+        F64 temperature,            //!< The temperature reading
+        F64 lowerThreshold,         //!< The lower temperature threshold
+        F64 upperThreshold,         //!< The upper temperature threshold
+        bool& belowThrottleActive,  //!< Whether the below threshold event throttle is currently active
+        bool& aboveThrottleActive,  //!< Whether the above threshold event throttle is currently active
+        LogFn logBelow,             //!< Log function for below threshold event
+        LogFn logAbove);            //!< Log function for above threshold event
 };
 
 }  // namespace Components
