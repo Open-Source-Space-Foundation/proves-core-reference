@@ -24,6 +24,7 @@ enum class Status {
 
 }  // namespace PacketValidator
 
+//! Validate the packet against ruleset
 PacketValidator::Status validatePacket(
     const Packet& packet,             //!< The Parsed packet to validate
     uint32_t expectedSequenceNumber,  //!< The expected sequence number for the packet

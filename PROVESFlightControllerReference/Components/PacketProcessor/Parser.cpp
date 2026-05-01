@@ -12,11 +12,14 @@ namespace Components {
 namespace {
 
 template <typename T>
+
+//! Struct to hold the result of parsing a field
 struct FieldParseResult {
-    PacketParser::Status status;
-    T value;
+    PacketParser::Status status;  //!< The status of the parsing attempt
+    T value;                      //!< The parsed value
 };
 
+//! Parse the SPI field from the packet buffer
 FieldParseResult<uint32_t> parseSpi(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
     if (!buffer || size < Ccsds355_0_B_2_Cmac::kSpiSize) {
@@ -29,6 +32,7 @@ FieldParseResult<uint32_t> parseSpi(const uint8_t* buffer, const size_t size) {
     return {PacketParser::Status::Ok, spi};
 }
 
+//! Parse the sequence number field from the packet buffer
 FieldParseResult<uint32_t> parseSequenceNumber(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
     if (!buffer || size < Ccsds355_0_B_2_Cmac::kSecurityHeaderSize) {
@@ -43,6 +47,7 @@ FieldParseResult<uint32_t> parseSequenceNumber(const uint8_t* buffer, const size
     return {PacketParser::Status::Ok, sequenceNumber};
 }
 
+//! Parse the OpCode field from the packet buffer
 FieldParseResult<uint32_t> parseOpCode(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
     if (!buffer || size < Ccsds355_0_B_2_Cmac::kMinPacketSize) {
@@ -58,6 +63,7 @@ FieldParseResult<uint32_t> parseOpCode(const uint8_t* buffer, const size_t size)
     return {PacketParser::Status::Ok, opCode};
 }
 
+//! Parse the HMAC field from the packet buffer
 FieldParseResult<Hmac> parseHmac(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
     if (!buffer || size < Ccsds355_0_B_2_Cmac::kMinAuthenticatedPacketSize) {

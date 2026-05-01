@@ -13,18 +13,21 @@ namespace {
 // build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
 // then convert the opcode field value from decimal to hexadecimal
 static constexpr uint32_t kBypassOpCodes[] = {
-    0x01000000,  // CdhCore.cmdDisp.CMD_NO_OP
-    0x2100B000,  // ComCcsdsUart.packetProcessor.GET_SEQ_NUM
-    0x2200B000,  // ComCcsdsLora.packetProcessor.GET_SEQ_NUM
-    0x2300B000,  // ComCcsdsSBand.packetProcessor.GET_SEQ_NUM
-    0x10065000,  // ReferenceDeployment.amateurRadio.TELL_JOKE
+    0x01000000,  //!< CdhCore.cmdDisp.CMD_NO_OP
+    0x2100B000,  //!< ComCcsdsUart.packetProcessor.GET_SEQ_NUM
+    0x2200B000,  //!< ComCcsdsLora.packetProcessor.GET_SEQ_NUM
+    0x2300B000,  //!< ComCcsdsSBand.packetProcessor.GET_SEQ_NUM
+    0x10065000,  //!< ReferenceDeployment.amateurRadio.TELL_JOKE
 };
 
+//! Validate the SPI field of the packet
 bool spiValid(uint32_t spi) {
     // For now we only support SPI 0, which indicates no additional security processing beyond HMAC
     return spi == 0;
 }
 
+//! Validate that the sequence number is within the allowed window of expected sequence numbers, accounting for
+//! wraparound
 bool sequenceNumberInWindow(uint32_t sequenceNumber, uint32_t expectedSequenceNumber, uint32_t sequenceNumberWindow) {
     /*
      * Compute the difference between received and expected sequence numbers using unsigned
@@ -36,6 +39,7 @@ bool sequenceNumberInWindow(uint32_t sequenceNumber, uint32_t expectedSequenceNu
     return (sequenceNumber - expectedSequenceNumber) <= sequenceNumberWindow;
 }
 
+//! Check if the OpCode is in the bypass list
 bool opCodeBypassAllowed(uint32_t opCode) {
     // Check if the OpCode is in the bypass list
     for (size_t i = 0; i < (sizeof(kBypassOpCodes) / sizeof(kBypassOpCodes[0])); i++) {

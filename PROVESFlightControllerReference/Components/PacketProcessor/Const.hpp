@@ -10,6 +10,7 @@
 namespace Components {
 
 // CCSDS 355.0-B-2 CMAC mode
+// https://ccsds.org/Pubs/355x0b2.pdf
 namespace Ccsds355_0_B_2_Cmac {
 
 constexpr const size_t kSpiSize = 2;                //!< The size of the Security Parameter Index field in bytes
