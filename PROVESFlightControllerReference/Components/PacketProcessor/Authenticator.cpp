@@ -16,6 +16,8 @@ namespace Components {
 namespace {
 
 constexpr size_t kKeyHexLength = 32;
+constexpr size_t kSha256BlockSize = 64;
+constexpr size_t kSha256OutputSize = 32;
 
 bool hexToNibble(char ch, uint8_t& nibble) {
     if (ch >= '0' && ch <= '9') {
@@ -68,6 +70,74 @@ psa_status_t importHmacKey(const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecur
     return status;
 }
 
+psa_status_t computeTruncatedHmacWithHashApi(const uint8_t* dataBuffer,
+                                             size_t dataSize,
+                                             const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize],
+                                             uint8_t (&hmacOut)[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize]) {
+    if (dataBuffer == nullptr) {
+        return PSA_ERROR_INVALID_ARGUMENT;
+    }
+
+    uint8_t preparedKey[kSha256BlockSize] = {0};
+    std::memcpy(preparedKey, keyBytes, sizeof(keyBytes));
+
+    uint8_t innerPad[kSha256BlockSize];
+    uint8_t outerPad[kSha256BlockSize];
+    for (size_t i = 0; i < kSha256BlockSize; i++) {
+        innerPad[i] = static_cast<uint8_t>(preparedKey[i] ^ 0x36U);
+        outerPad[i] = static_cast<uint8_t>(preparedKey[i] ^ 0x5CU);
+    }
+
+    psa_hash_operation_t innerHash = PSA_HASH_OPERATION_INIT;
+    psa_status_t status = psa_hash_setup(&innerHash, PSA_ALG_SHA_256);
+    if (status != PSA_SUCCESS) {
+        return status;
+    }
+
+    status = psa_hash_update(&innerHash, innerPad, sizeof(innerPad));
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&innerHash, dataBuffer, dataSize);
+    }
+
+    uint8_t innerDigest[kSha256OutputSize];
+    size_t innerDigestLen = 0;
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_finish(&innerHash, innerDigest, sizeof(innerDigest), &innerDigestLen);
+    }
+    if (status != PSA_SUCCESS) {
+        psa_hash_abort(&innerHash);
+        return status;
+    }
+
+    psa_hash_operation_t outerHash = PSA_HASH_OPERATION_INIT;
+    status = psa_hash_setup(&outerHash, PSA_ALG_SHA_256);
+    if (status != PSA_SUCCESS) {
+        return status;
+    }
+
+    status = psa_hash_update(&outerHash, outerPad, sizeof(outerPad));
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_update(&outerHash, innerDigest, innerDigestLen);
+    }
+
+    uint8_t fullMac[kSha256OutputSize];
+    size_t fullMacLen = 0;
+    if (status == PSA_SUCCESS) {
+        status = psa_hash_finish(&outerHash, fullMac, sizeof(fullMac), &fullMacLen);
+    }
+    if (status != PSA_SUCCESS) {
+        psa_hash_abort(&outerHash);
+        return status;
+    }
+
+    if (fullMacLen < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
+        return PSA_ERROR_GENERIC_ERROR;
+    }
+
+    std::memcpy(hmacOut, fullMac, Ccsds355_0_B_2_Cmac::kSecurityTrailerSize);
+    return PSA_SUCCESS;
+}
+
 }  // namespace
 
 PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t dataSize, const Hmac& hmac) {
@@ -85,31 +155,40 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 
+    const size_t authenticatedDataSize = dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize;
+
     psa_key_id_t keyId = 0;
-    // Import key allowing both verify and sign so we can compute full MAC
-    // and compare truncated bytes. Some providers restrict psa_mac_compute
-    // to keys with SIGN_MESSAGE usage.
-    status =
-        importHmacKey(keyBytes, (psa_key_usage_t)(PSA_KEY_USAGE_VERIFY_MESSAGE | PSA_KEY_USAGE_SIGN_MESSAGE), keyId);
+    status = importHmacKey(keyBytes, PSA_KEY_USAGE_VERIFY_MESSAGE, keyId);
     if (status != PSA_SUCCESS) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ImportKeyError, status};
     }
 
-    unsigned char fullMac[32];
-    size_t macLen = 0;
-    status = psa_mac_compute(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer,
-                             dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize, fullMac, sizeof(fullMac), &macLen);
+    status = psa_mac_verify(keyId, PSA_ALG_HMAC(PSA_ALG_SHA_256), dataBuffer, authenticatedDataSize, hmac.data(),
+                            hmac.size());
 
     const psa_status_t destroyStatus = psa_destroy_key(keyId);
     if (destroyStatus != PSA_SUCCESS) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::DestroyKeyError, destroyStatus};
     }
 
-    if (status != PSA_SUCCESS) {
+    if (status == PSA_SUCCESS) {
+        return PacketAuthenticator::Result{PacketAuthenticator::Status::Authenticated, PSA_SUCCESS};
+    }
+
+    // Some PSA backends used on embedded targets do not support psa_mac_verify
+    // for HMAC-SHA-256. Fall back to RFC2104 HMAC built from psa_hash_* calls.
+    if (status != PSA_ERROR_NOT_SUPPORTED && status != PSA_ERROR_NOT_PERMITTED) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, status};
     }
 
-    if (macLen < hmac.size() || std::memcmp(fullMac, hmac.data(), hmac.size()) != 0) {
+    uint8_t computedHmac[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize];
+    const psa_status_t fallbackStatus =
+        computeTruncatedHmacWithHashApi(dataBuffer, authenticatedDataSize, keyBytes, computedHmac);
+    if (fallbackStatus != PSA_SUCCESS) {
+        return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, fallbackStatus};
+    }
+
+    if (std::memcmp(computedHmac, hmac.data(), hmac.size()) != 0) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_SIGNATURE};
     }
 
