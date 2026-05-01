@@ -40,6 +40,16 @@ jobs:
         run: |
           make test-unit
 
+      - name: Dump LastTest.log on failure
+        if: ${{ failure() }}
+        run: |
+          if [ -f build-gtest/Testing/Temporary/LastTest.log ]; then
+            echo "----- LastTest.log -----"
+            cat build-gtest/Testing/Temporary/LastTest.log
+          else
+            echo "No LastTest.log file found."
+          fi
+
   build:
     runs-on: deathstar
     steps:
