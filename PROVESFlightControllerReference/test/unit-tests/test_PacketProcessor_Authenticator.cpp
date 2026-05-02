@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <psa/crypto.h>
 
-#include "PROVESFlightControllerReference/Components/PacketProcessor/AuthDefaultKey.h"
 #include "PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.hpp"
 
 constexpr char kTestKeyHex[] =
