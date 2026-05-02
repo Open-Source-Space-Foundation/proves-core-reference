@@ -12,9 +12,10 @@
 #include <iomanip>
 #include <utility>
 
+#include "Types.hpp"
+
 // Include generated header with default key (generated at build time)
 #include "AuthDefaultKey.h"
-#include "Types.hpp"
 
 namespace Components {
 
@@ -77,7 +78,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
 
     // Authenticate the packet
     const PacketAuthenticator::Result authResult =
-        authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac);
+        authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac, AUTH_DEFAULT_KEY);
 
     // If the packet failed authentication, reject it
     if (authResult.status != PacketAuthenticator::Status::Authenticated) {

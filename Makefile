@@ -176,7 +176,7 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
-test-unit: generate-auth-key ## Run unit tests
+test-unit: ## Run unit tests
 	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest

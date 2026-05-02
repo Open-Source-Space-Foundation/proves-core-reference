@@ -9,9 +9,6 @@
 
 #include <cstring>
 
-// Include generated header with default key (generated at build time)
-#include "AuthDefaultKey.h"
-
 namespace Components {
 namespace {
 
@@ -77,7 +74,10 @@ psa_status_t importHmacKey(const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecur
 
 }  // namespace
 
-PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t dataSize, const Hmac& hmac) {
+PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
+                                               size_t dataSize,
+                                               const Hmac& hmac,
+                                               const char* key) {
     // Basic input validation: buffer present and at least trailer-sized
     if (!dataBuffer || dataSize < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
@@ -91,7 +91,7 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer, size_t
 
     // Parse the hex-encoded default key into raw bytes
     uint8_t keyBytes[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize];
-    if (!parseHexKey(AUTH_DEFAULT_KEY, keyBytes)) {
+    if (!parseHexKey(key, keyBytes)) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 

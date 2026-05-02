@@ -38,7 +38,8 @@ struct Result {
 PacketAuthenticator::Result authenticatePacket(
     const uint8_t* buffer,  //!< The packet data buffer
     size_t size,            //!< The size of the data buffer
-    const Hmac& hmac        //!< The HMAC extracted from the packet to validate against
+    const Hmac& hmac,       //!< The HMAC extracted from the packet to validate against
+    const char* key         //!< The hex-encoded authentication key to use for validation
 );
 
 }  // namespace Components
