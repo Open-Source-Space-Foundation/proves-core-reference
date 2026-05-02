@@ -177,7 +177,7 @@ Os::File::Status PacketProcessor ::readSequenceNumber(U32& value) {
     }
 
     // If the sequence number file does not exist, write it to disk with the default value of 0
-    if (status != Os::File::DOESNT_EXIST) {
+    if (status == Os::File::DOESNT_EXIST) {
         return this->writeSequenceNumber(0);
     }
 
