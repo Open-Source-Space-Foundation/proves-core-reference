@@ -64,23 +64,19 @@ target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# Find Mbed TLS (we use libmbedcrypto for PSA provider)
-find_path(MBEDTLS_MD_H mbedtls/md.h)
+# Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h)
 find_library(MBEDCRYPTO_LIB mbedcrypto)
+
+if(NOT PSA_CRYPTO_H)
+    message(FATAL_ERROR "psa/crypto.h not found; install Mbed TLS PSA provider headers or set CMAKE_INCLUDE_PATH to the directory containing psa/crypto.h")
+endif()
 
 if(NOT MBEDCRYPTO_LIB)
     message(FATAL_ERROR "mbedcrypto library not found; install mbedtls (brew install mbedtls) or provide library in LIBRARY_PATH")
 endif()
 
-if(MBEDTLS_MD_H)
-    target_include_directories(packet_processor_authenticator PUBLIC ${MBEDTLS_MD_H})
-endif()
-
-if(PSA_CRYPTO_H)
-    target_include_directories(packet_processor_authenticator PUBLIC ${PSA_CRYPTO_H})
-endif()
-
+target_include_directories(packet_processor_authenticator PUBLIC ${PSA_CRYPTO_H})
 target_link_libraries(packet_processor_authenticator PUBLIC ${MBEDCRYPTO_LIB})
 
 # --- Auto-discover and build tests ---
