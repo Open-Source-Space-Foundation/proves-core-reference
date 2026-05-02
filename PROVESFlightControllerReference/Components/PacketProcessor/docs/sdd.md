@@ -56,7 +56,7 @@ class PacketValidator {
 
 class PacketAuthenticator {
   <<namespace>>
-  +authenticatePacket(buffer, size, hmac) Result
+  +authenticatePacket(buffer, size, hmac, key) Result
 }
 
 class Packet {

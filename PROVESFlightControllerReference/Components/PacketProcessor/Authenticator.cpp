@@ -13,7 +13,8 @@ namespace Components {
 namespace {
 
 constexpr size_t kKeyHexLength =
-    32;  //!< The expected length of the hex-encoded key string (16 bytes * 2 characters/byte)
+    Ccsds355_0_B_2_Cmac::kSecurityTrailerSize *
+    2;  //!< The expected length of the hex-encoded key string (16 bytes * 2 characters/byte)
 
 // Convert a single hex character to its numeric nibble value.
 // Returns true and sets `nibble` on success; returns false on invalid input.
