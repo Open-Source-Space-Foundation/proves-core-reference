@@ -129,6 +129,12 @@ void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U
         return;
     }
 
+    // Set runtime sequence number to the new value
+    this->m_sequenceNumber = seq_num;
+
+    // Telemeter the updated sequence number
+    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+
     // Log the successful sequence number set
     this->log_ACTIVITY_HI_SequenceNumberSet(seq_num);
 
