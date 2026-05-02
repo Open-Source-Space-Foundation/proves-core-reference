@@ -171,8 +171,10 @@ Os::File::Status PacketProcessor ::readSequenceNumber(U32& value) {
     if (status != Os::File::OP_OK) {
         // Log the failure to read the sequence number
         this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
+    } else {
+        // Clear throttle for sequence number read failure
+        this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
     }
-    this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
 
     // If the sequence number file does not exist, write it to disk with the default value of 0
     if (status != Os::File::DOESNT_EXIST) {
@@ -187,19 +189,18 @@ Os::File::Status PacketProcessor ::writeSequenceNumber(const U32 value) {
     if (status != Os::File::OP_OK) {
         // Log the failure to write the default sequence number
         this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));
+    } else {
+        // Clear throttle for sequence number write failure
+        this->log_WARNING_HI_SequenceNumberWriteFailed_ThrottleClear();
     }
-    this->log_WARNING_HI_SequenceNumberWriteFailed_ThrottleClear();
 
     return status;
 }
 
 void PacketProcessor ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
     // Update the sequence number and write it to disk
-    this->m_sequenceNumber += 1;
-    this->writeSequenceNumber(this->m_sequenceNumber);
-
-    // Write sequence number to persistent storage
     // intentionally not checking the return value
+    this->m_sequenceNumber += 1;
     this->writeSequenceNumber(this->m_sequenceNumber);
 
     // Authenticate the packet

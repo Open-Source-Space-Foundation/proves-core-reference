@@ -18,7 +18,7 @@ module Components {
         HmacParseError,            @< HMAC could not be parsed from packet
     }
 
-    @ Component placed between the radio component and the cdh. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
+    @ Component placed between the TcDeframer component and the SpacePacketDeframer. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
     passive component PacketProcessor {
 
         ### Commands ###
