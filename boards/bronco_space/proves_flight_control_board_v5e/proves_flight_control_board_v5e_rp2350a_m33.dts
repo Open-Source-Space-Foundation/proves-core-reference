@@ -361,6 +361,43 @@
 			};
 		};
 	};
+
+    // The V5e Board moved the MCP from I2C1 to I2C0
+
+	mcp23017: mcp23017@20 {
+		compatible = "microchip,mcp23017";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		/* gpio-line-names must match the numeric indexes used below. The
+		 * topology and gpio nodes expect the following mapping (index : name):
+		 *  0: ENABLE_HEATER (GPA0)
+		 *  1: PAYLOAD_PWR_ENABLE (GPA1)
+		 *  2: FIRE_DEPLOY2_B (GPA2)
+		 *  3: PAYLOAD_BATT_ENABLE (GPA3)
+		 *  4: SBAND_RX_EN (GPA4)
+		 *  5: RF2_IO1 (GPA5)
+		 *  6: RF2_IO0 (GPA6)
+		 *  7: SBAND_TX_EN (GPA7)
+		 *  8: FACE5_ENABLE (GPB5)
+		 *  9: FACE0_ENABLE (GPB1)
+		 * 10: FACE1_ENABLE (GPB2)
+		 * 11: FACE2_ENABLE (GPB3)
+		 * 12: FACE3_ENABLE (GPB4)
+		 * 13: FACE4_ENABLE (GPB0)
+		 * 14: 5V_RESET (GPB6)
+		 * 15: CHARGE (GPB7)
+		 */
+		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
+						  "SBAND_RX_EN", "RF2_IO1", "RF2_IO0", "SBAND_TX_EN",
+						  "FACE5_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
+						  "FACE3_ENABLE", "FACE4_ENABLE", "5V_RESET", "CHARGE";
+
+		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
+
+		ngpios = <16>;
+	};
 };
 
 
@@ -389,40 +426,6 @@
 		backup-switch-mode = "direct";
 		alarms-count = <1>;
 		label = "RV3028";
-	};
-	mcp23017: mcp23017@20 {
-		compatible = "microchip,mcp23017";
-		reg = <0x20>;
-		gpio-controller;
-		#gpio-cells = <2>;
-
-		/* gpio-line-names must match the numeric indexes used below. The
-		 * topology and gpio nodes expect the following mapping (index : name):
-		 *  0: ENABLE_HEATER (GPA0)
-		 *  1: PAYLOAD_PWR_ENABLE (GPA1)
-		 *  2: FIRE_DEPLOY2_B (GPA2)
-		 *  3: PAYLOAD_BATT_ENABLE (GPA3)
-		 *  4: RF2_IO2 (GPA4)
-		 *  5: RF2_IO1 (GPA5)
-		 *  6: RF2_IO0 (GPA6)
-		 *  7: RF2_IO3 (GPA7)
-		 *  8: FACE5_ENABLE (GPB5)
-		 *  9: FACE0_ENABLE (GPB1)
-		 * 10: FACE1_ENABLE (GPB2)
-		 * 11: FACE2_ENABLE (GPB3)
-		 * 12: FACE3_ENABLE (GPB4)
-		 * 13: FACE4_ENABLE (GPB0)
-		 * 14: READONLY (GPB6)
-		 * 15: CHARGE (GPB7)
-		 */
-		gpio-line-names = "ENABLE_HEATER", "PAYLOAD_PWR_ENABLE", "FIRE_DEPLOY2_B", "PAYLOAD_BATT_ENABLE",
-						  "RF2_IO2", "RF2_IO1", "RF2_IO0", "RF2_IO3",
-						  "FACE5_ENABLE", "FACE0_ENABLE", "FACE1_ENABLE", "FACE2_ENABLE",
-						  "FACE3_ENABLE", "FACE4_ENABLE", "READONLY", "CHARGE";
-
-		reset-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;
-
-		ngpios = <16>;
 	};
 };
 
