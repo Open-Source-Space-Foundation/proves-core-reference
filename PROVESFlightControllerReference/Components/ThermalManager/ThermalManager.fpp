@@ -15,6 +15,12 @@ module Components {
         @ Parameter for battery cell temperature upper threshold in °C
         param BATT_CELL_TEMP_UPPER_THRESHOLD: F64 default 60.0 id 3
 
+        @ Enum for temperature sensor types
+        enum TempSensorType {
+            FACE,
+            BATTERY
+        }
+
         sync input port run: Svc.Sched
 
         @ The number of face temperature sensors
@@ -32,25 +38,15 @@ module Components {
         @ Port for Pico temperature sensor
         output port picoTempGet: Drv.picoTemperatureGet
 
-        @ Event for face temperature reading below threshold
-        event FaceTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
+        @ Event for temperature reading below threshold
+        event TemperatureBelowThreshold(sensorType: TempSensorType, sensorId: U32, temperature: F64) \
             severity warning low \
-            format "Face temperature below threshold: Sensor {} at {} °C"
+            format "{} temperature below threshold: Sensor {} at {} °C"
 
-        @ Event for face temperature reading above threshold
-        event FaceTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
+        @ Event for temperature reading above threshold
+        event TemperatureAboveThreshold(sensorType: TempSensorType, sensorId: U32, temperature: F64) \
             severity warning low \
-            format "Face temperature above threshold: Sensor {} at {} °C"
-
-        @ Event for battery cell temperature reading below threshold
-        event BatteryCellTemperatureBelowThreshold(sensorId: U32, temperature: F32) \
-            severity warning low \
-            format "Battery cell temperature below threshold: Sensor {} at {} °C"
-
-        @ Event for battery cell temperature reading above threshold
-        event BatteryCellTemperatureAboveThreshold(sensorId: U32, temperature: F32) \
-            severity warning low \
-            format "Battery cell temperature above threshold: Sensor {} at {} °C"
+            format "{} temperature above threshold: Sensor {} at {} °C"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

@@ -25,15 +25,9 @@ class ThermalManager final : public ThermalManagerComponentBase {
 
   private:
     static constexpr F64 DEBOUNCE_ERROR = 3.0;  //!< Debounce error value for temperature threshold events
-    static constexpr U32 NUM_FACE_TEMP_SENSORS = 5;
-    static constexpr U32 NUM_BATT_CELL_TEMP_SENSORS = 4;
 
-    bool faceTempBelowThrottleActive[NUM_FACE_TEMP_SENSORS] = {false};
-    bool faceTempAboveThrottleActive[NUM_FACE_TEMP_SENSORS] = {false};
-    bool battCellTempBelowThrottleActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
-    bool battCellTempAboveThrottleActive[NUM_BATT_CELL_TEMP_SENSORS] = {false};
-
-    using LogFn = void (ThermalManager::*)(U32, F32) const;
+    bool faceTempThrottleActive[getNum_faceTempGet_OutputPorts()] = {false};
+    bool battCellTempThrottleActive[getNum_battCellTempGet_OutputPorts()] = {false};
 
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -52,14 +46,11 @@ class ThermalManager final : public ThermalManagerComponentBase {
 
     //! Helper function to log temperature threshold events
     void evaluateTemperatureThreshold(
-        FwIndexType idx,            //!< The sensor index
-        F64 temperature,            //!< The temperature reading
-        F64 lowerThreshold,         //!< The lower temperature threshold
-        F64 upperThreshold,         //!< The upper temperature threshold
-        bool& belowThrottleActive,  //!< Whether the below threshold event throttle is currently active
-        bool& aboveThrottleActive,  //!< Whether the above threshold event throttle is currently active
-        LogFn logBelow,             //!< Log function for below threshold event
-        LogFn logAbove);            //!< Log function for above threshold event
+        FwIndexType idx,       //!< The sensor index
+        F64 temperature,       //!< The temperature reading
+        bool& throttleActive,  //!< Whether the threshold event throttle is currently active
+        Components::ThermalManager_TempSensorType sensorType  //!< The type of the temperature sensor
+    );
 };
 
 }  // namespace Components
