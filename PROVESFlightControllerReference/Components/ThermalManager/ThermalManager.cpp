@@ -66,21 +66,20 @@ void ThermalManager::evaluateTemperatureThreshold(FwIndexType idx,
         upperThreshold = this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid);
     }
 
-    if (temperature < lowerThreshold && !throttleActive) {
+    if (!throttleActive && temperature < lowerThreshold) {
         throttleActive = true;
         this->log_WARNING_LO_TemperatureBelowThreshold(sensorType, static_cast<U32>(idx), temperature);
         return;
     }
 
-    if (temperature > (lowerThreshold + ThermalManager::DEBOUNCE_ERROR)) {
-        throttleActive = false;
-    }
-    if (temperature > upperThreshold && !throttleActive) {
+    if (!throttleActive && temperature > upperThreshold) {
         throttleActive = true;
         this->log_WARNING_LO_TemperatureAboveThreshold(sensorType, static_cast<U32>(idx), temperature);
         return;
     }
-    if (temperature < (upperThreshold - ThermalManager::DEBOUNCE_ERROR)) {
+
+    if (throttleActive && temperature > (upperThreshold + ThermalManager::DEBOUNCE_ERROR) &&
+        temperature < (upperThreshold - ThermalManager::DEBOUNCE_ERROR)) {
         throttleActive = false;
     }
 }
