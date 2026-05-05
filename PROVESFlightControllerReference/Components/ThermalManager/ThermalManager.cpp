@@ -78,7 +78,7 @@ void ThermalManager::evaluateTemperatureThreshold(FwIndexType idx,
         return;
     }
 
-    if (throttleActive && temperature > (upperThreshold + ThermalManager::DEBOUNCE_ERROR) &&
+    if (throttleActive && temperature > (lowerThreshold + ThermalManager::DEBOUNCE_ERROR) &&
         temperature < (upperThreshold - ThermalManager::DEBOUNCE_ERROR)) {
         throttleActive = false;
     }
