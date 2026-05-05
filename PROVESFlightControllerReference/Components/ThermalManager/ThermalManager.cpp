@@ -28,7 +28,8 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     for (FwIndexType i = 0; i < this->getNum_faceTempGet_OutputPorts(); i++) {
         const F64 temperature = this->faceTempGet_out(i, condition);
         if (condition == Fw::Success::SUCCESS) {  // Only evaluate thresholds if temperature reading was successful
-            this->evaluateTemperatureThreshold(i, temperature, this->faceTempThrottleActive[i],
+            this->evaluateTemperatureThreshold(i, temperature, this->faceAboveTemperatureThrottleActive[i],
+                                               this->faceBelowTemperatureThrottleActive[i],
                                                Components::ThermalManager_TempSensorType::FACE);
         }
     }
@@ -37,7 +38,8 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
     for (FwIndexType i = 0; i < this->getNum_battCellTempGet_OutputPorts(); i++) {
         const F64 temperature = this->battCellTempGet_out(i, condition);
         if (condition == Fw::Success::SUCCESS) {  // Only evaluate thresholds if temperature reading was successful
-            this->evaluateTemperatureThreshold(i, temperature, this->battCellTempThrottleActive[i],
+            this->evaluateTemperatureThreshold(i, temperature, this->battCellAboveTemperatureThrottleActive[i],
+                                               this->battCellBelowTemperatureThrottleActive[i],
                                                Components::ThermalManager_TempSensorType::BATTERY);
         }
     }
@@ -50,9 +52,10 @@ void ThermalManager::run_handler(FwIndexType portNum, U32 context) {
 // Private helper methods
 // ----------------------------------------------------------------------
 
-void ThermalManager::evaluateTemperatureThreshold(FwIndexType idx,
+void ThermalManager::evaluateTemperatureThreshold(U32 idx,
                                                   F64 temperature,
-                                                  bool& throttleActive,
+                                                  bool& aboveTemperatureThrottleActive,
+                                                  bool& belowTemperatureThrottleActive,
                                                   Components::ThermalManager_TempSensorType sensorType) {
     Fw::ParamValid param_valid;
     F64 lowerThreshold = 0.0;
@@ -66,21 +69,24 @@ void ThermalManager::evaluateTemperatureThreshold(FwIndexType idx,
         upperThreshold = this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid);
     }
 
-    if (!throttleActive && temperature < lowerThreshold) {
-        throttleActive = true;
-        this->log_WARNING_LO_TemperatureBelowThreshold(sensorType, static_cast<U32>(idx), temperature);
+    // Check below temperature threshold
+    if (!belowTemperatureThrottleActive && temperature < lowerThreshold) {
+        belowTemperatureThrottleActive = true;
+        this->log_WARNING_LO_TemperatureBelowThreshold(sensorType, idx, temperature);
         return;
     }
-
-    if (!throttleActive && temperature > upperThreshold) {
-        throttleActive = true;
-        this->log_WARNING_LO_TemperatureAboveThreshold(sensorType, static_cast<U32>(idx), temperature);
-        return;
+    if (temperature > (lowerThreshold + ThermalManager::DEBOUNCE_ERROR)) {
+        belowTemperatureThrottleActive = false;
     }
 
-    if (throttleActive && temperature > (lowerThreshold + ThermalManager::DEBOUNCE_ERROR) &&
-        temperature < (upperThreshold - ThermalManager::DEBOUNCE_ERROR)) {
-        throttleActive = false;
+    // Check above temperature threshold
+    if (!aboveTemperatureThrottleActive && temperature > upperThreshold) {
+        aboveTemperatureThrottleActive = true;
+        this->log_WARNING_LO_TemperatureAboveThreshold(sensorType, idx, temperature);
+        return;
+    }
+    if (temperature < (upperThreshold - ThermalManager::DEBOUNCE_ERROR)) {
+        aboveTemperatureThrottleActive = false;
     }
 }
 
