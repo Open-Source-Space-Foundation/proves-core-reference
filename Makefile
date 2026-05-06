@@ -184,7 +184,7 @@ OPENOCD_REF ?= v0.12.0
 OPENOCD_BIN ?= $(OPENOCD_DIR)/src/openocd
 OPENOCD_JOBS ?= 4
 OPENOCD_FLASH_SPEED ?= 5000
-OPENOCD_COMMON_FLAGS ?= -s tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed $(OPENOCD_FLASH_SPEED)"
+OPENOCD_COMMON_FLAGS ?= -s $(OPENOCD_DIR)/tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed $(OPENOCD_FLASH_SPEED)"
 
 $(OPENOCD_DIR)/.built:
 	@if [ ! -d "$(OPENOCD_DIR)" ]; then \
