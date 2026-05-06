@@ -180,7 +180,7 @@ build-mcuboot: submodules zephyr fprime-venv
 
 OPENOCD_DIR ?= $(shell pwd)/tools/openocd
 OPENOCD_REPO ?= https://github.com/raspberrypi/openocd.git
-OPENOCD_REF ?= v0.12.0
+OPENOCD_REF ?= acff23f
 OPENOCD_BIN ?= $(OPENOCD_DIR)/src/openocd
 OPENOCD_JOBS ?= 4
 OPENOCD_FLASH_SPEED ?= 5000
