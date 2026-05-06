@@ -6,6 +6,7 @@
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Types/String.hpp>
 #include <Os/File.hpp>
+#include <Os/Mutex.hpp>
 #include <atomic>
 #include <cassert>
 
@@ -114,9 +115,14 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    Fw::String m_sequenceNumberFilePath;      //!< File path where sequence number is stored
-    std::atomic<U32> m_sequenceNumber;        //!< The current sequence number
-    std::atomic<U32> m_sequenceNumberWindow;  //!< The allowed window for sequence number validation
+    // Sequence number state is coupled between in-memory runtime state and on-disk persistent storage
+    // they are protected by the same mutex to ensure atomicity of updates across both mediums
+    Os::Mutex m_sequenceNumberLock;       //!< Mutex protecting sequence number state atomicity
+    Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
+    U32 m_sequenceNumber;                 //!< The current sequence number
+    U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
+
+    // Counters for telemetry
     std::atomic<U32> m_bypassPacketsCount;    //!< Count of packets that bypass authentication
     std::atomic<U32> m_rejectedPacketsCount;  //!< Count of rejected packets
 };

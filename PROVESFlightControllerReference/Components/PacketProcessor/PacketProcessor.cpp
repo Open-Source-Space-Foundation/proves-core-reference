@@ -49,48 +49,53 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
-    // Validate the packet to determine if it can bypass authentication, should be rejected, or is eligible for
-    // authentication
-    PacketValidator::Status validationStatus =
-        validatePacket(parseResult.packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+    {
+        // Lock sequence number state
+        Os::ScopeLock lock(this->m_sequenceNumberLock);
 
-    // If the packet can bypass authentication
-    if (validationStatus == PacketValidator::Status::Bypass) {
-        this->bypassPacket(data, context);
-        return;
+        // Validate the packet to determine if it can bypass authentication, should be rejected, or is eligible for
+        // authentication
+        PacketValidator::Status validationStatus =
+            validatePacket(parseResult.packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+
+        // If the packet can bypass authentication
+        if (validationStatus == PacketValidator::Status::Bypass) {
+            this->bypassPacket(data, context);
+            return;
+        }
+
+        // If the packet failed validation due to invalid SPI value, reject it
+        if (validationStatus == PacketValidator::Status::SpiInvalid) {
+            this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
+            this->rejectPacket(data, context);
+            return;
+        }
+        this->log_WARNING_HI_SpiInvalid_ThrottleClear();
+
+        // If the packet failed validation due to sequence number being out of the acceptable window, reject it
+        if (validationStatus == PacketValidator::Status::SequenceNumberOutOfWindow) {
+            this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            this->rejectPacket(data, context);
+            return;
+        }
+        this->log_WARNING_HI_SequenceNumberOutOfWindow_ThrottleClear();
+
+        // Authenticate the packet
+        const PacketAuthenticator::Result authResult =
+            authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac, AUTH_DEFAULT_KEY);
+
+        // If the packet failed authentication, reject it
+        if (authResult.status != PacketAuthenticator::Status::Authenticated) {
+            this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
+                                                      authResult.psaStatus);
+            this->rejectPacket(data, context);
+            return;
+        }
+        this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
+
+        // If the packet was successfully authenticated, accept it (caller holds the mutex)
+        this->acceptPacket(data, context);
     }
-
-    // If the packet failed validation due to invalid SPI value, reject it
-    if (validationStatus == PacketValidator::Status::SpiInvalid) {
-        this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
-        this->rejectPacket(data, context);
-        return;
-    }
-    this->log_WARNING_HI_SpiInvalid_ThrottleClear();
-
-    // If the packet failed validation due to sequence number being out of the acceptable window, reject it
-    if (validationStatus == PacketValidator::Status::SequenceNumberOutOfWindow) {
-        this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
-        this->rejectPacket(data, context);
-        return;
-    }
-    this->log_WARNING_HI_SequenceNumberOutOfWindow_ThrottleClear();
-
-    // Authenticate the packet
-    const PacketAuthenticator::Result authResult =
-        authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac, AUTH_DEFAULT_KEY);
-
-    // If the packet failed authentication, reject it
-    if (authResult.status != PacketAuthenticator::Status::Authenticated) {
-        this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
-                                                  authResult.psaStatus);
-        this->rejectPacket(data, context);
-        return;
-    }
-    this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
-
-    // If the packet was successfully authenticated, accept it
-    this->acceptPacket(data, context);
 }
 
 void PacketProcessor ::dataReturnIn_handler(FwIndexType portNum,
@@ -104,23 +109,18 @@ void PacketProcessor ::dataReturnIn_handler(FwIndexType portNum,
 // ----------------------------------------------------------------------
 
 void PacketProcessor ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // Read the sequence number from the file system
-    U32 sequenceNumber = 0;
-    Os::File::Status status = this->readSequenceNumber(sequenceNumber);
-    if (status != Os::File::OP_OK) {
-        // Return execution error response
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
+    Os::ScopeLock lock(this->m_sequenceNumberLock);
 
     // Log the successful sequence number get
-    this->log_ACTIVITY_HI_SequenceNumberGet(sequenceNumber);
+    this->log_ACTIVITY_HI_SequenceNumberGet(this->m_sequenceNumber);
 
     // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
+    Os::ScopeLock lock(this->m_sequenceNumberLock);
+
     // Write the sequence number to the file system
     Os::File::Status status = this->writeSequenceNumber(seq_num);
     if (status != Os::File::OP_OK) {
@@ -136,7 +136,7 @@ void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U
     this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
 
     // Log the successful sequence number set
-    this->log_ACTIVITY_HI_SequenceNumberSet(seq_num);
+    this->log_ACTIVITY_HI_SequenceNumberSet(this->m_sequenceNumber);
 
     // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -147,6 +147,7 @@ void PacketProcessor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U
 // ----------------------------------------------------------------------
 
 void PacketProcessor ::configure() {
+    Os::ScopeLock lock(this->m_sequenceNumberLock);
     Fw::ParamValid is_valid;
 
     // Get the sequence number window size from the parameter
