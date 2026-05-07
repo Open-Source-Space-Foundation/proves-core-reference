@@ -54,8 +54,8 @@ module Components {
         @ SequenceNumberWriteFailed indicates that there was an error writing the sequence number to file
         event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
 
-        @ SequenceNumberOutOfWindow indicates that a received packet had a sequence number that was outside of the acceptable window
-        event SequenceNumberOutOfWindow(expected: U32, window: U32) severity warning high id 2 format "Sequence number out of window: Expected={}, Window={}" throttle 2
+        @ SequenceNumberInvalid indicates that a received packet had a sequence number that was outside of the acceptable window
+        event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number must be greater than last accepted and within the window: Received={}, LastAccepted={}, Window={}" throttle 2
 
         @ AuthenticationFailed indicates that a received packet failed authentication
         event AuthenticationFailed(auth_status: PacketAuthenticatorStatus, rc: I32) severity warning high id 1 format "Authentication failed: Status={}, PSA Return Code={}" throttle 2
@@ -64,7 +64,7 @@ module Components {
         event ParsingFailed(parse_status: PacketParserStatus) severity warning high id 3 format "Parsing failed: {}" throttle 2
 
         @ SpiInvalid indicates that a received packet had an invalid SPI value
-        event SpiInvalid(received: U32) severity warning high id 4 format "SPI invalid: Received {}" throttle 2
+        event SpiInvalid(packet_spi: U32) severity warning high id 4 format "SPI invalid: Received={}" throttle 2
 
         ### Parameters ###
 

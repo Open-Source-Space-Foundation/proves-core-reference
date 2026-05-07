@@ -50,7 +50,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
     // For easier readability of subsequent code, create a reference to the parsed packet
-    const Components::Packet& packet = packet;
+    const Components::Packet& packet = parseResult.packet;
 
     {
         // Lock sequence number state
@@ -77,11 +77,12 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
 
         // If the packet failed validation due to sequence number being out of the acceptable window, reject it
         if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
-            this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            this->log_WARNING_HI_SequenceNumberInvalid(packet.sequenceNumber, this->m_sequenceNumber,
+                                                       this->m_sequenceNumberWindow);
             this->rejectPacket(data, context);
             return;
         }
-        this->log_WARNING_HI_SequenceNumberOutOfWindow_ThrottleClear();
+        this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
 
         // Authenticate the packet
         const PacketAuthenticator::Result authResult =
