@@ -187,7 +187,7 @@ The default authentication key header is generated at build time from project ke
 | AUTH003 | The component shall validate that the SPI value corresponds to a configured Security Association. | Unit Test |
 | AUTH004 | The component shall validate the received sequence number against the stored sequence number. | Unit Test |
 | AUTH004-A | The component shall reject packets with sequence numbers that are outside the acceptable window and log an event. | Unit Test, Inspection |
-| AUTH004-B | The component shall increment the stored sequence number only when a packet is fully validated and authenticated | Inspection |
+| AUTH004-B | The component shall set the stored sequence number to the sequence number transmitted in the packet only when a packet is fully validated and authenticated | Inspection |
 | AUTH004-C | The component shall allow the sequence number window to be configurable via a parameter. | Inspection |
 | AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16 byte security trailer. | Unit Test |
 | AUTH005-A | The component shall reject packets where the computed HMAC does not match the security trailer HMAC. | Unit Test |
