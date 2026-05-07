@@ -55,7 +55,7 @@ module Components {
         event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
 
         @ SequenceNumberInvalid indicates that a received packet had a sequence number that was outside of the acceptable window
-        event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number must be greater than last accepted and within the window: Received={}, LastAccepted={}, Window={}" throttle 2
+        event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number less than last accepted or out of window: Received={}, LastAccepted={}, Window={}" throttle 2
 
         @ AuthenticationFailed indicates that a received packet failed authentication
         event AuthenticationFailed(auth_status: PacketAuthenticatorStatus, rc: I32) severity warning high id 1 format "Authentication failed: Status={}, PSA Return Code={}" throttle 2
