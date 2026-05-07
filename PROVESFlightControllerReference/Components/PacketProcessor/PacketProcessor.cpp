@@ -49,6 +49,9 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
+    // For easier readability of subsequent code, create a reference to the parsed packet
+    const Components::Packet& packet = packet;
+
     {
         // Lock sequence number state
         Os::ScopeLock lock(this->m_sequenceNumberLock);
@@ -56,7 +59,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         // Validate the packet to determine if it can bypass authentication, should be rejected, or is eligible for
         // authentication
         PacketValidator::Status validationStatus =
-            validatePacket(parseResult.packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            validatePacket(packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
 
         // If the packet can bypass authentication
         if (validationStatus == PacketValidator::Status::Bypass) {
@@ -66,14 +69,14 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
 
         // If the packet failed validation due to invalid SPI value, reject it
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
-            this->log_WARNING_HI_SpiInvalid(parseResult.packet.spi);
+            this->log_WARNING_HI_SpiInvalid(packet.spi);
             this->rejectPacket(data, context);
             return;
         }
         this->log_WARNING_HI_SpiInvalid_ThrottleClear();
 
         // If the packet failed validation due to sequence number being out of the acceptable window, reject it
-        if (validationStatus == PacketValidator::Status::SequenceNumberOutOfWindow) {
+        if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
             this->log_WARNING_HI_SequenceNumberOutOfWindow(this->m_sequenceNumber, this->m_sequenceNumberWindow);
             this->rejectPacket(data, context);
             return;
@@ -82,7 +85,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
 
         // Authenticate the packet
         const PacketAuthenticator::Result authResult =
-            authenticatePacket(data.getData(), data.getSize(), parseResult.packet.hmac, AUTH_DEFAULT_KEY);
+            authenticatePacket(data.getData(), data.getSize(), packet.hmac, AUTH_DEFAULT_KEY);
 
         // If the packet failed authentication, reject it
         if (authResult.status != PacketAuthenticator::Status::Authenticated) {
@@ -94,7 +97,7 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
         // If the packet was successfully authenticated, accept it (caller holds the mutex)
-        this->acceptPacket(data, context);
+        this->acceptPacket(data, context, packet.sequenceNumber);
     }
 }
 
@@ -204,10 +207,10 @@ Os::File::Status PacketProcessor ::writeSequenceNumber(const U32 value) {
     return status;
 }
 
-void PacketProcessor ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
+void PacketProcessor ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context, const U32 sequenceNumber) {
     // Update the sequence number and write it to disk
     // intentionally not checking the return value
-    this->m_sequenceNumber += 1;
+    this->m_sequenceNumber = sequenceNumber;
     this->writeSequenceNumber(this->m_sequenceNumber);
 
     // Authenticate the packet

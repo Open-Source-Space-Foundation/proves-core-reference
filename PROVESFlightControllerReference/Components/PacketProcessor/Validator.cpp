@@ -26,9 +26,13 @@ bool spiValid(uint32_t spi) {
     return spi == 0;
 }
 
-//! Validate that the sequence number is within the allowed window of expected sequence numbers, accounting for
-//! wraparound
-bool sequenceNumberInWindow(uint32_t sequenceNumber, uint32_t expectedSequenceNumber, uint32_t sequenceNumberWindow) {
+//! Validate packet sequence number must be greater than the last accepted sequence number and within the window
+bool sequenceNumberValid(uint32_t packetSequenceNumber, uint32_t sequenceNumber, uint32_t sequenceNumberWindow) {
+    // Check if the packet sequence number is equal to the current sequence number
+    if (packetSequenceNumber == sequenceNumber) {
+        return false;
+    }
+
     /*
      * Compute the difference between received and expected sequence numbers using unsigned
      * 32-bit arithmetic. This handles wraparound correctly due to the well-defined behavior
@@ -36,7 +40,7 @@ bool sequenceNumberInWindow(uint32_t sequenceNumber, uint32_t expectedSequenceNu
      * then (received - expected) == 3 (modulo 2^32). This is a standard technique for
      * sequence number window validation (see RFC 1982: Serial Number Arithmetic).
      */
-    return (sequenceNumber - expectedSequenceNumber) <= sequenceNumberWindow;
+    return (packetSequenceNumber - sequenceNumber) <= sequenceNumberWindow;
 }
 
 //! Check if the OpCode is in the bypass list
@@ -53,9 +57,7 @@ bool opCodeBypassAllowed(uint32_t opCode) {
 
 }  // namespace
 
-PacketValidator::Status validatePacket(const Packet& packet,
-                                       uint32_t expectedSequenceNumber,
-                                       uint32_t sequenceNumberWindow) {
+PacketValidator::Status validatePacket(const Packet& packet, uint32_t sequenceNumber, uint32_t sequenceNumberWindow) {
     // Check if the packet can bypass authentication based on its OpCode
     if (opCodeBypassAllowed(packet.opCode)) {
         return PacketValidator::Status::Bypass;
@@ -66,9 +68,9 @@ PacketValidator::Status validatePacket(const Packet& packet,
         return PacketValidator::Status::SpiInvalid;
     }
 
-    // Validate sequence number within window
-    if (!sequenceNumberInWindow(packet.sequenceNumber, expectedSequenceNumber, sequenceNumberWindow)) {
-        return PacketValidator::Status::SequenceNumberOutOfWindow;
+    // Validate sequence number
+    if (!sequenceNumberValid(packet.sequenceNumber, sequenceNumber, sequenceNumberWindow)) {
+        return PacketValidator::Status::SequenceNumberInvalid;
     }
 
     return PacketValidator::Status::Valid;

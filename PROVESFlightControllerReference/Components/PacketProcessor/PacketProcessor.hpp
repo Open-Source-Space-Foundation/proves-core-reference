@@ -91,8 +91,9 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     );
 
     //! Accepts a packet and updates the sequence number
-    void acceptPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
-                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+    void acceptPacket(Fw::Buffer& data,                     //!< The buffer containing the packet data
+                      const ComCfg::FrameContext& context,  //!< The frame context associated with the packet
+                      const U32 sequenceNumber              //!< The sequence number from the packet
     );
 
     //! Bypasses a packet and updates the bypass packets count

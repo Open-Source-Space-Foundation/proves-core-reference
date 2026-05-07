@@ -5,7 +5,7 @@
 using namespace Components;
 
 TEST(PacketValidatorTest, ValidPacket) {
-    Packet p{0u, 10u, 0xDEADBEEFu, {}};  // spi 0 valid
+    Packet p{0u, 11u, 0xDEADBEEFu, {}};  // spi 0 valid
     auto res = validatePacket(p, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::Valid);
 }
@@ -52,10 +52,10 @@ TEST(PacketValidatorTest, SpiInvalid) {
     EXPECT_EQ(res, PacketValidator::Status::SpiInvalid);
 }
 
-TEST(PacketValidatorTest, SequenceNumberOutOfWindow) {
+TEST(PacketValidatorTest, SequenceNumberInvalid) {
     Packet p{0u, 20u, 0xDEADBEEFu, {}};  // sequence 20, expected 10, window 5 -> out
     auto res = validatePacket(p, 10u, 5u);
-    EXPECT_EQ(res, PacketValidator::Status::SequenceNumberOutOfWindow);
+    EXPECT_EQ(res, PacketValidator::Status::SequenceNumberInvalid);
 }
 
 TEST(PacketValidatorTest, SequenceNumberWrapWithinWindow) {
@@ -77,5 +77,11 @@ TEST(PacketValidatorTest, SequenceNumberWrapOutOfWindow) {
     Packet p{0u, seq, 0xDEADBEEFu, {}};
 
     auto res = validatePacket(p, expected, 5u);
-    EXPECT_EQ(res, PacketValidator::Status::SequenceNumberOutOfWindow);
+    EXPECT_EQ(res, PacketValidator::Status::SequenceNumberInvalid);
+}
+
+TEST(PacketValidatorTest, SequenceNumberEqualToExpected) {
+    Packet p{0u, 10u, 0xDEADBEEFu, {}};  // sequence equal to expected should be invalid
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::SequenceNumberInvalid);
 }
