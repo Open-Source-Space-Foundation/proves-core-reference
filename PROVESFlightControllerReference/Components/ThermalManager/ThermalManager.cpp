@@ -57,21 +57,28 @@ void ThermalManager::evaluateTemperatureThreshold(U32 idx,
                                                   bool& aboveTemperatureThrottleActive,
                                                   bool& belowTemperatureThrottleActive,
                                                   Components::ThermalManager_TempSensorType sensorType) {
+    // Initialize parameter values
     Fw::ParamValid param_valid;
     F64 lowerThreshold = 0.0;
     F64 upperThreshold = 0.0;
 
-    if (sensorType == Components::ThermalManager_TempSensorType::FACE) {
-        lowerThreshold = this->paramGet_FACE_TEMP_LOWER_THRESHOLD(param_valid);
-        upperThreshold = this->paramGet_FACE_TEMP_UPPER_THRESHOLD(param_valid);
-    } else {
-        lowerThreshold = this->paramGet_BATT_CELL_TEMP_LOWER_THRESHOLD(param_valid);
-        upperThreshold = this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid);
+    switch (sensorType) {
+        case Components::ThermalManager_TempSensorType::FACE:
+            lowerThreshold = this->paramGet_FACE_TEMP_LOWER_THRESHOLD(param_valid);
+            upperThreshold = this->paramGet_FACE_TEMP_UPPER_THRESHOLD(param_valid);
+            break;
+        case Components::ThermalManager_TempSensorType::BATTERY:
+            lowerThreshold = this->paramGet_BATT_CELL_TEMP_LOWER_THRESHOLD(param_valid);
+            upperThreshold = this->paramGet_BATT_CELL_TEMP_UPPER_THRESHOLD(param_valid);
+            break;
+        default:
+            FW_ASSERT(0, sensorType);  // Invalid temperature sensor type
     }
 
     // Check below temperature threshold
     if (!belowTemperatureThrottleActive && temperature < lowerThreshold) {
         belowTemperatureThrottleActive = true;
+        aboveTemperatureThrottleActive = false;
         this->log_WARNING_LO_TemperatureBelowThreshold(sensorType, idx, temperature);
         return;
     }
@@ -82,6 +89,7 @@ void ThermalManager::evaluateTemperatureThreshold(U32 idx,
     // Check above temperature threshold
     if (!aboveTemperatureThrottleActive && temperature > upperThreshold) {
         aboveTemperatureThrottleActive = true;
+        belowTemperatureThrottleActive = false;
         this->log_WARNING_LO_TemperatureAboveThreshold(sensorType, idx, temperature);
         return;
     }

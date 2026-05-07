@@ -15,7 +15,7 @@ The Thermal Manager component is designed to be scheduled periodically to trigge
    - Iterates through the connected battery cell temperature sensor ports.
    - Triggers temperature readings for each connected sensor.
    - Triggers temperature reading from the Pico die temperature sensor.
-   - Evaluates lower/upper threshold conditions per sensor
+   - Evaluates lower/upper threshold conditions for face and battery sensors with per-sensor hysteresis state
 
 ## Class Diagram
 
@@ -28,8 +28,8 @@ classDiagram
         class ThermalManager {
             + ThermalManager(const char* compName)
             + ~ThermalManager()
-            - evaluateTemperatureThreshold(FwIndexType idx, F64 temperature, F64 lowerThreshold, F64 upperThreshold, bool& belowActive, bool& aboveActive, LogFn logBelow, LogFn logAbove): void
             - run_handler(FwIndexType portNum, U32 context): void
+            - evaluateTemperatureThreshold(U32 idx, F64 temperature, bool& aboveThrottleActive, bool& belowThrottleActive, ThermalManager_TempSensorType sensorType): void
         }
     }
     ThermalManagerComponentBase <|-- ThermalManager : inherits
@@ -64,12 +64,10 @@ classDiagram
 
 ## Events
 
-| Name                                 | Description                                                                        |
-| ------------------------------------ | ---------------------------------------------------------------------------------- |
-| FaceTemperatureBelowThreshold        | Face temperature reading below threshold (Sensor ID and temperature in °C)         |
-| FaceTemperatureAboveThreshold        | Face temperature reading above threshold (Sensor ID and temperature in °C)         |
-| BatteryCellTemperatureBelowThreshold | Battery cell temperature reading below threshold (Sensor ID and temperature in °C) |
-| BatteryCellTemperatureAboveThreshold | Battery cell temperature reading above threshold (Sensor ID and temperature in °C) |
+| Name                      | Description                                                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| TemperatureBelowThreshold | Event emitted when a face or battery sensor reading drops below its configured lower threshold; includes sensorType, sensorId, and temperature |
+| TemperatureAboveThreshold | Event emitted when a face or battery sensor reading exceeds its configured upper threshold; includes sensorType, sensorId, and temperature     |
 
 ## Sequence Diagrams
 
@@ -83,27 +81,31 @@ sequenceDiagram
     Scheduler-->>ThermalManager: run
     loop For each face sensor (0-4)
         ThermalManager->>Tmp112Manager: faceTempGet
+        ThermalManager->>ThermalManager: evaluateTemperatureThreshold
     end
     loop For each battery cell sensor (0-3)
         ThermalManager->>Tmp112Manager: battCellTempGet
+        ThermalManager->>ThermalManager: evaluateTemperatureThreshold
     end
     ThermalManager->>PicoTempManager: picoTempGet
 ```
 
 ## Requirements
 
-| Name                           | Description                                                                                                    | Validation                                                            |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Face Temperature Collection    | The component shall trigger data collection from connected face temperature sensors when run is called         | Verify all connected face temperature output ports are called         |
-| Battery Temperature Collection | The component shall trigger data collection from connected battery cell temperature sensors when run is called | Verify all connected battery cell temperature output ports are called |
-| Pico Temperature Collection    | The component shall trigger data collection from the Pico die temperature sensor when run is called            | Verify the Pico temperature output port is called                     |
-| Periodic Operation             | The component shall operate as a scheduled component responding to scheduler calls                             | Verify component responds correctly to scheduler input                |
+| Name                           | Description                                                                                                        | Validation                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Face Temperature Collection    | The component shall trigger data collection from connected face temperature sensors when run is called             | Verify all connected face temperature output ports are called                                       |
+| Battery Temperature Collection | The component shall trigger data collection from connected battery cell temperature sensors when run is called     | Verify all connected battery cell temperature output ports are called                               |
+| Pico Temperature Collection    | The component shall trigger data collection from the Pico die temperature sensor when run is called                | Verify the Pico temperature output port is called                                                   |
+| Threshold Monitoring           | The component shall emit threshold events when face or battery sensor temperatures cross configured bounds         | Verify `TemperatureBelowThreshold` and `TemperatureAboveThreshold` events are emitted appropriately |
+| Threshold Hysteresis           | The component shall suppress repeated threshold events until the measured temperature returns past a debounce band | Verify events are not re-emitted until the temperature re-enters the hysteresis band                |
+| Periodic Operation             | The component shall operate as a scheduled component responding to scheduler calls                                 | Verify component responds correctly to scheduler input                                              |
 
 ## Change Log
 
-| Date       | Description                                                                                                                |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 2026-05-01 | Updated threshold handling to use per-sensor state and shared evaluation logic; eliminated global throttle-clear behavior. |
-| 2026-03-30 | Add Pico die temperature sensor integration                                                                                |
-| 2026-03-30 | Add events for when temperature readings are above/below a threshold.                                                      |
-| 2025-12-05 | Initial Thermal Manager component SDD                                                                                      |
+| Date       | Description                                                                                                                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-07 | Updated threshold handling to use per-sensor state and shared evaluation logic; eliminated global throttle-clear behavior. Added evaluateTemperatureThreshold helper function, removed sensor-type specific threshold events. |
+| 2026-03-30 | Add Pico die temperature sensor integration                                                                                                                                                                                   |
+| 2026-03-30 | Add events for when temperature readings are above/below a threshold.                                                                                                                                                         |
+| 2025-12-05 | Initial Thermal Manager component SDD                                                                                                                                                                                         |
