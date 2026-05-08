@@ -152,7 +152,7 @@ jobs:
         if: env.KORAD_CONTROL == 'true'
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
+          sleep 10
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
 
       - name: Kill all python processes
