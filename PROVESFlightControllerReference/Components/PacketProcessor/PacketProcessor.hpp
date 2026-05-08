@@ -3,6 +3,9 @@
 // \brief  hpp file for PacketProcessor component implementation class
 // ======================================================================
 
+#ifndef Components_PacketProcessor
+#define Components_PacketProcessor
+
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Types/String.hpp>
 #include <Os/File.hpp>
@@ -129,3 +132,5 @@ class PacketProcessor final : public PacketProcessorComponentBase {
 };
 
 }  // namespace Components
+
+#endif  // Components_PacketProcessor

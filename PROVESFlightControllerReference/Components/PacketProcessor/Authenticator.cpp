@@ -5,6 +5,7 @@
 
 #include "Authenticator.hpp"
 
+#include <mbedtls/platform_util.h>
 #include <psa/crypto.h>
 
 #include <cstring>
@@ -101,6 +102,7 @@ PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
     // Import the key into PSA and verify the HMAC
     psa_key_id_t keyId = 0;
     psa_status_t status = importHmacKey(keyBytes, PSA_KEY_USAGE_VERIFY_MESSAGE, keyId);
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
     if (status != PSA_SUCCESS) {
         return PacketAuthenticator::Result{PacketAuthenticator::Status::ImportKeyError, status};
     }

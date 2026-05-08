@@ -96,6 +96,7 @@ Output packet layout (forwarded):
 - Space Packet Data Field
 
 ### Additional resources
+
 - [CCSDS 355.0-B-2 CMAC Authentication Standard](https://ccsds.org/Pubs/355x0b2.pdf)
 
 ## Parameters
@@ -189,9 +190,9 @@ The default authentication key header is generated at build time from project ke
 | AUTH004-A | The component shall reject packets with sequence numbers that are outside the acceptable window and log an event. | Unit Test, Inspection |
 | AUTH004-B | The component shall set the stored sequence number to the sequence number transmitted in the packet only when a packet is fully validated and authenticated | Inspection |
 | AUTH004-C | The component shall allow the sequence number window to be configurable via a parameter. | Inspection |
-| AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16 byte security trailer. | Unit Test |
+| AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16-byte security trailer. | Unit Test |
 | AUTH005-A | The component shall reject packets where the computed HMAC does not match the security trailer HMAC. | Unit Test |
-| AUTH006 | For any packet passing both validation and authentication steps or any packet marked for bypass, the component shall remove the Security Header and Security Trailer from the and pass the remaining packet data to data out. | Inspection, Integration Test |
+| AUTH006 | For any packet passing both validation and authentication steps or any packet marked for bypass, the component shall remove the Security Header and Security Trailer from the packet and pass the remaining packet data to data out. | Inspection, Integration Test |
 | AUTH007 | The component shall provide a command and telemetry channel to report the current sequence number for a given Security Association (SPI) to enable ground station synchronization. | Inspection, Integration Test |
 
 ## Change Log

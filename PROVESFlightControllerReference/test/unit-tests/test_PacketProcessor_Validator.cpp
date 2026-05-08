@@ -35,7 +35,7 @@ TEST(PacketValidatorTest, BypassTellJokeOpCode) {
 }
 
 TEST(PacketValidatorTest, BypassSpiInvalid) {
-    Packet p{1u, 10u, 0x01000000u, {}};  // non-zero SPI but bypass opcode but bypass opcode
+    Packet p{1u, 10u, 0x01000000u, {}};  // non-zero SPI but bypass opcode
     auto res = validatePacket(p, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::Bypass);
 }
@@ -84,4 +84,10 @@ TEST(PacketValidatorTest, SequenceNumberEqualToExpected) {
     Packet p{0u, 10u, 0xDEADBEEFu, {}};  // sequence equal to expected should be invalid
     auto res = validatePacket(p, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::SequenceNumberInvalid);
+}
+
+TEST(PacketValidatorTest, SequenceNumberAtWindowBoundary) {
+    Packet p{0u, 15u, 0xDEADBEEFu, {}};  // expected 10, window 5 → distance = 5 = window → valid
+    auto res = validatePacket(p, 10u, 5u);
+    EXPECT_EQ(res, PacketValidator::Status::Valid);
 }
