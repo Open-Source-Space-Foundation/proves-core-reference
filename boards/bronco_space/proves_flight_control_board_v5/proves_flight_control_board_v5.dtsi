@@ -13,6 +13,7 @@
 		zephyr,console = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart0;
 		zephyr,code-partition = &slot0_partition;
+		secure_storage_its_partition = &its_partition;
 	};
 
 	fstab {
@@ -89,10 +90,15 @@ zephyr_udc0: &usbd {
             reg = <0x300000 0x100000>;
         };
 
-        storage_partition: partition@400000 {
-            label = "storage_partition";
-            reg = <0x400000 0xC00000>;
-        };
+		its_partition: partition@400000 {
+			label = "secure_storage_its";
+			reg = <0x400000 0x20000>; /* 128KB for ITS */
+		};
+
+		storage_partition: partition@420000 {
+			label = "storage_partition";
+			reg = <0x420000 0xBE0000>; /* shifted to make room for ITS */
+		};
     };
 };
 

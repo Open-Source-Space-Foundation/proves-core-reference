@@ -129,6 +129,8 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     // Counters for telemetry
     std::atomic<U32> m_bypassPacketsCount;    //!< Count of packets that bypass authentication
     std::atomic<U32> m_rejectedPacketsCount;  //!< Count of rejected packets
+
+    uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
 
 }  // namespace Components

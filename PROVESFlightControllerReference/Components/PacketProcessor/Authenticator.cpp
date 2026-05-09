@@ -58,72 +58,64 @@ bool parseHexKey(const char* key, uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecu
     return true;
 }
 
-// Import an HMAC key into PSA for message verification.
-psa_status_t importHmacKey(const uint8_t (&keyBytes)[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize],
-                           psa_key_usage_t usage,
-                           psa_key_id_t& keyId) {
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
-    psa_set_key_bits(&attributes, static_cast<size_t>(Ccsds355_0_B_2_Cmac::kSecurityTrailerSize * 8));
-    psa_set_key_usage_flags(&attributes, usage);
-    psa_set_key_algorithm(&attributes, PSA_ALG_AT_LEAST_THIS_LENGTH_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256),
-                                                                        Ccsds355_0_B_2_Cmac::kSecurityTrailerSize));
-
-    const psa_status_t status = psa_import_key(&attributes, keyBytes, sizeof(keyBytes), &keyId);
-    psa_reset_key_attributes(&attributes);
-    return status;
-}
-
 }  // namespace
 
-PacketAuthenticator::Result authenticatePacket(const uint8_t* dataBuffer,
-                                               size_t dataSize,
-                                               const Hmac& hmac,
-                                               const char* key) {
-    // Basic input validation: buffer present and at least trailer-sized
-    if (!dataBuffer || dataSize < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
-    }
-
-    // Initialize PSA crypto library (idempotent)
+// Import an HMAC key into PSA for message verification.
+PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& keyId) {
+    // Initialize PSA crypto library
     const psa_status_t initStatus = psa_crypto_init();
     if (initStatus != PSA_SUCCESS) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::InitError, initStatus};
+        return {PacketAuthenticator::KeyImportStatus::InitError, initStatus};
     }
 
     // Parse the hex-encoded default key into raw bytes
     uint8_t keyBytes[Ccsds355_0_B_2_Cmac::kSecurityTrailerSize];
     if (!parseHexKey(key, keyBytes)) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
+        return {PacketAuthenticator::KeyImportStatus::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 
-    const size_t authenticatedDataSize = dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize;
+    // Set up the key attributes
+    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+    psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
+    psa_set_key_bits(&attributes, static_cast<size_t>(Ccsds355_0_B_2_Cmac::kSecurityTrailerSize * 8));
+    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_VERIFY_MESSAGE);
+    psa_set_key_algorithm(&attributes, PSA_ALG_AT_LEAST_THIS_LENGTH_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256),
+                                                                        Ccsds355_0_B_2_Cmac::kSecurityTrailerSize));
+    psa_set_key_lifetime(&attributes, PSA_KEY_LIFETIME_VOLATILE);
 
-    // Import the key into PSA and verify the HMAC
-    psa_key_id_t keyId = 0;
-    psa_status_t status = importHmacKey(keyBytes, PSA_KEY_USAGE_VERIFY_MESSAGE, keyId);
-    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
+    // Import the key into PSA key store
+    const psa_status_t status = psa_import_key(&attributes, keyBytes, sizeof(keyBytes), &keyId);
     if (status != PSA_SUCCESS) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::ImportKeyError, status};
+        return {PacketAuthenticator::KeyImportStatus::ImportKeyError, status};
     }
 
-    // Verify the HMAC on the packet data (excluding the trailer)
-    status = psa_mac_verify(
+    // Clean up sensitive data
+    psa_reset_key_attributes(&attributes);
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
+
+    return {PacketAuthenticator::KeyImportStatus::Success, PSA_SUCCESS};
+}
+
+PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* dataBuffer,
+                                                             size_t dataSize,
+                                                             const Hmac& hmac,
+                                                             uint32_t& keyId) {
+    // Basic input validation: buffer present and at least trailer-sized
+    if (!dataBuffer || dataSize < Ccsds355_0_B_2_Cmac::kSecurityTrailerSize) {
+        return {PacketAuthenticator::AuthenticationStatus::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
+    }
+
+    // Verify the HMAC on the packet data
+    const size_t authenticatedDataSize = dataSize - Ccsds355_0_B_2_Cmac::kSecurityTrailerSize;
+    const psa_status_t status = psa_mac_verify(
         keyId, PSA_ALG_TRUNCATED_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256), Ccsds355_0_B_2_Cmac::kSecurityTrailerSize),
         dataBuffer, authenticatedDataSize, hmac.data(), hmac.size());
-
-    // Destroy the key handle to clean up resources
-    const psa_status_t destroyStatus = psa_destroy_key(keyId);
-    if (destroyStatus != PSA_SUCCESS) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::DestroyKeyError, destroyStatus};
-    }
-
-    // Check the result of the verification step
     if (status != PSA_SUCCESS) {
-        return PacketAuthenticator::Result{PacketAuthenticator::Status::VerifyError, status};
+        return PacketAuthenticator::AuthenticationResult{PacketAuthenticator::AuthenticationStatus::VerifyError,
+                                                         status};
     }
 
-    return PacketAuthenticator::Result{PacketAuthenticator::Status::Authenticated, PSA_SUCCESS};
+    return {PacketAuthenticator::AuthenticationStatus::Authenticated, PSA_SUCCESS};
 }
 
 }  // namespace Components

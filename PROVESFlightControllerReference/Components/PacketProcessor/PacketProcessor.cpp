@@ -5,13 +5,13 @@
 
 #include "PROVESFlightControllerReference/Components/PacketProcessor/PacketProcessor.hpp"
 
-#include <psa/crypto.h>
-
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
 #include <iomanip>
 #include <utility>
 
+#include "Authenticator.hpp"
+#include "PacketProcessor.hpp"
 #include "Types.hpp"
 
 // Include generated header with default key (generated at build time)
@@ -85,11 +85,11 @@ void PacketProcessor ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, con
         this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
 
         // Authenticate the packet
-        const PacketAuthenticator::Result authResult =
-            authenticatePacket(data.getData(), data.getSize(), packet.hmac, AUTH_DEFAULT_KEY);
+        const PacketAuthenticator::AuthenticationResult authResult =
+            authenticatePacket(data.getData(), data.getSize(), packet.hmac, this->m_hmacKeyId);
 
         // If the packet failed authentication, reject it
-        if (authResult.status != PacketAuthenticator::Status::Authenticated) {
+        if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
             this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
                                                       authResult.psaStatus);
             this->rejectPacket(data, context);
@@ -170,6 +170,10 @@ void PacketProcessor ::configure() {
 
     // Telemeter the current sequence number
     this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+
+    // Import the HMAC key
+    PacketAuthenticator::KeyImportResult result = importHmacKey(AUTH_DEFAULT_KEY, this->m_hmacKeyId);
+    FW_ASSERT(result.status == PacketAuthenticator::KeyImportStatus::Success);
 }
 
 // ----------------------------------------------------------------------
