@@ -217,6 +217,7 @@ void PacketProcessor ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext
     // intentionally not checking the return value
     this->m_sequenceNumber = sequenceNumber;
     this->writeSequenceNumber(this->m_sequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
 
     // Authenticate the packet
     ComCfg::FrameContext contextOut = context;
