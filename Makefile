@@ -377,7 +377,13 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --communication-selection none \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
-	@sleep 5
+	@echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."
+	@i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 180 ]; then echo "ERROR: YAMCS did not open :8090 within 180s"; exit 1; fi; \
+	  sleep 1; \
+	done; \
+	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE)..."

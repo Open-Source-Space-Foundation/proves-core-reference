@@ -214,11 +214,26 @@ jobs:
           for i in $(seq 1 180); do
             if curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; then
               echo "YAMCS up after ${i}s"
+              break
+            fi
+            sleep 1
+            if [ $i -eq 180 ]; then
+              echo "ERROR: YAMCS did not respond on :8090 within 180s"
+              tail -200 yamcs.log || true
+              exit 1
+            fi
+          done
+
+      - name: Wait for fprime-yamcs-events bridge subscribe
+        run: |
+          for i in $(seq 1 60); do
+            if grep -q "Subscribing to tm_realtime" yamcs.log 2>/dev/null; then
+              echo "Events bridge subscribed after ${i}s"
               exit 0
             fi
             sleep 1
           done
-          echo "ERROR: YAMCS did not respond on :8090 within 180s"
+          echo "ERROR: fprime-yamcs-events bridge did not subscribe within 60s"
           tail -200 yamcs.log || true
           exit 1
 
