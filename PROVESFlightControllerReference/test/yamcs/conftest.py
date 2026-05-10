@@ -20,7 +20,7 @@ from yamcs.client import YamcsClient
 YAMCS_URL = os.environ.get("YAMCS_URL", "localhost:8090")
 YAMCS_INSTANCE = os.environ.get("YAMCS_INSTANCE", "fprime-project")
 YAMCS_PROCESSOR = os.environ.get("YAMCS_PROCESSOR", "realtime")
-YAMCS_READY_TIMEOUT_S = float(os.environ.get("YAMCS_READY_TIMEOUT_S", "60"))
+YAMCS_READY_TIMEOUT_S = float(os.environ.get("YAMCS_READY_TIMEOUT_S", "180"))
 
 
 @pytest.fixture(scope="session")

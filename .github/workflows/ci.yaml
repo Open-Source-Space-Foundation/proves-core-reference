@@ -203,9 +203,28 @@ jobs:
           nohup make yamcs UART_DEVICE=/dev/ttyBOARD > yamcs.log 2>&1 &
           echo $! > yamcs.pid
 
+      - name: Wait for YAMCS HTTP API
+        run: |
+          for i in $(seq 1 180); do
+            if curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; then
+              echo "YAMCS up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: YAMCS did not respond on :8090 within 180s"
+          tail -200 yamcs.log || true
+          exit 1
+
       - name: Run YAMCS Round-Trip Test
         run: |
           make test-yamcs
+
+      - name: Dump YAMCS log on failure
+        if: failure()
+        run: |
+          echo "===== yamcs.log (tail) ====="
+          tail -500 yamcs.log || true
 
       - name: Stop YAMCS Stack
         if: always()
