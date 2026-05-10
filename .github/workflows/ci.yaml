@@ -198,6 +198,12 @@ jobs:
             cp "$src" yamcs/yamcs-data/mdb/fprime.xtce.xml
           fi
 
+      - name: Set up Java 17 for YAMCS
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Start YAMCS Stack
         run: |
           nohup make yamcs UART_DEVICE=/dev/ttyBOARD > yamcs.log 2>&1 &
