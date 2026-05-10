@@ -14,7 +14,7 @@ the full TC + TM + events path is healthy.
 import queue
 import time
 
-NO_OP_COMMAND = "/ReferenceDeployment|ReferenceDeployment/CdhCore|cmdDisp|CMD_NO_OP"
+NO_OP_COMMAND = "/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CMD_NO_OP"
 NO_OP_EVENT_NEEDLE = "NoOpReceived"
 EVENT_TIMEOUT_S = 30.0
 
