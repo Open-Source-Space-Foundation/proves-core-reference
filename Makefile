@@ -180,6 +180,44 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
+##@ Debugging / OpenOCD
+
+OPENOCD_DIR ?= $(shell pwd)/tools/openocd
+OPENOCD_REPO ?= https://github.com/raspberrypi/openocd.git
+OPENOCD_REF ?= acff23f
+OPENOCD_BIN ?= $(OPENOCD_DIR)/src/openocd
+OPENOCD_JOBS ?= 4
+OPENOCD_FLASH_SPEED ?= 5000
+OPENOCD_COMMON_FLAGS ?= -s $(OPENOCD_DIR)/tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed $(OPENOCD_FLASH_SPEED)"
+
+$(OPENOCD_DIR)/.built:
+	@if [ ! -d "$(OPENOCD_DIR)" ]; then \
+		git clone "$(OPENOCD_REPO)" "$(OPENOCD_DIR)"; \
+	fi
+	@cd "$(OPENOCD_DIR)" && \
+		git checkout "$(OPENOCD_REF)" || { echo "Failed to checkout $(OPENOCD_REF)"; exit 1; } && \
+		./bootstrap && \
+		./configure --disable-werror --enable-cmsis-dap --enable-cmsis-dap-v2 && \
+		$(MAKE) -j$(OPENOCD_JOBS)
+	@touch "$(OPENOCD_DIR)/.built"
+
+.PHONY: debug
+debug: $(OPENOCD_DIR)/.built ## Run OpenOCD against the debug probe and stream board debug output
+	@"$(OPENOCD_BIN)" $(OPENOCD_COMMON_FLAGS)
+
+.PHONY: debug-install
+debug-install: $(OPENOCD_DIR)/.built ## Flash a file via SWD with OpenOCD. Usage: make debug-install <filename>
+	@TARGET_FILE="$(firstword $(filter-out $@,$(MAKECMDGOALS)))"; \
+	if [ -z "$$TARGET_FILE" ]; then \
+		echo "Usage: make debug-install <filename>"; \
+		exit 1; \
+	fi; \
+	if [ ! -f "$$TARGET_FILE" ]; then \
+		echo "File not found: $$TARGET_FILE"; \
+		exit 1; \
+	fi; \
+	"$(OPENOCD_BIN)" $(OPENOCD_COMMON_FLAGS) -c "program $$TARGET_FILE verify reset exit"
+
 test-unit: ## Run unit tests
 	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
