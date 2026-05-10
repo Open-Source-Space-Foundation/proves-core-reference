@@ -37,7 +37,7 @@ class Lora(object):
         self.rfm95 = adafruit_rfm9x.RFM9x(board.SPI(), self.CS, self.RESET, freq_mhz)
         self.rfm95.coding_rate = 5
         self.rfm95.preamble_length = 8
-        self.mode = "U"
+        self.mode = "1"
         self.up_count = 0
         self.dw_count = 0
 
