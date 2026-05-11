@@ -364,6 +364,12 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	done
 	@echo "Done."
 
+# Spacecraft ID used at runtime by the adapter. Must match the SCID baked
+# into the FSW build (ComCfg.fpp) and the YAMCS instance config. Defaults
+# to the production value (68 / 0x0044). CI sets this to 67 / 0x0043 via
+# `make-ci-spacecraft-id` to avoid collisions with dev machines nearby.
+SPACECRAFT_ID ?= 68
+
 .PHONY: yamcs
 yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
 	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
@@ -386,11 +392,12 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE)..."
+	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
 	    --uart-device $(UART_DEVICE) \
-	    --uart-baud 115200
+	    --uart-baud 115200 \
+	    --spacecraft-id $(SPACECRAFT_ID)
 
 .PHONY: yamcs-server
 yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
@@ -461,11 +468,15 @@ copy-secrets:
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
-make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
+make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
 	@echo "Generating unique spacecraft ID for CI build..."
 	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
+	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
+	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
+	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 
 include makelib/build-tools.mk
 include makelib/ci.mk

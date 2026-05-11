@@ -129,6 +129,15 @@ jobs:
         run: |
           make submodules fprime-venv
 
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          # The build job ran `make-ci-spacecraft-id` before compiling the
+          # FSW, so the hex flashed onto the board emits TM frames with
+          # SCID 67. The integration runner's working tree is a fresh
+          # checkout (default SCID 68) so we re-apply the same override
+          # here to keep the YAMCS instance config / adapter in sync.
+          make make-ci-spacecraft-id
+
       - name: Set Authentication Key
         run: |
           echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
@@ -220,7 +229,10 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
         run: |
-          PYTHONUNBUFFERED=1 nohup make yamcs UART_DEVICE=/dev/ttyBOARD > yamcs.log 2>&1 &
+          # SPACECRAFT_ID=67 matches the override applied by `make
+          # make-ci-spacecraft-id` in the build job so the adapter syncs on
+          # the same TM frame header the FSW is emitting.
+          PYTHONUNBUFFERED=1 nohup make yamcs UART_DEVICE=/dev/ttyBOARD SPACECRAFT_ID=67 > yamcs.log 2>&1 &
           echo $! > yamcs.pid
 
       - name: Wait for YAMCS HTTP API
