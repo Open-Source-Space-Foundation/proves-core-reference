@@ -270,6 +270,11 @@ sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and
 	@echo "Synchronizing sequence number; ensure you have the GDS open."
 	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
+.PHONY: format-filesystem
+format-filesystem: fprime-venv ## Format the filesystem of a connected FC board
+	@echo "Formatting the flight controller's filesystem; ensure you have the GDS open."
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/format_filesystem.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: clean
 clean: ## Remove all gitignored files
 	git clean -dfX
