@@ -186,11 +186,17 @@ jobs:
         run: |
           kill $(cat server.pid) || true
           # Make sure nothing is still holding /dev/ttyBOARD before YAMCS adapter
-          # tries to open it.
+          # tries to open it. pkill -f sometimes misses GDS child processes
+          # (e.g. fprime_gds.executables.run_deployment), so also force-evict
+          # anyone with an open fd on the tty itself.
           pkill -f fprime-gds || true
+          pkill -f fprime_gds || true
           pkill -f gds-integration || true
           pkill -f proves_adapter || true
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
+          echo "Holders of /dev/ttyBOARD after kill (should be empty):"
+          lsof /dev/ttyBOARD || true
 
       - name: Reboot Integration Cube before YAMCS
         if: env.KORAD_CONTROL == 'true'
