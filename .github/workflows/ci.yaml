@@ -226,8 +226,10 @@ jobs:
           java-version: '17'
 
       - name: Start YAMCS Stack
+        env:
+          PYTHONUNBUFFERED: "1"
         run: |
-          nohup make yamcs UART_DEVICE=/dev/ttyBOARD > yamcs.log 2>&1 &
+          PYTHONUNBUFFERED=1 nohup make yamcs UART_DEVICE=/dev/ttyBOARD > yamcs.log 2>&1 &
           echo $! > yamcs.pid
 
       - name: Wait for YAMCS HTTP API

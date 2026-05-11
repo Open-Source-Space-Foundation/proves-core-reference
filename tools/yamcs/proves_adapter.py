@@ -272,6 +272,7 @@ def _forward_tc_serial(
 ):
     """Receive TC datagrams from YAMCS, extract SpacePacket, auth-wrap, re-frame, write to serial."""
     print("[TC] UDP → extract SpacePacket → authenticate → TC frame → serial")
+    tc_count = 0
     while True:
         tc_transfer_frame, _ = tc_sock.recvfrom(4096)
         try:
@@ -282,6 +283,10 @@ def _forward_tc_serial(
             )
             continue
         ser.write(out_frame)
+        tc_count += 1
+        print(
+            f"[TC] #{tc_count}: YAMCS {len(tc_transfer_frame)}B → serial {len(out_frame)}B"
+        )
 
 
 def _forward_tc_tcp(
