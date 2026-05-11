@@ -86,12 +86,13 @@ def _forward_tm_serial(
     last_vc_count = -1  # not yet known
     vc_frame_gaps = 0
     junk_bytes = 0
+    junk_sample = bytearray()  # captures first 256B of junk in current stats window
     stats_time = time.monotonic()
 
     print(f"[TM] Scanning for frames (sync header={sync_header.hex(' ')})...")
 
     def _maybe_print_stats():
-        nonlocal stats_time, frames_sent, junk_bytes
+        nonlocal stats_time, frames_sent, junk_bytes, junk_sample
         now = time.monotonic()
         if now - stats_time >= 30.0:
             elapsed = now - stats_time
@@ -100,9 +101,26 @@ def _forward_tm_serial(
                 f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s, "
                 f"{vc_frame_gaps} gap(s), {junk_bytes} junk bytes skipped"
             )
+            # When no frames came through, dump what we did receive so we can
+            # tell whether FSW is silent, emitting console text, or emitting
+            # something we don't recognize as a CCSDS frame.
+            if frames_sent == 0 and junk_sample:
+                printable = "".join(
+                    chr(b) if 0x20 <= b < 0x7F else "." for b in junk_sample
+                )
+                print(f"[TM] junk hex : {junk_sample.hex(' ')}")
+                print(f"[TM] junk ascii: {printable}")
             stats_time = now
             frames_sent = 0
             junk_bytes = 0
+            junk_sample = bytearray()
+
+    def _capture_junk(chunk: bytes):
+        nonlocal junk_sample
+        if len(junk_sample) >= 256:
+            return
+        room = 256 - len(junk_sample)
+        junk_sample.extend(chunk[:room])
 
     while True:
         # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
@@ -120,12 +138,14 @@ def _forward_tm_serial(
                 # No sync header anywhere — discard everything except the last
                 # byte (which could be the first byte of a future sync header).
                 if len(buf) > 1:
+                    _capture_junk(bytes(buf[: len(buf) - 1]))
                     junk_bytes += len(buf) - 1
                     del buf[: len(buf) - 1]
                 break
 
             # Discard any non-frame bytes before the sync header.
             if idx > 0:
+                _capture_junk(bytes(buf[:idx]))
                 junk_bytes += idx
                 del buf[:idx]
 
