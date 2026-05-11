@@ -185,6 +185,21 @@ jobs:
         if: always()
         run: |
           kill $(cat server.pid) || true
+          # Make sure nothing is still holding /dev/ttyBOARD before YAMCS adapter
+          # tries to open it.
+          pkill -f fprime-gds || true
+          pkill -f gds-integration || true
+          pkill -f proves_adapter || true
+          sleep 2
+
+      - name: Reboot Integration Cube before YAMCS
+        if: env.KORAD_CONTROL == 'true'
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          # Give MCUBoot + FSW time to boot before YAMCS adapter opens the UART.
+          sleep 10
 
       - name: Restore MDB to expected path
         run: |
@@ -244,8 +259,10 @@ jobs:
       - name: Dump YAMCS log on failure
         if: failure()
         run: |
-          echo "===== yamcs.log (tail) ====="
-          tail -500 yamcs.log || true
+          echo "===== yamcs.log (tail 1500) ====="
+          tail -1500 yamcs.log || true
+          echo "===== lsof /dev/ttyBOARD ====="
+          lsof /dev/ttyBOARD || true
 
       - name: Stop YAMCS Stack
         if: always()
