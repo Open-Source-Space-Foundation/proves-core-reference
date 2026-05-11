@@ -38,7 +38,7 @@ def yamcs_client():
             if instance is not None and getattr(instance, "state", None) == "RUNNING":
                 yield client
                 return
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — YamcsClient raises gRPC/HTTP errors with no shared base while the instance is still booting
             last_error = exc
         time.sleep(1.0)
     pytest.fail(

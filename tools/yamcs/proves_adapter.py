@@ -101,7 +101,7 @@ def _forward_tm_serial(
     sync_desc = " / ".join(f"{h.hex(' ')} (SCID {s})" for s, h in syncs)
     print(f"[TM] Scanning for frames (sync headers: {sync_desc})...")
 
-    def _maybe_print_stats():
+    def _maybe_print_stats() -> None:
         nonlocal stats_time, junk_bytes
         now = time.monotonic()
         if now - stats_time >= 30.0:
@@ -349,7 +349,17 @@ def _forward_tc_tcp(
 
 def parse_args():
     def _parse_scid_list(val: str) -> list[int]:
-        return [int(x) for x in val.split(",") if x.strip()]
+        scids = [int(x) for x in val.split(",") if x.strip()]
+        if not scids:
+            raise argparse.ArgumentTypeError(
+                "--spacecraft-id must list at least one SCID"
+            )
+        for s in scids:
+            if not 0 <= s <= 0x3FF:
+                raise argparse.ArgumentTypeError(
+                    f"--spacecraft-id {s} out of range (CCSDS SCID is 10 bits, 0..1023)"
+                )
+        return scids
 
     p = argparse.ArgumentParser(
         description="PROVES YAMCS authentication adapter (Option B)",

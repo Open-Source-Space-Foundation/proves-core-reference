@@ -14,6 +14,8 @@ the full TC + TM + events path is healthy.
 import queue
 import time
 
+from conftest import YAMCS_INSTANCE
+
 NO_OP_COMMAND = "/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CMD_NO_OP"
 NO_OP_EVENT_NEEDLE = "NoOpReceived"
 TOTAL_TIMEOUT_S = 180.0
@@ -37,10 +39,10 @@ def test_noop_round_trip(yamcs_client, yamcs_processor):
     single TC can be dropped if FSW is mid-boot or in safe mode entry, so we
     keep nudging it until either the link comes up or we hit the hard ceiling.
     """
-    events: "queue.Queue" = queue.Queue()
+    events: queue.Queue = queue.Queue()
 
     subscription = yamcs_client.create_event_subscription(
-        instance="fprime-project",
+        instance=YAMCS_INSTANCE,
         on_data=events.put,
     )
 
