@@ -28,7 +28,7 @@ def check_gds(fprime_test_api_session: IntegrationTestAPI):
             time.sleep(1)
     assert gds_working
 
-    yield
+    return
 
 
 def test_format_filesystem(fprime_test_api: IntegrationTestAPI):
