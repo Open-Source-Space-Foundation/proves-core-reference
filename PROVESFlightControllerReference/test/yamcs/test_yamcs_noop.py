@@ -16,7 +16,7 @@ import time
 
 NO_OP_COMMAND = "/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CMD_NO_OP"
 NO_OP_EVENT_NEEDLE = "NoOpReceived"
-EVENT_TIMEOUT_S = 30.0
+EVENT_TIMEOUT_S = 90.0
 
 
 def _event_matches(event) -> bool:

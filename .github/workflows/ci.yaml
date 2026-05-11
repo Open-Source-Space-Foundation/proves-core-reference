@@ -210,19 +210,25 @@ jobs:
       - name: Pre-flight FSW UART check
         run: |
           # Confirm FSW is actually emitting on /dev/ttyBOARD before launching
-          # YAMCS. If this prints 0 bytes, the YAMCS round-trip cannot work no
-          # matter what we do downstream — the board itself is silent.
+          # YAMCS. Window is 35s so we span at least one TM beacon interval
+          # (FSW default is one frame every 30s). If sync-header count is 0
+          # over 35s, TM frames are disabled or routed elsewhere — no point
+          # running the YAMCS round-trip.
           stty -F /dev/ttyBOARD 115200 raw -echo -echoe -echok 2>/dev/null || true
           rm -f fsw-preflight.bin
-          timeout 5 cat /dev/ttyBOARD > fsw-preflight.bin || true
+          timeout 35 cat /dev/ttyBOARD > fsw-preflight.bin || true
           size=$(stat -c%s fsw-preflight.bin 2>/dev/null || echo 0)
-          echo "FSW emitted ${size} bytes in 5s"
+          sync_count=$(grep -c -a -o $'\x04\x42' fsw-preflight.bin || true)
+          echo "FSW emitted ${size} bytes in 35s"
           echo "----- first 128 bytes (hex) -----"
           head -c 128 fsw-preflight.bin | xxd || true
-          echo "----- sync-header (04 42) count -----"
-          grep -c -a -o $'\x04\x42' fsw-preflight.bin || true
+          echo "----- '04 42' sync-header count: ${sync_count} -----"
           if [ "$size" -eq 0 ]; then
             echo "ERROR: FSW emitted no bytes on /dev/ttyBOARD; aborting before YAMCS"
+            exit 1
+          fi
+          if [ "${sync_count:-0}" -eq 0 ]; then
+            echo "ERROR: FSW emitted ${size}B but zero CCSDS TM sync headers in 35s — TM path appears disabled"
             exit 1
           fi
 
