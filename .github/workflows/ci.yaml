@@ -130,7 +130,6 @@ jobs:
 
         # Reboot before installation to avoid watchdog reset
       - name: Reboot Integration Cube
-        if: env.KORAD_CONTROL == 'true'
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
           sleep 3
@@ -149,7 +148,6 @@ jobs:
 
         # Reboot after installation to ensure power monitor tests work
       - name: Reboot Integration Cube
-        if: env.KORAD_CONTROL == 'true'
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
           sleep 3
@@ -176,7 +174,13 @@ jobs:
         run: |
           make test-integration
 
-      - name: Kill GDS
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make format-filesystem
+
+      - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
           kill $(cat server.pid)
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
