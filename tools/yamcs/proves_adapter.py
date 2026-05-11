@@ -90,10 +90,25 @@ def _forward_tm_serial(
 
     print(f"[TM] Scanning for frames (sync header={sync_header.hex(' ')})...")
 
+    def _maybe_print_stats():
+        nonlocal stats_time, frames_sent, junk_bytes
+        now = time.monotonic()
+        if now - stats_time >= 30.0:
+            elapsed = now - stats_time
+            rate = frames_sent / elapsed if elapsed else 0
+            print(
+                f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s, "
+                f"{vc_frame_gaps} gap(s), {junk_bytes} junk bytes skipped"
+            )
+            stats_time = now
+            frames_sent = 0
+            junk_bytes = 0
+
     while True:
         # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
         chunk = ser.read(max(1, ser.in_waiting or 1))
         if not chunk:
+            _maybe_print_stats()
             continue
         buf.extend(chunk)
 
@@ -145,17 +160,7 @@ def _forward_tm_serial(
                 del buf[:2]
 
         # Periodic stats every 30 seconds.
-        now = time.monotonic()
-        if now - stats_time >= 30.0:
-            elapsed = now - stats_time
-            rate = frames_sent / elapsed if elapsed else 0
-            print(
-                f"[TM] stats: {frames_sent} frames, {rate:.1f} f/s, "
-                f"{vc_frame_gaps} gap(s), {junk_bytes} junk bytes skipped"
-            )
-            stats_time = now
-            frames_sent = 0
-            junk_bytes = 0
+        _maybe_print_stats()
 
 
 def _forward_tm_tcp(

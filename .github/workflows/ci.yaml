@@ -207,6 +207,25 @@ jobs:
           # Give MCUBoot + FSW time to boot before YAMCS adapter opens the UART.
           sleep 10
 
+      - name: Pre-flight FSW UART check
+        run: |
+          # Confirm FSW is actually emitting on /dev/ttyBOARD before launching
+          # YAMCS. If this prints 0 bytes, the YAMCS round-trip cannot work no
+          # matter what we do downstream — the board itself is silent.
+          stty -F /dev/ttyBOARD 115200 raw -echo -echoe -echok 2>/dev/null || true
+          rm -f fsw-preflight.bin
+          timeout 5 cat /dev/ttyBOARD > fsw-preflight.bin || true
+          size=$(stat -c%s fsw-preflight.bin 2>/dev/null || echo 0)
+          echo "FSW emitted ${size} bytes in 5s"
+          echo "----- first 128 bytes (hex) -----"
+          head -c 128 fsw-preflight.bin | xxd || true
+          echo "----- sync-header (04 42) count -----"
+          grep -c -a -o $'\x04\x42' fsw-preflight.bin || true
+          if [ "$size" -eq 0 ]; then
+            echo "ERROR: FSW emitted no bytes on /dev/ttyBOARD; aborting before YAMCS"
+            exit 1
+          fi
+
       - name: Restore MDB to expected path
         run: |
           mkdir -p yamcs/yamcs-data/mdb
