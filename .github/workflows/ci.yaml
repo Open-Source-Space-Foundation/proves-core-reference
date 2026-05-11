@@ -176,7 +176,12 @@ jobs:
         run: |
           make test-integration
 
-      - name: Kill GDS
+      - name: Format Filesystem
+        run: |
+          make format-filesystem
+
+      - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
           kill $(cat server.pid)
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
