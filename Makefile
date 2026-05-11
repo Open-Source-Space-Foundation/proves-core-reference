@@ -364,10 +364,12 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	done
 	@echo "Done."
 
-# Spacecraft ID used at runtime by the adapter. Must match the SCID baked
-# into the FSW build (ComCfg.fpp) and the YAMCS instance config. Defaults
-# to the production value (68 / 0x0044). CI sets this to 67 / 0x0043 via
-# `make-ci-spacecraft-id` to avoid collisions with dev machines nearby.
+# Spacecraft ID(s) passed to the adapter. May be a comma-separated list
+# (e.g. SPACECRAFT_ID=68,67) — the adapter accepts TM from all listed SCIDs
+# and uses the first for TC framing. Must include the SCID baked into the
+# FSW build (ComCfg.fpp) and registered in the YAMCS instance config.
+# Defaults to the production value (68 / 0x0044). CI sets this to 67 /
+# 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
 SPACECRAFT_ID ?= 68
 
 .PHONY: yamcs
