@@ -226,11 +226,22 @@ jobs:
           "$BINDIR/arm-zephyr-eabi-readelf" -l "$ELF" 2>&1 | head -20 || true
           echo "=== nm head (.text base candidates) ==="
           "$BINDIR/arm-zephyr-eabi-nm" -n "$ELF" 2>&1 | grep " [tT] " | head -10 || true
-          echo "=== addr2line for observed PCs (try with raw elf) ==="
+          MCUBOOT_ELF=$(find . -name "mcuboot.elf" 2>/dev/null | head -1)
+          echo "MCUBoot elf: $MCUBOOT_ELF"
+          echo "=== addr2line app elf (text base $(printf '0x%x' 0x10100330)) ==="
           for ADDR in 0x10011326 0x1001281a 0x10011145 0x1000fc53 0x10005885 0x10006139; do
             SYM=$("$BINDIR/arm-zephyr-eabi-addr2line" -f -e "$ELF" "$ADDR" 2>&1 | tr '\n' ' ')
-            echo "  $ADDR -> $SYM"
+            echo "  app  $ADDR -> $SYM"
           done
+          if [ -n "$MCUBOOT_ELF" ]; then
+            echo "=== MCUBoot elf section layout ==="
+            "$BINDIR/arm-zephyr-eabi-objdump" -h "$MCUBOOT_ELF" 2>&1 | grep -E "text|rom_start|VMA|Idx" | head -10
+            echo "=== addr2line mcuboot elf ==="
+            for ADDR in 0x10011326 0x1001281a 0x10011145 0x1000fc53 0x10005885 0x10006139; do
+              SYM=$("$BINDIR/arm-zephyr-eabi-addr2line" -f -e "$MCUBOOT_ELF" "$ADDR" 2>&1 | tr '\n' ' ')
+              echo "  mcu  $ADDR -> $SYM"
+            done
+          fi
           "$GDB" -batch -nx "$ELF" \
             -ex "set pagination off" \
             -ex "set confirm off" \
