@@ -237,6 +237,35 @@ jobs:
         run: |
           make test-integration
 
+      - name: Re-enable LoRa for RF pass
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          uv run --active pytest PROVESFlightControllerReference/test/int/0_radio_test.py::test_00_setup_only \
+            --deployment build-artifacts/zephyr/fprime-zephyr-deployment || true
+
+      - name: Kill UART GDS
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          kill $(cat server.pid) || true
+          make kill-gds || true
+          sleep 3
+
+      - name: Start GDS on LoRa Passthrough
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          nohup make gds-integration UART_DEVICE="$LORA_PASSTHROUGH_TTY" &
+          echo $! > server-rf.pid
+
+      - name: Sync Sequence Number (RF)
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          make sync-sequence-number
+
+      - name: Run Integration Tests over LoRa
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          make test-integration-radio
+
       - name: Format Filesystem
         if: always()
         run: |
@@ -245,5 +274,6 @@ jobs:
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
-          kill $(cat server.pid)
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0

@@ -18,6 +18,8 @@ import serial
 from common import proves_send_and_assert_command
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = pytest.mark.rf_unsafe
+
 lora = "ReferenceDeployment.lora"
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
 PASSTHROUGH_TTY = os.environ.get("LORA_PASSTHROUGH_TTY")

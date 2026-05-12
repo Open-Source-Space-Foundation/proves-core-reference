@@ -6,8 +6,11 @@ Integration tests for the Reset Manager component.
 
 from datetime import datetime
 
+import pytest
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+pytestmark = pytest.mark.rf_unsafe
 
 resetManager = "ReferenceDeployment.resetManager"
 
