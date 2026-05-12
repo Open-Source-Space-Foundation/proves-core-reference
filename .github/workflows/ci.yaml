@@ -189,16 +189,32 @@ jobs:
           done
           echo "=== dmesg (last 60 USB-related lines) ==="
           sudo -n dmesg 2>/dev/null | tail -120 | grep -iE "usb|cdc_acm|tty" || dmesg 2>/dev/null | tail -120 | grep -iE "usb|cdc_acm|tty" || echo "(dmesg unavailable)"
-          # Pick non-debug-probe device (exclude CMSIS-DAP / Debug_Probe / Picoprobe)
-          mapfile -t CANDIDATES < <(ls /dev/serial/by-id/ 2>/dev/null \
-            | grep -viE 'Debug_Probe|CMSIS-DAP|Picoprobe')
-          if [ "${#CANDIDATES[@]}" -eq 0 ]; then
-            echo "ERROR: no non-probe serial device found"; exit 1
+          # Locate Zephyr CDC ACM tty by VID:PID 0028:000f (set in board defconfig)
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              # CDC ACM control interface is the one with InterfaceClass=02 (Comm)
+              for ifn in $path/*:*; do
+                cls=$(cat "$ifn/bInterfaceClass" 2>/dev/null)
+                if [ "$cls" = "02" ]; then
+                  tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                  if [ -n "$tty" ]; then
+                    ZEPHYR_TTY="/dev/$tty"
+                    break 2
+                  fi
+                fi
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            exit 1
           fi
-          DEV="/dev/serial/by-id/${CANDIDATES[0]}"
-          REAL=$(readlink -f "$DEV")
-          echo "Selected board (fallback / debug only): $DEV -> $REAL"
-          echo "UART_DEVICE=$DEV" >> $GITHUB_ENV
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Start GDS
         run: |
