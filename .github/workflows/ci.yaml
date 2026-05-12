@@ -226,7 +226,7 @@ jobs:
 
       - name: Start GDS
         run: |
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$UART_DEVICE}" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           echo $! > server.pid
 
       - name: Sync Sequence Number
@@ -252,7 +252,7 @@ jobs:
       - name: Start GDS on LoRa Passthrough
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
-          nohup make gds-integration UART_DEVICE="$LORA_PASSTHROUGH_TTY" &
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
           echo $! > server-rf.pid
           sleep 10
 
