@@ -11,7 +11,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-const struct device* serial = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_udc0));
+const struct device* serial = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
 int main(int argc, char* argv[]) {
     // ** DO NOT REMOVE **//
