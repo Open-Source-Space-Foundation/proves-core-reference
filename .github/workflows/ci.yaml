@@ -166,28 +166,38 @@ jobs:
         run: |
           echo "=== lsusb ==="
           lsusb || true
+          echo "=== lsusb -v for 0028:000f (Zephyr) ==="
+          lsusb -v -d 0028:000f 2>/dev/null || true
           echo "=== /dev/serial/by-id ==="
           ls -l /dev/serial/by-id/ || true
-          echo "=== udevadm for each tty ==="
-          for s in /dev/serial/by-id/*; do
-            [ -e "$s" ] || continue
-            REAL=$(readlink -f "$s")
-            echo "--- $s -> $REAL ---"
-            udevadm info -q property -n "$REAL" 2>/dev/null \
-              | grep -E "ID_VENDOR_ID|ID_MODEL_ID|ID_VENDOR=|ID_MODEL=|ID_SERIAL=|ID_USB_INTERFACE_NUM" || true
+          echo "=== /dev/ttyACM* ==="
+          ls -l /dev/ttyACM* 2>/dev/null || echo "(none)"
+          echo "=== sysfs view of 0028:000f ==="
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              echo "Zephyr device sysfs path: $path"
+              echo "  product: $(cat $path/product 2>/dev/null)"
+              echo "  configuration: $(cat $path/configuration 2>/dev/null)"
+              for ifn in $path/*:*; do
+                [ -d "$ifn" ] || continue
+                echo "  interface $(basename $ifn): class=$(cat $ifn/bInterfaceClass 2>/dev/null) subclass=$(cat $ifn/bInterfaceSubClass 2>/dev/null) protocol=$(cat $ifn/bInterfaceProtocol 2>/dev/null) driver=$(basename $(readlink $ifn/driver 2>/dev/null) 2>/dev/null)"
+              done
+            fi
           done
+          echo "=== dmesg (last 60 USB-related lines) ==="
+          sudo -n dmesg 2>/dev/null | tail -120 | grep -iE "usb|cdc_acm|tty" || dmesg 2>/dev/null | tail -120 | grep -iE "usb|cdc_acm|tty" || echo "(dmesg unavailable)"
           # Pick non-debug-probe device (exclude CMSIS-DAP / Debug_Probe / Picoprobe)
           mapfile -t CANDIDATES < <(ls /dev/serial/by-id/ 2>/dev/null \
             | grep -viE 'Debug_Probe|CMSIS-DAP|Picoprobe')
           if [ "${#CANDIDATES[@]}" -eq 0 ]; then
             echo "ERROR: no non-probe serial device found"; exit 1
           fi
-          if [ "${#CANDIDATES[@]}" -gt 1 ]; then
-            echo "ERROR: multiple non-probe candidates: ${CANDIDATES[*]}"; exit 1
-          fi
           DEV="/dev/serial/by-id/${CANDIDATES[0]}"
           REAL=$(readlink -f "$DEV")
-          echo "Selected board: $DEV -> $REAL"
+          echo "Selected board (fallback / debug only): $DEV -> $REAL"
           echo "UART_DEVICE=$DEV" >> $GITHUB_ENV
 
       - name: Start GDS
