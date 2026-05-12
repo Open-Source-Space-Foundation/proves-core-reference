@@ -218,48 +218,50 @@ jobs:
             -c "adapter speed 5000" -c "init" &
           OCD_PID=$!
           sleep 3
+          BINDIR=$(dirname "$GDB")
           echo "=== ELF section layout ==="
-          arm-zephyr-eabi-objdump -h "$ELF" 2>/dev/null | head -40 || true
-          echo "=== nm head (lowest addrs) ==="
-          arm-zephyr-eabi-nm -n "$ELF" 2>/dev/null | head -20 || true
+          "$BINDIR/arm-zephyr-eabi-objdump" -h "$ELF" 2>&1 | head -40 || true
+          echo "=== readelf entry / program headers ==="
+          "$BINDIR/arm-zephyr-eabi-readelf" -h "$ELF" 2>&1 | grep -E "Entry|Type" || true
+          "$BINDIR/arm-zephyr-eabi-readelf" -l "$ELF" 2>&1 | head -20 || true
+          echo "=== nm head (.text base candidates) ==="
+          "$BINDIR/arm-zephyr-eabi-nm" -n "$ELF" 2>&1 | grep " [tT] " | head -10 || true
+          echo "=== addr2line for observed PCs (try with raw elf) ==="
+          for ADDR in 0x10011326 0x1001281a 0x10011145 0x1000fc53 0x10005885 0x10006139; do
+            SYM=$("$BINDIR/arm-zephyr-eabi-addr2line" -f -e "$ELF" "$ADDR" 2>&1 | tr '\n' ' ')
+            echo "  $ADDR -> $SYM"
+          done
           "$GDB" -batch -nx "$ELF" \
             -ex "set pagination off" \
             -ex "set confirm off" \
             -ex "target extended-remote localhost:3333" \
             -ex "monitor halt" \
-            -ex "printf \"=== SAMPLE 1 ===\\n\"" \
+            -ex "printf \"=== Halt 1 ===\\n\"" \
             -ex "info registers pc lr sp xpsr msp psp" \
-            -ex "info symbol \$pc" \
-            -ex "monitor resume" \
-            -ex "shell sleep 1" \
-            -ex "monitor halt" \
-            -ex "printf \"=== SAMPLE 2 (1s later) ===\\n\"" \
-            -ex "info registers pc lr sp xpsr msp psp" \
-            -ex "info symbol \$pc" \
-            -ex "monitor resume" \
-            -ex "shell sleep 1" \
-            -ex "monitor halt" \
-            -ex "printf \"=== SAMPLE 3 (2s later) ===\\n\"" \
-            -ex "info registers pc lr sp xpsr msp psp" \
-            -ex "info symbol \$pc" \
-            -ex "printf \"=== Fault regs ===\\n\"" \
+            -ex "printf \"=== Fault regs (before resume — should be sticky) ===\\n\"" \
             -ex "printf \"CFSR/HFSR/DFSR/MMFAR:\\n\"" \
             -ex "x/4xw 0xE000ED28" \
             -ex "printf \"BFAR:\\n\"" \
             -ex "x/1xw 0xE000ED38" \
             -ex "printf \"SHCSR:\\n\"" \
             -ex "x/1xw 0xE000ED24" \
-            -ex "printf \"ICSR / VTOR / NVIC iabr0..3:\\n\"" \
+            -ex "printf \"ICSR / VTOR:\\n\"" \
             -ex "x/1xw 0xE000ED04" \
             -ex "x/1xw 0xE000ED08" \
-            -ex "x/4xw 0xE000E300" \
-            -ex "printf \"=== Stack peek (psp) ===\\n\"" \
-            -ex "x/32xw \$psp" \
-            -ex "printf \"=== Stack peek (msp) ===\\n\"" \
-            -ex "x/32xw \$msp" \
-            -ex "info threads" \
-            -ex "bt full" \
-            -ex "thread apply all bt" \
+            -ex "printf \"=== Stacked frame at MSP (UsageFault entry frame) ===\\n\"" \
+            -ex "printf \"  r0..r3, r12, lr, ret_pc, xpsr:\\n\"" \
+            -ex "x/8xw \$msp" \
+            -ex "printf \"=== Stacked frame at PSP (thread context) ===\\n\"" \
+            -ex "x/8xw \$psp" \
+            -ex "printf \"=== Disasm at thread PC (after add-symbol-file with offsets) ===\\n\"" \
+            -ex "x/8i 0x10011326" \
+            -ex "x/8i 0x1001281a" \
+            -ex "monitor resume" \
+            -ex "shell sleep 1" \
+            -ex "monitor halt" \
+            -ex "printf \"=== Halt 2 (1s later — confirm fault loop or motion) ===\\n\"" \
+            -ex "info registers pc lr sp xpsr msp psp" \
+            -ex "x/8xw \$msp" \
             -ex "monitor resume" \
             -ex "disconnect"
           kill $OCD_PID 2>/dev/null
