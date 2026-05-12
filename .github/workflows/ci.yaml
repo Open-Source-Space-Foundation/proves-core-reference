@@ -218,21 +218,46 @@ jobs:
             -c "adapter speed 5000" -c "init" &
           OCD_PID=$!
           sleep 3
+          echo "=== ELF section layout ==="
+          arm-zephyr-eabi-objdump -h "$ELF" 2>/dev/null | head -40 || true
+          echo "=== nm head (lowest addrs) ==="
+          arm-zephyr-eabi-nm -n "$ELF" 2>/dev/null | head -20 || true
           "$GDB" -batch -nx "$ELF" \
             -ex "set pagination off" \
             -ex "set confirm off" \
             -ex "target extended-remote localhost:3333" \
             -ex "monitor halt" \
-            -ex "info threads" \
-            -ex "info registers" \
+            -ex "printf \"=== SAMPLE 1 ===\\n\"" \
+            -ex "info registers pc lr sp xpsr msp psp" \
+            -ex "info symbol \$pc" \
+            -ex "monitor resume" \
+            -ex "shell sleep 1" \
+            -ex "monitor halt" \
+            -ex "printf \"=== SAMPLE 2 (1s later) ===\\n\"" \
+            -ex "info registers pc lr sp xpsr msp psp" \
+            -ex "info symbol \$pc" \
+            -ex "monitor resume" \
+            -ex "shell sleep 1" \
+            -ex "monitor halt" \
+            -ex "printf \"=== SAMPLE 3 (2s later) ===\\n\"" \
+            -ex "info registers pc lr sp xpsr msp psp" \
+            -ex "info symbol \$pc" \
+            -ex "printf \"=== Fault regs ===\\n\"" \
             -ex "printf \"CFSR/HFSR/DFSR/MMFAR:\\n\"" \
             -ex "x/4xw 0xE000ED28" \
             -ex "printf \"BFAR:\\n\"" \
             -ex "x/1xw 0xE000ED38" \
             -ex "printf \"SHCSR:\\n\"" \
             -ex "x/1xw 0xE000ED24" \
-            -ex "printf \"ICSR:\\n\"" \
+            -ex "printf \"ICSR / VTOR / NVIC iabr0..3:\\n\"" \
             -ex "x/1xw 0xE000ED04" \
+            -ex "x/1xw 0xE000ED08" \
+            -ex "x/4xw 0xE000E300" \
+            -ex "printf \"=== Stack peek (psp) ===\\n\"" \
+            -ex "x/32xw \$psp" \
+            -ex "printf \"=== Stack peek (msp) ===\\n\"" \
+            -ex "x/32xw \$msp" \
+            -ex "info threads" \
             -ex "bt full" \
             -ex "thread apply all bt" \
             -ex "monitor resume" \
