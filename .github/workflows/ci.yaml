@@ -164,8 +164,18 @@ jobs:
 
       - name: Detect Board TTY
         run: |
-          echo "All serial by-id entries:"
+          echo "=== lsusb ==="
+          lsusb || true
+          echo "=== /dev/serial/by-id ==="
           ls -l /dev/serial/by-id/ || true
+          echo "=== udevadm for each tty ==="
+          for s in /dev/serial/by-id/*; do
+            [ -e "$s" ] || continue
+            REAL=$(readlink -f "$s")
+            echo "--- $s -> $REAL ---"
+            udevadm info -q property -n "$REAL" 2>/dev/null \
+              | grep -E "ID_VENDOR_ID|ID_MODEL_ID|ID_VENDOR=|ID_MODEL=|ID_SERIAL=|ID_USB_INTERFACE_NUM" || true
+          done
           # Pick non-debug-probe device (exclude CMSIS-DAP / Debug_Probe / Picoprobe)
           mapfile -t CANDIDATES < <(ls /dev/serial/by-id/ 2>/dev/null \
             | grep -viE 'Debug_Probe|CMSIS-DAP|Picoprobe')
