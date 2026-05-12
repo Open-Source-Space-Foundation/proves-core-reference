@@ -396,7 +396,7 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
-	@$(GDS_COMMAND) --gui=none --uart-device=/dev/ttyBOARD
+	@$(GDS_COMMAND) --gui=none --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
 DoL_test:

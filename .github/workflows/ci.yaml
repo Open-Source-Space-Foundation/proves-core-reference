@@ -161,9 +161,27 @@ jobs:
         run: |
           make framer-plugin
 
+      - name: Detect Board TTY
+        run: |
+          echo "All serial by-id entries:"
+          ls -l /dev/serial/by-id/ || true
+          # Pick non-debug-probe device (exclude CMSIS-DAP / Debug_Probe / Picoprobe)
+          mapfile -t CANDIDATES < <(ls /dev/serial/by-id/ 2>/dev/null \
+            | grep -viE 'Debug_Probe|CMSIS-DAP|Picoprobe')
+          if [ "${#CANDIDATES[@]}" -eq 0 ]; then
+            echo "ERROR: no non-probe serial device found"; exit 1
+          fi
+          if [ "${#CANDIDATES[@]}" -gt 1 ]; then
+            echo "ERROR: multiple non-probe candidates: ${CANDIDATES[*]}"; exit 1
+          fi
+          DEV="/dev/serial/by-id/${CANDIDATES[0]}"
+          REAL=$(readlink -f "$DEV")
+          echo "Selected board: $DEV -> $REAL"
+          echo "UART_DEVICE=$DEV" >> $GITHUB_ENV
+
       - name: Start GDS
         run: |
-          nohup make gds-integration &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           echo $! > server.pid
 
       - name: Sync Sequence Number
