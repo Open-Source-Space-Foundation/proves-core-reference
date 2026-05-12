@@ -187,6 +187,43 @@ jobs:
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
+      - name: Detect LoRa Passthrough TTY
+        run: |
+          # Find the non-Zephyr USB device's CDC data interface (CircuitPython
+          # passthrough on v5d). Heuristic: skip the Zephyr VID:PID and prefer
+          # interfaces whose iInterface descriptor contains "cdc2" or "data"
+          # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
+          # back to the last seen non-Zephyr CDC ACM tty when no name matches;
+          # the smoke test asserts binary traffic to catch a wrong pick.
+          PASSTHROUGH_TTY=""
+          FALLBACK_TTY=""
+          echo "=== USB CDC ACM candidates (non-Zephyr) ==="
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            [ "$v" = "0028" ] && [ "$p" = "000f" ] && continue
+            path=${d%/idVendor}
+            prod=$(cat "$path/product" 2>/dev/null || echo "?")
+            for ifn in "$path"/*:*; do
+              [ "$(cat "$ifn/bInterfaceClass" 2>/dev/null)" = "02" ] || continue
+              iname=$(cat "$ifn/interface" 2>/dev/null || echo "")
+              tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+              [ -z "$tty" ] && continue
+              echo "  $v:$p [$prod] $(basename "$ifn") '$iname' /dev/$tty"
+              case "$(echo "$iname" | tr '[:upper:]' '[:lower:]')" in
+                *cdc2*|*data*) PASSTHROUGH_TTY="/dev/$tty";;
+              esac
+              FALLBACK_TTY="/dev/$tty"
+            done
+          done
+          [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
+          if [ -n "$PASSTHROUGH_TTY" ]; then
+            echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+            echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
+          else
+            echo "No LoRa passthrough tty found; smoke test will skip"
+          fi
+
       - name: Start GDS
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
