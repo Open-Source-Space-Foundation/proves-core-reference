@@ -87,7 +87,6 @@ def test_02_system_stays_running_with_watchdog(
 
 
 @pytest.mark.slow
-@pytest.mark.requires_hw_watchdog
 def test_03_system_reboots_without_watchdog(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):

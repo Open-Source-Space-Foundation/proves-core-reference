@@ -1,13 +1,10 @@
 """
-1_lora_passthrough_test.py:
+lora_passthrough_test.py:
 
-Smoke test for the downlink LoRa radio path via the v5d CircuitPython
-passthrough board (code-lora.py). Runs right after 0_radio_test so the
-flight controller's TRANSMIT is already on and the downlink divider is
-already set; we still re-issue TRANSMIT ENABLED so the test passes when
-run in isolation. Reads raw bytes from the passthrough's USB CDC data
+Smoke test for the downlink LoRa radio via the CircuitPython passthrough
+board (code-lora.py). Reads raw bytes from the passthrough's USB CDC data
 interface and asserts non-trivial binary traffic arrives within a
-fixed window. Skipped when LORA_PASSTHROUGH_TTY is unset.
+fixed window.
 """
 
 import os
