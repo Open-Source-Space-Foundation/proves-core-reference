@@ -100,6 +100,7 @@ jobs:
             mcuboot.elf
             bootable.uf2
             bootable.signed.hex
+            build-fprime-automatic-zephyr/zephyr/zephyr.elf
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
@@ -185,8 +186,60 @@ jobs:
           echo $! > server.pid
 
       - name: Sync Sequence Number
+        id: sync_seq
         run: |
           make sync-sequence-number
+
+      - name: Probe CPU State (debug boot hang)
+        if: failure() && steps.sync_seq.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          set +e
+          ELF=$(find . -path "*/build-fprime-automatic-zephyr/zephyr/zephyr.elf" 2>/dev/null | head -1)
+          [ -z "$ELF" ] && ELF=$(find . -name "zephyr.elf" -not -path "*/mcuboot/*" 2>/dev/null | head -1)
+          echo "Using elf: $ELF"
+          GDB=$(command -v arm-zephyr-eabi-gdb || command -v arm-none-eabi-gdb)
+          if [ -z "$GDB" ]; then
+            GDB=$(ls ~/zephyr-sdk-*/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb 2>/dev/null | head -1)
+          fi
+          echo "Using gdb: $GDB"
+          if [ -z "$GDB" ] || [ -z "$ELF" ]; then
+            echo "ERROR: missing gdb or elf — falling back to openocd-only register dump"
+            ~/openocd/src/openocd -s ~/openocd/tcl \
+              -f interface/cmsis-dap.cfg -f target/rp2350.cfg \
+              -c "adapter speed 5000" \
+              -c "init" -c "halt" -c "reg" \
+              -c "mdw 0xE000ED28 4" -c "mdw 0xE000ED34 1" -c "mdw 0xE000ED38 1" \
+              -c "resume" -c "exit"
+            exit 0
+          fi
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f interface/cmsis-dap.cfg -f target/rp2350.cfg \
+            -c "adapter speed 5000" -c "init" &
+          OCD_PID=$!
+          sleep 3
+          "$GDB" -batch -nx "$ELF" \
+            -ex "set pagination off" \
+            -ex "set confirm off" \
+            -ex "target extended-remote localhost:3333" \
+            -ex "monitor halt" \
+            -ex "info threads" \
+            -ex "info registers" \
+            -ex "printf \"CFSR/HFSR/DFSR/MMFAR:\\n\"" \
+            -ex "x/4xw 0xE000ED28" \
+            -ex "printf \"BFAR:\\n\"" \
+            -ex "x/1xw 0xE000ED38" \
+            -ex "printf \"SHCSR:\\n\"" \
+            -ex "x/1xw 0xE000ED24" \
+            -ex "printf \"ICSR:\\n\"" \
+            -ex "x/1xw 0xE000ED04" \
+            -ex "bt full" \
+            -ex "thread apply all bt" \
+            -ex "monitor resume" \
+            -ex "disconnect"
+          kill $OCD_PID 2>/dev/null
+          wait $OCD_PID 2>/dev/null
+          exit 0
 
       - name: Run Integration Tests
         run: |
