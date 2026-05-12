@@ -123,10 +123,8 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference (flash build-artifacts/zephyr.uf2 when enabled)
 	@$(UV_RUN) fprime-util build
-	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
-	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
 
 ##@ Authentication Keys
 
