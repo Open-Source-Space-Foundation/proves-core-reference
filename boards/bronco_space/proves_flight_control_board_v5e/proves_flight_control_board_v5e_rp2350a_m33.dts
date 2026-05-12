@@ -27,8 +27,8 @@
 	dio1-gpios =  <&gpio0 14 (GPIO_ACTIVE_HIGH)>;
 	tx-enable-gpios =  <&gpio0 21 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
 	rx-enable-gpios =  <&gpio0 22 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-	dio3-tcxo-voltage = <SX126X_DIO3_TCXO_2V2>;
-    tcxo-power-startup-delay-ms = <5>;
+	// dio3-tcxo-voltage = <SX126X_DIO3_TCXO_2V2>;
+    // tcxo-power-startup-delay-ms = <5>;
 	rx-boosted;
 	label = "E22-400M30S";
 	// zephyr,deferred-init;
