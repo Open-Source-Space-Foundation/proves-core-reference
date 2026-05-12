@@ -22,8 +22,8 @@
 &lora0 {
 	compatible = "semtech,sx1262";
 	reset-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
-	busy-gpios =  <&gpio0 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-	dio1-gpios =  <&gpio0 14 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+	busy-gpios =  <&gpio0 13 (GPIO_ACTIVE_HIGH)>;
+	dio1-gpios =  <&gpio0 14 (GPIO_ACTIVE_HIGH)>;
 	tx-enable-gpios =  <&gpio0 21 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
 	rx-enable-gpios =  <&gpio0 22 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
 	rx-boosted;
