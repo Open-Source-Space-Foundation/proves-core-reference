@@ -248,6 +248,11 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
 
+.PHONY: reenable-lora
+reenable-lora: uv ## Re-enable LoRa transmit before the RF integration pass
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/int/0_radio_test.py::test_00_setup_only \
+	    --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: test-integration-radio
 test-integration-radio: uv ## Run integration tests via LoRa passthrough GDS
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \

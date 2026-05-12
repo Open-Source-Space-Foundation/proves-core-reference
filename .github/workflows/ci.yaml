@@ -240,8 +240,7 @@ jobs:
       - name: Re-enable LoRa for RF pass
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
-          uv run --active pytest PROVESFlightControllerReference/test/int/0_radio_test.py::test_00_setup_only \
-            --deployment build-artifacts/zephyr/fprime-zephyr-deployment || true
+          make reenable-lora || true
 
       - name: Kill UART GDS
         if: env.LORA_PASSTHROUGH_TTY != ''
@@ -255,6 +254,7 @@ jobs:
         run: |
           nohup make gds-integration UART_DEVICE="$LORA_PASSTHROUGH_TTY" &
           echo $! > server-rf.pid
+          sleep 10
 
       - name: Sync Sequence Number (RF)
         if: env.LORA_PASSTHROUGH_TTY != ''
