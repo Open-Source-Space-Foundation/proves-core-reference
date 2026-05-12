@@ -21,7 +21,7 @@
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
-const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
+const struct device* lora = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(lora0));
 // const struct device* spi0 = DEVICE_DT_GET(DT_NODELABEL(spi0));
 const struct device* peripheral_uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 const struct device* peripheral_uart1 = DEVICE_DT_GET(DT_NODELABEL(uart1));
