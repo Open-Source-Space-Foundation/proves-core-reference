@@ -44,6 +44,17 @@
             "preLaunchTask": "build unit tests",
             "stopAtEntry": false,
             "externalConsole": false
+        },
+        {
+            "name": "Debug RP2350 via OpenOCD :3333",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "servertype": "external",
+            "gdbTarget": "localhost:3333",
+            "executable": "${workspaceFolder}/build-artifacts/zephyr.elf",
+            "device": "RP2350",
+            "runToEntryPoint": "main"
         }
     ]
 }

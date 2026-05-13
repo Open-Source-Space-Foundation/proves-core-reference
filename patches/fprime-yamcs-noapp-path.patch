@@ -1,0 +1,22 @@
+diff --git a/fprime_yamcs/__main__.py b/fprime_yamcs/__main__.py
+--- a/fprime_yamcs/__main__.py
++++ b/fprime_yamcs/__main__.py
+@@ -232,6 +232,9 @@ def launch_yamcs(parsed_args):
+     environment = os.environ.copy()
+     environment["FPRIME_DICTIONARY"] = parsed_args.dictionary
+     environment["FPRIME_YAMCS_INSTANCE"] = parsed_args.yamcs_events_instance
++    # Ensure the venv bin (fprime-yamcs-events, etc.) is on PATH for Java subprocesses
++    venv_bin = str(Path(sys.executable).parent)
++    environment["PATH"] = venv_bin + os.pathsep + environment.get("PATH", "")
+
+     print(f"[INFO] Using FPRIME_DICTIONARY: {environment['FPRIME_DICTIONARY']}")
+     print(f"[INFO] Using FPRIME_YAMCS_INSTANCE: {environment['FPRIME_YAMCS_INSTANCE']}")
+@@ -280,7 +283,7 @@ def main():
+         if not instances:
+             raise Exception(f"No YAMCS instances found in {parsed_args.yamcs_config_dir / 'etc/yamcs.yaml'}")
+
+-        yamcs_config_dir, fprime_instance = construct_temporary_configuration(parsed_args.yamcs_config_dir, instances, parsed_args.dictionary, parsed_args.udp_uplink_port, parsed_args.udp_downlink_port)
++        yamcs_config_dir, fprime_instance = construct_temporary_configuration(parsed_args.yamcs_config_dir, instances, Path(parsed_args.dictionary), parsed_args.udp_uplink_port, parsed_args.udp_downlink_port)
+         parsed_args.yamcs_config_dir = yamcs_config_dir
+         if parsed_args.yamcs_events_instance is None:
+             parsed_args.yamcs_events_instance = fprime_instance

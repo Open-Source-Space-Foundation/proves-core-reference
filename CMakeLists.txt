@@ -22,6 +22,11 @@ endif()
 
 project(fprime-zephyr-reference C CXX)
 
+# Enable Zephyr Pico hardware_adc library
+zephyr_include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/zephyr-workspace/modules/hal/rpi_pico/src/rp2_common/hardware_adc/include
+)
+
 # Disable F´ framework/autocoder/app unit tests; we use our own GoogleTests in tests/
 set(FPRIME_ENABLE_FRAMEWORK_UTS OFF CACHE BOOL "" FORCE)
 set(FPRIME_ENABLE_AUTOCODER_UTS OFF CACHE BOOL "" FORCE)
@@ -43,7 +48,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/lib/fprime/cmake/FPrime.cmake")
 fprime_setup_included_code()
 
 # This includes project-wide objects
-add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/FprimeZephyrReference")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/PROVESFlightControllerReference")
 
 if (FPRIME_USE_POSIX)
     set_target_properties(Drv_Ip PROPERTIES EXCLUDE_FROM_ALL TRUE)

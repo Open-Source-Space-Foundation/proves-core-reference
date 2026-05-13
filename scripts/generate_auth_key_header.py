@@ -73,7 +73,7 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h",
+        default="PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h",
         help="Output path for AuthDefaultKey.h",
     )
     parser.add_argument(

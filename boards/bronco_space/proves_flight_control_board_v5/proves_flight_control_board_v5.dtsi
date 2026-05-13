@@ -108,6 +108,16 @@ zephyr_udc0: &usbd {
 	status = "okay";
 };
 
+&die_temp {
+	status = "okay";
+};
+
+&adc {
+	pinctrl-0 = <&adc_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 &uart0 {
     status = "okay";
     pinctrl-0 = <&uart0_default>;
@@ -501,6 +511,7 @@ zephyr_udc0: &usbd {
 		reg = <0x52>;
 		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
 		backup-switch-mode = "direct";
+		alarms-count = <1>;
 		label = "RV3028";
 	};
 	mcp23017: mcp23017@20 {

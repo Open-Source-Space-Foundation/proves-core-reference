@@ -19,6 +19,7 @@
 		group2 {
 			pinmux = <UART0_RX_P1>;
 			input-enable;
+			bias-pull-up;
 		};
 	};
 	uart1_default: uart1_default {
@@ -29,6 +30,7 @@
 		group2 {
 			pinmux = <UART1_RX_P5>;
 			input-enable;
+			bias-pull-up;
 		};
 	};
 	spi1_default: spi1_default {
@@ -50,6 +52,13 @@
 	i2c1_default: i2c1_default {
 		group1 {
 			pinmux = <I2C1_SCL_P3>, <I2C1_SDA_P2>;
+			input-enable;
+		};
+	};
+	adc_default: adc_default {
+		group1 {
+			pinmux = <ADC_CH0_P26>,		/* GP26: ADC_CH0 */
+					<ADC_CH1_P27>;		/* GP27: ADC_CH1 */
 			input-enable;
 		};
 	};

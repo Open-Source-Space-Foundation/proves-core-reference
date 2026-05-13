@@ -31,7 +31,7 @@ def get_default_auth_key_from_header() -> str:
         ValueError: If AuthDefaultKey.h does not contain a valid key
         IOError: If there is an error reading the file
     """
-    path = "FprimeZephyrReference/Components/Authenticate/AuthDefaultKey.h"
+    path = "PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h"
 
     if not os.path.exists(path):
         raise FileNotFoundError(

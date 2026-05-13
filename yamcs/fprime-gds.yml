@@ -1,0 +1,9 @@
+# fprime-gds config for fprime-yamcs (--communication-selection none mode).
+# Does NOT include output-unframed-data — that option is for the plain GDS
+# and is not recognised by fprime-yamcs's argument parser.
+command-line-options:
+  communication-selection: none
+  no-app:
+  dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+  frame-size: 248
+  framing-selection: authenticate-space-data-link

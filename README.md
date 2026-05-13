@@ -1,10 +1,15 @@
 # Proves Core Reference Project
 
-This is a reference software implementation for the [Proves Kit](https://docs.proveskit.space/en/latest/).
+This is a reference software implementation for the [PROVES Kit](https://docs.proveskit.space/en/latest/).
+
+## Documentation
+
+📚 **[Component Software Design Documents (SDDs)](https://open-source-space-foundation.github.io/proves-core-reference/)** - Browse detailed design documentation for all components.
 
 ## System Requirements
 - F Prime System Requirements listed [here](https://fprime.jpl.nasa.gov/latest/docs/getting-started/installing-fprime/#system-requirements)
 - Zephyr dependencies listed [here](https://docs.zephyrproject.org/latest/develop/getting_started/index.html#install-dependencies) (NOTE: Only complete the install dependencies step, as we run through the rest of the steps in this readme.)
+- [UV](https://docs.astral.sh/uv/getting-started/installation/) needs to be globally installed on your system.
 
 ## Installation
 
@@ -21,18 +26,16 @@ cd proves-core-reference
 make
 ```
 
-## Running the code
+### Bootloader (MCUBoot)
+If you have a brand new flight controller board (or are switching a board back to F Prime from CircuitPython) you will need to first install the MCUBoot Bootloader. Skip this step if you are already running F Prime on the board at V1.0.0+.
 
-Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
-```shell
-make generate
-```
-
-Then, and every time you change code, run
+Build the MCUBoot bootloader:
 
 ```shell
-make build
+make build-mcuboot
 ```
+
+This creates a bootloader with two partitions (slots) so the system can swap between images for over-the-air updates.
 
 ### Find the path to your board
 
@@ -51,10 +54,39 @@ For Linux:
 findmnt
 ```
 
-Now you want to install the firmware to the board.
+
+#### Copy/flash the bootloader to the board
+
+The bootloader build outputs `mcuboot.uf2` at the repo root Put the board into UF2 bootloader mode (so it mounts as a USB drive), then copy it onto the mounted drive:
+
 ```shell
-cp build-artifacts/zephyr.uf2 [path-to-your-board]
+cp mcuboot.uf2 [path-to-your-board]
 ```
+
+## Running the code
+
+Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
+```shell
+make generate
+```
+
+Then, and every time you change code, run
+
+```shell
+make build
+```
+
+Now you want to install the firmware onto the board. To do so, put the board into bootloader mode, then run
+```shell
+cp bootable.uf2 [path-to-your-board]
+```
+Run ```make build``` and reflash bootable.uf2 onto the board anytime you change code.
+
+## Ground Station: F Prime GDS or YAMCS
+
+You can use either the F Prime GDS or YAMCS as your mission control ground station.
+
+### Option A: F Prime GDS (Traditional)
 
 If this is your first time running the gds, you must create the authentication plug:
 ```shell
@@ -65,6 +97,62 @@ Finally, run the fprime-gds.
 ```shell
 make gds
 ```
+
+### Option B: YAMCS (Alternative Mission Control System)
+
+[YAMCS](https://www.yamcs.org/) (Yet Another Mission Control System) is an alternative ground station interface that provides a web-based mission control system with real-time telemetry visualization, commanding, and parameter trending.
+
+#### Setup and First Run
+
+Before running YAMCS for the first time, generate the F Prime dictionary and set up the Python environment:
+
+```shell
+make fprime-venv
+```
+
+This creates the YAMCS configuration and applies necessary patches (packet preprocessor configuration, TM stream root container, and CPU fixes for the event processor).
+
+Then start YAMCS with:
+
+```shell
+UART_DEVICE=/dev/ttyXXX make yamcs
+```
+
+YAMCS starts the following components:
+1. **YAMCS Server** – web interface and mission control backbone (available at `http://localhost:8090`)
+2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)
+3. **Events Bridge** – loads 655+ F Prime event definitions and streams events in real-time
+
+#### Web Interface
+
+Once YAMCS is running, open your browser to **`http://localhost:8090`** to see YAMCS running.
+
+#### Stopping YAMCS
+
+To cleanly shut down YAMCS and all its components:
+
+```shell
+make yamcs-stop
+```
+
+This kills the adapter, event bridge, and JVM, ensuring clean startup on the next `make yamcs` run.
+
+#### Troubleshooting YAMCS
+
+- **No parameters appearing:** Verify the `rootContainer` in `yamcs-data/mdb/fprime.xtce.xml` matches your deployment (e.g., `ReferenceDeployment`)
+- **Port 8090 in use:** Run `make yamcs-stop` to ensure previous YAMCS processes are cleaned up
+- **TM frame misalignment:** Caused by FSW console text on the serial UART. The adapter's rolling buffer and CRC validation handle this automatically
+- **UnsupportedPacketVersionException warnings:** Cosmetic — idle fill bytes have invalid CCSDS version but valid packets are processed correctly
+
+#### Ensuring your authentication/signing is correct
+
+The Makefile will ensure the authentication is correct if you run the code on the same computer you flash on. However, if you switch from a computer that compiled the code you will likely have issues with authentication. Here are some things you may encounter
+
+MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
+
+If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
+
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 
@@ -83,6 +171,23 @@ To run a single integration test file, set `TEST` to the filename (with or witho
 make test-integration TEST=mode_manager_test
 make test-integration TEST=mode_manager_test.py
 ```
+
+### Testing for Flaky Tests
+
+To debug intermittent integration test failures, use the interactive test runner to run tests multiple times:
+
+```sh
+# Interactive mode - select tests with arrow keys
+make test-interactive
+
+# Run specific tests multiple times
+make test-interactive ARGS="--tests watchdog_test --cycles 10"
+
+# Run all tests
+make test-interactive ARGS="--all --cycles 20"
+```
+
+The runner automatically detects flaky tests and shows detailed statistics.
 
 ## Running The Radio With CircuitPython
 
@@ -109,9 +214,7 @@ Once you have CircuitPython running, upload the files from the ```circuit-python
 
 Once you have the board running the proves-core-reference radio code (make sure its plugged in!), you should start receiving packets and seeing this on the serial port
 
-2.
-
-Now you want to be able to send commands through the radio. To do this, connect the gds to the circuitpython data port. Run the fprime-gds with the --uart-device parameter set to the serial port that is the second serial port that shows up when you plug in your circuitpython board
+2. Now you want to be able to send commands through the radio. To do this, connect the gds to the circuitpython data port. Run the fprime-gds with the --uart-device parameter set to the serial port that is the second serial port that shows up when you plug in your circuitpython board
 
 Depending on the comdelay, the gds should turn green every time a packet is sent. If you want to change this parameter use
 
@@ -121,16 +224,7 @@ Depending on the comdelay, the gds should turn green every time a packet is sent
 
 You can control the specific command lists of the satellite by writing a sequence file. Sequence files are contained in /sequences. For details on how to attack the startup sequence check the sdd in Startup Manager.
 
-## MCUBootloader
-
-To build the bootloader, ensure you have sourced fprime-venv, and then run:
-```sh
-make build-mcuboot
-```
-
-Once built, upload `mcuboot.uf2` like normally done.
-
-Then build proves-core-reference like normal. This will put `bootable.uf2` inside of the current directory. Ensure you upload this file to the board instead of `build-artifacts/zephyr.uf2`.
+## Conducting Over the Air Updates
 
 When you run the gds,
 
