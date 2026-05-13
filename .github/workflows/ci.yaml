@@ -189,8 +189,9 @@ jobs:
       - name: Detect LoRa Passthrough TTY
         run: |
           # Find the non-Zephyr USB device's CDC data interface (CircuitPython
-          # passthrough on v5d). Heuristic: skip the Zephyr VID:PID and prefer
-          # interfaces whose iInterface descriptor contains "cdc2" or "data"
+          # passthrough board, v5d hardware reused as ground-side LoRa receiver
+          # — not the v5e flight board). Heuristic: skip the Zephyr VID:PID and
+          # prefer interfaces whose iInterface descriptor contains "cdc2" or "data"
           # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
           # back to the last seen non-Zephyr CDC ACM tty when no name matches;
           # the smoke test asserts binary traffic to catch a wrong pick.

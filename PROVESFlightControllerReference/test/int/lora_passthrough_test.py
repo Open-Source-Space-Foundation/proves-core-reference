@@ -26,7 +26,7 @@ SETTLE_S = 2.0
 def test_lora_downlink_reaches_passthrough(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
-    """Bytes flow through the v5d LoRa passthrough after TRANSMIT is enabled."""
+    """Bytes flow through the LoRa passthrough board after TRANSMIT is enabled."""
     proves_send_and_assert_command(
         fprime_test_api, f"{downlinkDelay}.DIVIDER_PRM_SET", [20]
     )
@@ -46,8 +46,8 @@ def test_lora_downlink_reaches_passthrough(
         f"No bytes received from {PASSTHROUGH_TTY} after enabling LoRa transmit"
     )
 
-    binary_bytes = sum(1 for b in rx if b < 32 and b not in (9, 10, 13))
-    assert binary_bytes > 0, (
+    control_bytes = sum(1 for b in rx if b < 32 and b not in (9, 10, 13))
+    assert control_bytes > 0, (
         f"Only ASCII text received from {PASSTHROUGH_TTY}: {bytes(rx[:200])!r}. "
         "Likely opened the CircuitPython REPL CDC instead of the data CDC."
     )
