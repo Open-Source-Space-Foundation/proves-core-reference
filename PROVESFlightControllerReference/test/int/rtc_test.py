@@ -114,7 +114,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Ensure microseconds are included in event
     microseconds_arg: U32Type = result.args[1]
-    assert 0 <= microseconds_arg.val < 100_000_000, (
+    assert 0 <= microseconds_arg.val < 1_000_000, (
         "Microseconds arg should be >= 0 and < 1 million"
     )
 

@@ -130,7 +130,6 @@ jobs:
 
         # Reboot before installation to avoid watchdog reset
       - name: Reboot Integration Cube
-        if: env.KORAD_CONTROL == 'true'
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
           sleep 3
@@ -149,7 +148,6 @@ jobs:
 
         # Reboot after installation to ensure power monitor tests work
       - name: Reboot Integration Cube
-        if: env.KORAD_CONTROL == 'true'
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
           sleep 3
@@ -163,9 +161,71 @@ jobs:
         run: |
           make framer-plugin
 
+      - name: Detect Board TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              for ifn in $path/*:*; do
+                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
+                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Detect LoRa Passthrough TTY
+        run: |
+          # Find the non-Zephyr USB device's CDC data interface (CircuitPython
+          # passthrough on v5d). Heuristic: skip the Zephyr VID:PID and prefer
+          # interfaces whose iInterface descriptor contains "cdc2" or "data"
+          # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
+          # back to the last seen non-Zephyr CDC ACM tty when no name matches;
+          # the smoke test asserts binary traffic to catch a wrong pick.
+          PASSTHROUGH_TTY=""
+          FALLBACK_TTY=""
+          echo "=== USB CDC ACM candidates (non-Zephyr) ==="
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            [ "$v" = "0028" ] && [ "$p" = "000f" ] && continue
+            path=${d%/idVendor}
+            prod=$(cat "$path/product" 2>/dev/null || echo "?")
+            for ifn in "$path"/*:*; do
+              [ "$(cat "$ifn/bInterfaceClass" 2>/dev/null)" = "02" ] || continue
+              iname=$(cat "$ifn/interface" 2>/dev/null || echo "")
+              tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+              [ -z "$tty" ] && continue
+              echo "  $v:$p [$prod] $(basename "$ifn") '$iname' /dev/$tty"
+              case "$(echo "$iname" | tr '[:upper:]' '[:lower:]')" in
+                *cdc2*|*data*) PASSTHROUGH_TTY="/dev/$tty";;
+              esac
+              FALLBACK_TTY="/dev/$tty"
+            done
+          done
+          [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
+          if [ -n "$PASSTHROUGH_TTY" ]; then
+            echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+            echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
+          else
+            echo "No LoRa passthrough tty found; smoke test will skip"
+          fi
+
       - name: Start GDS
         run: |
-          nohup make gds-integration &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           echo $! > server.pid
 
       - name: Sync Sequence Number
@@ -176,7 +236,13 @@ jobs:
         run: |
           make test-integration
 
-      - name: Kill GDS
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make format-filesystem
+
+      - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
           kill $(cat server.pid)
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0

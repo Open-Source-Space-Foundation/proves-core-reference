@@ -19,6 +19,7 @@
 		group2 {
 			pinmux = <UART0_RX_P1>;
 			input-enable;
+			bias-pull-up;
 		};
 	};
 	uart1_default: uart1_default {
@@ -29,6 +30,7 @@
 		group2 {
 			pinmux = <UART1_RX_P5>;
 			input-enable;
+			bias-pull-up;
 		};
 	};
 	spi1_default: spi1_default {

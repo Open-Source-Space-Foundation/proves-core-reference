@@ -31,7 +31,7 @@ def check_gds(fprime_test_api_session: IntegrationTestAPI):
             time.sleep(1)
     assert gds_working
 
-    yield
+    return
 
 
 def test_sync_sequence_number(fprime_test_api: IntegrationTestAPI):
