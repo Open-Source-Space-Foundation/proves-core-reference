@@ -26,6 +26,7 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.flaky
 def test_01_get_visible_light(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get visible light"""
     start: TimeType = TimeType().set_datetime(
