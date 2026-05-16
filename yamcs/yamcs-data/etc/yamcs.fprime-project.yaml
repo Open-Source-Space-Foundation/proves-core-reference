@@ -56,7 +56,7 @@ dataLinks:
 mdb:
   - type: xtce
     args:
-      file: /yamcs-data/mdb/fprime.xtce.xml
+      file: mdb/fprime.xtce.xml
 
 streamConfig:
   tm:

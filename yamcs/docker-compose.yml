@@ -7,4 +7,5 @@ services:
       - "50001:50001/udp"
     volumes:
       - ./yamcs-data:/yamcs-data:ro
+      - ./yamcs-data/mdb:/opt/yamcs/mdb:ro
     command: ["--etc-dir", "/yamcs-data/etc"]
