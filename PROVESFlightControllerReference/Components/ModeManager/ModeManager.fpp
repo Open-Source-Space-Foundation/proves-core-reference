@@ -51,9 +51,9 @@ module Components {
         @ Port called before intentional reboot to set clean shutdown flag
         sync input port prepareForReboot: Fw.Signal
 
-        @ Port receiving a signal when any packet has been authenticated by ProvesRouter
+        @ Port receiving a signal when any packet has been routed by ProvesRouter
         @ Resets the command loss timer
-        sync input port commandReceived: Fw.Signal
+        sync input port packetRouted: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports
@@ -74,10 +74,12 @@ module Components {
         @ Port to get system voltage from INA219 manager
         output port voltageGet: Drv.VoltageGet
 
+        @ Port to stop the watchdog, triggering a hardware power cycle
+        output port stopWatchdog: Fw.Signal
+
         # ----------------------------------------------------------------------
         # Commands
         # ----------------------------------------------------------------------
-
 
         @ Command to force system into safe mode
         sync command FORCE_SAFE_MODE()
@@ -214,7 +216,7 @@ module Components {
         param SAFEMODE_SEQUENCE_FILE: string default "/seq/enter_safe.bin"
 
         @ Time (in seconds) without an authenticated packet before triggering command loss safe mode
-        @ Default: 1 day = 3*60*60*24
+        @ Default: 3 days = 3*60*60*24
         param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 3*60*60*24, useconds = 0}
 
         ###############################################################################

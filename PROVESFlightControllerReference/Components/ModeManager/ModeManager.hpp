@@ -75,11 +75,11 @@ class ModeManager : public ModeManagerComponentBase {
     void prepareForReboot_handler(FwIndexType portNum  //!< The port number
                                   ) override;
 
-    //! Handler implementation for commandReceived
+    //! Handler implementation for packetRouted
     //!
     //! Resets the command loss timer when an authenticated packet is received
-    void commandReceived_handler(FwIndexType portNum  //!< The port number
-                                 ) override;
+    void packetRouted_handler(FwIndexType portNum  //!< The port number
+                              ) override;
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -169,8 +169,8 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
     U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
 
-    Fw::Time m_lastCommandReceivedTime;  //!< Time of last authenticated packet (ZERO_TIME until first packet)
-    Os::Mutex m_commandLossMutex;        //!< Protects command loss state against concurrent access
+    Fw::Time m_lastPacketRoutedTime;  //!< Time of last authenticated packet (ZERO_TIME until first packet)
+    Os::Mutex m_commandLossMutex;     //!< Protects command loss state against concurrent access
 
     // ----------------------------------------------------------------------
     // Constants

@@ -27,7 +27,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
       m_recoveryVoltageCounter(0),
-      m_lastCommandReceivedTime(Fw::ZERO_TIME) {
+      m_lastPacketRoutedTime(Fw::ZERO_TIME) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -208,9 +208,9 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     file.close();
 }
 
-void ModeManager ::commandReceived_handler(FwIndexType portNum) {
+void ModeManager ::packetRouted_handler(FwIndexType portNum) {
     Os::ScopeLock lock(m_commandLossMutex);
-    this->m_lastCommandReceivedTime = this->getTime();
+    this->m_lastPacketRoutedTime = this->getTime();
 }
 
 // ----------------------------------------------------------------------
@@ -521,13 +521,13 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
 }
 
 void ModeManager::commandLossCheck() {
-    // Exit early if we haven't received any commands yet (e.g., on first boot) or if we're not in NORMAL mode
-    if (this->m_lastCommandReceivedTime == Fw::ZERO_TIME || this->m_mode != SystemMode::NORMAL) {
-        return;
-    }
-
     // Protect against concurrent access to command loss state
     Os::ScopeLock lock(this->m_commandLossMutex);
+
+    // Exit early if we haven't received any commands yet (e.g., on first boot) or if we're not in NORMAL mode
+    if (this->m_lastPacketRoutedTime == Fw::ZERO_TIME || this->m_mode != SystemMode::NORMAL) {
+        return;
+    }
 
     // Get command loss period from parameter
     Fw::ParamValid paramValid;
@@ -535,15 +535,21 @@ void ModeManager::commandLossCheck() {
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
     // Check if current time has exceeded the command loss start time + command loss period
-    Fw::Time commLossInterval(this->m_lastCommandReceivedTime.getTimeBase(), commLossPeriod.get_seconds(),
+    Fw::Time commLossInterval(this->m_lastPacketRoutedTime.getTimeBase(), commLossPeriod.get_seconds(),
                               commLossPeriod.get_useconds());
-    Fw::Time commLossEnd = Fw::Time::add(this->m_lastCommandReceivedTime, commLossInterval);
+    Fw::Time commLossEnd = Fw::Time::add(this->m_lastPacketRoutedTime, commLossInterval);
     Fw::Time currentTime = this->getTime();
     if (currentTime > commLossEnd) {
-        U32 commandLossDuration = Fw::Time::sub(currentTime, this->m_lastCommandReceivedTime).getSeconds();
+        // Telemeter the command loss duration
+        U32 commandLossDuration = Fw::Time::sub(currentTime, this->m_lastPacketRoutedTime).getSeconds();
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
+
+        // Trigger safe mode entry due to command loss
         this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::COMMAND_LOSS);
+
+        // Stop the watchdog to trigger a hardware power cycle as a last resort for recovery
+        this->stopWatchdog_out(0);
     }
 }
 

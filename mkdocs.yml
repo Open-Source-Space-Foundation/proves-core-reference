@@ -101,7 +101,6 @@ nav:
           - Fs Space: components/FsSpace.md
           - Null Prm Db: components/NullPrmDb.md
       - Security Components:
-          - Authenticate: components/Authenticate.md
           - TcSecurityDeframer: components/TcSecurityDeframer.md
           - PROVES Router: components/ProvesRouter.md
   - Additional Resources:

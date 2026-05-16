@@ -28,14 +28,13 @@ classDiagram
         - m_safeModeReason: SafeModeReason
         - m_safeModeVoltageCounter: U32
         - m_recoveryVoltageCounter: U32
-        - m_commandLossStartTime: Fw::Time
-        - m_commandLossTriggered: bool
+        - m_lastPacketRoutedTime: Fw::Time
         + init(queueDepth, instance)
         - run_handler()
         - forceSafeMode_handler(reason)
         - getMode_handler(): SystemMode
         - prepareForReboot_handler()
-        - commandReceived_handler()
+        - packetRouted_handler()
         - enterSafeMode(reason)
         - exitSafeMode()
         - exitSafeModeAutomatic(voltage)
@@ -67,7 +66,7 @@ classDiagram
 | forceSafeMode | ForceSafeModeWithReason | async | Safe mode requests from external components |
 | getMode | GetSystemMode | sync | Query current system mode |
 | prepareForReboot | Fw.Signal | sync | Set clean shutdown flag before intentional reboot |
-| commandReceived | Fw.Signal | sync | Resets the command loss timer when an authenticated packet is received from ProvesRouter |
+| packetRouted | Fw.Signal | sync | Resets the command loss timer when an authenticated packet is received from ProvesRouter |
 
 ### Output Ports
 | Name | Type | Description |
@@ -76,6 +75,7 @@ classDiagram
 | loadSwitchTurnOn | Fw.Signal [8] | Turn on load switches |
 | loadSwitchTurnOff | Fw.Signal [8] | Turn off load switches |
 | voltageGet | Drv.VoltageGet | Query system voltage |
+| stopWatchdog | Fw.Signal | Stops the hardware watchdog to trigger a power cycle (called on command loss) |
 
 ## Commands
 
@@ -93,7 +93,7 @@ Voltage thresholds and command loss timeout are configurable via F-Prime paramet
 | SafeModeEntryVoltage | F32 | 6.7 | Voltage (V) below which safe mode is entered |
 | SafeModeRecoveryVoltage | F32 | 8.0 | Voltage (V) above which safe mode can be exited |
 | SafeModeDebounceSeconds | U32 | 10 | Consecutive seconds required for transitions |
-| COMM_LOSS_TIME | Fw.TimeIntervalValue | {seconds=86400} | Time without an authenticated packet before command loss safe mode entry (default: 1 day) |
+| COMM_LOSS_TIME | Fw.TimeIntervalValue | {seconds=86400} | Time without an authenticated packet before command loss safe mode entry (default: 3 days) |
 
 Parameters can be modified at runtime via `PRM_SET` commands.
 
@@ -111,7 +111,7 @@ Parameters can be modified at runtime via `PRM_SET` commands.
 | PreparingForReboot | ACTIVITY_HI | Clean shutdown flag being set |
 | CommandValidationFailed | WARNING_LO | Command validation failed |
 | StatePersistenceFailure | WARNING_LO | State save/load failed |
-| CommandLossDetected | WARNING_HI | Command loss timeout exceeded; entering safe mode with reason EXTERNAL_REQUEST |
+| CommandLossDetected | WARNING_HI | Command loss timeout exceeded; entering safe mode with reason COMMAND_LOSS |
 
 ## Telemetry
 
@@ -157,7 +157,7 @@ sequenceDiagram
     participant ModeManager
     participant RateGroup
 
-    AuthRouter->>ModeManager: commandReceived() [on each authenticated packet]
+    AuthRouter->>ModeManager: packetRouted() [on each authenticated packet]
     Note over ModeManager: Resets m_commandLossStartTime to now
 
     loop Every 1Hz (no packets received)
@@ -166,7 +166,7 @@ sequenceDiagram
     end
     Note over ModeManager: Timeout exceeded
     ModeManager->>ModeManager: log CommandLossDetected event
-    ModeManager->>ModeManager: enterSafeMode(EXTERNAL_REQUEST)
+    ModeManager->>ModeManager: enterSafeMode(COMMAND_LOSS)
 ```
 
 ### Safe Mode Entry (Low Voltage)
@@ -209,4 +209,4 @@ sequenceDiagram
 - **Reason tracking**: Only LOW_BATTERY allows auto-recovery; other reasons require manual EXIT_SAFE_MODE
 - **Mode query**: Both pull (getMode) and push (modeChanged) patterns supported
 - **Command loss ownership**: ProvesRouter signals `packetRouted` on each routed packet; ModeManager owns the timer and the mode transition, keeping routing and mode management as separate concerns
-- **Command loss thread safety**: `m_commandLossStartTime` is protected by `m_commandLossMutex` since `commandReceived_handler` (called from the radio thread) and `run_handler` (called from the rate group thread) may run concurrently
+- **Command loss thread safety**: `m_commandLossStartTime` is protected by `m_commandLossMutex` since `packetRouted_handler` (called from the radio thread) and `run_handler` (called from the rate group thread) may run concurrently

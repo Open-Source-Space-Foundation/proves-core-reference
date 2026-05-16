@@ -51,6 +51,29 @@ class ProvesRouter final : public ProvesRouterComponentBase {
     void fileBufferReturnIn_handler(FwIndexType portNum,  //!< The port number
                                     Fw::Buffer& fwBuffer  //!< The buffer
                                     ) override;
+
+    // ----------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------
+
+    //! Handler for command packets
+    void handleCommandPacket(Fw::Buffer& packetBuffer  //!< The packet buffer
+    );
+
+    //! Handler for file packets
+    void handleFilePacket(Fw::Buffer& packetBuffer  //<! The packet buffer
+    );
+
+    //! Handler for unknown packet types
+    void handleUnknownPacket(Fw::Buffer& packetBuffer,            //!< The packet buffer
+                             const ComCfg::FrameContext& context  //!< The context object
+    );
+
+    //! Notify connected components that a packet was routed
+    void notifyPacketRouted();
+
+    //! Allocate a new buffer and copy src into it; returns an invalid buffer on error
+    Fw::Buffer allocateCopy(Fw::Buffer& src, ProvesRouter_AllocationReason reason);
 };
 
 }  // namespace Svc
