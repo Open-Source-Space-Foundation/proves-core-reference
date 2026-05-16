@@ -45,7 +45,7 @@ def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     # Re-enable the watchdog in case it was stopped by command loss
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{watchdog}.ENABLE",
+        f"{watchdog}.START_WATCHDOG",
     )
 
     # Clear event history
