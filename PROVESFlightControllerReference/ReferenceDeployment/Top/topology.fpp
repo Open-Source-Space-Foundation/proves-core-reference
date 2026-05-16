@@ -456,7 +456,7 @@ module ReferenceDeployment {
       resetManager.prepareForReboot -> modeManager.prepareForReboot
       watchdog.prepareForReboot -> modeManager.prepareForReboot
 
-      # Signal from authentication routers to reset the command loss timer in ModeManager
+      # Signal from PROVES routers to reset the command loss timer in ModeManager
       ComCcsdsLora.provesRouter.packetRouted -> modeManager.commandReceived
       ComCcsdsUart.provesRouter.packetRouted -> modeManager.commandReceived
 

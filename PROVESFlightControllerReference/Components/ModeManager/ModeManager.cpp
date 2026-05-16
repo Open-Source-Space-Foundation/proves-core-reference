@@ -521,13 +521,13 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
 }
 
 void ModeManager::commandLossCheck() {
+    // Protect against concurrent access to command loss state
+    Os::ScopeLock lock(this->m_commandLossMutex);
+
     // Exit early if we haven't received any commands yet (e.g., on first boot) or if we're not in NORMAL mode
     if (this->m_lastCommandReceivedTime == Fw::ZERO_TIME || this->m_mode != SystemMode::NORMAL) {
         return;
     }
-
-    // Protect against concurrent access to command loss state
-    Os::ScopeLock lock(this->m_commandLossMutex);
 
     // Get command loss period from parameter
     Fw::ParamValid paramValid;

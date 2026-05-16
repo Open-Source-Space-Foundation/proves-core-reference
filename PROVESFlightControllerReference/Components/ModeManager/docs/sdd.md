@@ -28,8 +28,7 @@ classDiagram
         - m_safeModeReason: SafeModeReason
         - m_safeModeVoltageCounter: U32
         - m_recoveryVoltageCounter: U32
-        - m_commandLossStartTime: Fw::Time
-        - m_commandLossTriggered: bool
+        - m_lastCommandReceivedTime: Fw::Time
         + init(queueDepth, instance)
         - run_handler()
         - forceSafeMode_handler(reason)
@@ -112,7 +111,7 @@ Parameters can be modified at runtime via `PRM_SET` commands.
 | PreparingForReboot | ACTIVITY_HI | Clean shutdown flag being set |
 | CommandValidationFailed | WARNING_LO | Command validation failed |
 | StatePersistenceFailure | WARNING_LO | State save/load failed |
-| CommandLossDetected | WARNING_HI | Command loss timeout exceeded; entering safe mode with reason EXTERNAL_REQUEST |
+| CommandLossDetected | WARNING_HI | Command loss timeout exceeded; entering safe mode with reason COMMAND_LOSS |
 
 ## Telemetry
 
@@ -167,7 +166,7 @@ sequenceDiagram
     end
     Note over ModeManager: Timeout exceeded
     ModeManager->>ModeManager: log CommandLossDetected event
-    ModeManager->>ModeManager: enterSafeMode(EXTERNAL_REQUEST)
+    ModeManager->>ModeManager: enterSafeMode(COMMAND_LOSS)
 ```
 
 ### Safe Mode Entry (Low Voltage)
