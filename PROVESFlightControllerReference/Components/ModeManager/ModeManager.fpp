@@ -51,9 +51,9 @@ module Components {
         @ Port called before intentional reboot to set clean shutdown flag
         sync input port prepareForReboot: Fw.Signal
 
-        @ Port receiving a signal when any packet has been authenticated by ProvesRouter
+        @ Port receiving a signal when any packet has been routed by ProvesRouter
         @ Resets the command loss timer
-        sync input port commandReceived: Fw.Signal
+        sync input port packetRouted: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports

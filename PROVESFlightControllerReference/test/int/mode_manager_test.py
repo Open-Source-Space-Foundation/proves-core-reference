@@ -550,7 +550,7 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     with reason COMMAND_LOSS and a hardware power cycle via the watchdog.
 
     Uses an RTC time jump to simulate the timeout without waiting the full 3-day period.
-    The TIME_SET packet stamps m_lastCommandReceivedTime with T0 (via commandReceived_handler,
+    The TIME_SET packet stamps m_lastPacketRoutedTime with T0 (via packetRouted_handler,
     called before the RTC actually changes), then the next 1Hz tick sees currentTime = T0 + 4 days
     > T0 + COMM_LOSS_TIME (3 days) and triggers command loss.
 
@@ -572,7 +572,7 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     fprime_test_api.clear_histories()
 
     # Jump RTC 4 days into the future (past the 3-day COMM_LOSS_TIME default).
-    # m_lastCommandReceivedTime is stamped with T0 when this packet arrives at ProvesRouter,
+    # m_lastPacketRoutedTime is stamped with T0 when this packet arrives at ProvesRouter,
     # before the RTC change takes effect, so the next run_handler tick triggers command loss.
     future_time = datetime.now(timezone.utc) + timedelta(days=COMM_LOSS_TIME_DAYS + 1)
     _set_rtc_time(fprime_test_api, future_time)
