@@ -246,7 +246,7 @@ jobs:
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
           kill $(cat server.pid) || true
-          make kill-gds || true
+          make delete-shadow-gds || true
           sleep 3
 
       - name: Start GDS on LoRa Passthrough

@@ -19,7 +19,7 @@ LORA_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 
 @pytest.fixture(autouse=True)
-def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
+def setup_test(fprime_test_api: IntegrationTestAPI, start_gds, request):
     """Fixture to set the downlink divider before each test and disable transmit after each test"""
     proves_send_and_assert_command(
         fprime_test_api,
@@ -27,11 +27,12 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
         [20],
     )
     yield
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{lora}.TRANSMIT",
-        ["DISABLED"],
-    )
+    if request.node.name != "test_00_setup_only":
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{lora}.TRANSMIT",
+            ["DISABLED"],
+        )
 
 
 def test_00_setup_only(fprime_test_api: IntegrationTestAPI, start_gds):
