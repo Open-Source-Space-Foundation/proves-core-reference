@@ -56,6 +56,8 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     proves_send_and_assert_command(fprime_test_api, f"{burnwire}.START_BURNWIRE")
 
     try:
+        # Wait for SetBurnwireState = ON
+        fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=1)
         system_power = get_system_power(fprime_test_api)
 
         assert system_power > 1, (
@@ -65,9 +67,6 @@ def test_01_start_and_stop_burnwire(fprime_test_api: IntegrationTestAPI, start_g
     finally:
         # Ensure burnwire is stopped
         proves_send_and_assert_command(fprime_test_api, f"{burnwire}.STOP_BURNWIRE")
-
-    # Wait for SetBurnwireState = ON
-    fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "ON", timeout=2)
 
     # Confirm Burnwire turned OFF
     fprime_test_api.assert_event(f"{burnwire}.SetBurnwireState", "OFF", timeout=2)
