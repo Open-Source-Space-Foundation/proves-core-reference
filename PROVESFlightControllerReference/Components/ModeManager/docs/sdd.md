@@ -76,6 +76,7 @@ classDiagram
 | loadSwitchTurnOn | Fw.Signal [8] | Turn on load switches |
 | loadSwitchTurnOff | Fw.Signal [8] | Turn off load switches |
 | voltageGet | Drv.VoltageGet | Query system voltage |
+| stopWatchdog | Fw.Signal | Stops the hardware watchdog to trigger a power cycle (called on command loss) |
 
 ## Commands
 

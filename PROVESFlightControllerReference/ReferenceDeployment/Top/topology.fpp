@@ -460,6 +460,9 @@ module ReferenceDeployment {
       ComCcsdsLora.provesRouter.packetRouted -> modeManager.commandReceived
       ComCcsdsUart.provesRouter.packetRouted -> modeManager.commandReceived
 
+      # Stop watchdog on command loss to trigger hardware power cycle
+      modeManager.stopWatchdog -> watchdog.stop
+
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.
       # This ordering ensures that software indices correspond to the hardware arrangement for easier maintenance and debugging.

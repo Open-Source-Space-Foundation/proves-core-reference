@@ -540,10 +540,16 @@ void ModeManager::commandLossCheck() {
     Fw::Time commLossEnd = Fw::Time::add(this->m_lastCommandReceivedTime, commLossInterval);
     Fw::Time currentTime = this->getTime();
     if (currentTime > commLossEnd) {
+        // Telemeter the command loss duration
         U32 commandLossDuration = Fw::Time::sub(currentTime, this->m_lastCommandReceivedTime).getSeconds();
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
+
+        // Trigger safe mode entry due to command loss
         this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::COMMAND_LOSS);
+
+        // Stop the watchdog to trigger a hardware power cycle as a last resort for recovery
+        this->stopWatchdog_out(0);
     }
 }
 

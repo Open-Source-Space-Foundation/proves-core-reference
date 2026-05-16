@@ -74,10 +74,12 @@ module Components {
         @ Port to get system voltage from INA219 manager
         output port voltageGet: Drv.VoltageGet
 
+        @ Port to stop the watchdog, triggering a hardware power cycle
+        output port stopWatchdog: Fw.Signal
+
         # ----------------------------------------------------------------------
         # Commands
         # ----------------------------------------------------------------------
-
 
         @ Command to force system into safe mode
         sync command FORCE_SAFE_MODE()
