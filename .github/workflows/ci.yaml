@@ -31,9 +31,24 @@ jobs:
         run: |
           make submodules
 
+      - name: Install lib dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
+
       - name: Run Unit Tests
         run: |
           make test-unit
+
+      - name: Dump LastTest.log on failure
+        if: ${{ failure() }}
+        run: |
+          if [ -f build-gtest/Testing/Temporary/LastTest.log ]; then
+            echo "----- LastTest.log -----"
+            cat build-gtest/Testing/Temporary/LastTest.log
+          else
+            echo "No LastTest.log file found."
+          fi
 
   build:
     runs-on: deathstar
@@ -82,7 +97,7 @@ jobs:
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Build MCUBoot
         run: |
@@ -126,7 +141,7 @@ jobs:
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
         # Reboot before installation to avoid watchdog reset
       - name: Reboot Integration Cube

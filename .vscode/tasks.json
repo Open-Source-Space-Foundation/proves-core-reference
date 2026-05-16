@@ -5,7 +5,7 @@
             "label": "build unit tests",
             "type": "shell",
             "command":
-                "cmake -S tests -B build-gtest -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON && cmake --build build-gtest",
+                "cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON && cmake --build build-gtest",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

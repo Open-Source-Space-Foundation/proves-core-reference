@@ -25,9 +25,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
 
     # Communications Data
-    # ComCcsdsSband.authenticatesband.CurrentSequenceNumber
-    ComCcsdsLora.authenticatelora.CurrentSequenceNumber
-    ComCcsdsUart.authenticate.CurrentSequenceNumber
+    # ComCcsdsSband.tcSecurityDeframerSband.CurrentSequenceNumber
+    ComCcsdsLora.tcSecurityDeframerLora.CurrentSequenceNumber
+    ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber
 
     lora.BytesReceived
 
@@ -157,13 +157,13 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Authenticate id 6 group 5 {
-    #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
-    ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
-    ComCcsdsUart.authenticate.AuthenticatedPacketsCount
+    #ComCcsdsSband.tcSecurityDeframerSband.BypassPacketsCount
+    ComCcsdsLora.tcSecurityDeframerLora.BypassPacketsCount
+    ComCcsdsUart.tcSecurityDeframer.BypassPacketsCount
 
-    #ComCcsdsSband.authenticatesband.RejectedPacketsCount
-    ComCcsdsLora.authenticatelora.RejectedPacketsCount
-    ComCcsdsUart.authenticate.RejectedPacketsCount
+    #ComCcsdsSband.tcSecurityDeframerSband.RejectedPacketsCount
+    ComCcsdsLora.tcSecurityDeframerLora.RejectedPacketsCount
+    ComCcsdsUart.tcSecurityDeframer.RejectedPacketsCount
 
     ReferenceDeployment.amateurRadio.count_names
 

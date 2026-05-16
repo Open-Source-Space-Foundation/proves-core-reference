@@ -102,7 +102,8 @@ nav:
           - Null Prm Db: components/NullPrmDb.md
       - Security Components:
           - Authenticate: components/Authenticate.md
-          - Authentication Router: components/ProvesRouter.md
+          - TcSecurityDeframer: components/TcSecurityDeframer.md
+          - PROVES Router: components/ProvesRouter.md
   - Additional Resources:
       - Troubleshooting: additional-resources/troubleshooting.md
       - WSL Notes: additional-resources/wsl-notes.md
