@@ -1,11 +1,10 @@
 # Svc::ProvesRouter
 
-The `Svc::ProvesRouter` component routes F´ packets (such as command or file packets) to other components. It is based on the FPrime Router, explained and linked later in the sdd, with two exceptions
+The `Svc::ProvesRouter` component routes F´ packets (such as command or file packets) to other components. It is based on the FPrime Router, explained and linked later in the sdd, with one exception:
 
-1. Command Loss Time component, which checks how long since commands have last been routed through the satellite. If it has been too long (changeable parameter) it will emit an event and send out to safemode, to conserve power
-As a result of this component writing to the filesystem, this component is active, while the usual FprimeRouter is passive.
+This component handles authenticated packets. It will check a list of preconfigured opcodes that do not need to be authenticated, will pass those on as well as the things that are authenticated.
 
-2. This component handles authenticated packets. It will check a list of preconfigured opcodes that do not need to be authenticated, will pass those on as well as the things that are authenticated
+After routing a packet, the component emits a `packetRouted` signal so that any interested components (such as `ModeManager`) can react to uplink activity.
 
 The `Svc::ProvesRouter` component receives F´ packets (as Fw::Buffer objects) and routes them to other components through synchronous port calls. The input port of type `Svc.ComDataWithContext` passes this Fw.Buffer object along with optional context data which can help for routing. The current F Prime protocol does not use this context data, but is nevertheless present in the interface for compatibility with other protocols which may for example pass APIDs in the frame headers.
 
@@ -29,8 +28,7 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 
 | Kind | Name | Type | Description |
 |---|---|---|---|
-| `async input` | `schedIn` | `Svc.Sched` | Port receiving calls from the rate group for periodic command loss time checking |
-| `async input` | `dataIn` | `Svc.ComDataWithContext` | Receiving Fw::Buffer with context buffer from Deframer |
+| `sync input` | `dataIn` | `Svc.ComDataWithContext` | Receiving Fw::Buffer with context buffer from Deframer |
 | `output` | `dataReturnOut` | `Svc.ComDataWithContext` | Returning ownership of buffer received on `dataIn` |
 | `output` | `commandOut` | `Fw.Com` | Port for sending command packets as Fw::ComBuffers |
 | `output` | `fileOut` | `Fw.BufferSend` | Port for sending file packets as Fw::Buffer (ownership passed to receiver) |
@@ -39,12 +37,12 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 | `output` | `unknownDataOut` | `Svc.ComDataWithContext` | Port forwarding unknown data (useful for adding custom routing rules with a project-defined router) |
 | `output` | `bufferAllocate` | `Fw.BufferGet` | Port for allocating buffers, allowing copy of received data |
 | `output` | `bufferDeallocate` | `Fw.BufferSend` | Port for deallocating buffers |
-| `output` | `SafeModeOn` | `Fw.Signal` | Port for sending signal to safemode when command loss time expires |
+| `output` | `packetRouted` | `Fw.Signal` | Emitted after each authenticated packet is routed; used to reset command loss timer in ModeManager |
 
 ## Requirements
 
 | Name | Description | Rationale | Validation |
-|---|---|---|---|
+| ---- | ----------- | --------- | ---------- |
 SVC-ROUTER-001 | `Svc::ProvesRouter` shall route packets based on their packet type as indicated by the packet header | Routing mechanism of the F´ comms protocol | Unit test |
 SVC-ROUTER-002 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_COMMAND` to the `commandOut` output port. | Routing command packets | Unit test |
 SVC-ROUTER-003 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_FILE` to the `fileOut` output port. | Routing file packets | Unit test |
@@ -52,38 +50,26 @@ SVC-ROUTER-004 | `Svc::ProvesRouter` shall route data that is neither `Fw::ComPa
 SVC-ROUTER-005 | `Svc::ProvesRouter` shall emit warning events if serialization errors occur during processing of incoming packets | Aid in diagnosing uplink issues | Unit test |
 SVC-ROUTER-005 | `Svc::ProvesRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` | Aid in memory management of file buffers | Unit test |
 SVC-ROUTER-006 | `Svc::ProvesRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
-SVC-ROUTER-007 | `Svc::ProvesRouter` shall check command loss time periodically via the `schedIn` port | Command loss time monitoring | Unit test |
-SVC-ROUTER-008 | `Svc::ProvesRouter` shall emit `CommandLossTimeExpired` event when command loss time exceeds `LOSS_MAX_TIME` parameter | Command loss time monitoring | Unit test |
-SVC-ROUTER-009 | `Svc::ProvesRouter` shall send `SafeModeOn` signal when command loss time expires | Safe mode activation | Unit test |
-SVC-ROUTER-010 | `Svc::ProvesRouter` shall update `LastCommandPacketTime` telemetry when a packet is received | Telemetry tracking | Unit test |
-SVC-ROUTER-011 | `Svc::ProvesRouter` shall use the 0/1 setting in `authenticateCfg.hpp` to enable or disable authentication functionality in this router component | Authentication configuration | Unit test |
-SVC-ROUTER-012 | `Svc::ProvesRouter` shall check a file for OpCodes that do not require authentication | OpCode exemption list | Unit test |
-SVC-ROUTER-013 | `Svc::ProvesRouter` shall only pass authenticated commands and files that are not on the list of opcodes to be executed | Authentication filtering | Unit test |
-SVC-ROUTER-014 | `Svc::ProvesRouter` shall pass non-authenticated commands and events backwards to `dataOut` | Non-authenticated packet routing | Unit test |
-SVC-ROUTER-015 | `Svc::ProvesRouter` shall emit events for authenticated commands and non-authenticated commands and whether they passed through the router | Authentication event reporting | Unit test |
+SVC-ROUTER-007 | `Svc::ProvesRouter` shall emit the `packetRouted` signal after each successfully routed packet | Allows interested components to track uplink activity without command loss logic in this component | Unit test |
+SVC-ROUTER-008 | `Svc::ProvesRouter` shall use the 0/1 setting in `authenticateCfg.hpp` to enable or disable authentication functionality in this router component | Authentication configuration | Unit test |
+SVC-ROUTER-009 | `Svc::ProvesRouter` shall check a file for OpCodes that do not require authentication | OpCode exemption list | Unit test |
+SVC-ROUTER-010 | `Svc::ProvesRouter` shall only pass authenticated commands and files that are not on the list of opcodes to be executed | Authentication filtering | Unit test |
+SVC-ROUTER-011 | `Svc::ProvesRouter` shall pass non-authenticated commands and events backwards to `dataOut` | Non-authenticated packet routing | Unit test |
+SVC-ROUTER-012 | `Svc::ProvesRouter` shall emit events for authenticated commands and non-authenticated commands and whether they passed through the router | Authentication event reporting | Unit test |
 
 ## Events
 
 | Name | Severity | Parameters | Description |
 |---|---|---|---|
-| CommandLossTimeExpired | Activity High | safemode: Fw.On | Emitted when command loss time expires. Format: "SafeModeOn: {}" |
-| CurrentLossTime | Activity Low | loss_max_time: U32 | Emitted with current loss time information. Format: "Current Loss Time: {}" |
-| PassedRouter | Activity Low | passed: Fw.Bool | Emitted to indicate whether a packet passed through the router. Format: "PassedRouter: {}" |
-| BypassAuthentification | Activity Low | bypassed: Fw.Bool | Emitted to indicate whether authentication was bypassed. Format: "BypassAuthentification: {}" |
-
+| SerializationError | Warning High | status: U32 | Emitted when serializing a com buffer fails |
+| DeserializationError | Warning High | status: U32 | Emitted when deserializing a packet type fails |
+| AllocationError | Warning High | reason: AllocationReason | Emitted when buffer allocation fails |
+| FileOpenError | Warning High | openStatus: U8 | Emitted when the bypass opcodes file cannot be opened |
 
 ## Telemetry Channels
 
 | Name | Type | Description |
 |---|---|---|
-| LastCommandPacketTime | U64 | The time of the last command packet |
-| CommandLossSafeOn | bool | The status of the command loss time sending to safe mode |
 | ByPassedRouter | U64 | Number of Packets that have bypassed the router |
 | PassedRouter | U64 | Number of Packets that have passed the router |
 | FailedRouter | U64 | Number of Packets that have not passed the Router |
-
-## Parameters
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| LOSS_MAX_TIME | U32 | 10 | The maximum amount of time (in seconds) since the last command before triggering safe mode |

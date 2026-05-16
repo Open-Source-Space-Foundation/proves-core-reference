@@ -14,6 +14,7 @@ module Components {
         GROUND_COMMAND = 3 @< Entered via ground command
         EXTERNAL_REQUEST = 4 @< Entered via external component request
         LORA = 5 @< Entered due to LoRa communication timeout or fault
+        COMMAND_LOSS = 6 @< Entered due to loss of contact with ground
     }
 
     @ Port for notifying about mode changes
@@ -49,6 +50,10 @@ module Components {
 
         @ Port called before intentional reboot to set clean shutdown flag
         sync input port prepareForReboot: Fw.Signal
+
+        @ Port receiving a signal when any packet has been authenticated by ProvesRouter
+        @ Resets the command loss timer
+        sync input port commandReceived: Fw.Signal
 
         # ----------------------------------------------------------------------
         # Output Ports
@@ -173,6 +178,13 @@ module Components {
             severity activity low \
             format "Current safe mode reason: {}"
 
+        @ Event emitted when command loss timeout expires and safe mode is being entered
+        event CommandLossDetected(
+            duration: U32 @< Seconds since last authenticated packet
+        ) \
+            severity warning high \
+            format "Command loss detected after {} seconds without contact - entering safe mode"
+
         # ----------------------------------------------------------------------
         # Telemetry
         # ----------------------------------------------------------------------
@@ -200,6 +212,10 @@ module Components {
         param SafeModeDebounceSeconds: U32 default 10
 
         param SAFEMODE_SEQUENCE_FILE: string default "/seq/enter_safe.bin"
+
+        @ Time (in seconds) without an authenticated packet before triggering command loss safe mode
+        @ Default: 1 day = 3*60*60*24
+        param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 3*60*60*24, useconds = 0}
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

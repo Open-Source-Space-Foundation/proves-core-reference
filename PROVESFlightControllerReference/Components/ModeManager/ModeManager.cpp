@@ -9,7 +9,9 @@
 #include <algorithm>
 #include <cstring>
 
+#include "Fw/Time/Time.hpp"
 #include "Fw/Types/Assert.hpp"
+#include "ModeManager.hpp"
 
 namespace Components {
 
@@ -24,7 +26,8 @@ ModeManager ::ModeManager(const char* const compName)
       m_runCounter(0),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0) {
+      m_recoveryVoltageCounter(0),
+      m_lastCommandReceivedTime(Fw::ZERO_TIME) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -106,6 +109,9 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
         // Reset safe mode entry counter when in safe mode
         this->m_safeModeVoltageCounter = 0;
     }
+
+    // Check for command loss and trigger safe mode if timeout has expired
+    commandLossCheck();
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -200,6 +206,11 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     }
 
     file.close();
+}
+
+void ModeManager ::commandReceived_handler(FwIndexType portNum) {
+    Os::ScopeLock lock(m_commandLossMutex);
+    this->m_lastCommandReceivedTime = this->getTime();
 }
 
 // ----------------------------------------------------------------------
@@ -397,6 +408,9 @@ void ModeManager ::enterSafeMode(Components::SafeModeReason reason) {
         case Components::SafeModeReason::LORA:
             reasonStr = "LoRa communication fault";
             break;
+        case Components::SafeModeReason::COMMAND_LOSS:
+            reasonStr = "Loss of contact with ground";
+            break;
         default:
             reasonStr = "Unknown";
             break;
@@ -504,6 +518,33 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
     // Do NOT return a fake value that could mask a real brown-out condition
     valid = false;
     return 0.0f;
+}
+
+void ModeManager::commandLossCheck() {
+    // Exit early if we haven't received any commands yet (e.g., on first boot) or if we're not in NORMAL mode
+    if (this->m_lastCommandReceivedTime == Fw::ZERO_TIME || this->m_mode != SystemMode::NORMAL) {
+        return;
+    }
+
+    // Protect against concurrent access to command loss state
+    Os::ScopeLock lock(this->m_commandLossMutex);
+
+    // Get command loss period from parameter
+    Fw::ParamValid paramValid;
+    Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
+    FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
+
+    // Check if current time has exceeded the command loss start time + command loss period
+    Fw::Time commLossInterval(this->m_lastCommandReceivedTime.getTimeBase(), commLossPeriod.get_seconds(),
+                              commLossPeriod.get_useconds());
+    Fw::Time commLossEnd = Fw::Time::add(this->m_lastCommandReceivedTime, commLossInterval);
+    Fw::Time currentTime = this->getTime();
+    if (currentTime > commLossEnd) {
+        U32 commandLossDuration = Fw::Time::sub(currentTime, this->m_lastCommandReceivedTime).getSeconds();
+        this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
+        this->runSafeModeSequence();
+        this->enterSafeMode(Components::SafeModeReason::COMMAND_LOSS);
+    }
 }
 
 }  // namespace Components
