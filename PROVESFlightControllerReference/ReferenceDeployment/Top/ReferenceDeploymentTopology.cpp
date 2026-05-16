@@ -120,9 +120,9 @@ void setupTopology(const TopologyState& state) {
     loadParameters();
 
     // Configure components which require parameters to be loaded from persistent storage before configuration
-    ComCcsdsUart::packetProcessor.configure();
-    ComCcsdsLora::packetProcessorLora.configure();
-    // ComCcsdsSband::packetProcessorSband.configure();
+    ComCcsdsUart::tcSecurityDeframer.configure();
+    ComCcsdsLora::tcSecurityDeframerLora.configure();
+    // ComCcsdsSband::tcSecurityDeframerSband.configure();
 
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);

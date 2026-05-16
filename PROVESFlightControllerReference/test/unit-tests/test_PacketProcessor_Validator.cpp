@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "PROVESFlightControllerReference/Components/PacketProcessor/Validator.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
 
 using namespace Components;
 

@@ -1,10 +1,10 @@
 // ======================================================================
-// \title  PacketProcessor.hpp
-// \brief  hpp file for PacketProcessor component implementation class
+// \title  TcSecurityDeframer.hpp
+// \brief  hpp file for TcSecurityDeframer component implementation class
 // ======================================================================
 
-#ifndef Components_PacketProcessor
-#define Components_PacketProcessor
+#ifndef Components_TcSecurityDeframer
+#define Components_TcSecurityDeframer
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Types/String.hpp>
@@ -13,25 +13,25 @@
 #include <atomic>
 #include <cassert>
 
-#include "PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.hpp"
-#include "PROVESFlightControllerReference/Components/PacketProcessor/PacketProcessorComponentAc.hpp"
-#include "PROVESFlightControllerReference/Components/PacketProcessor/Parser.hpp"
-#include "PROVESFlightControllerReference/Components/PacketProcessor/Validator.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
 
 namespace Components {
 
-class PacketProcessor final : public PacketProcessorComponentBase {
+class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct PacketProcessor object
-    PacketProcessor(const char* const compName  //!< The component name
+    //! Construct TcSecurityDeframer object
+    TcSecurityDeframer(const char* const compName  //!< The component name
     );
 
-    //! Destroy PacketProcessor object
-    ~PacketProcessor();
+    //! Destroy TcSecurityDeframer object
+    ~TcSecurityDeframer();
 
   private:
     // ----------------------------------------------------------------------
@@ -45,6 +45,14 @@ class PacketProcessor final : public PacketProcessorComponentBase {
                         Fw::Buffer& data,                    //!< The buffer containing the packet data
                         const ComCfg::FrameContext& context  //!< The frame context associated with the packet
                         ) override;
+    
+    //! Handler implementation for bypassIn
+    //!
+    //! Port receiving Space Packets from TcDeframer
+    void bypassIn_handler(FwIndexType portNum,                 //!< The port number
+                          Fw::Buffer& data,                    //!< The buffer containing the packet data
+                          const ComCfg::FrameContext& context  //!< The frame context associated with the packet
+                          ) override;
 
     //! Handler implementation for dataReturnIn
     //!
@@ -99,16 +107,6 @@ class PacketProcessor final : public PacketProcessorComponentBase {
                       const U32 sequenceNumber              //!< The sequence number from the packet
     );
 
-    //! Bypasses a packet and updates the bypass packets count
-    void bypassPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
-                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
-    );
-
-    //! Forwards a packet to the output port
-    void forwardPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
-                       const ComCfg::FrameContext& context  //!< The frame context associated with the packet
-    );
-
     //! Rejects a packet and updates the rejected packets count
     void rejectPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
                       const ComCfg::FrameContext& context  //!< The frame context associated with the packet
@@ -127,7 +125,6 @@ class PacketProcessor final : public PacketProcessorComponentBase {
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
     // Counters for telemetry
-    std::atomic<U32> m_bypassPacketsCount;    //!< Count of packets that bypass authentication
     std::atomic<U32> m_rejectedPacketsCount;  //!< Count of rejected packets
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
@@ -135,4 +132,4 @@ class PacketProcessor final : public PacketProcessorComponentBase {
 
 }  // namespace Components
 
-#endif  // Components_PacketProcessor
+#endif  // Components_TcSecurityDeframer

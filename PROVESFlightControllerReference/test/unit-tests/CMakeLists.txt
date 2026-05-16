@@ -31,27 +31,27 @@ target_include_directories(detumble_manager_strategy_selector PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# PacketProcessor Parser
-add_library(packet_processor_parser STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Parser.cpp
+# TcSecurityDeframer Parser
+add_library(security_deframer_parser STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.cpp
 )
-target_include_directories(packet_processor_parser PUBLIC
+target_include_directories(security_deframer_parser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# PacketProcessor Validator
-add_library(packet_processor_validator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Validator.cpp
+# TcSecurityDeframer Validator
+add_library(security_deframer_validator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.cpp
 )
-target_include_directories(packet_processor_validator PUBLIC
+target_include_directories(security_deframer_validator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# PacketProcessor Authenticator
-add_library(packet_processor_authenticator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PacketProcessor/Authenticator.cpp
+# TcSecurityDeframer Authenticator
+add_library(security_deframer_authenticator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.cpp
 )
-target_include_directories(packet_processor_authenticator PUBLIC
+target_include_directories(security_deframer_authenticator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
     ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
@@ -76,8 +76,8 @@ if(NOT MBEDCRYPTO_LIB)
     message(FATAL_ERROR "mbedcrypto library not found; install mbedtls (brew install mbedtls) or provide library in LIBRARY_PATH")
 endif()
 
-target_include_directories(packet_processor_authenticator PUBLIC ${PSA_CRYPTO_H})
-target_link_libraries(packet_processor_authenticator PUBLIC ${MBEDCRYPTO_LIB})
+target_include_directories(security_deframer_authenticator PUBLIC ${PSA_CRYPTO_H})
+target_link_libraries(security_deframer_authenticator PUBLIC ${MBEDCRYPTO_LIB})
 
 # --- Auto-discover and build tests ---
 
@@ -92,9 +92,9 @@ foreach(test_src ${TEST_SOURCES})
         detumble_manager_bdot
         detumble_manager_magnetorquer
         detumble_manager_strategy_selector
-        packet_processor_parser
-        packet_processor_validator
-        packet_processor_authenticator
+        security_deframer_parser
+        security_deframer_validator
+        security_deframer_authenticator
         rtc_manager_rtc_helper
     )
 

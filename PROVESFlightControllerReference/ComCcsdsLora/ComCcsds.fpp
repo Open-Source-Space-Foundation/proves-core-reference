@@ -98,7 +98,9 @@ module ComCcsdsLora {
 
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_LORA + 0x09000
 
-    instance packetProcessorLora: Components.PacketProcessor base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000
+    instance securityRouter: Components.SecurityRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x0A000
+
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000
 
     topology Subtopology {
         # Usage Note:
@@ -128,7 +130,7 @@ module ComCcsdsLora {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance packetProcessorLora
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -157,20 +159,31 @@ module ComCcsdsLora {
             # FrameAccumulator buffer allocations
             frameAccumulator.bufferDeallocate -> commsBufferManager.bufferSendIn
             frameAccumulator.bufferAllocate   -> commsBufferManager.bufferGetCallee
+
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # PacketProcessor <-> SpacePacketDeframer
-            packetProcessorLora.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> packetProcessorLora.dataReturnIn
-            # TcDeframer <-> PacketProcessor
-            tcDeframer.dataOut                -> packetProcessorLora.dataIn
-            packetProcessorLora.dataReturnOut -> tcDeframer.dataReturnIn
+
+            # TcDeframer <-> SecurityRouter
+            tcDeframer.dataOut                 -> securityRouter.dataIn
+            securityRouter.dataReturnOut   -> tcDeframer.dataReturnIn
+
+            # TcDeframer <-> TcSecurityDeframer
+            securityRouter.authenticateOut -> tcSecurityDeframer.dataIn
+            securityRouter.bypassOut       -> tcSecurityDeframer.bypassIn
+            tcSecurityDeframer.dataReturnOut -> securityRouter.dataReturnIn
+
+            # securityRouter <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut      -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
+
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
+
             # SpacePacketDeframer <-> AuthenticationRouter (routes both commands and files)
             spacePacketDeframer.dataOut -> authenticationRouter.dataIn
             authenticationRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+
             # AuthenticationRouter buffer allocations
             authenticationRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
             authenticationRouter.bufferDeallocate -> commsBufferManager.bufferSendIn

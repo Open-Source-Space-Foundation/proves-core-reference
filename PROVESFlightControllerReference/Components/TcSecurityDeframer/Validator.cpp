@@ -14,9 +14,9 @@ namespace {
 // then convert the opcode field value from decimal to hexadecimal
 static constexpr uint32_t kBypassOpCodes[] = {
     0x01000000,  //!< CdhCore.cmdDisp.CMD_NO_OP
-    0x2100B000,  //!< ComCcsdsUart.packetProcessor.GET_SEQ_NUM
-    0x2200B000,  //!< ComCcsdsLora.packetProcessor.GET_SEQ_NUM
-    0x2300B000,  //!< ComCcsdsSBand.packetProcessor.GET_SEQ_NUM
+    0x2100B000,  //!< ComCcsdsUart.tcSecurityDeframer.GET_SEQ_NUM
+    0x2200B000,  //!< ComCcsdsLora.tcSecurityDeframer.GET_SEQ_NUM
+    0x2300B000,  //!< ComCcsdsSBand.tcSecurityDeframer.GET_SEQ_NUM
     0x10065000,  //!< ReferenceDeployment.amateurRadio.TELL_JOKE
 };
 

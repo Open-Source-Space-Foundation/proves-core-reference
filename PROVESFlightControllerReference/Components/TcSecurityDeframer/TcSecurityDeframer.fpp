@@ -14,12 +14,11 @@ module Components {
         Ok,                        @< Packet was successfully parsed
         SpiParseError,             @< SPI could not be parsed from packet
         SequenceNumberParseError,  @< Sequence number could not be parsed from packet
-        OpCodeParseError,          @< OpCode could not be parsed from packet
-        HmacParseError,            @< HMAC could not be parsed from packet
+        MacParseError,             @< MAC could not be parsed from packet
     }
 
     @ Component placed between the TcDeframer component and the SpacePacketDeframer. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
-    passive component PacketProcessor {
+    passive component TcSecurityDeframer {
 
         ### Commands ###
 
@@ -33,9 +32,6 @@ module Components {
 
         @ Telemetry for the current sequence number, updated on each successfully authenticated packet
         telemetry CurrentSequenceNumber : U32
-
-        @ Telemetry for the count of bypassed packets, updated on each packet that bypasses authentication based on OpCode
-        telemetry BypassPacketsCount : U32
 
         @ Telemetry for the count of rejected packets, updated on each packet that fails authentication
         telemetry RejectedPacketsCount : U32
@@ -76,8 +72,11 @@ module Components {
 
         ### Ports ###
 
-        @ Port receiving Space Packets from TcDeframer
+        @ Port receiving Space Packets from SecurityRouter for packets that require authentication
         guarded input port dataIn: Svc.ComDataWithContext
+
+        @ Port receiving Space Packets from SecurityRouter for packets that do not require authentication
+        guarded input port bypassIn: Svc.ComDataWithContext
 
         @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
         sync input port dataReturnIn: Svc.ComDataWithContext

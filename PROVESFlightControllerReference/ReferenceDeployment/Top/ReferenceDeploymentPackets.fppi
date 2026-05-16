@@ -25,9 +25,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
 
     # Communications Data
-    # ComCcsdsSband.packetProcessorSband.CurrentSequenceNumber
-    ComCcsdsLora.packetProcessorLora.CurrentSequenceNumber
-    ComCcsdsUart.packetProcessor.CurrentSequenceNumber
+    # ComCcsdsSband.tcSecurityDeframerSband.CurrentSequenceNumber
+    ComCcsdsLora.tcSecurityDeframerLora.CurrentSequenceNumber
+    ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber
 
     lora.BytesReceived
 
@@ -157,13 +157,13 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Authenticate id 6 group 5 {
-    #ComCcsdsSband.packetProcessorSband.BypassPacketsCount
-    ComCcsdsLora.packetProcessorLora.BypassPacketsCount
-    ComCcsdsUart.packetProcessor.BypassPacketsCount
+    #ComCcsdsSband.tcSecurityDeframerSband.BypassPacketsCount
+    ComCcsdsLora.tcSecurityDeframerLora.BypassPacketsCount
+    ComCcsdsUart.tcSecurityDeframer.BypassPacketsCount
 
-    #ComCcsdsSband.packetProcessorSband.RejectedPacketsCount
-    ComCcsdsLora.packetProcessorLora.RejectedPacketsCount
-    ComCcsdsUart.packetProcessor.RejectedPacketsCount
+    #ComCcsdsSband.tcSecurityDeframerSband.RejectedPacketsCount
+    ComCcsdsLora.tcSecurityDeframerLora.RejectedPacketsCount
+    ComCcsdsUart.tcSecurityDeframer.RejectedPacketsCount
 
     #ComCcsdsSband.authenticationRouter.ByPassedRouter
     ComCcsdsLora.authenticationRouter.ByPassedRouter

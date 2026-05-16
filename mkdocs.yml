@@ -101,7 +101,7 @@ nav:
           - Fs Space: components/FsSpace.md
           - Null Prm Db: components/NullPrmDb.md
       - Security Components:
-          - PacketProcessor: components/PacketProcessor.md
+          - TcSecurityDeframer: components/TcSecurityDeframer.md
           - Authentication Router: components/AuthenticationRouter.md
   - Additional Resources:
       - Troubleshooting: additional-resources/troubleshooting.md

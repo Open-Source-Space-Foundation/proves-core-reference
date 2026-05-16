@@ -1,6 +1,6 @@
-# Components::TcSecurityDeframer
+# Components::SecurityRouter
 
-The TcSecurityDeframer component verifies the integrity and authenticity of incoming CCSDS command packets using HMAC in the uplink path. It sits between TcDeframer and SpacePacketDeframer and enforces parse, policy validation, and authentication before forwarding commands.
+The SecurityRouter component verifies the integrity and authenticity of incoming CCSDS command packets using HMAC in the uplink path. It sits between TcDeframer and SpacePacketDeframer and enforces parse, policy validation, and authentication before forwarding commands.
 
 ## Overview
 
@@ -15,10 +15,10 @@ The component provides:
 
 Primary data path connections:
 
-- TcDeframer.dataOut -> TcSecurityDeframer.dataIn
-- TcSecurityDeframer.dataOut -> SpacePacketDeframer.dataIn
-- TcSecurityDeframer.dataReturnOut -> TcDeframer.dataReturnIn
-- SpacePacketDeframer.dataReturnOut -> TcSecurityDeframer.dataReturnIn
+- TcDeframer.dataOut -> SecurityRouter.dataIn
+- SecurityRouter.dataOut -> SpacePacketDeframer.dataIn
+- SecurityRouter.dataReturnOut -> TcDeframer.dataReturnIn
+- SpacePacketDeframer.dataReturnOut -> SecurityRouter.dataReturnIn
 
 ## Class Diagram
 
@@ -26,7 +26,7 @@ Primary data path connections:
 classDiagram
 direction LR
 
-class TcSecurityDeframer {
+class SecurityRouter {
   +configure()
   -dataIn_handler(portNum, data, context)
   -dataReturnIn_handler(portNum, data, context)
@@ -71,9 +71,9 @@ class Hmac {
   +std::array~uint8_t,16~
 }
 
-TcSecurityDeframer ..> PacketParser : parses
-TcSecurityDeframer ..> PacketValidator : validates
-TcSecurityDeframer ..> PacketAuthenticator : authenticates
+SecurityRouter ..> PacketParser : parses
+SecurityRouter ..> PacketValidator : validates
+SecurityRouter ..> PacketAuthenticator : authenticates
 PacketParser --> Packet : returns
 PacketValidator --> Packet : validates
 Packet --> Hmac : contains
@@ -81,9 +81,9 @@ Packet --> Hmac : contains
 
 ## Packet Format
 
-The TcSecurityDeframer receives a security-wrapped command packet and, after successful authentication, forwards the packet without the security envelope.
+The SecurityRouter receives a security-wrapped command packet and, after successful authentication, forwards the packet without the security envelope.
 
-Input packet layout (as parsed by TcSecurityDeframer):
+Input packet layout (as parsed by SecurityRouter):
 
 - Security Header (6 bytes): SPI (2) + Sequence Number (4)
 - Space Packet Primary Header (6 bytes)
@@ -96,6 +96,7 @@ Output packet layout (forwarded):
 - Space Packet Data Field
 
 ### Additional resources
+
 - [CCSDS 355.0-B-2 CMAC Authentication Standard](https://ccsds.org/Pubs/355x0b2.pdf)
 
 ## Parameters
@@ -146,13 +147,13 @@ Standard AC ports are also present for command handling, events, telemetry, para
 
 ## Unit Tests
 
-TcSecurityDeframer helper functionality is covered by unit tests in PROVESFlightControllerReference/test/unit-tests:
+SecurityRouter helper functionality is covered by unit tests in PROVESFlightControllerReference/test/unit-tests:
 
 | Test File | Coverage |
 |---|---|
-| test_TcSecurityDeframer_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, opcode, and HMAC size checks. |
-| test_TcSecurityDeframer_Validator.cpp | Validation policy behavior for valid packets, bypass opcodes, invalid SPI, out-of-window sequence numbers, and wraparound window handling. |
-| test_TcSecurityDeframer_Authenticator.cpp | Authentication behavior for invalid input, successful HMAC verification, and failed verification with corrupted HMAC. |
+| test_SecurityRouter_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, opcode, and HMAC size checks. |
+| test_SecurityRouter_Validator.cpp | Validation policy behavior for valid packets, bypass opcodes, invalid SPI, out-of-window sequence numbers, and wraparound window handling. |
+| test_SecurityRouter_Authenticator.cpp | Authentication behavior for invalid input, successful HMAC verification, and failed verification with corrupted HMAC. |
 
 Run unit tests with:
 
@@ -189,9 +190,9 @@ The default authentication key header is generated at build time from project ke
 | AUTH004-A | The component shall reject packets with sequence numbers that are outside the acceptable window and log an event. | Unit Test, Inspection |
 | AUTH004-B | The component shall set the stored sequence number to the sequence number transmitted in the packet only when a packet is fully validated and authenticated | Inspection |
 | AUTH004-C | The component shall allow the sequence number window to be configurable via a parameter. | Inspection |
-| AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16 byte security trailer. | Unit Test |
+| AUTH005 | The component shall compute the HMAC over the entire packet minus the last 16-byte security trailer. | Unit Test |
 | AUTH005-A | The component shall reject packets where the computed HMAC does not match the security trailer HMAC. | Unit Test |
-| AUTH006 | For any packet passing both validation and authentication steps or any packet marked for bypass, the component shall remove the Security Header and Security Trailer from the and pass the remaining packet data to data out. | Inspection, Integration Test |
+| AUTH006 | For any packet passing both validation and authentication steps or any packet marked for bypass, the component shall remove the Security Header and Security Trailer from the packet and pass the remaining packet data to data out. | Inspection, Integration Test |
 | AUTH007 | The component shall provide a command and telemetry channel to report the current sequence number for a given Security Association (SPI) to enable ground station synchronization. | Inspection, Integration Test |
 
 ## Change Log
@@ -199,4 +200,4 @@ The default authentication key header is generated at build time from project ke
 | Date | Description |
 | --- | --- |
 | 2025-11-26 | Initial design. |
-| 2026-05-01 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. |
+| 2026-05-01 | Renamed to SecurityRouter, refactor to discrete responsibilities: Authenticator, Parser, Validator. |

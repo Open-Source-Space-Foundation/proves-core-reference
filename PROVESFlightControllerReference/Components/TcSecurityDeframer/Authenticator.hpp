@@ -50,7 +50,7 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key,  //!< The he
 PacketAuthenticator::AuthenticationResult authenticatePacket(
     const uint8_t* buffer,  //!< The packet data buffer
     size_t size,            //!< The size of the data buffer
-    const Hmac& hmac,       //!< The HMAC extracted from the packet to validate against
+    const Mac& hmac,       //!< The HMAC extracted from the packet to validate against
     uint32_t& keyId         //!< The hex-encoded authentication key to use for validation
 );
 

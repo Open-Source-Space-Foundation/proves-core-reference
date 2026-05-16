@@ -110,7 +110,9 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
-    instance packetProcessor: Components.PacketProcessor base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+    instance securityRouter: Components.SecurityRouter base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0C000
 
     topology FramingSubtopology {
         # Usage Note:
@@ -140,7 +142,7 @@ module ComCcsdsUart {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance packetProcessor
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -170,17 +172,18 @@ module ComCcsdsUart {
             frameAccumulator.bufferDeallocate -> commsBufferManager.bufferSendIn
             frameAccumulator.bufferAllocate   -> commsBufferManager.bufferGetCallee
 
-            # FrameAccumulator <-> TcDeframer
-            frameAccumulator.dataOut -> tcDeframer.dataIn
-            tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
+            # TcDeframer <-> SecurityRouter
+            tcDeframer.dataOut                 -> securityRouter.dataIn
+            securityRouter.dataReturnOut   -> tcDeframer.dataReturnIn
 
-            # PacketProcessor <-> SpacePacketDeframer
-            packetProcessor.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> packetProcessor.dataReturnIn
+            # SecurityRouter <-> TcSecurityDeframer
+            securityRouter.authenticateOut -> tcSecurityDeframer.dataIn
+            securityRouter.bypassOut       -> tcSecurityDeframer.bypassIn
+            tcSecurityDeframer.dataReturnOut -> securityRouter.dataReturnIn
 
-            # TcDeframer <-> PacketProcessor
-            tcDeframer.dataOut                -> packetProcessor.dataIn
-            packetProcessor.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut      -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn

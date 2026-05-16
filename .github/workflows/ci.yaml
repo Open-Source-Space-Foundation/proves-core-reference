@@ -97,7 +97,7 @@ jobs:
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/PacketProcessor/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Build MCUBoot
         run: |
@@ -141,7 +141,7 @@ jobs:
 
       - name: Set Authentication Key
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/PacketProcessor/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
         # Reboot before installation to avoid watchdog reset
       - name: Reboot Integration Cube

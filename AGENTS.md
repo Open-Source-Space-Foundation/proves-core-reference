@@ -155,7 +155,7 @@ PROVESFlightControllerReference/
 │   ├── ADCS/          # Attitude Determination and Control System
 │   ├── AmateurRadio/  # Amateur radio communication
 │   ├── AntennaDeployer/ # Antenna deployment mechanism
-│   ├── PacketProcessor/  # HMAC-based command authentication
+│   ├── TcSecurityDeframer/  # HMAC-based command authentication
 │   ├── AuthenticationRouter/ # Authentication routing
 │   ├── BootloaderTrigger/ # Bootloader mode entry
 │   ├── Burnwire/      # Burnwire deployment mechanism
@@ -513,7 +513,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 - **NullPrmDb**: No-op parameter database (for systems without persistent storage)
 
 **Security**:
-- **PacketProcessor**: HMAC-based command authentication
+- **TcSecurityDeframer**: HMAC-based command authentication
 - **AuthenticationRouter**: Routes authenticated vs. unauthenticated commands
 
 ### Development Environment
@@ -581,7 +581,7 @@ After compiling, upload the sequence through GDS for execution on the board.
 
 ### Authentication & Security
 
-Commands can be HMAC-authenticated using the `PacketProcessor` component. The authentication key is stored in `PROVESFlightControllerReference/Components/PacketProcessor/AuthDefaultKey.h`.
+Commands can be HMAC-authenticated using the `TcSecurityDeframer` component. The authentication key is stored in `PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h`.
 
 ```bash
 make generate-auth-key   # Generate a new random HMAC key (only if file doesn't exist)

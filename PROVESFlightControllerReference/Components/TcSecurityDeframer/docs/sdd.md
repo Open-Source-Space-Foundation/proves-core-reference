@@ -1,6 +1,6 @@
-# Components::PacketProcessor
+# Components::TcSecurityDeframer
 
-The PacketProcessor component verifies the integrity and authenticity of incoming CCSDS command packets using HMAC in the uplink path. It sits between TcDeframer and SpacePacketDeframer and enforces parse, policy validation, and authentication before forwarding commands.
+The TcSecurityDeframer component verifies the integrity and authenticity of incoming CCSDS command packets using HMAC in the uplink path. It sits between TcDeframer and SpacePacketDeframer and enforces parse, policy validation, and authentication before forwarding commands.
 
 ## Overview
 
@@ -15,10 +15,10 @@ The component provides:
 
 Primary data path connections:
 
-- TcDeframer.dataOut -> PacketProcessor.dataIn
-- PacketProcessor.dataOut -> SpacePacketDeframer.dataIn
-- PacketProcessor.dataReturnOut -> TcDeframer.dataReturnIn
-- SpacePacketDeframer.dataReturnOut -> PacketProcessor.dataReturnIn
+- TcDeframer.dataOut -> TcSecurityDeframer.dataIn
+- TcSecurityDeframer.dataOut -> SpacePacketDeframer.dataIn
+- TcSecurityDeframer.dataReturnOut -> TcDeframer.dataReturnIn
+- SpacePacketDeframer.dataReturnOut -> TcSecurityDeframer.dataReturnIn
 
 ## Class Diagram
 
@@ -26,7 +26,7 @@ Primary data path connections:
 classDiagram
 direction LR
 
-class PacketProcessor {
+class TcSecurityDeframer {
   +configure()
   -dataIn_handler(portNum, data, context)
   -dataReturnIn_handler(portNum, data, context)
@@ -71,9 +71,9 @@ class Hmac {
   +std::array~uint8_t,16~
 }
 
-PacketProcessor ..> PacketParser : parses
-PacketProcessor ..> PacketValidator : validates
-PacketProcessor ..> PacketAuthenticator : authenticates
+TcSecurityDeframer ..> PacketParser : parses
+TcSecurityDeframer ..> PacketValidator : validates
+TcSecurityDeframer ..> PacketAuthenticator : authenticates
 PacketParser --> Packet : returns
 PacketValidator --> Packet : validates
 Packet --> Hmac : contains
@@ -81,9 +81,9 @@ Packet --> Hmac : contains
 
 ## Packet Format
 
-The PacketProcessor receives a security-wrapped command packet and, after successful authentication, forwards the packet without the security envelope.
+The TcSecurityDeframer receives a security-wrapped command packet and, after successful authentication, forwards the packet without the security envelope.
 
-Input packet layout (as parsed by PacketProcessor):
+Input packet layout (as parsed by TcSecurityDeframer):
 
 - Security Header (6 bytes): SPI (2) + Sequence Number (4)
 - Space Packet Primary Header (6 bytes)
@@ -147,13 +147,13 @@ Standard AC ports are also present for command handling, events, telemetry, para
 
 ## Unit Tests
 
-PacketProcessor helper functionality is covered by unit tests in PROVESFlightControllerReference/test/unit-tests:
+TcSecurityDeframer helper functionality is covered by unit tests in PROVESFlightControllerReference/test/unit-tests:
 
 | Test File | Coverage |
 |---|---|
-| test_PacketProcessor_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, opcode, and HMAC size checks. |
-| test_PacketProcessor_Validator.cpp | Validation policy behavior for valid packets, bypass opcodes, invalid SPI, out-of-window sequence numbers, and wraparound window handling. |
-| test_PacketProcessor_Authenticator.cpp | Authentication behavior for invalid input, successful HMAC verification, and failed verification with corrupted HMAC. |
+| test_TcSecurityDeframer_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, opcode, and HMAC size checks. |
+| test_TcSecurityDeframer_Validator.cpp | Validation policy behavior for valid packets, bypass opcodes, invalid SPI, out-of-window sequence numbers, and wraparound window handling. |
+| test_TcSecurityDeframer_Authenticator.cpp | Authentication behavior for invalid input, successful HMAC verification, and failed verification with corrupted HMAC. |
 
 Run unit tests with:
 
@@ -200,4 +200,4 @@ The default authentication key header is generated at build time from project ke
 | Date | Description |
 | --- | --- |
 | 2025-11-26 | Initial design. |
-| 2026-05-01 | Renamed to PacketProcessor, refactor to discrete responsibilities: Authenticator, Parser, Validator. |
+| 2026-05-01 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. |

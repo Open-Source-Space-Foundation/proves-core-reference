@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "PROVESFlightControllerReference/Components/PacketProcessor/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
 
 using namespace Components;
 
@@ -29,9 +29,9 @@ TEST(PacketParserTest, SuccessfulParse) {
         buf[18 + i] = static_cast<uint8_t>(i);
     }
 
-    auto res = parsePacket(buf.data(), buf.size());
+    auto res = parse(buf.data(), buf.size());
 
-    EXPECT_EQ(res.status, PacketParser::Status::Ok);
+    EXPECT_EQ(res.status, TransferFrameParser::Status::Ok);
     EXPECT_EQ(res.packet.spi, 0x1234u);
     EXPECT_EQ(res.packet.sequenceNumber, 0x01020304u);
     EXPECT_EQ(res.packet.opCode, 0xAABBCCDDu);
@@ -44,13 +44,13 @@ TEST(PacketParserTest, SuccessfulParse) {
 TEST(PacketParserTest, SpiParseErrorTooSmall) {
     std::vector<uint8_t> buf(1, 0);  // smaller than SPI field requirement (2)
 
-    auto res = parsePacket(buf.data(), buf.size());
-    EXPECT_EQ(res.status, PacketParser::Status::SpiParseError);
+    auto res = parse(buf.data(), buf.size());
+    EXPECT_EQ(res.status, TransferFrameParser::Status::SpiParseError);
 }
 
 TEST(PacketParserTest, OpCodeParseErrorTooShort) {
     // Make size large enough for header (spi + seq) but too short for opcode
-    // opcode parsing requires at least 18 bytes total (kSecurityHeaderSize + 6 + 2 + 4)
+    // opcode parsing requires at least 18 bytes total (kTCSecurityHeaderSize + 6 + 2 + 4)
     // choose 17 to be just below that threshold
     std::vector<uint8_t> buf(17, 0);
 
@@ -61,8 +61,8 @@ TEST(PacketParserTest, OpCodeParseErrorTooShort) {
     buf[4] = 0x00;
     buf[5] = 0x02;
 
-    auto res = parsePacket(buf.data(), buf.size());
-    EXPECT_EQ(res.status, PacketParser::Status::OpCodeParseError);
+    auto res = parse(buf.data(), buf.size());
+    EXPECT_EQ(res.status, TransferFrameParser::Status::OpCodeParseError);
 }
 
 TEST(PacketParserTest, SequenceNumberParseErrorTooShort) {
@@ -72,8 +72,8 @@ TEST(PacketParserTest, SequenceNumberParseErrorTooShort) {
     buf[0] = 0x00;
     buf[1] = 0x01;  // SPI present
 
-    auto res = parsePacket(buf.data(), buf.size());
-    EXPECT_EQ(res.status, PacketParser::Status::SequenceNumberParseError);
+    auto res = parse(buf.data(), buf.size());
+    EXPECT_EQ(res.status, TransferFrameParser::Status::SequenceNumberParseError);
 }
 
 TEST(PacketParserTest, HmacParseErrorTooShort) {
@@ -93,6 +93,6 @@ TEST(PacketParserTest, HmacParseErrorTooShort) {
     buf[16] = 0x33;
     buf[17] = 0x44;
 
-    auto res = parsePacket(buf.data(), buf.size());
-    EXPECT_EQ(res.status, PacketParser::Status::HmacParseError);
+    auto res = parse(buf.data(), buf.size());
+    EXPECT_EQ(res.status, TransferFrameParser::Status::MacParseError);
 }
