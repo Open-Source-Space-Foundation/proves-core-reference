@@ -14,8 +14,6 @@ the full TC + TM + events path is healthy.
 import queue
 import time
 
-from conftest import YAMCS_INSTANCE
-
 NO_OP_COMMAND = "/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CMD_NO_OP"
 NO_OP_EVENT_NEEDLE = "NoOpReceived"
 TOTAL_TIMEOUT_S = 180.0
@@ -31,7 +29,7 @@ def _event_matches(event) -> bool:
     return False
 
 
-def test_noop_round_trip(yamcs_client, yamcs_processor):
+def test_noop_round_trip(yamcs_client, yamcs_processor, yamcs_instance):
     """Issue CMD_NO_OP via YAMCS and assert a NoOpReceived event comes back.
 
     Retries the command every RETRY_INTERVAL_S until TOTAL_TIMEOUT_S elapses
@@ -42,7 +40,7 @@ def test_noop_round_trip(yamcs_client, yamcs_processor):
     events: queue.Queue = queue.Queue()
 
     subscription = yamcs_client.create_event_subscription(
-        instance=YAMCS_INSTANCE,
+        instance=yamcs_instance,
         on_data=events.put,
     )
 

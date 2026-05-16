@@ -24,6 +24,11 @@ YAMCS_READY_TIMEOUT_S = float(os.environ.get("YAMCS_READY_TIMEOUT_S", "180"))
 
 
 @pytest.fixture(scope="session")
+def yamcs_instance():
+    return YAMCS_INSTANCE
+
+
+@pytest.fixture(scope="session")
 def yamcs_client():
     """Session-scoped YAMCS client that blocks until the instance is RUNNING."""
     client = YamcsClient(YAMCS_URL)

@@ -167,11 +167,12 @@ def _forward_tm_serial(
                     expected_vc = (last_vc_count[frame_scid] + 1) & 0xFF
                     if vc_count != expected_vc:
                         gap = (vc_count - last_vc_count[frame_scid]) & 0xFF
-                        vc_frame_gaps += gap - 1
-                        print(
-                            f"[TM] VC frame gap (SCID {frame_scid}): expected {expected_vc}, "
-                            f"got {vc_count} ({gap - 1} frame(s) lost)"
-                        )
+                        if gap > 1:
+                            vc_frame_gaps += gap - 1
+                            print(
+                                f"[TM] VC frame gap (SCID {frame_scid}): expected {expected_vc}, "
+                                f"got {vc_count} ({gap - 1} frame(s) lost)"
+                            )
                 last_vc_count[frame_scid] = vc_count
 
                 tm_sock.sendto(candidate, (yamcs_host, tm_port))

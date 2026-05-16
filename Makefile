@@ -303,7 +303,9 @@ yamcs-build-check: ## Validate YAMCS server boots via docker compose with the cu
 	  exit 1; \
 	fi; \
 	command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required for yamcs-build-check"; exit 1; }; \
-	trap 'docker compose -f yamcs/docker-compose.yml logs || true; docker compose -f yamcs/docker-compose.yml down || true' EXIT INT TERM; \
+	trap 'status=$$?; \
+	  if [ $$status -ne 0 ]; then docker compose -f yamcs/docker-compose.yml logs || true; fi; \
+	  docker compose -f yamcs/docker-compose.yml down || true' EXIT INT TERM; \
 	echo "Pre-pulling YAMCS images (excluded from readiness budget)..."; \
 	docker compose -f yamcs/docker-compose.yml pull; \
 	echo "Starting YAMCS server (docker compose)..."; \
