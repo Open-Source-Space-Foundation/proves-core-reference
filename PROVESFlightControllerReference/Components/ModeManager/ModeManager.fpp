@@ -216,7 +216,7 @@ module Components {
         param SAFEMODE_SEQUENCE_FILE: string default "/seq/enter_safe.bin"
 
         @ Time (in seconds) without an authenticated packet before triggering command loss safe mode
-        @ Default: 1 day = 3*60*60*24
+        @ Default: 3 days = 3*60*60*24
         param COMM_LOSS_TIME: Fw.TimeIntervalValue default {seconds = 3*60*60*24, useconds = 0}
 
         ###############################################################################
