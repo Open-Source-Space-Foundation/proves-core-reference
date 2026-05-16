@@ -100,7 +100,6 @@ jobs:
             mcuboot.elf
             bootable.uf2
             bootable.signed.hex
-            build-fprime-automatic-zephyr/zephyr/zephyr.elf
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 

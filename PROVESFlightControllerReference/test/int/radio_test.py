@@ -34,6 +34,15 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+def test_00_setup_only(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Enable LoRa transmit; used as a standalone re-enable step before the RF integration pass."""
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{lora}.TRANSMIT",
+        ["ENABLED"],
+    )
+
+
 def test_01_transmit_enabled(fprime_test_api: IntegrationTestAPI, start_gds):
     """Enabling transmit must not produce any LoRa error/warning events."""
     start: TimeType = TimeType().set_datetime(
