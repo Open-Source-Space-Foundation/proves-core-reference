@@ -31,7 +31,6 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
         f"{downlinkDelay}.DIVIDER_PRM_SET",
         [20],
     )
-    yield
 
 
 def test_00_setup_only(fprime_test_api: IntegrationTestAPI, start_gds):

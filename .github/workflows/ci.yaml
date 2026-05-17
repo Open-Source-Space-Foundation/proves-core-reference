@@ -240,7 +240,7 @@ jobs:
       - name: Re-enable LoRa for RF pass
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
-          make reenable-lora || true
+          make reenable-lora
 
       - name: Kill UART GDS
         if: env.LORA_PASSTHROUGH_TTY != ''
@@ -253,8 +253,12 @@ jobs:
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
           nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
-          echo $! > server-rf.pid
-          sleep 10
+          GDS_RF_PID=$!
+          echo $GDS_RF_PID > server-rf.pid
+          for i in $(seq 1 15); do
+            sleep 1
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process exited unexpectedly"; exit 1; }
+          done
 
       - name: Sync Sequence Number (RF)
         if: env.LORA_PASSTHROUGH_TTY != ''
@@ -265,6 +269,19 @@ jobs:
         if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
           make test-integration-radio
+
+      - name: Restore Clean State After RF Tests
+        if: env.LORA_PASSTHROUGH_TTY != ''
+        run: |
+          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
+          make delete-shadow-gds || true
+          sleep 2
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 5
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          echo $! > server.pid
 
       - name: Format Filesystem
         if: always()
