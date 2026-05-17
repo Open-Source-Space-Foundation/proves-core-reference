@@ -19,20 +19,19 @@ LORA_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 
 @pytest.fixture(autouse=True)
-def setup_test(fprime_test_api: IntegrationTestAPI, start_gds, request):
-    """Fixture to set the downlink divider before each test and disable transmit after each test"""
+def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Fixture to set the downlink divider before each test.
+
+    Note: transmit is intentionally NOT disabled in teardown. These tests run
+    over the RF link; sending TRANSMIT DISABLED severs the radio link before the
+    command acknowledgement can be received, making the assertion impossible.
+    """
     proves_send_and_assert_command(
         fprime_test_api,
         f"{downlinkDelay}.DIVIDER_PRM_SET",
         [20],
     )
     yield
-    if request.node.name != "test_00_setup_only":
-        proves_send_and_assert_command(
-            fprime_test_api,
-            f"{lora}.TRANSMIT",
-            ["DISABLED"],
-        )
 
 
 def test_00_setup_only(fprime_test_api: IntegrationTestAPI, start_gds):
