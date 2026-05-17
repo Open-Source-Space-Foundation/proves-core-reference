@@ -257,7 +257,7 @@ jobs:
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process exited unexpectedly"; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
           done
 
       - name: Sync Sequence Number (RF)
