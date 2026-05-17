@@ -41,7 +41,6 @@ module ComCfg {
         sequenceCount: U16          @< 14 bit Sequence count - sequence count is incremented per APID
         vcId: U8                    @< 6 bit Virtual Channel ID - used for TC and TM
         authenticated: bool         @< Whether the packet has been authenticated
-        bypassAuthentication: bool  @< Whether the packet should bypass authentication
     } default {
         comQueueIndex = 0
         apid = Apid.FW_PACKET_UNKNOWN

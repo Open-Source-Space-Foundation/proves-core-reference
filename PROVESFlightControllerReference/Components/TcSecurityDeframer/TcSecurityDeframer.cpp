@@ -27,8 +27,7 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
     : TcSecurityDeframerComponentBase(compName),
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
-      m_sequenceNumberWindow(0),
-      m_rejectedPacketsCount(0) {}
+      m_sequenceNumberWindow(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -42,8 +41,11 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 
     // If there was an error parsing the packet, reject it
     if (parseResult.status != TransferFrameParser::Status::Ok) {
+        // Telemeter the error
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-        this->rejectPacket(data, context);
+
+        // Return frame buffer ownership
+        this->dataReturnOut_out(0, data, context);
         return;
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
@@ -61,17 +63,23 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 
         // If the packet failed validation due to invalid SPI value, reject it
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
+            // Telemeter the error
             this->log_WARNING_HI_SpiInvalid(packet.spi);
-            this->rejectPacket(data, context);
+
+            // Return frame buffer ownership
+            this->dataReturnOut_out(0, data, context);
             return;
         }
         this->log_WARNING_HI_SpiInvalid_ThrottleClear();
 
         // If the packet failed validation due to sequence number being out of the acceptable window, reject it
         if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
+            // Telemeter the error
             this->log_WARNING_HI_SequenceNumberInvalid(packet.sequenceNumber, this->m_sequenceNumber,
                                                        this->m_sequenceNumberWindow);
-            this->rejectPacket(data, context);
+
+            // Return frame buffer ownership
+            this->dataReturnOut_out(0, data, context);
             return;
         }
         this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
@@ -82,9 +90,12 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 
         // If the packet failed authentication, reject it
         if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
+            // Telemeter the error
             this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
                                                       authResult.psaStatus);
-            this->rejectPacket(data, context);
+
+            // Return frame buffer ownership
+            this->dataReturnOut_out(0, data, context);
             return;
         }
         this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
@@ -100,8 +111,11 @@ void TcSecurityDeframer ::bypassIn_handler(FwIndexType portNum, Fw::Buffer& data
 
     // If there was an error parsing the packet, reject it
     if (parseResult.status != TransferFrameParser::Status::Ok) {
+        // Telemeter the error
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-        this->rejectPacket(data, context);
+
+        // Return frame buffer ownership
+        this->dataReturnOut_out(0, data, context);
         return;
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
@@ -219,7 +233,9 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     return status;
 }
 
-void TcSecurityDeframer ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameContext& context, const U32 sequenceNumber) {
+void TcSecurityDeframer ::acceptPacket(Fw::Buffer& data,
+                                       const ComCfg::FrameContext& context,
+                                       const U32 sequenceNumber) {
     // Update the sequence number and write it to disk
     // intentionally not checking the return value
     this->m_sequenceNumber = sequenceNumber;
@@ -232,15 +248,6 @@ void TcSecurityDeframer ::acceptPacket(Fw::Buffer& data, const ComCfg::FrameCont
 
     // Forward the packet to the output port
     this->dataOut_out(0, data, context);
-}
-
-void TcSecurityDeframer ::rejectPacket(Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // Telemeter the updated rejected packet count
-    this->m_rejectedPacketsCount += 1;
-    this->tlmWrite_RejectedPacketsCount(this->m_rejectedPacketsCount);
-
-    // Do not forward the packet to the output port
-    this->dataReturnOut_out(0, data, context);
 }
 
 }  // namespace Components

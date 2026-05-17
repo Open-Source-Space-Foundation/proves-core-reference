@@ -33,9 +33,6 @@ module Components {
         @ Telemetry for the current sequence number, updated on each successfully authenticated packet
         telemetry CurrentSequenceNumber : U32
 
-        @ Telemetry for the count of rejected packets, updated on each packet that fails authentication
-        telemetry RejectedPacketsCount : U32
-
         ### Events ###
 
         @ SequenceNumberGet returns the current sequence number from the file system in response to a command

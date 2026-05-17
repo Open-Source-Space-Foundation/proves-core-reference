@@ -14,8 +14,8 @@
 #include <cassert>
 
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
 
 namespace Components {
@@ -45,7 +45,7 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                         Fw::Buffer& data,                    //!< The buffer containing the packet data
                         const ComCfg::FrameContext& context  //!< The frame context associated with the packet
                         ) override;
-    
+
     //! Handler implementation for bypassIn
     //!
     //! Port receiving Space Packets from TcDeframer
@@ -107,11 +107,6 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                       const U32 sequenceNumber              //!< The sequence number from the packet
     );
 
-    //! Rejects a packet and updates the rejected packets count
-    void rejectPacket(Fw::Buffer& data,                    //!< The buffer containing the packet data
-                      const ComCfg::FrameContext& context  //!< The frame context associated with the packet
-    );
-
   private:
     // ----------------------------------------------------------------------
     // Private member variables
@@ -123,9 +118,6 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
     U32 m_sequenceNumber;                 //!< The current sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
-
-    // Counters for telemetry
-    std::atomic<U32> m_rejectedPacketsCount;  //!< Count of rejected packets
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
