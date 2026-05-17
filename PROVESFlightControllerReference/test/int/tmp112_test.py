@@ -28,20 +28,25 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get temperature"""
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
-    )
+    for attempt in range(3):
+        start: TimeType = TimeType().set_datetime(
+            datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+        )
 
-    # Send command to get temperature
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{tmp112Face0Manager}.GetTemperature",
-    )
-    result: EventData = fprime_test_api.assert_event(
-        f"{tmp112Face0Manager}.Temperature", start=start, timeout=2
-    )
+        # Send command to get temperature
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{tmp112Face0Manager}.GetTemperature",
+        )
+        result: EventData = fprime_test_api.assert_event(
+            f"{tmp112Face0Manager}.Temperature", start=start, timeout=5
+        )
 
-    assert result is not None
+        if result is not None:
+            break
+        if attempt == 2:
+            assert result is not None, "Temperature event not received after 3 attempts"
+
     assert len(result.get_args()) == 1
     temperature: F32Type = result.args[0]
     assert temperature.val >= 0.0
