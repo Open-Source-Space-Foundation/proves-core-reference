@@ -4,7 +4,7 @@ command-line-options:
   no-app:
   dictionary: build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
   output-unframed-data: "-"
-  frame-size: 248
+  frame-size: 255
   framing-selection: authenticate-space-data-link
   file-uplink-cooldown: 0.400
   file-uplink-chunk-size: 204
