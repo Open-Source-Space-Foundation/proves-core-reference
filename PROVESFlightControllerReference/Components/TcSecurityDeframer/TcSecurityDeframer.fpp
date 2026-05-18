@@ -69,20 +69,8 @@ module Components {
 
         ### Ports ###
 
-        @ Port receiving Space Packets from SecurityRouter for packets that require authentication
-        guarded input port dataIn: Svc.ComDataWithContext
-
-        @ Port receiving Space Packets from SecurityRouter for packets that do not require authentication
-        guarded input port bypassIn: Svc.ComDataWithContext
-
-        @ Port receiving back ownership of buffers sent to dataOut (SpacePacketDeframer)
-        sync input port dataReturnIn: Svc.ComDataWithContext
-
-        @ Port forwarding authenticated or non-authenticated packets to SpacePacketDeframer
-        output port dataOut: Svc.ComDataWithContext
-
-        @ Port returning ownership of invalid/unauthorized packets back to upstream component (TcDeframer)
-        output port dataReturnOut: Svc.ComDataWithContext
+        @ Port for receiving packets to be authenticated and deframed
+        guarded input port processSecurity: Ccsds.ProcessSecurity
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
