@@ -32,10 +32,9 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
 
     yield
 
+
 @pytest.fixture(autouse=True)
-def start_radio(
-    request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI
-):
+def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
     """Fixture to start the radio before tests"""
     if request.node.get_closest_marker("radio") is not None:
         return
@@ -47,6 +46,7 @@ def start_radio(
     fprime_test_api.send_and_assert_command(
         command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
     )
+
 
 @pytest.fixture(scope="session")
 def stop_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
