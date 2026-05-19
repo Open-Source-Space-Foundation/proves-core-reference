@@ -32,7 +32,8 @@ def start_gds(
     timeout_time = time.time() + 30
     while time.time() < timeout_time:
         try:
-            start_radio(request, fprime_test_api_session)
+            if request.config.getoption("--with-radio"):
+                _enable_radio(fprime_test_api_session)
             fprime_test_api_session.send_and_assert_command(
                 command=f"{cmdDispatch}.CMD_NO_OP"
             )
@@ -45,12 +46,7 @@ def start_gds(
     yield
 
 
-@pytest.fixture(autouse=True)
-def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
-    """Fixture to start the radio before tests"""
-    if not request.config.getoption("--with-radio"):
-        return
-
+def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
     fprime_test_api.send_and_assert_command(
         command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
         args=[20],
@@ -58,6 +54,15 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
     fprime_test_api.send_and_assert_command(
         command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
     )
+
+
+@pytest.fixture(autouse=True)
+def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
+    """Fixture to start the radio before tests"""
+    if not request.config.getoption("--with-radio"):
+        return
+
+    _enable_radio(fprime_test_api)
 
 
 @pytest.fixture(scope="session", autouse=True)
