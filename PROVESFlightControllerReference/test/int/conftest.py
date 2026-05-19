@@ -11,8 +11,19 @@ from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--with-radio",
+        action="store_true",
+        default=False,
+        help="Enable radio setup and teardown fixtures for this test run.",
+    )
+
+
 @pytest.fixture(scope="session")
-def start_gds(fprime_test_api_session: IntegrationTestAPI):
+def start_gds(
+    request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
+):
     """Fixture to start GDS before tests and stop after tests
 
     GDS is used to send commands and receive telemetry/events.
@@ -21,6 +32,7 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     timeout_time = time.time() + 30
     while time.time() < timeout_time:
         try:
+            start_radio(request, fprime_test_api_session)
             fprime_test_api_session.send_and_assert_command(
                 command=f"{cmdDispatch}.CMD_NO_OP"
             )
@@ -36,7 +48,7 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
 @pytest.fixture(autouse=True)
 def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
     """Fixture to start the radio before tests"""
-    if request.node.get_closest_marker("radio") is not None:
+    if not request.config.getoption("--with-radio"):
         return
 
     fprime_test_api.send_and_assert_command(
@@ -48,18 +60,18 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
     )
 
 
-@pytest.fixture(scope="session")
-def stop_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
+@pytest.fixture(scope="session", autouse=True)
+def stop_radio(
+    request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
+):
     """Fixture to stop the radio at the end of the test session"""
-    ran_radio_tests = any(
-        item.get_closest_marker("radio") is not None for item in request.session.items
-    )
+    with_radio = request.config.getoption("--with-radio")
 
     yield
 
-    if not ran_radio_tests:
+    if not with_radio:
         return
 
-    fprime_test_api.send_and_assert_command(
+    fprime_test_api_session.send_and_assert_command(
         command="ReferenceDeployment.lora.TRANSMIT", args=["DISABLED"]
     )

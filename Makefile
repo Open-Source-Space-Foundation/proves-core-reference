@@ -253,7 +253,7 @@ test-integration-radio: uv ## Run integration tests via LoRa passthrough GDS
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	FILTER="not uart_only"; \
 	$(UV_RUN) pytest PROVESFlightControllerReference/test/int \
-	    --deployment $$DEPLOY -m "$$FILTER" --exitfirst
+	    --deployment $$DEPLOY -m "$$FILTER" --exitfirst --with-radio
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
