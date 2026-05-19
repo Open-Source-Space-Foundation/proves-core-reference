@@ -193,7 +193,7 @@ jobs:
 
       - name: Sync Sequence Number
         run: |
-          make sync-sequence-number
+          make test-integration FILTER=sync_sequence_number
 
       - name: Run UART Integration Tests
         run: |
@@ -202,7 +202,7 @@ jobs:
       - name: Format Filesystem
         if: always()
         run: |
-          make format-filesystem
+          make test-integration FILTER=format_filesystem
 
       - name: Kill GDS & Power Off Satellite
         if: always()
@@ -319,16 +319,16 @@ jobs:
 
       - name: Sync Sequence Number
         run: |
-          make sync-sequence-number PYTEST_ARGS=--with-radio
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
 
       - name: Run Radio Integration Tests
         run: |
-          make test-integration-radio
+          make test-integration PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
         run: |
-          make format-filesystem
+          make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
 
       - name: Kill GDS & Power Off Satellite
         if: always()
