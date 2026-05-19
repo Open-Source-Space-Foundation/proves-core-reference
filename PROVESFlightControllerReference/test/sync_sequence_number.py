@@ -14,14 +14,41 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from int.common import cmdDispatch, proves_send_and_assert_command
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--with-radio",
+        action="store_true",
+        default=False,
+        help="Enable radio setup before syncing sequence number.",
+    )
+
+
+def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
+        [20],
+    )
+    proves_send_and_assert_command(
+        fprime_test_api,
+        "ReferenceDeployment.lora.TRANSMIT",
+        ["ENABLED"],
+    )
+
+
 @pytest.fixture(scope="session", autouse=True)
-def check_gds(fprime_test_api_session: IntegrationTestAPI):
+def check_gds(
+    request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
+):
     """Fixture to check GDS is running"""
 
+    with_radio = request.config.getoption("--with-radio")
     gds_working = False
-    timeout_time = time.time() + 30
+    timeout_time = time.time() + (60 if with_radio else 30)
     while time.time() < timeout_time:
         try:
+            if with_radio:
+                _enable_radio(fprime_test_api_session)
             fprime_test_api_session.send_and_assert_command(
                 command=f"{cmdDispatch}.CMD_NO_OP"
             )

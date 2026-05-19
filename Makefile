@@ -275,7 +275,7 @@ bootloader: uv
 .PHONY: sync-sequence-number
 sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
 	@echo "Synchronizing sequence number; ensure you have the GDS open."
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment $(PYTEST_ARGS)
 
 .PHONY: format-filesystem
 format-filesystem: fprime-venv ## Format the filesystem of a connected FC board

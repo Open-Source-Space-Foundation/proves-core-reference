@@ -319,7 +319,7 @@ jobs:
 
       - name: Sync Sequence Number
         run: |
-          make sync-sequence-number
+          make sync-sequence-number PYTEST_ARGS=--with-radio
 
       - name: Run Radio Integration Tests
         run: |
