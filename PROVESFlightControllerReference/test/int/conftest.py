@@ -48,11 +48,11 @@ def start_gds(
 
 def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
     fprime_test_api.send_and_assert_command(
-        command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
-        args=[20],
+        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
     )
     fprime_test_api.send_and_assert_command(
-        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
+        command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
+        args=[20],
     )
 
 
