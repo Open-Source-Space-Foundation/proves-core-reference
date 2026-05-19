@@ -21,7 +21,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.fixture(scope="session")
-def start_gds(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
+def start_gds(
+    request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
+):
     """Fixture to start GDS before tests and stop after tests
 
     GDS is used to send commands and receive telemetry/events.
@@ -31,8 +33,10 @@ def start_gds(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAP
     while time.time() < timeout_time:
         try:
             if request.config.getoption("--with-radio"):
-                _enable_radio(fprime_test_api)
-            fprime_test_api.send_and_assert_command(command=f"{cmdDispatch}.CMD_NO_OP")
+                _enable_radio(fprime_test_api_session)
+            fprime_test_api_session.send_and_assert_command(
+                command=f"{cmdDispatch}.CMD_NO_OP"
+            )
             gds_working = True
             break
         except Exception:
@@ -62,7 +66,9 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
 
 
 @pytest.fixture(scope="session", autouse=True)
-def stop_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
+def stop_radio(
+    request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
+):
     """Fixture to stop the radio at the end of the test session"""
     with_radio = request.config.getoption("--with-radio")
 
@@ -71,6 +77,6 @@ def stop_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestA
     if not with_radio:
         return
 
-    fprime_test_api.send_command(
+    fprime_test_api_session.send_command(
         command="ReferenceDeployment.lora.TRANSMIT", args=["DISABLED"]
     )
