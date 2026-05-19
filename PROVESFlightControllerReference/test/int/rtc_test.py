@@ -175,7 +175,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     }, Updated: {updated_time}"
 
 
-@pytest.mark.rf_unsafe
+@pytest.mark.uart_only
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 

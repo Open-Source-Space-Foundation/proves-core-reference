@@ -79,7 +79,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
 
 
-@pytest.mark.rf_unsafe
+@pytest.mark.uart_only
 def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 

@@ -227,7 +227,7 @@ test-unit: ## Run unit tests
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
-	FILTER="not flaky"; \
+	FILTER=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
@@ -248,15 +248,10 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
 
-.PHONY: reenable-lora
-reenable-lora: uv ## Re-enable LoRa transmit before the RF integration pass
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/int/radio_test.py::test_00_setup_only \
-	    --deployment build-artifacts/zephyr/fprime-zephyr-deployment
-
 .PHONY: test-integration-radio
 test-integration-radio: uv ## Run integration tests via LoRa passthrough GDS
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
-	FILTER="not flaky and not rf_unsafe"; \
+	FILTER="not uart_only"; \
 	$(UV_RUN) pytest PROVESFlightControllerReference/test/int \
 	    --deployment $$DEPLOY -m "$$FILTER" --exitfirst
 

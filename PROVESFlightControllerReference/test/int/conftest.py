@@ -31,3 +31,35 @@ def start_gds(fprime_test_api_session: IntegrationTestAPI):
     assert gds_working
 
     yield
+
+@pytest.fixture(autouse=True)
+def start_radio(
+    request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI
+):
+    """Fixture to start the radio before tests"""
+    if request.node.get_closest_marker("radio") is not None:
+        return
+
+    fprime_test_api.send_and_assert_command(
+        command="{downlinkDelay}.DIVIDER_PRM_SET",
+        args=[20],
+    )
+    fprime_test_api.send_and_assert_command(
+        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
+    )
+
+@pytest.fixture(scope="session")
+def stop_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
+    """Fixture to stop the radio at the end of the test session"""
+    ran_radio_tests = any(
+        item.get_closest_marker("radio") is not None for item in request.session.items
+    )
+
+    yield
+
+    if not ran_radio_tests:
+        return
+
+    fprime_test_api.send_and_assert_command(
+        command="ReferenceDeployment.lora.TRANSMIT", args=["DISABLED"]
+    )

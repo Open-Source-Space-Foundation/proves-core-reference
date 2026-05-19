@@ -103,10 +103,117 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
           retention-days: 30
 
-  integration:
+  integration-uart:
     runs-on:
       - integration
     needs: build
+    steps:
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+
+        # Reboot before installation to avoid watchdog reset
+      - name: Reboot Integration Cube
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Install MCUBoot
+        run: |
+          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
+          sleep 3
+
+      - name: Install Flight Software
+        run: |
+          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
+          sleep 3
+
+        # Reboot after installation to ensure power monitor tests work
+      - name: Reboot Integration Cube
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Detect Board TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              for ifn in $path/*:*; do
+                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
+                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make sync-sequence-number
+
+      - name: Run UART Integration Tests
+        run: |
+          make test-integration
+
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make format-filesystem
+
+      - name: Kill GDS & Power Off Satellite
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  integration-radio:
+    runs-on:
+      - integration
+    needs: integration-uart
     steps:
       - name: Load .env file
         run: |
@@ -217,40 +324,30 @@ jobs:
             done
           done
           [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
-          if [ -n "$PASSTHROUGH_TTY" ]; then
-            echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
-            echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
-          else
-            echo "No LoRa passthrough tty found; smoke test will skip"
+          if [ -z "$PASSTHROUGH_TTY" ]; then
+            echo "ERROR: LoRa passthrough tty not found; cannot run radio integration tests"
+            lsusb || true
+            exit 1
           fi
+          echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+          echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
 
       - name: Start GDS
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           echo $! > server.pid
 
-      - name: Sync Sequence Number
-        run: |
-          make sync-sequence-number
-
-      - name: Run Integration Tests
-        run: |
-          make test-integration
-
-      - name: Re-enable LoRa for RF pass
-        if: env.LORA_PASSTHROUGH_TTY != ''
+      - name: Re-enable LoRa
         run: |
           make reenable-lora
 
       - name: Kill UART GDS
-        if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
           kill $(cat server.pid) || true
           make delete-shadow-gds || true
           sleep 3
 
       - name: Start GDS on LoRa Passthrough
-        if: env.LORA_PASSTHROUGH_TTY != ''
         run: |
           nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
           GDS_RF_PID=$!
@@ -260,28 +357,13 @@ jobs:
             kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
           done
 
-      - name: Sync Sequence Number (RF)
-        if: env.LORA_PASSTHROUGH_TTY != ''
+      - name: Sync Sequence Number
         run: |
           make sync-sequence-number
 
-      - name: Run Integration Tests over LoRa
-        if: env.LORA_PASSTHROUGH_TTY != ''
+      - name: Run Radio Integration Tests
         run: |
           make test-integration-radio
-
-      - name: Restore Clean State After RF Tests
-        if: env.LORA_PASSTHROUGH_TTY != ''
-        run: |
-          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
-          make delete-shadow-gds || true
-          sleep 2
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          sleep 5
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
-          echo $! > server.pid
 
       - name: Format Filesystem
         if: always()

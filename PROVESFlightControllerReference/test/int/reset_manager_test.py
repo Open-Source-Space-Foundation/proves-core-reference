@@ -10,7 +10,7 @@ import pytest
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
-pytestmark = pytest.mark.rf_unsafe
+pytestmark = [pytest.mark.uart_only]
 
 resetManager = "ReferenceDeployment.resetManager"
 

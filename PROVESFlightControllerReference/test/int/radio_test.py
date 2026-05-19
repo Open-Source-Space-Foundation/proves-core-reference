@@ -12,7 +12,7 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
-pytestmark = pytest.mark.rf_unsafe
+pytestmark = [pytest.mark.uart_only]
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
 lora = "ReferenceDeployment.lora"
