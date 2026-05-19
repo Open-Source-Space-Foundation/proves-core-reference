@@ -12,6 +12,8 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = pytest.mark.rf_unsafe
+
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
 lora = "ReferenceDeployment.lora"
 
@@ -20,25 +22,17 @@ LORA_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 @pytest.fixture(autouse=True)
 def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Fixture to set the downlink divider before each test.
-
-    Note: transmit is intentionally NOT disabled in teardown. These tests run
-    over the RF link; sending TRANSMIT DISABLED severs the radio link before the
-    command acknowledgement can be received, making the assertion impossible.
-    """
+    """Fixture to set the downlink divider before each test and disable transmit after each test"""
     proves_send_and_assert_command(
         fprime_test_api,
         f"{downlinkDelay}.DIVIDER_PRM_SET",
         [20],
     )
-
-
-def test_00_setup_only(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Enable LoRa transmit; used as a standalone re-enable step before the RF integration pass."""
+    yield
     proves_send_and_assert_command(
         fprime_test_api,
         f"{lora}.TRANSMIT",
-        ["ENABLED"],
+        ["DISABLED"],
     )
 
 
