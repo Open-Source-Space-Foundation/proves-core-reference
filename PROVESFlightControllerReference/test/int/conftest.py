@@ -11,14 +11,6 @@ from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
-def pytest_configure(config):
-    config.addinivalue_line(
-        "markers",
-        "rf_unsafe: test severs the LoRa link (reset / TRANSMIT toggle); "
-        "skipped in the RF integration pass",
-    )
-
-
 @pytest.fixture(scope="session")
 def start_gds(fprime_test_api_session: IntegrationTestAPI):
     """Fixture to start GDS before tests and stop after tests
