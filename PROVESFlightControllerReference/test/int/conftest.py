@@ -40,7 +40,7 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
         return
 
     fprime_test_api.send_and_assert_command(
-        command="{downlinkDelay}.DIVIDER_PRM_SET",
+        command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
         args=[20],
     )
     fprime_test_api.send_and_assert_command(
