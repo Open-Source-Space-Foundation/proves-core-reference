@@ -268,31 +268,6 @@ jobs:
         run: |
           make framer-plugin
 
-      - name: Detect Board TTY
-        run: |
-          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
-          # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
-          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
-
       - name: Detect LoRa Passthrough TTY
         run: |
           # Find the non-Zephyr USB device's CDC data interface (CircuitPython
@@ -331,21 +306,6 @@ jobs:
           fi
           echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
           echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
-
-      - name: Start GDS
-        run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
-          echo $! > server.pid
-
-      - name: Re-enable LoRa
-        run: |
-          make reenable-lora
-
-      - name: Kill UART GDS
-        run: |
-          kill $(cat server.pid) || true
-          make delete-shadow-gds || true
-          sleep 3
 
       - name: Start GDS on LoRa Passthrough
         run: |
