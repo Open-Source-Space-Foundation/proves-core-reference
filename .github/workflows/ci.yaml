@@ -226,6 +226,51 @@ jobs:
         run: |
           make framer-plugin
 
+      - name: Detect Zephyr UART TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              for ifn in $path/*:*; do
+                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
+                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Bootstrap Sequence Number over UART
+        run: |
+          # DIVIDER_PRM_SET and lora.TRANSMIT both pass through the authentication
+          # router and require the GDS-side sequence number to match FSW. On a
+          # fresh boot the seq number is unsynced, so the LoRa bootstrap commands
+          # would silently fail auth and never enable the radio. Run the sync
+          # test over UART first to align the local sequence_number.bin used by
+          # the framer plugin, then the LoRa GDS that follows can authenticate.
+          # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
+          # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
+          pkill -9 python || true
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          # Wait briefly for GDS to bind sockets
+          sleep 5
+          make test-integration FILTER=sync_sequence_number
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
       - name: Detect LoRa Passthrough TTY
         run: |
           # Find the non-Zephyr USB device's CDC data interface (CircuitPython
