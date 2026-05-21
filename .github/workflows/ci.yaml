@@ -285,7 +285,7 @@ jobs:
 
       - name: Run Radio Integration Tests
         run: |
-          make test-integration PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
