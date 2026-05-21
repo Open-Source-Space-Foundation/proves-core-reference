@@ -47,12 +47,15 @@ def start_gds(
 
 
 def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
-    fprime_test_api.send_command(
-        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
-    )
+    # Divider must be set while TRANSMIT is DISABLED — radio parameter changes are latched on enable.
+    # Setting it after enable leaves the default divider (300) active, producing a ~30s downlink gap
+    # that exceeds the test sequence-search timeout.
     fprime_test_api.send_command(
         command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
         args=[20],
+    )
+    fprime_test_api.send_command(
+        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
     )
 
 
