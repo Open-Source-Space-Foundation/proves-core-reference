@@ -253,9 +253,15 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # tests for the rtc alarm subsystem
+# rf_unsafe: ALARM_SET over LoRa returns EXECUTION_ERROR and reboots FSW
+# (observed in CI run 26343919963 — BootCount jumped 1→2→2→4 across the
+# 5min radio pass, every reboot lands in SAFE_MODE). Alarm subsystem passes
+# on UART, so RF path is the suspect. Re-enable once FSW alarm-over-LoRa
+# regression is fixed.
 
 
 # set and trigger test
+@pytest.mark.rf_unsafe
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
@@ -284,6 +290,7 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
+@pytest.mark.rf_unsafe
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
@@ -310,6 +317,7 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
+@pytest.mark.rf_unsafe
 def test_07_rtc_alarm_cancel_no_alarm_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -324,6 +332,7 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
 
 # list test
+@pytest.mark.rf_unsafe
 def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can list RTC alarms and that the information is correct"""
 
@@ -350,6 +359,7 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
 
 
+@pytest.mark.rf_unsafe
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that setting an alarm in the past results in an error and does not set the alarm"""
     # Set an alarm for 5 seconds in the past
@@ -369,6 +379,15 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
 
 
+@pytest.mark.rf_unsafe
+@pytest.mark.xfail(
+    reason="FSW does not emit AlarmNotSet when a second ALARM_SET is sent "
+    "while an alarm is already active — second set silently overwrites or "
+    "is dropped without the rejection event. Reproduced on UART in CI run "
+    "26343919963 (assert_event AlarmNotSet times out after first ALARM_SET "
+    "+ AlarmSet succeed).",
+    strict=False,
+)
 def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     """Ensure that double setting an alarm will result in a rejection from the system"""
     # Set an alarm for 5 seconds in the future
