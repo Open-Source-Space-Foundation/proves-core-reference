@@ -21,6 +21,24 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Enable radio setup and teardown fixtures for this test run.",
     )
+    parser.addoption(
+        "--command-retries",
+        type=int,
+        default=None,
+        help="Override retry count for proves_send_and_assert_command (default: 3 UART, 5 radio).",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    explicit = config.getoption("--command-retries", default=None)
+    if explicit is not None:
+        from common import set_default_retries
+
+        set_default_retries(explicit)
+    elif config.getoption("--with-radio", default=False):
+        from common import set_default_retries
+
+        set_default_retries(5)
 
 
 @pytest.fixture(scope="session")
