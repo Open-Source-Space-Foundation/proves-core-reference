@@ -325,17 +325,32 @@ jobs:
           done
 
       - name: Sync Sequence Number
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_sync.csv
         run: |
           make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
 
       - name: Run Radio Integration Tests
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
           make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only and not rf_unsafe" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_format.csv
         run: |
           make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
+
+      - name: Upload telemetry sample logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radio-tlm-samples
+          path: tlm_sample_*.csv
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Kill GDS & Power Off Satellite
         if: always()

@@ -4,6 +4,9 @@ conftest.py:
 Pytest configuration for integration tests.
 """
 
+import csv
+import os
+import threading
 import time
 
 import pytest
@@ -120,3 +123,55 @@ def stop_radio(
     fprime_test_api_session.send_command(
         command="ReferenceDeployment.lora.TRANSMIT", args=["DISABLED"]
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def tlm_sampler(
+    request: pytest.FixtureRequest,
+    fprime_test_api_session: IntegrationTestAPI,
+):
+    """Background sampler: log every telemetry update arriving on the radio link
+    to a CSV. Lets us correlate link degradation against FSW-side counters
+    (cmdDisp.CommandsDispatched/Dropped, lora.BytesSent/LastRssi, comQueue
+    depth, etc). Only runs when --with-radio is set. File path overridable
+    via TLM_SAMPLE_LOG env var (default: tlm_sample.csv in cwd).
+    """
+    if not request.config.getoption("--with-radio"):
+        yield
+        return
+
+    log_path = os.environ.get("TLM_SAMPLE_LOG", "tlm_sample.csv")
+    subhist = fprime_test_api_session.get_telemetry_subhistory()
+    stop = threading.Event()
+
+    def sample_loop():
+        with open(log_path, "w", buffering=1) as fh:
+            w = csv.writer(fh)
+            w.writerow(["wall_ts", "channel", "value", "fsw_time"])
+            while not stop.is_set():
+                try:
+                    for item in subhist.retrieve_new():
+                        tmpl = item.get_template()
+                        name = (
+                            tmpl.get_full_name()
+                            if hasattr(tmpl, "get_full_name")
+                            else getattr(tmpl, "name", "?")
+                        )
+                        w.writerow(
+                            [
+                                f"{time.time():.3f}",
+                                name,
+                                item.get_val(),
+                                str(item.get_time()),
+                            ]
+                        )
+                except Exception as e:
+                    w.writerow([f"{time.time():.3f}", "SAMPLER_ERROR", str(e), ""])
+                stop.wait(1.0)
+
+    t = threading.Thread(target=sample_loop, name="tlm_sampler", daemon=True)
+    t.start()
+    yield
+    stop.set()
+    t.join(timeout=3)
+    fprime_test_api_session.remove_telemetry_subhistory(subhist)
