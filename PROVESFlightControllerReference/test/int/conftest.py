@@ -7,7 +7,7 @@ Pytest configuration for integration tests.
 import time
 
 import pytest
-from common import cmdDispatch, proves_send_and_assert_command
+from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
@@ -50,15 +50,16 @@ def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
     # Divider must be set while TRANSMIT is DISABLED — radio parameter changes are latched on enable.
     # Setting it after enable leaves the default divider (300) active, producing a ~30s downlink gap
     # that exceeds the test sequence-search timeout.
-    proves_send_and_assert_command(
-        fprime_test_api,
-        "ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
-        [20],
+    # Fire-and-forget (no per-call retry): start_gds wraps this in its own 30s
+    # retry budget around a follow-up NO_OP liveness check. Wrapping each send
+    # in proves_send_and_assert_command (3x10s) consumes that whole budget on
+    # the first attempt and prevents start_gds from ever retrying.
+    fprime_test_api.send_command(
+        command="ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET",
+        args=[20],
     )
-    proves_send_and_assert_command(
-        fprime_test_api,
-        "ReferenceDeployment.lora.TRANSMIT",
-        ["ENABLED"],
+    fprime_test_api.send_command(
+        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
     )
 
 
