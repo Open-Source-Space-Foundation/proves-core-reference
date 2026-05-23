@@ -72,6 +72,39 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
     _enable_radio(fprime_test_api)
 
 
+@pytest.fixture(autouse=True)
+def recover_from_safe_mode(
+    request: pytest.FixtureRequest,
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+):
+    """Best-effort: after each test, if FSW slipped into SAFE_MODE (e.g. low
+    voltage brownout from a burnwire-heavy test, or a partial file upload
+    triggering SafeModeSequenceFailed), send EXIT_SAFE_MODE so the next test
+    doesn't inherit the broken state. Only runs in the radio pass — UART
+    tests that exercise mode transitions handle their own cleanup.
+    """
+    yield
+    if not request.config.getoption("--with-radio"):
+        return
+    try:
+        fprime_test_api.clear_histories()
+        fprime_test_api.send_and_assert_command(
+            "ReferenceDeployment.modeManager.GET_CURRENT_MODE",
+            timeout=5,
+            max_delay=5,
+        )
+        evt = fprime_test_api.await_event(
+            "ReferenceDeployment.modeManager.CurrentModeReading", timeout=2
+        )
+        if evt is not None and "SAFE_MODE" in str(evt.args[0].val).upper():
+            fprime_test_api.send_command(
+                "ReferenceDeployment.modeManager.EXIT_SAFE_MODE"
+            )
+    except Exception:
+        pass
+
+
 @pytest.fixture(scope="session", autouse=True)
 def stop_radio(
     request: pytest.FixtureRequest, fprime_test_api_session: IntegrationTestAPI
