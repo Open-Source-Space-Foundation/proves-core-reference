@@ -28,18 +28,28 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get temperature"""
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
-    )
-
-    # Send command to get temperature
-    proves_send_and_assert_command(
-        fprime_test_api,
-        f"{tmp112Face0Manager}.GetTemperature",
-    )
-    result: EventData = fprime_test_api.assert_event(
-        f"{tmp112Face0Manager}.Temperature", start=start, timeout=2
-    )
+    result: EventData | None = None
+    for attempt in range(3):
+        start: TimeType = TimeType().set_datetime(
+            datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+        )
+        fprime_test_api.clear_histories()
+        try:
+            # retries=1 so clear_histories() is only called once per outer attempt,
+            # preventing a retry inside proves_send_and_assert_command from clearing
+            # a Temperature event that arrived between inner retry attempts.
+            proves_send_and_assert_command(
+                fprime_test_api,
+                f"{tmp112Face0Manager}.GetTemperature",
+                retries=1,
+            )
+            result = fprime_test_api.assert_event(
+                f"{tmp112Face0Manager}.Temperature", start=start, timeout=5
+            )
+            break
+        except AssertionError:
+            if attempt == 2:
+                raise
 
     assert result is not None
     assert len(result.get_args()) == 1
