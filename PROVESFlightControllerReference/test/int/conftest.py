@@ -13,6 +13,12 @@ import pytest
 from common import cmdDispatch
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+# After TRANSMIT is first enabled the satellite flushes the event backlog that
+# accumulated during boot (while transmit was DISABLED).  Wait this many seconds
+# for the burst to subside before clearing histories and starting tests, so that
+# command-ack events are not lost in the initial flood.
+RADIO_STABILIZE_S = 15
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
@@ -63,6 +69,13 @@ def start_gds(
         except Exception:
             time.sleep(1)
     assert gds_working
+
+    if request.config.getoption("--with-radio"):
+        # Allow the boot-time event backlog to drain before any test commands
+        # are issued.  Without this wait the initial burst of queued events can
+        # swamp command-ack events and cause the first test assertions to fail.
+        time.sleep(RADIO_STABILIZE_S)
+        fprime_test_api_session.clear_histories()
 
     yield
 
