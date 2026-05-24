@@ -13,8 +13,9 @@ from fprime_gds.common.testing_fw.predicates import event_predicate
 
 # Fibonacci backoff base values (seconds) indexed by attempt number (0-based).
 # Used by proves_send_and_assert_command to spread retries across time and
-# reduce half-duplex collisions on the LoRa radio link.
-_FIB_BACKOFF = [1, 1, 2, 3, 5, 8, 13]
+# reduce half-duplex collisions on the LoRa radio link.  Exported so that
+# test modules with their own outer retry loops can reference the same sequence.
+FIB_BACKOFF = [1, 1, 2, 3, 5, 8, 13]
 
 cmdDispatch = "CdhCore.cmdDisp"
 
@@ -67,6 +68,6 @@ def proves_send_and_assert_command(
             # downlink.  Retrying immediately can repeatedly collide with the
             # same downlink burst.  Spreading retries across Fibonacci-scaled
             # intervals with random jitter reduces collision probability.
-            base = _FIB_BACKOFF[min(attempt, len(_FIB_BACKOFF) - 1)]
+            base = FIB_BACKOFF[min(attempt, len(FIB_BACKOFF) - 1)]
             delay = base * random.uniform(0.5, 1.5)
             time.sleep(delay)

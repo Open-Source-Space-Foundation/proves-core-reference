@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 
 import pytest
-from common import proves_send_and_assert_command
+from common import FIB_BACKOFF, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
@@ -56,7 +56,7 @@ def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
             # Mirrors the backoff in proves_send_and_assert_command; the inner
             # call uses retries=1 (no inner retry), so the outer loop must
             # provide its own inter-attempt delay.
-            _fib = [1, 1, 2]
+            _fib = FIB_BACKOFF
             base = _fib[min(attempt, len(_fib) - 1)]
             time.sleep(base * random.uniform(0.5, 1.5))
 
