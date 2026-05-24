@@ -5,8 +5,16 @@ This module provides a functions and constants shared by
 integration tests for PROVES microcontroller hardware.
 """
 
+import random
+import time
+
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
+
+# Fibonacci backoff base values (seconds) indexed by attempt number (0-based).
+# Used by proves_send_and_assert_command to spread retries across time and
+# reduce half-duplex collisions on the LoRa radio link.
+_FIB_BACKOFF = [1, 1, 2, 3, 5, 8, 13]
 
 cmdDispatch = "CdhCore.cmdDisp"
 
@@ -53,3 +61,12 @@ def proves_send_and_assert_command(
         except AssertionError:
             if attempt == attempts - 1:
                 raise
+            # Fibonacci backoff with ±50% jitter before the next retry.
+            # The LoRa radio link is half-duplex: the satellite cannot receive
+            # an uplink command while it is transmitting events/telemetry
+            # downlink.  Retrying immediately can repeatedly collide with the
+            # same downlink burst.  Spreading retries across Fibonacci-scaled
+            # intervals with random jitter reduces collision probability.
+            base = _FIB_BACKOFF[min(attempt, len(_FIB_BACKOFF) - 1)]
+            delay = base * random.uniform(0.5, 1.5)
+            time.sleep(delay)

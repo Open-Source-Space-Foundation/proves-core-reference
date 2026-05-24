@@ -4,6 +4,8 @@ tmp112_test.py:
 Integration tests for the TMP112 Manager component.
 """
 
+import random
+import time
 from datetime import datetime
 
 import pytest
@@ -50,6 +52,13 @@ def test_01_get_temperature(fprime_test_api: IntegrationTestAPI, start_gds):
         except AssertionError:
             if attempt == 2:
                 raise
+            # Fibonacci backoff with ±50% jitter before the next outer attempt.
+            # Mirrors the backoff in proves_send_and_assert_command; the inner
+            # call uses retries=1 (no inner retry), so the outer loop must
+            # provide its own inter-attempt delay.
+            _fib = [1, 1, 2]
+            base = _fib[min(attempt, len(_fib) - 1)]
+            time.sleep(base * random.uniform(0.5, 1.5))
 
     assert result is not None
     assert len(result.get_args()) == 1
