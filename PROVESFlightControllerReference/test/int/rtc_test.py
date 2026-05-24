@@ -99,9 +99,13 @@ def uplink_sequence_and_await_completion(
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
 
-    # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
-    curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
-    set_time(fprime_test_api, curiosity_landing)
+    # Use a recent past time (12h ago) rather than a historical date.
+    # Setting the RTC far in the past (e.g. 2012) causes a false CommandLossFound
+    # when set_now_time teardown resets to current UTC: AuthRouter stamps
+    # command_loss_start with the old RTC value before RtcManager processes
+    # the reset command, producing an elapsed gap >> COMM_LOSS_TIME (3 days).
+    reference_time = datetime.now(timezone.utc) - timedelta(hours=12)
+    set_time(fprime_test_api, reference_time)
 
     # Fetch event data
     result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
@@ -125,8 +129,8 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     # Assert previously set time is within 30 seconds of now
     pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
 
-    # Assert event time is within 30 seconds of curiosity landing
-    pytest.approx(event_time, abs=30) == curiosity_landing
+    # Assert event time is within 30 seconds of reference_time
+    pytest.approx(event_time, abs=30) == reference_time
 
     # Fetch event data
     result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
