@@ -473,6 +473,20 @@ jobs:
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
 
+  integration:
+    runs-on: ubuntu-latest
+    needs: [integration-uart, integration-radio]
+    if: always()
+    steps:
+      - name: Check integration results
+        run: |
+          uart="${{ needs.integration-uart.result }}"
+          radio="${{ needs.integration-radio.result }}"
+          echo "integration-uart: $uart"
+          echo "integration-radio: $radio"
+          if [[ "$uart" != "success" && "$uart" != "skipped" ]]; then exit 1; fi
+          if [[ "$radio" != "success" && "$radio" != "skipped" && "$radio" != "cancelled" ]]; then exit 1; fi
+
   yamcs-build:
     runs-on: ubuntu-latest
     needs: build
