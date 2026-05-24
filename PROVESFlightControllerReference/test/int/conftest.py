@@ -20,6 +20,24 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 RADIO_STABILIZE_S = 15
 
 
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """When running with --with-radio, move RTC tests to the end of the collection.
+
+    The RTC tests mutate the system clock (TIME_SET to -12 h from now) and the
+    teardown resets it to current UTC.  Running the RTC tests last prevents the
+    temporary clock change from racing with the test that immediately follows
+    alphabetically (TMP112), which is otherwise flaky on the radio path.
+    """
+    if not config.getoption("--with-radio", default=False):
+        return
+
+    rtc_items = [i for i in items if "rtc_test" in i.nodeid]
+    non_rtc_items = [i for i in items if "rtc_test" not in i.nodeid]
+    items[:] = non_rtc_items + rtc_items
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--with-radio",
