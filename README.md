@@ -10,6 +10,7 @@ This is a reference software implementation for the [PROVES Kit](https://docs.pr
 - F Prime System Requirements listed [here](https://fprime.jpl.nasa.gov/latest/docs/getting-started/installing-fprime/#system-requirements)
 - Zephyr dependencies listed [here](https://docs.zephyrproject.org/latest/develop/getting_started/index.html#install-dependencies) (NOTE: Only complete the install dependencies step, as we run through the rest of the steps in this readme.)
 - [UV](https://docs.astral.sh/uv/getting-started/installation/) needs to be globally installed on your system.
+- To flash the Nicla Vision you want to have [dfu-util installed]. (https://dfu-util.sourceforge.net/)
 
 ## Installation
 
