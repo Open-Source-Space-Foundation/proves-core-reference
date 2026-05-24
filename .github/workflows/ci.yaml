@@ -194,7 +194,9 @@ jobs:
   integration-radio:
     runs-on:
       - integration
-    needs: build
+    needs:
+      - build
+      - integration-uart
     steps:
       - uses: actions/checkout@v6
 
