@@ -130,7 +130,7 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 
 # Default -r dfu-util = USB only (Arduino bootloader after double-tap RST). Override RUNNER if you use SWD.
 .PHONY: flash
-flash: fprime-venv ## USB DFU (install dfu-util; double-tap RST). Optional RUNNER=jlink openocd blackmagicprobe
+flash: fprime-venv ## USB DFU (install dfu-util; bee in bootloader mode first!!!!!!!!!)
 	@test -d "$(BUILD_DIR)" || { echo "No build at $(BUILD_DIR). Run make build first."; exit 1; }
 	@$(WEST) flash -d "$(BUILD_DIR)" -r $(if $(RUNNER),$(RUNNER),dfu-util)
 
