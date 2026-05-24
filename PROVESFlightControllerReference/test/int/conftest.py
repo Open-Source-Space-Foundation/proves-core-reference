@@ -10,7 +10,7 @@ import threading
 import time
 
 import pytest
-from common import cmdDispatch
+from common import cmdDispatch, set_radio_recover_fn
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # After TRANSMIT is first enabled the satellite flushes the event backlog that
@@ -122,6 +122,11 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
         return
 
     _enable_radio(fprime_test_api)
+
+    # Register the link recovery callback so that proves_send_and_assert_command
+    # can re-enable TRANSMIT after RADIO_RECOVER_THRESHOLD consecutive failures.
+    # The lambda captures fprime_test_api for this test's function scope.
+    set_radio_recover_fn(lambda: _enable_radio(fprime_test_api))
 
 
 @pytest.fixture(autouse=True)
