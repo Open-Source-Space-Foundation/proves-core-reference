@@ -7,6 +7,7 @@ integration tests for PROVES microcontroller hardware.
 
 import random
 import time
+from collections.abc import Callable
 
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
@@ -31,7 +32,7 @@ RADIO_RECOVER_THRESHOLD = 3
 # Callable registered by conftest when --with-radio is active.  Invoked inside
 # proves_send_and_assert_command every RADIO_RECOVER_THRESHOLD failures to
 # re-send TRANSMIT ENABLED and restore the RF downlink.
-_radio_recover_fn = None
+_radio_recover_fn: Callable[[], None] | None = None
 
 
 def set_default_retries(n: int) -> None:
@@ -39,7 +40,7 @@ def set_default_retries(n: int) -> None:
     _DEFAULT_RETRIES = n
 
 
-def set_radio_recover_fn(fn) -> None:
+def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     """Register a callable to re-establish the radio link.
 
     When ``--with-radio`` is active, ``conftest`` registers a function that
