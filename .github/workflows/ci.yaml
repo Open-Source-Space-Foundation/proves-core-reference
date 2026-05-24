@@ -100,7 +100,8 @@ jobs:
             mcuboot.elf
             bootable.uf2
             bootable.signed.hex
-            build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+            build-artifacts/zephyr/fprime-zephyr-deployment
+            yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
   integration:
@@ -118,11 +119,22 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: artifacts
 
       - name: Set up dependencies
         run: |
           make submodules fprime-venv
+
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          # The build job ran `make-ci-spacecraft-id` before compiling the
+          # FSW, so the hex flashed onto the board emits TM frames with
+          # SCID 67. The integration runner's working tree is a fresh
+          # checkout (default SCID 68) so we re-apply the same override
+          # here to keep the YAMCS instance config / adapter in sync.
+          make make-ci-spacecraft-id
 
       - name: Set Authentication Key
         run: |
@@ -245,5 +257,138 @@ jobs:
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
-          kill $(cat server.pid)
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          kill $(cat server.pid) || true
+          # Make sure nothing is still holding /dev/ttyBOARD before YAMCS adapter
+          # tries to open it. pkill -f sometimes misses GDS child processes
+          # (e.g. fprime_gds.executables.run_deployment), so also force-evict
+          # anyone with an open fd on the tty itself.
+          pkill -f fprime-gds || true
+          pkill -f fprime_gds || true
+          pkill -f gds-integration || true
+          pkill -f proves_adapter || true
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
+          sleep 2
+          echo "Holders of /dev/ttyBOARD after kill (should be empty):"
+          lsof /dev/ttyBOARD || true
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Set up Java 17 for YAMCS
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Start YAMCS Stack
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          # SPACECRAFT_ID=67 matches the override applied by `make
+          # make-ci-spacecraft-id` in the build job so the adapter syncs on
+          # the same TM frame header the FSW is emitting.
+          #
+          # setsid puts `make yamcs` in its own process group so teardown
+          # can signal the whole group (JVM, fprime-yamcs-events,
+          # proves_adapter.py) — killing the wrapper PID alone would orphan
+          # the long-lived children and leak /dev/ttyBOARD between jobs.
+          setsid bash -c 'PYTHONUNBUFFERED=1 exec make yamcs UART_DEVICE=/dev/ttyBOARD SPACECRAFT_ID=67' > yamcs.log 2>&1 &
+          pgid=$!
+          echo "$pgid" > yamcs.pid
+
+      - name: Wait for YAMCS HTTP API
+        run: |
+          for i in $(seq 1 180); do
+            if curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; then
+              echo "YAMCS up after ${i}s"
+              break
+            fi
+            sleep 1
+            if [ $i -eq 180 ]; then
+              echo "ERROR: YAMCS did not respond on :8090 within 180s"
+              tail -200 yamcs.log || true
+              exit 1
+            fi
+          done
+
+      - name: Wait for fprime-yamcs-events bridge subscribe
+        run: |
+          # Fuzzy match — readiness signal is emitted by fprime-yamcs-events
+          # at startup; pattern is loose so capitalization / punctuation
+          # tweaks upstream don't silently fail this gate.
+          for i in $(seq 1 60); do
+            if grep -iqE 'subscrib.*tm_realtime' yamcs.log 2>/dev/null; then
+              echo "Events bridge subscribed after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: fprime-yamcs-events bridge did not subscribe within 60s"
+          tail -200 yamcs.log || true
+          exit 1
+
+      - name: Run YAMCS Round-Trip Test
+        run: |
+          make test-yamcs
+
+      - name: Dump YAMCS log on failure
+        if: failure()
+        run: |
+          echo "===== yamcs.log (tail 1500) ====="
+          tail -1500 yamcs.log || true
+          echo "===== lsof /dev/ttyBOARD ====="
+          lsof /dev/ttyBOARD || true
+
+      - name: Stop YAMCS Stack
+        if: always()
+        run: |
+          # yamcs.pid contains the process-group leader PID from `setsid`,
+          # so kill the whole group to take JVM/events/adapter children with it.
+          pgid=$(cat yamcs.pid 2>/dev/null || true)
+          if [ -n "$pgid" ]; then
+            kill -TERM -- "-$pgid" 2>/dev/null || true
+            sleep 2
+            kill -KILL -- "-$pgid" 2>/dev/null || true
+          fi
+          make yamcs-stop || true
+
+      - name: Upload YAMCS log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamcs-log
+          path: yamcs.log
+          retention-days: 7
+
+  yamcs-build:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: artifacts
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Validate YAMCS server boots with current MDB
+        run: |
+          make yamcs-build-check
+
+      - name: Capture compose state on failure
+        if: failure()
+        run: |
+          docker compose -f yamcs/docker-compose.yml ps > yamcs-compose-ps.txt 2>&1 || true
+          docker compose -f yamcs/docker-compose.yml logs --tail=500 > yamcs-compose-logs.txt 2>&1 || true
+
+      - name: Upload compose state on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamcs-build-compose-state
+          path: |
+            yamcs-compose-ps.txt
+            yamcs-compose-logs.txt
+          retention-days: 7
