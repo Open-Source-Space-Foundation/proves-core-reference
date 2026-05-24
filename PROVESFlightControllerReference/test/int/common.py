@@ -93,7 +93,10 @@ def proves_send_and_assert_command(
             # the next test's first command attempt.  Calling the recovery
             # function (registered by conftest when --with-radio is active)
             # re-sends TRANSMIT ENABLED so the link is live for the next try.
-            if _radio_recover_fn is not None and (attempt + 1) % RADIO_RECOVER_THRESHOLD == 0:
+            if (
+                _radio_recover_fn is not None
+                and (attempt + 1) % RADIO_RECOVER_THRESHOLD == 0
+            ):
                 _radio_recover_fn()
             # Fibonacci backoff with ±50% jitter before the next retry.
             # The LoRa radio link is half-duplex: the satellite cannot receive
