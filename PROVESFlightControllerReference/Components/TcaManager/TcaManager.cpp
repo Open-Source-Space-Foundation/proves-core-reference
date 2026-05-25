@@ -24,8 +24,8 @@ TcaManager ::~TcaManager() {}
 
 void TcaManager ::tcaError_handler(FwIndexType portNum) {
     // Toggle the mux reset to attempt to recover from the TCA error
-    this->muxReset_out(0, Fw::Logic::HIGH);
     this->muxReset_out(0, Fw::Logic::LOW);
+    this->muxReset_out(0, Fw::Logic::HIGH);
 
     // Report tcaManager started
     // this->log_ACTIVITY_HI_MuxResetToggled();
