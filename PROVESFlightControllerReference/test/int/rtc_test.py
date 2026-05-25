@@ -274,11 +274,13 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
 
     # Assert that we receive an AlarmTriggered event within 10 seconds
-    fprime_test_api.await_event(f"{rtcManager}.AlarmTriggered", timeout=10)
+    fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmTriggered", start="NOW", timeout=10
+    )
 
     # make sure the alarm is gone
     fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
-    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start="NOW", timeout=10)
 
 
 # cancellation test
@@ -304,7 +306,9 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
     # Cancel the alarm immediately
     fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL")
 
-    fprime_test_api.await_event(f"{rtcManager}.AlarmTriggered", timeout=10)
+    fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmTriggered", start="NOW", timeout=10
+    )
 
 
 # validation test
@@ -318,7 +322,9 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
     # validate that cancel doesn't work without an alarm being present
     fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
-    fprime_test_api.await_event(f"{rtcManager}.AlarmNotCanceled", timeout=10)
+    fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmNotCanceled", start="NOW", timeout=10
+    )
 
 
 # list test
@@ -329,7 +335,7 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.clear_histories()
 
     fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
-    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start="NOW", timeout=10)
 
     # Set an alarm for 5 seconds in the future
     alarm_time = datetime.now(timezone.utc) + timedelta(seconds=5)
@@ -345,7 +351,7 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
 
     fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
-    fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", start="NOW", timeout=10)
 
 
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -364,7 +370,7 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
 
     # Assert that we receive an AlarmNotSet event within 10 seconds
-    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start="NOW", timeout=10)
 
 
 def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -382,11 +388,11 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     alarm_time_data_str = json.dumps(alarm_time_data)
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmSet event within 10 seconds
-    fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", start="NOW", timeout=10)
 
     # Double set the alarm
     alarm_time = datetime.now(timezone.utc) + timedelta(seconds=5)
     alarm_time_data_str = json.dumps(alarm_time_data)
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmNotSet event within 10 seconds
-    fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start="NOW", timeout=10)
