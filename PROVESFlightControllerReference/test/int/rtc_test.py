@@ -214,6 +214,7 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.rf_unsafe
 def test_04_sequence_cancellation_on_time_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
