@@ -25,6 +25,7 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     time.sleep(5)  # Wait for the camera to power on
 
 
+@pytest.mark.skip(reason="Temporary Skip Due to Lack of Camera in CI Environment")
 def test_01_take_image(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can take an image"""
     start: TimeType = TimeType().set_datetime(
