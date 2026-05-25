@@ -40,8 +40,6 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 logger = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.rf_unsafe]
-
 component = "ReferenceDeployment.modeManager"
 
 # Voltage thresholds (must match ModeManager.hpp constants)
