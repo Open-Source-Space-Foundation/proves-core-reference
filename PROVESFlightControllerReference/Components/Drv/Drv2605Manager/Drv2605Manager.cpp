@@ -63,6 +63,7 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
 
 Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
     if (!this->initializeDevice()) {
+        this->tcaError_out(0);
         return Fw::Success::FAILURE;
     }
 
@@ -73,6 +74,7 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
 
     int rc = drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data);
     if (rc < 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_DeviceHapticConfigSetFailed(rc);
         return Fw::Success::FAILURE;
     }
@@ -80,6 +82,7 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
     // Start the magnetorquer
     rc = haptics_start_output(this->m_dev);
     if (rc < 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_TriggerFailed(rc);
         return Fw::Success::FAILURE;
     }

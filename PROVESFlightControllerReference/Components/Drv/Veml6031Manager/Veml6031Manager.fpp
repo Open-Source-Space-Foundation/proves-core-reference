@@ -61,6 +61,9 @@ module Drv {
         @ Port to initialize and deinitialize the device on load switch state change
         sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
+        @ Port to indicate a TCA error has occurred
+        output port tcaError: Fw.Signal
+
         #### Events ####
 
         @ Event for reporting not ready error

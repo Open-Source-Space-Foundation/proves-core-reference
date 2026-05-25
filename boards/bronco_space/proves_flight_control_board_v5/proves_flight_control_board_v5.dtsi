@@ -593,6 +593,12 @@ zephyr_udc0: &usbd {
             label = "FACE4_ENABLE";
         };
 
+		mux_reset: mux-reset {
+
+			gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+			label = "MUX_RESET";
+		};
+
         enable_heater: enable-heater {
 
             gpios = <&mcp23017 0 GPIO_ACTIVE_HIGH>;  // GPA0

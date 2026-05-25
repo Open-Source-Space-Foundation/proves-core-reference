@@ -55,11 +55,13 @@ F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
+        this->tcaError_out(0);
         return 0;
     }
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP);
     if (rc != 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
@@ -68,6 +70,7 @@ F64 Tmp112Manager ::temperatureGet_handler(FwIndexType portNum, Fw::Success& con
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
     if (rc != 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0;
     }

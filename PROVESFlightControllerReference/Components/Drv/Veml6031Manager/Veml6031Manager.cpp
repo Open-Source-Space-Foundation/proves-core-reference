@@ -54,6 +54,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
     condition = Fw::Success::FAILURE;
 
     if (!this->initializeDevice()) {
+        this->tcaError_out(0);
         return 0;
     }
 
@@ -61,6 +62,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
 
     int rc = sensor_sample_fetch_chan(this->m_dev, SENSOR_CHAN_LIGHT);
     if (rc != 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_SensorSampleFetchFailed(rc);
         return 0;
     }
@@ -69,6 +71,7 @@ F32 Veml6031Manager ::visibleLightGet_handler(FwIndexType portNum, Fw::Success& 
     struct sensor_value val;
     rc = sensor_channel_get(this->m_dev, SENSOR_CHAN_LIGHT, &val);
     if (rc != 0) {
+        this->tcaError_out(0);
         this->log_WARNING_LO_SensorChannelGetFailed(rc);
         return 0;
     }

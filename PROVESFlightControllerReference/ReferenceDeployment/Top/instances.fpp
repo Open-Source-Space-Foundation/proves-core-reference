@@ -180,6 +180,10 @@ module ReferenceDeployment {
 
   instance startupManager: Components.StartupManager base id 0x1003B000
 
+  instance muxReset: Zephyr.ZephyrGpioDriver base id 0x1003C000
+
+  instance tcaManager: Components.TcaManager base id 0x1003D000
+
   instance amateurRadio: Components.AmateurRadio base id 0x10065000
 
   # Thermal Management System

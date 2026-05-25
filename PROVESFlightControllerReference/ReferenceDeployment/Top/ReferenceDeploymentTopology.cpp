@@ -23,6 +23,7 @@ static const struct gpio_dt_spec face2LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODEL
 static const struct gpio_dt_spec face3LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face3_enable), gpios);
 static const struct gpio_dt_spec face4LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face4_enable), gpios);
 static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(face5_enable), gpios);
+static const struct gpio_dt_spec muxResetGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(mux_reset), gpios);
 static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
 static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
     GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
@@ -87,6 +88,7 @@ void configureTopology() {
     gpioface2LS.open(face2LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface3LS.open(face3LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface5LS.open(face5LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    muxReset.open(muxResetGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadPowerLS.open(payloadPowerLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadBatteryLS.open(payloadBatteryLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     //    gpioSbandNrst.open(sbandNrstGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);

@@ -70,6 +70,8 @@ module ReferenceDeployment {
     instance face2LoadSwitch
     instance face3LoadSwitch
     instance face5LoadSwitch
+    instance tcaManager
+    instance muxReset
     instance payloadPowerLoadSwitch
     instance payloadBatteryLoadSwitch
     instance fsFormat
@@ -291,6 +293,28 @@ module ReferenceDeployment {
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
       ComCcsdsLora.authenticationRouter.reset_watchdog -> watchdog.stop
+    }
+
+    connections TcaManager {
+      tcaManager.muxReset -> muxReset.gpioWrite
+
+      tmp112Face0Manager.tcaError -> tcaManager.tcaError
+      tmp112Face1Manager.tcaError -> tcaManager.tcaError
+      tmp112Face2Manager.tcaError -> tcaManager.tcaError
+      tmp112Face3Manager.tcaError -> tcaManager.tcaError
+      tmp112Face5Manager.tcaError -> tcaManager.tcaError
+
+      veml6031Face0Manager.tcaError -> tcaManager.tcaError
+      veml6031Face1Manager.tcaError -> tcaManager.tcaError
+      veml6031Face2Manager.tcaError -> tcaManager.tcaError
+      veml6031Face3Manager.tcaError -> tcaManager.tcaError
+      veml6031Face5Manager.tcaError -> tcaManager.tcaError
+
+      drv2605Face0Manager.tcaError -> tcaManager.tcaError
+      drv2605Face1Manager.tcaError -> tcaManager.tcaError
+      drv2605Face2Manager.tcaError -> tcaManager.tcaError
+      drv2605Face3Manager.tcaError -> tcaManager.tcaError
+      drv2605Face5Manager.tcaError -> tcaManager.tcaError
     }
 
     connections LoadSwitches {
