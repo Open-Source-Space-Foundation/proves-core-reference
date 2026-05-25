@@ -259,6 +259,7 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # set and trigger test
+@pytest.mark.rf_unsafe
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
@@ -287,6 +288,7 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
+@pytest.mark.rf_unsafe
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
