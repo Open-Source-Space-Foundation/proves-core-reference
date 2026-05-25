@@ -214,7 +214,6 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
-@pytest.mark.rf_unsafe
 def test_04_sequence_cancellation_on_time_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -237,22 +236,16 @@ def test_04_sequence_cancellation_on_time_set(
     # Clear histories
     fprime_test_api.clear_histories()
 
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
-    )
-
     # Set the RTC time - this should trigger sequence cancellation
-    curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
-    set_time(fprime_test_api, curiosity_landing)
+    reference_time = datetime.now(timezone.utc) - timedelta(hours=12)
+    set_time(fprime_test_api, reference_time)
 
     # Assert that we see CS_SequenceCanceled
-    fprime_test_api.await_event(
-        fprime_test_api.get_event_pred(f"{cmdSeq}.CS_SequenceCanceled"),
-        start=start,
+    fprime_test_api.assert_event(
+        fprime_test_api.get_event_pred(f"{cmdSeq}.CS_SequenceCanceled"), timeout=10
     )
-    fprime_test_api.await_event(
-        fprime_test_api.get_event_pred(f"{payloadSeq}.CS_SequenceCanceled"),
-        start=start,
+    fprime_test_api.assert_event(
+        fprime_test_api.get_event_pred(f"{payloadSeq}.CS_SequenceCanceled"), timeout=10
     )
 
 
@@ -265,7 +258,6 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # set and trigger test
-@pytest.mark.rf_unsafe
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
@@ -294,7 +286,6 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
-@pytest.mark.rf_unsafe
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
@@ -321,7 +312,6 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
-@pytest.mark.rf_unsafe
 def test_07_rtc_alarm_cancel_no_alarm_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -336,7 +326,6 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
 
 # list test
-@pytest.mark.rf_unsafe
 def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can list RTC alarms and that the information is correct"""
 
@@ -363,7 +352,6 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
 
 
-@pytest.mark.rf_unsafe
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that setting an alarm in the past results in an error and does not set the alarm"""
     # Set an alarm for 5 seconds in the past
