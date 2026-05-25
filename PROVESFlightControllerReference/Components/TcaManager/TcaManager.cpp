@@ -28,7 +28,7 @@ void TcaManager ::tcaError_handler(FwIndexType portNum) {
     this->muxReset_out(0, Fw::Logic::LOW);
 
     // Report tcaManager started
-    this->log_ACTIVITY_HI_MuxResetToggled();
+    // this->log_ACTIVITY_HI_MuxResetToggled();
 }
 
 }  // namespace Components

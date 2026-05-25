@@ -303,12 +303,18 @@ module ReferenceDeployment {
       tmp112Face2Manager.tcaError -> tcaManager.tcaError
       tmp112Face3Manager.tcaError -> tcaManager.tcaError
       tmp112Face5Manager.tcaError -> tcaManager.tcaError
+      tmp112BattCell1Manager.tcaError -> tcaManager.tcaError
+      tmp112BattCell2Manager.tcaError -> tcaManager.tcaError
+      tmp112BattCell3Manager.tcaError -> tcaManager.tcaError
+      tmp112BattCell4Manager.tcaError -> tcaManager.tcaError
 
       veml6031Face0Manager.tcaError -> tcaManager.tcaError
       veml6031Face1Manager.tcaError -> tcaManager.tcaError
       veml6031Face2Manager.tcaError -> tcaManager.tcaError
       veml6031Face3Manager.tcaError -> tcaManager.tcaError
       veml6031Face5Manager.tcaError -> tcaManager.tcaError
+      veml6031Face6Manager.tcaError -> tcaManager.tcaError
+      veml6031Face7Manager.tcaError -> tcaManager.tcaError
 
       drv2605Face0Manager.tcaError -> tcaManager.tcaError
       drv2605Face1Manager.tcaError -> tcaManager.tcaError
