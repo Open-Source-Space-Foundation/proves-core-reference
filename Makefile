@@ -225,11 +225,12 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
+FILTER ?= not sync_sequence_number and not format_filesystem
+
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
-	FILTER="not flaky"; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
@@ -237,7 +238,6 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
-		FILTER=""; \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
 				*.py) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$$test" ;; \
@@ -248,7 +248,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
@@ -257,25 +257,6 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
 	@$(UV_RUN) python PROVESFlightControllerReference/test/run_interactive_tests.py $(ARGS)
-
-.PHONY: bootloader
-bootloader: uv
-	@if picotool info ; then \
-		echo "RP2350 already in bootloader mode - skipping trigger"; \
-	else \
-		echo "RP2350 not in bootloader mode - triggering bootloader"; \
-		$(UV_RUN) pytest PROVESFlightControllerReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
-	fi
-
-.PHONY: sync-sequence-number
-sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
-	@echo "Synchronizing sequence number; ensure you have the GDS open."
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
-
-.PHONY: format-filesystem
-format-filesystem: fprime-venv ## Format the filesystem of a connected FC board
-	@echo "Formatting the flight controller's filesystem; ensure you have the GDS open."
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/format_filesystem.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files

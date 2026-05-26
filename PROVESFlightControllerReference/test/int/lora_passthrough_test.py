@@ -22,7 +22,9 @@ READ_WINDOW_S = 20.0
 SETTLE_S = 2.0
 
 
-@pytest.mark.skipif(not PASSTHROUGH_TTY, reason="LORA_PASSTHROUGH_TTY not set")
+@pytest.mark.skip(
+    reason="This test is only needed to debug new CI systems. Re-enable when needed."
+)
 def test_lora_downlink_reaches_passthrough(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):

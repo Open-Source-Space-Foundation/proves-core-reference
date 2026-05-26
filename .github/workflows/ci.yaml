@@ -104,11 +104,21 @@ jobs:
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
-  integration:
+  integration-uart:
     runs-on:
       - integration
     needs: build
     steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do
@@ -116,12 +126,6 @@ jobs:
             [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
-
-      - uses: actions/checkout@v6
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: artifacts
 
       - name: Set up dependencies
         run: |
@@ -139,35 +143,6 @@ jobs:
       - name: Set Authentication Key
         run: |
           echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
-
-        # Reboot before installation to avoid watchdog reset
-      - name: Reboot Integration Cube
-        run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          sleep 3
-
-      - name: Install MCUBoot
-        run: |
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
-          sleep 3
-
-      - name: Install Flight Software
-        run: |
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
-          sleep 3
-
-        # Reboot after installation to ensure power monitor tests work
-      - name: Reboot Integration Cube
-        run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
 
       - name: Install Framer Plugin
         run: |
@@ -198,43 +173,9 @@ jobs:
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
-      - name: Detect LoRa Passthrough TTY
+      - name: Kill all python processes
         run: |
-          # Find the non-Zephyr USB device's CDC data interface (CircuitPython
-          # passthrough board, v5d hardware reused as ground-side LoRa receiver
-          # — not the v5e flight board). Heuristic: skip the Zephyr VID:PID and
-          # prefer interfaces whose iInterface descriptor contains "cdc2" or "data"
-          # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
-          # back to the last seen non-Zephyr CDC ACM tty when no name matches;
-          # the smoke test asserts binary traffic to catch a wrong pick.
-          PASSTHROUGH_TTY=""
-          FALLBACK_TTY=""
-          echo "=== USB CDC ACM candidates (non-Zephyr) ==="
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            [ "$v" = "0028" ] && [ "$p" = "000f" ] && continue
-            path=${d%/idVendor}
-            prod=$(cat "$path/product" 2>/dev/null || echo "?")
-            for ifn in "$path"/*:*; do
-              [ "$(cat "$ifn/bInterfaceClass" 2>/dev/null)" = "02" ] || continue
-              iname=$(cat "$ifn/interface" 2>/dev/null || echo "")
-              tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-              [ -z "$tty" ] && continue
-              echo "  $v:$p [$prod] $(basename "$ifn") '$iname' /dev/$tty"
-              case "$(echo "$iname" | tr '[:upper:]' '[:lower:]')" in
-                *cdc2*|*data*) PASSTHROUGH_TTY="/dev/$tty";;
-              esac
-              FALLBACK_TTY="/dev/$tty"
-            done
-          done
-          [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
-          if [ -n "$PASSTHROUGH_TTY" ]; then
-            echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
-            echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
-          else
-            echo "No LoRa passthrough tty found; smoke test will skip"
-          fi
+          pkill -9 python || true
 
       - name: Start GDS
         run: |
@@ -243,25 +184,22 @@ jobs:
 
       - name: Sync Sequence Number
         run: |
-          make sync-sequence-number
+          make test-integration FILTER=sync_sequence_number
 
-      - name: Run Integration Tests
+      - name: Run UART Integration Tests
         run: |
           make test-integration
 
       - name: Format Filesystem
         if: always()
         run: |
-          make format-filesystem
+          make test-integration FILTER=format_filesystem
 
-      - name: Kill GDS & Power Off Satellite
+      - name: Kill GDS
         if: always()
         run: |
-          kill $(cat server.pid) || true
-          # Make sure nothing is still holding /dev/ttyBOARD before YAMCS adapter
-          # tries to open it. pkill -f sometimes misses GDS child processes
-          # (e.g. fprime_gds.executables.run_deployment), so also force-evict
-          # anyone with an open fd on the tty itself.
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
           pkill -f fprime-gds || true
           pkill -f fprime_gds || true
           pkill -f gds-integration || true
@@ -290,7 +228,7 @@ jobs:
           #
           # setsid puts `make yamcs` in its own process group so teardown
           # can signal the whole group (JVM, fprime-yamcs-events,
-          # proves_adapter.py) — killing the wrapper PID alone would orphan
+          # proves_adapter.py) -- killing the wrapper PID alone would orphan
           # the long-lived children and leak /dev/ttyBOARD between jobs.
           setsid bash -c 'PYTHONUNBUFFERED=1 exec make yamcs UART_DEVICE=/dev/ttyBOARD SPACECRAFT_ID=67' > yamcs.log 2>&1 &
           pgid=$!
@@ -313,7 +251,7 @@ jobs:
 
       - name: Wait for fprime-yamcs-events bridge subscribe
         run: |
-          # Fuzzy match — readiness signal is emitted by fprime-yamcs-events
+          # Fuzzy match -- readiness signal is emitted by fprime-yamcs-events
           # at startup; pattern is loose so capitalization / punctuation
           # tweaks upstream don't silently fail this gate.
           for i in $(seq 1 60); do
@@ -359,6 +297,195 @@ jobs:
           name: yamcs-log
           path: yamcs.log
           retention-days: 7
+
+      - name: Power Off Satellite
+        if: always()
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  integration-radio:
+    runs-on:
+      - integration
+    needs:
+      - build
+      - integration-uart
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              for ifn in $path/*:*; do
+                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
+                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Bootstrap Sequence Number over UART
+        run: |
+          # DIVIDER_PRM_SET and lora.TRANSMIT both pass through the authentication
+          # router and require the GDS-side sequence number to match FSW. On a
+          # fresh boot the seq number is unsynced, so the LoRa bootstrap commands
+          # would silently fail auth and never enable the radio. Run the sync
+          # test over UART first to align the local sequence_number.bin used by
+          # the framer plugin, then the LoRa GDS that follows can authenticate.
+          # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
+          # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
+          pkill -9 python || true
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          # Wait briefly for GDS to bind sockets
+          sleep 5
+          make test-integration FILTER=sync_sequence_number
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Detect LoRa Passthrough TTY
+        run: |
+          # Find the non-Zephyr USB device's CDC data interface (CircuitPython
+          # passthrough board, v5d hardware reused as ground-side LoRa receiver
+          # — not the v5e flight board). Heuristic: skip the Zephyr VID:PID and
+          # prefer interfaces whose iInterface descriptor contains "cdc2" or "data"
+          # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
+          # back to the last seen non-Zephyr CDC ACM tty when no name matches;
+          # the smoke test asserts binary traffic to catch a wrong pick.
+          PASSTHROUGH_TTY=""
+          FALLBACK_TTY=""
+          echo "=== USB CDC ACM candidates (non-Zephyr) ==="
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            [ "$v" = "0028" ] && [ "$p" = "000f" ] && continue
+            path=${d%/idVendor}
+            prod=$(cat "$path/product" 2>/dev/null || echo "?")
+            for ifn in "$path"/*:*; do
+              [ "$(cat "$ifn/bInterfaceClass" 2>/dev/null)" = "02" ] || continue
+              iname=$(cat "$ifn/interface" 2>/dev/null || echo "")
+              tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+              [ -z "$tty" ] && continue
+              echo "  $v:$p [$prod] $(basename "$ifn") '$iname' /dev/$tty"
+              case "$(echo "$iname" | tr '[:upper:]' '[:lower:]')" in
+                *cdc2*|*data*) PASSTHROUGH_TTY="/dev/$tty";;
+              esac
+              FALLBACK_TTY="/dev/$tty"
+            done
+          done
+          [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
+          if [ -z "$PASSTHROUGH_TTY" ]; then
+            echo "ERROR: LoRa passthrough tty not found; cannot run radio integration tests"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+          echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Start GDS on LoRa Passthrough
+        run: |
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
+          GDS_RF_PID=$!
+          echo $GDS_RF_PID > server-rf.pid
+          for i in $(seq 1 15); do
+            sleep 1
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
+          done
+
+      - name: Sync Sequence Number
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_sync.csv
+        run: |
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
+
+      - name: Run Radio Integration Tests
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_radio.csv
+        run: |
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+
+      - name: Format Filesystem
+        if: always()
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_format.csv
+        run: |
+          make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
+
+      - name: Upload telemetry sample logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radio-tlm-samples
+          path: tlm_sample_*.csv
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Kill GDS & Power Off Satellite
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: [integration-uart, integration-radio]
+    if: always()
+    steps:
+      - name: Check integration results
+        run: |
+          uart="${{ needs.integration-uart.result }}"
+          radio="${{ needs.integration-radio.result }}"
+          echo "integration-uart: $uart"
+          echo "integration-radio: $radio"
+          if [[ "$uart" != "success" && "$uart" != "skipped" ]]; then exit 1; fi
+          if [[ "$radio" != "success" && "$radio" != "skipped" && "$radio" != "cancelled" ]]; then exit 1; fi
 
   yamcs-build:
     runs-on: ubuntu-latest
