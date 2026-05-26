@@ -96,7 +96,7 @@ def uplink_sequence_and_await_completion(
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -138,7 +138,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -181,7 +181,7 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     }, Updated: {updated_time}"
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -218,7 +218,7 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_04_sequence_cancellation_on_time_set(
@@ -266,7 +266,7 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # set and trigger test
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -297,7 +297,7 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -326,7 +326,7 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_07_rtc_alarm_cancel_no_alarm_set(
@@ -343,7 +343,7 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
 
 # list test
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -372,7 +372,7 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -394,7 +394,7 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
 
 
-@pytest.mark.rf_unsafe(
+@pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):

@@ -448,7 +448,7 @@ jobs:
         env:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only and not rf_unsafe" PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
