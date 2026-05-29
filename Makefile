@@ -123,7 +123,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
 	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
-	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
+	@cp PROVESFlightControllerReference/Components/ProvesRouter/docs/sdd.md docs-site/components/ProvesRouter.md
 	@# Copy images
 	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
 	@echo "✓ Synced 32 component SDDs and images"

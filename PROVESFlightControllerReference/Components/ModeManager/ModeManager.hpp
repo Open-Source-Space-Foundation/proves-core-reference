@@ -8,7 +8,9 @@
 #define Components_ModeManager_HPP
 
 #include <Os/File.hpp>
+#include <Os/Mutex.hpp>
 
+#include "Fw/Time/Time.hpp"
 #include "Fw/Types/String.hpp"
 #include "PROVESFlightControllerReference/Components/ModeManager/ModeManagerComponentAc.hpp"
 
@@ -73,6 +75,12 @@ class ModeManager : public ModeManagerComponentBase {
     void prepareForReboot_handler(FwIndexType portNum  //!< The port number
                                   ) override;
 
+    //! Handler implementation for packetRouted
+    //!
+    //! Resets the command loss timer when an authenticated packet is received
+    void packetRouted_handler(FwIndexType portNum  //!< The port number
+                              ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------
@@ -132,6 +140,9 @@ class ModeManager : public ModeManagerComponentBase {
     //! \return Current voltage (only valid if valid parameter is set to true)
     F32 getCurrentVoltage(bool& valid);
 
+    //! Check for command loss and enter safe mode if timeout has expired
+    void commandLossCheck();
+
     // ----------------------------------------------------------------------
     // Private enums and types
     // ----------------------------------------------------------------------
@@ -157,6 +168,9 @@ class ModeManager : public ModeManagerComponentBase {
     Components::SafeModeReason m_safeModeReason;  //!< Current safe mode reason
     U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
     U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
+
+    Fw::Time m_lastPacketRoutedTime;  //!< Time of last authenticated packet (ZERO_TIME until first packet)
+    Os::Mutex m_commandLossMutex;     //!< Protects command loss state against concurrent access
 
     // ----------------------------------------------------------------------
     // Constants
