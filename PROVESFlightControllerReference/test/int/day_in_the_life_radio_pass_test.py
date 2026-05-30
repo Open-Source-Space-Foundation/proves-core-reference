@@ -47,16 +47,30 @@ def test_radio_day_in_the_life_downlink_cadence(
 
     telemetry_subhist = fprime_test_api.get_telemetry_subhistory()
     event_subhist = fprime_test_api.get_event_subhistory()
+    test_start = time.monotonic()
+    windows_with_downlink = 0
 
     try:
         windows = PASS_DURATION_SECONDS // WINDOW_SECONDS
         for window in range(1, windows + 1):
-            assert _await_downlink_window(
+            has_downlink = _await_downlink_window(
                 telemetry_subhist, event_subhist, WINDOW_SECONDS
-            ), (
+            )
+            if has_downlink:
+                windows_with_downlink += 1
+                continue
+
+            elapsed = int(time.monotonic() - test_start)
+            assert has_downlink, (
                 "No event or telemetry arrived within "
-                f"{WINDOW_SECONDS}s window {window}/{windows}"
+                f"{WINDOW_SECONDS}s window {window}/{windows}; "
+                f"elapsed={elapsed}s/{PASS_DURATION_SECONDS}s, "
+                f"windows_with_downlink={windows_with_downlink}"
             )
     finally:
+        fprime_test_api.send_command(
+            command=f"{lora}.TRANSMIT",
+            args=["DISABLED"],
+        )
         fprime_test_api.remove_telemetry_subhistory(telemetry_subhist)
         fprime_test_api.remove_event_subhistory(event_subhist)
