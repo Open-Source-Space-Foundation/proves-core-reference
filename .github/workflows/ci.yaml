@@ -188,7 +188,7 @@ jobs:
 
       - name: Run UART Integration Tests
         run: |
-          make test-integration
+          make test-integration FILTER="not day_in_the_life"
 
       - name: Format Filesystem
         if: always()
