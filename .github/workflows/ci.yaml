@@ -448,7 +448,13 @@ jobs:
         env:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only and not day_in_the_life" PYTEST_ARGS=--with-radio
+
+      - name: Run Day in the Life Radio Test
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_day_in_life.csv
+        run: |
+          make test-day-in-the-life
 
       - name: Format Filesystem
         if: always()

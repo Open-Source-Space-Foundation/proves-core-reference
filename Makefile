@@ -250,6 +250,12 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
 
+.PHONY: test-day-in-the-life
+test-day-in-the-life: uv ## Run Day in the Life over-radio integration tests
+	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
+	echo "Running Day in the Life over-radio tests"; \
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/int --deployment $$DEPLOY -m "day_in_the_life" --with-radio $(PYTEST_ARGS)
+
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:
@@ -438,9 +444,7 @@ gds-integration: framer-plugin
 	@$(GDS_COMMAND) --gui=none --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
-DoL_test:
-	@echo "make sure passthrough GDS is running"
-	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+DoL_test: test-day-in-the-life
 
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
