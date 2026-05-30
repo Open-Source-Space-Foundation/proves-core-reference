@@ -444,7 +444,9 @@ gds-integration: framer-plugin
 	@$(GDS_COMMAND) --gui=none --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
-DoL_test: test-day-in-the-life
+DoL_test: ## DEPRECATED: use test-day-in-the-life
+	@echo "WARNING: DoL_test is deprecated; use 'make test-day-in-the-life' instead."
+	@$(MAKE) test-day-in-the-life
 
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
