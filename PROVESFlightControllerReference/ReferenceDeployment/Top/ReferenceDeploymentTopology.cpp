@@ -10,6 +10,7 @@
 
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
+#include <zephyr/sys/printk.h>
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -27,14 +28,12 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
 Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
-    {getRateGroupPeriod(10), 0},  // 10Hz
     {getRateGroupPeriod(1), 0},   // 1Hz
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
 // reference topology sets each token to zero as these contexts are unused in this project.
-U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
-U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
+U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {};
 
 /**
  * \brief configure/setup components in project-specific way
@@ -47,36 +46,36 @@ void configureTopology() {
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
-    rateGroup10Hz.configure(rateGroup10HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup10HzContext));
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
 namespace ReferenceDeployment {
 void setupTopology(const TopologyState& state) {
-    // Autocoded initialization. Function provided by autocoder.
+    printk("[SETUP] initComponents\n");
     initComponents(state);
-    // Autocoded id setup. Function provided by autocoder.
+    printk("[SETUP] setBaseIds\n");
     setBaseIds();
-    // Autocoded connection wiring. Function provided by autocoder.
+    printk("[SETUP] connectComponents\n");
     connectComponents();
-    // Autocoded command registration. Function provided by autocoder.
+    printk("[SETUP] regCommands\n");
     regCommands();
-    // Autocoded configuration. Function provided by autocoder.
+    printk("[SETUP] configComponents\n");
     configComponents(state);
-    // Project-specific component configuration. Function provided above. May be inlined, if desired.
+    printk("[SETUP] configureTopology\n");
     configureTopology();
-    // Autocoded parameter loading. Function provided by autocoder.
+    printk("[SETUP] loadParameters\n");
     loadParameters();
-    // Autocoded task kick-off (active components). Function provided by autocoder.
+    printk("[SETUP] startTasks\n");
     startTasks(state);
-
-    // Uplink is configured for receive so a socket task is started
+    printk("[SETUP] comDriver.configure\n");
     comDriver.configure(state.uartDevice, state.baudRate);
+    printk("[SETUP] complete\n");
 }
 
 void startRateGroups() {
     timer.configure(BASE_RATEGROUP_PERIOD_MS);
+    printk("\n=== Rate groups starting (period=%u ms) ===\n", static_cast<unsigned int>(BASE_RATEGROUP_PERIOD_MS));
     timer.start();
     while (1) {
         timer.cycle();

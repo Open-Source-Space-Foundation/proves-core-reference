@@ -11,9 +11,9 @@ module CdhCoreConfig {
 
 
     module StackSizes {
-        constant cmdDisp     = 4 * 1024 # Must match prj.conf thread stack size
-        constant events      = 4 * 1024 # Must match prj.conf thread stack size
-        constant tlmSend     = 4 * 1024 # Must match prj.conf thread stack size
+        constant cmdDisp     = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
+        constant events      = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
+        constant tlmSend     = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
     }
 
     module Priorities {

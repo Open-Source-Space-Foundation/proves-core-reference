@@ -19,17 +19,12 @@ module ReferenceDeployment {
 
   module Default {
     constant QUEUE_SIZE = 10
-    constant STACK_SIZE = 8 * 1024 # Must match prj.conf thread stack size
+    constant STACK_SIZE = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
   }
 
   # ----------------------------------------------------------------------
   # Active component instances
   # ----------------------------------------------------------------------
-
-  instance rateGroup10Hz: Svc.ActiveRateGroup base id 0x10001000 \
-    queue size Default.QUEUE_SIZE \
-    stack size Default.STACK_SIZE \
-    priority 3
 
   instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
     queue size Default.QUEUE_SIZE \

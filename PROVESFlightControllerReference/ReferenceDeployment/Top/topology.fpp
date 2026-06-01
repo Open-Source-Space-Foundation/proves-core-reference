@@ -5,7 +5,6 @@ module ReferenceDeployment {
   # ----------------------------------------------------------------------
 
   enum Ports_RateGroups {
-    rateGroup10Hz
     rateGroup1Hz
   }
 
@@ -21,7 +20,6 @@ module ReferenceDeployment {
   # Instances used in the topology
   # ----------------------------------------------------------------------
     instance chronoTime
-    instance rateGroup10Hz
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
@@ -80,12 +78,9 @@ module ReferenceDeployment {
       # timer to drive rate group
       timer.CycleOut -> rateGroupDriver.CycleIn
 
-      # High rate (10Hz) rate group
-      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup10Hz] -> rateGroup10Hz.CycleIn
-      rateGroup10Hz.RateGroupMemberOut[0] -> comDriver.schedIn
-
-      # Slow rate (1Hz) rate group
+      # All rate group activity is now on the 1Hz group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDriver.schedIn
       rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
       rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
       rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn

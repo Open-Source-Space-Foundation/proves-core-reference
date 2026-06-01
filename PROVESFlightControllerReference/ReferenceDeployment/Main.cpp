@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);
+    printk("Starting topology.....\n");
     ReferenceDeployment::startRateGroups();  // Program loop
     ReferenceDeployment::teardownTopology(inputs);
     return 0;

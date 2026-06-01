@@ -11,8 +11,8 @@ module ComCcsdsConfig {
     }
 
     module StackSizes {
-        constant comQueue            = 4 * 1024 # Must match prj.conf thread stack size
-        constant aggregator          = 4 * 1024 # Must match prj.conf thread stack size
+        constant comQueue            = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
+        constant aggregator          = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
     }
 
     module Priorities {
