@@ -60,6 +60,24 @@ only success signal is `FileReceived` on the flight console.
 `PROVESFlightControllerReference/test/int/bridge_uplink_test.py` — tests:
 `test_noop`, `test_get_seq`, `test_spray_seq`, `test_spray_disable_tx`
 (env `TX_STATE`/`SPRAY_N`/`SPRAY_GAP`), `test_enable_tx`, `test_uplink_file`
-(env `UPLINK_SRC`/`UPLINK_DEST`/`UPLINK_TIMEOUT`). Always run with the explicit
-`--dictionary` above and the venv pytest. `fprime-cli command-send` does NOT
-inject into a running headless GDS — only the pytest `send_command` path transmits.
+(env `UPLINK_SRC`/`UPLINK_DEST`/`UPLINK_TIMEOUT`), `test_calc_crc`
+(env `CRC_FILE` → on-board `CalculateCrc`, the reliable read-back oracle),
+`test_detect_drops` (env `DETECT_FILE`/`DETECT_PKT` → `DETECT_DROPS`; **unreliable, see
+OTA doc**). Always run with the explicit `--dictionary` above and the venv pytest.
+`fprime-cli command-send` does NOT inject into a running headless GDS — only the pytest
+`send_command` path transmits.
+
+## Reliable OTA file delivery over the lossy link
+
+To deliver a file intact despite over-air frame loss (and verify it without downlinking),
+see **[OTA-DROP-PATCHING.md](OTA-DROP-PATCHING.md)**: re-uplink the whole file to the same
+dest until `fileManager.CalculateCrc` matches the truth CRC (`= zlib.crc32 ^ 0xFFFFFFFF`).
+`UPLINK_TIMEOUT` must exceed the real transfer time (~7 min for 100 KB @0.4 s) or the
+transfer aborts mid-stream. Do not trust `DETECT_DROPS` (non-deterministic false positives).
+
+For the bandwidth-efficient, pass-window-aware version (split into parts, re-upload only the
+dropped parts, reassemble with `AppendFile`), see
+**[OTA-TIER1-PERFORMANCE.md](OTA-TIER1-PERFORMANCE.md)** and the validated driver
+`scripts/tier1-patch.sh <source> <num-parts>`. Measured uplink ≈ 256 B/s (~0.8 s/chunk,
+SF8); an update spans multiple ~4.5-min passes — dropping to SF7 near closest approach ≈
+doubles throughput. `AppendFile` is NOT idempotent — send it once per part, never sprayed.
