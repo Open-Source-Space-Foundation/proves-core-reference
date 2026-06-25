@@ -9,19 +9,30 @@ Method + verification details: [OTA-DROP-PATCHING.md](OTA-DROP-PATCHING.md).
 **Validated end-to-end on the bench (2026-06-20):** 24 KB → 6×4 KB parts, each uploaded
 (16–17 s) and CRC-verified, reassembled, final `//tp_asm.bin` CRC `0x3dd5ffb9` == truth.
 
-## Measured constants (BW125 / CR4-5, cooldown 0.4 s)
+## Measured constants (BW125 / CR4-5, frame-aware bridge, cd=0.0, chunk=200 B)
 
-| Quantity | SF8 (baseline) | SF7 (measured 2026-06-20) |
-|---|---|---|
-| Effective uplink goodput | **256 B/s** (4096 B/16 s, ×6) | **476–477 B/s** (20480 B/42.9–43.0 s, ×2) = **1.86×** |
-| Per 204 B chunk | **0.8 s** (1.25 chunks/s) | **0.42–0.43 s** (2.35 chunks/s) |
-| LoRa frame airtime floor | ~0.69 s/frame (SF8) | ~0.40 s/frame (SF7) |
-| Per-chunk over-air loss | ~0.6 % (3/502) | ~1–2 % observed (1 of 2 runs: 2 drops/101; other run clean) |
-| Usable pass window | ~270 s (4.5 min) | ~270 s |
-| Per-pass clean upload | **~67 KB / ~337 chunks** | **~128 KB / ~630 chunks** |
+All numbers below are with the **frame-aware GRC ByteComBridge** (`c1a941f`, 2026-06-24),
+CRC-verified (fileManager.CalculateCrc == truth).
 
-SF7 measured exactly as predicted (~0.43 s/chunk, ~2×). A dropped run was recovered to a
-clean whole-file CRC by one idempotent re-uplink (drop-patch loop) — see [[ota-drop-patch-loop]].
+| Config | Goodput | vs SF8 | Per-chunk | Pass capacity |
+|---|---|---|---|---|
+| **SF8/BW125** (baseline) | **~258 B/s** | 1× | ~0.78 s | ~69 KB / ~345 chunks |
+| **SF7/BW125** | **~447 B/s** | **1.73×** | ~0.45 s | ~121 KB / ~602 chunks |
+| **SF7/BW250** | **~779 B/s** | **3.02×** | ~0.26 s | ~210 KB / ~1049 chunks |
+| **SF7/BW500** | **~1299 B/s** | **5.03×** | ~0.15 s | ~351 KB / ~1755 chunks |
+
+All measured 2026-06-25 with 4 KB file, chunk=200 B, cd=0.0. CRC PASS ✓ at all configs.
+
+**Old bridge numbers (historical, OLD circular-buffer bridge):** SF8 ~228 B/s (cd=0.9), SF7
+~336 B/s (cd=0.6), bottleneck was GRC drain cadence (~0.6 s/frame), not RF. The frame-aware
+bridge eliminates that bottleneck — throughput is now purely airtime-bound.
+
+**BW250/BW500 require matching on both sides.** Set `BANDWIDTH_TX_PRM_SET` (GRC) and both
+`BANDWIDTH_TX_PRM_SET` + `BANDWIDTH_RX_PRM_SET` (flight). Apply via `TRANSMIT ENABLED →
+DISABLED` from DISABLED state (see [[sf7-switch-apply-mechanics]]).
+
+SF7 (2026-06-20, old bridge, different procedure) measured ~476–477 B/s. The difference is
+measurement method; both are consistent with the airtime model.
 
 **Cooldown is already below the airtime floor**, so throughput is PHY-bound — lowering
 cooldown won't help (it only risks GRC overflow). The lever that moves throughput is the
@@ -34,10 +45,10 @@ reassembly less. So an update can't fit in one pass (100 KB ≈ 6.7 min, 666 KB 
 SF8) — **updates span multiple passes, and the goal is the fewest passes with zero wasted
 re-work.**
 
-| Image | SF8 (~0.8 s/chunk) | SF7 (~0.43 s/chunk, ≈2×) |
-|---|---|---|
-| 100 KB (502 chunks) | ~6.7 min → **2 passes** | ~3.6 min → **1 pass** |
-| 666 KB (3343 chunks) | ~45 min → **~12 passes** | ~24 min → **~7 passes** |
+| Image | SF8/BW125 (~0.78 s/chunk) | SF7/BW125 (~0.45 s/chunk) | SF7/BW250 (~0.26 s/chunk) | SF7/BW500 (~0.15 s/chunk) |
+|---|---|---|---|---|
+| 100 KB (512 chunks) | ~6.7 min → **2 passes** | ~3.8 min → **1 pass** | ~2.2 min → **1 pass** | ~1.3 min → **1 pass** |
+| 666 KB (3410 chunks) | ~44 min → **~10 passes** | ~26 min → **~6 passes** | ~15 min → **~4 passes** | ~8.5 min → **~2 passes** |
 
 (includes ~20 % patch+overhead, rounded up to whole passes)
 
@@ -56,11 +67,13 @@ cost (one `AppendFile` per part) nudges the practical optimum up a little → **
 
 ## Optimization levers, ranked
 
-1. **Spreading factor — biggest lever.** SF8→SF7 ≈ halves airtime → ≈2× throughput → ≈half
-   the passes, for ~2.5 dB of margin. Use **SF7 near closest approach** (high elevation),
-   fall back SF8/SF9 at low elevation. Even if SF7 doubles loss to ~1.2 %, the extra re-send
-   (~+12 % at k=20) is dwarfed by the 2× speedup. `lora.DATA_RATE_PRM_SET SF_7` exists.
-2. **Leave cooldown at 0.4 s** (already airtime-bound); raise only if loss spikes.
+1. **Spreading factor + bandwidth — by far the biggest levers.** With the frame-aware bridge,
+   throughput is purely airtime-bound. SF8→SF7 = 1.73×; SF7+BW250 = 3.02×; SF7+BW500 = 5.03×
+   (all bench-verified, CRC-clean). Use the fastest config the link supports at the current
+   elevation. Apply via `DATA_RATE_PRM_SET` + `BANDWIDTH_*_PRM_SET` then `TRANSMIT ENABLED →
+   DISABLED` (from DISABLED state). BW500 requires high link margin (bench-only until
+   link-budget analysis at operating range; BW250 is a safer intermediate step).
+2. **Cooldown is already eliminated** (frame-aware bridge, cd=0.0 CRC-clean); no further tuning.
 3. **Part size ≈ 20–40 chunks (4–8 KB).** Never pass-sized — one dropped frame then wastes a
    whole pass. Small parts also give ~15 checkpoints per pass.
 4. **Verify with `CalculateCrc`; batch into a CRC manifest for big images.** Per pass you only
@@ -95,7 +108,8 @@ Each part is an independent file, so the update is checkpointed at part granular
 
 ## Bottom line
 
-~4–8 KB parts, SF7 near closest approach (SF8 fallback), `CalculateCrc` verification
-(manifest-batched for firmware), resume by verified-part set: **100 KB in 1–2 passes, a
-666 KB firmware in ~6–12 passes** depending on SF — initial upload is the irreducible floor,
-patch overhead held to ~10–25 %, and no pass's work is ever lost to LOS.
+~4–8 KB parts, highest-SF+BW the link supports (SF7/BW500 on bench = 5× SF8; SF7/BW125 safe
+at low elevations), `CalculateCrc` verification (manifest-batched for firmware), resume by
+verified-part set: **100 KB in 1 pass at SF7/BW250+, a 666 KB firmware in ~2–6 passes
+depending on SF/BW** — initial upload is the irreducible floor, patch overhead held to
+~10–25 %, and no pass's work is ever lost to LOS.
