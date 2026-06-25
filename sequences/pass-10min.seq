@@ -1,0 +1,6 @@
+; Set the comm dividers to a safe value for a 10 minute ground station pass.
+R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 20
+R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 4
+R00:10:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "Catch you on the next pass!"
+R00:00:00 ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET, 300
+R00:00:00 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 30
