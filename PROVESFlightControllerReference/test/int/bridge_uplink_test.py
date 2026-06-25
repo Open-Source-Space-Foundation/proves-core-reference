@@ -64,6 +64,31 @@ def test_watch_events(fprime_test_api: IntegrationTestAPI):
         print(f"[ev] {ev}")
 
 
+def test_watch_events_multi(fprime_test_api: IntegrationTestAPI):
+    """Watch several event names at once for WATCH_SECS. env WATCH_EVENTS
+    (comma-separated fully-qualified names), WATCH_SECS. Reports per-event COUNT
+    and prints every captured instance. Used to passively capture the GRC
+    ByteComBridge warning events during a transfer (point at GRC GDS 50060)."""
+    import os as _os
+    import time as _t
+
+    secs = float(_os.environ.get("WATCH_SECS", "60"))
+    names = [n for n in _os.environ.get("WATCH_EVENTS", "").split(",") if n]
+    subs = {
+        n: fprime_test_api.get_event_subhistory(
+            event_filter=fprime_test_api.get_event_pred(event=n)
+        )
+        for n in names
+    }
+    print(f"[multi] watching {len(names)} events for {secs}s ...", flush=True)
+    _t.sleep(secs)
+    for n, sub in subs.items():
+        items = list(sub.retrieve())
+        print(f"[multi] COUNT={len(items)} {n}")
+        for ev in items:
+            print(f"[mev] {ev}")
+
+
 def test_await_filerx(fprime_test_api: IntegrationTestAPI):
     """Watch the FC GDS (21101) for FileUplink completion, print wall-clock on first hit.
 

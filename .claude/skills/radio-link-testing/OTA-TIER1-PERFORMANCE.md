@@ -9,20 +9,23 @@ Method + verification details: [OTA-DROP-PATCHING.md](OTA-DROP-PATCHING.md).
 **Validated end-to-end on the bench (2026-06-20):** 24 KB → 6×4 KB parts, each uploaded
 (16–17 s) and CRC-verified, reassembled, final `//tp_asm.bin` CRC `0x3dd5ffb9` == truth.
 
-## Measured constants (SF8 / BW125 / CR4-5, cooldown 0.4 s)
+## Measured constants (BW125 / CR4-5, cooldown 0.4 s)
 
-| Quantity | Value | Source |
+| Quantity | SF8 (baseline) | SF7 (measured 2026-06-20) |
 |---|---|---|
-| Effective uplink goodput | **256 B/s** | 4096 B/part in 16 s, ×6 consistent |
-| Per 204 B chunk | **0.8 s** (1.25 chunks/s) | measured |
-| LoRa frame airtime floor (SF8) | ~0.69 s/frame | SF8/BW125/CR4-5 (`LoRaCfg.hpp`, `LoRa.fpp` DATA_RATE=SF_8) |
-| Per-chunk over-air loss | ~0.6 % | 3 drops / 502 chunks baseline |
-| Usable pass window | ~270 s (4.5 min) | given |
-| Per-pass clean upload | **~67 KB / ~337 chunks** | 256 B/s × 270 s |
+| Effective uplink goodput | **256 B/s** (4096 B/16 s, ×6) | **476–477 B/s** (20480 B/42.9–43.0 s, ×2) = **1.86×** |
+| Per 204 B chunk | **0.8 s** (1.25 chunks/s) | **0.42–0.43 s** (2.35 chunks/s) |
+| LoRa frame airtime floor | ~0.69 s/frame (SF8) | ~0.40 s/frame (SF7) |
+| Per-chunk over-air loss | ~0.6 % (3/502) | ~1–2 % observed (1 of 2 runs: 2 drops/101; other run clean) |
+| Usable pass window | ~270 s (4.5 min) | ~270 s |
+| Per-pass clean upload | **~67 KB / ~337 chunks** | **~128 KB / ~630 chunks** |
+
+SF7 measured exactly as predicted (~0.43 s/chunk, ~2×). A dropped run was recovered to a
+clean whole-file CRC by one idempotent re-uplink (drop-patch loop) — see [[ota-drop-patch-loop]].
 
 **Cooldown is already below the airtime floor**, so throughput is PHY-bound — lowering
 cooldown won't help (it only risks GRC overflow). The lever that moves throughput is the
-**spreading factor**.
+**spreading factor** — now verified on the bench, not just modeled.
 
 ## Where the time goes
 
