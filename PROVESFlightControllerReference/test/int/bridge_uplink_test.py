@@ -329,6 +329,125 @@ def test_detect_drops(fprime_test_api: IntegrationTestAPI):
     _t.sleep(5)
 
 
+def test_suppress_tm(fprime_test_api: IntegrationTestAPI):
+    """Set telemetryDelay divider high to reduce TM competition on the LoRa queue.
+
+    env TM_DIVIDER (default 60 = 6 s between TM packets). Spray so one lands.
+    """
+    import time as _t
+
+    div = int(os.environ.get("TM_DIVIDER", "60"))
+    n = int(os.environ.get("SPRAY_N", "12"))
+    gap = float(os.environ.get("SPRAY_GAP", "0.3"))
+    for _ in range(n):
+        fprime_test_api.send_command(
+            "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [div]
+        )
+        _t.sleep(gap)
+    print(f"[tm] sprayed {n} telemetryDelay.DIVIDER_PRM_SET({div})")
+    _t.sleep(3)
+
+
+def test_send_file(fprime_test_api: IntegrationTestAPI):
+    """Trigger fileDownlink.SendFile from the flight FS to the GDS.
+
+    env DL_SRC (default //tp_asm.bin), DL_DEST (default tp_asm.bin).
+    File lands at <GDS file-storage>/fprime-downlink/<DL_DEST>.
+    Spray so one command lands in a flight RX window.
+    """
+    import time as _t
+
+    src = os.environ.get("DL_SRC", "//tp_asm.bin")
+    dest = os.environ.get("DL_DEST", "tp_asm.bin")
+    n = int(os.environ.get("SPRAY_N", "12"))
+    gap = float(os.environ.get("SPRAY_GAP", "0.3"))
+    for _ in range(n):
+        fprime_test_api.send_command("FileHandling.fileDownlink.SendFile", [src, dest])
+        _t.sleep(gap)
+    print(f"[dl] sprayed {n} SendFile {src} -> {dest}")
+    _t.sleep(5)
+
+
+def test_send_partial(fprime_test_api: IntegrationTestAPI):
+    """Trigger fileDownlink.SendPartial for a byte range of a flight-FS file.
+
+    env DL_SRC, DL_DEST, DL_OFFSET (default 0), DL_LENGTH (default 4096).
+    Useful for re-downlinking only dropped portions or testing segment timing.
+    """
+    import time as _t
+
+    src = os.environ.get("DL_SRC", "//tp_asm.bin")
+    dest = os.environ.get("DL_DEST", "tp_asm_part.bin")
+    offset = int(os.environ.get("DL_OFFSET", "0"))
+    length = int(os.environ.get("DL_LENGTH", "4096"))
+    n = int(os.environ.get("SPRAY_N", "12"))
+    gap = float(os.environ.get("SPRAY_GAP", "0.3"))
+    for _ in range(n):
+        fprime_test_api.send_command(
+            "FileHandling.fileDownlink.SendPartial", [src, dest, offset, length]
+        )
+        _t.sleep(gap)
+    print(f"[dl] sprayed {n} SendPartial {src}[{offset}:{offset + length}] -> {dest}")
+    _t.sleep(5)
+
+
+def test_cancel_downlink(fprime_test_api: IntegrationTestAPI):
+    """Send fileDownlink.Cancel to abort an in-progress downlink. Spray to land."""
+    import time as _t
+
+    n = int(os.environ.get("SPRAY_N", "12"))
+    gap = float(os.environ.get("SPRAY_GAP", "0.3"))
+    for _ in range(n):
+        fprime_test_api.send_command("FileHandling.fileDownlink.Cancel")
+        _t.sleep(gap)
+    print(f"[dl] sprayed {n} fileDownlink.Cancel")
+    _t.sleep(3)
+
+
+def test_await_downlink(fprime_test_api: IntegrationTestAPI):
+    """Poll for a file to arrive in the GDS fprime-downlink directory.
+
+    env DL_DEST (default tp_asm.bin), DL_STORAGE (default /tmp/ossf-1),
+    WATCH_SECS (default 300). Prints size and elapsed time once the file
+    stops growing (stable for 3 s). Records DLSTART / DLEND timestamps.
+    """
+    import time as _t
+
+    dest = os.environ.get("DL_DEST", "tp_asm.bin")
+    storage = os.environ.get("DL_STORAGE", "/tmp/ossf-1")
+    secs = float(os.environ.get("WATCH_SECS", "300"))
+    path = os.path.join(storage, "fprime-downlink", dest)
+    t0 = _t.time()
+    print(f"DLSTART {t0:.3f}", flush=True)
+    print(f"[await_dl] watching {path} for up to {secs}s ...", flush=True)
+    t_end = t0 + secs
+    prev_size = -1
+    stable_since = None
+    while _t.time() < t_end:
+        try:
+            sz = os.path.getsize(path)
+            if sz != prev_size:
+                print(
+                    f"[await_dl] {path}: {sz} bytes @ +{_t.time() - t0:.1f}s",
+                    flush=True,
+                )
+                prev_size = sz
+                stable_since = _t.time()
+            elif stable_since and _t.time() - stable_since >= 3:
+                elapsed = _t.time() - t0
+                print(f"DLEND {_t.time():.3f}", flush=True)
+                print(
+                    f"[await_dl] DONE: {sz} bytes in {elapsed:.1f}s"
+                    f" = {sz / elapsed:.1f} B/s",
+                    flush=True,
+                )
+                return
+        except FileNotFoundError:
+            pass
+        _t.sleep(0.5)
+    print(f"[await_dl] TIMEOUT: {dest} not complete in {secs}s", flush=True)
+
+
 @pytest.mark.parametrize(
     "src", [os.environ.get("UPLINK_SRC", "/tmp/grc_scratch_2k.bin")]
 )

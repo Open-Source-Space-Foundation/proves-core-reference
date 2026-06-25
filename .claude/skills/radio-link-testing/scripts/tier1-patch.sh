@@ -14,7 +14,8 @@ LOG=/tmp/flight-console-text.log
 WORK=/tmp/tier1_parts; rm -rf "$WORK"; mkdir -p "$WORK"
 PY=./fprime-venv/bin/python3
 PYTEST=( ./fprime-venv/bin/pytest -s -o addopts=""
-  --dictionary build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json )
+  --dictionary build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+  --file-uplink-chunk-size 192 )
 T=PROVESFlightControllerReference/test/int/bridge_uplink_test.py
 
 fcrc(){ $PY -c "import zlib,sys;print('0x%08x'%(zlib.crc32(open(sys.argv[1],'rb').read())^0xffffffff))" "$1"; }
@@ -75,10 +76,8 @@ tasm=$(now)
 for i in "${!parts[@]}"; do
   mark=$(wc -l <"$LOG")
   # AppendFile is NOT idempotent -> send ONCE, confirm AppendFileSucceeded (retry only if not seen)
-  local tries
   for tries in 1 2 3; do
     APPEND_SRC="${DEST[$i]}" APPEND_TGT="$ASM" SPRAY_N=1 "${PYTEST[@]}" "$T::test_append_file" >/dev/null 2>&1
-    local s2
     for s2 in $(seq 1 8); do
       LC_ALL=C tail -n +"$((mark+1))" "$LOG" | grep -aq "AppendFileSucceeded" && break 2
       sleep 2
