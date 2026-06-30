@@ -5,6 +5,12 @@ Routes TM frames from the spacecraft to YAMCS (via UDP) and TC frames from
 YAMCS (via UDP) back to the spacecraft after wrapping them with the HMAC-SHA256
 authentication header/trailer required by the FSW Authenticate component.
 
+The TM side is promiscuous: it accepts frames from any CCSDS spacecraft ID
+without an explicit allow-list.  Before forwarding to YAMCS the SCID/VCID
+bytes are normalized to ``--spacecraft-id`` (default 68) and the frame CRC
+is recomputed, so YAMCS's ``spacecraftId`` filter always passes regardless of
+which satellite the GRC board heard.
+
 Use Case 1 (local UART):
     python proves_adapter.py --mode serial --uart-device /dev/ttyUSB0
 
@@ -55,6 +61,25 @@ from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E40
 # ---------------------------------------------------------------------------
 
 
+def _normalize_tm_scid(frame: bytes, spacecraft_id: int, vc_id: int) -> bytes:
+    """Overwrite bytes 0-1 of a CCSDS TM frame with the target SCID/VCID and recompute CRC.
+
+    CCSDS TM primary header word0 (bytes 0-1):
+      bits 15-14: version=0
+      bits 13-4:  spacecraft_id (10 bits)
+      bits 3-1:   vc_id (3 bits)
+      bit 0:      OCF flag = 0
+    """
+    word0 = (spacecraft_id << 4) | (vc_id << 1)
+    out = bytearray(frame)
+    out[0] = (word0 >> 8) & 0xFF
+    out[1] = word0 & 0xFF
+    crc = _crc16_ccitt(bytes(out[:-2]))
+    out[-2] = (crc >> 8) & 0xFF
+    out[-1] = crc & 0xFF
+    return bytes(out)
+
+
 def _forward_tm_serial(
     ser,
     tm_sock,
@@ -66,102 +91,77 @@ def _forward_tm_serial(
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
-    The FSW may interleave console/debug text (e.g. ``[Os::...]``) on the same
-    UART as CCSDS TM frames.  Rather than reading exactly *frame_length* bytes
-    and hoping they form a clean frame, we maintain a rolling buffer and scan for
-    the 2-byte sync header.  When found, we validate the CRC — if it passes the
-    frame is forwarded; if it fails the candidate is discarded and scanning
-    continues.  This makes the adapter resilient to arbitrary non-frame data on
-    the serial link without losing the frame that immediately follows.
+    Accepts frames from *any* spacecraft ID using a CRC-16/CCITT-only HUNT/LOCK
+    state machine — no sync-header allow-list is required.  Before forwarding,
+    frames whose SCID doesn't match ``spacecraft_ids[0]`` are normalized
+    (bytes 0-1 patched, CRC recomputed) so YAMCS's ``spacecraftId`` filter
+    always passes.  Per-SCID counters track how many frames arrived from each
+    satellite seen during the session.
 
-    *spacecraft_ids* may contain multiple SCIDs; the TM scanner accepts frames
-    from any of them.  Gap detection and frame counters are tracked per-SCID.
-    The TC path (not handled here) uses only the first entry.
+      HUNT — slide 1 byte at a time until a CRC-valid frame is found.
+      LOCK — once in sync, take the next frame exactly ``frame_length`` bytes
+             later; fall back to HUNT on CRC failure.
     """
     import time
 
     if spacecraft_ids is None:
         spacecraft_ids = [68]
 
+    primary_scid = spacecraft_ids[0]
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
-    # Build sync headers: first 2 bytes of CCSDS TM primary header per SCID.
-    # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
-    syncs = []
-    for scid in spacecraft_ids:
-        word0 = (scid << 4) | (vc_id << 1)
-        syncs.append((scid, bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])))
+    print(
+        f"[TM] Promiscuous: accepting any SCID, normalizing to SCID={primary_scid} VCID={vc_id}"
+    )
 
     buf = bytearray()
     frames_sent_by_scid: Counter[int] = Counter()
     last_vc_count: dict[int, int] = {}
     vc_frame_gaps = 0
     junk_bytes = 0
+    locked = False
     stats_time = time.monotonic()
 
-    sync_desc = " / ".join(f"{h.hex(' ')} (SCID {s})" for s, h in syncs)
-    print(f"[TM] Scanning for frames (sync headers: {sync_desc})...")
-
     def _maybe_print_stats() -> None:
-        nonlocal stats_time, junk_bytes
+        nonlocal stats_time, junk_bytes, vc_frame_gaps
         now = time.monotonic()
         if now - stats_time >= 30.0:
             elapsed = now - stats_time
             total = sum(frames_sent_by_scid.values())
             rate = total / elapsed if elapsed else 0
             scid_counts = " | ".join(
-                f"SCID {s}: {frames_sent_by_scid[s]} frames" for s, _ in syncs
+                f"SCID {s}: {n} frames" for s, n in sorted(frames_sent_by_scid.items())
             )
             print(
-                f"[TM] stats: {scid_counts} | {rate:.1f} f/s | "
+                f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
                 f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
             )
             stats_time = now
             frames_sent_by_scid.clear()
+            vc_frame_gaps = 0
             junk_bytes = 0
 
     while True:
-        # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
         chunk = ser.read(max(1, ser.in_waiting or 1))
         if not chunk:
             _maybe_print_stats()
             continue
         buf.extend(chunk)
 
-        # Scan the buffer for complete, CRC-valid frames.
-        while True:
-            # Find the earliest occurrence of any sync header in the buffer.
-            best_idx = -1
-            for _, hdr in syncs:
-                pos = buf.find(hdr)
-                if pos != -1 and (best_idx == -1 or pos < best_idx):
-                    best_idx = pos
-
-            if best_idx == -1:
-                # No sync header anywhere — discard everything except the last
-                # byte (which could be the first byte of a future sync header).
-                if len(buf) > 1:
-                    junk_bytes += len(buf) - 1
-                    del buf[: len(buf) - 1]
-                break
-
-            # Discard any non-frame bytes before the sync header.
-            if best_idx > 0:
-                junk_bytes += best_idx
-                del buf[:best_idx]
-
-            # Need a full frame to validate.
-            if len(buf) < frame_length:
-                break  # wait for more data
-
+        while len(buf) >= frame_length:
             candidate = bytes(buf[:frame_length])
             if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                # Valid frame — forward it.
-                del buf[:frame_length]
-
-                # Extract SCID from candidate header for per-SCID tracking.
                 frame_scid = ((candidate[0] << 8) | candidate[1]) >> 4 & 0x3FF
 
-                # VC frame count gap detection (byte 3 of TM primary header).
+                if frame_scid != primary_scid:
+                    if not locked:
+                        print(
+                            f"[TM] acquired lock: SCID={frame_scid} → normalizing to {primary_scid}"
+                        )
+                    candidate = _normalize_tm_scid(candidate, primary_scid, vc_id)
+
+                locked = True
+                del buf[:frame_length]
+
                 vc_count = candidate[3]
                 if frame_scid in last_vc_count:
                     expected_vc = (last_vc_count[frame_scid] + 1) & 0xFF
@@ -178,12 +178,12 @@ def _forward_tm_serial(
                 tm_sock.sendto(candidate, (yamcs_host, tm_port))
                 frames_sent_by_scid[frame_scid] += 1
             else:
-                # CRC mismatch — sync header was a false positive (or the
-                # frame was corrupted by interleaved text).  Skip past the
-                # 2 sync-header bytes and keep scanning from the next byte.
-                del buf[:2]
+                if locked:
+                    print("[TM] lost frame sync, hunting...")
+                    locked = False
+                junk_bytes += 1
+                del buf[:1]
 
-        # Periodic stats every 30 seconds.
         _maybe_print_stats()
 
 
@@ -421,9 +421,10 @@ def parse_args():
         action="append",
         default=None,
         help=(
-            "Spacecraft ID(s) to accept on TM; comma-separated or repeatable "
-            "(e.g. --spacecraft-id 68,67 or --spacecraft-id 68 --spacecraft-id 67). "
-            "First entry is the primary used for TC framing. Default: 68."
+            "Primary spacecraft ID used for TC framing and TM SCID normalization. "
+            "TM accepts frames from any SCID and normalizes them to this value "
+            "before forwarding to YAMCS. Comma-separated or repeatable; first "
+            "entry is the primary. Default: 68."
         ),
     )
     p.add_argument(
