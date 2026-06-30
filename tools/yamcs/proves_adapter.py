@@ -5,6 +5,11 @@ Routes TM frames from the spacecraft to YAMCS (via UDP) and TC frames from
 YAMCS (via UDP) back to the spacecraft after wrapping them with the HMAC-SHA256
 authentication header/trailer required by the FSW Authenticate component.
 
+The adapter is promiscuous on the TM side: it accepts frames from any CCSDS
+spacecraft ID and normalizes them to ``--spacecraft-id`` before forwarding, so
+a single YAMCS instance can capture telemetry from multiple satellites through
+a single GRC board without knowing their SCIDs in advance.
+
 Use Case 1 (local UART):
     python proves_adapter.py --mode serial --uart-device /dev/ttyUSB0
 
@@ -54,6 +59,25 @@ from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E40
 # ---------------------------------------------------------------------------
 
 
+def _normalize_tm_scid(frame: bytes, spacecraft_id: int, vc_id: int) -> bytes:
+    """Overwrite bytes 0-1 of a CCSDS TM frame with the target SCID/VCID and recompute CRC.
+
+    CCSDS TM primary header word0 (bytes 0-1):
+      bits 15-14: version=0
+      bits 13-4:  spacecraft_id (10 bits)
+      bits 3-1:   vc_id (3 bits)
+      bit 0:      OCF flag = 0
+    """
+    word0 = (spacecraft_id << 4) | (vc_id << 1)
+    out = bytearray(frame)
+    out[0] = (word0 >> 8) & 0xFF
+    out[1] = word0 & 0xFF
+    crc = _crc16_ccitt(bytes(out[:-2]))
+    out[-2] = (crc >> 8) & 0xFF
+    out[-1] = crc & 0xFF
+    return bytes(out)
+
+
 def _forward_tm_serial(
     ser,
     tm_sock,
@@ -65,65 +89,54 @@ def _forward_tm_serial(
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
-    The FSW may interleave console/debug text (e.g. ``[Os::...]``) on the same
-    UART as CCSDS TM frames.  Rather than reading exactly *frame_length* bytes
-    and hoping they form a clean frame, we maintain a rolling buffer and scan for
-    the 2-byte sync header.  When found, we validate the CRC — if it passes the
-    frame is forwarded; if it fails the candidate is discarded and scanning
-    continues.  This makes the adapter resilient to arbitrary non-frame data on
-    the serial link without losing the frame that immediately follows.
+    Operates in promiscuous mode: accepts frames from any spacecraft ID by
+    validating only the CRC-16/CCITT, not the embedded SCID.  Before forwarding,
+    the adapter normalizes the SCID/VCID bytes (header bytes 0-1) to match
+    ``spacecraft_id``/``vc_id`` and recomputes the frame CRC so YAMCS always
+    sees a consistent spacecraft ID regardless of which satellite sent the frame.
+
+    Uses a HUNT/LOCK state machine:
+      HUNT — slide 1 byte at a time until a CRC-valid frame is found.
+      LOCK — once in sync, expect the next frame exactly ``frame_length``
+             bytes later; fall back to HUNT on CRC failure.
     """
     import time
 
     print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
-    # Compute the expected first 2 bytes of the CCSDS TM primary header:
-    # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
-    word0 = (spacecraft_id << 4) | (vc_id << 1)
-    sync_header = bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])
+    print(
+        f"[TM] Promiscuous: accepting any SCID, normalizing to SCID={spacecraft_id} VCID={vc_id}"
+    )
 
     buf = bytearray()
     frames_sent = 0
-    last_vc_count = -1  # not yet known
+    last_vc_count = -1
     vc_frame_gaps = 0
     junk_bytes = 0
+    locked = False
     stats_time = time.monotonic()
 
-    print(f"[TM] Scanning for frames (sync header={sync_header.hex(' ')})...")
-
     while True:
-        # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
         chunk = ser.read(max(1, ser.in_waiting or 1))
         if not chunk:
             continue
         buf.extend(chunk)
 
-        # Scan the buffer for complete, CRC-valid frames.
-        while True:
-            # Find the sync header in the buffer.
-            idx = buf.find(sync_header)
-            if idx == -1:
-                # No sync header anywhere — discard everything except the last
-                # byte (which could be the first byte of a future sync header).
-                if len(buf) > 1:
-                    junk_bytes += len(buf) - 1
-                    del buf[: len(buf) - 1]
-                break
-
-            # Discard any non-frame bytes before the sync header.
-            if idx > 0:
-                junk_bytes += idx
-                del buf[:idx]
-
-            # Need a full frame to validate.
-            if len(buf) < frame_length:
-                break  # wait for more data
-
+        while len(buf) >= frame_length:
             candidate = bytes(buf[:frame_length])
             if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                # Valid frame — forward it.
+                # CRC-valid frame — normalize SCID if needed.
+                real_word0 = (candidate[0] << 8) | candidate[1]
+                real_scid = (real_word0 >> 4) & 0x3FF
+                if real_scid != spacecraft_id:
+                    if not locked:
+                        print(
+                            f"[TM] acquired lock: SCID={real_scid} → normalizing to {spacecraft_id}"
+                        )
+                    candidate = _normalize_tm_scid(candidate, spacecraft_id, vc_id)
+
+                locked = True
                 del buf[:frame_length]
 
-                # VC frame count gap detection (byte 3 of TM primary header).
                 vc_count = candidate[3]
                 if last_vc_count >= 0:
                     expected_vc = (last_vc_count + 1) & 0xFF
@@ -139,12 +152,12 @@ def _forward_tm_serial(
                 tm_sock.sendto(candidate, (yamcs_host, tm_port))
                 frames_sent += 1
             else:
-                # CRC mismatch — sync header was a false positive (or the
-                # frame was corrupted by interleaved text).  Skip past the
-                # 2 sync-header bytes and keep scanning from the next byte.
-                del buf[:2]
+                if locked:
+                    print("[TM] lost frame sync, hunting...")
+                    locked = False
+                junk_bytes += 1
+                del buf[:1]
 
-        # Periodic stats every 30 seconds.
         now = time.monotonic()
         if now - stats_time >= 30.0:
             elapsed = now - stats_time
@@ -155,6 +168,7 @@ def _forward_tm_serial(
             )
             stats_time = now
             frames_sent = 0
+            vc_frame_gaps = 0
             junk_bytes = 0
 
 
@@ -282,6 +296,9 @@ def _forward_tc_serial(
             )
             continue
         ser.write(out_frame)
+        print(
+            f"[TC] forwarded {len(tc_transfer_frame)}B YAMCS frame → {len(out_frame)}B auth'd TC frame"
+        )
 
 
 def _forward_tc_tcp(
@@ -399,8 +416,11 @@ def main():
 
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    tc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    tc_sock.bind(("0.0.0.0", args.yamcs_tc_port))
+    # Dual-stack so we receive TC from YAMCS whether it sends to 127.0.0.1 or ::1.
+    # macOS resolves "localhost" to ::1 by default, so AF_INET alone misses those packets.
+    tc_sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    tc_sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+    tc_sock.bind(("", args.yamcs_tc_port))
 
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
