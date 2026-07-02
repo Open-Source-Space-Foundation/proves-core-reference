@@ -118,6 +118,7 @@ def _forward_tm_serial(
     last_vc_count: dict[int, int] = {}
     vc_frame_gaps = 0
     junk_bytes = 0
+    junk_bytes_list = []
     locked = False
     stats_time = time.monotonic()
 
@@ -134,11 +135,13 @@ def _forward_tm_serial(
             print(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
                 f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
+                f"Junk bytes: {junk_bytes_list}"
             )
             stats_time = now
             frames_sent_by_scid.clear()
             vc_frame_gaps = 0
             junk_bytes = 0
+            junk_bytes_list.clear()
 
     while True:
         chunk = ser.read(max(1, ser.in_waiting or 1))
@@ -182,6 +185,7 @@ def _forward_tm_serial(
                     print("[TM] lost frame sync, hunting...")
                     locked = False
                 junk_bytes += 1
+                junk_bytes_list.append(buf[0])
                 del buf[:1]
 
         _maybe_print_stats()
