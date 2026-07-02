@@ -122,6 +122,27 @@ By default, the serial adapter reads `yamcs/deployments.yaml` and routes
 telemetry and commands by spacecraft ID. Add more entries to that file when
 running multiple YAMCS deployments with distinct TM/TC UDP ports.
 
+#### Multiple Spacecraft (Multi-SCID)
+
+To track several satellites through one ground radio, generate a
+multi-instance YAMCS configuration from each satellite's F Prime dictionary:
+
+```shell
+make yamcs-deployments DICTS="path/to/SatATopologyDictionary.json path/to/SatBTopologyDictionary.json"
+```
+
+This writes a gitignored tree under `yamcs/deployments/` containing one YAMCS
+instance per dictionary (spacecraft ID and frame length are read from the
+dictionary's `ComCfg` constants), an XTCE MDB per instance, non-conflicting
+TM/TC UDP port pairs starting at 50000, and a `deployments.yaml` routing table
+for the adapter. Then start everything — a single YAMCS server hosting all
+instances (web UI at `http://localhost:8090`), one events bridge per
+deployment, and the serial adapter — with:
+
+```shell
+UART_DEVICE=/dev/ttyXXX make yamcs-multi
+```
+
 YAMCS starts the following components:
 1. **YAMCS Server** – web interface and mission control backbone (available at `http://localhost:8090`)
 2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)

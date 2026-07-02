@@ -54,6 +54,8 @@ lib/fprime-extras/
 yamcs/yamcs-data/mdb/*.xml
 # YAMCS runtime data directory (created at startup by fprime-yamcs)
 yamcs/yamcs-runtime/
+# Generated multi-instance YAMCS deployments (make yamcs-deployments)
+yamcs/deployments/
 
 # CircuitPython passthrough
 /circuit-python-passthrough/firmware.uf2
