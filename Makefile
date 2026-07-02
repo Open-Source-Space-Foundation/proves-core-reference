@@ -338,8 +338,19 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	    echo "  stopped $$label (port $$port)"; \
 	  fi; \
 	}; \
-	kill_udp_port 50001 'serial adapter'; \
-	kill_udp_port 50000 'TM UDP sender'; \
+	if [ -f "$(YAMCS_DEPLOYMENTS)" ]; then \
+	  py="$(VIRTUAL_ENV)/bin/python"; [ -x "$$py" ] || py=python3; \
+	  ports="$$($$py -c 'import yaml; data=yaml.safe_load(open("$(YAMCS_DEPLOYMENTS)")); print(" ".join(str(d[p]) for d in data.get("deployments", []) for p in ("tm_port", "tc_port") if p in d))' 2>/dev/null || true)"; \
+	  if [ -n "$$ports" ]; then \
+	    for port in $$ports; do kill_udp_port "$$port" 'YAMCS adapter'; done; \
+	  else \
+	    kill_udp_port 50001 'serial adapter'; \
+	    kill_udp_port 50000 'TM UDP sender'; \
+	  fi; \
+	else \
+	  kill_udp_port 50001 'serial adapter'; \
+	  kill_udp_port 50000 'TM UDP sender'; \
+	fi; \
 	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
 	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
 	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
@@ -354,13 +365,14 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	done
 	@echo "Done."
 
-# Spacecraft ID(s) passed to the adapter. May be a comma-separated list
-# (e.g. SPACECRAFT_ID=68,67) — the adapter accepts TM from all listed SCIDs
-# and uses the first for TC framing. Must include the SCID baked into the
-# FSW build (ComCfg.fpp) and registered in the YAMCS instance config.
-# Defaults to the production value (68 / 0x0044). CI sets this to 67 /
-# 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
+# Spacecraft ID used by the adapter's single-deployment fallback. Defaults to
+# the production value (68 / 0x0044). CI sets this to 67 / 0x0043 via
+# `make-ci-spacecraft-id` to avoid collisions with dev machines.
 SPACECRAFT_ID ?= 68
+
+# Multi-deployment adapter configuration. When this file exists, make yamcs
+# passes it to the adapter so TM and TC are routed by deployment SCID/ports.
+YAMCS_DEPLOYMENTS ?= yamcs/deployments.yaml
 
 .PHONY: yamcs
 yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
@@ -384,11 +396,12 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
+	@echo "Starting serial adapter on $(UART_DEVICE) (deployments=$(YAMCS_DEPLOYMENTS), fallback spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
 	    --uart-device $(UART_DEVICE) \
 	    --uart-baud 115200 \
+	    $(if $(wildcard $(YAMCS_DEPLOYMENTS)),--yamcs-deployments $(YAMCS_DEPLOYMENTS),) \
 	    --spacecraft-id $(SPACECRAFT_ID)
 
 .PHONY: yamcs-server

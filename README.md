@@ -118,6 +118,10 @@ Then start YAMCS with:
 UART_DEVICE=/dev/ttyXXX make yamcs
 ```
 
+By default, the serial adapter reads `yamcs/deployments.yaml` and routes
+telemetry and commands by spacecraft ID. Add more entries to that file when
+running multiple YAMCS deployments with distinct TM/TC UDP ports.
+
 YAMCS starts the following components:
 1. **YAMCS Server** – web interface and mission control backbone (available at `http://localhost:8090`)
 2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)
