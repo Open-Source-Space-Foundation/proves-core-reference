@@ -20,11 +20,13 @@ Use Case 2 (remote TCP, skeleton):
 """
 
 import argparse
+import json
 import socket
 import sys
 import threading
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -43,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 
 
 def _crc16_ccitt(data: bytes) -> int:
+    """Compute CRC16-CCITT over the given bytes."""
     crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
@@ -66,6 +69,8 @@ from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E40
 
 @dataclass(frozen=True)
 class YamcsDeployment:
+    """One YAMCS instance the adapter routes TM to and receives TC from."""
+
     name: str
     spacecraft_id: int
     vc_id: int
@@ -75,11 +80,13 @@ class YamcsDeployment:
 
 
 def _validate_u10(value: int, field_name: str) -> None:
+    """Require a 10-bit unsigned value (CCSDS spacecraft ID range)."""
     if not 0 <= value <= 0x3FF:
         raise ValueError(f"{field_name} {value} out of range (expected 0..1023)")
 
 
 def _validate_vc_id(value: int, field_name: str) -> None:
+    """Require a 3-bit virtual channel ID."""
     if not 0 <= value <= 0x7:
         raise ValueError(f"{field_name} {value} out of range (expected 0..7)")
 
@@ -90,6 +97,7 @@ def _deployment_from_mapping(
     default_host: str = "127.0.0.1",
     default_vc_id: int = 1,
 ) -> YamcsDeployment:
+    """Build a validated YamcsDeployment from one deployments.yaml entry."""
     if not isinstance(item, dict):
         raise ValueError("each deployment must be a mapping")
 
@@ -118,6 +126,7 @@ def _deployment_from_mapping(
 
 
 def _validate_deployments(deployments: list[YamcsDeployment]) -> list[YamcsDeployment]:
+    """Reject empty deployment lists and duplicate names/SCIDs/TC ports."""
     if not deployments:
         raise ValueError("at least one YAMCS deployment is required")
 
@@ -138,6 +147,7 @@ def _validate_deployments(deployments: list[YamcsDeployment]) -> list[YamcsDeplo
 
 
 def load_yamcs_deployments(path: Path) -> list[YamcsDeployment]:
+    """Load and validate the deployments list from a YAML routing table."""
     with path.open() as stream:
         config = yaml.safe_load(stream)
     if not isinstance(config, dict) or not isinstance(config.get("deployments"), list):
@@ -147,6 +157,7 @@ def load_yamcs_deployments(path: Path) -> list[YamcsDeployment]:
 
 
 def _default_deployments(args) -> list[YamcsDeployment]:
+    """Build the single-deployment fallback from the CLI arguments."""
     primary_scid = args.spacecraft_ids[0]
     return _validate_deployments(
         [
@@ -163,6 +174,7 @@ def _default_deployments(args) -> list[YamcsDeployment]:
 
 
 def resolve_yamcs_deployments(args) -> list[YamcsDeployment]:
+    """Return deployments from --yamcs-deployments or the CLI fallback."""
     if args.yamcs_deployments is not None:
         return load_yamcs_deployments(args.yamcs_deployments)
     return _default_deployments(args)
@@ -174,13 +186,41 @@ def resolve_yamcs_deployments(args) -> list[YamcsDeployment]:
 
 
 def _extract_tm_scid(frame: bytes) -> int:
+    """Extract the 10-bit spacecraft ID from a TM frame header."""
     return ((frame[0] << 8) | frame[1]) >> 4 & 0x3FF
 
 
 def _tm_route_for_frame(
     frame: bytes, deployments_by_scid: dict[int, YamcsDeployment]
 ) -> YamcsDeployment | None:
+    """Return the deployment whose SCID matches the frame, if configured."""
     return deployments_by_scid.get(_extract_tm_scid(frame))
+
+
+# Default drop log for CRC-valid TM frames whose SCID matches no deployment.
+DEFAULT_UNKNOWN_PKTS_LOG = Path("unknown_pkts.json")
+
+
+def _log_unknown_frame(log_path: Path, frame: bytes) -> None:
+    """Append a CRC-valid frame with an unconfigured SCID to the drop log.
+
+    One JSON object per line (JSON Lines) so the file can be tailed, grepped,
+    or parsed incrementally while the adapter keeps running.  Logging failures
+    must never take down the TM path, so errors are reported and swallowed.
+    """
+    record = {
+        "time": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+        "scid": _extract_tm_scid(frame),
+        "vc_id": (frame[1] >> 1) & 0x7,
+        "vc_count": frame[3],
+        "length": len(frame),
+        "frame_hex": frame.hex(),
+    }
+    try:
+        with log_path.open("a") as stream:
+            stream.write(json.dumps(record) + "\n")
+    except OSError as exc:
+        print(f"[TM] failed to write {log_path}: {exc}")
 
 
 def _forward_tm_serial(
@@ -188,6 +228,7 @@ def _forward_tm_serial(
     tm_sock,
     deployments: list[YamcsDeployment],
     frame_length: int,
+    unknown_log: Path = DEFAULT_UNKNOWN_PKTS_LOG,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -222,6 +263,7 @@ def _forward_tm_serial(
     stats_time = time.monotonic()
 
     def _maybe_print_stats() -> None:
+        """Print and reset routing statistics every 30 seconds."""
         nonlocal stats_time, junk_bytes, vc_frame_gaps
         now = time.monotonic()
         if now - stats_time >= 30.0:
@@ -263,8 +305,12 @@ def _forward_tm_serial(
                 deployment = _tm_route_for_frame(candidate, deployments_by_scid)
                 if deployment is None:
                     frames_dropped_by_scid[frame_scid] += 1
+                    _log_unknown_frame(unknown_log, candidate)
                     if frames_dropped_by_scid[frame_scid] == 1:
-                        print(f"[TM] dropping unconfigured SCID {frame_scid}")
+                        print(
+                            f"[TM] dropping unconfigured SCID {frame_scid} "
+                            f"(logging to {unknown_log})"
+                        )
                     continue
 
                 vc_count = candidate[3]
@@ -293,7 +339,11 @@ def _forward_tm_serial(
 
 
 def _forward_tm_tcp(
-    tcp_sock, tm_sock, deployments: list[YamcsDeployment], frame_length: int
+    tcp_sock,
+    tm_sock,
+    deployments: list[YamcsDeployment],
+    frame_length: int,
+    unknown_log: Path = DEFAULT_UNKNOWN_PKTS_LOG,
 ):
     """Read fixed-length TM frames from a TCP connection and forward to YAMCS via UDP.
 
@@ -316,6 +366,7 @@ def _forward_tm_tcp(
             frame, buf = buf[:frame_length], buf[frame_length:]
             deployment = _tm_route_for_frame(frame, deployments_by_scid)
             if deployment is None:
+                _log_unknown_frame(unknown_log, frame)
                 print(f"[TM] dropping unconfigured SCID {_extract_tm_scid(frame)}")
                 continue
             tm_sock.sendto(frame, (deployment.yamcs_host, deployment.tm_port))
@@ -469,6 +520,7 @@ def _forward_tc_tcp(
 
 
 def _bind_tc_socket(deployment: YamcsDeployment):
+    """Bind a UDP socket on the deployment's TC port."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", deployment.tc_port))
     return sock
@@ -477,6 +529,7 @@ def _bind_tc_socket(deployment: YamcsDeployment):
 def _sdlink_framer_for_deployment(
     deployment: YamcsDeployment, frame_length: int
 ) -> SpaceDataLinkFramerDeframer:
+    """Build a TC framer stamped with the deployment's SCID/VCID."""
     return SpaceDataLinkFramerDeframer(
         scid=deployment.spacecraft_id,
         vcid=deployment.vc_id,
@@ -490,7 +543,10 @@ def _sdlink_framer_for_deployment(
 
 
 def parse_args():
+    """Parse command-line arguments."""
+
     def _parse_scid_list(val: str) -> list[int]:
+        """Parse a comma-separated list of 10-bit spacecraft IDs."""
         scids = [int(x) for x in val.split(",") if x.strip()]
         if not scids:
             raise argparse.ArgumentTypeError(
@@ -547,6 +603,13 @@ def parse_args():
         help="YAMCS TC UDP port (adapter receives TC from here)",
     )
 
+    p.add_argument(
+        "--unknown-pkts-log",
+        type=Path,
+        default=DEFAULT_UNKNOWN_PKTS_LOG,
+        help="JSON-lines file where CRC-valid TM frames with unconfigured SCIDs are appended",
+    )
+
     # Auth options
     p.add_argument(
         "--auth-key",
@@ -591,6 +654,7 @@ def parse_args():
 
 
 def main():
+    """Run the adapter: route TM to YAMCS and auth-wrap TC back to the radio."""
     args = parse_args()
     try:
         deployments = resolve_yamcs_deployments(args)
@@ -644,6 +708,7 @@ def main():
                 tm_sock,
                 deployments,
                 args.frame_length,
+                args.unknown_pkts_log,
             ),
             daemon=True,
         )
@@ -676,6 +741,7 @@ def main():
                 tm_sock,
                 deployments,
                 args.frame_length,
+                args.unknown_pkts_log,
             ),
             daemon=True,
         )

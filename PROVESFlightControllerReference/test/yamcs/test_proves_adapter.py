@@ -1,3 +1,5 @@
+"""Tests for the PROVES YAMCS adapter routing and config loading."""
+
 from pathlib import Path
 
 import pytest
@@ -12,12 +14,14 @@ from tools.yamcs.proves_adapter import (
 
 
 def _write_deployments(tmp_path: Path, body: str) -> Path:
+    """Write a deployments.yaml with the given body."""
     path = tmp_path / "deployments.yaml"
     path.write_text(body)
     return path
 
 
 def _tm_frame(scid: int, vc_id: int = 1, frame_length: int = 32) -> bytes:
+    """Build a CRC-valid TM frame for the given SCID."""
     frame = bytearray(frame_length)
     word0 = (scid << 4) | (vc_id << 1)
     frame[0] = (word0 >> 8) & 0xFF
@@ -30,6 +34,7 @@ def _tm_frame(scid: int, vc_id: int = 1, frame_length: int = 32) -> bytes:
 
 
 def test_load_yamcs_deployments_accepts_valid_config(tmp_path):
+    """A valid two-deployment config loads with all fields."""
     path = _write_deployments(
         tmp_path,
         """
@@ -69,6 +74,7 @@ deployments:
 def test_load_yamcs_deployments_rejects_invalid_config(
     tmp_path, field, replacement, message
 ):
+    """Invalid configs raise ValueError."""
     config = """
 deployments:
   - name: proves-68
@@ -91,6 +97,7 @@ deployments:
 
 
 def test_tm_route_for_frame_maps_configured_scid_without_rewriting():
+    """Configured SCIDs route to their deployment unmodified."""
     deployment = YamcsDeployment("proves-68", 68, 1, "127.0.0.1", 50000, 50001)
     frame = _tm_frame(68)
 
@@ -101,6 +108,7 @@ def test_tm_route_for_frame_maps_configured_scid_without_rewriting():
 
 
 def test_tm_route_for_frame_drops_unknown_scid():
+    """Unconfigured SCIDs route to None."""
     deployment = YamcsDeployment("proves-68", 68, 1, "127.0.0.1", 50000, 50001)
     frame = _tm_frame(67)
 
@@ -108,3 +116,26 @@ def test_tm_route_for_frame_drops_unknown_scid():
 
     assert route is None
     assert _extract_tm_scid(frame) == 67
+
+
+def test_log_unknown_frame_appends_json_lines(tmp_path):
+    """Unknown-SCID frames append one parseable JSON record per line."""
+    import json
+
+    from tools.yamcs.proves_adapter import _log_unknown_frame
+
+    frame = _tm_frame(99)
+    log_path = tmp_path / "unknown_pkts.json"
+
+    _log_unknown_frame(log_path, frame)
+    _log_unknown_frame(log_path, frame)
+
+    lines = log_path.read_text().splitlines()
+    assert len(lines) == 2
+    record = json.loads(lines[0])
+    assert record["scid"] == 99
+    assert record["vc_id"] == 1
+    assert record["vc_count"] == 7
+    assert record["length"] == len(frame)
+    assert record["frame_hex"] == frame.hex()
+    assert "time" in record
