@@ -590,6 +590,8 @@ def main():
     tc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     tc_sock.bind(("0.0.0.0", args.yamcs_tc_port))
 
+    session_dir: Path | None = None
+
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
 
@@ -675,6 +677,8 @@ def main():
         tc_thread.join()
     except KeyboardInterrupt:
         print("\n[adapter] Interrupted. Shutting down.")
+        if session_dir is not None:
+            print(f"[adapter] TM capture saved to {session_dir}/")
         sys.exit(0)
 
 
