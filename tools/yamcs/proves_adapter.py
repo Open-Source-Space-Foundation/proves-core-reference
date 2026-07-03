@@ -131,19 +131,16 @@ def _forward_tm_serial(
     stats_time = time.monotonic()
     junk_log = data_file.open("a") if data_file is not None else None
 
-    def _log_junk_byte(byte_val: int, byte_index: int, was_locked: bool, lost_sync: bool) -> None:
+    def _log_junk_byte(byte_val: int, byte_index: int, was_locked: bool) -> None:
         ts = _format_timestamp()
-        state = "lost-sync" if lost_sync else "hunt"
+        state = "locked" if was_locked else "hunt"
         print(
             f"[TM] junk | {ts} | idx={byte_index:4d} | 0x{byte_val:02x} | {state}",
             flush=True,
         )
         if junk_log is None:
             return
-        junk_log.write(
-            f"{ts},{byte_index},0x{byte_val:02x},"
-            f"{int(was_locked)},{int(lost_sync)}\n"
-        )
+        junk_log.write(f"{ts},{byte_index},0x{byte_val:02x},{state}\n")
         junk_log.flush()
 
     def _maybe_print_stats() -> None:
@@ -205,12 +202,11 @@ def _forward_tm_serial(
                 frames_sent_by_scid[frame_scid] += 1
             else:
                 was_locked = locked
-                lost_sync = locked
                 if locked:
                     print("[TM] lost frame sync, hunting...")
                     locked = False
                 junk_bytes += 1
-                _log_junk_byte(buf[0], junk_run_index, was_locked, lost_sync)
+                _log_junk_byte(buf[0], junk_run_index, was_locked)
                 junk_run_index += 1
                 del buf[:1]
 
@@ -497,7 +493,7 @@ def main():
     data_path.mkdir(parents=True, exist_ok=True)
     data_file = data_path / f"junk_{start_stamp}.csv"
     with data_file.open("w") as f:
-        f.write("timestamp,byte_index,hex_value,locked,lost_sync\n")
+        f.write("timestamp,byte_index,hex_value,state\n")
     print(f"[adapter] Logging junk bytes to {data_file}")
 
     # Shared UDP sockets
