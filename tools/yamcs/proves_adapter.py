@@ -25,6 +25,7 @@ import sys
 import threading
 from collections import Counter
 from pathlib import Path
+import time
 
 # Flush stdout on every print so diagnostic messages appear immediately even
 # when the adapter is run as a background process or piped to a log file.
@@ -38,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 # CRC16-CCITT (CCSDS standard: poly 0x1021, init 0xFFFF, no reflection)
 # ---------------------------------------------------------------------------
 
+data_path = "tools/yamcs/data"
 
 def _crc16_ccitt(data: bytes) -> int:
     crc = 0xFFFF
@@ -136,6 +138,8 @@ def _forward_tm_serial(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
                 f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
                 f"Junk bytes: {junk_bytes_list}"
+                with data_file.open("a") as f:
+                    f.write(f"Junk Bytes: {junk_bytes_list}\n"
             )
             stats_time = now
             frames_sent_by_scid.clear()
@@ -185,7 +189,8 @@ def _forward_tm_serial(
                     print("[TM] lost frame sync, hunting...")
                     locked = False
                 junk_bytes += 1
-                junk_bytes_list.append(buf[0])
+                #cast to hex string and append to list
+                junk_bytes_list.append(hex(buf[0]))
                 del buf[:1]
 
         _maybe_print_stats()
@@ -465,6 +470,13 @@ def main():
         vcid=args.vc_id,
         frame_size=args.frame_length,
     )
+
+    #get time of start of the adapter
+    start_time = time.time()
+    # create a file in data folder named for the start time
+    data_file = Path(data_path) / f"bytes_{start_time}.txt"
+    with open(data_file, "w") as f:
+        f.write("Junk Bytes: " + str(start_time) + "\n\n\n")
 
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
