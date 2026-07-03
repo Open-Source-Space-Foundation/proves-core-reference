@@ -24,6 +24,7 @@ import socket
 import sys
 import threading
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 import time
 
@@ -40,6 +41,12 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 # ---------------------------------------------------------------------------
 
 data_path = Path(__file__).parent / "data"
+
+
+def _format_timestamp(when: datetime | None = None) -> str:
+    """Human-readable local timestamp: YYYY-MM-DD HH:MM:SS."""
+    return (when or datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
+
 
 def _crc16_ccitt(data: bytes) -> int:
     crc = 0xFFFF
@@ -105,8 +112,6 @@ def _forward_tm_serial(
       LOCK — once in sync, take the next frame exactly ``frame_length`` bytes
              later; fall back to HUNT on CRC failure.
     """
-    import time
-
     if spacecraft_ids is None:
         spacecraft_ids = [68]
 
@@ -121,9 +126,25 @@ def _forward_tm_serial(
     last_vc_count: dict[int, int] = {}
     vc_frame_gaps = 0
     junk_bytes = 0
-    junk_bytes_list = []
+    junk_run_index = 0
     locked = False
     stats_time = time.monotonic()
+    junk_log = data_file.open("a") if data_file is not None else None
+
+    def _log_junk_byte(byte_val: int, byte_index: int, was_locked: bool, lost_sync: bool) -> None:
+        ts = _format_timestamp()
+        state = "lost-sync" if lost_sync else "hunt"
+        print(
+            f"[TM] junk | {ts} | idx={byte_index:4d} | 0x{byte_val:02x} | {state}",
+            flush=True,
+        )
+        if junk_log is None:
+            return
+        junk_log.write(
+            f"{ts},{byte_index},0x{byte_val:02x},"
+            f"{int(was_locked)},{int(lost_sync)}\n"
+        )
+        junk_log.flush()
 
     def _maybe_print_stats() -> None:
         nonlocal stats_time, junk_bytes, vc_frame_gaps
@@ -137,17 +158,12 @@ def _forward_tm_serial(
             )
             print(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
-                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes. "
-                f"Junk bytes: {junk_bytes_list}"
+                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
             )
-            if data_file is not None:
-                with data_file.open("a") as f:
-                    f.write(f"Junk Bytes at {time.time()}: {junk_bytes_list}\n")
             stats_time = now
             frames_sent_by_scid.clear()
             vc_frame_gaps = 0
             junk_bytes = 0
-            junk_bytes_list.clear()
 
     while True:
         chunk = ser.read(max(1, ser.in_waiting or 1))
@@ -169,6 +185,7 @@ def _forward_tm_serial(
                     candidate = _normalize_tm_scid(candidate, primary_scid, vc_id)
 
                 locked = True
+                junk_run_index = 0
                 del buf[:frame_length]
 
                 vc_count = candidate[3]
@@ -187,12 +204,14 @@ def _forward_tm_serial(
                 tm_sock.sendto(candidate, (yamcs_host, tm_port))
                 frames_sent_by_scid[frame_scid] += 1
             else:
+                was_locked = locked
+                lost_sync = locked
                 if locked:
                     print("[TM] lost frame sync, hunting...")
                     locked = False
                 junk_bytes += 1
-                #cast to hex string and append to list
-                junk_bytes_list.append(hex(buf[0]))
+                _log_junk_byte(buf[0], junk_run_index, was_locked, lost_sync)
+                junk_run_index += 1
                 del buf[:1]
 
         _maybe_print_stats()
@@ -473,14 +492,13 @@ def main():
         frame_size=args.frame_length,
     )
 
-    print("Getting time and creating data file...")
-    #get time of start of the adapter
-    start_time = time.time()
-    # create a file in data folder named for the start time
-    data_file = Path(data_path) / f"bytes_{start_time}.txt"
-    with open(data_file, "w") as f:
-        f.write("Junk Bytes: " + str(start_time) + "\n\n\n")
-        print(f"[adapter] Logging junk bytes to {data_file}")
+    start_dt = datetime.now()
+    start_stamp = start_dt.strftime("%Y-%m-%d_%H-%M-%S")
+    data_path.mkdir(parents=True, exist_ok=True)
+    data_file = data_path / f"junk_{start_stamp}.csv"
+    with data_file.open("w") as f:
+        f.write("timestamp,byte_index,hex_value,locked,lost_sync\n")
+    print(f"[adapter] Logging junk bytes to {data_file}")
 
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
