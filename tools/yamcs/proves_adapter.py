@@ -97,7 +97,8 @@ def _forward_tm_serial(
     frame_length: int,
     spacecraft_ids: list[int] | None = None,
     vc_id: int = 1,
-    data_file: Path | None = None,
+    junk_csv: Path | None = None,
+    junk_bin: Path | None = None,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -129,19 +130,31 @@ def _forward_tm_serial(
     junk_run_index = 0
     locked = False
     stats_time = time.monotonic()
-    junk_log = data_file.open("a") if data_file is not None else None
+    junk_csv_file = junk_csv.open("a") if junk_csv is not None else None
+    junk_bin_file = junk_bin.open("ab") if junk_bin is not None else None
 
-    def _log_junk_byte(byte_val: int, byte_index: int, was_locked: bool) -> None:
+    def _save_junk_bytes(
+        byte_vals: bytes, start_index: int, was_locked: bool
+    ) -> None:
+        if not byte_vals:
+            return
         ts = _format_timestamp()
         state = "locked" if was_locked else "hunt"
-        print(
-            f"[TM] junk | {ts} | idx={byte_index:4d} | 0x{byte_val:02x} | {state}",
-            flush=True,
-        )
-        if junk_log is None:
-            return
-        junk_log.write(f"{ts},{byte_index},0x{byte_val:02x},{state}\n")
-        junk_log.flush()
+        for offset, byte_val in enumerate(byte_vals):
+            byte_index = start_index + offset
+            print(
+                f"[TM] junk | {ts} | idx={byte_index:4d} | 0x{byte_val:02x} | {state}",
+                flush=True,
+            )
+            if junk_csv_file is not None:
+                junk_csv_file.write(
+                    f"{ts},{byte_index},0x{byte_val:02x},{state}\n"
+                )
+        if junk_bin_file is not None:
+            junk_bin_file.write(byte_vals)
+            junk_bin_file.flush()
+        if junk_csv_file is not None:
+            junk_csv_file.flush()
 
     def _maybe_print_stats() -> None:
         nonlocal stats_time, junk_bytes, vc_frame_gaps
@@ -206,7 +219,7 @@ def _forward_tm_serial(
                     print("[TM] lost frame sync, hunting...")
                     locked = False
                 junk_bytes += 1
-                _log_junk_byte(buf[0], junk_run_index, was_locked)
+                _save_junk_bytes(bytes([buf[0]]), junk_run_index, was_locked)
                 junk_run_index += 1
                 del buf[:1]
 
@@ -491,10 +504,11 @@ def main():
     start_dt = datetime.now()
     start_stamp = start_dt.strftime("%Y-%m-%d_%H-%M-%S")
     data_path.mkdir(parents=True, exist_ok=True)
-    data_file = data_path / f"junk_{start_stamp}.csv"
-    with data_file.open("w") as f:
+    junk_csv = data_path / f"junk_{start_stamp}.csv"
+    junk_bin = data_path / f"junk_{start_stamp}.bin"
+    with junk_csv.open("w") as f:
         f.write("timestamp,byte_index,hex_value,state\n")
-    print(f"[adapter] Logging junk bytes to {data_file}")
+    print(f"[adapter] Logging junk bytes to {junk_csv} and {junk_bin}")
 
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -525,7 +539,8 @@ def main():
                 args.frame_length,
                 args.spacecraft_ids,
                 args.vc_id,
-                data_file,
+                junk_csv,
+                junk_bin,
             ),
             daemon=True,
         )
