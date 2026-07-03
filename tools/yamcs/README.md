@@ -24,7 +24,7 @@ data/
     dropped.hex      # every CRC-failed 248-byte window
 ```
 
-The same byte events are also printed to the console.
+The same byte events are also printed to the console. On Ctrl+C the session folder path is printed and a **pass triage** report runs automatically (unless `--no-triage` is set).
 
 ## `stream.csv` columns
 
@@ -76,3 +76,72 @@ Console output mirrors `stream.csv`:
 [TM] dropped | 2026-07-02 20:13:46 | offset=1984 | hunt | CRC failed
 [TM] byte | 2026-07-02 20:13:46 | idx=  1984 | 0xff | hunt
 ```
+
+## Pass triage (`pass_triage.py`)
+
+After a pass, `pass_triage.py` summarizes `stream.csv`. The adapter runs it automatically on Ctrl+C (serial mode); you can also invoke it manually:
+
+```bash
+python tools/yamcs/pass_triage.py tools/yamcs/data/2026-07-02_20-13-45/stream.csv
+```
+
+Or from Python:
+
+```python
+from pass_triage import triage
+report = triage("tools/yamcs/data/2026-07-02_20-13-45/stream.csv")
+```
+
+### What it detects
+
+Greedy single-pass segmentation at each byte offset. First match wins:
+
+| Tag | What it is |
+| --- | --- |
+| `proves-tm` | CRC-valid 248-byte CCSDS TM frame (any offset, any SCID) |
+| `proves-tm-partial` | Signature-based partial TM (sync word, frame counter, idle fill) when CRC sweep finds nothing |
+| `own-uplink` | CRC-valid TC transfer frame, SCID 68 |
+| `foreign-uplink` | CRC-valid TC transfer frame, other SCID |
+| `own-uplink-degraded` | SCID 68 TC header parses but CRC fails |
+| `hucsat-beacon` / `hucsat-beacon-degraded` | HUCSat 12-byte beacon (exact or fuzzy match) |
+| `hucsat-telemetry` / `hucsat-telemetry-degraded` / `hucsat-telemetry-truncated` | HUCSat telemetry blob |
+| `unknown` | Unattributed byte runs between recognized packets |
+
+Read bursts (gaps > 5 s between classified timestamps) are counted in the report header.
+
+### Report sections
+
+**VERDICT** — quick pass summary:
+
+- **PROVES downlink** — `HEARD` (verified frames), `POSSIBLE` (partials only), or `NOT HEARD`
+- **Uplink co-heard** — own-SCID and foreign TC frames detected on the promiscuous RX path
+- **HUCSat** — beacon/telemetry packet counts and byte share
+- **Unknown** — unattributed bytes
+
+**WATCHED COMMANDS** — looks for these F Prime commands in TC traffic:
+
+- `CdhCore.cmdDisp.CMD_NO_OP`
+- `ReferenceDeployment.lora.TRANSMIT`
+- `ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET`
+- `ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET`
+
+Decoded from CRC-valid TC frames first (`UPLINKED (verified)`), then a raw opcode sweep over unattributed bytes (`possible (opcode match only)`). `lora.TRANSMIT` args resolve to `ENABLED` / `DISABLED` / `DISABLING`.
+
+**PACKETS** — full segmentation table: offset, time, tag, length, detail.
+
+### Dictionary
+
+Command opcodes are resolved from the F Prime dictionary at runtime. Default:
+
+```text
+build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+```
+
+**Use a dictionary that matches the flight build on the satellite.** Opcode decoding is wrong if the dictionary is from a different firmware version. For the last flight release ([v1.0.3](https://github.com/Open-Source-Space-Foundation/proves-core-reference/releases/tag/v1.0.3)), download `ReferenceDeploymentTopologyDictionary.json` from that release's build artifacts and pass it explicitly:
+
+```bash
+python tools/yamcs/pass_triage.py tools/yamcs/data/2026-07-02_20-13-45/stream.csv \
+  --dictionary /path/to/v1.0.3/ReferenceDeploymentTopologyDictionary.json
+```
+
+If no dictionary is found, built-in fallback opcodes from the 2026-07 flown build are used (reported as `FALLBACK CONSTANTS`).

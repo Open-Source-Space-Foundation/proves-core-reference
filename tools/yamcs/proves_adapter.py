@@ -27,6 +27,7 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 import time
+import pass_triage
 
 # Flush stdout on every print so diagnostic messages appear immediately even
 # when the adapter is run as a background process or piped to a log file.
@@ -120,6 +121,7 @@ def _forward_tm_serial(
     stream_hex: Path | None = None,
     packets_hex: Path | None = None,
     dropped_hex: Path | None = None,
+    stop_event: threading.Event | None = None,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -256,58 +258,79 @@ def _forward_tm_serial(
             vc_frame_gaps = 0
             discarded_bytes = 0
 
-    while True:
-        chunk = ser.read(max(1, ser.in_waiting or 1))
-        if not chunk:
-            _maybe_print_stats()
-            continue
-        _append_stream_hex(chunk)
-        buf.extend(chunk)
-        session_byte_index += len(chunk)
+    def _flush_capture_files() -> None:
+        if stream_hex_tail and stream_hex_file is not None:
+            row_offset = stream_hex_appended
+            hex_part = " ".join(f"{byte_val:02x}" for byte_val in stream_hex_tail)
+            stream_hex_file.write(f"  {row_offset:04x}: {hex_part}\n")
+            stream_hex_tail.clear()
+        for capture_file in (
+            stream_csv_file,
+            stream_hex_file,
+            packets_hex_file,
+            dropped_hex_file,
+        ):
+            if capture_file is not None:
+                capture_file.flush()
+                capture_file.close()
 
-        while len(buf) >= frame_length:
-            candidate = bytes(buf[:frame_length])
-            base_index = _buf_base_index()
-            if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                raw_frame = candidate
-                frame_scid = ((raw_frame[0] << 8) | raw_frame[1]) >> 4 & 0x3FF
+    try:
+        while stop_event is None or not stop_event.is_set():
+            chunk = ser.read(max(1, ser.in_waiting or 1))
+            if not chunk:
+                _maybe_print_stats()
+                continue
+            _append_stream_hex(chunk)
+            buf.extend(chunk)
+            session_byte_index += len(chunk)
 
-                if frame_scid != primary_scid:
-                    if not locked:
-                        print(
-                            f"[TM] acquired lock: SCID={frame_scid} → normalizing to {primary_scid}"
-                        )
-                    candidate = _normalize_tm_scid(candidate, primary_scid, vc_id)
+            while len(buf) >= frame_length:
+                candidate = bytes(buf[:frame_length])
+                base_index = _buf_base_index()
+                if _crc16_ccitt(candidate[:-2]) == int.from_bytes(
+                    candidate[-2:], "big"
+                ):
+                    raw_frame = candidate
+                    frame_scid = ((raw_frame[0] << 8) | raw_frame[1]) >> 4 & 0x3FF
 
-                locked = True
-                _log_classified_frame(raw_frame, base_index)
-                del buf[:frame_length]
-
-                vc_count = candidate[3]
-                if frame_scid in last_vc_count:
-                    expected_vc = (last_vc_count[frame_scid] + 1) & 0xFF
-                    if vc_count != expected_vc:
-                        gap = (vc_count - last_vc_count[frame_scid]) & 0xFF
-                        if gap > 1:
-                            vc_frame_gaps += gap - 1
+                    if frame_scid != primary_scid:
+                        if not locked:
                             print(
-                                f"[TM] VC frame gap (SCID {frame_scid}): expected {expected_vc}, "
-                                f"got {vc_count} ({gap - 1} frame(s) lost)"
+                                f"[TM] acquired lock: SCID={frame_scid} → normalizing to {primary_scid}"
                             )
-                last_vc_count[frame_scid] = vc_count
+                        candidate = _normalize_tm_scid(candidate, primary_scid, vc_id)
 
-                tm_sock.sendto(candidate, (yamcs_host, tm_port))
-                frames_sent_by_scid[frame_scid] += 1
-            else:
-                was_locked = locked
-                if locked:
-                    print("[TM] lost frame sync, hunting...")
-                    locked = False
-                state = "locked_discard" if was_locked else "hunt"
-                _save_dropped_window(candidate, base_index, state)
-                del buf[:1]
+                    locked = True
+                    _log_classified_frame(raw_frame, base_index)
+                    del buf[:frame_length]
 
-        _maybe_print_stats()
+                    vc_count = candidate[3]
+                    if frame_scid in last_vc_count:
+                        expected_vc = (last_vc_count[frame_scid] + 1) & 0xFF
+                        if vc_count != expected_vc:
+                            gap = (vc_count - last_vc_count[frame_scid]) & 0xFF
+                            if gap > 1:
+                                vc_frame_gaps += gap - 1
+                                print(
+                                    f"[TM] VC frame gap (SCID {frame_scid}): expected {expected_vc}, "
+                                    f"got {vc_count} ({gap - 1} frame(s) lost)"
+                                )
+                    last_vc_count[frame_scid] = vc_count
+
+                    tm_sock.sendto(candidate, (yamcs_host, tm_port))
+                    frames_sent_by_scid[frame_scid] += 1
+                else:
+                    was_locked = locked
+                    if locked:
+                        print("[TM] lost frame sync, hunting...")
+                        locked = False
+                    state = "locked_discard" if was_locked else "hunt"
+                    _save_dropped_window(candidate, base_index, state)
+                    del buf[:1]
+
+            _maybe_print_stats()
+    finally:
+        _flush_capture_files()
 
 
 def _forward_tm_tcp(
@@ -556,6 +579,19 @@ def parse_args():
         default=1,
         help="CCSDS virtual channel ID (3-bit, used for frame sync header)",
     )
+    p.add_argument(
+        "--dictionary",
+        default=None,
+        help=(
+            "F´ dictionary JSON for pass triage on Ctrl+C "
+            f"(default: {pass_triage.DEFAULT_DICTIONARY})"
+        ),
+    )
+    p.add_argument(
+        "--no-triage",
+        action="store_true",
+        help="Skip automatic pass triage report on Ctrl+C (serial mode)",
+    )
 
     args = p.parse_args()
     # Flatten [[68, 67], [65]] → [68, 67, 65]; default to [68].
@@ -591,6 +627,8 @@ def main():
     tc_sock.bind(("0.0.0.0", args.yamcs_tc_port))
 
     session_dir: Path | None = None
+    stop_event = threading.Event()
+    ser = None
 
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
@@ -634,8 +672,9 @@ def main():
                 stream_hex,
                 packets_hex,
                 dropped_hex,
+                stop_event,
             ),
-            daemon=True,
+            daemon=False,
         )
         tc_thread = threading.Thread(
             target=_forward_tc_serial,
@@ -677,8 +716,21 @@ def main():
         tc_thread.join()
     except KeyboardInterrupt:
         print("\n[adapter] Interrupted. Shutting down.")
+        stop_event.set()
+        if ser is not None:
+            ser.close()
+        tm_thread.join(timeout=2.0)
+        tc_thread.join(timeout=1.0)
         if session_dir is not None:
             print(f"[adapter] TM capture saved to {session_dir}/")
+            if not args.no_triage:
+                try:
+                    pass_triage.triage(
+                        session_dir / "stream.csv",
+                        dictionary=args.dictionary,
+                    )
+                except Exception as exc:
+                    print(f"[adapter] Pass triage failed: {exc}", file=sys.stderr)
         sys.exit(0)
 
 
