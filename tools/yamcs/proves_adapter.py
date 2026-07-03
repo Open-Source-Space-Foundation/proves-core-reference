@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 # CRC16-CCITT (CCSDS standard: poly 0x1021, init 0xFFFF, no reflection)
 # ---------------------------------------------------------------------------
 
-data_path = "tools/yamcs/data"
+data_path = Path(__file__).parent / "data"
 
 def _crc16_ccitt(data: bytes) -> int:
     crc = 0xFFFF
@@ -90,6 +90,7 @@ def _forward_tm_serial(
     frame_length: int,
     spacecraft_ids: list[int] | None = None,
     vc_id: int = 1,
+    data_file: Path | None = None,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -138,9 +139,10 @@ def _forward_tm_serial(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
                 f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes. "
                 f"Junk bytes: {junk_bytes_list}"
-                with data_file.open("a") as f:
-                    f.write(f"Junk Bytes at {time.time()}: {junk_bytes_list}\n"
             )
+            if data_file is not None:
+                with data_file.open("a") as f:
+                    f.write(f"Junk Bytes at {time.time()}: {junk_bytes_list}\n")
             stats_time = now
             frames_sent_by_scid.clear()
             vc_frame_gaps = 0
@@ -471,12 +473,14 @@ def main():
         frame_size=args.frame_length,
     )
 
+    print("Getting time and creating data file...")
     #get time of start of the adapter
     start_time = time.time()
     # create a file in data folder named for the start time
     data_file = Path(data_path) / f"bytes_{start_time}.txt"
     with open(data_file, "w") as f:
         f.write("Junk Bytes: " + str(start_time) + "\n\n\n")
+        print(f"[adapter] Logging junk bytes to {data_file}")
 
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -507,6 +511,7 @@ def main():
                 args.frame_length,
                 args.spacecraft_ids,
                 args.vc_id,
+                data_file,
             ),
             daemon=True,
         )
