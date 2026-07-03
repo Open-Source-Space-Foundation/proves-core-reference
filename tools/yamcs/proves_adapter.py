@@ -57,6 +57,25 @@ def _crc16_ccitt(data: bytes) -> int:
     return crc
 
 
+def _hex_dump_lines(data: bytes, base_offset: int = 0) -> list[str]:
+    """Format *data* as 16-byte hex rows (format B)."""
+    lines = []
+    for offset in range(0, len(data), 16):
+        chunk = data[offset : offset + 16]
+        hex_part = " ".join(f"{byte_val:02x}" for byte_val in chunk)
+        lines.append(f"  {base_offset + offset:04x}: {hex_part}")
+    return lines
+
+
+def _write_frame_hex_block(hex_file, header: str, frame: bytes) -> None:
+    """Append one format-C frame block (header + 16-byte hex rows)."""
+    hex_file.write(header + "\n")
+    for line in _hex_dump_lines(frame):
+        hex_file.write(line + "\n")
+    hex_file.write("\n")
+    hex_file.flush()
+
+
 from authenticate_plugin import (  # noqa: E402
     AuthenticateFramer,
     get_default_auth_key_from_header,
@@ -97,8 +116,10 @@ def _forward_tm_serial(
     frame_length: int,
     spacecraft_ids: list[int] | None = None,
     vc_id: int = 1,
-    junk_csv: Path | None = None,
-    junk_bin: Path | None = None,
+    stream_csv: Path | None = None,
+    stream_hex: Path | None = None,
+    packets_hex: Path | None = None,
+    dropped_hex: Path | None = None,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -108,6 +129,11 @@ def _forward_tm_serial(
     (bytes 0-1 patched, CRC recomputed) so YAMCS's ``spacecraftId`` filter
     always passes.  Per-SCID counters track how many frames arrived from each
     satellite seen during the session.
+
+    Every UART byte is logged to ``stream.hex`` on arrival and classified in
+    ``stream.csv`` when consumed (``frame``, ``hunt``, or ``locked_discard``).
+    Valid frames and CRC-failed windows are also written to ``packets.hex`` and
+    ``dropped.hex`` respectively.
 
       HUNT — slide 1 byte at a time until a CRC-valid frame is found.
       LOCK — once in sync, take the next frame exactly ``frame_length`` bytes
@@ -126,38 +152,93 @@ def _forward_tm_serial(
     frames_sent_by_scid: Counter[int] = Counter()
     last_vc_count: dict[int, int] = {}
     vc_frame_gaps = 0
-    junk_bytes = 0
-    junk_run_index = 0
+    discarded_bytes = 0
     locked = False
     stats_time = time.monotonic()
-    junk_csv_file = junk_csv.open("a") if junk_csv is not None else None
-    junk_bin_file = junk_bin.open("ab") if junk_bin is not None else None
+    session_byte_index = 0
+    stream_hex_appended = 0
+    packet_count = 0
+    dropped_count = 0
+    stream_hex_tail = bytearray()
+    stream_csv_file = stream_csv.open("a") if stream_csv is not None else None
+    stream_hex_file = stream_hex.open("a") if stream_hex is not None else None
+    packets_hex_file = packets_hex.open("a") if packets_hex is not None else None
+    dropped_hex_file = dropped_hex.open("a") if dropped_hex is not None else None
 
-    def _save_junk_bytes(
-        byte_vals: bytes, start_index: int, was_locked: bool
-    ) -> None:
-        if not byte_vals:
+    def _buf_base_index() -> int:
+        return session_byte_index - len(buf)
+
+    def _append_stream_hex(byte_vals: bytes) -> None:
+        nonlocal stream_hex_tail, stream_hex_appended
+        if not byte_vals or stream_hex_file is None:
             return
+        stream_hex_tail.extend(byte_vals)
+        while len(stream_hex_tail) >= 16:
+            row_offset = stream_hex_appended
+            row = bytes(stream_hex_tail[:16])
+            del stream_hex_tail[:16]
+            stream_hex_appended += 16
+            hex_part = " ".join(f"{byte_val:02x}" for byte_val in row)
+            stream_hex_file.write(f"  {row_offset:04x}: {hex_part}\n")
+        stream_hex_file.flush()
+
+    def _log_classified_byte(byte_index: int, byte_val: int, state: str) -> None:
         ts = _format_timestamp()
-        state = "locked" if was_locked else "hunt"
-        for offset, byte_val in enumerate(byte_vals):
-            byte_index = start_index + offset
+        print(
+            f"[TM] byte | {ts} | idx={byte_index:6d} | 0x{byte_val:02x} | {state}",
+            flush=True,
+        )
+        if stream_csv_file is not None:
+            stream_csv_file.write(
+                f"{ts},{byte_index},0x{byte_val:02x},{state}\n"
+            )
+
+    def _log_classified_frame(raw_frame: bytes, base_index: int) -> None:
+        nonlocal packet_count
+        ts = _format_timestamp()
+        frame_scid = ((raw_frame[0] << 8) | raw_frame[1]) >> 4 & 0x3FF
+        vc_count = raw_frame[3]
+        for offset, byte_val in enumerate(raw_frame):
+            byte_index = base_index + offset
             print(
-                f"[TM] junk | {ts} | idx={byte_index:4d} | 0x{byte_val:02x} | {state}",
+                f"[TM] byte | {ts} | idx={byte_index:6d} | 0x{byte_val:02x} | frame",
                 flush=True,
             )
-            if junk_csv_file is not None:
-                junk_csv_file.write(
-                    f"{ts},{byte_index},0x{byte_val:02x},{state}\n"
+            if stream_csv_file is not None:
+                stream_csv_file.write(
+                    f"{ts},{byte_index},0x{byte_val:02x},frame\n"
                 )
-        if junk_bin_file is not None:
-            junk_bin_file.write(byte_vals)
-            junk_bin_file.flush()
-        if junk_csv_file is not None:
-            junk_csv_file.flush()
+        if stream_csv_file is not None:
+            stream_csv_file.flush()
+        if packets_hex_file is not None:
+            packet_count += 1
+            header = (
+                f"--- packet {packet_count} | offset={base_index} | {ts} | "
+                f"SCID={frame_scid} VC={vc_count} ---"
+            )
+            _write_frame_hex_block(packets_hex_file, header, raw_frame)
+
+    def _save_dropped_window(candidate: bytes, base_index: int, state: str) -> None:
+        nonlocal dropped_count, discarded_bytes
+        ts = _format_timestamp()
+        if dropped_hex_file is not None:
+            dropped_count += 1
+            header = (
+                f"--- dropped {dropped_count} | offset={base_index} | {ts} | "
+                f"{state} ---"
+            )
+            _write_frame_hex_block(dropped_hex_file, header, candidate)
+        print(
+            f"[TM] dropped | {ts} | offset={base_index} | {state} | CRC failed",
+            flush=True,
+        )
+        _log_classified_byte(base_index, candidate[0], state)
+        if stream_csv_file is not None:
+            stream_csv_file.flush()
+        discarded_bytes += 1
 
     def _maybe_print_stats() -> None:
-        nonlocal stats_time, junk_bytes, vc_frame_gaps
+        nonlocal stats_time, discarded_bytes, vc_frame_gaps
         now = time.monotonic()
         if now - stats_time >= 30.0:
             elapsed = now - stats_time
@@ -168,24 +249,28 @@ def _forward_tm_serial(
             )
             print(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
-                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
+                f"{vc_frame_gaps} gap(s) | {discarded_bytes} discarded bytes"
             )
             stats_time = now
             frames_sent_by_scid.clear()
             vc_frame_gaps = 0
-            junk_bytes = 0
+            discarded_bytes = 0
 
     while True:
         chunk = ser.read(max(1, ser.in_waiting or 1))
         if not chunk:
             _maybe_print_stats()
             continue
+        _append_stream_hex(chunk)
         buf.extend(chunk)
+        session_byte_index += len(chunk)
 
         while len(buf) >= frame_length:
             candidate = bytes(buf[:frame_length])
+            base_index = _buf_base_index()
             if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                frame_scid = ((candidate[0] << 8) | candidate[1]) >> 4 & 0x3FF
+                raw_frame = candidate
+                frame_scid = ((raw_frame[0] << 8) | raw_frame[1]) >> 4 & 0x3FF
 
                 if frame_scid != primary_scid:
                     if not locked:
@@ -195,7 +280,7 @@ def _forward_tm_serial(
                     candidate = _normalize_tm_scid(candidate, primary_scid, vc_id)
 
                 locked = True
-                junk_run_index = 0
+                _log_classified_frame(raw_frame, base_index)
                 del buf[:frame_length]
 
                 vc_count = candidate[3]
@@ -218,9 +303,8 @@ def _forward_tm_serial(
                 if locked:
                     print("[TM] lost frame sync, hunting...")
                     locked = False
-                junk_bytes += 1
-                _save_junk_bytes(bytes([buf[0]]), junk_run_index, was_locked)
-                junk_run_index += 1
+                state = "locked_discard" if was_locked else "hunt"
+                _save_dropped_window(candidate, base_index, state)
                 del buf[:1]
 
         _maybe_print_stats()
@@ -501,15 +585,6 @@ def main():
         frame_size=args.frame_length,
     )
 
-    start_dt = datetime.now()
-    start_stamp = start_dt.strftime("%Y-%m-%d_%H-%M-%S")
-    data_path.mkdir(parents=True, exist_ok=True)
-    junk_csv = data_path / f"junk_{start_stamp}.csv"
-    junk_bin = data_path / f"junk_{start_stamp}.bin"
-    with junk_csv.open("w") as f:
-        f.write("timestamp,byte_index,hex_value,state\n")
-    print(f"[adapter] Logging junk bytes to {junk_csv} and {junk_bin}")
-
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     tc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -517,6 +592,20 @@ def main():
 
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
+
+        start_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        session_dir = data_path / start_stamp
+        session_dir.mkdir(parents=True, exist_ok=True)
+        stream_csv = session_dir / "stream.csv"
+        stream_hex = session_dir / "stream.hex"
+        packets_hex = session_dir / "packets.hex"
+        dropped_hex = session_dir / "dropped.hex"
+        with stream_csv.open("w") as f:
+            f.write("timestamp,byte_index,hex_value,state\n")
+        print(
+            f"[adapter] TM capture → {session_dir}/ "
+            f"(stream.csv, stream.hex, packets.hex, dropped.hex)"
+        )
 
         print(f"[serial] Opening {args.uart_device} @ {args.uart_baud} baud")
         ser = serial.Serial(args.uart_device, args.uart_baud, timeout=0.1)
@@ -539,8 +628,10 @@ def main():
                 args.frame_length,
                 args.spacecraft_ids,
                 args.vc_id,
-                junk_csv,
-                junk_bin,
+                stream_csv,
+                stream_hex,
+                packets_hex,
+                dropped_hex,
             ),
             daemon=True,
         )
