@@ -136,10 +136,10 @@ def _forward_tm_serial(
             )
             print(
                 f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
-                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
+                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes. "
                 f"Junk bytes: {junk_bytes_list}"
                 with data_file.open("a") as f:
-                    f.write(f"Junk Bytes: {junk_bytes_list}\n"
+                    f.write(f"Junk Bytes at {time.time()}: {junk_bytes_list}\n"
             )
             stats_time = now
             frames_sent_by_scid.clear()
