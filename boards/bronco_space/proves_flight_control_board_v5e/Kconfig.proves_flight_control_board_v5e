@@ -1,0 +1,5 @@
+config BOARD_PROVES_FLIGHT_CONTROL_BOARD_V5E
+	bool "PROVES Flight Control Board v5e"
+	default y
+
+rsource "../../../boards/bronco_space/proves_flight_control_board_v5/Kconfig.defconfig"
