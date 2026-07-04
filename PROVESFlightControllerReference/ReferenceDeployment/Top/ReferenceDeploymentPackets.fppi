@@ -29,7 +29,10 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.authenticatelora.CurrentSequenceNumber
     ComCcsdsUart.authenticate.CurrentSequenceNumber
 
-    lora.BytesReceived
+    # Radio bytes received: per-board instance name.
+    # RadioPackets.fppi is a symlink to RadioPackets_{Lora,Usp}.fppi
+    # created by CMakeLists.txt at configure time.
+    include "RadioPacketsBytesReceived.fppi"
 
   }
 
@@ -45,13 +48,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.imuManager.MagnetometerSamplingFrequency
   }
 
-  packet Radio id 8 group 2 {
-    lora.LastRssi
-    lora.LastSnr
-    lora.BytesSent
-#    sband.LastRssi
-#    sband.LastSnr
-  }
+  # Radio packet: per-board instance name.
+  include "RadioPacketsRadio.fppi"
 
   packet PowerMonitor id 11 group 2 {
     ReferenceDeployment.ina219SysManager.Current

@@ -191,10 +191,11 @@ module ReferenceDeployment {
       #  comDelaySband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
     #}
 
-    # CommunicationsRadio connections live in RadioTopology_Lora.fpp or
-    # RadioTopology_Usp.fpp (CMakeLists.txt picks per board).
-    # Those files also carry the startup-sequence and RTC cancel-sequence
-    # wiring (identical for both radio variants).
+    # CommunicationsRadio connections: per-board variant selected by CMake.
+    # CMake writes RadioTopology.fppi -> RadioTopology_{Lora,Usp}.fppi
+    # before the FPP autocoder runs.  That file also carries the
+    # startup-sequence and RTC cancel-sequence wiring (identical for both).
+    include "RadioTopology.fppi"
 
     connections CommunicationsUart {
       # ComDriver buffer allocations

@@ -149,14 +149,14 @@ void setupTopology(const TopologyState& state) {
     // v5e USP path.
     // 1. Inject the RalSessionImpl (constructed at file scope above) into
     //    the autocoded 'uspRadio' component via configure().
-    // 2. UspRadio::start() calls session.init() which internally calls
+    // 2. UspRadio::startRadio() calls session.init() which internally calls
     //    zephyr_usp_initialization_wait() + zephyr_smtc_rac_init() (see
     //    RalSessionImpl::init()), applies the P0 boot-default profile, and
     //    starts continuous RX.  TX stays DISABLED until the startup-sequence
     //    sends a TRANSMIT(ENABLED) command (same gating as the legacy path).
     uspRadio.configure(s_ralSession);
-    if (!uspRadio.start(Zephyr::UspTransmitState::DISABLED)) {
-        Fw::Logger::log("[Topology] UspRadio start() failed -- radio inactive\n");
+    if (!uspRadio.startRadio(Zephyr::UspTransmitState::DISABLED)) {
+        Fw::Logger::log("[Topology] UspRadio startRadio() failed -- radio inactive\n");
     }
 #else
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);

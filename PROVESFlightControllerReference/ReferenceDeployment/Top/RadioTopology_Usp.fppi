@@ -1,19 +1,9 @@
-module ReferenceDeployment {
-
-  # ----------------------------------------------------------------------
-  # Radio topology: Zephyr::UspRadio (v5e+ — Semtech USP path)
-  #
-  # Wires the `uspRadio` active component to the ComCcsdsLora subtopology's
-  # Svc.Com interface (framer / frameAccumulator / commsBufferManager).
-  # No ComRetry shim: UspRadio handles its own back-pressure via the
-  # active-component queue.
-  # Also registers the run port on rateGroup1Hz (slot 20 — unused by LoRa path)
-  # and preserves startup-sequence and cancel-sequence wiring.
-  #
-  # Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is set.
-  # ----------------------------------------------------------------------
-
-  topology ReferenceDeployment {
+# Radio topology connections for v5e (Semtech USP path).
+# Included by topology.fpp inside topology ReferenceDeployment { }.
+# Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is set.
+#
+# UspRadio is active; no ComRetry shim needed (active-component queue provides
+# back-pressure). Direct framer -> uspRadio.dataIn path.
 
     instance uspRadio
 
@@ -25,7 +15,7 @@ module ReferenceDeployment {
       uspRadio.dataOut -> ComCcsdsLora.frameAccumulator.dataIn
       ComCcsdsLora.frameAccumulator.dataReturnOut -> uspRadio.dataReturnIn
 
-      # UspRadio <-> Framer (Downlink — direct, no retry shim)
+      # UspRadio <-> Framer (Downlink, direct — no retry shim)
       ComCcsdsLora.framer.dataOut    -> uspRadio.dataIn
       uspRadio.dataReturnOut         -> ComCcsdsLora.framer.dataReturnIn
       uspRadio.comStatusOut          -> downlinkDelay.comStatusIn
@@ -46,11 +36,7 @@ module ReferenceDeployment {
     }
 
     connections RadioRateGroup {
-      # UspRadio run port: revert-deadline tick + telemetry flush (1 Hz)
-      # Slot 20 is free in the legacy LoRa topology.
+      # UspRadio run port: revert-deadline tick + telemetry flush at 1 Hz.
+      # Slot 20 is the first free slot after the legacy topology's highest used (19).
       rateGroup1Hz.RateGroupMemberOut[20] -> uspRadio.run
     }
-
-  }
-
-}

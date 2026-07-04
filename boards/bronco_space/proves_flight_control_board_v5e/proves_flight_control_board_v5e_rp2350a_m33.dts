@@ -31,6 +31,17 @@
 /* Remove the legacy sx1276 node inherited from v5.dtsi */
 /delete-node/ &lora0;
 
+/*
+ * Point the USP "chosen" transceiver handle at our sx1262 node.
+ * smtc_sw_platform_helper.c calls DEVICE_DT_GET(DT_CHOSEN(zephyr_lorawan_transceiver))
+ * to obtain the ral_t* handle for the SX1262.
+ */
+/ {
+	chosen {
+		zephyr,lorawan-transceiver = &lora0_usp;
+	};
+};
+
 &spi1 {
 	/*
 	 * USP SX1262 node — E22-400M30S module, SPI1 CS0 (same as v5 SX1276).

@@ -38,6 +38,9 @@ CONFIG_LORA_BASICS_MODEM_DRIVERS=y
 CONFIG_LORA_BASICS_MODEM_DRIVERS_RAL_RALF=y
 CONFIG_LORA_BASICS_MODEM_DRIVERS_EVENT_TRIGGER_GLOBAL_THREAD=y
 CONFIG_USP=y
+# USP main thread: provides zephyr_usp_initialization_wait() + smtc_rac run loop.
+# RalSessionImpl calls zephyr_usp_initialization_wait() before smtc_rac_open_radio().
+CONFIG_USP_MAIN_THREAD=y
 
 # RTC
 CONFIG_RTC=y
