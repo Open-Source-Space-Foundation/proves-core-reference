@@ -60,6 +60,30 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
 	}
 
+# USP_ZEPHYR_DIR: west places usp_zephyr at this path (see west.yml).
+USP_ZEPHYR_DIR ?= $(shell pwd)/lib/zephyr-workspace/modules/lib/usp_zephyr
+
+.PHONY: usp-patches
+usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat)
+	@if [ ! -d "$(USP_ZEPHYR_DIR)" ]; then \
+		echo "❌ usp_zephyr not found at $(USP_ZEPHYR_DIR) — run 'west update usp_zephyr usp' first"; \
+		exit 1; \
+	fi
+	@echo "Applying usp_zephyr patches..."
+	@cd "$(USP_ZEPHYR_DIR)" && \
+	for p in $(shell pwd)/patches/0001-feat-sx126x-add-external-RF-switch-GPIO-support-tx-r.patch \
+	          $(shell pwd)/patches/0002-fix-zephyr-4.3-remove-select-ZEPHYR_LORA_BASICS_MODE.patch \
+	          $(shell pwd)/patches/0003-fix-usp-main-2025-fix-LR_FHSS_SRC_PATH-for-flattened.patch; do \
+		name=$$(basename $$p); \
+		if git apply --check "$$p" 2>/dev/null; then \
+			git apply "$$p" && echo "✓ Applied $$name"; \
+		elif git apply --reverse --check "$$p" 2>/dev/null; then \
+			echo "⚠ Already applied: $$name"; \
+		else \
+			echo "❌ Cannot apply $$name — check usp_zephyr revision"; exit 1; \
+		fi; \
+	done
+
 ##@ Development
 
 .PHONY: pre-commit-install

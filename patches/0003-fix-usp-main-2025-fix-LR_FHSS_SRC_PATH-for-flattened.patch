@@ -1,0 +1,34 @@
+From 79f38c6669106d8018755dd3b2a509eb5f1bc924 Mon Sep 17 00:00:00 2001
+From: Michael Pham <61564344+Mikefly123@users.noreply.github.com>
+Date: Sat, 4 Jul 2026 14:30:08 -0700
+Subject: [PATCH 3/3] fix(usp-main-2025): fix LR_FHSS_SRC_PATH for flattened
+ lr_fhss_driver layout
+
+Upstream usp removed lr_fhss_driver/src/; lr_fhss_mac.c now lives flat
+in sx126x_driver/src (same dir as LBM_SX126X_LIB_DIR). Drop the now-
+invalid subdirectory suffix to fix the cmake path.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ modules/usp_drivers/dev_env.cmake | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/modules/usp_drivers/dev_env.cmake b/modules/usp_drivers/dev_env.cmake
+index f92cafe..1e76230 100644
+--- a/modules/usp_drivers/dev_env.cmake
++++ b/modules/usp_drivers/dev_env.cmake
+@@ -1,6 +1,10 @@
+ # SPDX-License-Identifier: BSD-3-Clause-Clear
+ 
+ if(SX126X_ENABLE_LR_FHSS)
+-  set(LR_FHSS_SRC_PATH "${LBM_SX126X_LIB_DIR}/lr_fhss_driver/src"
++  # PATCH(usp-main-2025): upstream usp repo removed the lr_fhss_driver/src
++  # subdirectory; lr_fhss_mac.c now lives flat in sx126x_driver/src/.
++  # Use the same directory as LBM_SX126X_LIB_DIR (already the default before
++  # dev_env.cmake was included).
++  set(LR_FHSS_SRC_PATH "${LBM_SX126X_LIB_DIR}"
+     CACHE PATH "Path to folder containing LR-FHSS driver" FORCE)
+ endif()
+-- 
+2.50.1 (Apple Git-155)
+

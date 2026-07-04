@@ -1,0 +1,36 @@
+From dcabc513f4c4d00be1370cbf986bca284eddff8d Mon Sep 17 00:00:00 2001
+From: Michael Pham <61564344+Mikefly123@users.noreply.github.com>
+Date: Sat, 4 Jul 2026 14:30:01 -0700
+Subject: [PATCH 2/3] fix(zephyr-4.3): remove select
+ ZEPHYR_LORA_BASICS_MODEM_MODULE (internalized in 4.3)
+
+ZEPHYR_LORA_BASICS_MODEM_MODULE was an external-module auto-symbol in
+Zephyr <=4.2. In 4.3 it became an internal Zephyr symbol and is not
+exposed to external modules. Remove the select to avoid a fatal Kconfig
+'direct dependencies 0' abort.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ drivers/usp/Kconfig | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usp/Kconfig b/drivers/usp/Kconfig
+index 5518a25..cc7940f 100644
+--- a/drivers/usp/Kconfig
++++ b/drivers/usp/Kconfig
+@@ -9,7 +9,11 @@ menuconfig LORA_BASICS_MODEM_DRIVERS
+ 	bool "LoRa drivers from the new LoRa Basics Modem stack [EXPERIMENTAL]"
+ 	select POLL
+ 	select EXPERIMENTAL
+-	select ZEPHYR_LORA_BASICS_MODEM_MODULE
++	# PATCH(zephyr-4.3): ZEPHYR_LORA_BASICS_MODEM_MODULE was an external-module
++	# auto-symbol in Zephyr <=4.2. In 4.3 it became an internal Zephyr symbol
++	# (zephyr/modules/lora-basics-modem/Kconfig) that is NOT exposed in the
++	# auto-generated Kconfig.modules for external builds.  Remove the select to
++	# avoid a fatal Kconfig "direct dependencies 0" abort.
+ 	depends on !LORA
+ 	help
+ 	  Include LoRa drivers from the new LoRa Basics Modem stack in the system configuration.
+-- 
+2.50.1 (Apple Git-155)
+

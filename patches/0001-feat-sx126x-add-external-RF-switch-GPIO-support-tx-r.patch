@@ -1,0 +1,251 @@
+From a23856a670226bb4e3e83acfc07106e47866c118 Mon Sep 17 00:00:00 2001
+From: Michael Pham <61564344+Mikefly123@users.noreply.github.com>
+Date: Sat, 4 Jul 2026 09:59:41 -0700
+Subject: [PATCH 1/3] feat(sx126x): add external RF-switch GPIO support
+ (tx/rx-enable-gpios)
+
+The EBYTE E22-400M30S (SX1262) module drives its RF switch via two
+dedicated GPIOs (TX-EN, RX-EN) rather than DIO2, so the existing
+dio2-as-rf-switch mechanism is unusable on PROVES FCB v5e.
+
+Changes:
+- dts/bindings/usp/semtech,sx126x-new-common.yaml: add optional
+  tx-enable-gpios and rx-enable-gpios phandle-array properties with
+  full description of operating-mode semantics.
+- drivers/usp/sx126x/sx126x_hal_context.h: add tx_enable and
+  rx_enable gpio_dt_spec fields to sx126x_hal_context_cfg_t (both
+  zero-initialised / .port==NULL when absent in DT, so boards without
+  the properties compile and behave identically to before).
+- drivers/usp/sx126x/sx126x_board.c: configure both pins as
+  OUTPUT_INACTIVE at init; wire them into SX126X_CONFIG via the
+  existing CONFIGURE_GPIO_IF_IN_DT helper.
+- drivers/usp/sx126x/sx126x_hal.c: add sx126x_hal_update_rf_switch()
+  that intercepts the first byte of every sx126x_hal_write() command
+  buffer and drives the GPIOs before the SPI transaction:
+    TX-class (TX-EN=1, RX-EN=0): 0x83 SetTx, 0xD1 SetTxContinuousWave,
+                                  0xD2 SetTxInfinitePreamble
+    RX-class (TX-EN=0, RX-EN=1): 0x82 SetRx, 0x94 SetRxDutyCycle,
+                                  0xC5 SetCad
+    Inactive  (TX-EN=0, RX-EN=0): 0x84 SetSleep, 0x80 SetStandby
+    All other opcodes leave switch state unchanged.
+  Deactivation of the leaving path always precedes activation of the
+  entering path to prevent simultaneous PA+LNA enable.
+
+Boards without tx-enable-gpios / rx-enable-gpios in DT are unaffected:
+gpio_dt_spec.port is NULL and all branches are skipped at runtime.
+Build verified: zephyr.elf + zephyr.uf2 compile clean on Zephyr 4.3 /
+RP2350 with FLASH 104760 B / RAM 31564 B (ping_pong sample).
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ drivers/usp/sx126x/sx126x_board.c             | 22 +++++
+ drivers/usp/sx126x/sx126x_hal.c               | 87 +++++++++++++++++++
+ drivers/usp/sx126x/sx126x_hal_context.h       | 10 +++
+ .../usp/semtech,sx126x-new-common.yaml        | 26 +++++-
+ 4 files changed, 144 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usp/sx126x/sx126x_board.c b/drivers/usp/sx126x/sx126x_board.c
+index 215801a..d119aba 100644
+--- a/drivers/usp/sx126x/sx126x_board.c
++++ b/drivers/usp/sx126x/sx126x_board.c
+@@ -239,6 +239,26 @@ static int sx126x_init( const struct device* dev )
+         }
+     }
+ 
++    /* External RF-switch GPIOs — configure as outputs, inactive (both paths off) */
++    if( config->tx_enable.port )
++    {
++        ret = gpio_pin_configure_dt( &config->tx_enable, GPIO_OUTPUT_INACTIVE );
++        if( ret < 0 )
++        {
++            LOG_ERR( "Could not configure tx-enable gpio" );
++            return ret;
++        }
++    }
++    if( config->rx_enable.port )
++    {
++        ret = gpio_pin_configure_dt( &config->rx_enable, GPIO_OUTPUT_INACTIVE );
++        if( ret < 0 )
++        {
++            LOG_ERR( "Could not configure rx-enable gpio" );
++            return ret;
++        }
++    }
++
+     data->radio_status               = RADIO_AWAKE;
+     data->tx_power_offset_db_current = config->tx_power_offset_db;
+ 
+@@ -366,6 +386,8 @@ static int sx126x_pm_action( const struct device* dev, enum pm_device_action act
+         CONFIGURE_GPIO_IF_IN_DT( node_id, dio1, dio1_gpios ) CONFIGURE_GPIO_IF_IN_DT( node_id, dio2, dio2_gpios )      \
+             CONFIGURE_GPIO_IF_IN_DT( node_id, dio3, dio3_gpios )                                                       \
+                 .dio2_as_rf_switch = DT_PROP( node_id, dio2_as_rf_switch ),                                            \
++        CONFIGURE_GPIO_IF_IN_DT( node_id, tx_enable, tx_enable_gpios )                                                \
++        CONFIGURE_GPIO_IF_IN_DT( node_id, rx_enable, rx_enable_gpios )                                                \
+         SX126X_CFG_TCXO( node_id ), .capa_xta = DT_PROP_OR( node_id, xtal_capacitor_value_xta, 0xFF ),                 \
+         .capa_xtb = DT_PROP_OR( node_id, xtal_capacitor_value_xtb, 0xFF ), .reg_mode = DT_PROP( node_id, reg_mode ),   \
+         .tx_power_offset_db = DT_PROP_OR( node_id, tx_power_offset, 0 ),                                               \
+diff --git a/drivers/usp/sx126x/sx126x_hal.c b/drivers/usp/sx126x/sx126x_hal.c
+index a3215cc..1530077 100644
+--- a/drivers/usp/sx126x/sx126x_hal.c
++++ b/drivers/usp/sx126x/sx126x_hal.c
+@@ -111,6 +111,86 @@ static void sx126x_hal_check_device_ready( const void* context )
+  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
+  */
+ 
++/*
++ * External RF-switch toggle helper.
++ *
++ * Called in sx126x_hal_write() before each SPI opcode transaction so the
++ * TX-EN / RX-EN lines track the radio mode without requiring a mode-callback
++ * hook (USP's SX126x HAL layer has none).
++ *
++ * Opcode table (SX126x datasheet §13.1):
++ *   TX-class  (TX-EN=1, RX-EN=0):
++ *     0x83  SetTx
++ *     0xD1  SetTxContinuousWave
++ *     0xD2  SetTxInfinitePreamble
++ *   RX-class  (TX-EN=0, RX-EN=1):
++ *     0x82  SetRx
++ *     0x94  SetRxDutyCycle
++ *     0xC5  SetCad
++ *   Inactive  (TX-EN=0, RX-EN=0):
++ *     0x84  SetSleep
++ *     0x80  SetStandby
++ *   All other opcodes leave the switch state unchanged.
++ */
++static void sx126x_hal_update_rf_switch( const struct sx126x_hal_context_cfg_t* config, uint8_t opcode )
++{
++    bool tx_active;
++    bool rx_active;
++
++    switch( opcode )
++    {
++    case 0x83: /* SetTx */
++    case 0xD1: /* SetTxContinuousWave */
++    case 0xD2: /* SetTxInfinitePreamble */
++        tx_active = true;
++        rx_active = false;
++        break;
++
++    case 0x82: /* SetRx */
++    case 0x94: /* SetRxDutyCycle */
++    case 0xC5: /* SetCad */
++        tx_active = false;
++        rx_active = true;
++        break;
++
++    case 0x84: /* SetSleep */
++    case 0x80: /* SetStandby */
++        tx_active = false;
++        rx_active = false;
++        break;
++
++    default:
++        /* No switch change for config/status opcodes */
++        return;
++    }
++
++    /* Deassert the path we are leaving before asserting the new one to
++     * avoid momentarily enabling both PA and LNA simultaneously.
++     */
++    if( config->tx_enable.port )
++    {
++        if( !tx_active )
++        {
++            gpio_pin_set_dt( &config->tx_enable, 0 );
++        }
++    }
++    if( config->rx_enable.port )
++    {
++        if( !rx_active )
++        {
++            gpio_pin_set_dt( &config->rx_enable, 0 );
++        }
++    }
++    if( config->tx_enable.port && tx_active )
++    {
++        gpio_pin_set_dt( &config->tx_enable, 1 );
++    }
++    if( config->rx_enable.port && rx_active )
++    {
++        gpio_pin_set_dt( &config->rx_enable, 1 );
++    }
++}
++
+ sx126x_hal_status_t sx126x_hal_write( const void* context, const uint8_t* command, const uint16_t command_length,
+                                       const uint8_t* data, const uint16_t data_length )
+ {
+@@ -127,6 +207,13 @@ sx126x_hal_status_t sx126x_hal_write( const void* context, const uint8_t* comman
+     const struct spi_buf_set tx_buf_set = { tx_bufs, .count = ARRAY_SIZE( tx_bufs ) };
+ 
+     sx126x_hal_check_device_ready( context );
++
++    /* Toggle external RF switch before writing the mode-change opcode */
++    if( command_length > 0 )
++    {
++        sx126x_hal_update_rf_switch( config, command[0] );
++    }
++
+     ret = spi_write_dt( &config->spi, &tx_buf_set );
+     if( ret )
+     {
+diff --git a/drivers/usp/sx126x/sx126x_hal_context.h b/drivers/usp/sx126x/sx126x_hal_context.h
+index 228f883..0c56bef 100644
+--- a/drivers/usp/sx126x/sx126x_hal_context.h
++++ b/drivers/usp/sx126x/sx126x_hal_context.h
+@@ -72,6 +72,16 @@ struct sx126x_hal_context_cfg_t
+     struct gpio_dt_spec dio3; /* DIO3 pin */
+ 
+     bool                                 dio2_as_rf_switch;
++
++    /* External RF-switch GPIOs (optional; absent when port == NULL).
++     * tx_enable is asserted during TX-class operations; rx_enable during RX.
++     * Both are deasserted on standby/sleep/init.
++     * These are mutually exclusive with dio2-as-rf-switch in hardware but
++     * the driver does not enforce that — user must not set both in DT.
++     */
++    struct gpio_dt_spec tx_enable; /* TX-EN line, e.g. EBYTE E22-400M30S pin 12 */
++    struct gpio_dt_spec rx_enable; /* RX-EN line, e.g. EBYTE E22-400M30S pin 11 */
++
+     struct sx126x_hal_context_tcxo_cfg_t tcxo_cfg; /* TCXO config, says if dio3-tcxo */
+     uint8_t                              capa_xta; /* set to 0xFF if not configured*/
+     uint8_t                              capa_xtb; /* set to 0xFF if not configured*/
+diff --git a/dts/bindings/usp/semtech,sx126x-new-common.yaml b/dts/bindings/usp/semtech,sx126x-new-common.yaml
+index 72032bb..56a8e40 100644
+--- a/dts/bindings/usp/semtech,sx126x-new-common.yaml
++++ b/dts/bindings/usp/semtech,sx126x-new-common.yaml
+@@ -128,6 +128,30 @@ properties:
+     required: false
+     enum: [0, 1, 2, 3, 4, 5, 6, 7]
+     description: |
+-      The ramp-up time for the radio PA, between 0x0 (10us) to 0x07 (3400us). 
++      The ramp-up time for the radio PA, between 0x0 (10us) to 0x07 (3400us).
+       If not provided, the driver will use the default, recommended time (40us).
+       It is not recommended to modify this value.
++
++  tx-enable-gpios:
++    type: phandle-array
++    required: false
++    description: |
++      External RF-switch TX-enable GPIO.
++
++      When present, the driver asserts this pin active before any transmit-class
++      operation (SetTx / SetTxContinuousWave / SetTxInfinitePreamble) and
++      deasserts it on standby, sleep, and receive-class operations. Use this for
++      modules such as the EBYTE E22-400M30S (SX1262) that drive an external
++      RF switch with a dedicated TX-EN line instead of using DIO2.
++
++      Must not be combined with dio2-as-rf-switch.
++
++  rx-enable-gpios:
++    type: phandle-array
++    required: false
++    description: |
++      External RF-switch RX-enable GPIO.
++
++      When present, the driver asserts this pin active before any receive-class
++      operation (SetRx / SetRxDutyCycle / SetCad) and deasserts it on standby,
++      sleep, and transmit-class operations. Pair with tx-enable-gpios.
+-- 
+2.50.1 (Apple Git-155)
+
