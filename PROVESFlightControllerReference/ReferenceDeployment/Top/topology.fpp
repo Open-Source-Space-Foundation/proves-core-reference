@@ -30,8 +30,8 @@ module ReferenceDeployment {
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
-    instance lora
-    instance loraRetry
+    # lora / uspRadio instance declared in RadioInstances_Lora.fpp or
+    # RadioInstances_Usp.fpp (CMakeLists.txt picks per board).
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
@@ -191,39 +191,10 @@ module ReferenceDeployment {
       #  comDelaySband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
     #}
 
-    connections CommunicationsRadio {
-      lora.allocate      -> ComCcsdsLora.commsBufferManager.bufferGetCallee
-      lora.deallocate    -> ComCcsdsLora.commsBufferManager.bufferSendIn
-
-      # ComDriver <-> FrameAccumulator (Uplink)
-      lora.dataOut -> ComCcsdsLora.frameAccumulator.dataIn
-      ComCcsdsLora.frameAccumulator.dataReturnOut -> lora.dataReturnIn
-
-      # ComStub <-> ComDriver (Downlink)
-      ComCcsdsLora.framer.dataOut -> loraRetry.dataIn
-      loraRetry.dataOut -> lora.dataIn
-
-      lora.dataReturnOut -> loraRetry.dataReturnIn
-      loraRetry.dataReturnOut -> ComCcsdsLora.framer.dataReturnIn
-
-      lora.comStatusOut -> loraRetry.comStatusIn
-      loraRetry.comStatusOut -> downlinkDelay.comStatusIn
-      downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
-
-      startupManager.runSequence -> cmdSeq.seqRunIn
-      cmdSeq.seqStartOut -> startupManager.sequenceStarted
-      cmdSeq.seqDone -> startupManager.completeSequence
-
-      modeManager.runSequence -> safeModeSeq.seqRunIn
-      safeModeSeq.seqDone -> modeManager.completeSequence
-
-      # RTC time change cancels running sequences
-      rtcManager.cancelSequences[0] -> cmdSeq.seqCancelIn
-      rtcManager.cancelSequences[1] -> payloadSeq.seqCancelIn
-      rtcManager.cancelSequences[2] -> safeModeSeq.seqCancelIn
-
-
-    }
+    # CommunicationsRadio connections live in RadioTopology_Lora.fpp or
+    # RadioTopology_Usp.fpp (CMakeLists.txt picks per board).
+    # Those files also carry the startup-sequence and RTC cancel-sequence
+    # wiring (identical for both radio variants).
 
     connections CommunicationsUart {
       # ComDriver buffer allocations

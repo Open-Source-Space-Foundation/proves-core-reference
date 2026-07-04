@@ -103,7 +103,8 @@ module ReferenceDeployment {
 
   instance downlinkDelay: Components.ComDelay base id 0x1001E000
 
-  instance lora: Zephyr.LoRa base id 0x1001F000
+  # lora / uspRadio instance lives in RadioInstances_Lora.fpp or
+  # RadioInstances_Usp.fpp (selected by CMakeLists.txt per board).
 
   instance comSplitterEvents: Svc.ComSplitter base id 0x10020000
 
@@ -215,7 +216,7 @@ module ReferenceDeployment {
   instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
   instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 
-  instance loraRetry: Svc.ComRetry base id 0x10063000
+  # loraRetry lives in RadioInstances_Lora.fpp (only on non-USP boards).
 
   instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
 
