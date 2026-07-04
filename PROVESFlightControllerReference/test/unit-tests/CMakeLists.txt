@@ -5,7 +5,7 @@ enable_testing()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime/googletest googletest-build)
 
-# --- UspRadio: LinkProfiles host-side test ---
+# --- UspRadio: LinkProfiles host-side test (Phase 2) ---
 # LinkProfiles.hpp is header-only and free of Zephyr/USP includes, so it
 # compiles here with a minimal FPrimeBasicTypes stub provided inline in the test.
 add_executable(test_LinkProfiles
@@ -17,6 +17,25 @@ target_include_directories(test_LinkProfiles PRIVATE
 )
 target_link_libraries(test_LinkProfiles gtest_main)
 add_test(NAME test_LinkProfiles COMMAND test_LinkProfiles)
+
+# --- UspRadio: ProfilePolicy host-side test (Phase 3) ---
+# ProfilePolicy.cpp is free of F'/USP/Zephyr includes (host-compilable).
+# LINK_PROFILES_USE_HOST_TYPES is defined inside the test source to activate
+# cstdint typedefs in both ProfilePolicy.hpp and LinkProfiles.hpp.
+add_executable(test_ProfilePolicy
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr/fprime-zephyr/Drv/UspRadio/test/ut/test_ProfilePolicy.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr/fprime-zephyr/Drv/UspRadio/ProfilePolicy.cpp
+)
+target_include_directories(test_ProfilePolicy PRIVATE
+    # Exposes #include "fprime-zephyr/Drv/UspRadio/ProfilePolicy.hpp"
+    # and    #include "fprime-zephyr/Drv/UspRadio/LinkProfiles.hpp"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr
+)
+# ProfilePolicy.cpp includes ProfilePolicy.hpp which includes LinkProfiles.hpp.
+# Neither header pulls in F', Zephyr, or USP, so no additional link deps.
+target_compile_definitions(test_ProfilePolicy PRIVATE LINK_PROFILES_USE_HOST_TYPES)
+target_link_libraries(test_ProfilePolicy gtest_main)
+add_test(NAME test_ProfilePolicy COMMAND test_ProfilePolicy)
 
 # --- Helper Libraries ---
 
