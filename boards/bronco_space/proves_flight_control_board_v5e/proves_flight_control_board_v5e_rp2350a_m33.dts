@@ -41,8 +41,8 @@
 	 *                 claiming this device.  LORA_BASICS_MODEM_DRIVERS
 	 *                 depends on !LORA so exactly one driver binds.
 	 *   spi-max-frequency: kept at 125000 Hz from the GRC bring-up value;
-	 *                 may be a board-level SPI signal-integrity workaround.
-	 *                 /* kept from v5e bring-up; revisit */
+	 *                 may be a board-level SPI signal-integrity workaround
+	 *                 (kept from v5e bring-up; revisit before production).
 	 *   tx/rx-enable-gpios: USP upstream has no external RF-switch support;
 	 *                 carried via our patch (spikes/patches/0001-feat-…).
 	 *   dio3-as-tcxo-control + tcxo-voltage: replaces dio3-tcxo-voltage in
