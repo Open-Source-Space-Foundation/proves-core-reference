@@ -5,6 +5,19 @@ enable_testing()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime/googletest googletest-build)
 
+# --- UspRadio: LinkProfiles host-side test ---
+# LinkProfiles.hpp is header-only and free of Zephyr/USP includes, so it
+# compiles here with a minimal FPrimeBasicTypes stub provided inline in the test.
+add_executable(test_LinkProfiles
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr/fprime-zephyr/Drv/UspRadio/test/ut/test_LinkProfiles.cpp
+)
+target_include_directories(test_LinkProfiles PRIVATE
+    # Exposes #include "fprime-zephyr/Drv/UspRadio/LinkProfiles.hpp"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr
+)
+target_link_libraries(test_LinkProfiles gtest_main)
+add_test(NAME test_LinkProfiles COMMAND test_LinkProfiles)
+
 # --- Helper Libraries ---
 
 # DetumbleManager Magnetorquer
