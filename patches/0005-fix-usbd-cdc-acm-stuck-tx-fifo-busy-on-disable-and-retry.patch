@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000002 Mon Sep 17 00:00:00 2001
+From: Michael Pham <phamlongmichael@gmail.com>
+Date: Sat, 5 Jul 2026 00:00:00 -0700
+Subject: [PATCH] fix(usbd_cdc_acm): clear TX_FIFO_BUSY on disable; retry when stuck
+
+Two related fixes for secondary silence on USB CDC-ACM TX path:
+
+1. Clear CDC_ACM_TX_FIFO_BUSY in usbd_cdc_acm_disable().
+   If the host stops issuing IN tokens while a transfer is in flight,
+   TX_FIFO_BUSY stays set indefinitely. The error completion path
+   (ECONNABORTED) clears it on USB disconnect/cancel, but a passive stall
+   where the host driver stops polling without disconnecting does not fire
+   any completion. Clearing on disable ensures the flag is reset on the
+   next enable/reconnect cycle.
+
+2. Self-reschedule tx_fifo_work with 10ms delay when BUSY is already set
+   and ring buffer is non-empty.
+   Provides a periodic drain retry when the USB IN transfer stalls. When
+   BUSY clears normally (completion fires), the retry fires once and is a
+   no-op (ring_buf_is_empty after drain). When BUSY is stuck, the handler
+   retries every 10ms without burning CPU.
+
+Root cause on FCB v5e (RP2350, macOS host): after the initial burst of
+~34 AOS frames is delivered, the macOS USB CDC driver pauses issuing IN
+tokens while the GDS Python process processes the burst. TX_FIFO_BUSY
+stays set. Subsequent uart_poll_out() calls schedule tx_fifo_work but the
+handler returns early on every invocation. The 10ms retry loop ensures
+the IN endpoint is re-armed as soon as the host resumes polling.
+
+Applies on top of:
+  0004-fix-usbd-cdc-acm-poll-mode-tx-drain-on-class-enable.patch
+
+Signed-off-by: Michael Pham <phamlongmichael@gmail.com>
+---
+diff --git a/subsys/usb/device_next/class/usbd_cdc_acm.c b/subsys/usb/device_next/class/usbd_cdc_acm.c
+index a8241ad130e..704b41a5a14 100644
+--- a/subsys/usb/device_next/class/usbd_cdc_acm.c
++++ b/subsys/usb/device_next/class/usbd_cdc_acm.c
+@@ -378,6 +378,10 @@ static void usbd_cdc_acm_disable(struct usbd_class_data *const c_data)
+
+ 	atomic_clear_bit(&data->state, CDC_ACM_CLASS_ENABLED);
+ 	atomic_clear_bit(&data->state, CDC_ACM_CLASS_SUSPENDED);
++	/* Clear TX_FIFO_BUSY on disable so a stuck IN transfer does not block
++	 * the TX path after the host reconnects and re-enables the class.
++	 */
++	atomic_clear_bit(&data->state, CDC_ACM_TX_FIFO_BUSY);
+ 	LOG_INF("Configuration disabled");
+ }
+
+@@ -648,6 +652,13 @@ static void cdc_acm_tx_fifo_handler(struct k_work *work)
+
+ 	if (atomic_test_and_set_bit(&data->state, CDC_ACM_TX_FIFO_BUSY)) {
+ 		LOG_DBG("TX transfer already in progress");
++		/* Reschedule if data is waiting - guards against a stuck IN transfer
++		 * where the host stops issuing IN tokens (e.g. macOS flow-control).
++		 * The retry is a no-op once the completion fires and clears BUSY.
++		 */
++		if (!ring_buf_is_empty(data->tx_fifo.rb)) {
++			cdc_acm_work_schedule(&data->tx_fifo_work, K_MSEC(10));
++		}
+ 		return;
+ 	}
+
+--
+2.39.3 (Apple Git-146)
