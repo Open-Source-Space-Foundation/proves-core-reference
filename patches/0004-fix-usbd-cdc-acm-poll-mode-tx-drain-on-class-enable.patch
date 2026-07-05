@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000001 Mon Sep 17 00:00:00 2001
+From: Michael Pham <phamlongmichael@gmail.com>
+Date: Sat, 5 Jul 2026 00:00:00 -0700
+Subject: [PATCH] fix(usbd_cdc_acm): drain TX FIFO on class enable in poll mode
+
+When the USB CDC-ACM class is enabled and the driver is used in poll mode
+(IRQ TX not enabled), any data written to the TX FIFO before the class was
+enabled is silently lost. Fix: schedule tx_fifo_work in the else-if branch.
+
+Root cause on FCB v5e: F Prime ComCcsdsUart writes to FIFO during early boot
+before USB host enumerates; class enables later; poll-mode never re-drains.
+
+Signed-off-by: Michael Pham <phamlongmichael@gmail.com>
+---
+diff --git a/subsys/usb/device_next/class/usbd_cdc_acm.c b/subsys/usb/device_next/class/usbd_cdc_acm.c
+index d3921c0f146..a8241ad130e 100644
+--- a/subsys/usb/device_next/class/usbd_cdc_acm.c
++++ b/subsys/usb/device_next/class/usbd_cdc_acm.c
+@@ -368,6 +368,9 @@ static void usbd_cdc_acm_enable(struct usbd_class_data *const c_data)
+ 			/* Queue pending TX data on IN endpoint */
+ 			cdc_acm_work_schedule(&data->tx_fifo_work, K_NO_WAIT);
+ 		}
++	} else if (!ring_buf_is_empty(data->tx_fifo.rb)) {
++		/* Poll-mode TX: drain any data buffered before the class was enabled */
++		cdc_acm_work_schedule(&data->tx_fifo_work, K_NO_WAIT);
+ 	}
+ }
+ 
+-- 
+2.39.3 (Apple Git-146)

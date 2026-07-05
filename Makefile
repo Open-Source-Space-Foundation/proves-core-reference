@@ -84,6 +84,27 @@ usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat)
 		fi; \
 	done
 
+ZEPHYR_DIR ?= $(shell pwd)/lib/zephyr-workspace/zephyr
+
+.PHONY: zephyr-patches
+zephyr-patches: ## Apply Zephyr tree patches (CDC-ACM poll-mode TX drain)
+	@if [ ! -d "$(ZEPHYR_DIR)" ]; then \
+		echo "zephyr not found at $(ZEPHYR_DIR) — run 'west update' first"; \
+		exit 1; \
+	fi
+	@echo "Applying Zephyr patches..."
+	@cd "$(ZEPHYR_DIR)" && \
+	for p in $(shell pwd)/patches/0004-fix-usbd-cdc-acm-poll-mode-tx-drain-on-class-enable.patch; do \
+		name=$$(basename $$p); \
+		if git apply --check "$$p" 2>/dev/null; then \
+			git apply "$$p" && echo "OK Applied $$name"; \
+		elif git apply --reverse --check "$$p" 2>/dev/null; then \
+			echo "Already applied: $$name"; \
+		else \
+			echo "Cannot apply $$name — check Zephyr revision"; exit 1; \
+		fi; \
+	done
+
 ##@ Development
 
 .PHONY: pre-commit-install
