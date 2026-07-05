@@ -8,7 +8,9 @@
 #define Update_FlashWorker_HPP
 #include "Os/File.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/FlashWorkerComponentAc.hpp"
+#ifdef CONFIG_IMG_MANAGER
 #include <zephyr/dfu/flash_img.h>
+#endif
 namespace Components {
 
 class FlashWorker final : public FlashWorkerComponentBase {
@@ -58,8 +60,10 @@ class FlashWorker final : public FlashWorkerComponentBase {
 
   private:
     Step m_last_successful;
+#ifdef CONFIG_IMG_MANAGER
     U8 m_data[CONFIG_IMG_BLOCK_BUF_SIZE];
     struct flash_img_context m_flash_context;
+#endif
 };
 
 }  // namespace Components
