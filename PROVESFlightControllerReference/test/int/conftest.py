@@ -21,7 +21,7 @@ RADIO_STABILIZE_S = 15
 
 
 # Hardware that a bare flight control board does not have. When
-# --bare-flight-control-board is passed, tests carrying any of these markers are
+# --bare-flight-controler-board is passed, tests carrying any of these markers are
 # skipped so the suite can run on the board alone.
 BARE_FCB_SKIP_MARKERS = {
     "requires_face": "a face board",
@@ -36,7 +36,7 @@ def pytest_collection_modifyitems(
 ) -> None:
     """Adjust the collected tests for the current hardware/link configuration.
 
-    1. With --bare-flight-control-board, skip tests whose markers require add-on
+    1. With --bare-flight-controller-board, skip tests whose markers require add-on
        hardware (face, antenna, battery, or the JP6 watchdog jumper).
     2. With --with-radio, move the RTC tests to the end of the collection. The
        RTC tests mutate the system clock (TIME_SET to -12 h from now) and the
@@ -44,7 +44,7 @@ def pytest_collection_modifyitems(
        temporary clock change from racing with the test that immediately follows
        alphabetically (TMP112), which is otherwise flaky on the radio path.
     """
-    if config.getoption("--bare-flight-control-board", default=False):
+    if config.getoption("--bare-flight-controler-board", default=False):
         for item in items:
             needed = [
                 description
@@ -81,7 +81,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Override retry count for proves_send_and_assert_command (default: 3 UART, 5 radio).",
     )
     parser.addoption(
-        "--bare-flight-control-board",
+        "--bare-flight-controler-board",
         action="store_true",
         default=False,
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
