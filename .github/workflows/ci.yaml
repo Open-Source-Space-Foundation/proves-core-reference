@@ -45,6 +45,10 @@ jobs:
         run: |
           make download-bin
 
+      - name: Reset submodule working trees
+        run: |
+          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
+
       - name: Setup submodules
         if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
