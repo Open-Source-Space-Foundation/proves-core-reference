@@ -96,6 +96,9 @@ def uplink_sequence_and_await_completion(
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
 
@@ -135,6 +138,9 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
@@ -175,6 +181,9 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     }, Updated: {updated_time}"
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 
@@ -209,6 +218,9 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_04_sequence_cancellation_on_time_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -254,6 +266,9 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # set and trigger test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
@@ -282,6 +297,9 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
@@ -308,6 +326,9 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_07_rtc_alarm_cancel_no_alarm_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -322,6 +343,9 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
 
 # list test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can list RTC alarms and that the information is correct"""
 
@@ -348,6 +372,9 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that setting an alarm in the past results in an error and does not set the alarm"""
     # Set an alarm for 5 seconds in the past
@@ -367,6 +394,9 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     """Ensure that double setting an alarm will result in a rejection from the system"""
     # Set an alarm for 5 seconds in the future

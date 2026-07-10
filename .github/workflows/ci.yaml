@@ -100,14 +100,25 @@ jobs:
             mcuboot.elf
             bootable.uf2
             bootable.signed.hex
-            build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+            build-artifacts/zephyr/fprime-zephyr-deployment
+            yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
-  integration:
+  integration-uart:
     runs-on:
       - integration
     needs: build
     steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do
@@ -116,46 +127,22 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
 
-      - uses: actions/checkout@v6
-
-      - uses: actions/download-artifact@v6
-
       - name: Set up dependencies
         run: |
           make submodules fprime-venv
 
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          # The build job ran `make-ci-spacecraft-id` before compiling the
+          # FSW, so the hex flashed onto the board emits TM frames with
+          # SCID 67. The integration runner's working tree is a fresh
+          # checkout (default SCID 68) so we re-apply the same override
+          # here to keep the YAMCS instance config / adapter in sync.
+          make make-ci-spacecraft-id
+
       - name: Set Authentication Key
         run: |
           echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
-
-        # Reboot before installation to avoid watchdog reset
-      - name: Reboot Integration Cube
-        run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          sleep 3
-
-      - name: Install MCUBoot
-        run: |
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
-          sleep 3
-
-      - name: Install Flight Software
-        run: |
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
-          sleep 3
-
-        # Reboot after installation to ensure power monitor tests work
-      - name: Reboot Integration Cube
-        run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
 
       - name: Install Framer Plugin
         run: |
@@ -185,6 +172,217 @@ jobs:
           fi
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Run UART Integration Tests
+        run: |
+          make test-integration
+
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make test-integration FILTER=format_filesystem
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
+          pkill -f fprime-gds || true
+          pkill -f fprime_gds || true
+          pkill -f gds-integration || true
+          pkill -f proves_adapter || true
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
+          sleep 2
+          echo "Holders of /dev/ttyBOARD after kill (should be empty):"
+          lsof /dev/ttyBOARD || true
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Set up Java 17 for YAMCS
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Start YAMCS Stack
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          # SPACECRAFT_ID=67 matches the override applied by `make
+          # make-ci-spacecraft-id` in the build job so the adapter syncs on
+          # the same TM frame header the FSW is emitting.
+          #
+          # setsid puts `make yamcs` in its own process group so teardown
+          # can signal the whole group (JVM, fprime-yamcs-events,
+          # proves_adapter.py) -- killing the wrapper PID alone would orphan
+          # the long-lived children and leak /dev/ttyBOARD between jobs.
+          setsid bash -c 'PYTHONUNBUFFERED=1 exec make yamcs UART_DEVICE=/dev/ttyBOARD SPACECRAFT_ID=67' > yamcs.log 2>&1 &
+          pgid=$!
+          echo "$pgid" > yamcs.pid
+
+      - name: Wait for YAMCS HTTP API
+        run: |
+          for i in $(seq 1 180); do
+            if curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; then
+              echo "YAMCS up after ${i}s"
+              break
+            fi
+            sleep 1
+            if [ $i -eq 180 ]; then
+              echo "ERROR: YAMCS did not respond on :8090 within 180s"
+              tail -200 yamcs.log || true
+              exit 1
+            fi
+          done
+
+      - name: Wait for fprime-yamcs-events bridge subscribe
+        run: |
+          # Fuzzy match -- readiness signal is emitted by fprime-yamcs-events
+          # at startup; pattern is loose so capitalization / punctuation
+          # tweaks upstream don't silently fail this gate.
+          for i in $(seq 1 60); do
+            if grep -iqE 'subscrib.*tm_realtime' yamcs.log 2>/dev/null; then
+              echo "Events bridge subscribed after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: fprime-yamcs-events bridge did not subscribe within 60s"
+          tail -200 yamcs.log || true
+          exit 1
+
+      - name: Run YAMCS Round-Trip Test
+        run: |
+          make test-yamcs
+
+      - name: Dump YAMCS log on failure
+        if: failure()
+        run: |
+          echo "===== yamcs.log (tail 1500) ====="
+          tail -1500 yamcs.log || true
+          echo "===== lsof /dev/ttyBOARD ====="
+          lsof /dev/ttyBOARD || true
+
+      - name: Stop YAMCS Stack
+        if: always()
+        run: |
+          # yamcs.pid contains the process-group leader PID from `setsid`,
+          # so kill the whole group to take JVM/events/adapter children with it.
+          pgid=$(cat yamcs.pid 2>/dev/null || true)
+          if [ -n "$pgid" ]; then
+            kill -TERM -- "-$pgid" 2>/dev/null || true
+            sleep 2
+            kill -KILL -- "-$pgid" 2>/dev/null || true
+          fi
+          make yamcs-stop || true
+
+      - name: Upload YAMCS log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamcs-log
+          path: yamcs.log
+          retention-days: 7
+
+      - name: Power Off Satellite
+        if: always()
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  integration-radio:
+    runs-on:
+      - integration
+    needs:
+      - build
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Set Authentication Key
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=""
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
+              path=${d%/idVendor}
+              for ifn in $path/*:*; do
+                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
+                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
+              done
+            fi
+          done
+          if [ -z "$ZEPHYR_TTY" ]; then
+            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Bootstrap Sequence Number over UART
+        run: |
+          # DIVIDER_PRM_SET and lora.TRANSMIT both pass through the authentication
+          # router and require the GDS-side sequence number to match FSW. On a
+          # fresh boot the seq number is unsynced, so the LoRa bootstrap commands
+          # would silently fail auth and never enable the radio. Run the sync
+          # test over UART first to align the local sequence_number.bin used by
+          # the framer plugin, then the LoRa GDS that follows can authenticate.
+          # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
+          # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
+          pkill -9 python || true
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          # Wait briefly for GDS to bind sockets
+          sleep 5
+          make test-integration FILTER=sync_sequence_number
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
 
       - name: Detect LoRa Passthrough TTY
         run: |
@@ -217,33 +415,92 @@ jobs:
             done
           done
           [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
-          if [ -n "$PASSTHROUGH_TTY" ]; then
-            echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
-            echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
-          else
-            echo "No LoRa passthrough tty found; smoke test will skip"
+          if [ -z "$PASSTHROUGH_TTY" ]; then
+            echo "ERROR: LoRa passthrough tty not found; cannot run radio integration tests"
+            lsusb || true
+            exit 1
           fi
+          echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+          echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
 
-      - name: Start GDS
+      - name: Kill all python processes
         run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
-          echo $! > server.pid
+          pkill -9 python || true
+
+      - name: Start GDS on LoRa Passthrough
+        run: |
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
+          GDS_RF_PID=$!
+          echo $GDS_RF_PID > server-rf.pid
+          for i in $(seq 1 15); do
+            sleep 1
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
+          done
 
       - name: Sync Sequence Number
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_sync.csv
         run: |
-          make sync-sequence-number
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
 
-      - name: Run Integration Tests
+      - name: Run Radio Integration Tests
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_format.csv
         run: |
-          make format-filesystem
+          make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
+
+      - name: Upload telemetry sample logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radio-tlm-samples
+          path: tlm_sample_*.csv
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
-          kill $(cat server.pid)
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  yamcs-build:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: artifacts
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Validate YAMCS server boots with current MDB
+        run: |
+          make yamcs-build-check
+
+      - name: Capture compose state on failure
+        if: failure()
+        run: |
+          docker compose -f yamcs/docker-compose.yml ps > yamcs-compose-ps.txt 2>&1 || true
+          docker compose -f yamcs/docker-compose.yml logs --tail=500 > yamcs-compose-logs.txt 2>&1 || true
+
+      - name: Upload compose state on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamcs-build-compose-state
+          path: |
+            yamcs-compose-ps.txt
+            yamcs-compose-logs.txt
+          retention-days: 7
