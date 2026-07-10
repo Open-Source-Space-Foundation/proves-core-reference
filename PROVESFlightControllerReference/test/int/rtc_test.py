@@ -126,16 +126,12 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert previously set time is within 30 seconds of now
-    pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
+    assert previously_set_time == pytest.approx(
+        datetime.now(timezone.utc), abs=timedelta(seconds=30)
+    )
 
     # Assert event time is within 30 seconds of curiosity landing
-    pytest.approx(event_time, abs=30) == curiosity_landing
-
-    # Fetch event data
-    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
-
-    # Assert time is within 30 seconds of now
-    pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
+    assert event_time == pytest.approx(curiosity_landing, abs=timedelta(seconds=30))
 
 
 @pytest.mark.uart_only(
