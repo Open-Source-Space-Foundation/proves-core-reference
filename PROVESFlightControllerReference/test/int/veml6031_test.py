@@ -13,6 +13,8 @@ from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.requires_face]
+
 veml6031Face0Manager = "ReferenceDeployment.veml6031Face0Manager"
 
 
