@@ -38,29 +38,15 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for dataIn
+    //! Handler implementation for processSecurity (Ccsds.ProcessSecurity port)
     //!
-    //! Port receiving Space Packets from TcDeframer
-    void dataIn_handler(FwIndexType portNum,                 //!< The port number
-                        Fw::Buffer& data,                    //!< The buffer containing the packet data
-                        const ComCfg::FrameContext& context  //!< The frame context associated with the packet
-                        ) override;
-
-    //! Handler implementation for bypassIn
-    //!
-    //! Port receiving Space Packets from TcDeframer
-    void bypassIn_handler(FwIndexType portNum,                 //!< The port number
-                          Fw::Buffer& data,                    //!< The buffer containing the packet data
-                          const ComCfg::FrameContext& context  //!< The frame context associated with the packet
-                          ) override;
-
-    //! Handler implementation for dataReturnIn
-    //!
-    //! Port receiving back ownership of buffers sent to dataOut
-    void dataReturnIn_handler(FwIndexType portNum,                 //!< The port number
-                              Fw::Buffer& data,                    //!< The buffer being returned
-                              const ComCfg::FrameContext& context  //!< The frame context associated with the buffer
-                              ) override;
+    //! Receives the full TC Transfer Frame minus FECF, verifies the Security Header and MAC,
+    //! and adjusts the payload buffer to expose only the Data Field on success (§3.3.3.3).
+    Ccsds::ProcessSecurityResult processSecurity_handler(FwIndexType portNum,  //!< The port number
+                                                         U16 globalVcId,       //!< Global Virtual Channel ID
+                                                         U16 globalMapId,      //!< Global MAP ID
+                                                         Fw::Buffer& payload   //!< TC Transfer Frame minus FECF
+                                                         ) override;
 
   private:
     // ----------------------------------------------------------------------
@@ -99,12 +85,6 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
 
     //! Writes the sequence number to the specified file path
     Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
-    );
-
-    //! Accepts a packet and updates the sequence number
-    void acceptPacket(Fw::Buffer& data,                     //!< The buffer containing the packet data
-                      const ComCfg::FrameContext& context,  //!< The frame context associated with the packet
-                      const U32 sequenceNumber              //!< The sequence number from the packet
     );
 
   private:

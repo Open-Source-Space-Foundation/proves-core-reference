@@ -37,30 +37,26 @@ struct TCSecurityTrailer {
 
 namespace Verification {
 
-//! Verification return
-//! CCSDS 355.0-B-2 Section 3.3.3.3
-struct Result {
-    Status status;                        //!< Whether the Transfer Frame passed verification
-    StatusCode statusCode;                //!< The status code indicates the type of verification failure
-    Ccsds355_0_B_2::TCFrameData payload;  //!< The portion of the Transfer Frame corresponding to the ProcessSecurity Payload, starting at the first octet following the Security Header and ending at the last octet of the Transfer Frame Data Field
-};
-
-//! Verification status
-//! CCSDS 355.0-B-2 Section 3.3.3.1
+//! Verification status — CCSDS 355.0-B-2 Section 3.3.3.1
 enum class Status {
     Ok,      //!< No failures detected
     Failed,  //!< Failure detected
 };
 
-//! Verification status codes
-//! CCSDS 355.0-B-2 Section 3.3.3.2
+//! Verification status codes — CCSDS 355.0-B-2 Section 3.3.3.2
 //! Must match the VerificationStatusCode enum in the .fpp file
 enum class StatusCode {
-    Success,               //!< No failures detected
-    SpiInvalid,            //!< SPI was invalid
-    MacFailed,             //!< MAC verification failed
-    SequenceNumberFailed,  //!< Anti-replay sequence number verification failed
-    PaddingError,          //!< Padding error in the packet
+    Success = 0,               //!< No failures detected
+    SpiInvalid = 1,            //!< SPI was invalid
+    MacFailed = 2,             //!< MAC verification failed
+    SequenceNumberFailed = 3,  //!< Anti-replay sequence number verification failed
+    PaddingError = 4,          //!< Padding error in the packet
+};
+
+//! Verification return — CCSDS 355.0-B-2 Section 3.3.3.3
+struct Result {
+    Status status;          //!< Whether the Transfer Frame passed verification
+    StatusCode statusCode;  //!< The type of verification failure
 };
 
 }  // namespace Verification

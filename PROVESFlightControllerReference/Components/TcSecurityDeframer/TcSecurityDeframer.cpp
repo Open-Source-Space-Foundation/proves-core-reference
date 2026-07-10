@@ -7,7 +7,6 @@
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
-#include <iomanip>
 #include <utility>
 
 #include "Authenticator.hpp"
@@ -35,98 +34,84 @@ TcSecurityDeframer ::~TcSecurityDeframer() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // Parse the packet to extract relevant information for validation and authentication
-    const TransferFrameParser::Result parseResult = parse(data.getData(), data.getSize());
+Ccsds::ProcessSecurityResult TcSecurityDeframer ::processSecurity_handler(FwIndexType portNum,
+                                                                          U16 globalVcId,
+                                                                          U16 globalMapId,
+                                                                          Fw::Buffer& payload) {
+    // The payload is a full TC Transfer Frame minus the 2-byte FECF:
+    //   [TC Primary Header (5)] [Security Header: SPI(2)+SeqNum(4)] [Data Field] [Security Trailer: MAC(16)]
+    // Skip the TC Primary Header to reach the Security Header for parsing and authentication.
+    const uint8_t* const secData = payload.getData() + Ccsds355_0_B_2::kTCPrimaryHeaderSize;
+    const size_t secDataSize = payload.getSize() - Ccsds355_0_B_2::kTCPrimaryHeaderSize;
 
-    // If there was an error parsing the packet, reject it
-    if (parseResult.status != TransferFrameParser::Status::Ok) {
-        // Telemeter the error
+    // --- Parse Security Header and Trailer ---
+    const Ccsds355_0_B_2::TcTransferFrame::Parser::Result parseResult = Ccsds355_0_B_2::parse(secData, secDataSize);
+    if (parseResult.status != Ccsds355_0_B_2::TcTransferFrame::Parser::Status::Ok) {
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-
-        // Return frame buffer ownership
-        this->dataReturnOut_out(0, data, context);
-        return;
+        Ccsds::ProcessSecurityResult result;
+        result.set_status(Ccsds::VerificationStatus::FAILURE);
+        result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SpiInvalid));
+        return result;
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
-    // For easier readability of subsequent code, create a reference to the parsed packet
-    const Components::Packet& packet = parseResult.packet;
-
     {
-        // Lock sequence number state
         Os::ScopeLock lock(this->m_sequenceNumberLock);
 
-        // Validate the packet to determine if it should be rejected, or is eligible for authentication
-        PacketValidator::Status validationStatus =
-            validatePacket(packet, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+        // --- Validate SPI and anti-replay sequence number ---
+        const PacketValidator::Status validationStatus =
+            validatePacket(parseResult.securityHeader, this->m_sequenceNumber, this->m_sequenceNumberWindow);
 
-        // If the packet failed validation due to invalid SPI value, reject it
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
-            // Telemeter the error
-            this->log_WARNING_HI_SpiInvalid(packet.spi);
-
-            // Return frame buffer ownership
-            this->dataReturnOut_out(0, data, context);
-            return;
+            this->log_WARNING_HI_SpiInvalid(parseResult.securityHeader.spi);
+            Ccsds::ProcessSecurityResult result;
+            result.set_status(Ccsds::VerificationStatus::FAILURE);
+            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SpiInvalid));
+            return result;
         }
         this->log_WARNING_HI_SpiInvalid_ThrottleClear();
 
-        // If the packet failed validation due to sequence number being out of the acceptable window, reject it
         if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
-            // Telemeter the error
-            this->log_WARNING_HI_SequenceNumberInvalid(packet.sequenceNumber, this->m_sequenceNumber,
-                                                       this->m_sequenceNumberWindow);
-
-            // Return frame buffer ownership
-            this->dataReturnOut_out(0, data, context);
-            return;
+            this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber,
+                                                       this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            Ccsds::ProcessSecurityResult result;
+            result.set_status(Ccsds::VerificationStatus::FAILURE);
+            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SequenceNumberFailed));
+            return result;
         }
         this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
 
-        // Authenticate the packet
+        // --- Authenticate: HMAC over Security Header + Data Field (same byte range as before port refactor) ---
         const PacketAuthenticator::AuthenticationResult authResult =
-            authenticatePacket(data.getData(), data.getSize(), packet.hmac, this->m_hmacKeyId);
+            authenticatePacket(secData, secDataSize, parseResult.securityTrailer.mac, this->m_hmacKeyId);
 
-        // If the packet failed authentication, reject it
         if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
-            // Telemeter the error
             this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
                                                       authResult.psaStatus);
-
-            // Return frame buffer ownership
-            this->dataReturnOut_out(0, data, context);
-            return;
+            Ccsds::ProcessSecurityResult result;
+            result.set_status(Ccsds::VerificationStatus::FAILURE);
+            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::MacFailed));
+            return result;
         }
         this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
-        // If the packet was successfully authenticated, accept it (caller holds the mutex)
-        this->acceptPacket(parseResult.frameData.data, context, packet.sequenceNumber);
+        // --- Accept: persist new sequence number ---
+        this->m_sequenceNumber = parseResult.securityHeader.sequenceNumber;
+        this->writeSequenceNumber(this->m_sequenceNumber);
+        this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
     }
-}
 
-void TcSecurityDeframer ::bypassIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
-    // Parse the packet to extract relevant information for validation and authentication
-    const TransferFrameParser::Result parseResult = parse(data.getData(), data.getSize());
+    // Adjust payload to expose only the Data Field per CCSDS 355.0-B-2 §3.3.3.3:
+    //   start = first octet after Security Header
+    //   end   = last octet of the Transfer Frame Data Field (excluding Security Trailer)
+    const size_t dataFieldOffset = Ccsds355_0_B_2::kTCPrimaryHeaderSize + Ccsds355_0_B_2::kTCSecurityHeaderSize;
+    payload.setData(payload.getData() + dataFieldOffset);
+    payload.setSize(payload.getSize() - dataFieldOffset - Ccsds355_0_B_2::kTCSecurityTrailer);
 
-    // If there was an error parsing the packet, reject it
-    if (parseResult.status != TransferFrameParser::Status::Ok) {
-        // Telemeter the error
-        this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-
-        // Return frame buffer ownership
-        this->dataReturnOut_out(0, data, context);
-        return;
-    }
-    this->log_WARNING_HI_ParsingFailed_ThrottleClear();
-
-    this->dataOut_out(0, parseResult.frameData.data, context);
-}
-
-void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
-                                               Fw::Buffer& data,
-                                               const ComCfg::FrameContext& context) {
-    this->dataReturnOut_out(0, data, context);
+    Ccsds::ProcessSecurityResult result;
+    result.set_status(Ccsds::VerificationStatus::NO_FAILURE);
+    result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::Success));
+    return result;
 }
 
 // ----------------------------------------------------------------------
@@ -231,23 +216,6 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     }
 
     return status;
-}
-
-void TcSecurityDeframer ::acceptPacket(Fw::Buffer& data,
-                                       const ComCfg::FrameContext& context,
-                                       const U32 sequenceNumber) {
-    // Update the sequence number and write it to disk
-    // intentionally not checking the return value
-    this->m_sequenceNumber = sequenceNumber;
-    this->writeSequenceNumber(this->m_sequenceNumber);
-    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
-
-    // Authenticate the packet
-    ComCfg::FrameContext contextOut = context;
-    contextOut.set_authenticated(true);
-
-    // Forward the packet to the output port
-    this->dataOut_out(0, data, context);
 }
 
 }  // namespace Components

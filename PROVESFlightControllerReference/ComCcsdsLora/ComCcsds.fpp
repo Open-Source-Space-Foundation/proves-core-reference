@@ -165,12 +165,11 @@ module ComCcsdsLora {
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
             # TcDeframer <-> TcSecurityDeframer
-            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
-            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+            tcDeframer.processSecurity       -> tcSecurityDeframer.processSecurity
 
-            # tcSecurityDeframer <-> SpacePacketDeframer
-            tcSecurityDeframer.dataOut        -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
+            # TcDeframer <-> SpacePacketDeframer
+            TcDeframer.dataOut                -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> TcDeframer.dataReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn

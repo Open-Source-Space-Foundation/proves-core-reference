@@ -33,14 +33,14 @@ bool sequenceNumberValid(uint32_t packetSequenceNumber, uint32_t sequenceNumber,
 
 }  // namespace
 
-PacketValidator::Status validatePacket(const Packet& packet, uint32_t sequenceNumber, uint32_t sequenceNumberWindow) {
-    // Validate SPI
-    if (!spiValid(packet.spi)) {
+PacketValidator::Status validatePacket(const Ccsds355_0_B_2::TCSecurityHeader& secHeader,
+                                       uint32_t sequenceNumber,
+                                       uint32_t sequenceNumberWindow) {
+    if (!spiValid(secHeader.spi)) {
         return PacketValidator::Status::SpiInvalid;
     }
 
-    // Validate sequence number
-    if (!sequenceNumberValid(packet.sequenceNumber, sequenceNumber, sequenceNumberWindow)) {
+    if (!sequenceNumberValid(secHeader.sequenceNumber, sequenceNumber, sequenceNumberWindow)) {
         return PacketValidator::Status::SequenceNumberInvalid;
     }
 

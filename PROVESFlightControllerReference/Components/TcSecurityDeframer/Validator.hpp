@@ -25,9 +25,10 @@ enum class Status {
 }  // namespace PacketValidator
 
 //! Validate the packet against ruleset
-PacketValidator::Status validatePacket(const Packet& packet,          //!< The Parsed packet to validate
-                                       uint32_t sequenceNumber,       //!< The current sequence number
-                                       uint32_t sequenceNumberWindow  //!< The acceptable sequence number window
+PacketValidator::Status validatePacket(
+    const Ccsds355_0_B_2::TCSecurityHeader& secHeader,  //!< The parsed security header
+    uint32_t sequenceNumber,                            //!< The current sequence number
+    uint32_t sequenceNumberWindow                       //!< The acceptable sequence number window
 );
 
 }  // namespace Components
