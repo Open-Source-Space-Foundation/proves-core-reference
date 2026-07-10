@@ -12,7 +12,9 @@ module ComCfg {
     dictionary constant SpacecraftId = 0x0044
 
     @ Fixed size of CCSDS TM frames
-    dictionary constant TmFrameFixedSize = 255  # Needs TmPayloadCapacity (= size-8) >= COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize[6]) + 1; min = 254
+    @ Capped at 248 bytes: the radio module has a 4 byte header and the Zephyr radio driver adds
+    @ another 4 byte header, leaving 256 - 4 - 4 = 248 bytes of usable frame space.
+    dictionary constant TmFrameFixedSize = 248  # Needs TmPayloadCapacity (= size-8) >= COM_BUFFER_MAX_SIZE + (2 * SpacePacketHeaderSize[6]) + 1
 
     @ Upper Bound on Fixed size of CCSDS AOS frames (not used in this project, matches default)
     constant AosMaxFrameFixedSize = 1536

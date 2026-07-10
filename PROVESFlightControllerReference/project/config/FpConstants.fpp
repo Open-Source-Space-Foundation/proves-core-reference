@@ -17,7 +17,9 @@ constant FW_QUEUE_NAME_BUFFER_SIZE = 80
 constant FW_TASK_NAME_BUFFER_SIZE = 80
 
 @ Specifies the size of the buffer that contains a communications packet
-constant FW_COM_BUFFER_MAX_SIZE = 233
+@ Capped so a full com buffer still fits in the radio-limited 248 byte CCSDS TM frame
+@ (see ComCfg::TmFrameFixedSize): TmPayloadCapacity(240) >= FW_COM_BUFFER_MAX_SIZE + SppOverhead(13)
+constant FW_COM_BUFFER_MAX_SIZE = 227
 
 @ Specifies the size of the buffer attached to state machine signals
 constant FW_SM_SIGNAL_BUFFER_MAX_SIZE = 128
