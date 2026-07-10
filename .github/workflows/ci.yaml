@@ -138,6 +138,10 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
 
+      - name: Reset submodule working trees
+        run: |
+          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
+
       - name: Set up dependencies
         run: |
           make submodules fprime-venv
@@ -337,6 +341,10 @@ jobs:
             [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
+
+      - name: Reset submodule working trees
+        run: |
+          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 
       - name: Set up dependencies
         run: |
