@@ -154,6 +154,11 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
 	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
 
+.PHONY: check-console-disabled
+ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
+check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
+	@$(UV_RUN) python3 scripts/check_console_disabled.py "$(ZEPHYR_CONFIG)"
+
 ##@ Authentication Keys
 
 AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
