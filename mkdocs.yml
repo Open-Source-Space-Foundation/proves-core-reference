@@ -107,6 +107,7 @@ nav:
       - Troubleshooting: additional-resources/troubleshooting.md
       - WSL Notes: additional-resources/wsl-notes.md
       - Self-Hosted Runner Setup: additional-resources/self-hosted-runner-setup.md
+      - PSRAM (v5d): additional-resources/psram.md
 
 extra:
   social:
