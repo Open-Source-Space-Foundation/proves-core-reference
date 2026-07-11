@@ -85,9 +85,11 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     }
     this->log_CONSOLE_RtcInvalidTime_ThrottleClear();
 
-    // Set FPrime time object
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time,
-             this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
+    // Set FPrime time object. Any seconds_carry from the rescale must be added to seconds_real_time,
+    // or a useconds wrap that overflows a full second would otherwise make the reported time appear
+    // to go backward (seconds_real_time only advances once per real second at RTC hardware resolution).
+    const Drv::RescaledTime rescaled = this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot);
+    time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time + rescaled.seconds_carry, rescaled.useconds);
 }
 
 // ----------------------------------------------------------------------
