@@ -22,6 +22,11 @@ endif()
 
 project(fprime-zephyr-reference C CXX)
 
+# RP2350 PSRAM driver (issue #285, slices S2/S3)
+if (NOT BUILD_TESTING)
+    add_subdirectory(drivers/memc)
+endif()
+
 # Enable Zephyr Pico hardware_adc library
 zephyr_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/zephyr-workspace/modules/hal/rpi_pico/src/rp2_common/hardware_adc/include
