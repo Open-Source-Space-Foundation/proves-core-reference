@@ -32,6 +32,17 @@ submodules: ## Initialize and update git submodules
 			echo "❌ Error: Unable to apply ComAggregator patch. Run 'cd lib/fprime && git status' to check."; \
 			exit 1; \
 		fi
+	@echo "Applying fprime sched-tick drop patch (issue #432 class)..."
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-sched-tick-drop.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-sched-tick-drop.patch && \
+			echo "✓ Applied sched-tick drop patch"; \
+		elif git apply --reverse --check ../../patches/fprime-sched-tick-drop.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply sched-tick drop patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv

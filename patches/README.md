@@ -25,3 +25,11 @@ Upstream's `m_allow_timeout` guard (fprime #4402) only suppresses timeout signal
 The patch bounds timeout-signal queue occupancy in the hand-coded `timeout_handler`: the signal is only enqueued when the queue retains headroom for it plus the (flow-controlled, at most one each) in-flight `fill` and `status` signals. Timeout ticks are periodic and idempotent, so a skipped tick is retried on the next cycle — behavior is unchanged except that the queue can no longer overflow.
 
 **Application:** Applied automatically by `make submodules`, same mechanism as the fprime-gds version patch. Candidate for upstreaming to nasa/fprime.
+
+## fprime-sched-tick-drop.patch
+
+Second instance of the issue-#432 defect class, captured by gdb tripwire during HWIL soak #5 (2026-07-10): `safeModeSeq` (Svc::CmdSequencer) hit the identical queue-full FW_ASSERT in its autocoded `schedIn_handlerBase` — rate-group sched ticks accumulate in any active component's queue whenever its dispatch thread stalls longer than `queue_depth / tick_rate`.
+
+The patch adds the `drop` queue-full annotation to the periodic `Svc.Sched` async inputs of all eight upstream Svc components that lacked it (CmdSequencer, CmdDispatcher, TlmChan, TlmPacketizer, FileDownlink, BufferLogger, DpManager, DpWriter). Dropping a periodic tick is safe by construction — the next tick retries — and upstream already uses `drop` for exactly this on `ComQueue.run` and `ActiveRateGroup.CycleIn`.
+
+**Application:** Applied automatically by `make submodules`. Candidate for upstreaming to nasa/fprime.

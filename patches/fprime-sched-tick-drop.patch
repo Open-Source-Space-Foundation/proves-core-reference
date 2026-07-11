@@ -1,0 +1,104 @@
+diff --git a/Svc/BufferLogger/BufferLogger.fpp b/Svc/BufferLogger/BufferLogger.fpp
+index 6da2ffd69..79fae4cc7 100644
+--- a/Svc/BufferLogger/BufferLogger.fpp
++++ b/Svc/BufferLogger/BufferLogger.fpp
+@@ -21,7 +21,7 @@ module Svc {
+     @ Ping output port
+     output port pingOut: Svc.Ping
+ 
+-    async input port schedIn: Svc.Sched
++    async input port schedIn: Svc.Sched drop
+ 
+     # ----------------------------------------------------------------------
+     # Special ports
+diff --git a/Svc/CmdDispatcher/CmdDispatcher.fpp b/Svc/CmdDispatcher/CmdDispatcher.fpp
+index 66343b886..49b921372 100644
+--- a/Svc/CmdDispatcher/CmdDispatcher.fpp
++++ b/Svc/CmdDispatcher/CmdDispatcher.fpp
+@@ -27,7 +27,7 @@ module Svc {
+     async input port pingIn: Svc.Ping
+ 
+     @ Run port used to emit telemetry
+-    async input port run: Svc.Sched
++    async input port run: Svc.Sched drop
+ 
+     @ Ping output port
+     output port pingOut: Svc.Ping
+diff --git a/Svc/CmdSequencer/CmdSequencer.fpp b/Svc/CmdSequencer/CmdSequencer.fpp
+index 1573fbe60..4e61d7272 100644
+--- a/Svc/CmdSequencer/CmdSequencer.fpp
++++ b/Svc/CmdSequencer/CmdSequencer.fpp
+@@ -83,7 +83,7 @@ module Svc {
+     output port comCmdOut: Fw.Com
+ 
+     @ Schedule in port
+-    async input port schedIn: Svc.Sched
++    async input port schedIn: Svc.Sched drop
+ 
+     @ Notifies that a sequence has started running
+     output port seqStartOut: Svc.CmdSeqIn
+diff --git a/Svc/DpManager/DpManager.fpp b/Svc/DpManager/DpManager.fpp
+index ebbf5a46f..74574f97f 100644
+--- a/Svc/DpManager/DpManager.fpp
++++ b/Svc/DpManager/DpManager.fpp
+@@ -8,7 +8,7 @@ module Svc {
+     # ----------------------------------------------------------------------
+ 
+     @ Schedule in port
+-    async input port schedIn: Svc.Sched
++    async input port schedIn: Svc.Sched drop
+ 
+     # ----------------------------------------------------------------------
+     # Ports for handling buffer requests
+diff --git a/Svc/DpWriter/DpWriter.fpp b/Svc/DpWriter/DpWriter.fpp
+index f24594f09..152be91ba 100644
+--- a/Svc/DpWriter/DpWriter.fpp
++++ b/Svc/DpWriter/DpWriter.fpp
+@@ -8,7 +8,7 @@ module Svc {
+     # ----------------------------------------------------------------------
+ 
+     @ Schedule in port
+-    async input port schedIn: Svc.Sched
++    async input port schedIn: Svc.Sched drop
+ 
+     # ----------------------------------------------------------------------
+     # Ports for handling data products
+diff --git a/Svc/FileDownlink/FileDownlink.fpp b/Svc/FileDownlink/FileDownlink.fpp
+index eed9376aa..d1d94db1a 100644
+--- a/Svc/FileDownlink/FileDownlink.fpp
++++ b/Svc/FileDownlink/FileDownlink.fpp
+@@ -8,7 +8,7 @@ module Svc {
+     # ----------------------------------------------------------------------
+ 
+     @ Run input port
+-    async input port Run: Svc.Sched
++    async input port Run: Svc.Sched drop
+ 
+     @ Mutexed Sendfile input port
+     guarded input port SendFile: Svc.SendFileRequest
+diff --git a/Svc/TlmChan/TlmChan.fpp b/Svc/TlmChan/TlmChan.fpp
+index d15072ed0..8f737cdc7 100644
+--- a/Svc/TlmChan/TlmChan.fpp
++++ b/Svc/TlmChan/TlmChan.fpp
+@@ -10,7 +10,7 @@ module Svc {
+     guarded input port TlmGet: Fw.TlmGet
+ 
+     @ Run port for starting packet send cycle
+-    async input port Run: Svc.Sched
++    async input port Run: Svc.Sched drop
+ 
+     @ Packet send port
+     output port PktSend: Fw.Com
+diff --git a/Svc/TlmPacketizer/TlmPacketizer.fpp b/Svc/TlmPacketizer/TlmPacketizer.fpp
+index f03dbafff..7ef46a7b2 100644
+--- a/Svc/TlmPacketizer/TlmPacketizer.fpp
++++ b/Svc/TlmPacketizer/TlmPacketizer.fpp
+@@ -17,7 +17,7 @@ module Svc {
+     output port pingOut: Svc.Ping
+ 
+     @ Run port for starting packet send cycle
+-    async input port Run: Svc.Sched
++    async input port Run: Svc.Sched drop
+ 
+     @ Telemetry input port
+     sync input port TlmRecv: Fw.Tlm
