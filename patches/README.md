@@ -32,4 +32,6 @@ Second instance of the issue-#432 defect class, captured by gdb tripwire during 
 
 The patch adds the `drop` queue-full annotation to the periodic `Svc.Sched` async inputs of all eight upstream Svc components that lacked it (CmdSequencer, CmdDispatcher, TlmChan, TlmPacketizer, FileDownlink, BufferLogger, DpManager, DpWriter). Dropping a periodic tick is safe by construction — the next tick retries — and upstream already uses `drop` for exactly this on `ComQueue.run` and `ActiveRateGroup.CycleIn`.
 
+A third capture (same soak: `Svc::Health` 1 Hz ping → `rateGroup50Hz.PingIn_handlerBase`, identical queue-full assert) showed pings are another unbounded periodic producer, so the patch also adds `drop` to the 14 async `PingIn`/`pingIn` ports in Svc (including `ActiveRateGroup` and `FpySequencer`, which was explicitly `assert`). Dropping a ping is the *designed* failure path: Health's ping-timeout policy exists precisely to catch a component that stops responding — an assert on the ping enqueue kills the board through the very mechanism meant to detect stuck components gracefully.
+
 **Application:** Applied automatically by `make submodules`. Candidate for upstreaming to nasa/fprime.
