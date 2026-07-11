@@ -57,6 +57,21 @@ Flash erase/program coexistence is handled by the pinned `hal_rpi_pico`:
 M1 registers around every `flash_range_erase/program` (verified on the bench:
 M1 registers and PSRAM contents intact across FSW filesystem writes).
 
+## Bench verification (2026-07-11, v5d + fprime-gds)
+
+Full 2 MB verified in-flight over the authenticated UART link: 8 consecutive
+`PSRAM_SELF_TEST` commands (256 KB each) all passed, and the `psramMonitor`
+channels downlinked (`PsramSize = 2097152`, `PsramStatus = 2` = heap-verified).
+
+![PSRAM channels in GDS](img/psram-gds-channels.png)
+
+![PSRAM self-test events in GDS](img/psram-gds-events.png)
+
+Operational note: the Psram packet is telemetry group 5. `SET_LEVEL 5` over
+the 115200-baud UART link floods the TLM queue (`QueueOverflow` warnings) —
+prefer `SEND_PKT 23` for on-demand sampling, or a radio link budget review
+before raising the level in ops.
+
 ## Boot self-test
 
 `CONFIG_MEMC_RP2350_PSRAM_SELF_TEST` (default `y`) runs an address-in-address
