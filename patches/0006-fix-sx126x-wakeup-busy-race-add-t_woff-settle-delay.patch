@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000006 Mon Sep 17 00:00:00 2001
+From: Michael Pham <phamlongmichael@gmail.com>
+Date: Fri, 10 Jul 2026 00:00:00 -0700
+Subject: [PATCH] fix(sx126x_hal): add t_woff settle delay after wake-up NSS
+ glitch to close BUSY-poll race
+
+sx126x_hal_check_device_ready() wakes a sleeping SX126x with a glitch on
+NSS and then immediately polls BUSY via sx126x_hal_wait_on_busy(). Per
+the datasheet, the chip needs up to ~340us (t_woff, warm start) after
+the wake-up NSS edge before it reliably asserts BUSY. Polling right away
+can sample BUSY before the chip has driven it, so the caller believes
+the radio is ready when it is still starting up; the very next SPI
+command (frequently SET_FREQ) is then clocked into a device that isn't
+listening yet and is silently dropped. This reproduces ~40% of the time
+in release builds where the post-wake instruction path is fast enough
+to win the race.
+
+Fix: insert a k_busy_wait(500) between the wake-up NSS toggle and the
+BUSY poll to wait out the chip's startup window before trusting BUSY.
+
+Same root cause and fix as the loramac_node SX126xWakeup() path fixed
+for the ground-radio-controller GRC firmware
+(patches/zephyr-sx126x-wakeup-busy-delay.patch there); this patch is
+the USP HAL (Semtech RAC-managed) equivalent for the flight stack.
+
+Preserves the existing external RF-switch GPIO patch (0001) in this
+same file — this change only adds the delay inside
+sx126x_hal_check_device_ready() and does not touch
+sx126x_hal_update_rf_switch() or sx126x_hal_write().
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+---
+ drivers/usp/sx126x/sx126x_hal.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/usp/sx126x/sx126x_hal.c b/drivers/usp/sx126x/sx126x_hal.c
+index 1530077..699d53b 100644
+--- a/drivers/usp/sx126x/sx126x_hal.c
++++ b/drivers/usp/sx126x/sx126x_hal.c
+@@ -101,6 +101,15 @@ static void sx126x_hal_check_device_ready( const void* context )
+         gpio_pin_set_dt( cs, 1 );
+         k_usleep( 100 );
+         gpio_pin_set_dt( cs, 0 );
++
++        /* The chip takes up to ~340us (datasheet t_woff, warm start) after
++         * the wake-up NSS edge before it is ready. Polling BUSY immediately
++         * can sample it before the chip has asserted it, in which case the
++         * next command is clocked into a device still starting up and is
++         * silently ignored. Wait out the startup window before polling.
++         */
++        k_busy_wait( 500 );
++
+         sx126x_hal_wait_on_busy( context );
+         data->radio_status = RADIO_AWAKE;
+     }
+--
+2.50.1 (Apple Git-155)
+
