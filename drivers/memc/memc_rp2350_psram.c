@@ -28,8 +28,11 @@
 
 #include "memc_rp2350_psram.h"
 
+#include <hardware/regs/addressmap.h>
 #include <hardware/regs/qmi.h>
+#include <hardware/regs/xip.h>
 #include <hardware/structs/qmi.h>
+#include <hardware/structs/xip_ctrl.h>
 
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
@@ -77,6 +80,69 @@ LOG_MODULE_REGISTER(memc_rp2350_psram, CONFIG_LOG_DEFAULT_LEVEL);
 #define DIRECT_TX_OE QMI_DIRECT_TX_OE_BITS
 #define DIRECT_TX_NOPUSH QMI_DIRECT_TX_NOPUSH_BITS
 #define DIRECT_TX_IWIDTH_Q (QMI_DIRECT_TX_IWIDTH_VALUE_Q << QMI_DIRECT_TX_IWIDTH_LSB)
+
+/* ---- Memory-mapped mode timing (S4) -------------------------------------- */
+
+/*
+ * All values are computed at compile time from the fixed 150 MHz sys_clk
+ * (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC equals clk_sys on RP2350).  If the
+ * system clock ever changes these derivations stay correct, but re-verify
+ * the tCEM margin on hardware.
+ */
+#define PSRAM_SYS_HZ CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC
+#define PSRAM_MAX_HZ 84000000u /* APS1604M quad max */
+
+/* SCK divisor: ceil(sys/max) → 2 at 150 MHz (75 MHz SCK). */
+#define PSRAM_CLKDIV ((PSRAM_SYS_HZ + PSRAM_MAX_HZ - 1u) / PSRAM_MAX_HZ)
+/* RX sampling delay in half sys-clocks; +1 above 100 MHz SCK (per SparkFun). */
+#define PSRAM_RXDELAY (PSRAM_CLKDIV + ((PSRAM_SYS_HZ / PSRAM_CLKDIV > 100000000u) ? 1u : 0u))
+
+/*
+ * tCEM: CE# may stay low at most 8 µs or refresh is starved (silent data
+ * corruption at temperature).  MAX_SELECT is in units of 64 sys-clk cycles:
+ * floor(8 µs * 150 MHz / 64) = 18.  Floor keeps us on the safe side.
+ */
+#define PSRAM_MAX_SELECT ((PSRAM_SYS_HZ / 1000000u) * 8u / 64u)
+BUILD_ASSERT(PSRAM_MAX_SELECT >= 1u && PSRAM_MAX_SELECT <= 0x3Fu, "MAX_SELECT out of field range");
+
+/*
+ * tCPH: CE# must stay high >= 18 ns between bursts.  MIN_DESELECT counts
+ * sys-clk cycles minus half an SCK period: ceil(18ns * sys) - ceil(div/2).
+ */
+#define PSRAM_MIN_DESELECT (((18u * (PSRAM_SYS_HZ / 1000000u)) + 999u) / 1000u - (PSRAM_CLKDIV + 1u) / 2u)
+
+#define PSRAM_M1_TIMING                                                                                            \
+    ((1u << QMI_M1_TIMING_COOLDOWN_LSB) | (QMI_M1_TIMING_PAGEBREAK_VALUE_1024 << QMI_M1_TIMING_PAGEBREAK_LSB) |    \
+     (PSRAM_MAX_SELECT << QMI_M1_TIMING_MAX_SELECT_LSB) | (PSRAM_MIN_DESELECT << QMI_M1_TIMING_MIN_DESELECT_LSB) | \
+     (PSRAM_RXDELAY << QMI_M1_TIMING_RXDELAY_LSB) | (PSRAM_CLKDIV << QMI_M1_TIMING_CLKDIV_LSB))
+
+/* Quad read 0xEB: quad cmd/addr/dummy/data, 6 dummy cycles (24 bits quad). */
+#define PSRAM_M1_RFMT                                                     \
+    ((QMI_M1_RFMT_PREFIX_WIDTH_VALUE_Q << QMI_M1_RFMT_PREFIX_WIDTH_LSB) | \
+     (QMI_M1_RFMT_ADDR_WIDTH_VALUE_Q << QMI_M1_RFMT_ADDR_WIDTH_LSB) |     \
+     (QMI_M1_RFMT_SUFFIX_WIDTH_VALUE_Q << QMI_M1_RFMT_SUFFIX_WIDTH_LSB) | \
+     (QMI_M1_RFMT_DUMMY_WIDTH_VALUE_Q << QMI_M1_RFMT_DUMMY_WIDTH_LSB) |   \
+     (QMI_M1_RFMT_DATA_WIDTH_VALUE_Q << QMI_M1_RFMT_DATA_WIDTH_LSB) |     \
+     (QMI_M1_RFMT_PREFIX_LEN_VALUE_8 << QMI_M1_RFMT_PREFIX_LEN_LSB) |     \
+     (QMI_M1_RFMT_DUMMY_LEN_VALUE_24 << QMI_M1_RFMT_DUMMY_LEN_LSB))
+#define PSRAM_M1_RCMD 0xEBu
+
+/* Quad write 0x38: quad cmd/addr/data, no dummy. */
+#define PSRAM_M1_WFMT                                                     \
+    ((QMI_M1_WFMT_PREFIX_WIDTH_VALUE_Q << QMI_M1_WFMT_PREFIX_WIDTH_LSB) | \
+     (QMI_M1_WFMT_ADDR_WIDTH_VALUE_Q << QMI_M1_WFMT_ADDR_WIDTH_LSB) |     \
+     (QMI_M1_WFMT_SUFFIX_WIDTH_VALUE_Q << QMI_M1_WFMT_SUFFIX_WIDTH_LSB) | \
+     (QMI_M1_WFMT_DUMMY_WIDTH_VALUE_Q << QMI_M1_WFMT_DUMMY_WIDTH_LSB) |   \
+     (QMI_M1_WFMT_DATA_WIDTH_VALUE_Q << QMI_M1_WFMT_DATA_WIDTH_LSB) |     \
+     (QMI_M1_WFMT_PREFIX_LEN_VALUE_8 << QMI_M1_WFMT_PREFIX_LEN_LSB))
+#define PSRAM_M1_WCMD 0x38u
+
+/*
+ * Uncached, non-allocating alias of the XIP CS1 window.  The XIP cache is
+ * write-back for writable windows, so the memtest uses this alias to talk
+ * to the actual chip instead of the cache.
+ */
+#define PSRAM_NOCACHE_BASE (XIP_NOCACHE_NOALLOC_BASE + 0x01000000u)
 
 /* ---- Driver state ------------------------------------------------------- */
 
@@ -277,6 +343,71 @@ static __ramfunc struct psram_id psram_setup_ramfunc(void) {
     return id;
 }
 
+/*
+ * psram_mmap_ramfunc — program the M1 (CS1) window registers (S4).
+ *
+ * Plain register writes; kept __ramfunc + irq-locked out of caution since
+ * they change live XIP behaviour.  ATRANS is never touched (datasheet
+ * §12.14.4.2 aliasing hazard).  The caller holds irq_lock().
+ */
+static __ramfunc void psram_mmap_ramfunc(void) {
+    qmi_hw->m[1].timing = PSRAM_M1_TIMING;
+    qmi_hw->m[1].rfmt = PSRAM_M1_RFMT;
+    qmi_hw->m[1].rcmd = PSRAM_M1_RCMD;
+    qmi_hw->m[1].wfmt = PSRAM_M1_WFMT;
+    qmi_hw->m[1].wcmd = PSRAM_M1_WCMD;
+    /* Memory-mapped writes to M1 are off by default. */
+    xip_ctrl_hw->ctrl |= XIP_CTRL_WRITABLE_M1_BITS;
+}
+
+/* ---- Post-init self-test (S4) -------------------------------------------- */
+
+#ifdef CONFIG_MEMC_RP2350_PSRAM_SELF_TEST
+/*
+ * Address-in-address + inverted pattern across the full region, plus
+ * first/last byte checks through the cached window.  Runs through the
+ * uncached alias so every access hits the chip, not the XIP cache.
+ * Returns 0 on pass, negative offset-encoding on first mismatch.
+ */
+static int psram_memtest(uintptr_t cached_base, size_t size) {
+    volatile uint32_t* nc = (volatile uint32_t*)PSRAM_NOCACHE_BASE;
+    volatile uint8_t* cb = (volatile uint8_t*)cached_base;
+    const size_t words = size / sizeof(uint32_t);
+
+    /* Pass 1: address-in-address */
+    for (size_t i = 0; i < words; i++) {
+        nc[i] = (uint32_t)i;
+    }
+    for (size_t i = 0; i < words; i++) {
+        if (nc[i] != (uint32_t)i) {
+            LOG_ERR("psram: memtest addr fail @%08zx read=0x%08x", i * 4, nc[i]);
+            return -1;
+        }
+    }
+
+    /* Pass 2: inverted */
+    for (size_t i = 0; i < words; i++) {
+        nc[i] = ~(uint32_t)i;
+    }
+    for (size_t i = 0; i < words; i++) {
+        if (nc[i] != ~(uint32_t)i) {
+            LOG_ERR("psram: memtest inv fail @%08zx read=0x%08x", i * 4, nc[i]);
+            return -2;
+        }
+    }
+
+    /* First/last byte through the cached window (functional path check). */
+    cb[0] = 0xA5u;
+    cb[size - 1] = 0x5Au;
+    if (cb[0] != 0xA5u || cb[size - 1] != 0x5Au) {
+        LOG_ERR("psram: cached-window byte check failed");
+        return -3;
+    }
+
+    return 0;
+}
+#endif /* CONFIG_MEMC_RP2350_PSRAM_SELF_TEST */
+
 /* ---- POST_KERNEL init --------------------------------------------------- */
 
 static int psram_init(const struct device* dev) {
@@ -294,9 +425,11 @@ static int psram_init(const struct device* dev) {
     LOG_INF("psram: init (base=0x%08x size=%zu max_hz=%u)", (uint32_t)cfg->base, cfg->size, cfg->max_hz);
 
     /* Run the direct-mode sequence from RAM with interrupts locked. */
+    uint32_t t0 = k_cycle_get_32();
     unsigned int key = irq_lock();
     struct psram_id id = psram_setup_ramfunc();
     irq_unlock(key);
+    uint32_t window_cyc = k_cycle_get_32() - t0;
 
     /* Parse and log ID bytes — safe to do after irq_unlock(). */
     LOG_INF(
@@ -327,6 +460,25 @@ static int psram_init(const struct device* dev) {
     if (density != 0x2u) {
         LOG_WRN("psram: unexpected density bits 0x%x (expected 0x2 for 2MB)", density);
     }
+
+    /* S4: program the M1 window — chip becomes memory-mapped at cfg->base. */
+    key = irq_lock();
+    psram_mmap_ramfunc();
+    irq_unlock(key);
+
+    LOG_INF("psram: direct-mode window %u cycles (%u us), M1 timing=0x%08x", window_cyc,
+            (uint32_t)(window_cyc / (PSRAM_SYS_HZ / 1000000u)), (uint32_t)PSRAM_M1_TIMING);
+
+#ifdef CONFIG_MEMC_RP2350_PSRAM_SELF_TEST
+    int test = psram_memtest(cfg->base, cfg->size);
+
+    if (test != 0) {
+        LOG_ERR("psram: memtest failed (%d) — PSRAM disabled, boot continues", test);
+        data->ready = false;
+        return 0;
+    }
+    LOG_INF("psram: memtest passed (%zu bytes)", cfg->size);
+#endif
 
     data->ready = true;
     LOG_INF("psram: ready — 2 MB at 0x%08x", (uint32_t)cfg->base);
