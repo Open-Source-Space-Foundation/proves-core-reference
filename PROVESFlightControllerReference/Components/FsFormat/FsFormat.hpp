@@ -24,15 +24,6 @@ class FsFormat final : public FsFormatComponentBase {
     //! Destroy FsFormat object
     ~FsFormat();
 
-  public:
-    // ----------------------------------------------------------------------
-    // Public helper methods
-    // ----------------------------------------------------------------------
-
-    //! Configure the file system format component
-    void configure(const int partition_id  //!< The partition ID to format
-    );
-
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -49,11 +40,6 @@ class FsFormat final : public FsFormatComponentBase {
                            ) override;
 
   private:
-    // ----------------------------------------------------------------------
-    // Private member variables
-    // ----------------------------------------------------------------------
-
-    int m_partition_id;  //!< The partition ID format
 };
 
 }  // namespace Components

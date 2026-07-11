@@ -15,17 +15,6 @@
 		zephyr,code-partition = &slot0_partition;
 	};
 
-	fstab {
-                compatible = "zephyr,fstab";
-                ffs1: ffs1 {
-                        compatible = "zephyr,fstab,fatfs";
-                        automount;
-                        disk-access;
-                        mount-point = "/";
-                };
-        };
-
-
 	aliases {
 		watchdog0 = &wdt0;
 	};
