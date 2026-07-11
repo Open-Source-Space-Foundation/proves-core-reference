@@ -1,4 +1,5 @@
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h>
+#include "proves_flight_control_board_v5-qspi-pinctrl.h"
 
 &pinctrl {
 	spi0_default: spi0_default {
@@ -60,6 +61,12 @@
 			pinmux = <ADC_CH0_P26>,		/* GP26: ADC_CH0 */
 					<ADC_CH1_P27>;		/* GP27: ADC_CH1 */
 			input-enable;
+		};
+	};
+	/* GPIO8 -> XIP_CS1n (alt function 9): PSRAM chip select on QMI CS1 */
+	psram_cs_default: psram_cs_default {
+		group1 {
+			pinmux = <XIP_CS1_P8>;
 		};
 	};
 };
