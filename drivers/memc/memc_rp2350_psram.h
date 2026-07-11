@@ -56,6 +56,17 @@ size_t psram_size(void);
  */
 bool psram_is_ready(void);
 
+/**
+ * @brief Check whether the PSRAM shared_multi_heap pool is usable.
+ *
+ * True once the region has been added to the shared_multi_heap pool and a
+ * trial allocation succeeded.  Allocate with
+ * shared_multi_heap_alloc(SMH_REG_ATTR_EXTERNAL, size).
+ *
+ * @return true PSRAM heap verified at init.
+ */
+bool psram_heap_ok(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -40,6 +40,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/multi_heap/shared_multi_heap.h>
 #include <zephyr/sys/util.h>
 
 LOG_MODULE_REGISTER(memc_rp2350_psram, CONFIG_LOG_DEFAULT_LEVEL);
@@ -156,6 +157,9 @@ struct psram_config {
 struct psram_data {
     bool ready; /* true after successful RDID */
 };
+
+/* 0 = no heap, 1 = region added but trial alloc failed, 2 = heap verified */
+static uint8_t psram_smh_status;
 
 /* ---- RAM-resident setup routine (S3) ------------------------------------ */
 
@@ -483,6 +487,41 @@ static int psram_init(const struct device* dev) {
     data->ready = true;
     LOG_INF("psram: ready — 2 MB at 0x%08x", (uint32_t)cfg->base);
 
+    /*
+     * S5: expose the region as a shared_multi_heap pool.  Consumers opt in
+     * explicitly with shared_multi_heap_alloc(SMH_REG_ATTR_EXTERNAL, n);
+     * nothing is redirected automatically.
+     */
+    ret = shared_multi_heap_pool_init();
+    if (ret != 0 && ret != -EALREADY) {
+        LOG_ERR("psram: smh pool init failed: %d", ret);
+        return 0; /* PSRAM still memory-mapped; heap just unavailable */
+    }
+
+    static struct shared_multi_heap_region region;
+
+    region.attr = SMH_REG_ATTR_EXTERNAL;
+    region.addr = cfg->base;
+    region.size = cfg->size;
+
+    ret = shared_multi_heap_add(&region, NULL);
+    if (ret != 0) {
+        LOG_ERR("psram: smh add failed: %d", ret);
+        return 0;
+    }
+
+    /* Trial allocation larger than any free internal SRAM block. */
+    uint32_t* trial = shared_multi_heap_alloc(SMH_REG_ATTR_EXTERNAL, 1024u * 1024u);
+
+    if (trial != NULL) {
+        trial[0] = 0x50535241u; /* 'PSRA' */
+        psram_smh_status = (trial[0] == 0x50535241u) ? 2u : 1u;
+        shared_multi_heap_free(trial);
+    } else {
+        psram_smh_status = 1u;
+    }
+    LOG_INF("psram: shared_multi_heap region added (trial alloc %s)", (psram_smh_status == 2u) ? "ok" : "failed");
+
     return 0;
 }
 
@@ -506,6 +545,10 @@ size_t psram_size(void) {
     const struct psram_config* cfg = psram_dev_ptr->config;
 
     return cfg->size;
+}
+
+bool psram_heap_ok(void) {
+    return psram_smh_status == 2u;
 }
 
 bool psram_is_ready(void) {

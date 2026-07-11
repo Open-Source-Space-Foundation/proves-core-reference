@@ -6,6 +6,7 @@ config MEMC_RP2350_PSRAM
 	default y
 	depends on DT_HAS_RASPBERRYPI_RP2350_PSRAM_APS1604M_ENABLED
 	select PINCTRL
+	select SHARED_MULTI_HEAP
 	help
 	  Enable the one-shot QMI memory-mapped driver for the APMemory
 	  APS1604M-3SQR 2 MB QSPI PSRAM on RP2350 chip-select 1 (0x11000000).
