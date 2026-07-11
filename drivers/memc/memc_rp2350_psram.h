@@ -21,6 +21,7 @@
 #define DRIVERS_MEMC_MEMC_RP2350_PSRAM_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

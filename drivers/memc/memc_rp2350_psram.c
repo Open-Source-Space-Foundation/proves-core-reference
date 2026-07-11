@@ -234,26 +234,26 @@ static __ramfunc struct psram_id psram_setup_ramfunc(void) {
 
     /*
      * Clock in 8 ID bytes — OE=false so we tri-state SD0 and sample SDx.
-     * NOPUSH=false so bytes land in the RX FIFO.
+     * NOPUSH=false so each byte lands in the RX FIFO.  The DIRECT_RX FIFO
+     * is only a few entries deep and a full RX FIFO stalls the transfer
+     * (BUSY never clears), so each byte must be drained immediately after
+     * its transfer — never batch the pushes.
      */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* MF_ID */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* KGD   */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID0  */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID1  */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID2  */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID3  */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID4  */
-    psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false); /* EID5  */
+    uint8_t raw[8];
 
-    /* Drain the RX FIFO — order must match the pushes above. */
-    id.mf_id = psram_rx_byte();
-    id.kgd = psram_rx_byte();
-    id.eid[0] = psram_rx_byte();
-    id.eid[1] = psram_rx_byte();
-    id.eid[2] = psram_rx_byte();
-    id.eid[3] = psram_rx_byte();
-    id.eid[4] = psram_rx_byte();
-    id.eid[5] = psram_rx_byte();
+    for (uint32_t i = 0; i < 8u; i++) {
+        psram_tx(0u, 0x00u, /*oe=*/false, /*nopush=*/false);
+        raw[i] = psram_rx_byte();
+    }
+
+    id.mf_id = raw[0];
+    id.kgd = raw[1];
+    id.eid[0] = raw[2];
+    id.eid[1] = raw[3];
+    id.eid[2] = raw[4];
+    id.eid[3] = raw[5];
+    id.eid[4] = raw[6];
+    id.eid[5] = raw[7];
 
     /* 10. Deassert CS1n after Read ID. */
     qmi_hw->direct_csr &= ~DIRECT_CSR_ASSERT_CS1N;
