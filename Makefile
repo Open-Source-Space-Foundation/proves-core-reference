@@ -21,6 +21,17 @@ submodules: ## Initialize and update git submodules
 			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
 			exit 1; \
 		fi
+	@echo "Applying fprime ComAggregator bounded-timeout patch (issue #432)..."
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-com-aggregator-bounded-timeout.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-com-aggregator-bounded-timeout.patch && \
+			echo "✓ Applied ComAggregator bounded-timeout patch"; \
+		elif git apply --reverse --check ../../patches/fprime-com-aggregator-bounded-timeout.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply ComAggregator patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
