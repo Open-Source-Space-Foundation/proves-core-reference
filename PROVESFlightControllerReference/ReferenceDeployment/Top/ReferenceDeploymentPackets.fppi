@@ -156,6 +156,11 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
+  packet Psram id 23 group 5 {
+    ReferenceDeployment.psramMonitor.PsramSize
+    ReferenceDeployment.psramMonitor.PsramStatus
+  }
+
   packet Authenticate id 6 group 5 {
     #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
     ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
