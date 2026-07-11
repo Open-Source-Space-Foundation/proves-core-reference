@@ -134,19 +134,19 @@ void PsramMonitor::PSRAM_SELF_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeqNum
         const U32 orig = nc[i];
 
         nc[i] = i;
-        if (nc[i] != i) {
+        U32 actual = nc[i];
+        if (actual != i) {
             nc[i] = orig;
-            this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), i,
-                                                     static_cast<U32>(nc[i]));
+            this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), i, actual);
             this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
 
         nc[i] = ~i;
-        if (nc[i] != ~i) {
+        actual = nc[i];
+        if (actual != ~i) {
             nc[i] = orig;
-            this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), ~i,
-                                                     static_cast<U32>(nc[i]));
+            this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), ~i, actual);
             this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
