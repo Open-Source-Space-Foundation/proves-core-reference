@@ -97,7 +97,8 @@ zephyr-patches: ## Apply Zephyr tree patches (CDC-ACM TX fixes)
 	@cd "$(ZEPHYR_DIR)" && \
 	for p in \
 		$(shell pwd)/patches/0004-fix-usbd-cdc-acm-poll-mode-tx-drain-on-class-enable.patch \
-		$(shell pwd)/patches/0005-fix-usbd-cdc-acm-stuck-tx-fifo-busy-on-disable-and-retry.patch; do \
+		$(shell pwd)/patches/0005-fix-usbd-cdc-acm-stuck-tx-fifo-busy-on-disable-and-retry.patch \
+		$(shell pwd)/patches/0007-fix-usbd-cdc-acm-bound-poll-out-backpressure-wait.patch; do \
 		name=$$(basename $$p); \
 		if git apply --check "$$p" 2>/dev/null; then \
 			git apply "$$p" && echo "OK Applied $$name"; \
