@@ -32,6 +32,10 @@ class FatalHandler final : public FatalHandlerComponentBase {
     //!
     ~FatalHandler();
 
+    //! Reboot the device
+    //!
+    void reboot();
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for user-defined typed input ports
