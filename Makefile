@@ -96,7 +96,8 @@ usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat + w
 	for p in $(shell pwd)/patches/0001-feat-sx126x-add-external-RF-switch-GPIO-support-tx-r.patch \
 	          $(shell pwd)/patches/0002-fix-zephyr-4.3-remove-select-ZEPHYR_LORA_BASICS_MODE.patch \
 	          $(shell pwd)/patches/0003-fix-usp-main-2025-fix-LR_FHSS_SRC_PATH-for-flattened.patch \
-	          $(shell pwd)/patches/0006-fix-sx126x-wakeup-busy-race-add-t_woff-settle-delay.patch; do \
+	          $(shell pwd)/patches/0006-fix-sx126x-wakeup-busy-race-add-t_woff-settle-delay.patch \
+	          $(shell pwd)/patches/0008-fix-smtc-modem-hal-implement-rac-api-mutex.patch; do \
 		name=$$(basename $$p); \
 		if git apply --check "$$p" 2>/dev/null; then \
 			git apply "$$p" && echo "✓ Applied $$name"; \
@@ -104,6 +105,23 @@ usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat + w
 			echo "⚠ Already applied: $$name"; \
 		else \
 			echo "❌ Cannot apply $$name — check usp_zephyr revision"; exit 1; \
+		fi; \
+	done
+
+# USP_DIR: the Semtech smtc_rac_lib west module (radio planner lives here).
+USP_DIR ?= $(shell pwd)/lib/zephyr-workspace/modules/lib/usp
+
+.PHONY: usp-core-patches
+usp-core-patches: ## Apply usp (smtc_rac_lib) patches (radio-planner failsafe unlock exemption)
+	@cd "$(USP_DIR)" && \
+	for p in $(shell pwd)/patches/0009-fix-radio-planner-failsafe-exempt-unlock-radio-access.patch; do \
+		name=$$(basename $$p); \
+		if git apply --check "$$p" 2>/dev/null; then \
+			git apply "$$p" && echo "✓ Applied $$name"; \
+		elif git apply --reverse --check "$$p" 2>/dev/null; then \
+			echo "⚠ Already applied: $$name"; \
+		else \
+			echo "❌ Cannot apply $$name — check usp revision"; exit 1; \
 		fi; \
 	done
 

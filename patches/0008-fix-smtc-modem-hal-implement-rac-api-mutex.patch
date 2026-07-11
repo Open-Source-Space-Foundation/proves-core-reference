@@ -1,0 +1,43 @@
+diff --git a/modules/smtc_modem_hal/smtc_modem_hal.c b/modules/smtc_modem_hal/smtc_modem_hal.c
+index a08e7b9..a46c474 100644
+--- a/modules/smtc_modem_hal/smtc_modem_hal.c
++++ b/modules/smtc_modem_hal/smtc_modem_hal.c
+@@ -176,14 +176,36 @@ struct k_sem* smtc_modem_hal_get_event_sem( void )
+     return &lbm_main_loop_sem;
+ }
+ 
++/* RAC API serialization (HWIL 2026-07-11): the RAC wraps every public entry
++ * point (engine pass included) in protect/unprotect and relies on it for
++ * mutual exclusion between the USP engine thread and API callers on other
++ * threads.  The bare-metal stub provided none: a concurrent
++ * rp_task_enqueue()/abort against a running engine tears the radio planner's
++ * task structs (observed live on RP2350: RP_FAILSAFE panic on a
++ * LOCK_RADIO_ACCESS task whose type field read non-LOCK, and a TX launch
++ * taken through the LR-FHSS branch while on a LoRa profile).  k_mutex allows
++ * recursive locking by the owner, which the RAC requires: post-transaction
++ * callbacks run inside the engine pass and may call
++ * smtc_rac_unlock_radio_access(), which re-enters protect.  The radio/timer
++ * IRQ callbacks only set flags and never call protect, so ISR context is
++ * excluded by design; guard anyway rather than fault.
++ */
++K_MUTEX_DEFINE( prv_rac_api_mutex );
++
+ void smtc_modem_hal_protect_api_call( void )
+ {
+-    // Do nothing in case implementation is bare metal
++    if( !k_is_in_isr( ) )
++    {
++        ( void ) k_mutex_lock( &prv_rac_api_mutex, K_FOREVER );
++    }
+ }
+ 
+ void smtc_modem_hal_unprotect_api_call( void )
+ {
+-    // Do nothing in case implementation is bare metal
++    if( !k_is_in_isr( ) )
++    {
++        ( void ) k_mutex_unlock( &prv_rac_api_mutex );
++    }
+ }
+ 
+ /* ------------ Timer management ------------ */
