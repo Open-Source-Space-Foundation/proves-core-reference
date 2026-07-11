@@ -45,6 +45,17 @@ uintptr_t psram_base(void);
 size_t psram_size(void);
 
 /**
+ * @brief Return the base of the uncached, non-allocating alias of the PSRAM.
+ *
+ * Accesses through this alias bypass the (write-back) XIP cache and always
+ * hit the chip — required for memtests.  Same size as psram_size().
+ *
+ * @return Uncached alias base (0x15000000 on RP2350 CS1),
+ *         or 0 if the driver is not enabled.
+ */
+uintptr_t psram_nocache_base(void);
+
+/**
  * @brief Check whether the PSRAM init sequence completed successfully.
  *
  * Returns false if the PSRAM was not detected (bad KGD byte in RDID)

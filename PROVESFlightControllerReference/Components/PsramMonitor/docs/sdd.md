@@ -39,13 +39,22 @@ a free-space estimate.
 
 ### Self-test details
 
-- **Patterns:** address-in-address (write `i`, read back) then inverted
-  (`~i`, read back).  Each pass covers `length/4` 32-bit words.
+- **Patterns:** word-wise save/test/restore — each 32-bit word is saved,
+  written with the address-in-address pattern (`i`) and its inverse (`~i`)
+  with read-back checks, then the original value is restored.
+- **Non-destructive at rest:** heap contents in the tested region are
+  preserved.  A concurrent writer to the same word can still race the
+  one-word test window, so prefer quiescent regions.  Full-region
+  *destructive* address-decode coverage is provided by the driver's boot
+  memtest (`CONFIG_MEMC_RP2350_PSRAM_SELF_TEST`), which runs before the
+  heap exists.
 - **Alias:** test runs through the uncached, non-allocating XIP CS1 alias
-  at `0x14000000` so every access hits the chip rather than the XIP cache.
+  (`psram_nocache_base()`, `0x15000000` on RP2350) so every access hits
+  the chip rather than the write-back XIP cache.
+- **Validation:** `start_offset` must be 4-byte aligned; `length` is
+  rounded down to whole words and clamped to the region.
 - **Length cap:** `256 KB` per invocation (`SELF_TEST_LENGTH_CAP`).  This
-  keeps the blocking time inside the command dispatcher under ~10 ms at
-  150 MHz (2 passes × 256 KB / 75 MHz effective ≈ 3 ms, plus overhead).
+  keeps the blocking time inside the command dispatcher under ~10 ms.
   For a full 2 MB test, issue 8 consecutive commands with `start_offset`
   stepping by 262144 (0x40000).
 - **Safety:** the command is rejected immediately (with a `PsramNotReady`

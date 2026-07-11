@@ -2,8 +2,8 @@
 
 The v5d board carries an APMemory APS1604M-3SQR 16 Mbit (2 MB) QSPI PSRAM on the
 RP2350's QMI chip-select 1. The in-tree driver
-(`drivers/memc/memc_rp2350_psram.c`) brings it up once at boot; afterwards it is
-ordinary memory-mapped RAM. Issue #285 tracks the feature.
+(`drivers/memc/memc_rp2350_psram.c`) initializes it once at boot; afterward it
+is ordinary memory-mapped RAM. Issue #285 tracks the feature.
 
 ## Memory map
 

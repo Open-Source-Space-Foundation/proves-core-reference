@@ -538,6 +538,13 @@ uintptr_t psram_base(void) {
     return cfg->base;
 }
 
+uintptr_t psram_nocache_base(void) {
+    if (!psram_dev_ptr || !device_is_ready(psram_dev_ptr)) {
+        return 0;
+    }
+    return PSRAM_NOCACHE_BASE;
+}
+
 size_t psram_size(void) {
     if (!psram_dev_ptr || !device_is_ready(psram_dev_ptr)) {
         return 0;

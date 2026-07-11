@@ -19,11 +19,15 @@
 // Self-test length cap
 // --------------------
 // PSRAM_SELF_TEST clamps length to SELF_TEST_LENGTH_CAP (256 KB) per
-// invocation so the command dispatcher is not blocked for more than ~10 ms
-// at 150 MHz (2 passes × 256 KB / (32-bit word at ~75 MHz effective) ≈ 3 ms
-// for writes + reads, conservative estimate).  For a full 2 MB test the
-// ground operator issues multiple commands with consecutive start_offset
-// values.
+// invocation so the command dispatcher is not blocked for more than ~10 ms.
+// For a full 2 MB test the ground operator issues multiple commands with
+// consecutive start_offset values.
+//
+// The test is word-wise save/test/restore, so it is non-destructive to heap
+// contents at rest.  Callers that share the tested region concurrently can
+// still race the one-word test window; run over quiescent regions when
+// possible.  Full-region destructive coverage (address-decode faults) is
+// provided by the driver's boot memtest before the heap exists.
 // ======================================================================
 
 #include "PROVESFlightControllerReference/Components/PsramMonitor/PsramMonitor.hpp"
@@ -99,53 +103,55 @@ void PsramMonitor::PSRAM_SELF_TEST_cmdHandler(FwOpcodeType opCode, U32 cmdSeqNum
         this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::VALIDATION_ERROR);
         return;
     }
+    // 32-bit word access requires 4-byte alignment.
+    if ((start_offset % sizeof(U32)) != 0U) {
+        this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
+    }
     if (start_offset + length > region_size) {
         length = region_size - start_offset;
     }
+    // Round down to whole 32-bit words; reject if nothing testable remains.
+    length &= ~static_cast<U32>(sizeof(U32) - 1U);
     if (length == 0U) {
         this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::VALIDATION_ERROR);
         return;
     }
 
-    // Use the uncached, non-allocating alias (PSRAM_NOCACHE_BASE = XIP
-    // CS1 nocache window: XIP_NOCACHE_NOALLOC_BASE + 0x01000000).
-    // The driver defines this at file scope; reconstruct it here to avoid
-    // pulling in HAL register headers in this component.
-    //
-    // RP2350 datasheet §12.14.4.2: cached XIP window base = 0x11000000,
-    // nocache+noalloc alias base = 0x13000000 + 0x01000000 = 0x14000000.
-    // The driver's own PSRAM_NOCACHE_BASE uses XIP_NOCACHE_NOALLOC_BASE
-    // from hardware/regs/addressmap.h which resolves to 0x13000000; adding
-    // 0x01000000 gives the CS1 nocache alias at 0x14000000.
-    static constexpr uintptr_t NOCACHE_ALIAS_BASE = 0x14000000U;
-
-    volatile U32* nc = reinterpret_cast<volatile U32*>(NOCACHE_ALIAS_BASE + start_offset);
+    // Test through the uncached, non-allocating alias so every access hits
+    // the chip instead of the write-back XIP cache.  The alias base comes
+    // from the driver (0x15000000 on RP2350 CS1) — do not hardcode it here.
+    volatile U32* nc = reinterpret_cast<volatile U32*>(psram_nocache_base() + start_offset);
     const U32 words = length / sizeof(U32);
 
-    // Pass 1: address-in-address pattern (write then verify).
+    // Word-wise save/test/restore: each word is saved, tested with the
+    // address-in-address pattern and its inverse, then restored.  This keeps
+    // the command safe to run over regions holding live heap allocations
+    // (contents are preserved; only a single word is in flux at any time).
+    // Full-region destructive address-decode coverage is provided by the
+    // driver's boot memtest, which runs before the heap exists.
     for (U32 i = 0U; i < words; i++) {
+        const U32 orig = nc[i];
+
         nc[i] = i;
-    }
-    for (U32 i = 0U; i < words; i++) {
         if (nc[i] != i) {
+            nc[i] = orig;
             this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), i,
                                                      static_cast<U32>(nc[i]));
             this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
-    }
 
-    // Pass 2: inverted pattern.
-    for (U32 i = 0U; i < words; i++) {
         nc[i] = ~i;
-    }
-    for (U32 i = 0U; i < words; i++) {
         if (nc[i] != ~i) {
+            nc[i] = orig;
             this->log_WARNING_HI_PsramSelfTestFailed(start_offset + i * static_cast<U32>(sizeof(U32)), ~i,
                                                      static_cast<U32>(nc[i]));
             this->cmdResponse_out(opCode, cmdSeqNum, Fw::CmdResponse::EXECUTION_ERROR);
             return;
         }
+
+        nc[i] = orig;
     }
 
     this->log_ACTIVITY_LO_PsramSelfTestPassed(start_offset, length);
