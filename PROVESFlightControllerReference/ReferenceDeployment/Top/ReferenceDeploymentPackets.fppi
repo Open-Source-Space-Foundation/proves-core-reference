@@ -156,6 +156,19 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
+  packet TelemetryArchive id 23 group 5 {
+    ReferenceDeployment.telemetryArchive.Mode
+    ReferenceDeployment.telemetryArchive.Enabled
+    ReferenceDeployment.telemetryArchive.Paused
+    ReferenceDeployment.telemetryArchive.RecordsStored
+    ReferenceDeployment.telemetryArchive.BytesStored
+    ReferenceDeployment.telemetryArchive.RecordsDropped
+    ReferenceDeployment.telemetryArchive.RollingBytesPruned
+    ReferenceDeployment.telemetryArchive.LastWriteDurationUs
+    ReferenceDeployment.telemetryArchive.MaxWriteDurationUs
+    ReferenceDeployment.telemetryArchive.FreeSpace
+  }
+
   packet Authenticate id 6 group 5 {
     #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
     ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount

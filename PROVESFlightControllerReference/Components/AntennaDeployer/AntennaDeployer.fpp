@@ -85,6 +85,9 @@ module Components {
         @ Port signaling the burnwire component to stop heating
         output port burnStop: Fw.Signal
 
+        @ Signals after the deployed state has been successfully persisted
+        output port deploymentComplete: Fw.Signal
+
         ######################################################################
         # Parameters
         ######################################################################

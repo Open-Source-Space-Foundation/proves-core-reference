@@ -124,14 +124,17 @@ void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 
 void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Write 0 to indicate not deployed
-    this->writeDeploymentState(false);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    const bool success = this->writeDeploymentState(false);
+    this->cmdResponse_out(opCode, cmdSeq, success ? Fw::CmdResponse::OK : Fw::CmdResponse::EXECUTION_ERROR);
 }
 
 void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, bool deployed) {
     // Write 1 for deployed, 0 for not deployed
-    this->writeDeploymentState(deployed);
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    const bool success = this->writeDeploymentState(deployed);
+    if (success && deployed && this->isConnected_deploymentComplete_OutputPort(0)) {
+        this->deploymentComplete_out(0);
+    }
+    this->cmdResponse_out(opCode, cmdSeq, success ? Fw::CmdResponse::OK : Fw::CmdResponse::EXECUTION_ERROR);
 }
 
 // ----------------------------------------------------------------------
@@ -223,7 +226,9 @@ void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
         this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
 
         // Mark antenna as deployed by writing state file
-        this->writeDeploymentState(true);
+        if (this->writeDeploymentState(true) && this->isConnected_deploymentComplete_OutputPort(0)) {
+            this->deploymentComplete_out(0);
+        }
     }
 
     this->log_ACTIVITY_HI_DeployFinish(result, this->m_currentAttempt);
@@ -283,7 +288,7 @@ bool AntennaDeployer ::readDeploymentState() {
     return (read_status == Os::File::OP_OK && value == 1);
 }
 
-void AntennaDeployer ::writeDeploymentState(bool deployed) {
+bool AntennaDeployer ::writeDeploymentState(bool deployed) {
     const char* path_str = DEPLOYED_STATE_FILE_PATH;
 
     Os::File file;
@@ -294,7 +299,7 @@ void AntennaDeployer ::writeDeploymentState(bool deployed) {
         Fw::LogStringArg logFilePath(path_str);
         Fw::LogStringArg logOperation("open_write");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
-        return;
+        return false;
     }
 
     // Seek to beginning to overwrite the file
@@ -305,19 +310,24 @@ void AntennaDeployer ::writeDeploymentState(bool deployed) {
         Fw::LogStringArg logOperation("seek");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
         (void)file.close();
-        return;
+        return false;
     }
 
     U8 value = deployed ? 1 : 0;
     FwSizeType size = sizeof(value);
     Os::File::Status write_status = file.write(&value, size);
+    if (write_status == Os::File::OP_OK && size == sizeof(value)) {
+        write_status = file.flush();
+    }
     (void)file.close();
 
-    if (write_status != Os::File::OP_OK) {
+    if (write_status != Os::File::OP_OK || size != sizeof(value)) {
         Fw::LogStringArg logFilePath(path_str);
         Fw::LogStringArg logOperation("write");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        return false;
     }
+    return true;
 }
 
 }  // namespace Components

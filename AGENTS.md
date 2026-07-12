@@ -27,6 +27,14 @@ This project uses **UV** (v0.8.13) for Python environment management. It is auto
 - Do NOT use `pip` or `python -m venv` directly
 - Always use `make` targets which invoke UV internally
 
+### Makefile-Only Workflow
+
+If an action is covered by a Makefile target, **only use the Makefile target for that action**. Do not invoke the underlying tool directly, even for an incremental or follow-up run.
+
+- Use `make generate`, never invoke CMake or `fprime-util generate` directly.
+- Use `make build`, never invoke `cmake --build`, Ninja, or West directly.
+- Use `make fmt`, `make test-unit`, and `make test-integration` instead of directly invoking the formatters, CTest, or pytest when the Makefile target covers the intended operation.
+
 ## Build & Test Workflow
 
 ### First-Time Setup (Complete Sequence)

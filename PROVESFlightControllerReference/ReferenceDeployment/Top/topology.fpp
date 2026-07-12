@@ -117,6 +117,7 @@ module ReferenceDeployment {
     instance dropDetector
 
     instance picoTempManager
+    instance telemetryArchive
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -150,6 +151,7 @@ module ReferenceDeployment {
       CdhCore.tlmSend.PktSend -> comSplitterTelemetry.comIn
       comSplitterTelemetry.comOut -> ComCcsdsLora.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
       comSplitterTelemetry.comOut -> ComCcsdsUart.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      comSplitterTelemetry.comOut -> telemetryArchive.comIn
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
@@ -342,6 +344,7 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
+      antennaDeployer.deploymentComplete -> telemetryArchive.deploymentComplete
     }
 
     connections DetumbleManager {

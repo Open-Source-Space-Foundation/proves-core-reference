@@ -55,7 +55,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     void ensureBurnwireStopped();
     void logBurnSignalCount();
     bool readDeploymentState();
-    void writeDeploymentState(bool deployed);
+    bool writeDeploymentState(bool deployed);
 
     DeploymentState m_state = DeploymentState::IDLE;
     U32 m_currentAttempt = 0;
