@@ -9,8 +9,8 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
-#include <Fw/Types/MallocAllocator.hpp>
 #include <Fw/Logger/Logger.hpp>
+#include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
@@ -22,10 +22,10 @@
 #include "fprime-zephyr/Drv/UspRadio/UspRadio.hpp"
 
 // Static RalSessionImpl instance (lives for the entire flight).
-// Freq and power match LoRaCfg constants used by the legacy driver.
-static Zephyr::RalSessionImpl s_ralSession(
-    915000000U,  // 915 MHz (matches LoRaConfig::FREQUENCY)
-    14           // +14 dBm (matches LoRaConfig::TX_POWER)
+// 437.4 MHz / 70cm amateur band, matches GRC LoRaCfg DEFAULT_FREQ. TX power
+// capped at 10 dBm.
+static Zephyr::RalSessionImpl s_ralSession(437400000U,  // 437.4 MHz
+                                           10           // +10 dBm
 );
 #endif  // CONFIG_LORA_BASICS_MODEM_DRIVERS
 
