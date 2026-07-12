@@ -147,7 +147,7 @@ def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
         args=[20],
     )
     fprime_test_api.send_command(
-        command="ReferenceDeployment.lora.TRANSMIT", args=["ENABLED"]
+        command="ReferenceDeployment.uspRadio.TRANSMIT", args=["ENABLED"]
     )
 
 
@@ -211,7 +211,7 @@ def stop_radio(
         return
 
     fprime_test_api_session.send_command(
-        command="ReferenceDeployment.lora.TRANSMIT", args=["DISABLED"]
+        command="ReferenceDeployment.uspRadio.TRANSMIT", args=["DISABLED"]
     )
 
 

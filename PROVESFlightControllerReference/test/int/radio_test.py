@@ -15,9 +15,11 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 pytestmark = [pytest.mark.uart_only]
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
-lora = "ReferenceDeployment.lora"
+# v5e builds Zephyr::UspRadio (not the legacy Zephyr::LoRa component); TRANSMIT
+# and the error/warning event names are kept verbatim on UspRadio.fpp.
+radio = "ReferenceDeployment.uspRadio"
 
-LORA_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
+RADIO_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 
 @pytest.fixture(autouse=True)
@@ -31,25 +33,25 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     yield
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.TRANSMIT",
+        f"{radio}.TRANSMIT",
         ["DISABLED"],
     )
 
 
 def test_01_transmit_enabled(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Enabling transmit must not produce any LoRa error/warning events."""
+    """Enabling transmit must not produce any radio error/warning events."""
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
 
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.TRANSMIT",
+        f"{radio}.TRANSMIT",
         ["ENABLED"],
     )
 
     time.sleep(10)
 
-    for evt in LORA_ERROR_EVENTS:
-        result = fprime_test_api.await_event(f"{lora}.{evt}", start=start, timeout=0)
-        assert result is None, f"Unexpected {lora}.{evt}: {result}"
+    for evt in RADIO_ERROR_EVENTS:
+        result = fprime_test_api.await_event(f"{radio}.{evt}", start=start, timeout=0)
+        assert result is None, f"Unexpected {radio}.{evt}: {result}"
