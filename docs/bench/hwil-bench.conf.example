@@ -1,0 +1,22 @@
+# BENCH-ONLY EXAMPLE — do NOT pass to a flight build.
+# This file disables MCUBoot so you can flash a bare-metal image directly
+# to 0x10000000 on boards that do not have MCUBoot pre-installed.
+#
+# How to use:
+#   cp docs/bench/hwil-bench.conf.example hwil-bench.conf
+#   fprime-util generate -f -- -DEXTRA_CONF_FILE=hwil-bench.conf
+#
+# The local copy (hwil-bench.conf at repo root) is listed in .gitignore
+# and must never be committed or used in a flight build.
+
+CONFIG_BOOTLOADER_MCUBOOT=n
+# Without MCUBoot we do not need the boot image management config.
+CONFIG_MCUBOOT_BOOTUTIL_LIB=n
+CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_OFFSET=n
+CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE=n
+CONFIG_ROM_END_OFFSET=0
+CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE=0
+CONFIG_USE_DT_CODE_PARTITION=n
+CONFIG_FLASH_MAP=n
+CONFIG_STREAM_FLASH=n
+CONFIG_IMG_MANAGER=n
