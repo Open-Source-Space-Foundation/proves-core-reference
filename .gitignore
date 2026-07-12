@@ -32,6 +32,7 @@ Framing/uv.lock
 *.uf2
 *.hex
 *.elf
+/tools/openocd
 
 **/__pycache__/
 **/*.egg-info/
