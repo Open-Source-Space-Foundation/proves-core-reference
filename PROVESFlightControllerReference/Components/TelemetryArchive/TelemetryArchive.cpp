@@ -107,9 +107,9 @@ void TelemetryArchive::PURGE_ROLLING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
 
 void TelemetryArchive::GET_STATUS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     Os::ScopeLock lock(this->m_mutex);
-    this->log_ACTIVITY_LO_ArchiveStatus(this->m_deploymentMode ? TelemetryArchiveMode::DEPLOYMENT
-                                                               : TelemetryArchiveMode::ROLLING,
-                                        this->m_enabled, this->m_paused, this->m_recordsStored, this->m_bytesStored);
+    this->log_ACTIVITY_LO_ArchiveStatus(
+        this->m_deploymentMode ? TelemetryArchiveMode::DEPLOYMENT : TelemetryArchiveMode::ROLLING, this->m_enabled,
+        this->m_paused, this->m_recordsStored, this->m_bytesStored);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
@@ -137,8 +137,8 @@ bool TelemetryArchive::openSegment() {
     }
     const char* directory = this->m_deploymentMode ? DEPLOYMENT_DIR : ROLLING_DIR;
     const char* prefix = this->m_deploymentMode ? "deployment" : "rolling";
-    const int length = std::snprintf(this->m_fileName, sizeof(this->m_fileName), "%s/%s_%08u.tlm", directory,
-                                     prefix, this->m_segmentSequence++);
+    const int length = std::snprintf(this->m_fileName, sizeof(this->m_fileName), "%s/%s_%08u.tlm", directory, prefix,
+                                     this->m_segmentSequence++);
     if (length <= 0 || static_cast<FwSizeType>(length) >= sizeof(this->m_fileName) ||
         this->m_file.open(this->m_fileName, Os::File::OPEN_CREATE, Os::File::NO_OVERWRITE) != Os::File::OP_OK) {
         this->pause("segment open failed");
@@ -256,10 +256,7 @@ bool TelemetryArchive::ensureCapacity() {
     return true;
 }
 
-U32 TelemetryArchive::scanDirectory(const char* directory,
-                                    const char* prefix,
-                                    U32& nextSequence,
-                                    U32* oldestSequence) {
+U32 TelemetryArchive::scanDirectory(const char* directory, const char* prefix, U32& nextSequence, U32* oldestSequence) {
     Os::Directory dir;
     nextSequence = 0;
     U32 oldest = 0xFFFFFFFFU;

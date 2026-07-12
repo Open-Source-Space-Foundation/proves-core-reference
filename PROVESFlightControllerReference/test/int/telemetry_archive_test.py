@@ -40,9 +40,7 @@ def test_archive_segment_downlinks(
         [source, destination],
         retries=5,
     )
-    started = fprime_test_api.assert_event(
-        f"{file_downlink}.SendStarted", timeout=30
-    )
+    started = fprime_test_api.assert_event(f"{file_downlink}.SendStarted", timeout=30)
     assert started.args[1].val == source
     sent = fprime_test_api.assert_event(f"{file_downlink}.FileSent", timeout=120)
     assert sent.args[0].val == source
