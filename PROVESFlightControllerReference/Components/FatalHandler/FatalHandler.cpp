@@ -14,6 +14,7 @@
 #include <Fw/Logger/Logger.hpp>
 #include <Os/Task.hpp>
 #include <PROVESFlightControllerReference/Components/FatalHandler/FatalHandler.hpp>
+
 #include <zephyr/sys/reboot.h>
 
 namespace Components {
@@ -46,7 +47,8 @@ void FatalHandler::FatalReceive_handler(const FwIndexType portNum, FwEventIdType
     // (it may be absent/disconnected on a bench, or its timeout may be long). Delay briefly
     // to allow the FATAL log/event to drain, then force a reboot directly so a real reset is
     // guaranteed regardless of the external watchdog's state.
-    Os::Task::delay(Fw::TimeInterval(0, 1000));  // Delay to allow log to be processed
+    Os::Task::delay(Fw::TimeInterval(
+        0, 1000));  // 1 ms (TimeInterval is seconds, microseconds); best-effort log drain before forced reboot
     this->reboot();
 }
 

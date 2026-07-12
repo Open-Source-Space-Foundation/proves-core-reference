@@ -21,7 +21,7 @@ Glossary for the flight-software radio domain. Terms here are canonical; use the
 ## Modulations
 
 - **CW (Continuous Wave)** — unmodulated carrier transmission for beacons, range testing, and RF debug. A test mode, not a Link Profile.
-- **GFSK** — Gaussian FSK packet modulation; the high-throughput downlink option on the USP Radio Path. Capped at ~75–80 kbps by the Band Constraint.
+- **GFSK** — Gaussian FSK packet modulation; the high-throughput downlink option on the USP Radio Path. Capped at ≤75 kbps (with fdev = 25 kHz) by the Band Constraint.
 - **Band Constraint** — IARU coordination limits PROVES UHF emissions to ≤125 kHz occupied bandwidth. Every Link Profile must satisfy it.
 - **LR-FHSS** — long-range frequency-hopping modulation. SX126x can transmit but never receive it, so it is out of scope until gateway-grade or LR20xx receive hardware exists in the ground segment.
 
