@@ -4,11 +4,11 @@ index 3ee1488e3..c60ad6d0d 100644
 +++ b/Svc/ActiveRateGroup/ActiveRateGroup.fpp
 @@ -15,7 +15,7 @@ module Svc {
      output port RateGroupMemberOut: [ActiveRateGroupOutputPorts] Sched
- 
+
      @ Ping input port for health
 -    async input port PingIn: Ping
 +    async input port PingIn: Ping drop
- 
+
      @ Ping output port for health
      output port PingOut: Ping
 diff --git a/Svc/BufferLogger/BufferLogger.fpp b/Svc/BufferLogger/BufferLogger.fpp
@@ -17,17 +17,17 @@ index 6da2ffd69..e045b1856 100644
 +++ b/Svc/BufferLogger/BufferLogger.fpp
 @@ -16,12 +16,12 @@ module Svc {
      async input port comIn: Fw.Com
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
- 
+
 -    async input port schedIn: Svc.Sched
 +    async input port schedIn: Svc.Sched drop
- 
+
      # ----------------------------------------------------------------------
      # Special ports
 diff --git a/Svc/CmdDispatcher/CmdDispatcher.fpp b/Svc/CmdDispatcher/CmdDispatcher.fpp
@@ -36,15 +36,15 @@ index 66343b886..2f7732896 100644
 +++ b/Svc/CmdDispatcher/CmdDispatcher.fpp
 @@ -24,10 +24,10 @@ module Svc {
      async input port seqCmdBuff: [CmdDispatcherSequencePorts] Fw.Com hook
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Run port used to emit telemetry
 -    async input port run: Svc.Sched
 +    async input port run: Svc.Sched drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/CmdSequencer/CmdSequencer.fpp b/Svc/CmdSequencer/CmdSequencer.fpp
@@ -53,20 +53,20 @@ index 1573fbe60..614fefd5f 100644
 +++ b/Svc/CmdSequencer/CmdSequencer.fpp
 @@ -68,7 +68,7 @@ module Svc {
      async input port cmdResponseIn: Fw.CmdResponse
- 
+
      @ Ping in port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping out port
      output port pingOut: Svc.Ping
 @@ -83,7 +83,7 @@ module Svc {
      output port comCmdOut: Fw.Com
- 
+
      @ Schedule in port
 -    async input port schedIn: Svc.Sched
 +    async input port schedIn: Svc.Sched drop
- 
+
      @ Notifies that a sequence has started running
      output port seqStartOut: Svc.CmdSeqIn
 diff --git a/Svc/ComLogger/ComLogger.fpp b/Svc/ComLogger/ComLogger.fpp
@@ -75,11 +75,11 @@ index c4327b7dd..cf4bc2238 100644
 +++ b/Svc/ComLogger/ComLogger.fpp
 @@ -11,7 +11,7 @@ module Svc {
      async input port comIn: Fw.Com
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/DpCatalog/DpCatalog.fpp b/Svc/DpCatalog/DpCatalog.fpp
@@ -88,11 +88,11 @@ index e1fd468dd..59ffc363f 100644
 +++ b/Svc/DpCatalog/DpCatalog.fpp
 @@ -32,7 +32,7 @@ module Svc {
      # Component specific ports
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/DpManager/DpManager.fpp b/Svc/DpManager/DpManager.fpp
@@ -101,11 +101,11 @@ index ebbf5a46f..74574f97f 100644
 +++ b/Svc/DpManager/DpManager.fpp
 @@ -8,7 +8,7 @@ module Svc {
      # ----------------------------------------------------------------------
- 
+
      @ Schedule in port
 -    async input port schedIn: Svc.Sched
 +    async input port schedIn: Svc.Sched drop
- 
+
      # ----------------------------------------------------------------------
      # Ports for handling buffer requests
 diff --git a/Svc/DpWriter/DpWriter.fpp b/Svc/DpWriter/DpWriter.fpp
@@ -114,11 +114,11 @@ index f24594f09..152be91ba 100644
 +++ b/Svc/DpWriter/DpWriter.fpp
 @@ -8,7 +8,7 @@ module Svc {
      # ----------------------------------------------------------------------
- 
+
      @ Schedule in port
 -    async input port schedIn: Svc.Sched
 +    async input port schedIn: Svc.Sched drop
- 
+
      # ----------------------------------------------------------------------
      # Ports for handling data products
 diff --git a/Svc/EventManager/EventManager.fpp b/Svc/EventManager/EventManager.fpp
@@ -127,11 +127,11 @@ index b97a8d807..2ea88960a 100644
 +++ b/Svc/EventManager/EventManager.fpp
 @@ -53,7 +53,7 @@ module Svc {
      output port FatalAnnounce: Svc.FatalEvent
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/FileDownlink/FileDownlink.fpp b/Svc/FileDownlink/FileDownlink.fpp
@@ -140,20 +140,20 @@ index eed9376aa..5e710a3f4 100644
 +++ b/Svc/FileDownlink/FileDownlink.fpp
 @@ -8,7 +8,7 @@ module Svc {
      # ----------------------------------------------------------------------
- 
+
      @ Run input port
 -    async input port Run: Svc.Sched
 +    async input port Run: Svc.Sched drop
- 
+
      @ Mutexed Sendfile input port
      guarded input port SendFile: Svc.SendFileRequest
 @@ -23,7 +23,7 @@ module Svc {
      output port bufferSendOut: Fw.BufferSend
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/FileManager/FileManager.fpp b/Svc/FileManager/FileManager.fpp
@@ -162,11 +162,11 @@ index bef777c71..d85f42002 100644
 +++ b/Svc/FileManager/FileManager.fpp
 @@ -8,7 +8,7 @@ module Svc {
      # ----------------------------------------------------------------------
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Scheduler input port for rate group operations
      sync input port schedIn: Sched
 diff --git a/Svc/FileUplink/FileUplink.fpp b/Svc/FileUplink/FileUplink.fpp
@@ -175,11 +175,11 @@ index 90ef4e9a8..b2b67bd5c 100644
 +++ b/Svc/FileUplink/FileUplink.fpp
 @@ -14,7 +14,7 @@ module Svc {
      output port bufferSendOut: Fw.BufferSend
- 
+
      @ Ping in
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping out
      output port pingOut: Svc.Ping
 diff --git a/Svc/FpySequencer/FpySequencer.fpp b/Svc/FpySequencer/FpySequencer.fpp
@@ -187,12 +187,12 @@ index 8af40d3d7..b9e80e1af 100644
 --- a/Svc/FpySequencer/FpySequencer.fpp
 +++ b/Svc/FpySequencer/FpySequencer.fpp
 @@ -38,7 +38,7 @@ module Svc {
- 
+
          @ Ping in port
          # TODO should ping have highest prio? or lowest?
 -        async input port pingIn: Svc.Ping priority 10 assert
 +        async input port pingIn: Svc.Ping priority 10 drop
- 
+
          @ port to trigger a wakeup or timeout check. increase frequency
          @ to increase temporal resolution of sequencer
 diff --git a/Svc/PrmDb/PrmDb.fpp b/Svc/PrmDb/PrmDb.fpp
@@ -201,11 +201,11 @@ index 66f850e30..9588336e3 100644
 +++ b/Svc/PrmDb/PrmDb.fpp
 @@ -60,7 +60,7 @@ module Svc {
      async input port setPrm: Fw.PrmSet
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/TlmChan/TlmChan.fpp b/Svc/TlmChan/TlmChan.fpp
@@ -214,18 +214,18 @@ index d15072ed0..52b73b2d8 100644
 +++ b/Svc/TlmChan/TlmChan.fpp
 @@ -10,13 +10,13 @@ module Svc {
      guarded input port TlmGet: Fw.TlmGet
- 
+
      @ Run port for starting packet send cycle
 -    async input port Run: Svc.Sched
 +    async input port Run: Svc.Sched drop
- 
+
      @ Packet send port
      output port PktSend: Fw.Com
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/TlmPacketizer/TlmPacketizer.fpp b/Svc/TlmPacketizer/TlmPacketizer.fpp
@@ -234,17 +234,17 @@ index f03dbafff..91f45eb6f 100644
 +++ b/Svc/TlmPacketizer/TlmPacketizer.fpp
 @@ -11,13 +11,13 @@ module Svc {
      output port PktSend: Fw.Com
- 
+
      @ Ping input port
 -    async input port pingIn: Svc.Ping
 +    async input port pingIn: Svc.Ping drop
- 
+
      @ Ping output port
      output port pingOut: Svc.Ping
- 
+
      @ Run port for starting packet send cycle
 -    async input port Run: Svc.Sched
 +    async input port Run: Svc.Sched drop
- 
+
      @ Telemetry input port
      sync input port TlmRecv: Fw.Tlm

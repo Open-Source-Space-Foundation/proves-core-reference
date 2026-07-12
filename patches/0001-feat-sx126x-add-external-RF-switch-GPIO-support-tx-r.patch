@@ -51,7 +51,7 @@ index 215801a..d119aba 100644
 @@ -239,6 +239,26 @@ static int sx126x_init( const struct device* dev )
          }
      }
- 
+
 +    /* External RF-switch GPIOs — configure as outputs, inactive (both paths off) */
 +    if( config->tx_enable.port )
 +    {
@@ -74,7 +74,7 @@ index 215801a..d119aba 100644
 +
      data->radio_status               = RADIO_AWAKE;
      data->tx_power_offset_db_current = config->tx_power_offset_db;
- 
+
 @@ -366,6 +386,8 @@ static int sx126x_pm_action( const struct device* dev, enum pm_device_action act
          CONFIGURE_GPIO_IF_IN_DT( node_id, dio1, dio1_gpios ) CONFIGURE_GPIO_IF_IN_DT( node_id, dio2, dio2_gpios )      \
              CONFIGURE_GPIO_IF_IN_DT( node_id, dio3, dio3_gpios )                                                       \
@@ -91,7 +91,7 @@ index a3215cc..1530077 100644
 @@ -111,6 +111,86 @@ static void sx126x_hal_check_device_ready( const void* context )
   * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
   */
- 
+
 +/*
 + * External RF-switch toggle helper.
 + *
@@ -177,7 +177,7 @@ index a3215cc..1530077 100644
  {
 @@ -127,6 +207,13 @@ sx126x_hal_status_t sx126x_hal_write( const void* context, const uint8_t* comman
      const struct spi_buf_set tx_buf_set = { tx_bufs, .count = ARRAY_SIZE( tx_bufs ) };
- 
+
      sx126x_hal_check_device_ready( context );
 +
 +    /* Toggle external RF switch before writing the mode-change opcode */
@@ -195,7 +195,7 @@ index 228f883..0c56bef 100644
 +++ b/drivers/usp/sx126x/sx126x_hal_context.h
 @@ -72,6 +72,16 @@ struct sx126x_hal_context_cfg_t
      struct gpio_dt_spec dio3; /* DIO3 pin */
- 
+
      bool                                 dio2_as_rf_switch;
 +
 +    /* External RF-switch GPIOs (optional; absent when port == NULL).
@@ -218,7 +218,7 @@ index 72032bb..56a8e40 100644
      required: false
      enum: [0, 1, 2, 3, 4, 5, 6, 7]
      description: |
--      The ramp-up time for the radio PA, between 0x0 (10us) to 0x07 (3400us). 
+-      The ramp-up time for the radio PA, between 0x0 (10us) to 0x07 (3400us).
 +      The ramp-up time for the radio PA, between 0x0 (10us) to 0x07 (3400us).
        If not provided, the driver will use the default, recommended time (40us).
        It is not recommended to modify this value.
@@ -246,6 +246,5 @@ index 72032bb..56a8e40 100644
 +      When present, the driver asserts this pin active before any receive-class
 +      operation (SetRx / SetRxDutyCycle / SetCad) and deasserts it on standby,
 +      sleep, and transmit-class operations. Pair with tx-enable-gpios.
--- 
+--
 2.50.1 (Apple Git-155)
-

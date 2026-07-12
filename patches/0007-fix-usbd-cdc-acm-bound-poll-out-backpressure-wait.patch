@@ -14,13 +14,13 @@ discard behavior.
  	k_spinlock_key_t key;
  	uint32_t wrote;
 +	int retries = 20;
- 
+
  	while (true) {
  		key = k_spin_lock(&data->lock);
 @@ -1017,7 +1018,15 @@
  			break;
  		}
- 
+
 -		if (k_is_in_isr() || !data->flow_ctrl) {
 +		/* Bounded wait: with an attached-but-stalled host session (macOS
 +		 * ceases IN polling for minutes at a time), an unbounded sleep-retry

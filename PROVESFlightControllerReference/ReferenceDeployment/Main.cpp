@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
 #else
     // v5e USP path: freq/power passed instead of a device pointer.
     // Constants match LoRaConfig values used by the legacy driver.
-    inputs.uspFreqHz      = 915000000U;
-    inputs.uspTxPowerDbm  = 14;
+    inputs.uspFreqHz = 915000000U;
+    inputs.uspTxPowerDbm = 14;
 #endif
     inputs.uartDevice = serial;
     inputs.lsm6dsoDevice = lsm6dso;
