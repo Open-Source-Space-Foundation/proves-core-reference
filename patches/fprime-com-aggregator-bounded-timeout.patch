@@ -3,9 +3,9 @@ index dc6dd130d..6cfeecd6c 100644
 --- a/Svc/ComAggregator/ComAggregator.cpp
 +++ b/Svc/ComAggregator/ComAggregator.cpp
 @@ -8,6 +8,12 @@
-
+ 
  namespace Svc {
-
+ 
 +namespace {
 +//! Queue slots that must remain free for a timeout signal to be enqueued: the timeout itself plus one
 +//! in-flight 'fill' and one in-flight 'status' signal (each bounded to one message by the com protocol).

@@ -25,6 +25,6 @@ index d3921c0f146..a8241ad130e 100644
 +		cdc_acm_work_schedule(&data->tx_fifo_work, K_NO_WAIT);
  	}
  }
-
---
+ 
+-- 
 2.39.3 (Apple Git-146)

@@ -3,7 +3,14 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
+      # patches/*.patch are machine-generated diffs applied via `git apply`;
+      # their context/removed lines must byte-match the real upstream files,
+      # which can legitimately have trailing whitespace. Stripping it here
+      # silently breaks patch application (see: 0001-feat-sx126x patch vs
+      # usp_zephyr's semtech,sx126x-new-common.yaml).
+      exclude: ^patches/
     - id: end-of-file-fixer
+      exclude: ^patches/
     - id: check-yaml
       exclude: ^mkdocs\.yml$
     - id: check-json

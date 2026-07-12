@@ -31,5 +31,6 @@ index 5518a25..cc7940f 100644
  	depends on !LORA
  	help
  	  Include LoRa drivers from the new LoRa Basics Modem stack in the system configuration.
---
+-- 
 2.50.1 (Apple Git-155)
+

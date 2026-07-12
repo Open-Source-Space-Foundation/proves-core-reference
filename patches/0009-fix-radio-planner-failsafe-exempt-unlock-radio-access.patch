@@ -3,7 +3,7 @@ index 2c44c68..a4c99d6 100644
 --- a/smtc_rac_lib/radio_planner/src/radio_planner.c
 +++ b/smtc_rac_lib/radio_planner/src/radio_planner.c
 @@ -444,8 +444,15 @@ rp_stats_t rp_get_stats( const radio_planner_t* rp )
-
+ 
  void rp_callback( radio_planner_t* rp )
  {
 +    // UNLOCK_RADIO_ACCESS must be exempt like LOCK_RADIO_ACCESS: a lock task
