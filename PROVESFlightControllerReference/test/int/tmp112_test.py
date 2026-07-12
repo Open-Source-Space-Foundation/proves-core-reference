@@ -15,6 +15,8 @@ from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.requires_face]
+
 tmp112Face0Manager = "ReferenceDeployment.tmp112Face0Manager"
 
 
