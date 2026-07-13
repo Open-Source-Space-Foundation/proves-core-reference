@@ -47,6 +47,14 @@ target_include_directories(stack_monitor_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# SBand FaultPolicy
+add_library(sband_fault_policy STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/SBand/SBandFaultPolicy.cpp
+)
+target_include_directories(sband_fault_policy PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # --- Auto-discover and build tests ---
 
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
@@ -62,6 +70,7 @@ foreach(test_src ${TEST_SOURCES})
         detumble_manager_bdot
         rtc_manager_rtc_helper
         stack_monitor_core
+        sband_fault_policy
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
