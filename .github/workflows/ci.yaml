@@ -40,6 +40,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Reset repository and submodules to original state
+        run: |
+          git clean -fd
+          git reset --hard
+          git submodule foreach git clean -fd
+          git submodule foreach git reset --hard
+
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
@@ -223,7 +230,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Start YAMCS Stack
         env:
