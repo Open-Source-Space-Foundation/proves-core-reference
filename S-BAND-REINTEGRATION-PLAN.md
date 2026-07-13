@@ -159,6 +159,68 @@ New `SBAND_STACK_SIZE = 8 * 1024` for the sband instance only (comment explainin
 the pool-fallback mechanism). CI builds for v5c/v5d/v5e; existing integration +
 day-in-the-life suites green.
 
+> **BUILT 2026-07-13 (branch `feat/sband-pr3-topology`).** Two corrections to
+> the paragraph above, found during implementation:
+>
+> - **CI does not actually matrix-build multiple boards today.** `.github/workflows/ci.yaml`
+>   runs a single `make generate && make build`, and the board is whatever
+>   `settings.ini`'s `BOARD=` line says (`proves_flight_control_board_v5e/rp2350a/m33`).
+>   There is no per-board CI job for v5c/v5d/v5(base). This PR does not add one
+>   (out of scope per D7 / "no existing pattern" guidance below) — v5d was
+>   build-verified locally by swapping `settings.ini` and rerunning `make
+>   generate && make build`, then reverting.
+> - **No per-board FPP/CMake conditionalization mechanism exists in this repo**
+>   (topology.fpp/instances.fpp compile identically for every board; the one
+>   `cameraHandler`/"NOT ALL SATS HAVE CAMERAS" comment in
+>   `ReferenceDeploymentTopology.cpp` is documentation, not a real `#if`
+>   guard). So "un-comment the topology" is necessarily a **global** change —
+>   every board that builds this topology now instantiates `sband` and must
+>   resolve its devicetree nodes at compile time, or the build fails outright.
+>
+> **Board hardware findings (from the checked-in device trees, not assumed):**
+> `boards/bronco_space/proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi`
+> had a `sband_nrst`/`sband_rx_en`/`sband_tx_en` block dead-commented (C-style
+> comment) since before this effort, wired to raw GPIOs 17/21/22. Checking
+> every board variant's actual pin usage (not just the comments) found:
+> - `gpio0 17` (nrst): unused anywhere else on any board variant. Safe to revive.
+> - `gpio0 21`/`22` (rx_en/tx_en): **conflict on v5e only** — v5e's SX126x LoRa
+>   module (`&lora0` override in
+>   `proves_flight_control_board_v5e_rp2350a_m33.dts`) already claims
+>   `tx-enable-gpios`/`rx-enable-gpios` on those exact pins. This is why v5e's
+>   hardware revision moved S-Band's RX/TX enables onto the MCP23017 expander
+>   instead (`sband_rx_en`/`sband_tx_en` on `mcp23017` pins 4/7, already present
+>   in v5e's own `.dts` before this PR). v5, v5c, and v5d all use the base
+>   (SX1276) `&lora0` config, which claims neither pin — no conflict there.
+> - IRQ/BUSY: the 4-pin generic `RF2_IO0..3` header on the MCP (present,
+>   unmodified, on every board) had 2 pins repurposed for RX/TX-enable on v5e
+>   only, leaving `rf2_io0`/`rf2_io1` free and identical across all four board
+>   variants. This deployment's C++ (`ReferenceDeploymentTopology.cpp`) binds
+>   `rf2_io1` → IRQ (carrying forward this draft's pre-existing choice) and
+>   `rf2_io0` → BUSY (new for PR 3, since `getBusyLine` is a PR 2 addition).
+>   **The BUSY pin assignment is inferred from the schematic's spare-pin count,
+>   not confirmed against a wiring diagram — bench-verify in Slice 3.2.**
+>
+> **Resolution:** uncommented `sband_nrst`/`sband_rx_en`/`sband_tx_en` in the
+> shared `v5.dtsi` (not per-board). Because devicetree node-path merging is
+> "last property wins" — the same mechanism v5e's own `.dts` already relies on
+> to override the inherited `&lora0` node — v5e's pre-existing MCP-based
+> `sband_rx_en`/`sband_tx_en` declarations transparently take precedence over
+> the newly-uncommented raw-GPIO ones, while `sband_nrst` (which v5e never
+> overrides) is inherited from the shared block. This was **verified by an
+> actual build**, not just reasoned about: `make generate && make build`
+> succeeded for both v5e (mandatory) and v5d (attempted), with no devicetree
+> duplicate-node or missing-nodelabel errors on either. **v5 (base) and v5c
+> were not build-tested** (outside this task's verification gates) but are
+> expected to build cleanly by the same reasoning — they inherit the same
+> uncommented block unmodified and have no lora/pin conflicts.
+>
+> No board needed to be scoped out. Had a genuine per-board hardware gap
+> existed (e.g. a board truly missing a required GPIO with no safe fallback),
+> the right move would have been to stop and present options (DT stub aliases
+> vs. a first-ever `CONFIG_BOARD_*`-gated C++ guard vs. accepting that board's
+> breakage) rather than invent per-board FPP conditionalization that has no
+> precedent in this codebase — that fork did not materialize here.
+
 ### Slice 3.2 — HWIL functional pass (bench, v5e)
 - Downlink: TM frames received over the S-Band link end-to-end.
 - Uplink: command through `ComCcsdsSband.authenticationRouter` → `cmdDisp` executes.
