@@ -130,6 +130,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.modeManager.CurrentMode
     ReferenceDeployment.modeManager.SafeModeEntryCount
     ReferenceDeployment.modeManager.CurrentSafeModeReason
+    ReferenceDeployment.stackMonitor.MinFreeBytes
+    ReferenceDeployment.stackMonitor.WorstThread
+    ReferenceDeployment.stackMonitor.ThreadsBelowThreshold
   }
 
   packet HealthWarnings id 3 group 5 {
