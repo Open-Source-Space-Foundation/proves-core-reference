@@ -28,3 +28,4 @@ Glossary for the flight-software radio domain. Terms here are canonical; use the
 ## Ground segment
 
 - **GRC (Ground Radio Controller)** — the station-local Zephyr radio box (SX1262) that terminates the RF link. Must consume the same Profile Table as flight.
+- **RadioHead Header** — the 4-byte `[destination, source, identifier, flags]` prefix the RadioHead LoRa ecosystem (adafruit_rfm9x, legacy `Zephyr::LoRa`) puts on every LoRa packet. The USP Radio Path radiates raw F´ frames; the `RADIOHEAD_COMPAT` parameter on `UspRadio` (default: enabled) prepends/strips this header so USP boards interoperate with RadioHead peers such as the CI CircuitPython passthrough board. Both ends of a link must agree; GFSK profiles are always raw.

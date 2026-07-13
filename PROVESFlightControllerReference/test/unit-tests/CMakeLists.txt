@@ -37,6 +37,19 @@ target_compile_definitions(test_ProfilePolicy PRIVATE LINK_PROFILES_USE_HOST_TYP
 target_link_libraries(test_ProfilePolicy gtest_main)
 add_test(NAME test_ProfilePolicy COMMAND test_ProfilePolicy)
 
+# --- UspRadio: RadioHeadShim host-side test (RadioHead-compat toggle) ---
+# RadioHeadShim.hpp is header-only and free of F'/USP/Zephyr includes.
+add_executable(test_RadioHeadShim
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr/fprime-zephyr/Drv/UspRadio/test/ut/test_RadioHeadShim.cpp
+)
+target_include_directories(test_RadioHeadShim PRIVATE
+    # Exposes #include "fprime-zephyr/Drv/UspRadio/RadioHeadShim.hpp"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr
+)
+target_compile_definitions(test_RadioHeadShim PRIVATE LINK_PROFILES_USE_HOST_TYPES)
+target_link_libraries(test_RadioHeadShim gtest_main)
+add_test(NAME test_RadioHeadShim COMMAND test_RadioHeadShim)
+
 # --- Helper Libraries ---
 
 # DetumbleManager Magnetorquer
