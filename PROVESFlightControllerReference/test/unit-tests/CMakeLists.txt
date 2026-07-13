@@ -39,6 +39,14 @@ target_include_directories(detumble_manager_bdot PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# StackMonitor Core
+add_library(stack_monitor_core STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/StackMonitor/StackMonitorCore.cpp
+)
+target_include_directories(stack_monitor_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # --- Auto-discover and build tests ---
 
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
@@ -53,6 +61,7 @@ foreach(test_src ${TEST_SOURCES})
         detumble_manager_strategy_selector
         detumble_manager_bdot
         rtc_manager_rtc_helper
+        stack_monitor_core
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
