@@ -25,7 +25,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.powerMonitor.TotalPowerGenerated
 
     # Communications Data
-    # ComCcsdsSband.authenticatesband.CurrentSequenceNumber
+    ComCcsdsSband.authenticatesband.CurrentSequenceNumber
     ComCcsdsLora.authenticatelora.CurrentSequenceNumber
     ComCcsdsUart.authenticate.CurrentSequenceNumber
 
@@ -49,8 +49,8 @@ telemetry packets ReferenceDeploymentPackets {
     lora.LastRssi
     lora.LastSnr
     lora.BytesSent
-#    sband.LastRssi
-#    sband.LastSnr
+    sband.LastRssi
+    sband.LastSnr
   }
 
   packet PowerMonitor id 11 group 2 {
@@ -119,8 +119,8 @@ telemetry packets ReferenceDeploymentPackets {
   packet Health id 2 group 5 {
     ComCcsdsLora.comQueue.comQueueDepth
     ComCcsdsLora.commsBufferManager.HiBuffs
-#    ComCcsdsSband.comQueue.comQueueDepth
-#    ComCcsdsSband.commsBufferManager.HiBuffs
+    ComCcsdsSband.comQueue.comQueueDepth
+    ComCcsdsSband.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup50Hz.RgMaxTime
@@ -134,12 +134,17 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.stackMonitor.WorstThread
     ReferenceDeployment.stackMonitor.ThreadsBelowThreshold
     ReferenceDeployment.stackMonitor.SampleOverflow
+    # New in PR 3: SBand's fault-policy state (PR 2) -- radio fault state
+    # belongs in Health alongside the other component health/status channels.
+    sband.RadioFaulted
+    sband.ConsecutiveRadioFailures
+    sband.RadioResetCount
   }
 
   packet HealthWarnings id 3 group 5 {
     CdhCore.$health.PingLateWarnings
     ComCcsdsLora.commsBufferManager.NoBuffs
-    #ComCcsdsSband.commsBufferManager.NoBuffs
+    ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     ReferenceDeployment.rateGroup50Hz.RgCycleSlips
@@ -150,7 +155,7 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet HealthAuxiliary id 4 group 5 {
     ComCcsdsLora.comQueue.buffQueueDepth
-#    ComCcsdsSband.comQueue.buffQueueDepth
+    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
@@ -161,23 +166,23 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Authenticate id 6 group 5 {
-    #ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
+    ComCcsdsSband.authenticatesband.AuthenticatedPacketsCount
     ComCcsdsLora.authenticatelora.AuthenticatedPacketsCount
     ComCcsdsUart.authenticate.AuthenticatedPacketsCount
 
-    #ComCcsdsSband.authenticatesband.RejectedPacketsCount
+    ComCcsdsSband.authenticatesband.RejectedPacketsCount
     ComCcsdsLora.authenticatelora.RejectedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
 
-    #ComCcsdsSband.authenticationRouter.ByPassedRouter
+    ComCcsdsSband.authenticationRouter.ByPassedRouter
     ComCcsdsLora.authenticationRouter.ByPassedRouter
     ComCcsdsUart.authenticationRouter.ByPassedRouter
 
-    #ComCcsdsSband.authenticationRouter.PassedRouter
+    ComCcsdsSband.authenticationRouter.PassedRouter
     ComCcsdsLora.authenticationRouter.PassedRouter
     ComCcsdsUart.authenticationRouter.PassedRouter
 
-    #ComCcsdsSband.authenticationRouter.FailedRouter
+    ComCcsdsSband.authenticationRouter.FailedRouter
     ComCcsdsLora.authenticationRouter.FailedRouter
     ComCcsdsUart.authenticationRouter.FailedRouter
 
@@ -306,14 +311,14 @@ telemetry packets ReferenceDeploymentPackets {
   ComCcsdsUart.comQueue.buffQueueDepth
 
   ComCcsdsLora.commsBufferManager.EmptyBuffs
-#  ComCcsdsSband.commsBufferManager.EmptyBuffs
+  ComCcsdsSband.commsBufferManager.EmptyBuffs
   ComCcsdsUart.commsBufferManager.EmptyBuffs
   payloadBufferManager.EmptyBuffs
 
   ComCcsdsLora.commsBufferManager.TotalBuffs
   ComCcsdsLora.commsBufferManager.CurrBuffs
-#  ComCcsdsSband.commsBufferManager.TotalBuffs
-#  ComCcsdsSband.commsBufferManager.CurrBuffs
+  ComCcsdsSband.commsBufferManager.TotalBuffs
+  ComCcsdsSband.commsBufferManager.CurrBuffs
 
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs

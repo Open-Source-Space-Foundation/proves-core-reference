@@ -21,6 +21,19 @@ module ReferenceDeployment {
   module Default {
     constant QUEUE_SIZE = 10
     constant STACK_SIZE = 4 * 1024 # Must match prj.conf thread stack size
+
+    # S-Band reintegration plan (PR 3, Slice 3.1): the sband thread is the one
+    # thread in this deployment that needs more than the shared 4096-byte pool
+    # stack slot (see prj.conf's CONFIG_DYNAMIC_THREAD_ALLOC comment). Zephyr's
+    # thread-stack pool (CONFIG_DYNAMIC_THREAD_POOL_SIZE slots of
+    # CONFIG_DYNAMIC_THREAD_STACK_SIZE=4096 bytes each) serves every other
+    # active component's k_thread_create() request; CONFIG_DYNAMIC_THREAD_ALLOC=y
+    # lets ONLY an oversized request (like this one) fall back to a one-off
+    # boot-time k_malloc() instead of failing, while CONFIG_DYNAMIC_THREAD_PREFER_POOL=y
+    # keeps every other thread on the pool as before. Do not reuse this constant
+    # for other components -- each additional heap-allocated stack shrinks the
+    # margin the pool-fallback mechanism assumes.
+    constant SBAND_STACK_SIZE = 8 * 1024
   }
 
   # ----------------------------------------------------------------------
@@ -223,18 +236,25 @@ module ReferenceDeployment {
 
   instance spiDriver: Zephyr.ZephyrSpiDriver base id 0x10071000
 
-  #instance sband : Components.SBand base id 0x10072000 \
-  #  queue size Default.QUEUE_SIZE \
-  #  stack size Default.STACK_SIZE \
-  #  priority 10
+  instance sband : Components.SBand base id 0x10072000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.SBAND_STACK_SIZE \
+    priority 10
 
-  #instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
+  instance gpioSbandNrst: Zephyr.ZephyrGpioDriver base id 0x10073000
 
-  #instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
+  instance gpioSbandRxEn: Zephyr.ZephyrGpioDriver base id 0x10074000
 
-  #instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
+  instance gpioSbandTxEn: Zephyr.ZephyrGpioDriver base id 0x10075000
 
-  #instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
+  instance gpioSbandIRQ: Zephyr.ZephyrGpioDriver base id 0x10076000
+
+  # New in PR 3: drives SBand.getBusyLine (added PR 2). Reuses the existing
+  # rf2_io0 devicetree node (see boards/bronco_space's v5.dtsi gpio_inputs) --
+  # rf2_io1 is used for IRQ below, rf2_io0 is the remaining free line of the
+  # 4-pin RF header on every board variant. Bench-confirm this pin assignment
+  # in HWIL Slice 3.2 (see SBAND-HWIL-PROCEDURE.md).
+  instance gpioSbandBusy: Zephyr.ZephyrGpioDriver base id 0x1007B000
 
   instance dropDetector: Utilities.DropDetector base id 0x10077000
 
