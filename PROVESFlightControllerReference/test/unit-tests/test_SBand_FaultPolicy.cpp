@@ -111,3 +111,21 @@ TEST(SBandFaultPolicyTest, GroundResetReArmsFromFaultedAndCanReLatch) {
     }
     EXPECT_EQ(policy.decision(), SBandFaultPolicy::Decision::FAULTED);
 }
+
+TEST(SBandFaultPolicyTest, CountersReflectFailuresAndResetsForTelemetry) {
+    SBandFaultPolicy policy;
+
+    EXPECT_EQ(policy.consecutiveFailures(), 0u);
+    EXPECT_EQ(policy.resetsSinceSuccess(), 0u);
+
+    policy.operationFailed();
+    policy.operationFailed();
+    EXPECT_EQ(policy.consecutiveFailures(), 2u);
+
+    policy.operationSucceeded();
+    EXPECT_EQ(policy.consecutiveFailures(), 0u);
+
+    driveOneResetCycle(policy);
+    EXPECT_EQ(policy.resetsSinceSuccess(), 1u);
+    EXPECT_EQ(policy.consecutiveFailures(), 0u);
+}

@@ -72,6 +72,14 @@ class SBandFaultPolicy {
     //! often as needed.
     Decision decision() const;
 
+    //! Current consecutive-failure count (for telemetry/EVR args only; not
+    //! part of the state-machine's semantics).
+    std::uint32_t consecutiveFailures() const;
+
+    //! Current resets-since-last-success count (for telemetry/EVR args
+    //! only; not part of the state-machine's semantics).
+    std::uint32_t resetsSinceSuccess() const;
+
   private:
     std::uint32_t m_consecutiveFailures;
     std::uint32_t m_resetsSinceSuccess;

@@ -57,4 +57,12 @@ SBandFaultPolicy::Decision SBandFaultPolicy::decision() const {
     return Decision::NONE;
 }
 
+std::uint32_t SBandFaultPolicy::consecutiveFailures() const {
+    return m_consecutiveFailures;
+}
+
+std::uint32_t SBandFaultPolicy::resetsSinceSuccess() const {
+    return m_resetsSinceSuccess;
+}
+
 }  // namespace Components
