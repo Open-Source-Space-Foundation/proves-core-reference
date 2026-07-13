@@ -117,6 +117,7 @@ module ReferenceDeployment {
     instance dropDetector
 
     instance picoTempManager
+    instance stackMonitor
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -284,6 +285,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
       rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
+      rateGroup1Hz.RateGroupMemberOut[12] -> stackMonitor.run
 
     }
 
