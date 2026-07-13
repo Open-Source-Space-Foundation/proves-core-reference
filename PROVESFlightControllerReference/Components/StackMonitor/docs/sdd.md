@@ -15,12 +15,22 @@ with no Zephyr or F Prime dependencies, so it is host-testable in isolation
 thin adapter: it walks Zephyr threads, builds a sample list, and feeds it to
 the core each tick.
 
+All storage is fixed-capacity POD (32 threads x 32-char names) kept as
+component member state: the `k_thread_foreach` callback runs under the kernel
+thread-monitor spinlock with IRQs locked, so it performs only a bounds check,
+a bounded string copy, and integer stores. Zero heap allocation anywhere in
+the monitoring path after boot (per-tick heap churn is the defect class that
+got the S-Band radio removed; see issue #122). If a tick sees more live
+threads than capacity, the extras are dropped and the `SampleOverflow`
+telemetry channel reports it (no silent truncation).
+
 ## Telemetry
 | Name | Description |
 |---|---|
 | MinFreeBytes | Free bytes remaining on the thread under the most stack pressure this tick |
 | WorstThread | Name of the thread under the most stack pressure this tick |
 | ThreadsBelowThreshold | Count of threads currently below the warn threshold |
+| SampleOverflow | True when a tick saw more live threads than the monitor's fixed capacity |
 
 ## Events
 | Name | Description |

@@ -43,6 +43,13 @@ class StackMonitor final : public StackMonitorComponentBase {
     //! summary and warn/clear decisions. Host-testable in isolation; see
     //! test/unit-tests/test_StackMonitor_Core.cpp.
     StackMonitorCore m_core;
+
+    //! Per-tick sample and result storage. Fixed-size and kept as member
+    //! state (not run_handler locals): together they are a few KB, which
+    //! would not be comfortable on the 4 KB rate-group thread stack, and
+    //! keeping them here guarantees zero heap allocation after boot.
+    ThreadStackSampleSet m_samples;
+    StackMonitorTickResult m_result;
 };
 
 }  // namespace Components

@@ -1,8 +1,9 @@
 module Components {
     @ Program-wide stack-usage watchdog. Walks all live Zephyr threads once per
-    @ tick (via ThreadInfoProviderIf) and reports per-thread stack high-water
+    @ tick (k_thread_foreach) and reports per-thread stack high-water
     @ telemetry, warning when any thread's free stack drops below a configurable
-    @ percent of its own size and clearing on recovery.
+    @ percent of its own size and clearing on recovery. Fixed-capacity storage
+    @ throughout: zero heap allocation after construction.
     @ S-Band reintegration plan, PR 1 / Slice 1.1 (D6).
     passive component StackMonitor {
 
@@ -17,6 +18,10 @@ module Components {
 
         @ Count of threads currently below the warn threshold
         telemetry ThreadsBelowThreshold: U32
+
+        @ True when a tick saw more live threads than the monitor's fixed
+        @ capacity (extra threads went unsampled that tick -- not silent)
+        telemetry SampleOverflow: bool
 
         @ Event logged when a thread's free stack drops below its warn threshold
         event StackLow(

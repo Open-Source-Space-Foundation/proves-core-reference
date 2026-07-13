@@ -133,6 +133,7 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.stackMonitor.MinFreeBytes
     ReferenceDeployment.stackMonitor.WorstThread
     ReferenceDeployment.stackMonitor.ThreadsBelowThreshold
+    ReferenceDeployment.stackMonitor.SampleOverflow
   }
 
   packet HealthWarnings id 3 group 5 {
