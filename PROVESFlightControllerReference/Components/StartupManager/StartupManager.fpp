@@ -13,6 +13,12 @@ module Components {
         @ Port for receiving the indication that the start-up sequence has started
         sync input port sequenceStarted: Svc.CmdSeqIn
 
+        @ Enable LoRa transmission
+        output port enableTransmit: Fw.Signal
+
+        @ Disable LoRa transmission
+        output port disableTransmit: Fw.Signal
+
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
 

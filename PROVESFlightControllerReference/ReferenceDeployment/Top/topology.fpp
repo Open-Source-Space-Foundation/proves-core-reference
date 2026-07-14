@@ -214,6 +214,10 @@ module ReferenceDeployment {
       cmdSeq.seqStartOut -> startupManager.sequenceStarted
       cmdSeq.seqDone -> startupManager.completeSequence
 
+      # StartupManager drives LoRa TX enable/disable around quiescence
+      startupManager.enableTransmit -> lora.enableTransmit
+      startupManager.disableTransmit -> lora.disableTransmit
+
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
 
