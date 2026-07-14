@@ -49,6 +49,8 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
+    Os::ScopeLock lock(m_commandLossMutex);
+    this->m_commandLossCounter++;  // keep track of seconds since last packet was received
 
     // Get current voltage (used by mode-specific voltage monitoring)
     bool valid = false;
@@ -210,7 +212,7 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
 
 void ModeManager ::packetRouted_handler(FwIndexType portNum) {
     Os::ScopeLock lock(m_commandLossMutex);
-    this->m_lastPacketRoutedTime = this->getTime();
+    this->m_commandLossCounter = 0;
 }
 
 // ----------------------------------------------------------------------
@@ -534,14 +536,9 @@ void ModeManager::commandLossCheck() {
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
-    // Check if current time has exceeded the command loss start time + command loss period
-    Fw::Time commLossInterval(this->m_lastPacketRoutedTime.getTimeBase(), commLossPeriod.get_seconds(),
-                              commLossPeriod.get_useconds());
-    Fw::Time commLossEnd = Fw::Time::add(this->m_lastPacketRoutedTime, commLossInterval);
-    Fw::Time currentTime = this->getTime();
-    if (currentTime > commLossEnd) {
+    if (this->m_commandLossCounter >= commLossPeriod.get_seconds()) {
         // Telemeter the command loss duration
-        U32 commandLossDuration = Fw::Time::sub(currentTime, this->m_lastPacketRoutedTime).getSeconds();
+        U32 commandLossDuration = this->m_commandLossCounter - (commLossPeriod.get_seconds());
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
 
         // Trigger safe mode entry due to command loss
