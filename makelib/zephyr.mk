@@ -48,7 +48,7 @@ clean-zephyr-export: ## Remove Zephyr exported files
 
 .PHONY: zephyr-sdk
 zephyr-sdk: fprime-venv ## Install Zephyr SDK
-	@test -d $(ZEPHYR_SDK_PATH) || { \
+	@test -d $(ZEPHYR_SDK_PATH)/gnu/arm-zephyr-eabi || { \
 		$(WEST) sdk install --toolchains arm-zephyr-eabi; \
 	}
 
