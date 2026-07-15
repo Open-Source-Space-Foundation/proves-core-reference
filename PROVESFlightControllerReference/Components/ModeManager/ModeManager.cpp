@@ -26,8 +26,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_runCounter(0),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0),
-      m_lastPacketRoutedTime(Fw::ZERO_TIME) {
+      m_recoveryVoltageCounter(0) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -50,7 +49,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
     Os::ScopeLock lock(m_commandLossMutex);
-    this->m_commandLossCounter++;  // keep track of seconds since last packet was received
+    this->m_commandLossCounter++;  // keep track of seconds since last packet
 
     // Get current voltage (used by mode-specific voltage monitoring)
     bool valid = false;
@@ -526,11 +525,6 @@ void ModeManager::commandLossCheck() {
     // Protect against concurrent access to command loss state
     Os::ScopeLock lock(this->m_commandLossMutex);
 
-    // Exit early if we haven't received any commands yet (e.g., on first boot) or if we're not in NORMAL mode
-    if (this->m_lastPacketRoutedTime == Fw::ZERO_TIME || this->m_mode != SystemMode::NORMAL) {
-        return;
-    }
-
     // Get command loss period from parameter
     Fw::ParamValid paramValid;
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
@@ -538,7 +532,7 @@ void ModeManager::commandLossCheck() {
 
     if (this->m_commandLossCounter >= commLossPeriod.get_seconds()) {
         // Telemeter the command loss duration
-        U32 commandLossDuration = this->m_commandLossCounter - (commLossPeriod.get_seconds());
+        U32 commandLossDuration = this->m_commandLossCounter;
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
 
         // Trigger safe mode entry due to command loss
