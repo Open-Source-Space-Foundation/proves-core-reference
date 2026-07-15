@@ -47,7 +47,7 @@ clean-zephyr-export: ## Remove Zephyr exported files
 	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
 .PHONY: zephyr-sdk
-ZEPHYR_SDK_INSTALL_RETRIES ?= 3
+ZEPHYR_SDK_INSTALL_RETRIES ?= 4
 zephyr-sdk: fprime-venv ## Install Zephyr SDK
 	@test -d $(ZEPHYR_SDK_PATH)/gnu/arm-zephyr-eabi || { \
 		i=1; \
@@ -56,8 +56,14 @@ zephyr-sdk: fprime-venv ## Install Zephyr SDK
 				echo "❌ Error: Zephyr SDK install failed after $(ZEPHYR_SDK_INSTALL_RETRIES) attempts"; \
 				exit 1; \
 			fi; \
-			echo "⚠ Zephyr SDK install failed (attempt $$i/$(ZEPHYR_SDK_INSTALL_RETRIES)), retrying with a clean SDK dir..."; \
-			rm -rf $(ZEPHYR_SDK_PATH); \
+			echo "⚠ Zephyr SDK install failed (attempt $$i/$(ZEPHYR_SDK_INSTALL_RETRIES))"; \
+			if [ "$$(uname)" = "Darwin" ] && [ -d $(ZEPHYR_SDK_PATH) ] && [ "$$i" -lt 3 ]; then \
+				echo "  Clearing macOS quarantine attributes on $(ZEPHYR_SDK_PATH) and retrying in place (likely Gatekeeper blocking the bundled host tools)..."; \
+				xattr -dr com.apple.quarantine $(ZEPHYR_SDK_PATH) 2>/dev/null || true; \
+			else \
+				echo "  Retrying with a clean SDK dir..."; \
+				rm -rf $(ZEPHYR_SDK_PATH); \
+			fi; \
 			i=$$((i + 1)); \
 		done; \
 	}
