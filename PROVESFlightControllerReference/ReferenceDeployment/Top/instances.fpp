@@ -242,4 +242,6 @@ module ReferenceDeployment {
 
   instance picoTempManager: Drv.PicoTempManager base id 0x10079000
 
+  instance psramMonitor: Components.PsramMonitor base id 0x1007A000
+
 }
