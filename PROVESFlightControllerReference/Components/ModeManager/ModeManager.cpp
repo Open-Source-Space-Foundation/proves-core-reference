@@ -530,7 +530,7 @@ void ModeManager::commandLossCheck() {
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
-    if (this->m_commandLossCounter >= commLossPeriod.get_seconds()) {
+    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() || this->m_mode == SystemMode::NORMAL) {
         // Telemeter the command loss duration
         U32 commandLossDuration = this->m_commandLossCounter;
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
