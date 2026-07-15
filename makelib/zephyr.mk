@@ -47,9 +47,19 @@ clean-zephyr-export: ## Remove Zephyr exported files
 	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
 .PHONY: zephyr-sdk
+ZEPHYR_SDK_INSTALL_RETRIES ?= 3
 zephyr-sdk: fprime-venv ## Install Zephyr SDK
 	@test -d $(ZEPHYR_SDK_PATH)/gnu/arm-zephyr-eabi || { \
-		$(WEST) sdk install --toolchains arm-zephyr-eabi; \
+		i=1; \
+		until $(WEST) sdk install --toolchains arm-zephyr-eabi; do \
+			if [ "$$i" -ge $(ZEPHYR_SDK_INSTALL_RETRIES) ]; then \
+				echo "❌ Error: Zephyr SDK install failed after $(ZEPHYR_SDK_INSTALL_RETRIES) attempts"; \
+				exit 1; \
+			fi; \
+			echo "⚠ Zephyr SDK install failed (attempt $$i/$(ZEPHYR_SDK_INSTALL_RETRIES)), retrying with a clean SDK dir..."; \
+			rm -rf $(ZEPHYR_SDK_PATH); \
+			i=$$((i + 1)); \
+		done; \
 	}
 
 .PHONY: clean-zephyr-sdk
