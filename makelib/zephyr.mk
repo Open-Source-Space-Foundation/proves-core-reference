@@ -58,7 +58,7 @@ zephyr-sdk: fprime-venv ## Install Zephyr SDK
 			fi; \
 			echo "⚠ Zephyr SDK install failed (attempt $$i/$(ZEPHYR_SDK_INSTALL_RETRIES))"; \
 			if [ -f $(ZEPHYR_SDK_PATH)/setup.sh ]; then \
-				echo "  Patching setup.sh to fall back to curl if the bundled wget fails, then retrying in place..."; \
+				echo "  Patching setup.sh's macOS host-arch detection (Rosetta-translated shells misreport HOSTTYPE), then retrying in place..."; \
 				$(UV_RUN) python3 tools/patch-zephyr-sdk-toolchain-download.py $(ZEPHYR_SDK_PATH)/setup.sh; \
 			else \
 				echo "  Retrying with a clean SDK dir..."; \

@@ -1,10 +1,16 @@
-"""Make the Zephyr SDK's macOS toolchain download fall back to curl if the bundled wget fails.
+"""Fix the Zephyr SDK's macOS host-arch detection in setup.sh.
 
-Some macOS hosts (observed on a self-hosted CI runner) fail every invocation
-of the SDK's bundled hosttools wget when downloading a GNU toolchain archive,
-even against a freshly extracted SDK, while a plain curl to the same URL
-succeeds. This appends a curl fallback to the wget invocation in setup.sh so
-a wget failure doesn't abort the install.
+Observed on a self-hosted Apple Silicon CI runner: setup.sh derives the
+download host string from bash's $HOSTTYPE, which reports 'x86_64' when
+the shell itself is running translated under Rosetta -- even though the
+hardware is arm64. That produces a toolchain download URL
+(toolchain_gnu_macos-x86_64_...) for an asset that was never published
+(only the macos-aarch64 asset exists), so the download 404s every time,
+regardless of which downloader (wget/curl) or how many retries are used.
+
+This patches the darwin host-detection branch to double check the true
+hardware architecture via `sysctl hw.optional.arm64`, which reports the
+physical CPU regardless of Rosetta translation.
 """
 
 import sys
@@ -12,19 +18,40 @@ import sys
 path = sys.argv[1]
 content = open(path).read()
 
-marker = 'curl -fSL --retry 3 -o "${toolchain_filename}" "${toolchain_uri}"'
+marker = "hw.optional.arm64"
 if marker in content:
-    print("⚠ Zephyr SDK curl fallback already applied")
+    print("⚠ Zephyr SDK macOS host-arch fix already applied")
     sys.exit(0)
 
-original = '${wget} -q --show-progress -N -O "${toolchain_filename}" "${toolchain_uri}"'
-patched = f"{original} || {marker}"
+original = """  darwin*)
+    # Bash 3.x on AArch64 Darwin sets HOSTTYPE to 'arm64'
+    if [ "${HOSTTYPE}" = "arm64" ]; then
+      HOSTTYPE="aarch64"
+    fi
+
+    host="macos-${HOSTTYPE}"
+    ;;"""
+
+patched = """  darwin*)
+    # Bash 3.x on AArch64 Darwin sets HOSTTYPE to 'arm64'
+    if [ "${HOSTTYPE}" = "arm64" ]; then
+      HOSTTYPE="aarch64"
+    fi
+
+    # A Rosetta-translated shell reports HOSTTYPE=x86_64 even on Apple
+    # Silicon hardware; sysctl reports the true hardware architecture.
+    if [ "${HOSTTYPE}" = "x86_64" ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ]; then
+      HOSTTYPE="aarch64"
+    fi
+
+    host="macos-${HOSTTYPE}"
+    ;;"""
 
 if original not in content:
     print(
-        "❌ Error: wget download line not found in setup.sh — SDK setup.sh may have changed"
+        "❌ Error: darwin host-detection block not found in setup.sh — SDK setup.sh may have changed"
     )
     sys.exit(1)
 
 open(path, "w").write(content.replace(original, patched))
-print("✓ Applied Zephyr SDK curl fallback")
+print("✓ Applied Zephyr SDK macOS host-arch fix")
