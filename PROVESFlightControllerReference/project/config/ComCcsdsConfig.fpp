@@ -42,4 +42,26 @@ module ComCcsdsConfig {
         constant commsFileBuffCount    = 5
         constant commsBuffMgrId        = 200
     }
+
+    # Lean profile for the S-Band subtopology. Three full-size ComCcsds stacks do
+    # not fit the RP2350 malloc arena (~149 KB): each stack costs ~35.6 KB of heap
+    # (comQueue table ~13.5K + buffer pool ~11.2K + frame accumulator ~1K + the two
+    # OS message queues ~9.9K), and the third one exhausted the arena during
+    # configComponents (HWIL 2026-07-16). S-Band is a secondary downlink; it gets
+    # smaller queues and a smaller buffer pool (~17 KB total instead of ~35.6 KB).
+    module Sband {
+        module QueueSizes {
+            constant comQueue            = 10
+            constant aggregator          = 8
+        }
+        module QueueDepths {
+            constant events      = 15
+            constant tlm         = 1
+            constant file        = 1
+        }
+        module BuffMgr {
+            constant commsBuffCount     = 3
+            constant commsFileBuffCount = 3
+        }
+    }
 }
