@@ -35,7 +35,7 @@ Mode enum values: SAFE_MODE=1, NORMAL=2
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 from common import proves_send_and_assert_command
@@ -571,11 +571,11 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
 
     fprime_test_api.clear_histories()
 
-    # Jump RTC 4 days into the future (past the 3-day COMM_LOSS_TIME default).
-    # m_lastPacketRoutedTime is stamped with T0 when this packet arrives at ProvesRouter,
-    # before the RTC change takes effect, so the next run_handler tick triggers command loss.
-    future_time = datetime.now(timezone.utc) + timedelta(days=COMM_LOSS_TIME_DAYS + 1)
-    _set_rtc_time(fprime_test_api, future_time)
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{component}.COMM_LOSS_TIME_PRM_SET",
+        ["1", "0"],
+    )
 
     # Wait for the 1Hz run_handler to detect command loss (at most 2 seconds)
     fprime_test_api.assert_event(f"{component}.CommandLossDetected", timeout=5)
