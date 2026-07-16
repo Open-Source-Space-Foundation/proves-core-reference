@@ -1,0 +1,44 @@
+From 73abd683d1ac5f9d680619b193fa1df6991d6879 Mon Sep 17 00:00:00 2001
+From: Michael Pham <61564344+Mikefly123@users.noreply.github.com>
+Date: Thu, 16 Jul 2026 14:25:39 -0700
+Subject: [PATCH] fix(ComQueue): tolerate a redundant READY status as a benign
+ re-prime
+
+The one-shot priming READY (ComAggregator::preamble) travels over an async
+port whose dispatch queue can overflow during the boot event storm; when the
+priming status is dropped there is no recovery path and the downlink
+deadlocks permanently. Accepting READY+SUCCESS in the READY state (process
+the queue, no assert) lets deployments re-send the priming status safely.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ Svc/ComQueue/ComQueue.cpp | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/Svc/ComQueue/ComQueue.cpp b/Svc/ComQueue/ComQueue.cpp
+index 842023014..8c82369b8 100644
+--- a/Svc/ComQueue/ComQueue.cpp
++++ b/Svc/ComQueue/ComQueue.cpp
+@@ -184,8 +184,17 @@ void ComQueue::comStatusIn_handler(const FwIndexType portNum, Fw::Success& condi
+                 this->m_state = WAITING;
+             }
+             break;
+-        // Both READY and unknown states should not be possible at this point. To receive a status message we must be
+-        // one of the WAITING or RETRY states.
++        // A READY status while already sendable is a benign re-prime: the one-shot
++        // priming status (e.g. ComAggregator::preamble) can be lost to dispatch-queue
++        // overflow during the boot event storm, deadlocking the downlink with no
++        // recovery path. Deployments may therefore re-send a priming status after
++        // bring-up; process the queue in case data arrived while the queue was idle.
++        case READY:
++            if (condition.e == Fw::Success::SUCCESS) {
++                this->processQueue();
++            }
++            break;
++        // Unknown states should not be possible at this point.
+         default:
+             FW_ASSERT(0, static_cast<FwAssertArgType>(this->m_state));
+             break;
+-- 
+2.50.1 (Apple Git-155)
+
