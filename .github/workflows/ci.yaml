@@ -201,6 +201,20 @@ jobs:
         run: |
           make test-integration FILTER=sync_sequence_number
 
+      - name: Format Filesystem (pre-test)
+        # The storage_partition persists across flashes and across branches on
+        # this shared board (see .dtsi storage_partition @ 0x400000). The
+        # end-of-job "Format Filesystem" step below is best-effort cleanup, but
+        # it depends on a healthy, commandable FSW -- exactly what's least
+        # likely if this run's own tests fail. Format again right here, right
+        # after a fresh flash + reboot, when the FSW is at its most commandable,
+        # so a prior run's persisted-state contamination (e.g. an
+        # out-of-range SafeModeReason enum value from a since-reverted branch)
+        # can't poison this run's test suite. Runs after sequence sync so the
+        # FORMAT command itself can authenticate.
+        run: |
+          make test-integration FILTER=format_filesystem
+
       - name: Run UART Integration Tests
         run: |
           make test-integration
@@ -457,6 +471,18 @@ jobs:
           TLM_SAMPLE_LOG: tlm_sample_sync.csv
         run: |
           make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
+
+      - name: Format Filesystem (pre-test)
+        # See the matching step in integration-uart: the shared board's
+        # storage_partition persists across flashes/branches, and the
+        # end-of-job format below is best-effort cleanup that depends on FSW
+        # health. Format right after boot/sync, while the FSW is most
+        # commandable, so contamination inherited from a prior run/branch
+        # can't poison this run's radio suite.
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_format_pretest.csv
+        run: |
+          make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
 
       - name: Run Radio Integration Tests
         env:
