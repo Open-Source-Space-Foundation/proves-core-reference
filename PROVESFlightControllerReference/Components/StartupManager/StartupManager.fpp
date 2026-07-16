@@ -51,6 +51,10 @@ module Components {
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
             ) severity warning low format "Start-up sequence failed with response code {}"
 
+        @ Event emitted when the hardcoded startup sequence enables the radio
+        event HardcodedRadioEnable() severity activity high \
+            format "Hardcoded Startup Sequence has enabled the radio"
+
         @ Whether the start-up manager is armed to wait for quiescence
         param ARMED: bool default true
 
@@ -65,6 +69,9 @@ module Components {
 
         @ File to store the boot count
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
+
+        @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

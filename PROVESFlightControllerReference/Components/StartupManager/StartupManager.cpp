@@ -186,6 +186,18 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
         this->runSequence_out(0, first_sequence);
+        this->m_transmit_enable_ticks = this->paramGet_TRANSMIT_ENABLE_TICKS(is_valid);
+        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
+    }
+
+    if (this->m_transmit_enable_ticks > 0) {
+        this->m_transmit_enable_ticks--;
+        if (this->m_transmit_enable_ticks == 0) {
+            this->log_ACTIVITY_HI_HardcodedRadioEnable();
+            if (this->isConnected_enableTransmit_OutputPort(0)) {
+                this->enableTransmit_out(0);
+            }
+        }
     }
 
     // Calculate the quiescence end time based on the quiescence period parameter

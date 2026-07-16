@@ -104,6 +104,8 @@ class StartupManager final : public StartupManagerComponentBase {
     U32 m_stored_sequence;         //!< Stored sequence number for delayed response
     std::atomic<bool> m_waiting;   //!< Indicates if waiting for quiescence
     Fw::String m_sequence_file;    //!< The filepath for the sequence last initiated
+    U32 m_transmit_enable_ticks = 0;  //!< Remaining 1 Hz ticks until hard-coded transmit enable
+
 };
 
 }  // namespace Components
