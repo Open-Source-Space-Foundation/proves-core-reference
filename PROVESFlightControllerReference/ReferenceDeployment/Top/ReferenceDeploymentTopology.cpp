@@ -200,6 +200,22 @@ void setupTopology(const TopologyState& state) {
     fsFormat.configure(state.storagePartitionId);
 }
 
+void primeDownlinkQueues() {
+    // Re-prime the downlink queues. Each ComQueue is primed by a single READY
+    // status (ComAggregator::preamble) delivered over a lossy hop: comStatusIn
+    // is async, and the 20-deep dispatch queue overflows during the bring-up
+    // event storm (on boards with absent sensors, dozens of warning events),
+    // silently dropping priming statuses and deadlocking the downlink forever —
+    // late statuses die in the aggregator's assertNoStatus action, so there is
+    // no recovery path. A redundant READY is benign (see
+    // ComQueue::comStatusIn_handler), so main() calls this several times after
+    // bring-up settles to guarantee delivery.
+    Fw::Success primeReady = Fw::Success::SUCCESS;
+    ComCcsdsUart::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
+    ComCcsdsLora::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
+    ComCcsdsSband::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
+}
+
 void startRateGroups() {
     timer.configure(BASE_RATEGROUP_PERIOD_MS);
     timer.start();

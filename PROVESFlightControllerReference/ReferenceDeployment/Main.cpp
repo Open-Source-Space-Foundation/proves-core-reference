@@ -129,6 +129,16 @@ int main(int argc, char* argv[]) {
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);
+
+    // Re-prime the downlink a few times with settling gaps: the one-shot READY
+    // that primes each ComQueue is dropped when the bring-up event storm
+    // overflows its dispatch queue (see primeDownlinkQueues). The sleeps let
+    // the storm drain between attempts so at least one READY is delivered.
+    for (int i = 0; i < 3; i++) {
+        k_sleep(K_MSEC(1000));
+        ReferenceDeployment::primeDownlinkQueues();
+    }
+
     ReferenceDeployment::startRateGroups();  // Program loop
     ReferenceDeployment::teardownTopology(inputs);
     return 0;
