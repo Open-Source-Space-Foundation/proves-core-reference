@@ -48,8 +48,10 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
-    Os::ScopeLock lock(m_commandLossMutex);
-    this->m_commandLossCounter++;  // keep track of seconds since last packet
+    {
+        Os::ScopeLock lock(m_commandLossMutex);
+        this->m_commandLossCounter++;  // keep track of seconds since last packet
+    }
 
     // Get current voltage (used by mode-specific voltage monitoring)
     bool valid = false;
