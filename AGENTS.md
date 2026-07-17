@@ -156,7 +156,7 @@ PROVESFlightControllerReference/
 │   ├── AmateurRadio/  # Amateur radio communication
 │   ├── AntennaDeployer/ # Antenna deployment mechanism
 │   ├── Authenticate/  # HMAC-based command authentication
-│   ├── AuthenticationRouter/ # Authentication routing
+│   ├── ProvesRouter/  # Packet routing
 │   ├── BootloaderTrigger/ # Bootloader mode entry
 │   ├── Burnwire/      # Burnwire deployment mechanism
 │   ├── CameraHandler/ # Camera management
@@ -514,7 +514,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 
 **Security**:
 - **Authenticate**: HMAC-based command authentication
-- **AuthenticationRouter**: Routes authenticated vs. unauthenticated commands
+- **ProvesRouter**: Routes authenticated vs. unauthenticated commands
 
 ### Development Environment
 
