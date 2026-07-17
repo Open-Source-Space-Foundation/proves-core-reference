@@ -20,16 +20,45 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 RADIO_STABILIZE_S = 15
 
 
+# Hardware that a bare flight control board does not have. When
+# --bare-flight-controler-board is passed, tests carrying any of these markers are
+# skipped so the suite can run on the board alone.
+BARE_FCB_SKIP_MARKERS = {
+    "requires_face": "a face board",
+    "requires_antenna": "the antenna board and burnwire capacitor",
+    "requires_battery": "the battery board with power at the terminals",
+    "requires_watchdog_jumper": "the JP6 watchdog jumper bridged",
+}
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """When running with --with-radio, move RTC tests to the end of the collection.
+    """Adjust the collected tests for the current hardware/link configuration.
 
-    The RTC tests mutate the system clock (TIME_SET to -12 h from now) and the
-    teardown resets it to current UTC.  Running the RTC tests last prevents the
-    temporary clock change from racing with the test that immediately follows
-    alphabetically (TMP112), which is otherwise flaky on the radio path.
+    1. With --bare-flight-controller-board, skip tests whose markers require add-on
+       hardware (face, antenna, battery, or the JP6 watchdog jumper).
+    2. With --with-radio, move the RTC tests to the end of the collection. The
+       RTC tests mutate the system clock (TIME_SET to -12 h from now) and the
+       teardown resets it to current UTC.  Running them last prevents the
+       temporary clock change from racing with the test that immediately follows
+       alphabetically (TMP112), which is otherwise flaky on the radio path.
     """
+    if config.getoption("--bare-flight-controler-board", default=False):
+        for item in items:
+            needed = [
+                description
+                for marker, description in BARE_FCB_SKIP_MARKERS.items()
+                if item.get_closest_marker(marker) is not None
+            ]
+            if needed:
+                item.add_marker(
+                    pytest.mark.skip(
+                        reason="bare flight control board: requires "
+                        + "; ".join(needed)
+                    )
+                )
+
     if not config.getoption("--with-radio", default=False):
         return
 
@@ -50,6 +79,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type=int,
         default=None,
         help="Override retry count for proves_send_and_assert_command (default: 3 UART, 5 radio).",
+    )
+    parser.addoption(
+        "--bare-flight-controler-board",
+        action="store_true",
+        default=False,
+        help="Skip tests that require add-on hardware (face, antenna, battery, or "
+        "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
     )
 
 

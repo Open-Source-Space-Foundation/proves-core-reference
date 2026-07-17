@@ -58,4 +58,4 @@ clean-zephyr-sdk: ## Remove Zephyr SDK
 
 .PHONY: zephyr-python-deps
 zephyr-python-deps: fprime-venv ## Install Zephyr Python dependencies
-	@$(WEST) uv pip --install -- --prerelease=allow --quiet
+	@UV="$(UV)" $(WEST) uv pip --install -- --prerelease=allow --quiet

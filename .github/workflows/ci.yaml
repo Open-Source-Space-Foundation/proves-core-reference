@@ -40,6 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Reset repository and submodules to original state
+        run: |
+          git submodule update --init --recursive
+          git clean -dfX
+          git reset --hard
+          git submodule foreach --recursive git clean -dfX
+          git submodule foreach --recursive git reset --hard
+
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
@@ -91,6 +99,13 @@ jobs:
       - name: Build Flight Software
         run: |
           make build
+
+      - name: Ensure console disabled
+        # The Zephyr console shares cdc_acm_uart0 with the F' downlink; if it is
+        # re-enabled, console text interleaves with the CCSDS TM frames and
+        # desyncs the GDS deframer. Fail the build so this cannot reach main.
+        run: |
+          make check-console-disabled
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -216,7 +231,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Start YAMCS Stack
         env:
