@@ -145,7 +145,9 @@ void setupTopology(const TopologyState& state) {
     };
 
     struct spi_config sbandSpiCfg = {
-        .frequency = 100000,  // 100 KHz -- sx1280 has maximum 18.18 MHz -- there is a 12MHz oscillator on-board
+        .frequency = 4000000,  // 4 MHz (SX1280 max 18.18 MHz; 100 kHz cost ~25 ms per 252 B buffer
+                               // upload -- see REPORT-sband-goodput.md; the same spi0 bus already
+                               // runs the SD card at 24 MHz)
         .operation = SPI_WORD_SET(8),
         .slave = 0,
         .cs = sbandCsCtrl,
