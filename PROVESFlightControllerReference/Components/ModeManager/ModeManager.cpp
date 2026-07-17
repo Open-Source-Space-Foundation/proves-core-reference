@@ -24,10 +24,11 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_runCounter(0),
-      m_commandLossDebounce(false),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0) {
+      m_recoveryVoltageCounter(0),
+      m_commandLossCounter(0),
+      m_commandLossDebounce(false) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
