@@ -24,6 +24,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_runCounter(0),
+      m_commandLossDebounce(false),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
       m_recoveryVoltageCounter(0) {
@@ -214,6 +215,7 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
 void ModeManager ::packetRouted_handler(FwIndexType portNum) {
     Os::ScopeLock lock(m_commandLossMutex);
     this->m_commandLossCounter = 0;
+    this->m_commandLossDebounce = false;
 }
 
 // ----------------------------------------------------------------------
@@ -532,7 +534,10 @@ void ModeManager::commandLossCheck() {
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
-    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() && this->m_mode == SystemMode::NORMAL) {
+    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() && !this->m_commandLossDebounce) {
+        // Debounce so we don't repeatedly re-trigger command loss behavior
+        this->m_commandLossDebounce = true;
+
         // Telemeter the command loss duration
         U32 commandLossDuration = this->m_commandLossCounter;
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);

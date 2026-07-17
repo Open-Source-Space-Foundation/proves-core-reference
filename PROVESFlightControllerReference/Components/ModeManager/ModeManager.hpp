@@ -165,12 +165,13 @@ class ModeManager : public ModeManagerComponentBase {
     SystemMode m_mode;                            //!< Current system mode
     U32 m_safeModeEntryCount;                     //!< Counter for safe mode entries
     U32 m_runCounter;                             //!< Counter for run handler calls (1Hz)
-    U32 m_commandLossCounter;                     //!< Value of runCounter when last command was received
     Components::SafeModeReason m_safeModeReason;  //!< Current safe mode reason
     U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
     U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
 
     Os::Mutex m_commandLossMutex;  //!< Protects command loss state against concurrent access
+    U32 m_commandLossCounter;      //!< Value of runCounter when last command was received
+    bool m_commandLossDebounce;    //!< Prevents re-triggering safe mode entry while command loss persists
 
     // ----------------------------------------------------------------------
     // Constants
