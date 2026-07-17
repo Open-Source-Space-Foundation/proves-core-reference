@@ -39,19 +39,17 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 
 ## Requirements
 
-> **Note:** The `Unit test` validation methods below are not yet implemented (TODO); requirements are currently exercised only indirectly via integration tests.
-
 | Name | Description | Rationale | Validation |
 | ---- | ----------- | --------- | ---------- |
-SVC-ROUTER-001 | `Svc::ProvesRouter` shall route packets based on their packet type as read from the `ComCfg::FrameContext` APID field (`context.get_apid()`) | Routing mechanism of the F´ comms protocol | Unit test |
-SVC-ROUTER-002 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_COMMAND` to the `commandOut` output port. | Routing command packets | Unit test |
-SVC-ROUTER-003 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_FILE` to the `fileOut` output port. | Routing file packets | Unit test |
-SVC-ROUTER-004 | `Svc::ProvesRouter` shall route data that is neither `Fw::ComPacketType::FW_PACKET_COMMAND` nor `Fw::ComPacketType::FW_PACKET_FILE` to the `unknownDataOut` output port. | Allows for projects to provide custom routing for additional (project-specific) uplink data types | Unit test |
-SVC-ROUTER-005 | `Svc::ProvesRouter` shall emit a `SerializationError` warning event if copying a command packet into a `Fw::ComBuffer` fails | Aid in diagnosing uplink issues | Unit test |
-SVC-ROUTER-006 | `Svc::ProvesRouter` shall emit an `AllocationError` warning event and skip forwarding if buffer allocation fails for a file or unknown packet | Memory management safety | Unit test |
-SVC-ROUTER-007 | `Svc::ProvesRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` or unknown packet type before forwarding, so that the original buffer can be returned immediately via `dataReturnOut` | Memory management | Unit test |
-SVC-ROUTER-008 | `Svc::ProvesRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
-SVC-ROUTER-009 | `Svc::ProvesRouter` shall emit the `packetRouted` signal after processing each received packet | Allows interested components (e.g., `ModeManager`) to track uplink activity | Unit test |
+SVC-ROUTER-001 | `Svc::ProvesRouter` shall route packets based on their packet type as read from the `ComCfg::FrameContext` APID field (`context.get_apid()`) | Routing mechanism of the F´ comms protocol | Integration test |
+SVC-ROUTER-002 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_COMMAND` to the `commandOut` output port. | Routing command packets | Integration test |
+SVC-ROUTER-003 | `Svc::ProvesRouter` shall route packets of type `Fw::ComPacketType::FW_PACKET_FILE` to the `fileOut` output port. | Routing file packets | Integration test |
+SVC-ROUTER-004 | `Svc::ProvesRouter` shall route data that is neither `Fw::ComPacketType::FW_PACKET_COMMAND` nor `Fw::ComPacketType::FW_PACKET_FILE` to the `unknownDataOut` output port. | Allows for projects to provide custom routing for additional (project-specific) uplink data types | Integration test |
+SVC-ROUTER-005 | `Svc::ProvesRouter` shall emit a `SerializationError` warning event if copying a command packet into a `Fw::ComBuffer` fails | Aid in diagnosing uplink issues | Integration test |
+SVC-ROUTER-006 | `Svc::ProvesRouter` shall emit an `AllocationError` warning event and skip forwarding if buffer allocation fails for a file or unknown packet | Memory management safety | Integration test |
+SVC-ROUTER-007 | `Svc::ProvesRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` or unknown packet type before forwarding, so that the original buffer can be returned immediately via `dataReturnOut` | Memory management | Integration test |
+SVC-ROUTER-008 | `Svc::ProvesRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Integration test |
+SVC-ROUTER-009 | `Svc::ProvesRouter` shall emit the `packetRouted` signal after processing each received packet | Allows interested components (e.g., `ModeManager`) to track uplink activity | Integration test |
 
 ## Events
 
