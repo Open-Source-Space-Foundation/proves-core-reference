@@ -39,6 +39,8 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 
 ## Requirements
 
+> **Note:** The `Unit test` validation methods below are not yet implemented (TODO); requirements are currently exercised only indirectly via integration tests.
+
 | Name | Description | Rationale | Validation |
 | ---- | ----------- | --------- | ---------- |
 SVC-ROUTER-001 | `Svc::ProvesRouter` shall route packets based on their packet type as read from the `ComCfg::FrameContext` APID field (`context.get_apid()`) | Routing mechanism of the F´ comms protocol | Unit test |
