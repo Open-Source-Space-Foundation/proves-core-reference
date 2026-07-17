@@ -184,29 +184,11 @@ jobs:
         run: |
           make test-integration FILTER=sync_sequence_number
 
-      - name: Format Filesystem (pre-test)
-        # The storage_partition persists across flashes and across branches on
-        # this shared board (see .dtsi storage_partition @ 0x400000). The
-        # end-of-job "Format Filesystem" step below is best-effort cleanup, but
-        # it depends on a healthy, commandable FSW -- exactly what's least
-        # likely if this run's own tests fail. Format again right here, right
-        # after a fresh flash + reboot, when the FSW is at its most commandable,
-        # so a prior run's persisted-state contamination (e.g. an
-        # out-of-range SafeModeReason enum value from a since-reverted branch)
-        # can't poison this run's test suite. Runs after sequence sync so the
-        # FORMAT command itself can authenticate.
+      - name: Format Filesystem
         run: |
           make test-integration FILTER=format_filesystem
 
-      - name: Power-Cycle Satellite (post-format)
-        # fs_mkfs wipes everything components create only at boot -- e.g.
-        # AntennaDeployer::init's //antenna directory -- so a format without a
-        # reboot leaves later file writes failing (run 29471382518:
-        # antenna_deployer_test failed open_write on
-        # //antenna/antenna_deployer.bin). Reboot so init code re-creates them
-        # on the clean filesystem. Kill the GDS first: the board's CDC ACM
-        # node disappears during the cycle and may re-enumerate elsewhere.
-        # Timing mirrors .github/actions/flash-firmware/action.yml.
+      - name: Power-Cycle Satellite
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           pkill -9 python || true
@@ -215,25 +197,18 @@ jobs:
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
           sleep 3
 
-      - name: Re-detect Board TTY
-        # USB re-enumeration after the power cycle can move the CDC ACM node;
-        # the helper retries while the board finishes booting.
+      - name: Detect Board TTY
         run: |
           ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
-      - name: Restart GDS
+      - name: Start GDS
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           echo $! > server.pid
 
-      - name: Re-sync Sequence Number
-        # The format wiped the FSW-side auth sequence-number file and the
-        # reboot made the FSW re-read it, so its counter is back to the
-        # default while the GDS-side sequence_number.bin still holds the
-        # pre-format value. Sync again or every authenticated command in the
-        # suite would be rejected.
+      - name: Sync Sequence Number
         run: |
           make test-integration FILTER=sync_sequence_number
 
@@ -408,33 +383,17 @@ jobs:
           # the framer plugin, then the LoRa GDS that follows can authenticate.
           # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
           # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
-          #
-          # The format that follows the sync is the pre-test filesystem hygiene
-          # wipe: the shared board's storage_partition persists across
-          # flashes/branches, and the end-of-job format is best-effort cleanup
-          # that depends on FSW health -- exactly what's least likely if a run
-          # just failed. Wiping here, over UART on a freshly flashed FSW,
-          # breaks any contamination chain before this run's radio suite.
           pkill -9 python || true
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
-          # Wait briefly for GDS to bind sockets
           sleep 5
           make test-integration FILTER=sync_sequence_number
           make test-integration FILTER=format_filesystem
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
           rm -f server-bootstrap.pid
 
-      - name: Power-Cycle Satellite (post-format)
-        # fs_mkfs wipes everything components create only at boot -- e.g.
-        # AntennaDeployer::init's //antenna directory -- so a format without a
-        # reboot leaves later file writes failing (run 29471382518:
-        # antenna_deployer_test failed open_write on
-        # //antenna/antenna_deployer.bin). Reboot so init code re-creates them
-        # on the clean filesystem. The bootstrap GDS is already down, so the
-        # CDC ACM node is free to disappear and re-enumerate.
-        # Timing mirrors .github/actions/flash-firmware/action.yml.
+      - name: Power-Cycle Satellite
         run: |
           pkill -9 python || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
@@ -442,26 +401,17 @@ jobs:
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
           sleep 3
 
-      - name: Re-detect Zephyr UART TTY
-        # USB re-enumeration after the power cycle can move the CDC ACM node;
-        # the helper retries while the board finishes booting.
+      - name: Detect Zephyr UART TTY
         run: |
           ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
-      - name: Re-sync Sequence Number over UART
-        # The format wiped the FSW-side auth sequence-number file and the
-        # reboot made the FSW re-read it, so its counter is back to the
-        # default while the GDS-side sequence_number.bin still holds the
-        # pre-format value. Re-run the UART bootstrap sync or the LoRa
-        # bootstrap commands (DIVIDER_PRM_SET, lora.TRANSMIT) would silently
-        # fail auth.
+      - name: Sync Sequence Number over UART
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
-          # Wait briefly for GDS to bind sockets
           sleep 5
           make test-integration FILTER=sync_sequence_number
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
