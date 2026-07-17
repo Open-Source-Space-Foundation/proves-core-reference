@@ -11,6 +11,8 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.uart_only]
+
 watchdog = "ReferenceDeployment.watchdog"
 startup_manager = "ReferenceDeployment.startupManager"
 
@@ -63,7 +65,6 @@ def test_01_stop_watchdog_command(fprime_test_api: IntegrationTestAPI, start_gds
     fprime_test_api.assert_event("ReferenceDeployment.watchdog.WatchdogStop", timeout=2)
 
 
-@pytest.mark.slow
 def test_02_system_stays_running_with_watchdog(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -86,7 +87,7 @@ def test_02_system_stays_running_with_watchdog(
     )
 
 
-@pytest.mark.slow
+@pytest.mark.requires_watchdog_jumper
 def test_03_system_reboots_without_watchdog(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):

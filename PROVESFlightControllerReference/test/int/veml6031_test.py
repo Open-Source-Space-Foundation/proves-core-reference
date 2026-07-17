@@ -13,6 +13,8 @@ from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.requires_face]
+
 veml6031Face0Manager = "ReferenceDeployment.veml6031Face0Manager"
 
 
@@ -26,7 +28,6 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
-@pytest.mark.flaky
 def test_01_get_visible_light(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can get visible light"""
     start: TimeType = TimeType().set_datetime(

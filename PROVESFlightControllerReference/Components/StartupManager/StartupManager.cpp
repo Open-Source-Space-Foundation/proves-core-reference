@@ -130,6 +130,13 @@ Fw::Time StartupManager ::update_quiescence_start() {
     Fw::Time time = this->getTime();
     // Open the quiescence start time file and read the current time. On read failure, return the current time.
     StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+    // Reject a corrupt file (e.g. partial flash write leaving 0xFF bytes) whose useconds field is outside
+    // the [0, 999999] contract Fw::Time::set asserts on. Without this, downstream Fw::Time::add panics
+    // in a boot-loop because the bad value persists across reflashes.
+    if (status == StartupManager::SUCCESS && time.getUSeconds() >= 1000000) {
+        time = this->getTime();
+        status = StartupManager::FAILURE;
+    }
     // On read failure, write the current time to the file for future reads. This only happens on read failure because
     // there is a singular quiescence start time for the whole mission.
     if (status != StartupManager::SUCCESS) {
