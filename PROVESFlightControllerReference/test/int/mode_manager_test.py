@@ -574,7 +574,7 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     proves_send_and_assert_command(
         fprime_test_api,
         f"{component}.COMM_LOSS_TIME_PRM_SET",
-        ["1", "0"],
+        ['{"seconds": 1, "useconds": 0}'],
     )
 
     # Wait for the 1Hz run_handler to detect command loss (at most 2 seconds)
