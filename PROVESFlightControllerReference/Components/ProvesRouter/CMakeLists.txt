@@ -10,5 +10,6 @@
 set(SOURCE_FILES
   "${CMAKE_CURRENT_LIST_DIR}/ProvesRouter.fpp"
   "${CMAKE_CURRENT_LIST_DIR}/ProvesRouter.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/Bypasser.cpp"
 )
 register_fprime_module()
