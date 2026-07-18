@@ -22,8 +22,9 @@ Two submodule fixes required for a working downlink; committed on local
 submodule branches (unpushable — submodules track upstream remotes) and
 exported here so the branch is reproducible:
 
-- `fprime-comqueue-reprime-tolerance.patch` — apply in `lib/fprime`
-  (`git apply ../../patches/fprime-comqueue-reprime-tolerance.patch`).
+- `fprime-comqueue-reprime-tolerance.patch` — applied automatically by
+  `make submodules` (manual: `cd lib/fprime && git apply
+  ../../patches/fprime-comqueue-reprime-tolerance.patch`).
   ComQueue treats a redundant READY comStatus as a benign re-prime instead of
   asserting; required by ReferenceDeployment::primeDownlinkQueues(), without
   which the downlink deadlocks when the boot event storm drops the one-shot

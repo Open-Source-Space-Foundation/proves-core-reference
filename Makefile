@@ -21,6 +21,28 @@ submodules: ## Initialize and update git submodules
 			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
 			exit 1; \
 		fi
+	@echo "Applying ComQueue re-prime tolerance patch (see patches/README.md)..."
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-comqueue-reprime-tolerance.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-comqueue-reprime-tolerance.patch && \
+			echo "✓ Applied ComQueue re-prime tolerance patch"; \
+		elif git apply --reverse --check ../../patches/fprime-comqueue-reprime-tolerance.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply ComQueue patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
+	@echo "Applying CDC-ACM poll-mode TX drain patch (see patches/README.md)..."
+	@cd lib/zephyr-workspace/zephyr && \
+		if git apply --check ../../../patches/zephyr-cdc-acm-pollmode-enable-drain.patch 2>/dev/null; then \
+			git apply ../../../patches/zephyr-cdc-acm-pollmode-enable-drain.patch && \
+			echo "✓ Applied CDC-ACM poll-mode drain patch"; \
+		elif git apply --reverse --check ../../../patches/zephyr-cdc-acm-pollmode-enable-drain.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply CDC-ACM patch. Run 'cd lib/zephyr-workspace/zephyr && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
