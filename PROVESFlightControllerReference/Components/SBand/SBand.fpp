@@ -81,6 +81,9 @@ module Components {
         @ S-Band IRQ Line
         output port getIRQLine: Drv.GpioRead
 
+        @ S-Band Busy Line
+        output port getBusyLine: Drv.GpioRead
+
         @ Event to indicate RadioLib call failure
         event RadioLibFailed(error: I16) severity warning high \
             format "SBand RadioLib call failed, error: {}" throttle 2
@@ -93,11 +96,32 @@ module Components {
         event RadioNotConfigured() severity warning high \
             format "Radio not configured, operation ignored" throttle 3
 
+        @ Event: consecutive RadioLib failures crossed the auto-reset threshold; a nRST reset was requested
+        event RadioResetRequested(consecutiveFailures: U32) severity warning low \
+            format "SBand: {} consecutive radio failures, requesting nRST reset"
+
+        @ Event: repeated resets without an intervening success latched the radio FAULTED
+        event RadioFaultLatched(resetCount: U32) severity warning high \
+            format "SBand radio FAULTED after {} failed reset attempts; ground RESET_RADIO required to recover"
+
+        @ Event: ground RESET_RADIO command cleared a FAULTED latch and re-initialized the radio
+        event RadioFaultCleared() severity activity high \
+            format "SBand radio fault cleared by ground RESET_RADIO; radio re-initialized"
+
         @ Last received RSSI (if available)
         telemetry LastRssi: F32 update on change
 
         @ Last received SNR (if available)
         telemetry LastSnr: F32 update on change
+
+        @ True when the radio is latched FAULTED (see SBandFaultPolicy); cleared only by a successful RESET_RADIO
+        telemetry RadioFaulted: bool update on change
+
+        @ Current consecutive-failure count tracked by SBandFaultPolicy
+        telemetry ConsecutiveRadioFailures: U32 update on change
+
+        @ Number of nRST resets performed since the last successful radio operation
+        telemetry RadioResetCount: U32 update on change
 
         ###############################################################################
         # Parameters                                                                   #
@@ -121,6 +145,9 @@ module Components {
 
         @ Start/stop transmission on the S-Band module
         sync command TRANSMIT(enabled: SBandTransmitState)
+
+        @ Ground-commanded radio reset: clears a FAULTED latch (if any) and attempts a full re-init
+        sync command RESET_RADIO()
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

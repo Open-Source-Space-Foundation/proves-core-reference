@@ -5,8 +5,14 @@ that got it removed in PR #256 ("Remove SBand to protect RAM"), with every fix p
 by a test written first.
 
 **Related:** issue #122 (library can lock up / RAM concerns), issue #299 (stack
-overflow analysis), PR #175 (original MVP), PR #256 (removal), PR #109 (radio fault
-management / nRST reset), branch `s-band-speedup` (post-removal correctness fixes).
+overflow analysis), PR #175 (original MVP), PR #256 (removal), branch
+`s-band-speedup` (post-removal correctness fixes).
+
+> Correction (found during PR 2): issue #109's radio fault management
+> (RESET_RADIO + auto-reset) was never merged to main — it lives only on the
+> unmerged `radio-sensor-fault-manage` branch (2273dc3). PR 2 built the fault
+> surface fresh per D3; that branch remains reference material for PR 3 bench
+> work only.
 
 > Naming note: #122 says "RadioHead" but the flight code uses **RadioLib**
 > (`lib/RadioLib`, jgromes). Correct this when updating the issues.
@@ -37,7 +43,7 @@ management / nRST reset), branch `s-band-speedup` (post-removal correctness fixe
 |---|----------|
 | D1 | Resurrect the existing RadioLib driver in place (no Zephyr-native rewrite, no com-chain async rework). Cherry-pick only *correctness* commits from `s-band-speedup`. |
 | D2 | SBand thread gets a dedicated 8 KB stack via `CONFIG_DYNAMIC_THREAD_ALLOC=y` fallback; boot-failure is loud (assert/FATAL); stack usage is *measured*, not assumed. |
-| D3 | Failure semantics: bounded call → N consecutive errors/timeouts → auto nRST reset (reuse #109 path) → M failed resets → **FAULTED, latched until ground command**. Invariant: S-Band failure degrades to "no S-Band", never to backpressure, hang, or spacecraft reset. UHF unaffected. |
+| D3 | Failure semantics: bounded call → N consecutive errors/timeouts → auto nRST reset → M failed resets → **FAULTED, latched until ground command**. Invariant: S-Band failure degrades to "no S-Band", never to backpressure, hang, or spacecraft reset. UHF unaffected. |
 | D4 | Test seam: new `SBandRadioIf` abstract interface over the 13 SX1280 calls the component uses; production impl wraps SX1280 and owns the bounded-timeout logic; F´ UTs drive the component against a scripted fake. |
 | D5 | Three staged PRs (infra → component+UTs → topology re-enable). PR 3 gated on ≥24 h dual-radio HWIL soak + end-to-end functional pass. |
 | D6 | Program-wide `StackMonitor` component (all threads, 1 Hz, `k_thread_foreach` + `k_thread_stack_space_get`, needs `CONFIG_THREAD_MONITOR=y`). |
@@ -61,11 +67,21 @@ New passive component `Components/StackMonitor`, seam: `ThreadInfoProviderIf`
 3. Handles thread count changing between ticks without asserting.
 
 ### Slice 1.2 — Loud boot failure on task-start error
-Verify what `ActiveComponentBase`/`Os::Task` does today when
-`k_thread_stack_alloc` returns null (`ERROR_RESOURCES`). If it can silently limp,
-add an assert/FATAL. Behavior to pin (host UT where the Os layer permits, else
-HWIL check in PR 3): a deployment whose thread can't get its stack never runs
-half-alive.
+**RESOLVED 2026-07-13 (investigated):** `ActiveComponentBase::start()` already
+FW_ASSERTs on failure, but the assert hook (`AssertFatalAdapter`) logs a FATAL
+event and *continues*; the reboot arrives indirectly via FatalHandler →
+stop-watchdog-feed → external WDT starvation. For SBand (started late, event
+machinery alive) this path is loud. Resolution:
+- No change to global assert semantics (FATAL→watchdog-starve was chosen
+  deliberately in PR #259).
+- fprime-zephyr PR (branch `fix/task-start-stack-alloc-logging`, 015c34a):
+  `ZephyrTask::start()` logs task name + requested size on stack-alloc failure
+  (compile-verified against this project). Submodule bump after upstream merge.
+- PR 3 HWIL fault injection includes: impossible sband stack size → expect
+  FATAL EVR + watchdog reset, not a silent limp.
+- Known pre-existing gap, filed separately (out of scope): if one of the *first*
+  components (`cmdDisp`, `events`) fails task-start, the FATAL is queued but
+  never dispatched → genuine half-alive boot.
 
 ### Slice 1.3 — Kconfig flips
 `CONFIG_DYNAMIC_THREAD_ALLOC=y`, `CONFIG_THREAD_MONITOR=y`. No new tests (config
@@ -108,7 +124,7 @@ Fake returns an error / simulated timeout → call completes promptly, EVR emitt
 consecutive-error counter advances; one success resets the counter.
 
 ### Slice 2.6 — Auto-reset escalation
-N consecutive failures → exactly one nRST reset request via the #109 path, EVR,
+N consecutive failures → exactly one nRST reset request via the nRST GPIO, EVR,
 counters observable in telemetry.
 
 ### Slice 2.7 — FAULTED latch
