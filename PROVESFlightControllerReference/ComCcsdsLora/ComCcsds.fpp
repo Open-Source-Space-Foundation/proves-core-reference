@@ -80,7 +80,7 @@ module ComCcsdsLora {
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500
+    instance provesRouter: Svc.ProvesRouter base id ComCcsdsConfig.BASE_ID_LORA + 0x03500
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x04000
 
@@ -121,7 +121,7 @@ module ComCcsdsLora {
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance authenticationRouter
+        instance provesRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer
@@ -168,12 +168,12 @@ module ComCcsdsLora {
             authenticatelora.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
-            # SpacePacketDeframer <-> AuthenticationRouter (routes both commands and files)
-            spacePacketDeframer.dataOut -> authenticationRouter.dataIn
-            authenticationRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
-            # AuthenticationRouter buffer allocations
-            authenticationRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
-            authenticationRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
+            # SpacePacketDeframer <-> ProvesRouter (routes both commands and files)
+            spacePacketDeframer.dataOut -> provesRouter.dataIn
+            provesRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+            # ProvesRouter buffer allocations
+            provesRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
+            provesRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
         }
     } # end Subtopology
 

@@ -178,18 +178,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.authenticatelora.RejectedPacketsCount
     ComCcsdsUart.authenticate.RejectedPacketsCount
 
-    #ComCcsdsSband.authenticationRouter.ByPassedRouter
-    ComCcsdsLora.authenticationRouter.ByPassedRouter
-    ComCcsdsUart.authenticationRouter.ByPassedRouter
-
-    #ComCcsdsSband.authenticationRouter.PassedRouter
-    ComCcsdsLora.authenticationRouter.PassedRouter
-    ComCcsdsUart.authenticationRouter.PassedRouter
-
-    #ComCcsdsSband.authenticationRouter.FailedRouter
-    ComCcsdsLora.authenticationRouter.FailedRouter
-    ComCcsdsUart.authenticationRouter.FailedRouter
-
     ReferenceDeployment.amateurRadio.count_names
 
   }

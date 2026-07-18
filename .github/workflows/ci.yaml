@@ -42,9 +42,11 @@ jobs:
 
       - name: Reset repository and submodules to original state
         run: |
-          git clean -fd
-          git submodule foreach git clean -fd
-          git submodule foreach git reset --hard
+          git submodule update --init --recursive
+          git clean -dfX
+          git reset --hard
+          git submodule foreach --recursive git clean -dfX
+          git submodule foreach --recursive git reset --hard
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -165,30 +167,41 @@ jobs:
         run: |
           # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
           # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Kill all python processes
         run: |
           pkill -9 python || true
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Format Filesystem
+        run: |
+          make test-integration FILTER=format_filesystem
+
+      - name: Power-Cycle Satellite
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Start GDS
         run: |
@@ -356,24 +369,7 @@ jobs:
         run: |
           # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
           # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
@@ -391,7 +387,31 @@ jobs:
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
-          # Wait briefly for GDS to bind sockets
+          sleep 5
+          make test-integration FILTER=sync_sequence_number
+          make test-integration FILTER=format_filesystem
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Power-Cycle Satellite
+        run: |
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Sync Sequence Number over UART
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
           make test-integration FILTER=sync_sequence_number
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
