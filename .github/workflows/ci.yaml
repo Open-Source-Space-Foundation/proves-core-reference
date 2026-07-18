@@ -234,6 +234,7 @@ jobs:
           path: |
             gds-bootstrap.log
             gds.log
+            logs
           if-no-files-found: ignore
           retention-days: 7
 
@@ -523,6 +524,7 @@ jobs:
             gds-bootstrap.log
             gds-sync.log
             gds-rf.log
+            logs
           if-no-files-found: ignore
           retention-days: 7
 
