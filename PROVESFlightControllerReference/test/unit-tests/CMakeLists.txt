@@ -64,6 +64,14 @@ target_include_directories(rtc_manager_rtc_helper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# ProvesRouter Bypasser
+add_library(proves_router_bypasser STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/ProvesRouter/Bypasser.cpp
+)
+target_include_directories(proves_router_bypasser PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h)
 find_library(MBEDCRYPTO_LIB mbedcrypto)
@@ -96,6 +104,7 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_validator
         security_deframer_authenticator
         rtc_manager_rtc_helper
+        proves_router_bypasser
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
