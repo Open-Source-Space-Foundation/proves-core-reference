@@ -450,7 +450,12 @@ DoL_test:
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
-	@ cd Framing && $(UV_RUN) pip install -e .
+	@# Use `uv pip` (installs into $(VIRTUAL_ENV)) rather than `uv run` inside
+	@# Framing/: `uv run` treats Framing as its own uv project and syncs its
+	@# lockfile into the shared venv, uninstalling/reinstalling dozens of
+	@# packages. When gds-integration runs in the background this churn races
+	@# any concurrently starting pytest and breaks its imports mid-flight.
+	@ $(UV) pip install -e Framing
 
 .PHONY: copy-secrets
 copy-secrets:
