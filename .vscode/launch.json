@@ -35,10 +35,10 @@
             "externalConsole": false
         },
         {
-            "name": "Debug test_PacketProcessor_Authenticator",
+            "name": "Debug test_TcSecurityDeframer_Authenticator",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-gtest/test_PacketProcessor_Authenticator",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Authenticator",
             "cwd": "${workspaceFolder}",
             "MIMode": "lldb",
             "preLaunchTask": "build unit tests",
@@ -46,10 +46,10 @@
             "externalConsole": false
         },
         {
-            "name": "Debug test_PacketProcessor_Parser",
+            "name": "Debug test_TcSecurityDeframer_Parser",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-gtest/test_PacketProcessor_Parser",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Parser",
             "cwd": "${workspaceFolder}",
             "MIMode": "lldb",
             "preLaunchTask": "build unit tests",
@@ -57,10 +57,10 @@
             "externalConsole": false
         },
         {
-            "name": "Debug test_PacketProcessor_Validator",
+            "name": "Debug test_TcSecurityDeframer_Validator",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-gtest/test_PacketProcessor_Validator",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Validator",
             "cwd": "${workspaceFolder}",
             "MIMode": "lldb",
             "preLaunchTask": "build unit tests",

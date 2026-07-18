@@ -104,6 +104,11 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
                                                Fw::Buffer& data,
                                                const ComCfg::FrameContext& context) {
+    // Restore the original buffer pointer and size stripped in dataIn_handler so the
+    // upstream BufferManager deallocates the exact allocation it originally handed out.
+    data.setData(data.getData() - Ccsds355_0_B_2::kTCSecurityHeaderSize);
+    data.setSize(data.getSize() + Ccsds355_0_B_2::kTCSecurityHeaderSize + Ccsds355_0_B_2::kTCSecurityTrailer);
+
     this->dataReturnOut_out(0, data, context);
 }
 

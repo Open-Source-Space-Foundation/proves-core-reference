@@ -94,8 +94,10 @@ jobs:
           make generate
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Build MCUBoot
         run: |
@@ -161,8 +163,10 @@ jobs:
           make make-ci-spacecraft-id
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |
@@ -376,8 +380,10 @@ jobs:
           make submodules fprime-venv
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |

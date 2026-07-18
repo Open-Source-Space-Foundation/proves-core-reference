@@ -85,13 +85,14 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& ke
 
     // Import the key into PSA key store
     const psa_status_t status = psa_import_key(&attributes, keyBytes, sizeof(keyBytes), &keyId);
+
+    // Clean up sensitive data regardless of import outcome
+    psa_reset_key_attributes(&attributes);
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
+
     if (status != PSA_SUCCESS) {
         return {PacketAuthenticator::KeyImportStatus::ImportKeyError, status};
     }
-
-    // Clean up sensitive data
-    psa_reset_key_attributes(&attributes);
-    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
 
     return {PacketAuthenticator::KeyImportStatus::Success, PSA_SUCCESS};
 }
