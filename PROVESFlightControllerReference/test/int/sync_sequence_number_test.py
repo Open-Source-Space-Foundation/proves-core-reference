@@ -16,10 +16,10 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 def test_sync_sequence_number(fprime_test_api: IntegrationTestAPI, start_gds):
     """Sync the authentication sequence number from the F' component to the framing plugin"""
     proves_send_and_assert_command(
-        fprime_test_api, "ComCcsdsLora.authenticatelora.GET_SEQ_NUM"
+        fprime_test_api, "ComCcsdsLora.tcSecurityDeframer.GET_SEQ_NUM"
     )
     evt: EventData = fprime_test_api.assert_event(
-        "ComCcsdsLora.authenticatelora.EmitSequenceNumber", timeout=5
+        "ComCcsdsLora.tcSecurityDeframer.SequenceNumberGet", timeout=5
     )
     seq_num = evt.args[0].val
 

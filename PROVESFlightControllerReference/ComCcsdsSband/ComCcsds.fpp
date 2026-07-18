@@ -98,7 +98,12 @@ module ComCcsdsSband {
 
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_SBAND + 0x09000
 
-    instance authenticatesband: Components.Authenticate base id ComCcsdsConfig.BASE_ID_SBAND + 0x0B000
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_SBAND + 0x0B000 \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        ComCcsdsSband::tcSecurityDeframer.configure();
+        """
+    }
 
     topology Subtopology {
         # Usage Note:
@@ -128,7 +133,7 @@ module ComCcsdsSband {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticatesband
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -160,12 +165,12 @@ module ComCcsdsSband {
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # Authenticate <-> SpacePacketDeframer
-            authenticatesband.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticatesband.dataReturnIn
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticatesband.dataIn
-            authenticatesband.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
+            # TcDeframer <-> TcSecurityDeframer
+            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
+            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
             # SpacePacketDeframer <-> ProvesRouter (routes both commands and files)

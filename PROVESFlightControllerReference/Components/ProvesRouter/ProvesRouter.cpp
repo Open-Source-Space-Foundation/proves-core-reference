@@ -10,6 +10,7 @@
 #include <Fw/Time/Time.hpp>
 #include <Fw/Types/String.hpp>
 
+#include "Bypasser.hpp"
 #include "Fw/Com/ComPacket.hpp"
 #include "Fw/FPrimeBasicTypes.hpp"
 #include "Fw/Logger/Logger.hpp"
@@ -22,7 +23,7 @@ namespace Svc {
 // ----------------------------------------------------------------------
 
 ProvesRouter ::ProvesRouter(const char* const compName)
-    : ProvesRouterComponentBase(compName), m_bypassedPackets(0), m_rejectedPackets(0), m_routedPackets(0) {}
+    : ProvesRouterComponentBase(compName), m_routedPackets(0), m_bypassedPackets(0), m_rejectedPackets(0) {}
 ProvesRouter ::~ProvesRouter() {}
 
 // ----------------------------------------------------------------------

@@ -38,15 +38,25 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for processSecurity (Ccsds.ProcessSecurity port)
+    //! Handler implementation for dataIn
     //!
-    //! Receives the full TC Transfer Frame minus FECF, verifies the Security Header and MAC,
-    //! and adjusts the payload buffer to expose only the Data Field on success (§3.3.3.3).
-    Ccsds::ProcessSecurityResult processSecurity_handler(FwIndexType portNum,  //!< The port number
-                                                         U16 globalVcId,       //!< Global Virtual Channel ID
-                                                         U16 globalMapId,      //!< Global MAP ID
-                                                         Fw::Buffer& payload   //!< TC Transfer Frame minus FECF
-                                                         ) override;
+    //! Receives [Security Header | Data Field | Security Trailer] from TcDeframer (which
+    //! has already stripped the TC Primary Header and FECF), verifies the Security Header
+    //! and MAC, records the result in the frame context authenticated flag, and forwards
+    //! the Data Field per CCSDS 355.0-B-2 §3.3.3.3. Structurally invalid frames are
+    //! returned upstream on dataReturnOut.
+    void dataIn_handler(FwIndexType portNum,                 //!< The port number
+                        Fw::Buffer& data,                    //!< The frame buffer
+                        const ComCfg::FrameContext& context  //!< The frame context
+                        ) override;
+
+    //! Handler implementation for dataReturnIn
+    //!
+    //! Returns ownership of buffers sent on dataOut back to the upstream component
+    void dataReturnIn_handler(FwIndexType portNum,                 //!< The port number
+                              Fw::Buffer& data,                    //!< The frame buffer
+                              const ComCfg::FrameContext& context  //!< The frame context
+                              ) override;
 
   private:
     // ----------------------------------------------------------------------

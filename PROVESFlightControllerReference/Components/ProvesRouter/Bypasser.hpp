@@ -12,8 +12,9 @@ namespace Components {
 namespace PacketBypasser {
 
 //! Determine if the packet can bypass authentication
-bool bypassPacket(const uint8_t* buffer,  //!< The transfer frame buffer
-                  const size_t size       //!< The transfer frame size
+bool bypassPacket(const uint8_t* buffer,  //!< The packet buffer
+                  const size_t size       //!< The packet size
 );
 
+}  // namespace PacketBypasser
 }  // namespace Components

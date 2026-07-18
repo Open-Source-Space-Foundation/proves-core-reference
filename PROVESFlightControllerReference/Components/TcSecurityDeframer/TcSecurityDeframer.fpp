@@ -1,12 +1,8 @@
 module Components {
-    @ FPP shadow-enum representing Components::PacketAuthenticator::Status
+    @ FPP shadow-enum representing Components::PacketAuthenticator::AuthenticationStatus
     enum PacketAuthenticatorStatus {
-        Authenticated,    @< Packet is authenticated
-        InitError,        @< There was an error initializing the authentication process
-        ParseKeyError,    @< There was an error parsing the key from storage
-        ImportKeyError,   @< There was an error importing the authentication key
-        VerifyError,      @< The packet HMAC did not match the expected value
-        DestroyKeyError,  @< There was an error destroying the authentication key
+        Authenticated,  @< Packet is authenticated
+        VerifyError,    @< The packet HMAC did not match the expected value
     }
 
     @ FPP shadow-enum representing Components::PacketParser::Status
@@ -17,7 +13,12 @@ module Components {
         MacParseError,             @< MAC could not be parsed from packet
     }
 
-    @ Component placed between the TcDeframer component and the SpacePacketDeframer. It ensures that any commands are authenticated before they are acted on. Some commands and messages do not require being authenticated
+    @ Component placed between the TcDeframer and SpacePacketDeframer components. It
+    @ implements the TC ProcessSecurity flow of CCSDS 355.0-B-2: parse the Security
+    @ Header and Trailer, validate the SPI and anti-replay sequence number, and verify
+    @ the MAC. The verification result is recorded in the frame context
+    @ (authenticated flag); policy enforcement (reject or bypass) is owned downstream
+    @ by the router.
     passive component TcSecurityDeframer {
 
         ### Commands ###
@@ -69,8 +70,17 @@ module Components {
 
         ### Ports ###
 
-        @ Port for receiving packets to be authenticated and deframed
-        guarded input port processSecurity: Ccsds.ProcessSecurity
+        @ Port receiving frames from TcDeframer: [Security Header | Data Field | Security Trailer]
+        guarded input port dataIn: Svc.ComDataWithContext
+
+        @ Port forwarding the Data Field to SpacePacketDeframer with the authenticated flag set in the context
+        output port dataOut: Svc.ComDataWithContext
+
+        @ Port returning ownership of structurally invalid frames back to TcDeframer
+        output port dataReturnOut: Svc.ComDataWithContext
+
+        @ Port receiving back ownership of buffers sent on dataOut
+        sync input port dataReturnIn: Svc.ComDataWithContext
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

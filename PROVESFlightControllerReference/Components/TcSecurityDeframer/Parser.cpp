@@ -63,7 +63,9 @@ FieldParseResult<Mac> parseMac(const uint8_t* buffer, const size_t size) {
 
 }  // namespace
 
-Ccsds355_0_B_2::TcTransferFrame::Parser::Result parse(const uint8_t* buffer, const size_t size) {
+namespace Ccsds355_0_B_2 {
+
+TcTransferFrame::Parser::Result parse(const uint8_t* buffer, const size_t size) {
     // Parse SPI
     const FieldParseResult<uint32_t> spiResult = parseSpi(buffer, size);
     if (!spiResult.success) {
@@ -82,11 +84,10 @@ Ccsds355_0_B_2::TcTransferFrame::Parser::Result parse(const uint8_t* buffer, con
         return {Ccsds355_0_B_2::TcTransferFrame::Parser::Status::MacParseError, {}};
     }
 
-    return {
-        Ccsds355_0_B_2::TcTransferFrame::Parser::Status::Ok,
-        Ccsds355_0_B_2::TCSecurityHeader{spiResult.value, sequenceNumberResult.value},
-        Ccsds355_0_B_2::TCSecurityTrailer{macResult.value},
-        Ccsds355_0_B_2::TCFrameData{buffer + Ccsds355_0_B_2::kTCSecurityHeaderSize,
-                                    size - Ccsds355_0_B_2::kTCSecurityHeaderSize - Ccsds355_0_B_2::kTCSecurityTrailer}};
+    return {TcTransferFrame::Parser::Status::Ok, TCSecurityHeader{spiResult.value, sequenceNumberResult.value},
+            TCSecurityTrailer{macResult.value},
+            TCFrameData{buffer + kTCSecurityHeaderSize, size - kTCSecurityHeaderSize - kTCSecurityTrailer}};
+}
 
+}  // namespace Ccsds355_0_B_2
 }  // namespace Components

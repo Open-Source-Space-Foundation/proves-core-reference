@@ -110,7 +110,12 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
-    instance authenticate: Components.Authenticate base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        ComCcsdsUart::tcSecurityDeframer.configure();
+        """
+    }
 
     topology FramingSubtopology {
         # Usage Note:
@@ -140,7 +145,7 @@ module ComCcsdsUart {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticate
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -174,13 +179,13 @@ module ComCcsdsUart {
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
-            # Authenticate <-> SpacePacketDeframer
-            authenticate.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
 
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticate.dataIn
-            authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcDeframer <-> TcSecurityDeframer
+            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
+            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn

@@ -34,24 +34,22 @@ TcSecurityDeframer ::~TcSecurityDeframer() {}
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-Ccsds::ProcessSecurityResult TcSecurityDeframer ::processSecurity_handler(FwIndexType portNum,
-                                                                          U16 globalVcId,
-                                                                          U16 globalMapId,
-                                                                          Fw::Buffer& payload) {
-    // The payload is a full TC Transfer Frame minus the 2-byte FECF:
-    //   [TC Primary Header (5)] [Security Header: SPI(2)+SeqNum(4)] [Data Field] [Security Trailer: MAC(16)]
-    // Skip the TC Primary Header to reach the Security Header for parsing and authentication.
-    const uint8_t* const secData = payload.getData() + Ccsds355_0_B_2::kTCPrimaryHeaderSize;
-    const size_t secDataSize = payload.getSize() - Ccsds355_0_B_2::kTCPrimaryHeaderSize;
+void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+    ComCfg::FrameContext contextOut = context;
+    contextOut.set_authenticated(false);
+
+    // TcDeframer has already stripped the TC Primary Header and FECF, so the buffer is:
+    //   [Security Header: SPI(2)+SeqNum(4)] [Data Field] [Security Trailer: MAC(16)]
 
     // --- Parse Security Header and Trailer ---
-    const Ccsds355_0_B_2::TcTransferFrame::Parser::Result parseResult = Ccsds355_0_B_2::parse(secData, secDataSize);
+    const Ccsds355_0_B_2::TcTransferFrame::Parser::Result parseResult =
+        Ccsds355_0_B_2::parse(data.getData(), data.getSize());
     if (parseResult.status != Ccsds355_0_B_2::TcTransferFrame::Parser::Status::Ok) {
+        // The frame is too short to contain the security fields, so it cannot be stripped
+        // for downstream deframing. Return buffer ownership upstream and drop the frame.
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-        Ccsds::ProcessSecurityResult result;
-        result.set_status(Ccsds::VerificationStatus::FAILURE);
-        result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SpiInvalid));
-        return result;
+        this->dataReturnOut_out(0, data, contextOut);
+        return;
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
 
@@ -64,54 +62,49 @@ Ccsds::ProcessSecurityResult TcSecurityDeframer ::processSecurity_handler(FwInde
 
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
             this->log_WARNING_HI_SpiInvalid(parseResult.securityHeader.spi);
-            Ccsds::ProcessSecurityResult result;
-            result.set_status(Ccsds::VerificationStatus::FAILURE);
-            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SpiInvalid));
-            return result;
-        }
-        this->log_WARNING_HI_SpiInvalid_ThrottleClear();
-
-        if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
+        } else if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
             this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber,
                                                        this->m_sequenceNumber, this->m_sequenceNumberWindow);
-            Ccsds::ProcessSecurityResult result;
-            result.set_status(Ccsds::VerificationStatus::FAILURE);
-            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::SequenceNumberFailed));
-            return result;
+        } else {
+            this->log_WARNING_HI_SpiInvalid_ThrottleClear();
+            this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
+
+            // --- Authenticate: HMAC over Security Header + Data Field ---
+            const PacketAuthenticator::AuthenticationResult authResult =
+                authenticatePacket(data.getData(), data.getSize(), parseResult.securityTrailer.mac, this->m_hmacKeyId);
+
+            if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
+                this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
+                                                          authResult.psaStatus);
+            } else {
+                this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
+
+                // --- Accept: persist new sequence number ---
+                // Only fully verified frames advance the counter, so bypass and replayed
+                // frames can never desync ground and spacecraft (issue #426)
+                this->m_sequenceNumber = parseResult.securityHeader.sequenceNumber;
+                this->writeSequenceNumber(this->m_sequenceNumber);
+                this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+                contextOut.set_authenticated(true);
+            }
         }
-        this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
-
-        // --- Authenticate: HMAC over Security Header + Data Field (same byte range as before port refactor) ---
-        const PacketAuthenticator::AuthenticationResult authResult =
-            authenticatePacket(secData, secDataSize, parseResult.securityTrailer.mac, this->m_hmacKeyId);
-
-        if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
-            this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
-                                                      authResult.psaStatus);
-            Ccsds::ProcessSecurityResult result;
-            result.set_status(Ccsds::VerificationStatus::FAILURE);
-            result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::MacFailed));
-            return result;
-        }
-        this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
-
-        // --- Accept: persist new sequence number ---
-        this->m_sequenceNumber = parseResult.securityHeader.sequenceNumber;
-        this->writeSequenceNumber(this->m_sequenceNumber);
-        this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
     }
 
-    // Adjust payload to expose only the Data Field per CCSDS 355.0-B-2 §3.3.3.3:
+    // Forward only the Data Field per CCSDS 355.0-B-2 §3.3.3.3:
     //   start = first octet after Security Header
     //   end   = last octet of the Transfer Frame Data Field (excluding Security Trailer)
-    const size_t dataFieldOffset = Ccsds355_0_B_2::kTCPrimaryHeaderSize + Ccsds355_0_B_2::kTCSecurityHeaderSize;
-    payload.setData(payload.getData() + dataFieldOffset);
-    payload.setSize(payload.getSize() - dataFieldOffset - Ccsds355_0_B_2::kTCSecurityTrailer);
+    // Unverified frames are forwarded with authenticated=false; the router enforces
+    // the reject-or-bypass policy.
+    data.setData(data.getData() + Ccsds355_0_B_2::kTCSecurityHeaderSize);
+    data.setSize(data.getSize() - Ccsds355_0_B_2::kTCSecurityHeaderSize - Ccsds355_0_B_2::kTCSecurityTrailer);
 
-    Ccsds::ProcessSecurityResult result;
-    result.set_status(Ccsds::VerificationStatus::NO_FAILURE);
-    result.set_statusCode(static_cast<U8>(Ccsds355_0_B_2::Verification::StatusCode::Success));
-    return result;
+    this->dataOut_out(0, data, contextOut);
+}
+
+void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
+                                               Fw::Buffer& data,
+                                               const ComCfg::FrameContext& context) {
+    this->dataReturnOut_out(0, data, context);
 }
 
 // ----------------------------------------------------------------------
@@ -168,10 +161,11 @@ void TcSecurityDeframer ::configure() {
     this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    // Get the sequence number from the file system
+    // Get the sequence number from the file system. On a read failure (already evented
+    // by readSequenceNumber) fall back to 0 rather than refusing to boot; the operator
+    // can correct the counter with SET_SEQ_NUM.
     U32 sequenceNumber = 0;
-    Os::File::Status status = this->readSequenceNumber(sequenceNumber);
-    FW_ASSERT(status == Os::File::OP_OK);
+    (void)this->readSequenceNumber(sequenceNumber);
     this->m_sequenceNumber = sequenceNumber;
 
     // Telemeter the current sequence number

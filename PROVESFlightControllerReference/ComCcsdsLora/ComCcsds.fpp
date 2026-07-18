@@ -98,7 +98,12 @@ module ComCcsdsLora {
 
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_LORA + 0x09000
 
-    instance authenticatelora: Components.Authenticate base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_LORA + 0x0B000 \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        ComCcsdsLora::tcSecurityDeframer.configure();
+        """
+    }
 
     topology Subtopology {
         # Usage Note:
@@ -128,7 +133,7 @@ module ComCcsdsLora {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticatelora
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -160,12 +165,12 @@ module ComCcsdsLora {
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # Authenticate <-> SpacePacketDeframer
-            authenticatelora.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticatelora.dataReturnIn
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticatelora.dataIn
-            authenticatelora.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
+            # TcDeframer <-> TcSecurityDeframer
+            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
+            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
             # SpacePacketDeframer <-> ProvesRouter (routes both commands and files)
