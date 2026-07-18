@@ -26,10 +26,18 @@ static const struct gpio_dt_spec face5LoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODEL
 static const struct gpio_dt_spec payloadPowerLoadSwitchGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(payload_pwr_enable), gpios);
 static const struct gpio_dt_spec payloadBatteryLoadSwitchGpio =
     GPIO_DT_SPEC_GET(DT_NODELABEL(payload_batt_enable), gpios);
-// static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_nrst), gpios);
-// static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
-// static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
-// static const struct gpio_dt_spec sbandTxEnIRQ = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io1), gpios);
+static const struct gpio_dt_spec sbandNrstGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_nrst), gpios);
+static const struct gpio_dt_spec sbandRxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_rx_en), gpios);
+static const struct gpio_dt_spec sbandTxEnGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(sband_tx_en), gpios);
+// rf2_io0/rf2_io1 are the two remaining lines of the generic 4-pin RF header
+// shared by every board variant (see boards/bronco_space's v5.dtsi); this
+// deployment repurposes them as the SX1280's IRQ/BUSY lines. rf2_io1 = IRQ
+// carries forward the mapping this draft already used; rf2_io0 = BUSY is a
+// PR 3 addition for SBand.getBusyLine (added PR 2) and has not been bench-
+// verified against a schematic -- confirm on real hardware in HWIL Slice 3.2
+// (see SBAND-HWIL-PROCEDURE.md) before relying on it operationally.
+static const struct gpio_dt_spec sbandIrqGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io1), gpios);
+static const struct gpio_dt_spec sbandBusyGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(rf2_io0), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -89,10 +97,11 @@ void configureTopology() {
     gpioface5LS.open(face5LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadPowerLS.open(payloadPowerLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioPayloadBatteryLS.open(payloadBatteryLoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    //    gpioSbandNrst.open(sbandNrstGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    //    gpioSbandRxEn.open(sbandRxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    //    gpioSbandTxEn.open(sbandTxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
-    //    gpioSbandIRQ.open(sbandTxEnIRQ, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
+    gpioSbandNrst.open(sbandNrstGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandRxEn.open(sbandRxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandTxEn.open(sbandTxEnGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
+    gpioSbandIRQ.open(sbandIrqGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
+    gpioSbandBusy.open(sbandBusyGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::IN);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
@@ -126,21 +135,29 @@ void setupTopology(const TopologyState& state) {
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
 
-    // static struct spi_cs_control cs_ctrl = {
-    //     .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),
-    //     .delay = 0U, /* us to wait after asserting CS before transfer */
-    //     .cs_is_gpio = true,
-    // };
+    // S-Band SPI: spi0 is shared with the onboard SD card (cs_gpios index 0);
+    // the SX1280 uses the second chip-select on the same bus (cs_gpios index 1,
+    // gpio0 7 -- see boards/bronco_space's v5.dtsi &spi0 node).
+    static struct spi_cs_control sbandCsCtrl = {
+        .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),
+        .delay = 0U, /* us to wait after asserting CS before transfer */
+        .cs_is_gpio = true,
+    };
 
-    // struct spi_config cfg = {
-    //     .frequency = 100000,  // 100 KHz -- sx1280 has maximum 18.18 MHz -- there is a 12MHz oscillator on-board
-    //     .operation = SPI_WORD_SET(8),
-    //     .slave = 0,
-    //     .cs = cs_ctrl,
-    //     .word_delay = 0,
-    // };
-    //    spiDriver.configure(state.spi0Device, cfg);
-    //    sband.configureRadio();
+    struct spi_config sbandSpiCfg = {
+        .frequency = 4000000,  // 4 MHz (SX1280 max 18.18 MHz; 100 kHz cost ~25 ms per 252 B buffer
+                               // upload -- see REPORT-sband-goodput.md; the same spi0 bus already
+                               // runs the SD card at 24 MHz)
+        .operation = SPI_WORD_SET(8),
+        .slave = 0,
+        .cs = sbandCsCtrl,
+        .word_delay = 0,
+    };
+    spiDriver.configure(state.spi0Device, sbandSpiCfg);
+    // Discarding the Status here matches SBand.cpp's own (void)configureRadio()
+    // call site; a failed initial configure is not fatal at boot -- SBandFaultPolicy
+    // (PR 2) surfaces RadioNotConfigured/RadioLibFailed events on first use instead.
+    (void)sband.configureRadio();
 
     // UART from the board to the payload
     peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
@@ -183,6 +200,22 @@ void setupTopology(const TopologyState& state) {
     picoTempManager.configure(state.dieTempDevice);
 
     fsFormat.configure(state.storagePartitionId);
+}
+
+void primeDownlinkQueues() {
+    // Re-prime the downlink queues. Each ComQueue is primed by a single READY
+    // status (ComAggregator::preamble) delivered over a lossy hop: comStatusIn
+    // is async, and the 20-deep dispatch queue overflows during the bring-up
+    // event storm (on boards with absent sensors, dozens of warning events),
+    // silently dropping priming statuses and deadlocking the downlink forever —
+    // late statuses die in the aggregator's assertNoStatus action, so there is
+    // no recovery path. A redundant READY is benign (see
+    // ComQueue::comStatusIn_handler), so main() calls this several times after
+    // bring-up settles to guarantee delivery.
+    Fw::Success primeReady = Fw::Success::SUCCESS;
+    ComCcsdsUart::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
+    ComCcsdsLora::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
+    ComCcsdsSband::comQueue.get_comStatusIn_InputPort(0)->invoke(primeReady);
 }
 
 void startRateGroups() {

@@ -22,7 +22,7 @@ const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
-// const struct device* spi0 = DEVICE_DT_GET(DT_NODELABEL(spi0));
+const struct device* spi0 = DEVICE_DT_GET(DT_NODELABEL(spi0));
 const struct device* peripheral_uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 const struct device* peripheral_uart1 = DEVICE_DT_GET(DT_NODELABEL(uart1));
 const struct device* lsm6dso = DEVICE_DT_GET(DT_NODELABEL(lsm6dso0));
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 
     // Object for communicating state to the topology
     ReferenceDeployment::TopologyState inputs;
-    // inputs.spi0Device = spi0;
+    inputs.spi0Device = spi0;
 
     // Flight Control Board device bindings
     inputs.ina219SysDevice = ina219Sys;
@@ -129,6 +129,16 @@ int main(int argc, char* argv[]) {
 
     // Setup, cycle, and teardown topology
     ReferenceDeployment::setupTopology(inputs);
+
+    // Re-prime the downlink a few times with settling gaps: the one-shot READY
+    // that primes each ComQueue is dropped when the bring-up event storm
+    // overflows its dispatch queue (see primeDownlinkQueues). The sleeps let
+    // the storm drain between attempts so at least one READY is delivered.
+    for (int i = 0; i < 3; i++) {
+        k_sleep(K_MSEC(1000));
+        ReferenceDeployment::primeDownlinkQueues();
+    }
+
     ReferenceDeployment::startRateGroups();  // Program loop
     ReferenceDeployment::teardownTopology(inputs);
     return 0;

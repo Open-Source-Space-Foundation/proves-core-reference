@@ -1,0 +1,36 @@
+From 25cbe02e4fe92003bbc1ede103d9eb6895b3072e Mon Sep 17 00:00:00 2001
+From: Michael Pham <61564344+Mikefly123@users.noreply.github.com>
+Date: Thu, 16 Jul 2026 14:25:43 -0700
+Subject: [PATCH] usb: cdc_acm: drain poll-mode TX backlog when configuration
+ is enabled
+
+Poll-mode users (no IRQ callback API) that write before enumeration
+completes fill tx_fifo with no one scheduling tx_fifo_work: the FIFO
+stays full and output is silent forever. Schedule the TX work at enable
+time when the ring buffer is non-empty, mirroring the IRQ-mode path.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ subsys/usb/device_next/class/usbd_cdc_acm.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/subsys/usb/device_next/class/usbd_cdc_acm.c b/subsys/usb/device_next/class/usbd_cdc_acm.c
+index d3921c0f146..d16bf42cbc2 100644
+--- a/subsys/usb/device_next/class/usbd_cdc_acm.c
++++ b/subsys/usb/device_next/class/usbd_cdc_acm.c
+@@ -368,6 +368,12 @@ static void usbd_cdc_acm_enable(struct usbd_class_data *const c_data)
+ 			/* Queue pending TX data on IN endpoint */
+ 			cdc_acm_work_schedule(&data->tx_fifo_work, K_NO_WAIT);
+ 		}
++	} else if (!ring_buf_is_empty(data->tx_fifo.rb)) {
++		/* Poll-mode (no IRQ API user): drain TX data accumulated in the
++		 * ring buffer before enumeration completed, otherwise the FIFO
++		 * stays full and poll-mode output is silent forever.
++		 */
++		cdc_acm_work_schedule(&data->tx_fifo_work, K_NO_WAIT);
+ 	}
+ }
+ 
+-- 
+2.50.1 (Apple Git-155)
+

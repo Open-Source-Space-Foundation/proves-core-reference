@@ -39,6 +39,16 @@ namespace ReferenceDeployment {
 void setupTopology(const TopologyState& state);
 
 /**
+ * \brief re-send the downlink priming status to every ComQueue
+ *
+ * The one-shot READY that primes each ComQueue travels over a lossy async hop
+ * and is silently dropped when the dispatch queue overflows during the
+ * bring-up event storm, permanently deadlocking the downlink. Redundant READY
+ * statuses are benign, so main() calls this several times after bring-up.
+ */
+void primeDownlinkQueues();
+
+/**
  * \brief teardown the F´ topology
  *
  * Tears down the F´ topology in preparation for shutdown. This is done via a series of steps, some provided by
