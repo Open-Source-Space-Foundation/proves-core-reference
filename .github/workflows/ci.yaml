@@ -235,6 +235,7 @@ jobs:
             gds-bootstrap.log
             gds.log
             logs
+            Framing/src/frame_debug.log
             !logs/**/*.xlsx
           if-no-files-found: ignore
           retention-days: 7
@@ -526,6 +527,7 @@ jobs:
             gds-sync.log
             gds-rf.log
             logs
+            Framing/src/frame_debug.log
             !logs/**/*.xlsx
           if-no-files-found: ignore
           retention-days: 7

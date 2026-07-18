@@ -130,6 +130,23 @@ class AuthenticateFramer(FramerDeframer):
 
     def frame(self, data: bytes) -> bytes:
         """Frame data by adding authentication header and trailer"""
+        debug_log_path = os.path.join(_SEQUENCE_NUMBER_DIR, "frame_debug.log")
+        with open(debug_log_path, "a") as f:
+            f.write(f"frame() called with {len(data)} bytes of input\n")
+        try:
+            framed = self._frame(data)
+        except Exception:
+            import traceback
+
+            with open(debug_log_path, "a") as f:
+                f.write(f"frame() raised on input of {len(data)} bytes:\n")
+                traceback.print_exc(file=f)
+            raise
+        with open(debug_log_path, "a") as f:
+            f.write(f"frame() returning {len(framed)} bytes\n")
+        return framed
+
+    def _frame(self, data: bytes) -> bytes:
         # Authentication Header (16 octets/bytes)
         # right now all default but later, should be able
 
