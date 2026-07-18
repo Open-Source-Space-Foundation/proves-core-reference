@@ -182,7 +182,7 @@ jobs:
 
       - name: Start GDS
         run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           echo $! > server.pid
 
       - name: Sync Sequence Number
@@ -210,7 +210,7 @@ jobs:
 
       - name: Start GDS
         run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds.log 2>&1 &
           echo $! > server.pid
 
       - name: Sync Sequence Number
@@ -225,6 +225,17 @@ jobs:
         if: always()
         run: |
           make test-integration FILTER=format_filesystem
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-uart
+          path: |
+            gds-bootstrap.log
+            gds.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Kill GDS
         if: always()
@@ -389,7 +400,7 @@ jobs:
           # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
           # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
           pkill -9 python || true
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
@@ -414,7 +425,7 @@ jobs:
 
       - name: Sync Sequence Number over UART
         run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-sync.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
@@ -467,12 +478,12 @@ jobs:
 
       - name: Start GDS on LoRa Passthrough
         run: |
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds-rf.log 2>&1 &
           GDS_RF_PID=$!
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds-rf.log for details."; exit 1; }
           done
 
       - name: Sync Sequence Number
@@ -502,6 +513,18 @@ jobs:
           path: tlm_sample_*.csv
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-radio
+          path: |
+            gds-bootstrap.log
+            gds-sync.log
+            gds-rf.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Kill GDS & Power Off Satellite
         if: always()
