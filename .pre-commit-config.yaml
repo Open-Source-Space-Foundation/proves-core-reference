@@ -1,3 +1,8 @@
+# patches/*.patch are byte-exact submodule patches (see patches/README.md):
+# trailing whitespace in diff context lines is significant and any rewrite
+# breaks `git apply`. No hook may touch them.
+exclude: ^patches/.*\.patch$
+
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
