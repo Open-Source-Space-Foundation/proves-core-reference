@@ -406,7 +406,10 @@ jobs:
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
-          make test-integration FILTER=sync_sequence_number
+          # Sync against the LoRa deframer instance: the radio traffic that
+          # follows is validated by it, not by the UART instance this
+          # bootstrap link talks through.
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
           make test-integration FILTER=format_filesystem
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
           rm -f server-bootstrap.pid
@@ -431,7 +434,7 @@ jobs:
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
-          make test-integration FILTER=sync_sequence_number
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
           rm -f server-bootstrap.pid
 
