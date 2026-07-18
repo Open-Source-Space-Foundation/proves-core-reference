@@ -98,14 +98,13 @@ class StartupManager final : public StartupManagerComponentBase {
                                    ) override;
 
   private:
-    Fw::Time m_quiescence_start;   //!< Time of the start of the quiescence wait
-    FwOpcodeType m_stored_opcode;  //!< Stored opcode for delayed response
-    FwSizeType m_boot_count;       //!< Current boot count
-    U32 m_stored_sequence;         //!< Stored sequence number for delayed response
-    std::atomic<bool> m_waiting;   //!< Indicates if waiting for quiescence
-    Fw::String m_sequence_file;    //!< The filepath for the sequence last initiated
+    Fw::Time m_quiescence_start;      //!< Time of the start of the quiescence wait
+    FwOpcodeType m_stored_opcode;     //!< Stored opcode for delayed response
+    FwSizeType m_boot_count;          //!< Current boot count
+    U32 m_stored_sequence;            //!< Stored sequence number for delayed response
+    std::atomic<bool> m_waiting;      //!< Indicates if waiting for quiescence
+    Fw::String m_sequence_file;       //!< The filepath for the sequence last initiated
     U32 m_transmit_enable_ticks = 0;  //!< Remaining 1 Hz ticks until hard-coded transmit enable
-
 };
 
 }  // namespace Components
