@@ -112,7 +112,9 @@ module ComCcsdsUart {
 
     instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
     {
-        phase Fpp.ToCpp.Phases.configComponents """
+        phase Fpp.ToCpp.Phases.startTasks """
+        // configure() reads parameters, so it must run after loadParameters();
+        // the startTasks phase is the first phase after parameters are loaded.
         ComCcsdsUart::tcSecurityDeframer.configure();
         """
     }
