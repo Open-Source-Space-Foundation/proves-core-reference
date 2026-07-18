@@ -32,42 +32,45 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
     FW_ASSERT(file.isOpen());
     FwSizeType size = 0;
     U32 file_crc = 0;
-    Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
-    // Read file size, and default to 0 if unavailable
     Os::File::Status file_status = file.size(size);
-    if (file_status == Os::File::Status::OP_OK) {
-        // Loop through file chunk by chunk
-        file_status = file.calculateCrc(file_crc);
-        if (file_status != Os::File::Status::OP_OK || file_crc != expected_crc32) {
-            this->log_WARNING_LO_ImageFileCrcMismatch(
-                file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)), expected_crc32, file_crc);
-            return_status = Update::UpdateStatus::IMAGE_CRC_MISMATCH;
-        } else {
-            file_status = file.seek(0, Os::File::SeekType::ABSOLUTE);
-        }
+    if (file_status != Os::File::Status::OP_OK) {
+        this->log_WARNING_LO_ImageFileReadError(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
+        return Update::UpdateStatus::IMAGE_FILE_READ_ERROR;
+    }
+    // Validate the CRC before touching flash: a corrupted upload must never reach the slot
+    file_status = file.calculateCrc(file_crc);
+    if (file_status != Os::File::Status::OP_OK || file_crc != expected_crc32) {
+        this->log_WARNING_LO_ImageFileCrcMismatch(
+            file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)), expected_crc32, file_crc);
+        return Update::UpdateStatus::IMAGE_CRC_MISMATCH;
+    }
+    file_status = file.seek(0, Os::File::SeekType::ABSOLUTE);
+    if (file_status != Os::File::Status::OP_OK) {
+        this->log_WARNING_LO_ImageFileReadError(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
+        return Update::UpdateStatus::IMAGE_FILE_READ_ERROR;
     }
     int status = flash_img_init_id(&this->m_flash_context, FlashWorker::REGION_NUMBER);
-    FwSizeType i = 0;
-    for (i = 0; i < size && status == 0 && file_status == Os::File::Status::OP_OK; i += CHUNK) {
+    if (status != 0) {
+        this->log_WARNING_LO_FlashWriteFailed(static_cast<I32>(-1 * status), 0);
+        return Update::UpdateStatus::FLASH_WRITE_ERROR;
+    }
+    for (FwSizeType i = 0; i < size; i += CHUNK) {
         FwSizeType read_size = CHUNK;
         file_status = file.read(this->m_data, read_size);
         if (file_status != Os::File::Status::OP_OK) {
-            break;
+            this->log_WARNING_LO_ImageFileReadError(file_name,
+                                                    Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
+            return Update::UpdateStatus::IMAGE_FILE_READ_ERROR;
         }
         status = flash_img_buffered_write(&this->m_flash_context, this->m_data, read_size, true);
         if (status != 0) {
-            break;
+            this->log_WARNING_LO_FlashWriteFailed(static_cast<I32>(-1 * status), i);
+            return Update::UpdateStatus::FLASH_WRITE_ERROR;
         }
         // Give 5ms for flash to process data and allow data to be loaded off the flash
         Os::Task::delay(Fw::TimeInterval(0, 5000));
     }
-    if (file_status != Os::File::Status::OP_OK) {
-        this->log_WARNING_LO_ImageFileReadError(file_name, Os::FileStatus(static_cast<Os::FileStatus::T>(file_status)));
-    }
-    if (status != 0) {
-        this->log_WARNING_LO_FlashWriteFailed(static_cast<I32>(-1 * status), i);
-    }
-    return return_status;
+    return Update::UpdateStatus::OP_OK;
 }
 
 // ----------------------------------------------------------------------
@@ -118,7 +121,16 @@ void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase
         Os::File::Status file_status = image_file.open(file.toChar(), Os::File::Mode::OPEN_READ);
         if (file_status == Os::File::Status::OP_OK) {
             return_status = this->writeImage(file, image_file, crc32);
-            this->m_last_successful = UPDATE;
+            if (return_status == Update::UpdateStatus::OP_OK) {
+                this->m_last_successful = UPDATE;
+            } else if (return_status == Update::UpdateStatus::IMAGE_CRC_MISMATCH) {
+                // Flash was not touched: the slot is still erased, so the operator may re-uplink
+                // the file and retry the update without another PREPARE_UPDATE
+                this->m_last_successful = PREPARE;
+            } else {
+                // Flash may hold a partial image: require a fresh PREPARE_UPDATE (erase) before retrying
+                this->m_last_successful = IDLE;
+            }
         } else {
             return_status = Update::UpdateStatus::IMAGE_FILE_READ_ERROR;
             this->m_last_successful = IDLE;
