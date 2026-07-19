@@ -188,9 +188,7 @@ void setupTopology(const TopologyState& state) {
 
     fsFormat.configure(state.storagePartitionId);
 
-    // Data product storage directory for MOSAIC gamma ray data
-    Os::FileSystem::createDirectory("/dp");
-    dpWriter.configure(Fw::FileNameString("/dp"));
+    // DataProducts subtopology creates /dp and configures dpCat/dpWriter in its config phases
 }
 
 void startRateGroups() {

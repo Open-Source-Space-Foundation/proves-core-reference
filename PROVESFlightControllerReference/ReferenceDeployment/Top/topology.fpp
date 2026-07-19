@@ -18,6 +18,7 @@ module ReferenceDeployment {
     import CdhCore.Subtopology
     import ComCcsdsLora.Subtopology
     import ComCcsdsUart.Subtopology
+    import DataProducts.Subtopology
     import FileHandling.Subtopology
     #import ComCcsdsSband.Subtopology
     import Update.Subtopology
@@ -118,13 +119,10 @@ module ReferenceDeployment {
 
     instance picoTempManager
 
-    # MOSAIC gamma ray payload and data product storage
+    # MOSAIC gamma ray payload
     instance mosaicManager
     instance peripheralUartDriver2
     instance mosaicBufferManager
-    instance dpMgr
-    instance dpWriter
-    instance dpBufferManager
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -294,9 +292,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
       rateGroup1Hz.RateGroupMemberOut[19] -> mosaicManager.run
       rateGroup1Hz.RateGroupMemberOut[20] -> mosaicBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[21] -> dpBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[22] -> dpMgr.schedIn
-      rateGroup1Hz.RateGroupMemberOut[23] -> dpWriter.schedIn
+      rateGroup1Hz.RateGroupMemberOut[21] -> DataProducts.dpBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[22] -> DataProducts.dpMgr.schedIn
+      rateGroup1Hz.RateGroupMemberOut[23] -> DataProducts.dpWriter.schedIn
 
     }
 
@@ -405,17 +403,17 @@ module ReferenceDeployment {
       peripheralUartDriver2.deallocate -> mosaicBufferManager.bufferSendIn
     }
 
-    connections DataProducts {
-      # MosaicManager <-> DpManager (synchronous container get, filled container send)
-      mosaicManager.productGetOut -> dpMgr.productGetIn[0]
-      mosaicManager.productSendOut -> dpMgr.productSendIn[0]
+    connections MosaicDataProducts {
+      # MosaicManager <-> DpManager (synchronous container get, filled container send).
+      # The dpMgr/dpWriter/dpBufferManager internal wiring lives in DataProducts.Subtopology.
+      mosaicManager.productGetOut -> DataProducts.dpMgr.productGetIn[0]
+      mosaicManager.productSendOut -> DataProducts.dpMgr.productSendIn[0]
+    }
 
-      # DpManager buffer allocation and hand-off to DpWriter
-      dpMgr.bufferGetOut[0] -> dpBufferManager.bufferGetCallee
-      dpMgr.productSendOut[0] -> dpWriter.bufferSendIn
-
-      # DpWriter returns container buffers after writing to disk
-      dpWriter.deallocBufferSendOut -> dpBufferManager.bufferSendIn
+    connections FileHandling_DataProducts {
+      # Data Products catalog downlinks DP files via File Downlink
+      DataProducts.dpCat.fileOut -> FileHandling.fileDownlink.SendFile
+      FileHandling.fileDownlink.FileComplete -> DataProducts.dpCat.fileDone
     }
 
     #connections MyConnectionGraph {

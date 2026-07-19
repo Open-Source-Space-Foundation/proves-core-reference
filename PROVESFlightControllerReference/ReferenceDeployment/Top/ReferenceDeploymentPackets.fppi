@@ -122,9 +122,9 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.mosaicManager.ParseErrors
     ReferenceDeployment.mosaicManager.LatestAdc
     ReferenceDeployment.mosaicManager.LatestMillivolts
-    dpMgr.NumFailedAllocations
-    dpWriter.NumFailedWrites
-    dpWriter.NumErrors
+    DataProducts.dpMgr.NumFailedAllocations
+    DataProducts.dpWriter.NumFailedWrites
+    DataProducts.dpWriter.NumErrors
   }
 
   ### Health and Status Packets ###
@@ -151,7 +151,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     mosaicBufferManager.NoBuffs
-    dpBufferManager.NoBuffs
+    DataProducts.dpBufferManager.NoBuffs
     ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
@@ -163,7 +163,7 @@ telemetry packets ReferenceDeploymentPackets {
 #    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     mosaicBufferManager.HiBuffs
-    dpBufferManager.HiBuffs
+    DataProducts.dpBufferManager.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
@@ -321,16 +321,19 @@ telemetry packets ReferenceDeploymentPackets {
   mosaicBufferManager.EmptyBuffs
   mosaicBufferManager.TotalBuffs
   mosaicBufferManager.CurrBuffs
-  dpBufferManager.EmptyBuffs
-  dpBufferManager.TotalBuffs
-  dpBufferManager.CurrBuffs
+  DataProducts.dpBufferManager.EmptyBuffs
+  DataProducts.dpBufferManager.TotalBuffs
+  DataProducts.dpBufferManager.CurrBuffs
 
-  dpMgr.NumSuccessfulAllocations
-  dpMgr.NumDataProducts
-  dpMgr.NumBytes
-  dpWriter.NumBuffersReceived
-  dpWriter.NumBytesWritten
-  dpWriter.NumSuccessfulWrites
+  DataProducts.dpMgr.NumSuccessfulAllocations
+  DataProducts.dpMgr.NumDataProducts
+  DataProducts.dpMgr.NumBytes
+  DataProducts.dpWriter.NumBuffersReceived
+  DataProducts.dpWriter.NumBytesWritten
+  DataProducts.dpWriter.NumSuccessfulWrites
+
+  DataProducts.dpCat.CatalogDps
+  DataProducts.dpCat.DpsSent
 
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion

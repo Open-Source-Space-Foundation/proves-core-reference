@@ -22,6 +22,7 @@
 // #include "PROVESFlightControllerReference/ComCcsdsSband/SubtopologyTopologyDefs.hpp"
 #include "PROVESFlightControllerReference/ComCcsdsUart/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
+#include "Svc/Subtopologies/DataProducts/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
 // ComCcsds Enum Includes (for ComCcsdsLora)
