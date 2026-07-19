@@ -74,6 +74,14 @@ class ProvesRouter final : public ProvesRouterComponentBase {
 
     //! Allocate a new buffer and copy src into it; returns an invalid buffer on error
     Fw::Buffer allocateCopy(Fw::Buffer& src, ProvesRouter_AllocationReason reason);
+
+    // ----------------------------------------------------------------------
+    // Private member variables
+    // ----------------------------------------------------------------------
+
+    U32 m_routedPackets;    //!< The count of packets routed
+    U32 m_bypassedPackets;  //!< The count of packets bypassed
+    U32 m_rejectedPackets;  //!< The count of packets rejected
 };
 
 }  // namespace Svc
