@@ -71,7 +71,7 @@ module Components {
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
 
         @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
-        param TRANSMIT_ENABLE_TICKS: U32 default 100
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
