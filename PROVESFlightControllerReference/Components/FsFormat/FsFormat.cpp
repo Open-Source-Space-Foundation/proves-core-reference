@@ -6,14 +6,11 @@
 
 #include "PROVESFlightControllerReference/Components/FsFormat/FsFormat.hpp"
 
-// #include <zephyr/kernel.h>
-// #include <zephyr/device.h>
 #include <zephyr/fs/fs.h>
-// #include <zephyr/storage/flash_map.h>
-// #include <zephyr/storage/disk_access.h>
-// #include <ff.h>
+#include <zephyr/sys/util.h>
 
-#define MKFS_FS_TYPE FS_FATFS
+// The SD card disk backing the "/" littlefs mount (see Main.cpp).
+#define STORAGE_DISK_NAME "SD"
 
 namespace Components {
 
@@ -26,19 +23,11 @@ FsFormat ::FsFormat(const char* const compName) : FsFormatComponentBase(compName
 FsFormat ::~FsFormat() {}
 
 // ----------------------------------------------------------------------
-// Public helper methods
-// ----------------------------------------------------------------------
-
-void FsFormat ::configure(const int partition_id) {
-    this->m_partition_id = partition_id;
-}
-
-// ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
 void FsFormat ::FORMAT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    int rc = fs_mkfs(MKFS_FS_TYPE, (uintptr_t)this->m_partition_id, NULL, 0);
+    int rc = fs_mkfs(FS_LITTLEFS, (uintptr_t)STORAGE_DISK_NAME, NULL, FS_MOUNT_FLAG_USE_DISK_ACCESS);
 
     if (rc < 0) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);

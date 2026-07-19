@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """test_filesystem_resilience.py:
 
-Interactive filesystem power-loss resilience test for FAT32 on 8MB flash.
+Interactive filesystem power-loss resilience test for littlefs on the SD card.
 
 Systematically exercises filesystem corruption scenarios by interrupting
 write operations with COLD_RESET and checking post-reboot filesystem health.
-FAT32 has no journaling, so resets during writes can cause:
+This test predates the migration from FAT32 to littlefs, which was motivated
+by exactly this class of failure: FAT32 has no journaling, so resets during
+writes could cause:
   1. Filesystem completely unmountable
   2. Duplicate/orphaned files
+littlefs's copy-on-write design is meant to prevent both, so this test now
+also serves as a regression check for that guarantee.
 
 Usage:
     python test_filesystem_resilience.py
@@ -581,8 +585,10 @@ def main():
     print("Filesystem Power-Loss Resilience Test")
     print("=" * 60)
     print()
-    print("FAT32 on 8MB flash has no journaling. This script tests")
-    print("what happens when writes are interrupted by COLD_RESET.")
+    print("This script tests what happens when SD card writes are")
+    print(
+        "interrupted by COLD_RESET (regression check for the FAT32 -> littlefs migration)."
+    )
     print()
 
     # Repo root is 3 levels up: long/ -> test/ -> PROVESFlightControllerReference/ -> repo root

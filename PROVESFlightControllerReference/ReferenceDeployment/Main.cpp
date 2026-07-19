@@ -13,9 +13,19 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/fs/fs.h>
+#include <zephyr/fs/littlefs.h>
 #include <zephyr/kernel.h>
-#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/printk.h>
+
+// SD card is formatted littlefs and mounted at "/" (see FsFormat for reformatting).
+FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(sd_storage_fs);
+static struct fs_mount_t sd_storage_mnt = {
+    .type = FS_LITTLEFS,
+    .mnt_point = "/",
+    .fs_data = &sd_storage_fs,
+    .storage_dev = (void*)"SD",
+    .flags = FS_MOUNT_FLAG_USE_DISK_ACCESS,
+};
 
 // Devices
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
@@ -59,13 +69,17 @@ const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 const struct device* die_temp = DEVICE_DT_GET(DT_NODELABEL(die_temp));
-const int storage_partition_id = FIXED_PARTITION_ID(storage_partition);
 
 int main(int argc, char* argv[]) {
     //
     // This sleep is necessary to allow the USB CDC ACM interface to initialize before
     // the application starts writing to it.
     k_sleep(K_MSEC(3000));
+
+    int fs_rc = fs_mount(&sd_storage_mnt);
+    if (fs_rc < 0) {
+        printk("Failed to mount littlefs on SD card: %d\n", fs_rc);
+    }
 
     Os::init();
 
@@ -90,7 +104,6 @@ int main(int argc, char* argv[]) {
     inputs.muxChannel5Device = mux_channel_5;
     inputs.muxChannel6Device = mux_channel_6;
     inputs.muxChannel7Device = mux_channel_7;
-    inputs.storagePartitionId = storage_partition_id;
 
     // Face Board device bindings
     // TMP112 temperature sensor devices

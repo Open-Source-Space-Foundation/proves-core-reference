@@ -1,30 +1,28 @@
 # Components::FsFormat
 
-The FsFormat component provides a simple command interface for formatting a Zephyr file system partition. It wraps the Zephyr `fs_mkfs` API and exposes a single F Prime command that callers can use to erase and re‑initialize a storage partition with a FAT file system.
+The FsFormat component provides a simple command interface for formatting the SD card storage. It wraps the Zephyr `fs_mkfs` API and exposes a single F Prime command that callers can use to erase and re‑initialize the SD card with a littlefs file system.
 
 ## Usage Examples
 
-The FsFormat component is designed to be instantiated once and configured at startup:
+The FsFormat component is designed to be instantiated once with no configuration required at startup:
 
 1. The component is constructed and initialized during system startup.
-2. The deployment calls `configure(partition_id)` during the configuration phase to select the Zephyr partition to format.
-3. The deployment registers the `FORMAT` command over the standard command ports.
-4. When an operator (or higher‑level component) decides to reformat the partition, it sends the `FORMAT` command.
-5. The component calls `fs_mkfs` on the configured partition and responds to the command with success or failure.
+2. The deployment registers the `FORMAT` command over the standard command ports.
+3. When an operator (or higher‑level component) decides to reformat the storage, it sends the `FORMAT` command.
+4. The component calls `fs_mkfs` on the SD card disk and responds to the command with success or failure.
 
 ### Typical Usage
 
 - **Startup**
-  - The deployment chooses a Zephyr partition ID that corresponds to the desired backing storage (e.g., QSPI/flash region) and passes it to `FsFormat::configure`.
-  - No parameters or run‑loop scheduling are required for this component.
+  - No configuration, parameters, or run‑loop scheduling are required for this component. It always targets the SD card disk (`"SD"`) that backs the `/` littlefs mount established in `Main.cpp`.
 
 - **Commanding**
   - Ground sends `FORMAT` via the command interface.
-  - The component calls `fs_mkfs(MKFS_FS_TYPE, partition_id, NULL, 0)`.
+  - The component calls `fs_mkfs(FS_LITTLEFS, (uintptr_t)"SD", NULL, FS_MOUNT_FLAG_USE_DISK_ACCESS)`.
   - On success, it returns `CmdResponse::OK` and may emit a high‑severity activity event indicating successful format.
   - On error, it returns `CmdResponse::EXECUTION_ERROR` and may emit a high‑severity warning event describing the failure.
 
-> **Warning:** Formatting will erase all data on the selected partition. Use this command only in controlled scenarios (e.g., commissioning, recovery, or test).
+> **Warning:** Formatting will erase all data on the SD card. Use this command only in controlled scenarios (e.g., commissioning, recovery, or test).
 
 ## Class Diagram
 
@@ -37,9 +35,7 @@ classDiagram
 		class FsFormat {
 			+ FsFormat(const char* compName)
 			+ ~FsFormat()
-			+ configure(partition_id: int) void
 			- FORMAT_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32) void
-			- m_partition_id: int
 		}
 	}
 
@@ -50,7 +46,7 @@ classDiagram
 
 ### Commands
 
-- `FORMAT()` – Format the configured file system partition.
+- `FORMAT()` – Format the SD card's littlefs file system.
   - Sent over the standard F Prime command receive port `cmdIn`.
   - Responses are returned on `cmdResponseOut` as `CmdResponse::OK` on success or `CmdResponse::EXECUTION_ERROR` on failure.
 
@@ -76,13 +72,6 @@ The FPP definition declares two events:
 
 ## Behavioral Description
 
-### Configuration
-
-The deployment must call `FsFormat::configure(partition_id)` before any `FORMAT` commands are issued:
-
-- `partition_id` is stored in `m_partition_id` and later passed to Zephyr's `fs_mkfs` as the target partition.
-- The current implementation does not validate the partition ID; the caller is responsible for providing a valid value.
-
 ### FORMAT Command Flow
 
 ```mermaid
@@ -95,7 +84,7 @@ sequenceDiagram
 	GDS->>Cmd: FORMAT
 	Cmd->>FsFormat: cmdIn(FORMAT, opCode, cmdSeq)
 	FsFormat->>FsFormat: FORMAT_cmdHandler(opCode, cmdSeq)
-	FsFormat->>ZephyrFS: fs_mkfs(FS_FATFS, partition_id, NULL, 0)
+	FsFormat->>ZephyrFS: fs_mkfs(FS_LITTLEFS, "SD", NULL, FS_MOUNT_FLAG_USE_DISK_ACCESS)
 	alt fs_mkfs error (< 0)
 		FsFormat-->>Cmd: cmdResponseOut(EXECUTION_ERROR)
 		note right of FsFormat: Optionally log FileSystemFormatFailed
@@ -110,10 +99,9 @@ sequenceDiagram
 
 | Name                         | Description                                                                                     | Validation                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Format Command Support       | The component shall provide a `FORMAT` command to re‑initialize a file system partition.        | Issue `FORMAT` from GDS and observe that the command is accepted.         |
-| Partition Selection          | The component shall allow the deployment to select which partition is formatted.                | Call `configure(partition_id)` and verify that `fs_mkfs` uses that ID.    |
+| Format Command Support       | The component shall provide a `FORMAT` command to re‑initialize the SD card file system.        | Issue `FORMAT` from GDS and observe that the command is accepted.         |
 | Success Response             | On successful formatting, the component shall return `CmdResponse::OK`.                         | Force `fs_mkfs` to succeed and verify the command response is `OK`.       |
-| Failure Response             | On formatting failure, the component shall return `CmdResponse::EXECUTION_ERROR`.               | Inject an error from `fs_mkfs` (e.g., invalid partition) and verify response. |
+| Failure Response             | On formatting failure, the component shall return `CmdResponse::EXECUTION_ERROR`.               | Inject an error from `fs_mkfs` (e.g., disk removed) and verify response.   |
 | Success Event (optional)     | The component should emit `FileSystemFormatted` when the file system is formatted successfully. | Verify that the event is emitted after a successful format (once added).  |
 | Failure Event (optional)     | The component should emit `FileSystemFormatFailed` when the format operation fails.             | Verify that the event is emitted when `fs_mkfs` returns an error (once added). |
 
@@ -122,3 +110,4 @@ sequenceDiagram
 | Date       | Description                                            |
 | ---------- | ------------------------------------------------------ |
 | 2026-01-06 | Initial design document drafted for FsFormat component |
+| 2026-07-11 | Updated to reflect switch from FAT32 (QSPI partition) to littlefs (SD card) |
