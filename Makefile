@@ -259,6 +259,11 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 %:
 	@:
 
+.PHONY: sync-sequence-number
+sync-sequence-number: uv ## Synchronize GDS/flight sequence number
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
 	@$(UV_RUN) python PROVESFlightControllerReference/test/run_interactive_tests.py $(ARGS)
