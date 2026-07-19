@@ -85,6 +85,7 @@ nav:
           - Burnwire: components/Burnwire.md
           - Camera Handler: components/CameraHandler.md
           - Load Switch: components/LoadSwitch.md
+          - Mosaic Manager: components/MosaicManager.md
       - Sensor Components:
           - IMU Manager: components/ImuManager.md
           - Power Monitor: components/PowerMonitor.md

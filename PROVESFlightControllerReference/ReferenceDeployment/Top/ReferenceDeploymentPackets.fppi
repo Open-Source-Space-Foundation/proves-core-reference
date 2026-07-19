@@ -115,6 +115,18 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.cameraHandler.ImagesSaved
   }
 
+  packet Mosaic id 23 group 4 {
+    ReferenceDeployment.mosaicManager.Recording
+    ReferenceDeployment.mosaicManager.SamplesRecorded
+    ReferenceDeployment.mosaicManager.ProductsSent
+    ReferenceDeployment.mosaicManager.ParseErrors
+    ReferenceDeployment.mosaicManager.LatestAdc
+    ReferenceDeployment.mosaicManager.LatestMillivolts
+    dpMgr.NumFailedAllocations
+    dpWriter.NumFailedWrites
+    dpWriter.NumErrors
+  }
+
   ### Health and Status Packets ###
   packet Health id 2 group 5 {
     ComCcsdsLora.comQueue.comQueueDepth
@@ -138,6 +150,8 @@ telemetry packets ReferenceDeploymentPackets {
     #ComCcsdsSband.commsBufferManager.NoBuffs
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
+    mosaicBufferManager.NoBuffs
+    dpBufferManager.NoBuffs
     ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
@@ -148,6 +162,8 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.comQueue.buffQueueDepth
 #    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
+    mosaicBufferManager.HiBuffs
+    dpBufferManager.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
@@ -301,6 +317,20 @@ telemetry packets ReferenceDeploymentPackets {
 
   payloadBufferManager.TotalBuffs
   payloadBufferManager.CurrBuffs
+
+  mosaicBufferManager.EmptyBuffs
+  mosaicBufferManager.TotalBuffs
+  mosaicBufferManager.CurrBuffs
+  dpBufferManager.EmptyBuffs
+  dpBufferManager.TotalBuffs
+  dpBufferManager.CurrBuffs
+
+  dpMgr.NumSuccessfulAllocations
+  dpMgr.NumDataProducts
+  dpMgr.NumBytes
+  dpWriter.NumBuffersReceived
+  dpWriter.NumBytesWritten
+  dpWriter.NumSuccessfulWrites
 
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion

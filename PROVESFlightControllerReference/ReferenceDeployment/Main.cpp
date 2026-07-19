@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     // For the uart peripheral config
     inputs.peripheralBaudRate = 115200;  // Minimum is 19200
     inputs.peripheralUart = peripheral_uart;
-    inputs.peripheralBaudRate2 = 115200;  // Minimum is 19200
+    inputs.peripheralBaudRate2 = 9600;  // MOSAIC gamma ray payload streams at 9600 8N1
     inputs.peripheralUart2 = peripheral_uart1;
 
     // Setup, cycle, and teardown topology

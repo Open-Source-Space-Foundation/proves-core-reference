@@ -9,7 +9,9 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
+#include <Fw/Types/FileNameString.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
+#include <Os/FileSystem.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
@@ -144,6 +146,8 @@ void setupTopology(const TopologyState& state) {
 
     // UART from the board to the payload
     peripheralUartDriver.configure(state.peripheralUart, state.peripheralBaudRate);
+    // UART from the board to the MOSAIC gamma ray payload
+    peripheralUartDriver2.configure(state.peripheralUart2, state.peripheralBaudRate2);
     imuManager.configure(state.lis2mdlDevice, state.lsm6dsoDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
@@ -183,6 +187,10 @@ void setupTopology(const TopologyState& state) {
     picoTempManager.configure(state.dieTempDevice);
 
     fsFormat.configure(state.storagePartitionId);
+
+    // Data product storage directory for MOSAIC gamma ray data
+    Os::FileSystem::createDirectory("/dp");
+    dpWriter.configure(Fw::FileNameString("/dp"));
 }
 
 void startRateGroups() {

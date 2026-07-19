@@ -68,6 +68,16 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 13
 
+  instance dpMgr: Svc.DpManager base id 0x1007D000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 14
+
+  instance dpWriter: Svc.DpWriter base id 0x1007E000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 15
+
 
   # ----------------------------------------------------------------------
   # Queued component instances
@@ -241,5 +251,53 @@ module ReferenceDeployment {
   instance fsFormat: Components.FsFormat base id 0x10078000
 
   instance picoTempManager: Drv.PicoTempManager base id 0x10079000
+
+  instance mosaicManager: Components.MosaicManager base id 0x1007A000
+
+  instance peripheralUartDriver2: Zephyr.ZephyrUartDriver base id 0x1007B000
+
+  instance mosaicBufferManager: Svc.BufferManager base id 0x1007C000 \
+  {
+    phase Fpp.ToCpp.Phases.configObjects """
+    Svc::BufferManager::BufferBins bins;
+    """
+    phase Fpp.ToCpp.Phases.configComponents """
+    memset(&ConfigObjects::ReferenceDeployment_mosaicBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_mosaicBufferManager::bins));
+    // UART RX buffers for MOSAIC gamma ray CSV lines (driver reads at most 64 bytes per 10Hz tick)
+    ConfigObjects::ReferenceDeployment_mosaicBufferManager::bins.bins[0].bufferSize = 128;
+    ConfigObjects::ReferenceDeployment_mosaicBufferManager::bins.bins[0].numBuffers = 4;
+    ReferenceDeployment::mosaicBufferManager.setup(
+        3,  // manager ID
+        0,  // store ID
+        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
+        ConfigObjects::ReferenceDeployment_mosaicBufferManager::bins
+    );
+    """
+    phase Fpp.ToCpp.Phases.tearDownComponents """
+    ReferenceDeployment::mosaicBufferManager.cleanup();
+    """
+  }
+
+  instance dpBufferManager: Svc.BufferManager base id 0x1007F000 \
+  {
+    phase Fpp.ToCpp.Phases.configObjects """
+    Svc::BufferManager::BufferBins bins;
+    """
+    phase Fpp.ToCpp.Phases.configComponents """
+    memset(&ConfigObjects::ReferenceDeployment_dpBufferManager::bins, 0, sizeof(ConfigObjects::ReferenceDeployment_dpBufferManager::bins));
+    // Data product containers: 100 samples * 8 bytes + ~125 bytes DP packet header/hash overhead
+    ConfigObjects::ReferenceDeployment_dpBufferManager::bins.bins[0].bufferSize = 1024;
+    ConfigObjects::ReferenceDeployment_dpBufferManager::bins.bins[0].numBuffers = 2;
+    ReferenceDeployment::dpBufferManager.setup(
+        4,  // manager ID
+        0,  // store ID
+        ComCcsds::Allocation::memAllocator,  // Reuse existing allocator from ComCcsds subtopology
+        ConfigObjects::ReferenceDeployment_dpBufferManager::bins
+    );
+    """
+    phase Fpp.ToCpp.Phases.tearDownComponents """
+    ReferenceDeployment::dpBufferManager.cleanup();
+    """
+  }
 
 }

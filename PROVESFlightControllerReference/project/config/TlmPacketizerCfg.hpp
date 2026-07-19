@@ -25,8 +25,8 @@ static const FwChanIdType TLMPACKETIZER_HASH_MOD_VALUE =
           // Should be set to a little below the ID gaps to spread the entries around
 
 static const FwChanIdType TLMPACKETIZER_HASH_BUCKETS =
-    202;  // !< Buckets assignable to a hash slot.
-          // Buckets must be >= number of telemetry channels in system
+    220;  // !< Buckets assignable to a hash slot.
+          // Buckets must be >= number of telemetry channels in system (211 as of MosaicManager/data products)
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks
 
