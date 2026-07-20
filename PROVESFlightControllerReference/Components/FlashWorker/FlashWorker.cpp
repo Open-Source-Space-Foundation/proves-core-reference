@@ -8,10 +8,8 @@
 
 #include "Os/File.hpp"
 #include "Os/Task.hpp"
-#ifdef CONFIG_IMG_MANAGER
 #include <zephyr/dfu/flash_img.h>
 #include <zephyr/dfu/mcuboot.h>
-#endif
 
 namespace Components {
 // static_assert(FlashWorker::REGION_NUMBER == UPLOAD_FLASH_AREA_LABEL,
@@ -29,7 +27,6 @@ FlashWorker ::~FlashWorker() {}
 // Flash helpers
 // ----------------------------------------------------------------------
 
-#ifdef CONFIG_IMG_MANAGER
 Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, Os::File& file, U32 expected_crc32) {
     const FwSizeType CHUNK = static_cast<FwSizeType>(sizeof(this->m_data));
     FW_ASSERT(file.isOpen());
@@ -72,29 +69,21 @@ Update::UpdateStatus FlashWorker ::writeImage(const Fw::StringBase& file_name, O
     }
     return return_status;
 }
-#endif  // CONFIG_IMG_MANAGER
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
 Update::UpdateStatus FlashWorker ::confirmImage_handler(FwIndexType portNum) {
-#ifndef CONFIG_IMG_MANAGER
-    return Update::UpdateStatus::OP_OK;
-#else
     int status = boot_write_img_confirmed();
     if (status != 0) {
         this->log_WARNING_LO_ConfirmImageFailed(static_cast<I32>(-1 * status));
         return Update::UpdateStatus::NEXT_BOOT_ERROR;
     }
     return Update::UpdateStatus::OP_OK;
-#endif  // CONFIG_IMG_MANAGER
 }
 
 Update::UpdateStatus FlashWorker ::nextBoot_handler(FwIndexType portNum, const Update::NextBootMode& mode) {
-#ifndef CONFIG_IMG_MANAGER
-    return Update::UpdateStatus::OP_OK;
-#else
     int permanent = (mode == Update::NextBootMode::PERMANENT) ? BOOT_UPGRADE_PERMANENT : BOOT_UPGRADE_TEST;
 
     int status = boot_request_upgrade(permanent);
@@ -103,12 +92,10 @@ Update::UpdateStatus FlashWorker ::nextBoot_handler(FwIndexType portNum, const U
         return Update::UpdateStatus::NEXT_BOOT_ERROR;
     }
     return Update::UpdateStatus::OP_OK;
-#endif  // CONFIG_IMG_MANAGER
 }
 
 void FlashWorker ::prepareImage_handler(FwIndexType portNum) {
     Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
-#ifdef CONFIG_IMG_MANAGER
     int status = boot_erase_img_bank(FlashWorker::REGION_NUMBER);
     if (status != 0) {
         this->log_WARNING_LO_FlashEraseFailed(static_cast<I32>(-1 * status));
@@ -116,16 +103,13 @@ void FlashWorker ::prepareImage_handler(FwIndexType portNum) {
     } else {
         this->m_last_successful = PREPARE;
     }
-#else
-    this->m_last_successful = PREPARE;
-#endif  // CONFIG_IMG_MANAGER
     this->prepareImageDone_out(0, return_status);
 }
 
 void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase& file, U32 crc32) {
     Os::File image_file;
     Update::UpdateStatus return_status = Update::UpdateStatus::OP_OK;
-#ifdef CONFIG_IMG_MANAGER
+
     if (this->m_last_successful != PREPARE) {
         return_status = Update::UpdateStatus::UNPREPARED;
         this->m_last_successful = IDLE;
@@ -141,7 +125,6 @@ void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase
             this->log_WARNING_LO_ImageFileReadError(file, static_cast<Os::FileStatus::T>(file_status));
         }
     }
-#endif  // CONFIG_IMG_MANAGER
     this->updateImageDone_out(0, return_status);
 }
 
