@@ -9,6 +9,7 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
+	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
 	@echo "Applying fprime-gds version patch..."
 	@cd lib/fprime && \
