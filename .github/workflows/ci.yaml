@@ -50,10 +50,6 @@ jobs:
         run: |
           make download-bin
 
-      - name: Reset submodule working trees
-        run: |
-          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
-
       - name: Setup submodules
         if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
@@ -144,10 +140,6 @@ jobs:
             [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
-
-      - name: Reset submodule working trees
-        run: |
-          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 
       - name: Set up dependencies
         run: |
@@ -416,10 +408,6 @@ jobs:
             [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             echo "$line" >> $GITHUB_ENV
           done < ~/actions-runner/.env
-
-      - name: Reset submodule working trees
-        run: |
-          git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 
       - name: Set up dependencies
         run: |
