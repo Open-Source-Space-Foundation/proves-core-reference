@@ -35,6 +35,39 @@
             "externalConsole": false
         },
         {
+            "name": "Debug test_TcSecurityDeframer_Authenticator",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Authenticator",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
+            "name": "Debug test_TcSecurityDeframer_Parser",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Parser",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
+            "name": "Debug test_TcSecurityDeframer_Validator",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-gtest/test_TcSecurityDeframer_Validator",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "lldb",
+            "preLaunchTask": "build unit tests",
+            "stopAtEntry": false,
+            "externalConsole": false
+        },
+        {
             "name": "Debug test_RtcManager_RtcHelper",
             "type": "cppdbg",
             "request": "launch",
