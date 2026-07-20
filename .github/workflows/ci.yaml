@@ -238,16 +238,39 @@ jobs:
       - name: Kill GDS
         if: always()
         run: |
+          echo "=== python procs BEFORE kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           [ -f server.pid ] && kill $(cat server.pid) || true
           # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
-          pkill -f fprime-gds || true
-          pkill -f fprime_gds || true
-          pkill -f gds-integration || true
-          pkill -f proves_adapter || true
+          pkill -9 python || true
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
+          echo "=== python procs AFTER kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           echo "Holders of /dev/ttyBOARD after kill (should be empty):"
           lsof /dev/ttyBOARD || true
+
+      - name: Power-Cycle Satellite Before YAMCS
+        if: always()
+        run: |
+          # The GDS phase can leave the board's uplink deframer holding a
+          # partial TC frame (killing the GDS mid-write leaves the
+          # FrameAccumulator waiting for bytes that never arrive, and the
+          # detector consumes subsequent YAMCS commands silently). A power
+          # cycle clears all board-side latent state so the YAMCS phase
+          # starts from a known-good boot, mirroring manual bench testing
+          # where YAMCS-first-after-boot always round-trips.
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          # Wait for the CDC ACM device to re-enumerate as /dev/ttyBOARD.
+          for i in $(seq 1 30); do
+            [ -e /dev/ttyBOARD ] && { echo "/dev/ttyBOARD back after ${i}s"; break; }
+            sleep 1
+          done
+          [ -e /dev/ttyBOARD ] || { echo "ERROR: /dev/ttyBOARD did not re-enumerate"; exit 1; }
+          # Give the FSW a moment to finish booting before the adapter opens the port.
+          sleep 5
 
       - name: Restore MDB to expected path
         run: ./tools/ci/restore-yamcs-mdb.sh
@@ -316,6 +339,25 @@ jobs:
           tail -1500 yamcs.log || true
           echo "===== lsof /dev/ttyBOARD ====="
           lsof /dev/ttyBOARD || true
+
+      - name: Dump YAMCS archive diagnostics on failure
+        if: failure()
+        run: |
+          # Discriminate uplink-dead vs downlink/decode-dead:
+          # if CommandsDispatched grew during the test, the board received and
+          # executed the NO_OPs and the fault is in the TM/event path; if it
+          # never updated, the uplink died before the command dispatcher.
+          echo "===== packets received by YAMCS (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/packets?limit=50&order=desc" || true
+          echo ""
+          echo "===== CommandsDispatched parameter samples ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/parameters/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CommandsDispatched/samples" || true
+          echo ""
+          echo "===== data link stats ====="
+          curl -fsS "http://localhost:8090/api/links/fprime-project" || true
+          echo ""
+          echo "===== YAMCS events (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/events?limit=50&order=desc" || true
 
       - name: Stop YAMCS Stack
         if: always()
@@ -484,12 +526,12 @@ jobs:
           # Capture GDS's own stdout/stderr for the whole session (not just what
           # pytest captures on failure) so a crash mid-run has a full record of
           # every EVR/telemetry line GDS saw, uploaded as the gds-console-log artifact.
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds_console.log 2>&1 &
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds-rf.log 2>&1 &
           GDS_RF_PID=$!
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds_console.log for details."; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds-rf.log for details."; exit 1; }
           done
 
       - name: Sync Sequence Number
@@ -540,15 +582,6 @@ jobs:
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-
-      - name: Upload GDS console log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gds-console-log
-          path: gds_console.log
-          if-no-files-found: ignore
-          retention-days: 14
 
   yamcs-build:
     runs-on: ubuntu-latest

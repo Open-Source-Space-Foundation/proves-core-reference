@@ -19,4 +19,5 @@ register_fprime_module(
         "${CMAKE_CURRENT_LIST_DIR}/ReferenceDeploymentTopology.cpp"
     DEPENDS
         Fw_Logger
+        Svc_TlmPacketizer_config_TlmPacketizerConfig
 )
