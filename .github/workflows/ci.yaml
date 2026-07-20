@@ -246,13 +246,39 @@ jobs:
       - name: Kill GDS
         if: always()
         run: |
+          echo "=== python procs BEFORE kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           [ -f server.pid ] && kill $(cat server.pid) || true
           # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
           pkill -9 python || true
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
+          echo "=== python procs AFTER kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           echo "Holders of /dev/ttyBOARD after kill (should be empty):"
           lsof /dev/ttyBOARD || true
+
+      - name: Power-Cycle Satellite Before YAMCS
+        if: always()
+        run: |
+          # The GDS phase can leave the board's uplink deframer holding a
+          # partial TC frame (killing the GDS mid-write leaves the
+          # FrameAccumulator waiting for bytes that never arrive, and the
+          # detector consumes subsequent YAMCS commands silently). A power
+          # cycle clears all board-side latent state so the YAMCS phase
+          # starts from a known-good boot, mirroring manual bench testing
+          # where YAMCS-first-after-boot always round-trips.
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          # Wait for the CDC ACM device to re-enumerate as /dev/ttyBOARD.
+          for i in $(seq 1 30); do
+            [ -e /dev/ttyBOARD ] && { echo "/dev/ttyBOARD back after ${i}s"; break; }
+            sleep 1
+          done
+          [ -e /dev/ttyBOARD ] || { echo "ERROR: /dev/ttyBOARD did not re-enumerate"; exit 1; }
+          # Give the FSW a moment to finish booting before the adapter opens the port.
+          sleep 5
 
       - name: Restore MDB to expected path
         run: ./tools/ci/restore-yamcs-mdb.sh
