@@ -5,10 +5,11 @@ Integration tests for the ModeManager component (Normal <-> Safe mode transition
 
 Tests cover:
 - CurrentSafeModeReason verification via command/event
-- Safe mode reason tracking (GROUND_COMMAND, LOW_BATTERY, SYSTEM_FAULT)
+- Safe mode reason tracking (GROUND_COMMAND, LOW_BATTERY, SYSTEM_FAULT, COMMAND_LOSS)
 - Auto safe mode entry due to low voltage (manual test - requires voltage control)
 - Auto safe mode exit/recovery when voltage > 8V (manual test - requires voltage control)
 - Unintended reboot detection (manual test - requires reboot)
+- Command loss detection via RTC time jump (automated, requires reboot)
 
 SafeModeReason Test Coverage:
 | Reason           | Value | Test                    | Status                          |
@@ -19,19 +20,22 @@ SafeModeReason Test Coverage:
 | GROUND_COMMAND   | 3     | test_safe_02, 04        | ✅ Automated                    |
 | EXTERNAL_REQUEST | 4     | N/A                     | ❌ Internal port only           |
 | LORA             | 5     | N/A                     | ❌ Internal port only           |
+| COMMAND_LOSS     | 6     | test_safe_09            | ✅ Automated (slow, reboot)     |
 
 Note: EXTERNAL_REQUEST is triggered via forceSafeMode port (used by other components).
       LORA is triggered by LoRa driver when communication timeout/fault occurs.
       These cannot be tested via ground commands in integration tests.
 
-Total: 8 tests (4 automated, 4 manual)
+Total: 9 tests (5 automated, 4 manual)
 
-SafeModeReason enum values: NONE=0, LOW_BATTERY=1, SYSTEM_FAULT=2, GROUND_COMMAND=3, EXTERNAL_REQUEST=4, LORA=5
+SafeModeReason enum values: NONE=0, LOW_BATTERY=1, SYSTEM_FAULT=2, GROUND_COMMAND=3, EXTERNAL_REQUEST=4, LORA=5, COMMAND_LOSS=6
 Mode enum values: SAFE_MODE=1, NORMAL=2
 """
 
+import json
 import logging
 import time
+from datetime import datetime, timezone
 
 import pytest
 from common import proves_send_and_assert_command
@@ -54,6 +58,14 @@ SAFE_MODE_REASON_SYSTEM_FAULT = "SYSTEM_FAULT"
 SAFE_MODE_REASON_GROUND_COMMAND = "GROUND_COMMAND"
 SAFE_MODE_REASON_EXTERNAL_REQUEST = "EXTERNAL_REQUEST"
 SAFE_MODE_REASON_LORA = "LORA"
+SAFE_MODE_REASON_COMMAND_LOSS = "COMMAND_LOSS"
+
+# COMM_LOSS_TIME default value in days (matches ModeManager.fpp: 3*60*60*24 seconds)
+COMM_LOSS_TIME_DAYS = 3
+
+_rtc_manager = "ReferenceDeployment.rtcManager"
+_startup_manager = "ReferenceDeployment.startupManager"
+_watchdog = "ReferenceDeployment.watchdog"
 
 # Mode enum values
 MODE_SAFE_MODE = "SAFE_MODE"
@@ -438,6 +450,35 @@ def test_safe_07_unintended_reboot_detection(
     )
 
 
+def _set_rtc_time(fprime_test_api: IntegrationTestAPI, dt: datetime):
+    """Helper to set the RTC to a specific datetime"""
+    time_data = dict(
+        Year=dt.year,
+        Month=dt.month,
+        Day=dt.day,
+        Hour=dt.hour,
+        Minute=dt.minute,
+        Second=dt.second,
+    )
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{_rtc_manager}.TIME_SET",
+        [json.dumps(time_data)],
+    )
+
+
+def _get_boot_count(fprime_test_api: IntegrationTestAPI) -> int:
+    """Helper to get current boot count via startupManager command"""
+    fprime_test_api.clear_histories()
+    proves_send_and_assert_command(
+        fprime_test_api, f"{_startup_manager}.GET_BOOT_COUNT"
+    )
+    result: EventData = fprime_test_api.assert_event(
+        f"{_startup_manager}.CurrentBootCount", timeout=3
+    )
+    return result.args[0].val
+
+
 @pytest.mark.skip(reason="Requires reboot - run manually to verify clean shutdown")
 def test_safe_08_clean_reboot_no_safe_mode(
     fprime_test_api: IntegrationTestAPI, start_gds
@@ -493,3 +534,83 @@ def test_safe_08_clean_reboot_no_safe_mode(
     assert SAFE_MODE_REASON_NONE in str(reason).upper(), (
         f"Safe mode reason should be NONE after clean reboot, got {reason}"
     )
+
+
+# ==============================================================================
+# Automated Tests - Require Reboot
+# ==============================================================================
+
+
+@pytest.mark.slow
+def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """
+    Test that command loss (no authenticated packet within COMM_LOSS_TIME) triggers safe mode
+    with reason COMMAND_LOSS and a hardware power cycle via the watchdog.
+
+    Uses an RTC time jump to simulate the timeout without waiting the full 3-day period.
+    The TIME_SET packet stamps m_lastPacketRoutedTime with T0 (via packetRouted_handler,
+    called before the RTC actually changes), then the next 1Hz tick sees currentTime = T0 + 4 days
+    > T0 + COMM_LOSS_TIME (3 days) and triggers command loss.
+
+    Verifies:
+    - CommandLossDetected event is emitted
+    - EnteringSafeMode event mentions loss of contact
+    - Watchdog is stopped, causing a hardware power cycle
+    - Boot count increments by 1
+    - After reboot, mode is SAFE_MODE with reason COMMAND_LOSS (persisted across reboot)
+
+    Precondition: Must start in NORMAL mode (enforced by setup_and_teardown fixture).
+    Teardown: fixture exits safe mode after verification.
+    """
+    # Ensure watchdog is running so stopWatchdog causes a hardware reset
+    proves_send_and_assert_command(fprime_test_api, f"{_watchdog}.START_WATCHDOG")
+
+    initial_boot_count = _get_boot_count(fprime_test_api)
+
+    fprime_test_api.clear_histories()
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{component}.COMM_LOSS_TIME_PRM_SET",
+        ['{"seconds": 1, "useconds": 0}'],
+    )
+
+    # Wait for the 1Hz run_handler to detect command loss (at most 2 seconds)
+    fprime_test_api.assert_event(f"{component}.CommandLossDetected", timeout=5)
+
+    # Verify EnteringSafeMode event mentions loss of contact
+    events = fprime_test_api.get_event_test_history()
+    entering_events = [
+        e for e in events if "EnteringSafeMode" in str(e.get_template().get_name())
+    ]
+    assert len(entering_events) > 0, (
+        "EnteringSafeMode event should be emitted on command loss"
+    )
+    assert "contact" in entering_events[-1].get_display_text().lower(), (
+        "EnteringSafeMode should mention loss of contact"
+    )
+
+    # stopWatchdog was called after safe mode entry — hardware reset expected in ~30 seconds
+    logger.info("Waiting for hardware reboot triggered by watchdog stop (~60s)...")
+    time.sleep(60.0)
+
+    # Verify reboot occurred
+    final_boot_count = _get_boot_count(fprime_test_api)
+    assert final_boot_count == initial_boot_count + 1, (
+        f"Boot count should increment by 1 after command loss reboot. "
+        f"Before: {initial_boot_count}, After: {final_boot_count}"
+    )
+
+    # Verify safe mode state is persisted across the reboot
+    mode = get_current_mode(fprime_test_api)
+    assert mode == MODE_SAFE_MODE, "Should be in SAFE_MODE after command loss reboot"
+
+    reason = get_safe_mode_reason(fprime_test_api)
+    assert SAFE_MODE_REASON_COMMAND_LOSS in str(reason).upper(), (
+        f"Safe mode reason should be COMMAND_LOSS after command loss reboot, got {reason}"
+    )
+
+    # Reset RTC to actual current time so subsequent tests are not affected
+    _set_rtc_time(fprime_test_api, datetime.now(timezone.utc))
