@@ -348,6 +348,25 @@ jobs:
           echo "===== lsof /dev/ttyBOARD ====="
           lsof /dev/ttyBOARD || true
 
+      - name: Dump YAMCS archive diagnostics on failure
+        if: failure()
+        run: |
+          # Discriminate uplink-dead vs downlink/decode-dead:
+          # if CommandsDispatched grew during the test, the board received and
+          # executed the NO_OPs and the fault is in the TM/event path; if it
+          # never updated, the uplink died before the command dispatcher.
+          echo "===== packets received by YAMCS (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/packets?limit=50&order=desc" || true
+          echo ""
+          echo "===== CommandsDispatched parameter samples ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/parameters/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CommandsDispatched/samples" || true
+          echo ""
+          echo "===== data link stats ====="
+          curl -fsS "http://localhost:8090/api/links/fprime-project" || true
+          echo ""
+          echo "===== YAMCS events (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/events?limit=50&order=desc" || true
+
       - name: Stop YAMCS Stack
         if: always()
         run: |
