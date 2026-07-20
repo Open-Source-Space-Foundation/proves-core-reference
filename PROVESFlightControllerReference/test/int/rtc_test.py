@@ -340,9 +340,16 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
     # Cancel the alarm immediately
     fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL")
 
-    fprime_test_api.assert_event(
-        f"{rtcManager}.AlarmTriggered", start="NOW", timeout=10
-    )
+    with pytest.raises(AssertionError):
+        fprime_test_api.assert_event(
+            f"{rtcManager}.AlarmTriggered", start="NOW", timeout=10
+        )
+
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmCanceled", start="NOW", timeout=10)
+
+    # make sure the alarm is gone
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start="NOW", timeout=10)
 
 
 # validation test
