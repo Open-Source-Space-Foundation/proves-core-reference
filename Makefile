@@ -37,6 +37,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs constants-order fix..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
 
 
 .PHONY: zephyr-setup
