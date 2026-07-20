@@ -40,6 +40,7 @@ from datetime import datetime, timezone
 import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
+from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 logger = logging.getLogger(__name__)
@@ -543,6 +544,7 @@ def test_safe_08_clean_reboot_no_safe_mode(
 
 @pytest.mark.slow
 @pytest.mark.uart_only(reason="Requires reboot and GDS reconnect")
+@pytest.mark.requires_watchdog_jumper
 def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -594,8 +596,13 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     )
 
     # stopWatchdog was called after safe mode entry — hardware reset expected in ~30 seconds
-    logger.info("Waiting for hardware reboot triggered by watchdog stop (~60s)...")
-    time.sleep(60.0)
+    reboot_start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
+    logger.info("Waiting for hardware reboot triggered by watchdog stop...")
+    fprime_test_api.assert_event(
+        "CdhCore.version.FrameworkVersion", start=reboot_start, timeout=90
+    )
 
     # Verify reboot occurred
     final_boot_count = _get_boot_count(fprime_test_api)
