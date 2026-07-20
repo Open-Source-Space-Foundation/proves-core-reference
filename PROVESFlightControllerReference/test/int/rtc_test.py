@@ -21,21 +21,34 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
-resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
-ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
-safeModeSeq = "ReferenceDeployment.safeModeSeq"
 fileManager = "FileHandling.fileManager"
+modeManager = "ReferenceDeployment.modeManager"
+watchdog = "ReferenceDeployment.watchdog"
 
 
 @pytest.fixture(autouse=True)
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    # fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+    # Set the time back to current time
     set_time(fprime_test_api)
+
+    # Set mode back to normal after each test in case we entered safe mode by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{modeManager}.EXIT_SAFE_MODE",
+    )
+
+    # Re-enable the watchdog in case it was stopped by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{watchdog}.START_WATCHDOG",
+    )
+
+    # Clear event history
     fprime_test_api.clear_histories()
 
 

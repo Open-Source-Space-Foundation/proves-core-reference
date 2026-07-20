@@ -31,6 +31,11 @@ jobs:
         run: |
           make submodules
 
+      - name: Install lib dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
+
       - name: Run Unit Tests
         run: |
           make test-unit
@@ -85,8 +90,10 @@ jobs:
           make generate
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Build MCUBoot
         run: |
@@ -156,8 +163,10 @@ jobs:
           make make-ci-spacecraft-id
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |
@@ -167,24 +176,7 @@ jobs:
         run: |
           # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
           # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
@@ -194,7 +186,35 @@ jobs:
 
       - name: Start GDS
         run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Format Filesystem
+        run: |
+          make test-integration FILTER=format_filesystem
+
+      - name: Power-Cycle Satellite
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds.log 2>&1 &
           echo $! > server.pid
 
       - name: Sync Sequence Number
@@ -209,6 +229,19 @@ jobs:
         if: always()
         run: |
           make test-integration FILTER=format_filesystem
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-uart
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Kill GDS
         if: always()
@@ -231,7 +264,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Start YAMCS Stack
         env:
@@ -351,8 +384,10 @@ jobs:
           make submodules fprime-venv
 
       - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |
@@ -362,24 +397,7 @@ jobs:
         run: |
           # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
           # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
           echo "Selected Zephyr board tty: $ZEPHYR_TTY"
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
@@ -394,12 +412,39 @@ jobs:
           # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
           # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
           pkill -9 python || true
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
-          # Wait briefly for GDS to bind sockets
           sleep 5
-          make test-integration FILTER=sync_sequence_number
+          # Sync against the LoRa deframer instance: the radio traffic that
+          # follows is validated by it, not by the UART instance this
+          # bootstrap link talks through.
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
+          make test-integration FILTER=format_filesystem
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Power-Cycle Satellite
+        run: |
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Sync Sequence Number over UART
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-sync.log 2>&1 &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          sleep 5
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
           rm -f server-bootstrap.pid
 
@@ -448,12 +493,15 @@ jobs:
 
       - name: Start GDS on LoRa Passthrough
         run: |
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
+          # Capture GDS's own stdout/stderr for the whole session (not just what
+          # pytest captures on failure) so a crash mid-run has a full record of
+          # every EVR/telemetry line GDS saw, uploaded as the gds-console-log artifact.
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds_console.log 2>&1 &
           GDS_RF_PID=$!
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds_console.log for details."; exit 1; }
           done
 
       - name: Sync Sequence Number
@@ -484,12 +532,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-radio
+          path: |
+            gds-bootstrap.log
+            gds-sync.log
+            gds-rf.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+      - name: Upload GDS console log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-console-log
+          path: gds_console.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   yamcs-build:
     runs-on: ubuntu-latest
