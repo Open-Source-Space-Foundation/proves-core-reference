@@ -252,7 +252,6 @@ jobs:
           pkill -f fprime_gds || true
           pkill -f gds-integration || true
           pkill -f proves_adapter || true
-          pkill -9 python || true
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
           echo "Holders of /dev/ttyBOARD after kill (should be empty):"
