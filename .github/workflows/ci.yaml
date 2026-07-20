@@ -248,10 +248,10 @@ jobs:
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
-          pkill -f fprime-gds || true
-          pkill -f fprime_gds || true
-          pkill -f gds-integration || true
-          pkill -f proves_adapter || true
+          pkill -9 fprime-gds || true
+          pkill -9 fprime_gds || true
+          pkill -9 gds-integration || true
+          pkill -9 proves_adapter || true
           pkill -9 python || true
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
