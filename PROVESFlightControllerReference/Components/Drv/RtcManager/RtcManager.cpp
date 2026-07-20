@@ -49,6 +49,13 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
+    // check if proc time mode is set
+    if (this->m_ProcTimeSet) {
+        // use proc time
+        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+        return;
+    }
+
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
