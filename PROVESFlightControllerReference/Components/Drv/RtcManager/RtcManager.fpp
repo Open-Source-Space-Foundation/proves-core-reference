@@ -31,6 +31,9 @@ module Drv {
             t: Drv.TimeData @< Set the time
         )
 
+        @ TO_PROC_TIME command to use proc time instead of RTC time
+        sync command TO_PROC_TIME()
+
         @ ALARM_SET command to set an alarm on the RTC
         sync command ALARM_SET(
             t: Drv.TimeData @< Time to set the alarm for
@@ -54,6 +57,10 @@ module Drv {
             seconds: U32 @< Seconds since epoch
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
+
+        event procTimeSet(
+            seconds: U32 @< Uptime in seconds
+        ) severity activity high id 17 format "Proc time set, current uptime: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"

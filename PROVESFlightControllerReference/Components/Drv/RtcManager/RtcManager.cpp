@@ -17,7 +17,8 @@ RtcManager ::RtcManager(const char* const compName)
       m_rtcHelper(),
       m_RtcNotReadyThrottle(false),
       m_RtcGetTimeFailedThrottle(false),
-      m_RtcInvalidTimeThrottle(false) {
+      m_RtcInvalidTimeThrottle(false),
+      m_ProcTimeSet(false) {
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
@@ -51,6 +52,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
+        this->m_ProcTimeSet = true;  // proc time flag
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
@@ -63,6 +65,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     const int rc = rtc_get_time(this->m_dev, &time_rtc);
     if (rc != 0) {
         this->log_CONSOLE_RtcGetTimeFailed(rc);
+        this->m_ProcTimeSet = true;  // proc time flag
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
@@ -78,12 +81,15 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
     if (errno == ERANGE) {
         this->log_CONSOLE_RtcInvalidTime();
+        this->m_ProcTimeSet = true;  // proc time flag
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
     this->log_CONSOLE_RtcInvalidTime_ThrottleClear();
+
+    this->m_ProcTimeSet = false;  // proc time flag
 
     // Set FPrime time object
     time.set(TimeBase::TB_SC_TIME, 0, seconds_real_time,
@@ -151,10 +157,27 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
         return;
     }
 
+    this->m_ProcTimeSet = false;  // proc time flag
+
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
 
     // Send command response
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void RtcManager ::TO_PROC_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Switch the time source to proc time
+    Fw::Time proc_time;
+    int64_t t = k_uptime_get();
+    U32 seconds_since_boot = static_cast<U32>(t / 1000);
+    U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
+    this->log_ACTIVITY_HI_procTimeSet(seconds_since_boot);  // Log the current uptime in seconds
+
+    this->m_ProcTimeSet = true;  // proc time flag
+    proc_time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+
+    // Command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
