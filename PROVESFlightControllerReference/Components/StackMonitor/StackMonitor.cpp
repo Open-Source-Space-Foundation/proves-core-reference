@@ -11,13 +11,12 @@ namespace Components {
 
 namespace {
 
-//! k_thread_foreach callback: append this thread's stack usage to the
-//! ThreadStackSampleSet pointed to by userData. Zephyr runs this callback
-//! with the thread-monitor spinlock held and IRQs locked, so it must not
-//! allocate or block: it only reads the stack high-water mark, does a
-//! bounded string copy of the name, and stores integers into a fixed slot
-//! (ThreadStackSampleSet::add). Keeps all Zephyr calls out of
-//! StackMonitorCore, which stays pure.
+//! k_thread_foreach_unlocked callback: append this thread's stack usage to
+//! the ThreadStackSampleSet pointed to by userData. Called without the
+//! thread-monitor spinlock held, so it must not allocate or block: it only
+//! reads the stack high-water mark, does a bounded string copy of the name,
+//! and stores integers into a fixed slot (ThreadStackSampleSet::add). Keeps
+//! all Zephyr calls out of StackMonitorCore, which stays pure.
 void appendThreadSample(const struct k_thread* thread, void* userData) {
     auto* samples = static_cast<ThreadStackSampleSet*>(userData);
 
@@ -29,12 +28,15 @@ void appendThreadSample(const struct k_thread* thread, void* userData) {
         return;
     }
 
-    const char* name = "";
+    const char* name = "unknown";
 #if defined(CONFIG_THREAD_NAME)
     // thread is logically read-only here, but k_thread_name_get takes a
     // non-const k_tid_t; the callback signature is fixed by
-    // k_thread_foreach and always hands us a live thread object.
-    name = k_thread_name_get(const_cast<k_tid_t>(thread));
+    // k_thread_foreach_unlocked and always hands us a live thread object.
+    const char* threadName = k_thread_name_get(const_cast<k_tid_t>(thread));
+    if (threadName != nullptr) {
+        name = threadName;
+    }
 #endif
 
     (void)samples->add(name, static_cast<std::uint32_t>(thread->stack_info.size),
@@ -58,7 +60,7 @@ StackMonitor ::~StackMonitor() {}
 
 void StackMonitor ::run_handler(FwIndexType portNum, U32 context) {
     this->m_samples.clear();
-    k_thread_foreach(&appendThreadSample, &this->m_samples);
+    k_thread_foreach_unlocked(&appendThreadSample, &this->m_samples);
 
     this->m_core.tick(this->m_samples, this->m_result);
 

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cstdio>
+
 #include "PROVESFlightControllerReference/Components/StackMonitor/StackMonitorCore.hpp"
 
 using Components::STACK_MONITOR_MAX_THREADS;
