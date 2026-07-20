@@ -11,6 +11,7 @@
 // Necessary project-specified types
 #include <Fw/Types/FileNameString.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
+#include <Os/Directory.hpp>
 #include <Os/FileSystem.hpp>
 
 #include <zephyr/drivers/gpio.h>
@@ -188,7 +189,9 @@ void setupTopology(const TopologyState& state) {
 
     fsFormat.configure(state.storagePartitionId);
 
-    // DataProducts subtopology creates /dp and configures dpCat/dpWriter in its config phases
+    // MOSAIC gamma ray samples are stored under /mosaic for later downlink
+    Os::Directory mosaicDir;
+    mosaicDir.open("/mosaic", Os::Directory::OpenMode::CREATE_IF_MISSING);
 }
 
 void startRateGroups() {

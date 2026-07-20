@@ -2,13 +2,15 @@
 // \title  MosaicManager.cpp
 // \brief  cpp file for MosaicManager component implementation class
 //         Receives MOSAIC gamma ray detector data over UART and stores
-//         it on disk as F Prime data products
+//         it on disk under /mosaic for later downlink
 // ======================================================================
 
 #include "PROVESFlightControllerReference/Components/MosaicManager/MosaicManager.hpp"
 
 #include <cstdlib>
 #include <cstring>
+
+#include "Fw/Types/FileNameString.hpp"
 
 namespace Components {
 
@@ -57,17 +59,17 @@ void MosaicManager ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
 }
 
 void MosaicManager ::run_handler(FwIndexType portNum, U32 context) {
-    // Flush a partially filled container that has been sitting too long
-    if (m_containerOpen && m_samplesInContainer > 0) {
+    // Flush a partially filled file that has been sitting too long
+    if (m_fileOpen && m_samplesInFile > 0) {
         const U32 now = this->getTime().getSeconds();
-        if ((now - m_containerStartSeconds) >= FLUSH_TIMEOUT_SECONDS) {
-            this->sendContainer();
+        if ((now - m_fileStartSeconds) >= FLUSH_TIMEOUT_SECONDS) {
+            this->closeFile();
         }
     }
 
     this->tlmWrite_Recording(m_recording);
     this->tlmWrite_SamplesRecorded(m_samplesRecorded);
-    this->tlmWrite_ProductsSent(m_productsSent);
+    this->tlmWrite_FilesWritten(m_filesWritten);
     this->tlmWrite_ParseErrors(m_parseErrors);
 }
 
@@ -84,8 +86,8 @@ void MosaicManager ::START_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
 
 void MosaicManager ::STOP_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     m_recording = false;
-    if (m_containerOpen && m_samplesInContainer > 0) {
-        this->sendContainer();
+    if (m_fileOpen && m_samplesInFile > 0) {
+        this->closeFile();
     }
     this->tlmWrite_Recording(m_recording);
     this->log_ACTIVITY_HI_RecordingStopped();
@@ -93,8 +95,8 @@ void MosaicManager ::STOP_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) 
 }
 
 void MosaicManager ::FLUSH_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (m_containerOpen && m_samplesInContainer > 0) {
-        this->sendContainer();
+    if (m_fileOpen && m_samplesInFile > 0) {
+        this->closeFile();
     }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -128,64 +130,89 @@ void MosaicManager ::processLine() {
         return;
     }
 
-    const MosaicManager_MosaicSample sample(static_cast<U16>(adc), static_cast<U16>(millivolts));
-    this->tlmWrite_LatestAdc(sample.get_adc());
-    this->tlmWrite_LatestMillivolts(sample.get_millivolts());
+    this->tlmWrite_LatestAdc(static_cast<U16>(adc));
+    this->tlmWrite_LatestMillivolts(static_cast<U16>(millivolts));
 
     if (m_recording) {
-        this->recordSample(sample);
+        this->recordSample(static_cast<U16>(adc), static_cast<U16>(millivolts));
     }
 }
 
-void MosaicManager ::recordSample(const MosaicManager_MosaicSample& sample) {
-    if (!this->ensureContainer()) {
+void MosaicManager ::recordSample(U16 adc, U16 millivolts) {
+    if (!this->ensureFileOpen()) {
         return;
     }
 
-    const Fw::SerializeStatus status = m_container.serializeRecord_SampleRecord(sample);
-    if (status != Fw::FW_SERIALIZE_OK) {
-        this->log_WARNING_HI_RecordSerializeError();
-        this->sendContainer();
+    const U32 seconds = this->getTime().getSeconds();
+    U8 record[RECORD_SIZE];
+    std::memcpy(&record[0], &seconds, sizeof(seconds));
+    std::memcpy(&record[sizeof(seconds)], &adc, sizeof(adc));
+    std::memcpy(&record[sizeof(seconds) + sizeof(adc)], &millivolts, sizeof(millivolts));
+
+    FwSizeType writeSize = RECORD_SIZE;
+    const Os::File::Status status = m_file.write(record, writeSize, Os::File::WaitType::WAIT);
+    if ((status != Os::File::OP_OK) || (writeSize != RECORD_SIZE)) {
+        this->log_WARNING_HI_FileWriteError(static_cast<U32>(status));
+        this->closeFile();
         return;
     }
 
-    if (m_samplesInContainer == 0) {
-        m_containerStartSeconds = this->getTime().getSeconds();
+    if (m_samplesInFile == 0) {
+        m_fileStartSeconds = this->getTime().getSeconds();
     }
-    m_samplesInContainer++;
+    m_samplesInFile++;
     m_samplesRecorded++;
     this->tlmWrite_SamplesRecorded(m_samplesRecorded);
 
-    if (m_samplesInContainer >= SAMPLES_PER_CONTAINER) {
-        this->sendContainer();
+    if (m_samplesInFile >= SAMPLES_PER_FILE) {
+        this->closeFile();
     }
 }
 
-bool MosaicManager ::ensureContainer() {
-    if (m_containerOpen) {
+bool MosaicManager ::ensureFileOpen() {
+    if (m_fileOpen) {
         return true;
     }
 
-    const FwSizeType dataSize = static_cast<FwSizeType>(SAMPLES_PER_CONTAINER) * RECORD_SIZE;
-    const Fw::Success status = this->dpGet_GammaData(dataSize, m_container);
-    if (status != Fw::Success::SUCCESS) {
-        this->log_WARNING_HI_DpMemoryFail();
+    // The Zephyr Os::File delegate truncates on OPEN_CREATE regardless of the NO_OVERWRITE flag
+    // (its handling of `overwrite` is unimplemented), and m_filesWritten resets to 0 on every reboot.
+    // Without this check, reusing a stale index would silently wipe a file from a previous boot that
+    // has not yet been downlinked. Search forward for the first name not already on disk.
+    Fw::FileNameString path;
+    U32 searched = 0;
+    do {
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+        if (Os::FileSystem::getPathType(path.toChar()) == Os::FileSystem::NOT_EXIST) {
+            break;
+        }
+        m_filesWritten++;
+        searched++;
+    } while (searched < MAX_FILE_INDEX_SEARCH);
+
+    const Os::File::Status status = m_file.open(path.toChar(), Os::File::OPEN_CREATE, Os::File::NO_OVERWRITE);
+    if (status != Os::File::OP_OK) {
+        this->log_WARNING_HI_FileOpenError(path, static_cast<U32>(status));
         return false;
     }
 
-    m_containerOpen = true;
-    m_samplesInContainer = 0;
+    m_fileOpen = true;
+    m_samplesInFile = 0;
     return true;
 }
 
-void MosaicManager ::sendContainer() {
-    this->dpSend(m_container);
-    this->log_ACTIVITY_HI_DataProductSent(m_samplesInContainer);
+void MosaicManager ::closeFile() {
+    Fw::FileNameString path;
+    path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
 
-    m_containerOpen = false;
-    m_samplesInContainer = 0;
-    m_productsSent++;
-    this->tlmWrite_ProductsSent(m_productsSent);
+    m_file.flush();
+    m_file.close();
+
+    this->log_ACTIVITY_HI_SampleFileClosed(path, m_samplesInFile);
+
+    m_fileOpen = false;
+    m_samplesInFile = 0;
+    m_filesWritten++;
+    this->tlmWrite_FilesWritten(m_filesWritten);
 }
 
 }  // namespace Components

@@ -118,13 +118,10 @@ telemetry packets ReferenceDeploymentPackets {
   packet Mosaic id 23 group 4 {
     ReferenceDeployment.mosaicManager.Recording
     ReferenceDeployment.mosaicManager.SamplesRecorded
-    ReferenceDeployment.mosaicManager.ProductsSent
+    ReferenceDeployment.mosaicManager.FilesWritten
     ReferenceDeployment.mosaicManager.ParseErrors
     ReferenceDeployment.mosaicManager.LatestAdc
     ReferenceDeployment.mosaicManager.LatestMillivolts
-    DataProducts.dpMgr.NumFailedAllocations
-    DataProducts.dpWriter.NumFailedWrites
-    DataProducts.dpWriter.NumErrors
   }
 
   ### Health and Status Packets ###
@@ -151,7 +148,6 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.commsBufferManager.NoBuffs
     payloadBufferManager.NoBuffs
     mosaicBufferManager.NoBuffs
-    DataProducts.dpBufferManager.NoBuffs
     ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
@@ -163,7 +159,6 @@ telemetry packets ReferenceDeploymentPackets {
 #    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     mosaicBufferManager.HiBuffs
-    DataProducts.dpBufferManager.HiBuffs
     CdhCore.tlmSend.SendLevel
   }
 
@@ -321,19 +316,6 @@ telemetry packets ReferenceDeploymentPackets {
   mosaicBufferManager.EmptyBuffs
   mosaicBufferManager.TotalBuffs
   mosaicBufferManager.CurrBuffs
-  DataProducts.dpBufferManager.EmptyBuffs
-  DataProducts.dpBufferManager.TotalBuffs
-  DataProducts.dpBufferManager.CurrBuffs
-
-  DataProducts.dpMgr.NumSuccessfulAllocations
-  DataProducts.dpMgr.NumDataProducts
-  DataProducts.dpMgr.NumBytes
-  DataProducts.dpWriter.NumBuffersReceived
-  DataProducts.dpWriter.NumBytesWritten
-  DataProducts.dpWriter.NumSuccessfulWrites
-
-  DataProducts.dpCat.CatalogDps
-  DataProducts.dpCat.DpsSent
 
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion

@@ -1,43 +1,21 @@
 module Components {
     @ Passive component that receives gamma ray detector data from the MOSAIC
-    @ payload over UART and stores it on disk as F Prime data products.
+    @ payload over UART and stores it on disk under the /mosaic directory.
     @ MOSAIC streams ASCII lines of the form "ADC=<raw>,MV=<millivolts>\n".
     @ The manager only listens; it never sends commands to the payload.
     passive component MosaicManager {
 
         # ----------------------------------------------------------------------
-        # Types
-        # ----------------------------------------------------------------------
-
-        @ A single gamma ray detector sample parsed from a MOSAIC CSV line
-        struct MosaicSample {
-            @ Raw 12-bit ADC code (0-4095)
-            adc: U16
-            @ ADC reading converted to millivolts by the payload
-            millivolts: U16
-        }
-
-        # ----------------------------------------------------------------------
-        # Data products
-        # ----------------------------------------------------------------------
-
-        @ A single gamma ray detector sample
-        product record SampleRecord: MosaicSample id 0
-
-        @ Container holding a batch of gamma ray detector samples
-        product container GammaData id 0 default priority 10
-
-        # ----------------------------------------------------------------------
         # Commands
         # ----------------------------------------------------------------------
 
-        @ Start recording received samples into data products (default on boot)
+        @ Start recording received samples to the filesystem (default on boot)
         sync command START_RECORDING()
 
-        @ Stop recording; flushes any partially filled data product to disk
+        @ Stop recording; flushes and closes the current file
         sync command STOP_RECORDING()
 
-        @ Flush the partially filled data product to disk now
+        @ Flush the current file to disk and close it now
         sync command FLUSH()
 
         # ----------------------------------------------------------------------
@@ -50,27 +28,27 @@ module Components {
         @ Recording was stopped
         event RecordingStopped() severity activity high format "MOSAIC sample recording stopped"
 
-        @ A data product container was completed and sent to be written to disk
-        event DataProductSent(records: U32) \
+        @ A sample file was completed and closed
+        event SampleFileClosed(fileName: string size 32, records: U32) \
             severity activity high \
-            format "MOSAIC data product sent with {} samples"
+            format "MOSAIC sample file {} closed with {} samples"
 
-        @ Failed to get a data product buffer; samples will be dropped
-        event DpMemoryFail() \
+        @ Failed to open a new sample file on the filesystem; samples will be dropped
+        event FileOpenError(fileName: string size 32, status: U32) \
             severity warning high \
-            format "Failed to acquire a MOSAIC data product buffer" \
+            format "Failed to open MOSAIC sample file {} (status {})" \
+            throttle 5
+
+        @ A write to the current sample file failed
+        event FileWriteError(status: U32) \
+            severity warning high \
+            format "Failed to write MOSAIC sample record (status {})" \
             throttle 5
 
         @ A received line could not be parsed as a MOSAIC sample
         event LineParseError() \
             severity warning low \
             format "Failed to parse a MOSAIC line" \
-            throttle 5
-
-        @ A serialization error occurred while recording a sample
-        event RecordSerializeError() \
-            severity warning high \
-            format "Failed to serialize a MOSAIC sample record" \
             throttle 5
 
         @ UART receive reported a bad status
@@ -83,14 +61,14 @@ module Components {
         # Telemetry
         # ----------------------------------------------------------------------
 
-        @ Whether samples are currently being recorded to data products
+        @ Whether samples are currently being recorded to the filesystem
         telemetry Recording: bool
 
-        @ Total samples recorded to data products
+        @ Total samples recorded to the filesystem
         telemetry SamplesRecorded: U32
 
-        @ Total data product containers sent to be written to disk
-        telemetry ProductsSent: U32
+        @ Total sample files closed and ready for downlink
+        telemetry FilesWritten: U32
 
         @ Total lines that failed to parse
         telemetry ParseErrors: U32
@@ -111,14 +89,8 @@ module Components {
         @ Returns receive buffers to the UART driver
         output port bufferReturn: Fw.BufferSend
 
-        @ Rate group input for periodic telemetry and data product flush
+        @ Rate group input for periodic telemetry and file flush
         sync input port run: Svc.Sched
-
-        @ Data product get port (synchronous buffer request)
-        product get port productGetOut
-
-        @ Data product send port
-        product send port productSendOut
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

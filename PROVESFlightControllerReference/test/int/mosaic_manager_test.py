@@ -4,8 +4,8 @@ mosaic_manager_test.py:
 Integration tests for the MosaicManager component.
 
 The MOSAIC gamma ray payload streams "ADC=<raw>,MV=<millivolts>" CSV lines
-over UART. MosaicManager parses the lines and stores the samples on disk as
-F Prime data products.
+over UART. MosaicManager parses the lines and stores the samples on disk
+under /mosaic as raw binary records for later downlink.
 """
 
 import os
@@ -72,23 +72,18 @@ def test_02_samples_recorded(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 @requires_mosaic
-def test_03_flush_writes_data_product(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that FLUSH sends a partially filled data product to disk"""
+def test_03_flush_closes_sample_file(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that FLUSH closes the partially filled sample file"""
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
 
-    # Let some samples accumulate, then flush the open container
+    # Let some samples accumulate, then flush the open file
     time.sleep(5)
     proves_send_and_assert_command(
         fprime_test_api,
         f"{mosaicManager}.FLUSH",
     )
     fprime_test_api.assert_event(
-        f"{mosaicManager}.DataProductSent", start=start, timeout=10
-    )
-
-    # DpWriter reports the file write on the ground path as well
-    fprime_test_api.assert_event(
-        "ReferenceDeployment.DataProducts.dpWriter.FileWritten", start=start, timeout=10
+        f"{mosaicManager}.SampleFileClosed", start=start, timeout=10
     )

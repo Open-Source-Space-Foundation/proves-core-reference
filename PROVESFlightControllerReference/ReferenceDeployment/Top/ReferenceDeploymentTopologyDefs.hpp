@@ -13,7 +13,6 @@
 #include "PROVESFlightControllerReference/ComCcsdsLora/PingEntries.hpp"
 // #include "PROVESFlightControllerReference/ComCcsdsSband/PingEntries.hpp"
 #include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
-#include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
 // Replaced with override section below
 // #include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
 
@@ -22,7 +21,6 @@
 // #include "PROVESFlightControllerReference/ComCcsdsSband/SubtopologyTopologyDefs.hpp"
 #include "PROVESFlightControllerReference/ComCcsdsUart/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
-#include "Svc/Subtopologies/DataProducts/SubtopologyTopologyDefs.hpp"
 #include "Svc/Subtopologies/FileHandling/SubtopologyTopologyDefs.hpp"
 
 // ComCcsds Enum Includes (for ComCcsdsLora)
