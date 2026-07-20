@@ -93,6 +93,13 @@ class RtcManager final : public RtcManagerComponentBase {
                                U32 cmdSeq            //!< The command sequence number
                                ) override;
 
+    //! Handler implementation for command TO_PROC_TIME
+    //!
+    //! Switches the time source to use proc time
+    void TO_PROC_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                 U32 cmdSeq            //!< The command sequence number
+                                 ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
@@ -135,6 +142,7 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_RtcNotReadyThrottle;       //!< Throttle for RtcNotReady
     std::atomic<bool> m_RtcGetTimeFailedThrottle;  //!< Throttle for RtcGetTimeFailed
     std::atomic<bool> m_RtcInvalidTimeThrottle;    //!< Throttle for RtcInvalidTime
+    std::atomic<bool> m_ProcTimeSet;               //!< Proc time flag
 
     // rtc alarm members
     U16 m_curr_mask;               //!< The mask of the alarm present on hardware
