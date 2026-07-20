@@ -496,12 +496,12 @@ jobs:
           # Capture GDS's own stdout/stderr for the whole session (not just what
           # pytest captures on failure) so a crash mid-run has a full record of
           # every EVR/telemetry line GDS saw, uploaded as the gds-console-log artifact.
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds_console.log 2>&1 &
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds-rf.log 2>&1 &
           GDS_RF_PID=$!
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds_console.log for details."; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds-rf.log for details."; exit 1; }
           done
 
       - name: Sync Sequence Number
@@ -552,15 +552,6 @@ jobs:
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-
-      - name: Upload GDS console log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gds-console-log
-          path: gds_console.log
-          if-no-files-found: ignore
-          retention-days: 14
 
   yamcs-build:
     runs-on: ubuntu-latest
