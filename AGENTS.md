@@ -156,7 +156,7 @@ PROVESFlightControllerReference/
 │   ├── AmateurRadio/  # Amateur radio communication
 │   ├── AntennaDeployer/ # Antenna deployment mechanism
 │   ├── Authenticate/  # HMAC-based command authentication
-│   ├── AuthenticationRouter/ # Authentication routing
+│   ├── ProvesRouter/  # Packet routing
 │   ├── BootloaderTrigger/ # Bootloader mode entry
 │   ├── Burnwire/      # Burnwire deployment mechanism
 │   ├── CameraHandler/ # Camera management
@@ -514,7 +514,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 
 **Security**:
 - **Authenticate**: HMAC-based command authentication
-- **AuthenticationRouter**: Routes authenticated vs. unauthenticated commands
+- **ProvesRouter**: Routes authenticated vs. unauthenticated commands
 
 ### Development Environment
 
@@ -581,7 +581,7 @@ After compiling, upload the sequence through GDS for execution on the board.
 
 ### Authentication & Security
 
-Commands can be HMAC-authenticated using the `Authenticate` component. The authentication key is stored in `PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h`.
+Commands can be HMAC-authenticated using the `TcSecurityDeframer` component. The authentication key is stored in `PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h`.
 
 ```bash
 make generate-auth-key   # Generate a new random HMAC key (only if file doesn't exist)

@@ -9,18 +9,8 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
+	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 	@echo "Applying fprime ComAggregator bounded-timeout patch (issue #432)..."
 	@cd lib/fprime && \
 		if git apply --check ../../patches/fprime-com-aggregator-bounded-timeout.patch 2>/dev/null; then \
@@ -69,6 +59,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs constants-order fix..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
 
 
 .PHONY: zephyr-setup
@@ -211,8 +205,8 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
 	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
-	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
+	@cp PROVESFlightControllerReference/Components/TcSecurityDeframer/docs/sdd.md docs-site/components/TcSecurityDeframer.md
+	@cp PROVESFlightControllerReference/Components/ProvesRouter/docs/sdd.md docs-site/components/ProvesRouter.md
 	@# Copy images
 	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
 	@echo "✓ Synced 32 component SDDs and images"
@@ -250,7 +244,7 @@ check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it cor
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -349,6 +343,11 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:
+
+.PHONY: sync-sequence-number
+sync-sequence-number: uv ## Synchronize GDS/flight sequence number
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
@@ -531,7 +530,7 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
-	@$(GDS_COMMAND) --gui=none --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
+	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
 DoL_test:
@@ -541,7 +540,12 @@ DoL_test:
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
-	@ cd Framing && $(UV_RUN) pip install -e .
+	@# Use `uv pip` (installs into $(VIRTUAL_ENV)) rather than `uv run` inside
+	@# Framing/: `uv run` treats Framing as its own uv project and syncs its
+	@# lockfile into the shared venv, uninstalling/reinstalling dozens of
+	@# packages. When gds-integration runs in the background this churn races
+	@# any concurrently starting pytest and breaks its imports mid-flight.
+	@ $(UV) pip install -e Framing
 
 .PHONY: copy-secrets
 copy-secrets:
@@ -552,7 +556,7 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
