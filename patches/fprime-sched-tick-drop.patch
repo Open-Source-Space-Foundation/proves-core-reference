@@ -48,7 +48,7 @@ index 66343b886..2f7732896 100644
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/CmdSequencer/CmdSequencer.fpp b/Svc/CmdSequencer/CmdSequencer.fpp
-index 1573fbe60..614fefd5f 100644
+index f1c401278..ebc381653 100644
 --- a/Svc/CmdSequencer/CmdSequencer.fpp
 +++ b/Svc/CmdSequencer/CmdSequencer.fpp
 @@ -68,7 +68,7 @@ module Svc {
@@ -60,7 +60,7 @@ index 1573fbe60..614fefd5f 100644
  
      @ Ping out port
      output port pingOut: Svc.Ping
-@@ -83,7 +83,7 @@ module Svc {
+@@ -86,7 +86,7 @@ module Svc {
      output port comCmdOut: Fw.Com
  
      @ Schedule in port
@@ -196,10 +196,10 @@ index 8af40d3d7..b9e80e1af 100644
          @ port to trigger a wakeup or timeout check. increase frequency
          @ to increase temporal resolution of sequencer
 diff --git a/Svc/PrmDb/PrmDb.fpp b/Svc/PrmDb/PrmDb.fpp
-index 66f850e30..9588336e3 100644
+index bca4f172f..b2a4b95b1 100644
 --- a/Svc/PrmDb/PrmDb.fpp
 +++ b/Svc/PrmDb/PrmDb.fpp
-@@ -60,7 +60,7 @@ module Svc {
+@@ -69,7 +69,7 @@ module Svc {
      async input port setPrm: Fw.PrmSet
  
      @ Ping input port
@@ -229,11 +229,11 @@ index d15072ed0..52b73b2d8 100644
      @ Ping output port
      output port pingOut: Svc.Ping
 diff --git a/Svc/TlmPacketizer/TlmPacketizer.fpp b/Svc/TlmPacketizer/TlmPacketizer.fpp
-index f03dbafff..91f45eb6f 100644
+index 1655c3e2e..4125fdac9 100644
 --- a/Svc/TlmPacketizer/TlmPacketizer.fpp
 +++ b/Svc/TlmPacketizer/TlmPacketizer.fpp
-@@ -11,13 +11,13 @@ module Svc {
-     output port PktSend: Fw.Com
+@@ -28,13 +28,13 @@ module Svc {
+     async input port controlIn: EnableSection
  
      @ Ping input port
 -    async input port pingIn: Svc.Ping
@@ -246,5 +246,5 @@ index f03dbafff..91f45eb6f 100644
 -    async input port Run: Svc.Sched
 +    async input port Run: Svc.Sched drop
  
-     @ Telemetry input port
-     sync input port TlmRecv: Fw.Tlm
+     @ Input configuration port
+     async input port configureSectionGroupRate: ConfigureGroupRate
