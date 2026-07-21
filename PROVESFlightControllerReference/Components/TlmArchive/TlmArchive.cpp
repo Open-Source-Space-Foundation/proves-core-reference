@@ -27,8 +27,6 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
         return;
     }
 
-    this->log_ACTIVITY_LO_Debug(Fw::LogStringArg("Got a packet from comIn"));
-
     if (this->m_packetCount == MAX_STORED_PACKETS) {
         this->log_ACTIVITY_LO_Debug(Fw::LogStringArg("Writing record."));
         bool status = this->writeRecord();

@@ -65,6 +65,7 @@ def test_tlm_archive_downlinks_record_over_radio(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
     """Create a telemetry record, discover it, and downlink it over LoRa."""
+    telemetry_delay_restored = False
     try:
         proves_send_and_assert_command(
             fprime_test_api,
@@ -84,8 +85,19 @@ def test_tlm_archive_downlinks_record_over_radio(
         )
         assert writing is not None, "TlmArchive did not start writing a record"
 
+        # Stop the high-rate telemetry before sending filesystem commands or
+        # file packets over the bandwidth-constrained, half-duplex radio link.
+        # Waiting for this command's acknowledgement also gives the queued
+        # telemetry generated at the fast rate time to drain.
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
+            [DEFAULT_TELEMETRY_DIVIDER],
+        )
+        telemetry_delay_restored = True
+
         # TlmArchive writes synchronously, but leave time for the filesystem
-        # close and the associated events to clear the radio link.
+        # close and the remaining radio backlog to clear.
         time.sleep(5)
 
         entries = _listed_tlm_files(fprime_test_api)
@@ -112,8 +124,9 @@ def test_tlm_archive_downlinks_record_over_radio(
         # FileSent event, it proves every radio packet reached GDS.
         _await_complete_local_file(local_path, expected_size)
     finally:
-        proves_send_and_assert_command(
-            fprime_test_api,
-            f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
-            [DEFAULT_TELEMETRY_DIVIDER],
-        )
+        if not telemetry_delay_restored:
+            proves_send_and_assert_command(
+                fprime_test_api,
+                f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
+                [DEFAULT_TELEMETRY_DIVIDER],
+            )
