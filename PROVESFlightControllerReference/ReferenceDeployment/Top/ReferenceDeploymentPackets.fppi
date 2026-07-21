@@ -308,4 +308,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   ReferenceDeployment.watchdog.WatchdogTransitions
 
+  ReferenceDeployment.tlmArchive.RecordingEnabled
+
 }
