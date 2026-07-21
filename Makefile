@@ -91,7 +91,8 @@ usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat + w
 	          $(shell pwd)/patches/0002-fix-zephyr-4.3-remove-select-ZEPHYR_LORA_BASICS_MODE.patch \
 	          $(shell pwd)/patches/0003-fix-usp-main-2025-fix-LR_FHSS_SRC_PATH-for-flattened.patch \
 	          $(shell pwd)/patches/0006-fix-sx126x-wakeup-busy-race-add-t_woff-settle-delay.patch \
-	          $(shell pwd)/patches/0008-fix-smtc-modem-hal-implement-rac-api-mutex.patch; do \
+	          $(shell pwd)/patches/0008-fix-smtc-modem-hal-implement-rac-api-mutex.patch \
+	          $(shell pwd)/patches/0010-fix-boards-xiao-nrf54l15-full_name-zephyr-4.4-schema.patch; do \
 		name=$$(basename $$p); \
 		if git apply --check "$$p" 2>/dev/null; then \
 			git apply "$$p" && echo "✓ Applied $$name"; \
