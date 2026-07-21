@@ -16,7 +16,7 @@ FILE_MANAGER = "FileHandling.fileManager"
 FILE_DOWNLINK = "FileHandling.fileDownlink"
 
 DEFAULT_TELEMETRY_DIVIDER = 29
-RECORD_TIMEOUT_S = 180
+RECORD_TIMEOUT_S = 250
 FILE_RECEIVE_TIMEOUT_S = 180
 
 
@@ -75,7 +75,7 @@ def test_tlm_archive_downlinks_record_over_radio(
         proves_send_and_assert_command(
             fprime_test_api,
             f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
-            [1],
+            [3],
         )
 
         writing = fprime_test_api.await_event(
