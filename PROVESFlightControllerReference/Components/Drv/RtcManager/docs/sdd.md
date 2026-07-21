@@ -52,7 +52,7 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
     - If the RTC is ready:
         - Fetches time from the RTC hardware
         - Computes a rescaled microsecond value using the system cycle counter
-        - Returns time with `TB_WORKSTATION_TIME` time base
+        - Returns time with `TB_SC_TIME` time base
     - If the RTC is not ready (failover mode):
         - Logs a warning message (throttled to prevent console flooding)
         - Fetches monotonic uptime from the system
@@ -77,7 +77,7 @@ This guarantees:
 - `0 <= useconds <= 999_999` for all returned times (satisfies `FW_ASSERT(useconds < 1000000, ...)`)
 - No backward jumps in the sub-second field for a given time base, until natural wrap at one second
 
-This logic applies both when using the RTC (`TB_WORKSTATION_TIME`) and when in failover mode using uptime (`TB_PROC_TIME`).
+This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover mode using uptime (`TB_PROC_TIME`).
 
 ## Requirements
 | Name | Description | Validation |
@@ -221,7 +221,7 @@ sequenceDiagram
     RTC Manager->>RTC Manager: Convert to time_t via timeutil_timegm()
     RTC Manager->>RTC Helper: Combine RTC and System clock data to get monotonicly increasing useconds
     RTC Helper-->>RTC Manager: Return useconds
-    RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_WORKSTATION_TIME`
+    RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_SC_TIME`
 ```
 
 #### Failover to Uptime (RTC Unavailable)
