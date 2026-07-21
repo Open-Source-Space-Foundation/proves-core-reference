@@ -208,8 +208,6 @@ zephyr_udc0: &usbd {
 		i2c-mux-idle-disconnect;
 
 		mux_channel_0: i2c_mux@0 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_0";
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -245,8 +243,6 @@ zephyr_udc0: &usbd {
 		};
 
 		mux_channel_1: i2c_mux@1 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_1";
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -282,8 +278,6 @@ zephyr_udc0: &usbd {
 		};
 
 		mux_channel_2: i2c_mux@2 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_2";
 			reg = <2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -319,8 +313,6 @@ zephyr_udc0: &usbd {
 		};
 
 		mux_channel_3: i2c_mux@3 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_3";
 			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -357,8 +349,6 @@ zephyr_udc0: &usbd {
 
 		// Battery
 		mux_channel_4: i2c_mux@4 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_4";
 			reg = <4>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -394,8 +384,6 @@ zephyr_udc0: &usbd {
 
 		// Z- Face x1
 		mux_channel_5: i2c_mux@5 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_5";
 			reg = <5>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -432,8 +420,6 @@ zephyr_udc0: &usbd {
 
 		// Z- Face x2
 		mux_channel_6: i2c_mux@6 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_6";
 			reg = <6>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -470,8 +456,6 @@ zephyr_udc0: &usbd {
 
 		// Top cap
 		mux_channel_7: i2c_mux@7 {
-			compatible = "ti,tca9548a-channel";
-			label = "mux_channel_7";
 			reg = <7>;
 			#address-cells = <1>;
 			#size-cells = <0>;

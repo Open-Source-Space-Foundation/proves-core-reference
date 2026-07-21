@@ -79,6 +79,15 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Enable radio setup and teardown fixtures for this test run.",
     )
     parser.addoption(
+        "--sync-deframer",
+        choices=["uart", "lora"],
+        default=None,
+        help="Which TcSecurityDeframer instance the sequence-number sync test "
+        "queries. Defaults to lora when --with-radio is set, uart otherwise. "
+        "The radio CI job's UART-side bootstrap passes --sync-deframer=lora "
+        "because the traffic that follows is validated by the LoRa instance.",
+    )
+    parser.addoption(
         "--command-retries",
         type=int,
         default=None,
