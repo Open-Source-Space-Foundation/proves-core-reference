@@ -141,6 +141,8 @@ telemetry packets ReferenceDeploymentPackets {
     ReferenceDeployment.rateGroup50Hz.RgCycleSlips
     ReferenceDeployment.rateGroup10Hz.RgCycleSlips
     ReferenceDeployment.rateGroup1Hz.RgCycleSlips
+    # issue #457: UART RX ring-buffer overrun counter (ZephyrUartDriver)
+    comDriver.RxOverrunCount
   }
 
 
@@ -241,6 +243,10 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
 } omit {
+  # issue #457: peripheralUartDriver is the secondary/payload UART; only the
+  # primary comDriver's RxOverrunCount is included in a packet (HealthWarnings).
+  ReferenceDeployment.peripheralUartDriver.RxOverrunCount
+
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
