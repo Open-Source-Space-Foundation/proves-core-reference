@@ -6,5 +6,6 @@ command-line-options:
   output-unframed-data: "-"
   frame-size: 248
   framing-selection: authenticate-space-data-link
+  file-storage-directory: build-artifacts/radio-downlinked-tlm
   file-uplink-cooldown: 0.400
   file-uplink-chunk-size: 204

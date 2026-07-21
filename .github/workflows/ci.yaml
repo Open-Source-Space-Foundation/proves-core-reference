@@ -498,6 +498,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Upload downlinked telemetry archives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radio-downlinked-tlm-archives
+          path: build-artifacts/radio-downlinked-tlm/*.tlm
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |

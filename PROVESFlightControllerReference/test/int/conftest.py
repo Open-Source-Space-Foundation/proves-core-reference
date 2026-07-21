@@ -59,7 +59,11 @@ def pytest_collection_modifyitems(
                     )
                 )
 
-    if not config.getoption("--with-radio", default=False):
+    with_radio = config.getoption("--with-radio", default=False)
+    if not with_radio:
+        for item in items:
+            if item.get_closest_marker("radio_only") is not None:
+                item.add_marker(pytest.mark.skip(reason="requires --with-radio"))
         return
 
     rtc_items = [i for i in items if "rtc_test" in i.nodeid]
