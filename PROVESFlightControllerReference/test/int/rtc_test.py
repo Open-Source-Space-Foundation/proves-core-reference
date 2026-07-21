@@ -21,21 +21,34 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
-resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
-ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
-safeModeSeq = "ReferenceDeployment.safeModeSeq"
 fileManager = "FileHandling.fileManager"
+modeManager = "ReferenceDeployment.modeManager"
+watchdog = "ReferenceDeployment.watchdog"
 
 
 @pytest.fixture(autouse=True)
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    # fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+    # Set the time back to current time
     set_time(fprime_test_api)
+
+    # Set mode back to normal after each test in case we entered safe mode by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{modeManager}.EXIT_SAFE_MODE",
+    )
+
+    # Re-enable the watchdog in case it was stopped by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{watchdog}.START_WATCHDOG",
+    )
+
+    # Clear event history
     fprime_test_api.clear_histories()
 
 
@@ -102,6 +115,11 @@ def uplink_sequence_and_await_completion(
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
 
+    # Sync the RTC to the test runner's clock first so the "previous time"
+    # reported by the next TIME_SET is known (a fresh boot starts at 2000-01-01)
+    set_time(fprime_test_api)
+    fprime_test_api.clear_histories()
+
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
     curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
     set_time(fprime_test_api, curiosity_landing)
@@ -126,16 +144,14 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert previously set time is within 30 seconds of now
-    pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(previously_set_time - datetime.now(timezone.utc)) <= timedelta(
+        seconds=30
+    ), f"Previous time {previously_set_time} should be within 30s of now"
 
     # Assert event time is within 30 seconds of curiosity landing
-    pytest.approx(event_time, abs=30) == curiosity_landing
-
-    # Fetch event data
-    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
-
-    # Assert time is within 30 seconds of now
-    pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(event_time - curiosity_landing) <= timedelta(seconds=30), (
+        f"Event time {event_time} should be within 30s of {curiosity_landing}"
+    )
 
 
 @pytest.mark.uart_only(
