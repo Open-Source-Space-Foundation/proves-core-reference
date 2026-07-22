@@ -27,7 +27,8 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0),
-      m_persistedHighWater(0) {}
+      m_persistedHighWater(0),
+      m_persistRetryBackoff(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -271,29 +272,40 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
 }
 
 void TcSecurityDeframer ::writeAheadPersistIfNeeded(U32 acceptedSeqNum) {
-    // Only persist when the accepted sequence number has caught up to (or passed) the last
-    // write-ahead high-water mark. This bounds filesystem writes to at most once every
-    // SEQ_NUM_PERSIST_STRIDE accepted frames instead of once per frame (issue #461).
+    // Only consider persisting when the accepted sequence number has caught up to (or passed) the
+    // last write-ahead high-water mark, AND we are not currently backing off after a prior
+    // failure. This bounds filesystem writes to at most once every SEQ_NUM_PERSIST_STRIDE accepted
+    // frames in the steady state instead of once per frame (issue #461's original bug).
+    if (this->m_persistRetryBackoff > 0) {
+        --this->m_persistRetryBackoff;
+        return;
+    }
+
     if (acceptedSeqNum >= this->m_persistedHighWater) {
         // Write comfortably ahead of what we've actually seen so a burst of N-1 more accepted
         // frames doesn't require another persist before the next stride boundary.
         const U32 newHighWater = acceptedSeqNum + SEQ_NUM_PERSIST_STRIDE;
         Os::File::Status status = this->writeSequenceNumber(newHighWater);
-        // Advance m_persistedHighWater UNCONDITIONALLY, even if the write failed. A previous
-        // version of this method left it unchanged on failure, reasoning that "the next frame
-        // retries, no more often than every STRIDE frames" -- that was wrong: once
-        // m_persistedHighWater is stuck at a stale value below the ever-advancing
-        // acceptedSeqNum, EVERY subsequent accepted frame re-satisfies the >= check above and
-        // retries the write, degrading this back into a persist-on-every-frame race (issue #461's
-        // original bug) for the rest of the boot, permanently, after a single transient
-        // filesystem hiccup. Advancing regardless bounds the retry to the next stride boundary
-        // (~SEQ_NUM_PERSIST_STRIDE frames later) instead. The tradeoff: a failed write means the
-        // on-disk value can be stale by up to ~2x SEQ_NUM_PERSIST_STRIDE instead of 1x after a
-        // power loss -- still bounded, and the anti-replay invariant (persisted value is always
-        // ahead of some point at-or-before the last accepted frame) still holds, since we only
-        // ever advance the mark forward, never backward.
-        this->m_persistedHighWater = newHighWater;
-        static_cast<void>(status);  // writeSequenceNumber() already logged/throttled on failure
+        if (status == Os::File::OP_OK) {
+            // CORE INVARIANT: only advance m_persistedHighWater on a CONFIRMED successful write.
+            // An earlier version of this method advanced it unconditionally (including on
+            // failure), reasoning it would only cause "the on-disk value to be a bit stale" --
+            // that was a real security regression: it let accepted sequence numbers advance
+            // arbitrarily far past a STALE on-disk value while persist writes kept failing, so a
+            // reboot during a failure streak could reopen a replay window for that entire gap
+            // (not bounded by SEQ_NUM_PERSIST_STRIDE at all). Only a confirmed-successful write
+            // is allowed to move the high-water mark forward.
+            this->m_persistedHighWater = newHighWater;
+            this->m_persistRetryBackoff = 0;
+        } else {
+            // Fail safe, not fail open: do NOT advance the high-water mark, so the invariant
+            // (disk >= last accepted, whenever a persist has ever succeeded) keeps holding for
+            // every frame accepted between now and the next successful write. Do NOT retry on
+            // every subsequent frame either (that degrades back to the original #461 race) --
+            // back off for a bounded number of frames instead, and make noise every time.
+            this->m_persistRetryBackoff = SEQ_NUM_PERSIST_RETRY_BACKOFF;
+            this->log_WARNING_HI_SequenceNumberPersistFailed(static_cast<Os::FileStatus::T>(status), acceptedSeqNum);
+        }
     }
 }
 

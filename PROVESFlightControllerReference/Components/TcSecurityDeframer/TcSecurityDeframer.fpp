@@ -48,6 +48,12 @@ module Components {
         @ SequenceNumberWriteFailed indicates that there was an error writing the sequence number to file
         event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
 
+        @ SequenceNumberPersistFailed indicates that the write-ahead high-water persist (issue #461)
+        @ failed to reach disk. The in-RAM high-water mark is deliberately NOT advanced in this case
+        @ (that would reopen the anti-replay window on a subsequent reboot) -- a retry is scheduled
+        @ after a bounded number of further accepted frames instead of retrying on every single one.
+        event SequenceNumberPersistFailed(status: Os.FileStatus, accepted_seq_num: U32) severity warning high id 10 format "Write-ahead sequence-number persist failed, error: {} (accepted seq {}); retrying after a bounded backoff, not every frame" throttle 2
+
         @ SequenceNumberInvalid indicates that a received packet had a sequence number that was outside of the acceptable window
         event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number less than last accepted or out of window: Received={}, LastAccepted={}, Window={}" throttle 2
 
