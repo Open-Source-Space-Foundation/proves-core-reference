@@ -27,8 +27,7 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0),
-      m_persistedHighWater(0),
-      m_sequenceNumberArmed(false) {}
+      m_persistedHighWater(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -58,16 +57,16 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
     {
         Os::ScopeLock lock(this->m_sequenceNumberLock);
 
-        // If the persisted sequence-number record failed torn-write validation on boot, the
-        // component is UNARMED: reject every frame (valid or not) until ground re-arms it via
-        // SET_SEQ_NUM. This is the conservative recovery path for issue #461's persistence fix --
-        // see SequenceNumberRecordInvalid and m_sequenceNumberArmed.
-        if (!this->m_sequenceNumberArmed) {
-            this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber,
-                                                       this->m_sequenceNumber, this->m_sequenceNumberWindow);
-            this->dataReturnOut_out(0, data, contextOut);
-            return;
-        }
+        // NOTE: there is deliberately NO "unarmed / reject everything" gate here. An earlier
+        // version of this fix rejected all frames -- including SET_SEQ_NUM itself -- whenever the
+        // persisted record failed validation, which is a self-inflicted deadlock: SET_SEQ_NUM is
+        // itself an authenticated command frame that must pass through this same handler, so a
+        // blanket reject can never be un-done by ground. Instead, an invalid/unreadable persisted
+        // record falls back to the same behavior as a genuine first boot (sequence number 0,
+        // frames accepted normally from there) -- see readSequenceNumber() -- with a distinct
+        // SequenceNumberRecordInvalid event so the anomaly is visible and ground can choose to
+        // fast-forward via SET_SEQ_NUM if they know the real last-used value, without that ever
+        // being required to restore basic command capability.
 
         // --- Validate SPI and anti-replay sequence number ---
         const PacketValidator::Status validationStatus =
@@ -147,8 +146,8 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     Os::ScopeLock lock(this->m_sequenceNumberLock);
 
     // Explicit ground command: persist immediately (not subject to the write-ahead stride --
-    // an operator-issued SET_SEQ_NUM is inherently infrequent and is the one path that MUST take
-    // effect durably right away, including re-arming after a SequenceNumberRecordInvalid).
+    // an operator-issued SET_SEQ_NUM is inherently infrequent and is the one path that should take
+    // effect durably right away, e.g. to fast-forward past a SequenceNumberRecordInvalid reset).
     Os::File::Status status = this->writeSequenceNumber(seq_num);
     if (status != Os::File::OP_OK) {
         // Return execution error response
@@ -159,11 +158,6 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     // Set runtime sequence number to the new value and track the persisted high-water mark
     this->m_sequenceNumber = seq_num;
     this->m_persistedHighWater = seq_num;
-
-    // A ground-issued SET_SEQ_NUM is the documented recovery path after
-    // SequenceNumberRecordInvalid -- re-arm the component now that an operator has confirmed a
-    // trustworthy sequence number.
-    this->m_sequenceNumberArmed = true;
 
     // Telemeter the updated sequence number
     this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
@@ -191,11 +185,11 @@ void TcSecurityDeframer ::configure() {
     this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    // Get the persisted high-water mark from the file system. readSequenceNumber() arms the
-    // component on a genuine first boot (DOESNT_EXIST -> bootstraps to 0) or a successfully
-    // validated record; it leaves the component UNARMED (rejecting all frames) on any other
-    // failure, including a torn-write checksum mismatch -- see SequenceNumberRecordInvalid.
-    // The window still starts at this value either way (unchanged semantics from before this fix).
+    // Get the persisted high-water mark from the file system. readSequenceNumber() falls back to
+    // 0 (same as a genuine first boot) on any read/validation failure -- including a torn-write
+    // checksum mismatch -- while emitting SequenceNumberRecordInvalid so the anomaly is visible.
+    // The window always starts at this value (unchanged semantics from before this fix); command
+    // capability is never blocked on this outcome.
     U32 sequenceNumber = 0;
     (void)this->readSequenceNumber(sequenceNumber);
     this->m_sequenceNumber = sequenceNumber;
@@ -223,20 +217,22 @@ Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
 
     if (status == Os::File::DOESNT_EXIST) {
         // Genuine first boot: no risk of replay since nothing has ever been accepted. Bootstrap
-        // to 0 and arm normally -- this mirrors the pre-fix behavior for this specific case.
+        // to 0 -- unchanged from the pre-fix behavior for this specific case.
         this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
         value = 0;
-        this->m_sequenceNumberArmed = true;
         return this->writeSequenceNumber(0);
     }
 
     if (status != Os::File::OP_OK) {
-        // Genuine I/O failure (not a missing file, not (yet) a checksum question). Treat the same
-        // as a torn/invalid record: do not guess a value, stay unarmed until SET_SEQ_NUM.
+        // Genuine I/O failure (not a missing file, not (yet) a checksum question). Fall back to 0,
+        // same as a first boot -- see the SequenceNumberRecordInvalid rationale below. Deliberately
+        // does NOT block command capability: an early version of this fix rejected all frames
+        // (including the SET_SEQ_NUM recovery command itself) whenever this path was hit, which is
+        // a self-inflicted deadlock. Ground can always fast-forward the counter with SET_SEQ_NUM if
+        // they know the real last-used value; they are never required to in order to command again.
         this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
         this->log_WARNING_HI_SequenceNumberRecordInvalid(0);
         value = 0;
-        this->m_sequenceNumberArmed = false;
         return status;
     }
     this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
@@ -244,18 +240,18 @@ Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
     const U32 storedValue = static_cast<U32>(record >> 32);
     const U32 storedChecksum = static_cast<U32>(record & 0xFFFFFFFFu);
     if (storedChecksum != static_cast<U32>(~storedValue)) {
-        // Checksum mismatch: torn write or corruption. Do NOT default to 0/low -- that would
-        // reopen the anti-replay window below whatever the real high-water mark was. Instead,
-        // leave the component UNARMED (rejects all frames) until ground re-arms it via
-        // SET_SEQ_NUM, per the component's existing recovery procedure for sequence-number issues.
+        // Checksum mismatch: torn write or corruption. Falls back to 0 (same as first boot) rather
+        // than trusting a possibly-garbage stored value -- but, per the note above, this does NOT
+        // block command capability. This is a narrower guarantee than fully preventing replay of
+        // any sequence number ever used before the corruption; the tradeoff is deliberate, since a
+        // design that could brick command capability on a single flipped bit is a worse operational
+        // risk than a bounded, visible (see SequenceNumberRecordInvalid) reopening of the window.
         this->log_WARNING_HI_SequenceNumberRecordInvalid(storedValue);
         value = 0;
-        this->m_sequenceNumberArmed = false;
         return Os::File::Status::OTHER_ERROR;
     }
 
     value = storedValue;
-    this->m_sequenceNumberArmed = true;
     return Os::File::Status::OP_OK;
 }
 

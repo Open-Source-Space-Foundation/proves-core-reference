@@ -91,10 +91,10 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
 
     // Loads the sequence-number high-water record from the specified file path, validating its
     // torn-write checksum. On success, `value` holds the persisted high-water mark (see
-    // SEQ_NUM_PERSIST_STRIDE below) and the component is armed. On DOESNT_EXIST (genuine first
-    // boot), bootstraps to 0 and arms. On any other failure -- including a checksum mismatch --
-    // the component is left UNARMED (see m_sequenceNumberArmed) rather than defaulting `value` to
-    // a low number, since a wrong-but-plausible low value would reopen the anti-replay window.
+    // SEQ_NUM_PERSIST_STRIDE below). On DOESNT_EXIST (genuine first boot) or any other failure --
+    // including a checksum mismatch -- falls back to 0, the same as a first boot, and emits
+    // SequenceNumberRecordInvalid for the latter cases so the anomaly is visible. Command
+    // capability is never blocked on this outcome (see dataIn_handler for why).
     Os::File::Status readSequenceNumber(U32& value  //!< The variable to store the read high-water mark
     );
 
@@ -135,11 +135,6 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     U32 m_sequenceNumber;                 //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
     U32 m_persistedHighWater;             //!< The high-water value last written to persistent storage
-    //! Whether the component will accept ANY frame. False after boot if the persisted record
-    //! failed torn-write validation -- ground must issue SET_SEQ_NUM to re-arm (see
-    //! SequenceNumberRecordInvalid). True after a genuine first boot (no file yet) or a
-    //! successful record read/validation, and always true again immediately after SET_SEQ_NUM.
-    bool m_sequenceNumberArmed;
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };

@@ -52,10 +52,11 @@ module Components {
         event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number less than last accepted or out of window: Received={}, LastAccepted={}, Window={}" throttle 2
 
         @ SequenceNumberRecordInvalid indicates that the persisted sequence-number record failed its
-        @ torn-write validation (checksum mismatch) on boot. The component starts UNARMED (rejects all
-        @ frames, valid or not) until ground re-arms it via SET_SEQ_NUM -- this is deliberately more
-        @ conservative than falling back to a low/zero value, which could reopen the anti-replay window.
-        event SequenceNumberRecordInvalid(stored_value: U32) severity warning high id 9 format "Persisted sequence-number record failed validation (raw value read: {}); rejecting all frames until SET_SEQ_NUM re-arms the component"
+        @ torn-write validation (checksum mismatch) on boot, or could not be read for another reason.
+        @ The runtime sequence number falls back to 0 (same as a genuine first boot) so command
+        @ capability is never blocked on this outcome; ground may issue SET_SEQ_NUM to fast-forward
+        @ past any previously-used sequence numbers if the real last-used value is known.
+        event SequenceNumberRecordInvalid(stored_value: U32) severity warning high id 9 format "Persisted sequence-number record failed validation (raw value read: {}); falling back to 0 -- use SET_SEQ_NUM to fast-forward if needed"
 
         @ AuthenticationFailed indicates that a received packet failed authentication
         event AuthenticationFailed(auth_status: PacketAuthenticatorStatus, rc: I32) severity warning high id 1 format "Authentication failed: Status={}, PSA Return Code={}" throttle 2
