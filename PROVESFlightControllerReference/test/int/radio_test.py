@@ -98,7 +98,9 @@ def test_02_continuous_wave_repeated(fprime_test_api: IntegrationTestAPI, start_
     result = fprime_test_api.await_event(
         f"{lora}.ConfigurationFailed", start=start, timeout=0
     )
-    assert result is None, f"Unexpected {lora}.ConfigurationFailed after repeated CW: {result}"
+    assert result is None, (
+        f"Unexpected {lora}.ConfigurationFailed after repeated CW: {result}"
+    )
 
     # The radio must still be usable for normal transmission after the CW bursts;
     # a wedged modem would surface as LoRa error events here.
