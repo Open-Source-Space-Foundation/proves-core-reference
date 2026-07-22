@@ -45,6 +45,26 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Reset repository and submodules to original state
+        # Restores the latent-state protection from #441 (accidentally dropped
+        # by the Zephyr 4.4.1 upgrade in #421). Unlike the original step, the
+        # west-managed Zephyr workspace is excluded from the top-level clean and
+        # instead has each module's working tree reset in place: carried
+        # patches (patches/*.patch) are applied into these trees, so they must
+        # start pristine every run, but deleting the clones would force a full
+        # re-fetch of Zephyr and all modules on every build.
+        run: |
+          git submodule update --init --recursive
+          git clean -dfX -e lib/zephyr-workspace
+          git reset --hard
+          git submodule foreach --recursive git clean -dfX
+          git submodule foreach --recursive git reset --hard
+          find lib/zephyr-workspace -mindepth 1 -maxdepth 4 -name .git 2>/dev/null | while read -r g; do
+            d=$(dirname "$g")
+            git -C "$d" reset --hard
+            git -C "$d" clean -fdx
+          done
+
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
