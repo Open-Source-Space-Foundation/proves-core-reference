@@ -83,7 +83,9 @@ make build
 - Command: `make generate`
 
 ### Linting & Formatting
+
 **IMPORTANT**: The linter must be run before every commit.
+
 ```bash
 # Run all pre-commit checks (REQUIRED before committing)
 make fmt
@@ -108,7 +110,6 @@ make test-unit
 ```
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
-
 
 **Test Framework Details**:
 
@@ -472,10 +473,12 @@ When creating components that need hardware access:
 The project includes a comprehensive set of custom F Prime components organized by function:
 
 **ADCS & Control**:
+
 - **ADCS**: Attitude determination and control system
 - **DetumbleManager**: Magnetic detumble control
 
 **Communication**:
+
 - **AmateurRadio**: Amateur radio (LoRa) management
 - **SBand**: S-Band radio management
 - **ComCcsdsLora / ComCcsdsSband / ComCcsdsUart**: CCSDS framing layers for each link
@@ -483,6 +486,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 - **PayloadCom**: Payload communication interface
 
 **Core System**:
+
 - **ModeManager**: Spacecraft operating mode management
 - **StartupManager**: Startup sequence and boot count
 - **ResetManager**: System reset and watchdog management
@@ -491,6 +495,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 - **BootloaderTrigger**: Bootloader mode entry for firmware updates
 
 **Hardware Drivers (Drv/)**:
+
 - **ImuManager**: LSM6DSO 6-axis IMU sensor management
 - **Drv2605Manager**: Haptic feedback driver
 - **Ina219Manager**: INA219 current/power monitor
@@ -499,6 +504,7 @@ The project includes a comprehensive set of custom F Prime components organized 
 - **Veml6031Manager**: VEML6031 ambient light sensor
 
 **Hardware Control**:
+
 - **AntennaDeployer**: Antenna deployment mechanism
 - **Burnwire**: Burnwire deployment control
 - **CameraHandler**: Camera management
@@ -507,12 +513,14 @@ The project includes a comprehensive set of custom F Prime components organized 
 - **ThermalManager**: Thermal monitoring and control
 
 **Storage**:
+
 - **FlashWorker**: Flash memory read/write management
 - **FsFormat**: Filesystem formatting
 - **FsSpace**: Filesystem space monitoring
 - **NullPrmDb**: No-op parameter database (for systems without persistent storage)
 
 **Security**:
+
 - **Authenticate**: HMAC-based command authentication
 - **ProvesRouter**: Routes authenticated vs. unauthenticated commands
 
@@ -593,6 +601,10 @@ Firmware is signed with MCUBoot for secure boot. The signing key is at `keys/pro
 ```bash
 make build-mcuboot       # Build firmware with MCUBoot signing
 ```
+
+### CI File Edits
+
+Avoid adding giant expanatory comment blocks in `ci.yaml` for changes. Be very conservative with code comments in this file, only add them if they're necessary to understand what a line of the workflow does, and even then, keep them very concise.
 
 ## Trust These Instructions
 
