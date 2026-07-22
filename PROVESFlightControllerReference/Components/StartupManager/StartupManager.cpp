@@ -7,6 +7,7 @@
 #include "PROVESFlightControllerReference/Components/StartupManager/StartupManager.hpp"
 
 #include "Os/File.hpp"
+#include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
 #include <zephyr/drivers/rtc.h>
 
 namespace Components {
@@ -190,6 +191,7 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
     }
 
+#if DEFAULT_STARTUP_VALUE == 1
     if (this->m_transmit_enable_ticks > 0) {
         this->m_transmit_enable_ticks--;
         if (this->m_transmit_enable_ticks == 0) {
@@ -199,6 +201,7 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
             }
         }
     }
+#endif
 
     // Calculate the quiescence end time based on the quiescence period parameter
     Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
