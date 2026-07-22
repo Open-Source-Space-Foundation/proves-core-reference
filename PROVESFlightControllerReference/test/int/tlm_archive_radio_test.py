@@ -12,10 +12,14 @@ pytestmark = [pytest.mark.radio_only]
 
 TLM_ARCHIVE = "ReferenceDeployment.tlmArchive"
 TELEMETRY_DELAY = "ReferenceDeployment.telemetryDelay"
+DOWNLINK_DELAY = "ReferenceDeployment.downlinkDelay"
 FILE_MANAGER = "FileHandling.fileManager"
 FILE_DOWNLINK = "FileHandling.fileDownlink"
 
 DEFAULT_TELEMETRY_DIVIDER = 29
+DEFAULT_DOWNLINK_DIVIDER = 20
+ARCHIVE_TELEMETRY_DIVIDER = 4
+ARCHIVE_DOWNLINK_DIVIDER = 3
 RECORD_TIMEOUT_S = 250
 FILE_RECEIVE_TIMEOUT_S = 180
 
@@ -66,6 +70,7 @@ def test_tlm_archive_downlinks_record_over_radio(
 ):
     """Create a telemetry record, discover it, and downlink it over LoRa."""
     telemetry_delay_restored = False
+    downlink_delay_restored = False
     try:
         proves_send_and_assert_command(
             fprime_test_api,
@@ -74,8 +79,13 @@ def test_tlm_archive_downlinks_record_over_radio(
         )
         proves_send_and_assert_command(
             fprime_test_api,
+            f"{DOWNLINK_DELAY}.DIVIDER_PRM_SET",
+            [ARCHIVE_DOWNLINK_DIVIDER],
+        )
+        proves_send_and_assert_command(
+            fprime_test_api,
             f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
-            [3],
+            [ARCHIVE_TELEMETRY_DIVIDER],
         )
 
         writing = fprime_test_api.await_event(
@@ -123,10 +133,25 @@ def test_tlm_archive_downlinks_record_over_radio(
         # The completed local file is the end-to-end assertion: unlike the
         # FileSent event, it proves every radio packet reached GDS.
         _await_complete_local_file(local_path, expected_size)
+
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{DOWNLINK_DELAY}.DIVIDER_PRM_SET",
+            [DEFAULT_DOWNLINK_DIVIDER],
+        )
+        downlink_delay_restored = True
     finally:
-        if not telemetry_delay_restored:
-            proves_send_and_assert_command(
-                fprime_test_api,
-                f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
-                [DEFAULT_TELEMETRY_DIVIDER],
-            )
+        try:
+            if not telemetry_delay_restored:
+                proves_send_and_assert_command(
+                    fprime_test_api,
+                    f"{TELEMETRY_DELAY}.DIVIDER_PRM_SET",
+                    [DEFAULT_TELEMETRY_DIVIDER],
+                )
+        finally:
+            if not downlink_delay_restored:
+                proves_send_and_assert_command(
+                    fprime_test_api,
+                    f"{DOWNLINK_DELAY}.DIVIDER_PRM_SET",
+                    [DEFAULT_DOWNLINK_DIVIDER],
+                )
