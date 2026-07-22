@@ -604,7 +604,7 @@ make build-mcuboot       # Build firmware with MCUBoot signing
 
 ### CI File Edits
 
-Avoid adding giant expanatory comment blocks in `ci.yaml` for changes. Be very conservative with code comments in this file, only add them if they're necessary to understand what a line of the workflow does, and even then, keep them very concise.
+Avoid adding giant explanatory comment blocks in `ci.yaml` for changes. Be very conservative with code comments in this file; only add them if they're necessary to understand what a line of the workflow does, and even then, keep them very concise.
 
 ## Trust These Instructions
 
