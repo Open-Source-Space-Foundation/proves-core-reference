@@ -279,12 +279,21 @@ void TcSecurityDeframer ::writeAheadPersistIfNeeded(U32 acceptedSeqNum) {
         // frames doesn't require another persist before the next stride boundary.
         const U32 newHighWater = acceptedSeqNum + SEQ_NUM_PERSIST_STRIDE;
         Os::File::Status status = this->writeSequenceNumber(newHighWater);
-        if (status == Os::File::OP_OK) {
-            this->m_persistedHighWater = newHighWater;
-        }
-        // On failure, m_persistedHighWater is left unchanged so the next accepted frame retries
-        // the persist (still no more often than every SEQ_NUM_PERSIST_STRIDE frames in steady
-        // state, since acceptedSeqNum keeps advancing past the stale high-water mark).
+        // Advance m_persistedHighWater UNCONDITIONALLY, even if the write failed. A previous
+        // version of this method left it unchanged on failure, reasoning that "the next frame
+        // retries, no more often than every STRIDE frames" -- that was wrong: once
+        // m_persistedHighWater is stuck at a stale value below the ever-advancing
+        // acceptedSeqNum, EVERY subsequent accepted frame re-satisfies the >= check above and
+        // retries the write, degrading this back into a persist-on-every-frame race (issue #461's
+        // original bug) for the rest of the boot, permanently, after a single transient
+        // filesystem hiccup. Advancing regardless bounds the retry to the next stride boundary
+        // (~SEQ_NUM_PERSIST_STRIDE frames later) instead. The tradeoff: a failed write means the
+        // on-disk value can be stale by up to ~2x SEQ_NUM_PERSIST_STRIDE instead of 1x after a
+        // power loss -- still bounded, and the anti-replay invariant (persisted value is always
+        // ahead of some point at-or-before the last accepted frame) still holds, since we only
+        // ever advance the mark forward, never backward.
+        this->m_persistedHighWater = newHighWater;
+        static_cast<void>(status);  // writeSequenceNumber() already logged/throttled on failure
     }
 }
 
