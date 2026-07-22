@@ -89,12 +89,31 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
-    // Loads the sequence number from the specified file path
-    Os::File::Status readSequenceNumber(U32& value  //!< The variable to store the read sequence number
+    // Loads the sequence-number high-water record from the specified file path, validating its
+    // torn-write checksum. On success, `value` holds the persisted high-water mark (see
+    // SEQ_NUM_PERSIST_STRIDE below) and the component is armed. On DOESNT_EXIST (genuine first
+    // boot), bootstraps to 0 and arms. On any other failure -- including a checksum mismatch --
+    // the component is left UNARMED (see m_sequenceNumberArmed) rather than defaulting `value` to
+    // a low number, since a wrong-but-plausible low value would reopen the anti-replay window.
+    Os::File::Status readSequenceNumber(U32& value  //!< The variable to store the read high-water mark
     );
 
-    //! Writes the sequence number to the specified file path
-    Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
+    //! Persists the sequence-number high-water record (value + torn-write checksum) to the
+    //! specified file path. See writeAheadPersistIfNeeded() for when this is actually called --
+    //! it is NOT called on every accepted frame (that was the root cause of issue #461).
+    Os::File::Status writeSequenceNumber(const U32 value  //!< The high-water value to persist
+    );
+
+    //! Write-ahead batched persistence (issue #461 fix): call after accepting a frame with
+    //! `acceptedSeqNum`. Persists a new high-water record ONLY when the persisted high-water mark
+    //! has been reached or passed, writing `acceptedSeqNum + SEQ_NUM_PERSIST_STRIDE` instead of the
+    //! bare accepted value. This bounds filesystem writes to at most once per
+    //! SEQ_NUM_PERSIST_STRIDE accepted frames (eliminating the per-command race with
+    //! FileUplink/FileManager/FileDownlink/PrmDb's own filesystem access -- see #461) while
+    //! preserving the anti-replay invariant: the persisted value is always >= the highest sequence
+    //! number any legitimate command could have used before an unexpected power loss, so a replayed
+    //! (already-used) sequence number is still rejected after a reboot, by construction.
+    void writeAheadPersistIfNeeded(U32 acceptedSeqNum  //!< The sequence number just accepted
     );
 
   private:
@@ -102,12 +121,25 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
+    //! Number of accepted frames between persisted high-water writes. The persisted value is
+    //! always `lastAccepted + SEQ_NUM_PERSIST_STRIDE` at the time of a write, so a reboot can lose
+    //! at most this many already-used sequence numbers worth of "slack" before the anti-replay
+    //! window catches up -- it can never lose the ability to reject a truly replayed frame, since
+    //! the stored value never falls below any previously-accepted sequence number.
+    static constexpr U32 SEQ_NUM_PERSIST_STRIDE = 100;
+
     // Sequence number state is coupled between in-memory runtime state and on-disk persistent storage
     // they are protected by the same mutex to ensure atomicity of updates across both mediums
     Os::Mutex m_sequenceNumberLock;       //!< Mutex protecting sequence number state atomicity
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
-    U32 m_sequenceNumber;                 //!< The current sequence number
+    U32 m_sequenceNumber;                 //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
+    U32 m_persistedHighWater;             //!< The high-water value last written to persistent storage
+    //! Whether the component will accept ANY frame. False after boot if the persisted record
+    //! failed torn-write validation -- ground must issue SET_SEQ_NUM to re-arm (see
+    //! SequenceNumberRecordInvalid). True after a genuine first boot (no file yet) or a
+    //! successful record read/validation, and always true again immediately after SET_SEQ_NUM.
+    bool m_sequenceNumberArmed;
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
