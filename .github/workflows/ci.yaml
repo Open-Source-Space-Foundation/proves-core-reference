@@ -133,16 +133,18 @@ jobs:
           ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" \
             -c "init" \
             -c "targets" \
-            -c "rp2350.cm0 halt" \
-            -c "echo {--- cm0 regs ---}" -c "rp2350.cm0 reg" \
+            -c "targets rp2350.cm0" \
+            -c "halt" \
+            -c "echo {--- cm0 regs ---}" -c "reg" \
             -c "echo {--- cm0 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
-            -c "rp2350.cm0 mdw 0xE000ED28 5" \
-            -c "echo {--- cm0 backtrace ---}" -c "rp2350.cm0 arm semihosting enable" \
-            -c "rp2350.cm0 bt" \
-            -c "rp2350.cm1 halt" \
-            -c "echo {--- cm1 regs ---}" -c "rp2350.cm1 reg" \
+            -c "mdw 0xE000ED28 5" \
+            -c "echo {--- cm0 backtrace ---}" -c "arm semihosting enable" \
+            -c "bt" \
+            -c "targets rp2350.cm1" \
+            -c "halt" \
+            -c "echo {--- cm1 regs ---}" -c "reg" \
             -c "echo {--- cm1 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
-            -c "rp2350.cm1 mdw 0xE000ED28 5" \
+            -c "mdw 0xE000ED28 5" \
             -c "shutdown" || true
           # Power-cycle to clear the halted-core state and get back to a clean boot
           # for the real test steps that follow.
