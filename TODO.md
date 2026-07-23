@@ -113,15 +113,36 @@ Status legend: [ ] todo, [~] in progress, [x] done
       commented-out `register_fprime_ut` block remains for a future on-target/component test pass.
 - [x] `make build` with no `AuthDefaultKey.h` — clean build confirmed (see above)
 - [x] `make check-console-disabled` — OK, Zephyr console disabled
-- [ ] CI green — **blocked**, see `PROBLEM.md`: `integration-uart`/`integration-radio`
-      fail on real hardware. Board is confirmed alive (not crashed/faulted — verified
-      via live SWD register dump), but the ground side sees real USB serial
-      disconnects and never gets a response to the first command. Leading theory:
-      moving the sequence-number file + key-store reload onto the same internal QSPI
-      flash chip that serves the running code means every write now disables
-      interrupts system-wide (RP2350 XIP constraint) on what used to be
-      interrupt-safe SD-card I/O, stalling USB. Needs a decision + fix — not yet
-      implemented.
+- [ ] CI green — **pending re-run**. `integration-uart`/`integration-radio` failed on
+      real hardware. Board was confirmed alive (not crashed/faulted — verified via live
+      SWD register dump), but the ground side saw real USB serial disconnects and never
+      got a response to the first command. See `INVESTIGATION.md` for a static
+      re-analysis: the `PROBLEM.md` interrupt-stall theory is **likely wrong** (reads
+      don't `irq_lock` in `flash_rpi_pico.c`, and `keystore_partition@0x400000` sat
+      past the declared 4 MB `flash0` boundary → every keystore op returned `-EINVAL`
+      before any `irq_lock`, so `/keys` never mounted and no interrupt was ever
+      disabled for it). Real root cause is almost certainly the flash-size
+      mis-declaration. **Fix implemented below — awaiting CI hardware confirmation.**
+
+## Suggested fix (blocked CI) — see INVESTIGATION.md
+- [x] **Primary fix**: changed `&flash0 { reg = <0x10000000 DT_SIZE_M(4)>; }` →
+      `DT_SIZE_M(16)` in `proves_flight_control_board_v5.dtsi` (shared by v5c/v5d/v5e).
+      No hardware bench available this session to do the SWD/console confirmation from
+      the old Step 0, but the evidence was already strong without it: `storage_partition`
+      on `main` has run `0x400000 → 0x1000000` (16 MB extent) against this same 4 MB
+      declaration for a while, unnoticed only because nothing mounted it. `make generate
+      build` confirms `CONFIG_FLASH_SIZE` now follows to 16384 (was 4096), same
+      FLASH/RAM usage as before (69.82%/62.32%) — build is otherwise unaffected.
+      **Re-run both integration jobs on real hardware to confirm** — if the chip is
+      actually 4 MB this will surface as a hardware-level flash access fault/hang
+      distinct from the old `-EINVAL`-before-mount failure, at which point fall back to
+      carving `keystore_partition` from within 0–4 MB (e.g. shrink `slot2/test`) and
+      fixing `storage_partition` too.
+- [ ] **Robustness follow-ups (evaluate only after CI confirms the fix):** (a) consider raw
+      `flash_area_*`/NVS instead of littlefs for this fixed-size store; (b) rate-limit
+      `loadKeyStore()` so it isn't a fresh `fs_open` per unrecognized-SPI frame; (c) if
+      per-frame `writeSequenceNumber` proves a real wear/timing problem, throttle it or
+      move only the seq counter to a no-erase medium (RV3028 RTC user RAM / FRAM).
 
 ## Notes / decisions while implementing
 (append here as work progresses)
