@@ -30,15 +30,25 @@ class StartupManager final : public StartupManagerComponentBase {
     //! Destroy StartupManager object
     ~StartupManager();
 
-    //! \brief read and increment the boot count
+    //! \brief read and optionally increment the boot count
     //!
-    //! Reads the boot count from the boot count file, increments it, and writes it back to the file. If the read
-    //! fails, the boot count will be initialized to 1. If the write fails, a warning will be emitted.
+    //! Reads the boot count from the boot count file. If the read fails or the stored value is implausible
+    //! (torn/corrupt write), the count is treated as unread and initializes to 1 on increment. Only the
+    //! increment path writes the file; plain reads leave it untouched. If the write fails, a warning is
+    //! emitted and the write is retried on subsequent run ticks.
     //!
-    //! \warning this function will modify the boot count file on disk.
+    //! \warning this function will modify the boot count file on disk when increment is true.
     //!
     //! \return The updated boot count
     FwSizeType get_boot_count(bool increment);
+
+    //! \brief durably persist the boot count via write-to-temp + atomic rename
+    //!
+    //! littlefs renames are atomic, so a reset landing mid-update leaves either the old or the new
+    //! file — never a torn one.
+    //!
+    //! \return Status of the persist operation
+    Status persist_boot_count(const Fw::StringBase& file_path, FwSizeType value);
 
     //! \brief get and possibly initialize the quiescence start time
     //!
@@ -98,12 +108,14 @@ class StartupManager final : public StartupManagerComponentBase {
                                    ) override;
 
   private:
-    Fw::Time m_quiescence_start;   //!< Time of the start of the quiescence wait
-    FwOpcodeType m_stored_opcode;  //!< Stored opcode for delayed response
-    FwSizeType m_boot_count;       //!< Current boot count
-    U32 m_stored_sequence;         //!< Stored sequence number for delayed response
-    std::atomic<bool> m_waiting;   //!< Indicates if waiting for quiescence
-    Fw::String m_sequence_file;    //!< The filepath for the sequence last initiated
+    Fw::Time m_quiescence_start;             //!< Time of the start of the quiescence wait
+    FwOpcodeType m_stored_opcode;            //!< Stored opcode for delayed response
+    FwSizeType m_boot_count;                 //!< Current boot count
+    bool m_boot_count_persisted = false;     //!< Whether the incremented boot count has reached the file
+    bool m_boot_count_write_logged = false;  //!< Warning already emitted for the current persist-failure streak
+    U32 m_stored_sequence;                   //!< Stored sequence number for delayed response
+    std::atomic<bool> m_waiting;             //!< Indicates if waiting for quiescence
+    Fw::String m_sequence_file;              //!< The filepath for the sequence last initiated
 };
 
 }  // namespace Components
