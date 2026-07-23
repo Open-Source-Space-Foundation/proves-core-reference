@@ -110,7 +110,7 @@ class StartupManager final : public StartupManagerComponentBase {
   private:
     Fw::Time m_quiescence_start;             //!< Time of the start of the quiescence wait
     FwOpcodeType m_stored_opcode;            //!< Stored opcode for delayed response
-    FwSizeType m_boot_count;                 //!< Current boot count
+    FwSizeType m_boot_count = 0;             //!< Current boot count (0 = first run tick not yet processed)
     bool m_boot_count_persisted = false;     //!< Whether the incremented boot count has reached the file
     bool m_boot_count_write_logged = false;  //!< Warning already emitted for the current persist-failure streak
     U32 m_stored_sequence;                   //!< Stored sequence number for delayed response

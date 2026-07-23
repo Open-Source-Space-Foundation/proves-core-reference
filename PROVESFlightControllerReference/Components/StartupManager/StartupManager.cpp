@@ -94,7 +94,10 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     if (status == Os::File::OP_OK) {
         FwSizeType size = sizeof(data_buffer);
         status = file.write(data_buffer, size);
-        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
+        // Flush before close so the data has reached storage before callers (e.g. the atomic
+        // rename in persist_boot_count) treat the write as durable. close() returns void and
+        // cannot report a flush failure.
+        if (status == Os::File::OP_OK && size == sizeof(data_buffer) && file.flush() == Os::File::OP_OK) {
             return_status = StartupManager::SUCCESS;
         }
     }
