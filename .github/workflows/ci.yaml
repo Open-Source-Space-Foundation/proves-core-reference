@@ -127,42 +127,6 @@ jobs:
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
 
-      # TEMPORARY DIAGNOSTIC (remove once root-caused): sample PC/LR on both
-      # cores at several offsets after a fresh reset to see whether either
-      # core is parked inside flash_range_erase/flash_range_program (or the
-      # bootrom routines they call) for an extended period, per the revised
-      # interrupt-stall theory in INVESTIGATION.md. Halt/resume only -- no
-      # firmware or config changes, so this doesn't disturb the rest of the
-      # job's normal (still-failing) GDS flow below.
-      - name: PC Sweep Diagnostic
-        run: |
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg \
-            -c "adapter speed 5000" \
-            -c "init" \
-            -c "reset run" \
-            -c "sleep 2000" \
-            -c "targets rp2350.cm0" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=2s cm0 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "targets rp2350.cm1" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=2s cm1 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "sleep 8000" \
-            -c "targets rp2350.cm0" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=10s cm0 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "targets rp2350.cm1" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=10s cm1 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "sleep 10000" \
-            -c "targets rp2350.cm0" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=20s cm0 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "targets rp2350.cm1" -c "poll" -c "halt" -c "poll" \
-            -c "echo {--- t=20s cm1 ---}" -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" \
-            -c "resume" \
-            -c "shutdown" || true
-
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do

@@ -226,6 +226,78 @@ they call for an extended period. That would confirm or rule out the
 interrupt-stall theory directly without touching console/USB at all, avoiding
 the corruption tradeoff entirely.
 
+## PC-sweep diagnostic (CI run 30043983799, 2026-07-23) — hang located
+
+Ran the sweep above (`PC Sweep Diagnostic` step, halt/resume only, no
+firmware/config changes). Result for `cm0` (the core running Zephyr/F'):
+
+| offset | pc         | lr         | sp         | xpsr       |
+|--------|------------|------------|------------|------------|
+| t=2s   | 0x101864b8 | 0x1010fb69 | 0x20034410 | 0x61000000 |
+| t=10s  | 0x101864b8 | 0x1010fb69 | 0x20034410 | 0x61000000 |
+| t=20s  | 0x101864b8 | 0x1010fb69 | 0x20034410 | 0x61000000 |
+
+**Identical PC/LR/SP/xPSR at all three offsets spanning 20 seconds** — cm0
+made zero forward progress the entire window. Resolved against this exact
+commit's local build (`build-fprime-automatic-zephyr/zephyr/zephyr.elf`,
+same `f5c3a124` the CI run built from):
+
+```
+101864b6 T fs_open
+101864b6 T fs_open        <- pc 0x101864b8 is fs_open+2 (its first real instruction)
+1010fb48 T idle
+1010fb90 t unpend_thread_no_timeout   <- lr 0x1010fb69 is idle()+0x21 (its caller)
+```
+
+So cm0 is parked at the very entry of `fs_open()`, called from Zephyr's early
+init sequence (which runs in the context that becomes the idle thread before
+the scheduler starts other threads — this is the boot-time `SYS_INIT`/fstab
+automount call chain, not literally the CPU-idle loop). This is consistent
+with the **first real file operation this branch performs after a successful
+`/keys` mount** — almost certainly `TcSecurityDeframer::configure()` calling
+`loadKeyStore()`'s `fs_open()` on a virgin key-store file, i.e. exactly the
+code path the flash-size fix newly unblocked.
+
+`cm1` (the second RP2350 core) sampled `pc=0x19e`/`msp=0xf0000000` unchanged
+at all three offsets too — `0x19e` is a bootrom address (well below the
+`0x10000000` XIP flash base), meaning **cm1 was never launched into Zephyr
+code at all** and has been idling in the bootrom's core-1 launch stub since
+reset. This app apparently runs single-core (cm1 unused/unlaunched).
+
+This is a real, reproducible, total hang (not a slow operation) at the exact
+point the new keystore feature first touches the filesystem, and it fully
+explains the console-log diagnostic's total silence after ~1.16s. It doesn't
+by itself prove the *mechanism* (why `fs_open`/whatever it calls never
+returns), but two mechanisms fit the facts and are worth checking first:
+
+1. **RP2350 dual-core flash lockout deadlock**: the vendored
+   `flash_range_erase`/`flash_range_program` in
+   `lib/zephyr-workspace/modules/hal/rpi_pico/src/rp2_common/hardware_flash/flash.c`
+   call `flash_exit_xip_func()`/ROM erase-program routines directly — no
+   `multicore_lockout`/`flash_safe_execute` handshake is visible in this
+   vendored copy, so a genuine multicore lockout wait is less likely here
+   than on stock Pico SDK, but worth double-checking the ROM functions
+   themselves don't internally expect core1's cooperation given cm1 was never
+   launched.
+2. **A global fs/littlefs lock held by a different, already-wedged context**:
+   if some earlier code path (e.g. an interrupt-context or another thread)
+   is genuinely stuck inside a flash erase/program with `irq_lock()` held
+   indefinitely, `fs_open()`'s first action (typically taking a shared fs
+   mutex) would block forever waiting for a lock that will never be
+   released — cm0's halted PC/LR here would be showing the *this* thread's
+   blocked-on-mutex state, not literally an infinite loop inside `fs_open`
+   itself. Under this reading the real hang is still likely to be an
+   erase/program call somewhere in the mount/format path, just not the one
+   `fs_open` is calling right now.
+
+Both point at the same practical fix: avoid littlefs's first-time
+format/create path on this partition. The pre-existing "Robustness
+follow-ups" item — replacing the littlefs `/keys` mount with raw
+`flash_area_*`/NVS for this fixed-size key store — sidesteps this class of
+bug entirely regardless of which exact mechanism is at fault, since NVS
+doesn't take a global fs lock and its record writes are simple, bounded
+`flash_area_write`/`erase` calls with well-understood timing.
+
 ## Original next steps (superseded above, kept for the 4 MB fallback)
 
 Everything below was written before hardware confirmation; kept for

@@ -152,11 +152,30 @@ Status legend: [ ] todo, [~] in progress, [x] done
       where. Ruled out a stale `PICO_FLASH_SIZE_BYTES` hard_assert in the Pico
       SDK's `flash_range_erase` — that macro isn't defined in this Zephyr build.
       Diagnostic reverted (console can't coexist with a working GDS link — see
-      `scripts/check_console_disabled.py`). **Next: SWD PC-sampling at multiple
-      time offsets** after flash (same pattern as commits `1ff5d8bb`/`78ca10f7`/
-      `0949dfbd`/`693eb5d8`, but timed sweeps instead of one dump) to see if PC is
-      parked inside `flash_range_erase`/`flash_range_program` — see
-      `INVESTIGATION.md` "Next diagnostic" for details. Not yet run.
+      `scripts/check_console_disabled.py`).
+      **Ran the SWD PC-sweep (CI run 30043983799, reverted after): hang located.**
+      cm0's pc/lr/sp/xpsr are byte-for-byte identical at t=+2s/+10s/+20s after
+      reset — zero forward progress for 20+ seconds. Resolved against the
+      build's symbols: `pc=0x101864b8` is `fs_open+2` (its first real
+      instruction), `lr=0x1010fb69` is inside Zephyr's `idle()` (the context
+      that runs early `SYS_INIT`/fstab-automount code before the scheduler
+      starts other threads) — i.e. cm0 is frozen at the very first file
+      operation this branch performs after `/keys` mounts (almost certainly
+      `TcSecurityDeframer::configure()`'s `loadKeyStore()` opening a virgin
+      key-store file for the first time). cm1 sampled `pc=0x19e` (a bootrom
+      address) unchanged too — cm1 was never launched into Zephyr code at all,
+      this app runs single-core. Two candidate mechanisms (both point at the
+      same fix, see `INVESTIGATION.md` "PC-sweep diagnostic" for full
+      reasoning): (a) something in the mount/format path already holds
+      `irq_lock()` in a flash erase/program that never returns, and `fs_open`'s
+      first action (a shared fs mutex) blocks on it forever; (b) a dual-core
+      interaction given cm1's unusual unlaunched state, though the vendored
+      `flash_range_erase`/`flash_range_program` in this tree don't show an
+      obvious multicore-lockout wait. **Next: either replace the littlefs
+      `/keys` mount with raw `flash_area_*`/NVS (sidesteps this class of bug
+      regardless of exact mechanism — see Robustness follow-ups below), or dig
+      further into which specific call inside the mount/format/create path
+      never returns.**
 - [ ] **Robustness follow-ups (evaluate once the stall is diagnosed):** (a) consider
       raw `flash_area_*`/NVS instead of littlefs for this fixed-size store (avoids
       the format-time erase burst and any long single-call erase/program under
