@@ -583,15 +583,13 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     # Wait for the 1Hz run_handler to detect command loss (at most 2 seconds)
     fprime_test_api.assert_event(f"{component}.CommandLossDetected", timeout=5)
 
-    # Verify EnteringSafeMode event mentions loss of contact
-    events = fprime_test_api.get_event_test_history()
-    entering_events = [
-        e for e in events if "EnteringSafeMode" in str(e.get_template().get_name())
-    ]
-    assert len(entering_events) > 0, (
-        "EnteringSafeMode event should be emitted on command loss"
+    # Verify EnteringSafeMode event mentions loss of contact. The firmware emits it a few
+    # tens of ms after CommandLossDetected, so wait for it rather than scraping the history
+    # snapshot (which races the EVR's arrival at the GDS).
+    entering_event = fprime_test_api.assert_event(
+        f"{component}.EnteringSafeMode", timeout=5
     )
-    assert "contact" in entering_events[-1].get_display_text().lower(), (
+    assert "contact" in entering_event.get_display_text().lower(), (
         "EnteringSafeMode should mention loss of contact"
     )
 
