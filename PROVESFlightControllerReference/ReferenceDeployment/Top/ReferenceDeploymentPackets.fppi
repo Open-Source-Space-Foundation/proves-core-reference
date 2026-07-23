@@ -121,6 +121,10 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.commsBufferManager.HiBuffs
 #    ComCcsdsSband.comQueue.comQueueDepth
 #    ComCcsdsSband.commsBufferManager.HiBuffs
+    # issue #471: UART comms buffer pool exhaustion diagnostics
+    ComCcsdsUart.commsBufferManager.TotalBuffs
+    ComCcsdsUart.commsBufferManager.CurrBuffs
+    ComCcsdsUart.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     ReferenceDeployment.rateGroup50Hz.RgMaxTime
@@ -294,9 +298,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   # Moved to omit as they are not useful in normal ops
   ComCcsdsUart.comQueue.comQueueDepth
-  ComCcsdsUart.commsBufferManager.HiBuffs
-  ComCcsdsUart.commsBufferManager.TotalBuffs
-  ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
 
   ComCcsdsLora.commsBufferManager.EmptyBuffs

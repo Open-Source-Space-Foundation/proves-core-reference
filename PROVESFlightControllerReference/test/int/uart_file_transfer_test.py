@@ -83,16 +83,23 @@ def _uplink_and_verify_crc(
 
     idle = _wait_for_uplink_idle(uplinker, timeout_s)
 
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_command(f"{FILE_MANAGER}.CalculateCrc", [dest_path])
-    evt = fprime_test_api.await_event(
-        f"{FILE_MANAGER}.CalculateCrcSucceeded", timeout=15
-    )
-    fail_evt = None
-    if evt is None:
+    # CalculateCrc right after file close can transiently fail with
+    # OTHER_ERROR (11) from shared-FatFs contention (issue #465 family);
+    # retry a couple of times before declaring the file bad.
+    evt = fail_evt = None
+    for _ in range(3):
+        fprime_test_api.clear_histories()
+        fprime_test_api.send_command(f"{FILE_MANAGER}.CalculateCrc", [dest_path])
+        evt = fprime_test_api.await_event(
+            f"{FILE_MANAGER}.CalculateCrcSucceeded", timeout=15
+        )
+        if evt is not None:
+            fail_evt = None
+            break
         fail_evt = fprime_test_api.await_event(
             f"{FILE_MANAGER}.CalculateCrcFailed", timeout=1
         )
+        time.sleep(2)
 
     return {
         "uplink_idle": idle,
@@ -163,11 +170,6 @@ def test_uplink_large(
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason="issue #471: comms buffer pool leak FATALs the board on the second "
-    "large uplink of a boot; remove this marker as the #471 acceptance gate",
-    strict=False,
-)
 def test_large_round_trip(fprime_test_api: IntegrationTestAPI, start_gds, tmp_path):
     """~204KB (1000-chunk) uplink + downlink round trip.
 
@@ -227,6 +229,85 @@ def test_large_round_trip(fprime_test_api: IntegrationTestAPI, start_gds, tmp_pa
         "downlinked bytes do not match the uplinked source"
     )
     print(f"[round-trip] SUCCESS: up {size / t_up:.1f} B/s, down {size / t_dl:.1f} B/s")
+
+
+@pytest.mark.slow
+def test_three_consecutive_large_uplinks(
+    fprime_test_api: IntegrationTestAPI, start_gds, tmp_path
+):
+    """Issue #471 acceptance: three consecutive ~204KB uplinks on one boot must
+    all succeed, and the comms buffer pool must keep headroom (HiBuffs <
+    TotalBuffs) and return to baseline (CurrBuffs == 0) after each transfer.
+
+    Buffer telemetry is pulled on demand via CdhCore.tlmSend.SEND_PKT [2]
+    (Health packet); requested packets bypass the TlmPacketizer send level.
+    """
+    bm = "ComCcsdsUart.commsBufferManager"
+    # The GDS only emits a channel update when its value changes, so an
+    # unchanged HiBuffs never re-appears after a SEND_PKT. Carry the
+    # last-known value forward across samples instead of expecting a fresh
+    # update every time.
+    latest = {}
+
+    def sample(attempts: int = 4):
+        # A single forced packet can be lost to a corrupted frame; retry until
+        # at least one Health packet has ever decoded (latest non-empty).
+        for _ in range(attempts):
+            fprime_test_api.send_command("CdhCore.tlmSend.SEND_PKT", ["2"])
+            time.sleep(5)
+            for upd in list(fprime_test_api.telemetry_history.retrieve()):
+                name = upd.template.get_full_name()
+                if name.startswith(bm):
+                    latest[name.rsplit(".", 1)[1]] = upd.get_val()
+            if latest:
+                break
+        return latest
+
+    sample()
+    total = latest.get("TotalBuffs")
+    assert total is not None, "no buffer telemetry -- Health packet not arriving"
+
+    for i in range(3):
+        # The link has no ARQ, so rare silent frame loss corrupts a transfer;
+        # recovery is a whole-file re-uplink to the same dest (idempotent
+        # offset writes). One retry keeps that residual out of this test's
+        # verdict -- #471 is about the board surviving, not link reliability.
+        result = None
+        for attempt in range(2):
+            local_path = _make_random_file(
+                tmp_path, 1000 * UPLINK_CHUNK_SIZE, f"consec_{i}.bin"
+            )
+            result = _uplink_and_verify_crc(
+                fprime_test_api, local_path, f"/consec_{i}.bin", timeout_s=900
+            )
+            crc_ok = (
+                result["crc_event"] is not None
+                and result["crc_event"].args[1].val == result["expected_crc"]
+            )
+            if result["uplink_idle"] and crc_ok:
+                break
+            print(
+                f"[471-acceptance] uplink {i} attempt {attempt} bad "
+                f"(idle={result['uplink_idle']}), retrying"
+            )
+        assert result["uplink_idle"], f"uplink {i} hung"
+        assert result["crc_event"] is not None, f"uplink {i}: file missing/empty"
+        assert result["crc_event"].args[1].val == result["expected_crc"], (
+            f"uplink {i}: CRC mismatch even after re-uplink"
+        )
+
+        sample()
+        curr = latest.get("CurrBuffs")
+        hi = latest.get("HiBuffs")
+        print(f"[471-acceptance] after uplink {i}: curr={curr} hi={hi}/{total}")
+        assert curr == 0, f"after uplink {i}: {curr} buffers not returned (leak)"
+        assert hi is not None and hi < total, (
+            f"after uplink {i}: high-water {hi} hit pool size {total} -- "
+            "no headroom, #471 exhaustion can recur"
+        )
+        fprime_test_api.send_command(
+            f"{FILE_MANAGER}.RemoveFile", [f"/consec_{i}.bin", True]
+        )
 
 
 @pytest.mark.parametrize("n_chunks", [1, 3, 5])

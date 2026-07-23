@@ -277,6 +277,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> ComCcsdsUart.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
