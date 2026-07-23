@@ -144,9 +144,19 @@ Status legend: [ ] todo, [~] in progress, [x] done
       littlefs's format now actually reaches `flash_rpi_write`/`flash_rpi_erase`,
       which hold `irq_lock()` for the whole erase/program call — `PROBLEM.md`'s
       original interrupt-stall theory may be correct, it just had nothing to act on
-      before this fix. Next: temporary `CONFIG_LOG=y` diagnostic CI run (pattern
-      from commits `1ff5d8bb`/`78ca10f7`/`0949dfbd`/`693eb5d8`) to see whether the
-      stall is the one-time format or ongoing per-frame reloads.
+      before this fix.
+      Ran (and reverted) a temporary `CONFIG_LOG=y`+console diagnostic (CI run
+      30036653676): boot log shows normal USB init through ~1.16s then **total
+      silence** for the remaining ~39s — no more log lines, no TM-frame noise
+      either. Consistent with a full hang very early in boot, but doesn't pinpoint
+      where. Ruled out a stale `PICO_FLASH_SIZE_BYTES` hard_assert in the Pico
+      SDK's `flash_range_erase` — that macro isn't defined in this Zephyr build.
+      Diagnostic reverted (console can't coexist with a working GDS link — see
+      `scripts/check_console_disabled.py`). **Next: SWD PC-sampling at multiple
+      time offsets** after flash (same pattern as commits `1ff5d8bb`/`78ca10f7`/
+      `0949dfbd`/`693eb5d8`, but timed sweeps instead of one dump) to see if PC is
+      parked inside `flash_range_erase`/`flash_range_program` — see
+      `INVESTIGATION.md` "Next diagnostic" for details. Not yet run.
 - [ ] **Robustness follow-ups (evaluate once the stall is diagnosed):** (a) consider
       raw `flash_area_*`/NVS instead of littlefs for this fixed-size store (avoids
       the format-time erase burst and any long single-call erase/program under

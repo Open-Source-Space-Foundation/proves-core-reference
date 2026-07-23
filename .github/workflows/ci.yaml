@@ -93,13 +93,12 @@ jobs:
         run: |
           make build
 
-      # TEMPORARY DIAGNOSTIC (revert before merge): console is intentionally
-      # enabled right now (see prj.conf) to capture boot-time littlefs text,
-      # so this gate would fail the build. Re-enable once the diagnostic is
-      # removed and prj.conf is reverted.
-      # - name: Ensure console disabled
-      #   run: |
-      #     make check-console-disabled
+      - name: Ensure console disabled
+        # The Zephyr console shares cdc_acm_uart0 with the F' downlink; if it is
+        # re-enabled, console text interleaves with the CCSDS TM frames and
+        # desyncs the GDS deframer. Fail the build so this cannot reach main.
+        run: |
+          make check-console-disabled
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -164,32 +163,6 @@ jobs:
       - name: Kill all python processes
         run: |
           pkill -9 python || true
-
-      # TEMPORARY DIAGNOSTIC (revert before merge): console is enabled in this
-      # build (see prj.conf), sharing cdc_acm_uart0 with the F' downlink, so
-      # capture raw boot text from a fresh power cycle before anything else
-      # opens the port. This intentionally desyncs the rest of this job's GDS
-      # steps below -- that's expected for this one-off diagnostic run.
-      - name: Capture Boot Console Log
-        run: |
-          timeout 40 cat "$UART_DEVICE" > console-boot.log 2>&1 &
-          CAT_PID=$!
-          sleep 1
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          wait "$CAT_PID" || true
-          echo "=== console-boot.log ==="
-          cat console-boot.log || true
-
-      - name: Upload Boot Console Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: console-boot-log
-          path: console-boot.log
-          if-no-files-found: ignore
-          retention-days: 7
 
       - name: Start GDS
         env:

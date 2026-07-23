@@ -175,6 +175,57 @@ visibility in this CI run to distinguish the two — a temporary
 diagnostic commits `1ff5d8bb`/`78ca10f7`/`0949dfbd`/`693eb5d8`) would show
 whether the stall is at first-mount/format or ongoing.
 
+## Console-log diagnostic (CI run 30036653676, 2026-07-23, reverted)
+
+Temporarily enabled `CONFIG_CONSOLE`/`CONFIG_UART_CONSOLE`/`CONFIG_PRINTK`/
+`CONFIG_LOG` and captured raw serial from a fresh power-cycle for 40s before
+GDS ever opened the port (console shares `cdc_acm_uart0` with the F' downlink
+per `scripts/check_console_disabled.py`, so this intentionally desynced GDS
+for the run — same tradeoff as the prior fault-register diagnostics).
+
+Captured log (`console-boot.log`, full contents):
+
+```
+[00:00:00.034,000] <inf> LSM6DSO: Initialize device LSM6DSO
+[00:00:00.035,000] <inf> LSM6DSO: chip id 0x6c
+[00:00:00.785,000] <inf> sd: Maximum SD clock is under 25MHz, using clock of 24000000Hz
+*** Booting Zephyr OS build v4.4.1 ***
+[00:00:00.795,000] <inf> usbd_init: bNumInterfaces 2 wTotalLength 75
+[00:00:00.927,000] <inf> usbd_core: Actual device speed 1
+[00:00:01.040,000] <inf> usbd_core: Actual device speed 1
+[00:00:01.162,000] <inf> usbd_ch9: protocol error: (GET_DESCRIPTOR/DEVICE_QUALIFIER, "not supported" — routine/benign for a full-speed-only device, seen twice)
+```
+
+...then **nothing** for the remaining ~39s of the 40s capture window — no
+further log lines, and critically no raw TM-frame bytes either (F' emits
+periodic telemetry within the first second or two of a normal boot; even
+console-corrupted binary noise from that would show up as bytes in the
+capture). Ruled out one specific hypothesis: the Pico SDK's own
+`flash_range_erase()` has a separate `hard_assert(flash_offs + count <=
+PICO_FLASH_SIZE_BYTES)` guard (`lib/zephyr-workspace/modules/hal/rpi_pico/src/
+rp2_common/hardware_flash/flash.c`) independent of Zephyr's `CONFIG_FLASH_SIZE`
+— but `PICO_FLASH_SIZE_BYTES` is not defined anywhere in this Zephyr build
+(confirmed via grep across `lib/zephyr-workspace/zephyr/` and the generated
+build's compile flags), so that `#ifdef`-guarded assert is compiled out
+entirely and cannot be firing.
+
+**Reading**: total silence this early (before first telemetry) is consistent
+with a full system hang very early in boot — plausibly right around where the
+`/keys` fstab automount would run — but the console log alone doesn't prove
+*where*. It could be `irq_lock()` held for a very long single erase/program
+call (the "revised theory" above), or something else entirely blocking
+further interrupt/scheduler activity. Diagnostic reverted (prj.conf +
+ci.yaml back to pre-diagnostic state) since it can't safely coexist with a
+working GDS link.
+
+**Next diagnostic (not yet run)**: repeat the original fault-register/SWD
+approach (commits `1ff5d8bb` etc.) but at multiple time offsets *after* a
+fresh flash — e.g. halt+dump PC at t=+2s, +10s, +20s — to see whether PC is
+parked inside `flash_range_erase`/`flash_range_program`/the bootrom routines
+they call for an extended period. That would confirm or rule out the
+interrupt-stall theory directly without touching console/USB at all, avoiding
+the corruption tradeoff entirely.
+
 ## Original next steps (superseded above, kept for the 4 MB fallback)
 
 Everything below was written before hardware confirmation; kept for
