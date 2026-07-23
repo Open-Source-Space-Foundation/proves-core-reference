@@ -3,7 +3,13 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
+      # patches/*.patch are machine-generated diffs applied via `git apply`;
+      # their context/removed lines must byte-match the real upstream files,
+      # which can legitimately have trailing whitespace. Stripping it here
+      # silently breaks patch application.
+      exclude: ^patches/
     - id: end-of-file-fixer
+      exclude: ^patches/
     - id: check-yaml
       exclude: ^mkdocs\.yml$
     - id: check-json
