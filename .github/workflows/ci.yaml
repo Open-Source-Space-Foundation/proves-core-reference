@@ -127,6 +127,20 @@ jobs:
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
 
+      # TEMPORARY DIAGNOSTIC (remove once root-caused): read-only SWD forensics
+      # to distinguish core-fault vs. wedged-XIP vs. fs-lock at the /keys boot
+      # hang, before deciding on the littlefs->NVS rework. See INVESTIGATION.md
+      # and scripts/diag/hang_forensics.tcl. Halt/read only; no firmware or
+      # config change, so the rest of the (still-failing) GDS flow below is
+      # undisturbed.
+      - name: Hang Forensics Diagnostic
+        run: |
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -f "$GITHUB_WORKSPACE/scripts/diag/hang_forensics.tcl" || true
+
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do
