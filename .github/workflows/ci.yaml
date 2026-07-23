@@ -134,15 +134,21 @@ jobs:
             -c "init" \
             -c "targets" \
             -c "targets rp2350.cm0" \
+            -c "poll" \
             -c "halt" \
-            -c "echo {--- cm0 regs ---}" -c "reg" \
+            -c "sleep 200" \
+            -c "poll" \
+            -c "echo {--- cm0 pc/lr/sp/xpsr/r0-r3 ---}" \
+            -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" -c "reg r0" -c "reg r1" -c "reg r2" -c "reg r3" \
             -c "echo {--- cm0 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
             -c "mdw 0xE000ED28 5" \
-            -c "echo {--- cm0 backtrace ---}" -c "arm semihosting enable" \
-            -c "bt" \
             -c "targets rp2350.cm1" \
+            -c "poll" \
             -c "halt" \
-            -c "echo {--- cm1 regs ---}" -c "reg" \
+            -c "sleep 200" \
+            -c "poll" \
+            -c "echo {--- cm1 pc/lr/sp/xpsr/r0-r3 ---}" \
+            -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" -c "reg r0" -c "reg r1" -c "reg r2" -c "reg r3" \
             -c "echo {--- cm1 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
             -c "mdw 0xE000ED28 5" \
             -c "shutdown" || true
