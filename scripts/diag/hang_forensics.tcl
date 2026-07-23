@@ -36,6 +36,18 @@ proc rd {label addr} {
     }
 }
 
+# Bare `reg`/`mdw` output does NOT reach the CI step stdout in batch (-c/-f)
+# mode -- only `echo` and `capture` do (see run 30051402310, where the core-reg
+# and stack blocks came back empty). Wrap every such command so its output is
+# echoed into the captured log.
+proc dump {cmd} {
+    if {[catch {set out [capture $cmd]} err]} {
+        echo "  \[$cmd]: <failed: $err>"
+    } else {
+        echo "  \[$cmd]: [string trim $out]"
+    }
+}
+
 init
 
 echo "=== reset + free-run so boot reaches the hang ==="
@@ -54,17 +66,16 @@ poll
 
 echo ""
 echo "=== CORE REGISTERS (cm0) -- expect pc ~= fs_open (0x101864b6) ==="
-catch {
-    reg pc
-    reg lr
-    reg sp
-    reg msp
-    reg psp
-    reg xpsr
-    reg r0
-    reg r1
-    reg r2
-    reg r3
+foreach r {pc lr sp msp psp xpsr r0 r1 r2 r3 r4 r5 r6 r7} {
+    dump "reg $r"
+}
+
+echo ""
+echo "=== INTERRUPT MASKING -- what is holding IRQs off? ==="
+echo "    PRIMASK=1 => irq_lock via PRIMASK; BASEPRI!=0 => Zephyr BASEPRI mask."
+echo "    Confirms the ISRPENDING-but-unserviced spin seen in run 30051402310."
+foreach r {primask basepri faultmask control} {
+    dump "reg $r"
 }
 
 echo ""
@@ -100,8 +111,8 @@ echo "    stack; resolve them against zephyr.elf to reconstruct the call chain"
 echo "    below fs_open (mount? create? a k_mutex_lock wait?). SP was a rock"
 echo "    stable 0x20034410 across the whole PC sweep, so dump a fixed window"
 echo "    from just below it (does not require the live reg read to succeed)."
-catch { reg sp }
-mdw 0x20034380 96
+dump "reg sp"
+dump "mdw 0x20034380 96"
 
 echo ""
 echo "=== done ==="
