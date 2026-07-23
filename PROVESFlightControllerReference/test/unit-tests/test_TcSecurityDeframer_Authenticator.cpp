@@ -45,6 +45,56 @@ TEST(PacketAuthenticatorTest, ImportNullKey) {
     EXPECT_EQ(res.psaStatus, PSA_ERROR_INVALID_ARGUMENT);
 }
 
+TEST(ParseHexKeyTest, ValidLowercaseKey) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_TRUE(parseHexKey(kTestKeyHex, keyBytes));
+    EXPECT_EQ(keyBytes[0], 0x14);
+    EXPECT_EQ(keyBytes[1], 0x40);
+    EXPECT_EQ(keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer - 1], 0xfa);
+}
+
+TEST(ParseHexKeyTest, ValidUppercaseKey) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_TRUE(parseHexKey("14408C2711281F4D70452CE3730BB4FA", keyBytes));
+}
+
+TEST(ParseHexKeyTest, NullKeyRejected) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_FALSE(parseHexKey(nullptr, keyBytes));
+}
+
+TEST(ParseHexKeyTest, WrongLengthRejected) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_FALSE(parseHexKey("1234", keyBytes));
+}
+
+TEST(ParseHexKeyTest, NonHexCharacterRejected) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_FALSE(parseHexKey("zz408c2711281f4d70452ce3730bb4fa", keyBytes));
+}
+
+TEST(PacketAuthenticatorTest, ImportKeyBytesDirectly) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    ASSERT_TRUE(parseHexKey(kTestKeyHex, keyBytes));
+
+    uint32_t keyId = 0;
+    auto res = importHmacKeyBytes(keyBytes, keyId);
+    EXPECT_EQ(res.status, PacketAuthenticator::KeyImportStatus::Success);
+    EXPECT_EQ(res.psaStatus, PSA_SUCCESS);
+    EXPECT_NE(keyId, 0u);
+
+    destroyHmacKey(keyId);
+}
+
+TEST(PacketAuthenticatorTest, DestroyedKeyFailsToVerify) {
+    uint32_t keyId = importTestKey();
+    destroyHmacKey(keyId);
+
+    auto res = authenticatePacket(kTestPacket.data(), kTestPacket.size(), macOf(kTestPacket), keyId);
+    EXPECT_EQ(res.status, PacketAuthenticator::AuthenticationStatus::VerifyError);
+    EXPECT_NE(res.psaStatus, PSA_SUCCESS);
+}
+
 TEST(PacketAuthenticatorTest, NullBuffer) {
     uint32_t keyId = importTestKey();
     Mac mac{};

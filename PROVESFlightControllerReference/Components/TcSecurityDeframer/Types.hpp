@@ -14,6 +14,17 @@ namespace Components {
 
 using Mac = std::array<uint8_t, Ccsds355_0_B_2::kTCSecurityTrailer>;  //!< The MAC field 16 octets in length
 
+constexpr size_t kMaxActiveKeys = 2;  //!< Max simultaneously active auth keys (mirrors AuthKeyStore::SIZE)
+
+//! A single active-key SPI slot. Mirrors the FPP-generated AuthKeySlot's `valid`/`spi` fields
+//! without depending on the FPP/F Prime type, so Validator.cpp can stay pure C++.
+struct ActiveSpiSlot {
+    bool valid;    //!< Whether this slot holds an active key
+    uint32_t spi;  //!< The SPI associated with the active key
+};
+
+using ActiveSpiSlots = std::array<ActiveSpiSlot, kMaxActiveKeys>;  //!< The set of currently active SPIs
+
 //! CCSDS 355.0-B-2
 //! https://ccsds.org/Pubs/355x0b2.pdf
 namespace Ccsds355_0_B_2 {

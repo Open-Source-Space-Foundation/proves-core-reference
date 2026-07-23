@@ -13,6 +13,29 @@ module Components {
         MacParseError,             @< MAC could not be parsed from packet
     }
 
+    @ A single HMAC authentication key slot
+    struct AuthKeySlot {
+        valid: bool    @< Whether this slot holds an active key
+        spi: U16       @< Security Parameter Index selecting this key (CCSDS 355.0-B-2 key selector)
+        key: [16] U8   @< Raw 128-bit HMAC key bytes
+    }
+
+    @ On-flash store of active authentication keys. Holds at most 2 keys so rotation can add a new
+    @ key before removing the old one (see issue #220: keys must never be compiled into the image)
+    array AuthKeyStore = [2] AuthKeySlot
+
+    @ FPP shadow-enum representing Components::PacketKeyStore::ProvisionStatus
+    enum KeyStoreProvisionStatus {
+        Ok,           @< Command succeeded
+        NotEmpty,     @< PROVISION_KEY was rejected because the store already has a key
+        StoreFull,    @< ADD_KEY was rejected because the store already has 2 keys
+        LastKey,      @< REMOVE_KEY was rejected because it would remove the last remaining key
+        SpiNotFound,  @< REMOVE_KEY was rejected because no slot has the given SPI
+        ParseKeyError,  @< The supplied key was not a valid 32-character hex string
+        WriteError,   @< The updated store could not be written to the file system
+        ImportError,  @< The updated key could not be imported into PSA
+    }
+
     @ Component placed between the TcDeframer and SpacePacketDeframer components. It
     @ implements the TC ProcessSecurity flow of CCSDS 355.0-B-2: parse the Security
     @ Header and Trailer, validate the SPI and anti-replay sequence number, and verify
@@ -29,10 +52,25 @@ module Components {
         @ Command to set the current sequence number
         sync command SET_SEQ_NUM(seq_num: U32)
 
+        @ Command to bootstrap a key onto a keyless satellite. Bypass-allowlisted so it can run
+        @ before any key exists; rejected once the store already holds a key (use ADD_KEY to rotate)
+        sync command PROVISION_KEY(spi: U16, key: string size 33)
+
+        @ Command to add a second active key for rotation. Requires an authenticated frame. Fails
+        @ if the store already has 2 keys
+        sync command ADD_KEY(spi: U16, key: string size 33)
+
+        @ Command to remove an active key by SPI. Requires an authenticated frame. Fails if it
+        @ would drop the key count below 1
+        sync command REMOVE_KEY(spi: U16)
+
         ### Telemetry ###
 
         @ Telemetry for the current sequence number, updated on each successfully authenticated packet
         telemetry CurrentSequenceNumber : U32
+
+        @ Telemetry for the number of active keys in the key store, updated on configure() and every key store mutation
+        telemetry ActiveKeyCount : U8
 
         ### Events ###
 
@@ -60,13 +98,40 @@ module Components {
         @ SpiInvalid indicates that a received packet had an invalid SPI value
         event SpiInvalid(packet_spi: U32) severity warning high id 4 format "SPI invalid: Received={}" throttle 2
 
+        @ KeyStoreReadFailed indicates that there was an error reading the key store from the file system
+        event KeyStoreReadFailed(status: Os.FileStatus) severity warning high id 16 format "Failed to read key store, error: {}" throttle 2
+
+        @ KeyStoreWriteFailed indicates that there was an error writing the key store to the file system
+        event KeyStoreWriteFailed(status: Os.FileStatus) severity warning high id 17 format "Failed to write key store, error: {}" throttle 2
+
+        @ KeyProvisioned indicates PROVISION_KEY succeeded
+        event KeyProvisioned(spi: U16) severity activity high id 9 format "Key provisioned for SPI={}"
+
+        @ KeyProvisionFailed indicates PROVISION_KEY was rejected or failed
+        event KeyProvisionFailed(status: KeyStoreProvisionStatus) severity warning high id 10 format "Key provisioning failed: {}" throttle 2
+
+        @ KeyAdded indicates ADD_KEY succeeded
+        event KeyAdded(spi: U16) severity activity high id 11 format "Key added for SPI={}"
+
+        @ KeyAddFailed indicates ADD_KEY was rejected or failed
+        event KeyAddFailed(status: KeyStoreProvisionStatus) severity warning high id 12 format "Key add failed: {}" throttle 2
+
+        @ KeyRemoved indicates REMOVE_KEY succeeded
+        event KeyRemoved(spi: U16) severity activity high id 13 format "Key removed for SPI={}"
+
+        @ KeyRemoveFailed indicates REMOVE_KEY was rejected or failed
+        event KeyRemoveFailed(status: KeyStoreProvisionStatus) severity warning high id 15 format "Key remove failed: {}" throttle 2
+
         ### Parameters ###
 
         @ Parameter for the sequence numbers window size, used to prevent replay attacks. The window allows no reuse of previous sequence numbers but allows for new sequence numbers to be accepted within the window size
         param SEQ_NUM_WINDOW : U32 default 50000
 
         @ Parameter for the file path where the current sequence number is stored
-        param SEQ_NUM_FILE_PATH : string default "//sequence_number.txt"
+        param SEQ_NUM_FILE_PATH : string default "/keys/sequence_number.bin"
+
+        @ Parameter for the file path where the HMAC authentication key store is stored
+        param KEY_STORE_FILE_PATH : string default "/keys/authkeys.bin"
 
         ### Ports ###
 
