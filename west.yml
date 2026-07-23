@@ -31,6 +31,7 @@ manifest:
           - mcuboot    # Bootloader support
           - fatfs      # FatFS (file system) support
           - hal_st     # Required for certain sensors
+          - segger     # SEGGER RTT (debug capture; inert without CONFIG_USE_SEGGER_RTT)
 
     - name: loramac-node
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
@@ -86,6 +87,22 @@ manifest:
     - name: fatfs
       revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
       path: lib/zephyr-workspace/modules/fatfs
+
+    # USP radio stack (Semtech Unified Software Platform) — v5e+ boards only.
+    # usp_zephyr upstream is pinned at the commit immediately below our local
+    # RF-switch patch (commit a23856a in spikes/usp_zephyr).  Two Zephyr-4.3
+    # compat fixes are carried as patches (see patches/usp_zephyr-*.patch).
+    - name: usp_zephyr
+      url: https://github.com/Lora-net/usp_zephyr
+      revision: bfacd435f53935ebea1a0e95fb877f4ede119985
+      path: lib/zephyr-workspace/modules/lib/usp_zephyr
+
+    # USP core library (LBM + RAL) — pulled by usp_zephyr at runtime.
+    # Path mirrors the usp_zephyr west.yml convention (modules/lib/usp).
+    - name: usp
+      url: https://github.com/Lora-net/usp
+      revision: 351b2015350670eb4dfa3aec35eb04433e062654
+      path: lib/zephyr-workspace/modules/lib/usp
 
   self:
     path: .

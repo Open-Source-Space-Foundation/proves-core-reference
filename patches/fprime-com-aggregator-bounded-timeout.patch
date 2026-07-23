@@ -1,0 +1,35 @@
+diff --git a/Svc/ComAggregator/ComAggregator.cpp b/Svc/ComAggregator/ComAggregator.cpp
+index dc6dd130d..6cfeecd6c 100644
+--- a/Svc/ComAggregator/ComAggregator.cpp
++++ b/Svc/ComAggregator/ComAggregator.cpp
+@@ -8,6 +8,12 @@
+ 
+ namespace Svc {
+ 
++namespace {
++//! Queue slots that must remain free for a timeout signal to be enqueued: the timeout itself plus one
++//! in-flight 'fill' and one in-flight 'status' signal (each bounded to one message by the com protocol).
++constexpr FwSizeType TIMEOUT_QUEUE_HEADROOM = 3;
++}  // namespace
++
+ // ----------------------------------------------------------------------
+ // Component construction and destruction
+ // ----------------------------------------------------------------------
+@@ -55,7 +61,16 @@ void ComAggregator ::timeout_handler(FwIndexType portNum, U32 context) {
+     //
+     // Behaviorally, this solution will work exactly like the naive implementation with an infinite queue depth, but
+     // prevents queue overflow when using finite queues.
+-    if (this->m_allow_timeout) {
++    //
++    // Even so, timeout remains the only signal source without flow control: 'fill' and 'status' are each bounded
++    // to one in-flight message by the com protocol, but the rate group keeps delivering ticks while this
++    // component's dispatch thread is stalled (downstream backpressure, thread starvation). In the FILL state
++    // (m_allow_timeout true) such a stall would still fill the queue with timeout signals and trip the queue-full
++    // assertion in the autocoded signal send. Ticks are periodic and idempotent, so additionally skip the signal
++    // unless the queue has headroom for it plus the in-flight flow-controlled signals; a skipped tick is simply
++    // retried on the next cycle.
++    if (this->m_allow_timeout &&
++        (this->m_queue.getMessagesAvailable() + TIMEOUT_QUEUE_HEADROOM <= this->m_queue.getDepth())) {
+         this->aggregationMachine_sendSignal_timeout();
+     }
+ }

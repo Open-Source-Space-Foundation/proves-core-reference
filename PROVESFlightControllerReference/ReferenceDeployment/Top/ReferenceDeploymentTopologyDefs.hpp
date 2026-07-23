@@ -111,9 +111,17 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;                     //!< UART device path for communication
-    const device* spi0Device;                     //!< Spi device path for s-band LoRa module
-    const device* loraDevice;                     //!< LoRa device path for communication
+    const device* uartDevice;  //!< UART device path for communication
+    const device* spi0Device;  //!< Spi device path for s-band LoRa module
+#ifdef CONFIG_LORA_BASICS_MODEM_DRIVERS
+    // v5e (USP path): no Zephyr LoRa device; radio is initialised by
+    // RalSessionImpl via the USP/RAC API.  Freq and power come from LoRaCfg
+    // constants re-exported below so callers don't need the Zephyr lora header.
+    uint32_t uspFreqHz;    //!< Carrier frequency in Hz (e.g. 915000000)
+    int8_t uspTxPowerDbm;  //!< TX power in dBm (e.g. 14)
+#else
+    const device* loraDevice;  //!< LoRa device path for communication (v5c/v5d)
+#endif
     ComCcsdsLora::SubtopologyState comCcsdsLora;  //!< Subtopology state for ComCcsdsLora
     // ComCcsdsSband::SubtopologyState comCcsdsSband;  //!< Subtopology state for ComCcsdsSband
     U32 baudRate;                       //!< Baud rate for UART communication

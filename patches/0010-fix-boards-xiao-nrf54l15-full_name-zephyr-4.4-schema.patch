@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000010 Mon Sep 17 00:00:00 2001
+From: Michael Pham <phamlongmichael@gmail.com>
+Date: Tue, 21 Jul 2026 00:00:00 -0700
+Subject: [PATCH] fix(boards): add full_name to xiao_nrf54l15 board.yml for Zephyr 4.4 schema
+
+Zephyr 4.4 board-schema.yaml requires name+full_name (or extend). The
+vendored xiao_nrf54l15 board.yml predates this; matches the in-tree
+Zephyr 4.4.1 board metadata.
+
+Signed-off-by: Michael Pham <phamlongmichael@gmail.com>
+---
+diff --git a/boards/seeed/xiao_nrf54l15/board.yml b/boards/seeed/xiao_nrf54l15/board.yml
+index 9ffc64f..8641807 100644
+--- a/boards/seeed/xiao_nrf54l15/board.yml
++++ b/boards/seeed/xiao_nrf54l15/board.yml
+@@ -1,5 +1,6 @@
+ board:
+   name: xiao_nrf54l15
++  full_name: XIAO NRF54L15
+   vendor: seeed
+   socs:
+   - name: nrf54l15
+-- 
+2.39.3 (Apple Git-146)

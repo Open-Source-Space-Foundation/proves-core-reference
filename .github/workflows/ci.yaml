@@ -64,6 +64,15 @@ jobs:
         run: |
           make zephyr-workspace
 
+      - name: Apply carried patches
+        # west update fetches vanilla usp_zephyr/usp/zephyr modules; the USP
+        # radio port needs the RF-switch GPIO, Zephyr 4.3 compat, wakeup-race,
+        # radio-planner failsafe, and CDC-ACM fixes carried in patches/.
+        run: |
+          make usp-patches
+          make usp-core-patches
+          make zephyr-patches
+
       - name: Setup Zephyr SDK
         if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
         run: |

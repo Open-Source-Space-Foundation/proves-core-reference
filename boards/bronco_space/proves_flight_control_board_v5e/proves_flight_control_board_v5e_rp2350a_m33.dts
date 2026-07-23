@@ -2,32 +2,90 @@
  * Copyright (c) 2024 Andrew Featherstone
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * PROVES Flight Control Board v5e — SX1262 (E22-400M30S) via USP driver.
+ *
+ * Same SoC + board base as v5d (inherits all v5 hardware: I2C sensors,
+ * UART, SPI0/SD-card, flash partitions, MCUboot layout), but the radio
+ * node on SPI1 is replaced with a USP-binding SX1262 node. Also carries
+ * the v5e hardware-bringup deltas from #385 (MCP23017 i2c1->i2c0 move,
+ * SBAND enable lines onto the MCP) merged in alongside the radio swap.
+ *
+ * Flash partition layout is inherited from proves_flight_control_board_v5.dtsi
+ * (16 MiB: boot 1M / slot0 1M / slot1 1M / test 1M / storage 12M — see dtsi).
+ * smtc_modem_hal_storage.c requires storage_partition; that node is defined
+ * in the shared dtsi at 0x400000 so no extra include is needed here.
  */
 
 /dts-v1/;
 
 #include <raspberrypi/rpi_pico/rp2350a.dtsi>
 #include <raspberrypi/rpi_pico/m33.dtsi>
-#include <zephyr/dt-bindings/lora/sx126x.h>
 
 #include "../proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi"
 
-/* v5e uses an SX126x-based LoRa module. Override inherited v5 SX1276 settings. */
-&lora0 {
-	compatible = "semtech,sx1262";
-	reset-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
-	busy-gpios =  <&gpio0 13 (GPIO_ACTIVE_HIGH)>;
-	dio1-gpios =  <&gpio0 14 (GPIO_ACTIVE_HIGH)>;
-	tx-enable-gpios =  <&gpio0 21 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-	rx-enable-gpios =  <&gpio0 22 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-	dio3-tcxo-voltage = <SX126X_DIO3_TCXO_1V8>;
-	tcxo-power-startup-delay-ms = <10>;
-	rx-boosted;
-	label = "E22-400M30S";
+/*
+ * Replace the v5 SX1276 radio node with the USP SX1262 node.
+ * The v5.dtsi enables &spi1 with cs-gpios, pinctrl, and lora0 (sx1276@0).
+ * Delete the SX1276 node and add the USP-compatible SX1262 node at the
+ * same SPI1 CS0 slot.
+ */
+#include <zephyr/dt-bindings/usp/sx126x.h>
 
-	/delete-property/ dio-gpios;
-	/delete-property/ power-amplifier-output;
+/* Remove the legacy sx1276 node inherited from v5.dtsi */
+/delete-node/ &lora0;
+
+/*
+ * Point the USP "chosen" transceiver handle at our sx1262 node.
+ * smtc_sw_platform_helper.c calls DEVICE_DT_GET(DT_CHOSEN(zephyr_lorawan_transceiver))
+ * to obtain the ral_t* handle for the SX1262.
+ */
+/ {
+	chosen {
+		zephyr,lorawan-transceiver = &lora0_usp;
+	};
 };
+
+&spi1 {
+	/*
+	 * USP SX1262 node — E22-400M30S module, SPI1 CS0 (same as v5 SX1276).
+	 *
+	 * Property notes (see REPORT-devicetree.md for mapping table):
+	 *   compatible:   "semtech,sx1262-new" — USP binding; prevents the
+	 *                 in-tree Zephyr lora driver (semtech,sx1262) from
+	 *                 claiming this device.  LORA_BASICS_MODEM_DRIVERS
+	 *                 depends on !LORA so exactly one driver binds.
+	 *   spi-max-frequency: kept at 125000 Hz from the GRC bring-up value;
+	 *                 may be a board-level SPI signal-integrity workaround
+	 *                 (kept from v5e bring-up; revisit before production).
+	 *   tx/rx-enable-gpios: USP upstream has no external RF-switch support;
+	 *                 carried via our patch (spikes/patches/0001-feat-…).
+	 *   dio3-as-tcxo-control + tcxo-voltage: replaces dio3-tcxo-voltage in
+	 *                 the in-tree binding.
+	 *   tcxo-wakeup-time: replaces tcxo-power-startup-delay-ms.
+	 *   reg-mode: LDO required on E22-400M30S (no DC-DC inductor).
+	 */
+	lora0_usp: sx1262_usp@0 {
+		compatible = "semtech,sx1262-new";
+		reg = <0>;
+		spi-max-frequency = <125000>; /* kept from v5e bring-up; revisit */
+		reset-gpios  = <&gpio0 6  GPIO_ACTIVE_LOW>;
+		busy-gpios   = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+		dio1-gpios   = <&gpio0 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+		dio3-as-tcxo-control;
+		tcxo-voltage     = <SX126X_TCXO_SUPPLY_1_8V>;
+		tcxo-wakeup-time = <10>;
+		reg-mode         = <SX126X_REG_MODE_LDO>;
+		rx-boosted;
+		tx-enable-gpios  = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+		rx-enable-gpios  = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/*
+ * v5e hardware bring-up (from #385, merged in alongside the USP radio swap
+ * above — independent of which radio driver binds).
+ */
 
 /* v5e moves the MCP23017 from i2c1 to i2c0. */
 &i2c1 {

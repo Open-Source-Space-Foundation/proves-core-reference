@@ -1,0 +1,36 @@
+From: bench <bench@proves>
+Subject: [PATCH] fix(usbd-cdc-acm): bound poll_out sleep-retry to ~20ms, discard on sustained backpressure
+
+An attached-but-stalled host session (macOS ceases IN polling) makes the
+unbounded 1ms sleep-retry loop take the full stall duration (minutes) per
+console byte. Any logging thread then cascades into a com-stack livelock
+(HWIL 2026-07-10). Bound the wait and fall back to the detached-case
+discard behavior.
+---
+--- a/subsys/usb/device_next/class/usbd_cdc_acm.c
++++ b/subsys/usb/device_next/class/usbd_cdc_acm.c
+@@ -1007,6 +1007,7 @@
+ 	struct cdc_acm_uart_data *const data = dev->data;
+ 	k_spinlock_key_t key;
+ 	uint32_t wrote;
++	int retries = 20;
+ 
+ 	while (true) {
+ 		key = k_spin_lock(&data->lock);
+@@ -1017,7 +1018,15 @@
+ 			break;
+ 		}
+ 
+-		if (k_is_in_isr() || !data->flow_ctrl) {
++		/* Bounded wait: with an attached-but-stalled host session (macOS
++		 * ceases IN polling for minutes at a time), an unbounded sleep-retry
++		 * here makes every console write take the full stall duration. Any
++		 * thread that logs (event text loggers, assert reporting) then backs
++		 * up its own queues and cascades into a system-wide com livelock.
++		 * After ~20 ms of backpressure, treat the console as best-effort and
++		 * discard, exactly like the detached (!flow_ctrl) case below.
++		 */
++		if (k_is_in_isr() || !data->flow_ctrl || retries-- <= 0) {
+ 			LOG_WRN_ONCE("Ring buffer full, discard data");
+ 			break;
+ 		}
