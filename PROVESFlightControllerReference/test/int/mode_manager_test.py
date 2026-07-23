@@ -604,8 +604,18 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
         "CdhCore.version.FrameworkVersion", start=reboot_start, timeout=90
     )
 
-    # Verify reboot occurred
+    # Verify reboot occurred. StartupManager increments the boot count lazily
+    # on its first 1Hz run tick, and FrameworkVersion is emitted during topology
+    # startup before rate groups run — so immediately after reboot detection
+    # GET_BOOT_COUNT can still return the pre-reboot count. Retry briefly until
+    # the increment lands. Asserting +1 (not just "a startup EVR arrived") also
+    # catches a boot loop: a watchdog that isn't re-fed on the new boot would
+    # keep resetting and drive the count past initial + 1.
+    deadline = time.monotonic() + 30.0
     final_boot_count = _get_boot_count(fprime_test_api)
+    while final_boot_count == initial_boot_count and time.monotonic() < deadline:
+        time.sleep(2.0)
+        final_boot_count = _get_boot_count(fprime_test_api)
     assert final_boot_count == initial_boot_count + 1, (
         f"Boot count should increment by 1 after command loss reboot. "
         f"Before: {initial_boot_count}, After: {final_boot_count}"
