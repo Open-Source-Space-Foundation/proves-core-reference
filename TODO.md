@@ -113,7 +113,15 @@ Status legend: [ ] todo, [~] in progress, [x] done
       commented-out `register_fprime_ut` block remains for a future on-target/component test pass.
 - [x] `make build` with no `AuthDefaultKey.h` — clean build confirmed (see above)
 - [x] `make check-console-disabled` — OK, Zephyr console disabled
-- [ ] CI green
+- [ ] CI green — **blocked**, see `PROBLEM.md`: `integration-uart`/`integration-radio`
+      fail on real hardware. Board is confirmed alive (not crashed/faulted — verified
+      via live SWD register dump), but the ground side sees real USB serial
+      disconnects and never gets a response to the first command. Leading theory:
+      moving the sequence-number file + key-store reload onto the same internal QSPI
+      flash chip that serves the running code means every write now disables
+      interrupts system-wide (RP2350 XIP constraint) on what used to be
+      interrupt-safe SD-card I/O, stalling USB. Needs a decision + fix — not yet
+      implemented.
 
 ## Notes / decisions while implementing
 (append here as work progresses)
