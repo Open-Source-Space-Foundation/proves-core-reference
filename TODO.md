@@ -113,36 +113,47 @@ Status legend: [ ] todo, [~] in progress, [x] done
       commented-out `register_fprime_ut` block remains for a future on-target/component test pass.
 - [x] `make build` with no `AuthDefaultKey.h` — clean build confirmed (see above)
 - [x] `make check-console-disabled` — OK, Zephyr console disabled
-- [ ] CI green — **pending re-run**. `integration-uart`/`integration-radio` failed on
-      real hardware. Board was confirmed alive (not crashed/faulted — verified via live
-      SWD register dump), but the ground side saw real USB serial disconnects and never
-      got a response to the first command. See `INVESTIGATION.md` for a static
-      re-analysis: the `PROBLEM.md` interrupt-stall theory is **likely wrong** (reads
-      don't `irq_lock` in `flash_rpi_pico.c`, and `keystore_partition@0x400000` sat
-      past the declared 4 MB `flash0` boundary → every keystore op returned `-EINVAL`
-      before any `irq_lock`, so `/keys` never mounted and no interrupt was ever
-      disabled for it). Real root cause is almost certainly the flash-size
-      mis-declaration. **Fix implemented below — awaiting CI hardware confirmation.**
+- [ ] CI green — **still blocked, but root cause narrowed**. Pushed the 16MB flash
+      fix (below) and re-ran CI (run 30034861047): `Flash Firmware` step's OpenOCD
+      output confirms the chip really is 16MB (`w25q128fv/jv ... size = 16384 KiB`),
+      so the fix itself is correct and necessary. But `integration-uart`/
+      `integration-radio` **still fail with the identical symptom** — GDS
+      `comm.py.log` shows repeated `device disconnected` serial exceptions starting
+      ~19s after boot, `CMD_NO_OP` never gets a response. So the flash-size
+      mis-declaration was real but **not the sole cause**. Revised theory: now that
+      `/keys` can actually mount, littlefs's first-ever format on this partition is
+      the first code path in this branch that reaches `flash_rpi_write`/
+      `flash_rpi_erase`, both of which hold `irq_lock()` for the entire
+      erase/program call with no yielding — i.e. the original `PROBLEM.md`
+      interrupt-stall theory may be correct after all, it just couldn't fire before
+      (every op was rejected by `-EINVAL` pre-`irq_lock`). See `INVESTIGATION.md`
+      "Revised theory" section. **Next: a temporary `CONFIG_LOG=y` diagnostic CI
+      run** (same pattern as the prior fault-register diagnostic commits) to see
+      whether the stall is the one-time format or ongoing per-frame reloads.
 
 ## Suggested fix (blocked CI) — see INVESTIGATION.md
 - [x] **Primary fix**: changed `&flash0 { reg = <0x10000000 DT_SIZE_M(4)>; }` →
       `DT_SIZE_M(16)` in `proves_flight_control_board_v5.dtsi` (shared by v5c/v5d/v5e).
-      No hardware bench available this session to do the SWD/console confirmation from
-      the old Step 0, but the evidence was already strong without it: `storage_partition`
-      on `main` has run `0x400000 → 0x1000000` (16 MB extent) against this same 4 MB
-      declaration for a while, unnoticed only because nothing mounted it. `make generate
-      build` confirms `CONFIG_FLASH_SIZE` now follows to 16384 (was 4096), same
-      FLASH/RAM usage as before (69.82%/62.32%) — build is otherwise unaffected.
-      **Re-run both integration jobs on real hardware to confirm** — if the chip is
-      actually 4 MB this will surface as a hardware-level flash access fault/hang
-      distinct from the old `-EINVAL`-before-mount failure, at which point fall back to
-      carving `keystore_partition` from within 0–4 MB (e.g. shrink `slot2/test`) and
-      fixing `storage_partition` too.
-- [ ] **Robustness follow-ups (evaluate only after CI confirms the fix):** (a) consider raw
-      `flash_area_*`/NVS instead of littlefs for this fixed-size store; (b) rate-limit
-      `loadKeyStore()` so it isn't a fresh `fs_open` per unrecognized-SPI frame; (c) if
-      per-frame `writeSequenceNumber` proves a real wear/timing problem, throttle it or
-      move only the seq counter to a no-erase medium (RV3028 RTC user RAM / FRAM).
+      Confirmed correct by CI hardware run 30034861047: OpenOCD reports the real chip
+      is `w25q128fv/jv ... size = 16384 KiB`. `CONFIG_FLASH_SIZE` now follows to 16384
+      (was 4096), build otherwise unaffected (FLASH/RAM usage unchanged). **Necessary
+      but not sufficient** — see next item.
+- [ ] **Diagnose the remaining stall**: same CI run still fails identically
+      (repeated GDS `device disconnected` serial exceptions, no response to
+      `CMD_NO_OP`). Revised theory: `/keys` mounting for the first time means
+      littlefs's format now actually reaches `flash_rpi_write`/`flash_rpi_erase`,
+      which hold `irq_lock()` for the whole erase/program call — `PROBLEM.md`'s
+      original interrupt-stall theory may be correct, it just had nothing to act on
+      before this fix. Next: temporary `CONFIG_LOG=y` diagnostic CI run (pattern
+      from commits `1ff5d8bb`/`78ca10f7`/`0949dfbd`/`693eb5d8`) to see whether the
+      stall is the one-time format or ongoing per-frame reloads.
+- [ ] **Robustness follow-ups (evaluate once the stall is diagnosed):** (a) consider
+      raw `flash_area_*`/NVS instead of littlefs for this fixed-size store (avoids
+      the format-time erase burst and any long single-call erase/program under
+      `irq_lock`); (b) rate-limit `loadKeyStore()` so it isn't a fresh `fs_open` per
+      unrecognized-SPI frame; (c) if per-frame `writeSequenceNumber` proves a real
+      wear/timing problem, throttle it or move only the seq counter to a no-erase
+      medium (RV3028 RTC user RAM / FRAM).
 
 ## Notes / decisions while implementing
 (append here as work progresses)

@@ -131,14 +131,55 @@ board variants via `#include`). `make generate build` confirms `CONFIG_FLASH_SIZ
 now follows to 16384 (was 4096) with an otherwise identical, clean build (FLASH
 69.82%, RAM 62.32% — unchanged from before the edit).
 
-**This is not yet confirmed on hardware.** If the physical chip is actually
-4 MB, re-running `integration-uart`/`integration-radio` should surface a
-different failure mode than before (a hardware-level flash access fault or
-hang when littlefs actually reaches into out-of-range silicon, rather than the
-old software-level `-EINVAL`-before-mount short-circuit) — that would be the
-signal to fall back to the original plan: carve `keystore_partition` from
-within 0–4 MB (e.g. shrink `slot2/test`) and fix `storage_partition` too, since
-it's also out of bounds.
+**Confirmed on hardware (CI run 30034861047, 2026-07-23):** `Flash Firmware`
+step's OpenOCD output reports `RP2350 rev 3, QSPI Flash win w25q128fv/jv id =
+0x1840ef size = 16384 KiB in 4096 sectors` — the chip really is 16 MB, so the
+`.dtsi` fix is correct and `CONFIG_FLASH_SIZE`/`is_valid_range` now permit the
+`keystore_partition` range.
+
+**But `integration-uart`/`integration-radio` still fail identically** — GDS's
+`comm.py.log` shows the same repeated
+`Serial exception caught: device reports readiness to read but returned no
+data (device disconnected or multiple access on port?). Reconnecting.`
+starting ~19s after GDS start, and `start_gds`'s `CMD_NO_OP` never gets a
+response within the whole 30s test window (both `provision_key_test.py` and
+`format_filesystem_test.py` fail the same way in `integration-uart`; the radio
+job fails at the identical `Bootstrap Sequence Number over UART` /
+`provision_key` step). So the flash-size mis-declaration was real and worth
+fixing, but it was **not the sole cause** of the CI failure.
+
+## Revised theory: PROBLEM.md's interrupt-stall theory may now apply for real
+
+Before this fix, every keystore flash op was rejected by `-EINVAL` *before*
+`flash_rpi_write`/`flash_rpi_erase` ever reached `irq_lock()` — that's why
+Finding 1/2 above concluded the interrupt-stall theory had "nothing to act on."
+Now that `/keys` can actually mount, `lfs_mount`'s first-ever format on this
+partition (superblock write, at minimum) is the first code in this branch that
+actually reaches `flash_rpi_erase`/`flash_rpi_write`, both of which wrap the
+*entire* erase/program call in `irq_lock()`/`irq_unlock()`
+(`flash_rpi_pico.c:132-136`, `:82-107`) — with **no yielding** for however long
+`flash_range_erase`/`flash_range_program` (Pico SDK bootrom calls) take. If
+that takes long enough, USB CDC-ACM polling stalls exactly like the
+symptom shows. This would mean the size fix was a necessary but not
+sufficient change — PROBLEM.md's mechanism is real, it just couldn't fire
+until the partition became mountable.
+
+**Not yet confirmed**: whether it's actually the littlefs format path (one-time,
+at first boot on a virgin partition) vs. per-frame `loadKeyStore()`/
+`writeSequenceNumber` reloads causing repeated stalls throughout the test. The
+timing (~19s in, then continuing through the whole 30s window) is at least
+consistent with either. Console/log output is disabled in these builds
+(`make check-console-disabled` is a required check), so there's no boot log
+visibility in this CI run to distinguish the two — a temporary
+`CONFIG_LOG=y` diagnostic CI run (same pattern as the prior fault-register
+diagnostic commits `1ff5d8bb`/`78ca10f7`/`0949dfbd`/`693eb5d8`) would show
+whether the stall is at first-mount/format or ongoing.
+
+## Original next steps (superseded above, kept for the 4 MB fallback)
+
+Everything below was written before hardware confirmation; kept for
+reference/fallback only — the chip is now confirmed 16 MB, so the fallback
+branch does not apply:
 
 **Robustness follow-ups (independent of the size fix, evaluate after Step 0):**
 
