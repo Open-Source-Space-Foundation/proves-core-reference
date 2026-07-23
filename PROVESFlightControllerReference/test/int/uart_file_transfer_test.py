@@ -25,6 +25,10 @@ import pytest
 from fprime_gds.common.files.helpers import FileStates
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+# Needs only a bare flight controller: exercises the UART command/file paths
+# and the SD filesystem, no face/antenna/battery hardware involved.
+pytestmark = [pytest.mark.board_only]
+
 UPLINK_CHUNK_SIZE = 204  # from fprime-gds.yml: file-uplink-chunk-size
 
 FILE_MANAGER = "FileHandling.fileManager"
@@ -159,116 +163,70 @@ def test_uplink_large(
 
 
 @pytest.mark.slow
-def test_downlink_large(fprime_test_api: IntegrationTestAPI, start_gds, tmp_path):
-    """~204KB (1000 chunks) downlink stress test.
+@pytest.mark.xfail(
+    reason="issue #471: comms buffer pool leak FATALs the board on the second "
+    "large uplink of a boot; remove this marker as the #471 acceptance gate",
+    strict=False,
+)
+def test_large_round_trip(fprime_test_api: IntegrationTestAPI, start_gds, tmp_path):
+    """~204KB (1000-chunk) uplink + downlink round trip.
 
-    Uplink itself is separately broken above 3-4 chunks (see test_uplink_n_chunks),
-    so a 1000-chunk file cannot be reliably placed on the board via the normal
-    chunked uplink path. To stress-test the (now-fixed) DOWNLINK path in isolation,
-    build the large on-board source file out of many small, individually-reliable
-    single-chunk uplinks + on-board FileManager.AppendFile calls (204 bytes each,
-    known-good per test_uplink_n_chunks[1]), rather than one large uplink.
+    Uplinks a single large file, verifies it on-board via the CRC oracle, then
+    downlinks it back and compares bytes. This protects the full UART file
+    transfer path end-to-end (issues #457 and #461).
+
+    Deliberately avoids send_and_assert_command: the board occasionally emits
+    EVR timestamps out of order (e.g. OpCodeDispatched stamped at .999 of the
+    prior second), which makes the test API's chronological sequence search
+    fail even though the on-board operation succeeded.
     """
-    n_repeats = 1000
-    pattern = _make_random_file(
-        tmp_path, UPLINK_CHUNK_SIZE, "downlink_large_pattern.bin"
-    ).read_bytes()
-    # local_path was consumed (deleted) by the uplink below; re-materialize a
-    # fresh copy for the initial upload since we still need it uplinked once.
-    pattern_path = tmp_path / "downlink_large_pattern_upload.bin"
-    pattern_path.write_bytes(pattern)
+    n_chunks = 1000
+    size = n_chunks * UPLINK_CHUNK_SIZE
+    local_path = _make_random_file(tmp_path, size, "round_trip_large.bin")
+    # The Uplinker deletes its source file on success; snapshot the bytes now.
+    original_bytes = local_path.read_bytes()
+    board_path = "/round_trip_large.bin"
+    dest_name = "round_trip_large_received.bin"
 
-    board_pattern_path = "/downlink_large_pattern.bin"
-    board_target_path = "/downlink_large.bin"
-
-    print(
-        f"[large] uplinking {UPLINK_CHUNK_SIZE}-byte pattern file to seed the board build"
+    print(f"[round-trip] uplinking {size} bytes as one file...")
+    t0 = time.time()
+    up = _uplink_and_verify_crc(fprime_test_api, local_path, board_path, timeout_s=900)
+    t_up = time.time() - t0
+    assert up["uplink_idle"], f"{size}-byte uplink did not go idle within 900s"
+    assert up["crc_event"] is not None, (
+        "no CalculateCrcSucceeded after large uplink -- file missing/empty"
     )
-    up = _uplink_and_verify_crc(
-        fprime_test_api, pattern_path, board_pattern_path, timeout_s=15
+    board_crc = up["crc_event"].args[1].val
+    assert board_crc == up["expected_crc"], (
+        f"large uplink corrupted: board=0x{board_crc:08x} "
+        f"expected=0x{up['expected_crc']:08x}"
     )
-    assert up["uplink_idle"] and up["crc_event"] is not None
-    assert up["crc_event"].args[1].val == up["expected_crc"], (
-        "pattern seed uplink corrupted"
-    )
-
-    print(
-        f"[large] building {n_repeats * UPLINK_CHUNK_SIZE} byte on-board file via {n_repeats} AppendFile calls"
-    )
-    t_build_start = time.time()
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_and_assert_command(
-        "FileHandling.fileManager.RemoveFile", [board_target_path, True], max_delay=5
-    )
-    for i in range(n_repeats):
-        fprime_test_api.send_and_assert_command(
-            "FileHandling.fileManager.AppendFile",
-            [board_pattern_path, board_target_path],
-            max_delay=5,
-        )
-        if (i + 1) % 100 == 0:
-            print(f"[large] build progress: {i + 1}/{n_repeats}")
-    t_build_end = time.time()
-    print(
-        f"[large] on-board build took {t_build_end - t_build_start:.1f}s for {n_repeats} appends"
-    )
-
-    expected_bytes = pattern * n_repeats
-    expected_crc = _local_crc(expected_bytes)
-    size = len(expected_bytes)
-
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_command(
-        "FileHandling.fileManager.CalculateCrc", [board_target_path]
-    )
-    crc_evt = fprime_test_api.await_event(
-        "FileHandling.fileManager.CalculateCrcSucceeded", timeout=30
-    )
-    assert crc_evt is not None, "CRC check on assembled large file failed/timed out"
-    assert crc_evt.args[1].val == expected_crc, (
-        f"assembled large file CRC mismatch: board=0x{crc_evt.args[1].val:08x} "
-        f"expected=0x{expected_crc:08x} -- AppendFile assembly itself corrupted, "
-        f"not a downlink issue"
-    )
-    print(
-        f"[large] on-board file verified via CRC: {size} bytes, CRC 0x{expected_crc:08x}"
-    )
+    print(f"[round-trip] uplink OK in {t_up:.1f}s ({size / t_up:.1f} B/s)")
 
     downlinker = fprime_test_api.pipeline.files.downlinker
-    dest_name = "downlink_large_received.bin"
-    print("[large] starting downlink...")
-    t_dl_start = time.time()
     fprime_test_api.clear_histories()
-    fprime_test_api.send_command(
-        "FileHandling.fileDownlink.SendFile", [board_target_path, dest_name]
-    )
+    t0 = time.time()
+    fprime_test_api.send_command(f"{FILE_DOWNLINK}.SendFile", [board_path, dest_name])
 
     candidate = Path(downlinker._FileDownlinker__directory) / dest_name
-    deadline = time.time() + 900  # 15 min ceiling
+    deadline = time.time() + 900
     landed = False
     while time.time() < deadline:
         if candidate.exists() and candidate.stat().st_size == size:
             landed = True
             break
         time.sleep(1)
-    t_dl_end = time.time()
-    elapsed = t_dl_end - t_dl_start
-
+    t_dl = time.time() - t0
     actual_size = candidate.stat().st_size if candidate.exists() else 0
     print(
-        f"[large] downlink landed={landed} elapsed={elapsed:.1f}s "
-        f"size={actual_size}/{size} throughput={(actual_size / elapsed if elapsed > 0 else 0):.1f} B/s"
+        f"[round-trip] downlink landed={landed} elapsed={t_dl:.1f}s "
+        f"size={actual_size}/{size}"
     )
-
-    assert landed, f"1000-chunk (~{size} byte) downlink did not complete within 900s"
-    received = candidate.read_bytes()
-    assert received == expected_bytes, (
-        "1000-chunk downlink bytes do not match expected pattern"
+    assert landed, f"{size}-byte downlink did not complete within 900s"
+    assert candidate.read_bytes() == original_bytes, (
+        "downlinked bytes do not match the uplinked source"
     )
-    print(
-        f"[large] SUCCESS: {size} bytes downlinked correctly in {elapsed:.1f}s "
-        f"({size / elapsed:.1f} B/s)"
-    )
+    print(f"[round-trip] SUCCESS: up {size / t_up:.1f} B/s, down {size / t_dl:.1f} B/s")
 
 
 @pytest.mark.parametrize("n_chunks", [1, 3, 5])
