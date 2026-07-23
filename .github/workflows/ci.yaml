@@ -127,38 +127,6 @@ jobs:
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
 
-      - name: DEBUG capture fault registers after boot
-        run: |
-          sleep 20
-          ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" \
-            -c "init" \
-            -c "targets" \
-            -c "targets rp2350.cm0" \
-            -c "poll" \
-            -c "halt" \
-            -c "sleep 200" \
-            -c "poll" \
-            -c "echo {--- cm0 pc/lr/sp/xpsr/r0-r3 ---}" \
-            -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" -c "reg r0" -c "reg r1" -c "reg r2" -c "reg r3" \
-            -c "echo {--- cm0 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
-            -c "mdw 0xE000ED28 5" \
-            -c "targets rp2350.cm1" \
-            -c "poll" \
-            -c "halt" \
-            -c "sleep 200" \
-            -c "poll" \
-            -c "echo {--- cm1 pc/lr/sp/xpsr/r0-r3 ---}" \
-            -c "reg pc" -c "reg lr" -c "reg sp" -c "reg xpsr" -c "reg r0" -c "reg r1" -c "reg r2" -c "reg r3" \
-            -c "echo {--- cm1 CFSR/HFSR/DFSR/MMFAR/BFAR/AFSR ---}" \
-            -c "mdw 0xE000ED28 5" \
-            -c "shutdown" || true
-          # Power-cycle to clear the halted-core state and get back to a clean boot
-          # for the real test steps that follow.
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          sleep 5
-
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do
