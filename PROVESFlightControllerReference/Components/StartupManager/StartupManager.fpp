@@ -8,10 +8,25 @@ module Components {
         output port runSequence: Svc.CmdSeqIn
 
         @ Port for receiving the status of the start-up sequence
-        sync input port completeSequence: Fw.CmdResponse
+        sync input port startupCompleteSequence: Fw.CmdResponse
 
         @ Port for receiving the indication that the start-up sequence has started
-        sync input port sequenceStarted: Svc.CmdSeqIn
+        sync input port startupsequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the status of the SafeMode Sequence
+        sync input port safeModeCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving the indication that the SafeMode sequence has started
+        sync input port safeModeSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the indication that the Payload sequence has started
+        sync input port payloadSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the status of the Payload Sequence
+        sync input port payloadCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving if Lora was ever on
+        sync input port loraEverOn: Fw.Signal
 
         @ Enable LoRa transmission
         output port enableTransmit: Fw.Signal

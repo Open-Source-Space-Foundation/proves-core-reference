@@ -155,18 +155,31 @@ Fw::Time StartupManager ::get_uptime() {
     return time;
 }
 
-void StartupManager ::sequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
-    // Reads in the file name of the start-up sequence from the sequenceStarted port and logs it.
-    this->m_sequence_file = fileName;
+void StartupManager ::startupsequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+    (void)portNum;
+    this->onSequenceStarted(fileName);
 }
 
-void StartupManager ::completeSequence_handler(FwIndexType portNum,
-                                               FwOpcodeType opCode,
-                                               U32 cmdSeq,
-                                               const Fw::CmdResponse& response) {
+void StartupManager ::safeModeSequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+    (void)portNum;
+    this->onSequenceStarted(fileName);
+}
+
+void StartupManager ::payloadSequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+    (void)portNum;
+    this->onSequenceStarted(fileName);
+}
+
+void StartupManager ::startupCompleteSequence_handler(FwIndexType portNum,
+                                                      FwOpcodeType opCode,
+                                                      U32 cmdSeq,
+                                                      const Fw::CmdResponse& response) {
+    (void)portNum;
+    (void)opCode;
+    (void)cmdSeq;
+
     // Emits a log event indicating the completion of the start-up sequence, and whether it was successful or not
     // based on the information in m_sequence_file and the command response.
-
     if (this->m_sequence_file == "//seq/startup.bin") {
         if (response == Fw::CmdResponse::OK) {
             this->log_ACTIVITY_LO_StartupSequenceFinished();
@@ -174,6 +187,64 @@ void StartupManager ::completeSequence_handler(FwIndexType portNum,
             this->log_WARNING_LO_StartupSequenceFailed(response);
         }
     }
+    this->onSequenceCompleted();
+}
+
+void StartupManager ::safeModeCompleteSequence_handler(FwIndexType portNum,
+                                                       FwOpcodeType opCode,
+                                                       U32 cmdSeq,
+                                                       const Fw::CmdResponse& response) {
+    (void)portNum;
+    (void)opCode;
+    (void)cmdSeq;
+    (void)response;
+    this->onSequenceCompleted();
+}
+
+void StartupManager ::payloadCompleteSequence_handler(FwIndexType portNum,
+                                                      FwOpcodeType opCode,
+                                                      U32 cmdSeq,
+                                                      const Fw::CmdResponse& response) {
+    (void)portNum;
+    (void)opCode;
+    (void)cmdSeq;
+    (void)response;
+    this->onSequenceCompleted();
+}
+
+void StartupManager ::loraEverOn_handler(FwIndexType portNum) {
+    (void)portNum;
+    this->m_lora_ever_on = true;
+    // Radio already came up; drop any deferred hardcoded enable
+    this->m_pending_hardcoded_enable = false;
+}
+
+void StartupManager ::onSequenceStarted(const Fw::StringBase& fileName) {
+    this->m_sequence_file = fileName;
+    this->m_active_sequences++;
+}
+
+void StartupManager ::onSequenceCompleted() {
+    if (this->m_active_sequences > 0) {
+        this->m_active_sequences--;
+    }
+    this->tryHardcodedTransmitEnable();
+}
+
+void StartupManager ::tryHardcodedTransmitEnable() {
+#if DEFAULT_STARTUP_VALUE == 1
+    if (!this->m_pending_hardcoded_enable) {
+        return;
+    }
+    if (this->m_lora_ever_on || this->m_active_sequences > 0) {
+        return;
+    }
+    this->m_pending_hardcoded_enable = false;
+    this->log_ACTIVITY_HI_HardcodedRadioEnable();
+    if (this->isConnected_enableTransmit_OutputPort(0)) {
+        this->enableTransmit_out(0);
+    }
+#endif
 }
 
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
@@ -195,9 +266,16 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     if (this->m_transmit_enable_ticks > 0) {
         this->m_transmit_enable_ticks--;
         if (this->m_transmit_enable_ticks == 0) {
-            this->log_ACTIVITY_HI_HardcodedRadioEnable();
-            if (this->isConnected_enableTransmit_OutputPort(0)) {
-                this->enableTransmit_out(0);
+            if (this->m_lora_ever_on) {
+                // Radio already enabled this boot; nothing to do
+            } else if (this->m_active_sequences > 0) {
+                // Defer until all sequences finish
+                this->m_pending_hardcoded_enable = true;
+            } else {
+                this->log_ACTIVITY_HI_HardcodedRadioEnable();
+                if (this->isConnected_enableTransmit_OutputPort(0)) {
+                    this->enableTransmit_out(0);
+                }
             }
         }
     }

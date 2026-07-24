@@ -211,15 +211,29 @@ module ReferenceDeployment {
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
       startupManager.runSequence -> cmdSeq.seqRunIn
-      cmdSeq.seqStartOut -> startupManager.sequenceStarted
-      cmdSeq.seqDone -> startupManager.completeSequence
+
+      # StartupManager receives sequence status from CmdSeq
+      cmdSeq.seqStartOut -> startupManager.startupsequenceStarted
+      cmdSeq.seqDone -> startupManager.startupCompleteSequence
+
+      # StartupManager receives sequence status from PayloadSeq
+      payloadSeq.seqStartOut -> startupManager.payloadSequenceStarted
+      payloadSeq.seqDone -> startupManager.payloadCompleteSequence
+
+      # StartupManager receives sequence status from SafeModeSeq
+      # seqDone is owned by ModeManager; completion is forwarded via sequenceDoneNotify
+      safeModeSeq.seqStartOut -> startupManager.safeModeSequenceStarted
 
       # StartupManager drives LoRa TX enable/disable around quiescence
       startupManager.enableTransmit -> lora.enableTransmit
       startupManager.disableTransmit -> lora.disableTransmit
 
+      # --- Radio ever enabled this boot? ---
+      lora.loraEverOn -> startupManager.loraEverOn
+
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
+      modeManager.sequenceDoneNotify -> startupManager.safeModeCompleteSequence
 
       # RTC time change cancels running sequences
       rtcManager.cancelSequences[0] -> cmdSeq.seqCancelIn

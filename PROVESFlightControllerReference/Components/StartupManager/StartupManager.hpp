@@ -59,17 +59,45 @@ class StartupManager final : public StartupManagerComponentBase {
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for completeSequence
-    void completeSequence_handler(FwIndexType portNum,             //!< The port number
-                                  FwOpcodeType opCode,             //!< Command Op Code
-                                  U32 cmdSeq,                      //!< Command Sequence
-                                  const Fw::CmdResponse& response  //!< The command response argument
-                                  ) override;
+    //! Handler implementation for startupCompleteSequence
+    void startupCompleteSequence_handler(FwIndexType portNum,             //!< The port number
+                                         FwOpcodeType opCode,             //!< Command Op Code
+                                         U32 cmdSeq,                      //!< Command Sequence
+                                         const Fw::CmdResponse& response  //!< The command response argument
+                                         ) override;
 
-    //! Handler implementation for sequenceStarted
-    void sequenceStarted_handler(FwIndexType portNum,            //!< The port number
-                                 const Fw::StringBase& fileName  //!< The file path for start-up sequence
-                                 ) override;
+    //! Handler implementation for startupsequenceStarted
+    void startupsequenceStarted_handler(FwIndexType portNum,            //!< The port number
+                                        const Fw::StringBase& fileName  //!< The file path for start-up sequence
+                                        ) override;
+
+    //! Handler implementation for safeModeCompleteSequence
+    void safeModeCompleteSequence_handler(FwIndexType portNum,             //!< The port number
+                                          FwOpcodeType opCode,             //!< Command Op Code
+                                          U32 cmdSeq,                      //!< Command Sequence
+                                          const Fw::CmdResponse& response  //!< The command response argument
+                                          ) override;
+
+    //! Handler implementation for safeModeSequenceStarted
+    void safeModeSequenceStarted_handler(FwIndexType portNum,            //!< The port number
+                                         const Fw::StringBase& fileName  //!< The sequence file
+                                         ) override;
+
+    //! Handler implementation for payloadCompleteSequence
+    void payloadCompleteSequence_handler(FwIndexType portNum,             //!< The port number
+                                         FwOpcodeType opCode,             //!< Command Op Code
+                                         U32 cmdSeq,                      //!< Command Sequence
+                                         const Fw::CmdResponse& response  //!< The command response argument
+                                         ) override;
+
+    //! Handler implementation for payloadSequenceStarted
+    void payloadSequenceStarted_handler(FwIndexType portNum,            //!< The port number
+                                        const Fw::StringBase& fileName  //!< The sequence file
+                                        ) override;
+
+    //! Handler implementation for loraEverOn
+    void loraEverOn_handler(FwIndexType portNum  //!< The port number
+                            ) override;
 
     //! Handler implementation for run
     //!
@@ -97,14 +125,30 @@ class StartupManager final : public StartupManagerComponentBase {
                                    U32 cmdSeq            //!< The command sequence number
                                    ) override;
 
+    // ----------------------------------------------------------------------
+    // Helpers
+    // ----------------------------------------------------------------------
+
+    //! Record that a sequence has started on any sequencer
+    void onSequenceStarted(const Fw::StringBase& fileName);
+
+    //! Record that a sequence has completed on any sequencer
+    void onSequenceCompleted();
+
+    //! Assert enableTransmit if hardcoded enable is pending and safe to fire
+    void tryHardcodedTransmitEnable();
+
   private:
-    Fw::Time m_quiescence_start;      //!< Time of the start of the quiescence wait
-    FwOpcodeType m_stored_opcode;     //!< Stored opcode for delayed response
-    FwSizeType m_boot_count;          //!< Current boot count
-    U32 m_stored_sequence;            //!< Stored sequence number for delayed response
-    std::atomic<bool> m_waiting;      //!< Indicates if waiting for quiescence
-    Fw::String m_sequence_file;       //!< The filepath for the sequence last initiated
-    U32 m_transmit_enable_ticks = 0;  //!< Remaining 1 Hz ticks until hard-coded transmit enable
+    Fw::Time m_quiescence_start;              //!< Time of the start of the quiescence wait
+    FwOpcodeType m_stored_opcode;             //!< Stored opcode for delayed response
+    FwSizeType m_boot_count;                  //!< Current boot count
+    U32 m_stored_sequence;                    //!< Stored sequence number for delayed response
+    std::atomic<bool> m_waiting;              //!< Indicates if waiting for quiescence
+    Fw::String m_sequence_file;               //!< The filepath for the sequence last initiated
+    U32 m_transmit_enable_ticks = 0;          //!< Remaining 1 Hz ticks until hard-coded transmit enable
+    U32 m_active_sequences = 0;               //!< Count of sequences currently running across sequencers
+    bool m_pending_hardcoded_enable = false;  //!< Hardcoded enable deferred until sequences finish
+    bool m_lora_ever_on = false;              //!< True once LoRa TX has been enabled this boot
 };
 
 }  // namespace Components
