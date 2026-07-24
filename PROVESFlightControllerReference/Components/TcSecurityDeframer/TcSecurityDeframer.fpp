@@ -95,6 +95,12 @@ module Components {
         @ Port receiving back ownership of buffers sent on dataOut
         sync input port dataReturnIn: Svc.ComDataWithContext
 
+        @ Called before an intentional reboot: persist the EXACT current sequence
+        @ number (instead of the write-ahead high-water mark) so ground stays in
+        @ sync across planned reboots and does not need to burn through the
+        @ written-ahead gap (issue #461 write-ahead persistence).
+        sync input port prepareForReboot: Fw.Signal
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

@@ -58,6 +58,13 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                               const ComCfg::FrameContext& context  //!< The frame context
                               ) override;
 
+    //! Handler implementation for prepareForReboot
+    //!
+    //! Persists the exact current sequence number ahead of a planned reboot so
+    //! ground and spacecraft resume aligned (no write-ahead gap to burn through)
+    void prepareForReboot_handler(FwIndexType portNum  //!< The port number
+                                  ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands

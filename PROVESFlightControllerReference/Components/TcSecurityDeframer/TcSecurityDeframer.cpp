@@ -256,6 +256,25 @@ Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
     return Os::File::Status::OP_OK;
 }
 
+void TcSecurityDeframer ::prepareForReboot_handler(FwIndexType portNum) {
+    // Planned reboot: persist the EXACT current sequence number, not the write-ahead
+    // high-water mark. On the next boot the counter resumes at precisely the last
+    // accepted value, so ground (at lastAccepted + 1) stays inside the acceptance
+    // window with no resync needed. Unplanned reboots (crash/power loss) still resume
+    // from the write-ahead mark -- that direction is the security-conservative one.
+    Os::ScopeLock lock(this->m_sequenceNumberLock);
+    const Os::File::Status status = this->writeSequenceNumber(this->m_sequenceNumber);
+    if (status == Os::File::OP_OK) {
+        // Disk now equals lastAccepted: the next accepted frame is at/above the mark,
+        // which re-triggers a normal write-ahead persist after the reboot.
+        this->m_persistedHighWater = this->m_sequenceNumber;
+        this->m_persistRetryBackoff = 0;
+    }
+    // On failure writeSequenceNumber already emitted SequenceNumberWriteFailed; the
+    // stale (higher) write-ahead record stays on disk, which is safe -- it just means
+    // ground must resync forward after this reboot, same as before this handler existed.
+}
+
 Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     const U64 record = (static_cast<U64>(value) << 32) | static_cast<U64>(~value);
     Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), record);

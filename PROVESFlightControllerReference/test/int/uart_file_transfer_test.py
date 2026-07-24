@@ -27,7 +27,9 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # Needs only a bare flight controller: exercises the UART command/file paths
 # and the SD filesystem, no face/antenna/battery hardware involved.
-pytestmark = [pytest.mark.board_only]
+# uart_only: large-file UART throughput tests are meaningless (and hours-slow)
+# over the LoRa link -- the radio CI job filters this marker out.
+pytestmark = [pytest.mark.board_only, pytest.mark.uart_only]
 
 UPLINK_CHUNK_SIZE = 204  # from fprime-gds.yml: file-uplink-chunk-size
 
