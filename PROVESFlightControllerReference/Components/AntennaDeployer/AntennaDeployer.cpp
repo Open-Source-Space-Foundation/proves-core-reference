@@ -63,6 +63,8 @@ void AntennaDeployer ::init(FwEnumStoreType instance) {
             this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
         }
     }
+
+    this->m_deployed = this->readDeploymentState();
 }
 
 // ----------------------------------------------------------------------
@@ -86,14 +88,18 @@ void AntennaDeployer ::schedIn_handler(FwIndexType portNum, U32 context) {
     }
 }
 
+bool AntennaDeployer ::deploymentStateGet_handler(FwIndexType portNum) {
+    (void)portNum;
+    return this->m_deployed;
+}
+
 // ----------------------------------------------------------------------
 // Command handler implementations
 // ----------------------------------------------------------------------
 
 void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     // Check if antenna has already been deployed
-    bool isDeployed = this->readDeploymentState();
-    if (isDeployed) {
+    if (this->m_deployed) {
         this->log_ACTIVITY_HI_DeploymentAlreadyComplete();
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
         return;
@@ -273,14 +279,14 @@ bool AntennaDeployer ::readDeploymentState() {
     Os::File::Status read_status = file.read(&value, size);
     (void)file.close();
 
-    if (read_status != Os::File::OP_OK) {
+    if ((read_status != Os::File::OP_OK) || (size != sizeof(value))) {
         Fw::LogStringArg logFilePath(path_str);
         Fw::LogStringArg logOperation("read");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
     }
 
     // Return true if file contains 1, false otherwise
-    return (read_status == Os::File::OP_OK && value == 1);
+    return (read_status == Os::File::OP_OK && size == sizeof(value) && value == 1);
 }
 
 void AntennaDeployer ::writeDeploymentState(bool deployed) {
@@ -313,11 +319,14 @@ void AntennaDeployer ::writeDeploymentState(bool deployed) {
     Os::File::Status write_status = file.write(&value, size);
     (void)file.close();
 
-    if (write_status != Os::File::OP_OK) {
+    if ((write_status != Os::File::OP_OK) || (size != sizeof(value))) {
         Fw::LogStringArg logFilePath(path_str);
         Fw::LogStringArg logOperation("write");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation);
+        return;
     }
+
+    this->m_deployed = deployed;
 }
 
 }  // namespace Components

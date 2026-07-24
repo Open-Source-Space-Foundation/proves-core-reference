@@ -35,20 +35,31 @@ class TlmArchive final : public TlmArchiveComponentBase {
     void RECORDING_STATUS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Components::Status status) override;
 
     bool writeRecord();
-    bool openFile();
+    bool openFile(const char* fileName);
     bool closeFile();
     bool writeToFile(FwSizeType fileDataSize);
     bool ensureDirectories();
+    bool loadFileCount(const char* directory, const char* countPath, U32& count);
+    bool readFileCount(const char* countPath, U32& count);
+    bool writeFileCount(const char* countPath, U32 count);
+    bool scanFileCount(const char* directory, U32& count, U32& retainedCount, U32& lowestId);
+    bool formatFileName(const char* directory, U32 fileId, char* fileName, FwSizeType fileNameSize);
+    bool pruneOldFiles(U32 nextFileId);
+    bool removeFileRange(U32 firstId);
 
     Os::Mutex m_mutex;
     Os::File m_file;
     bool m_fileOpen = false;
+    bool m_directoriesReady = false;
     U8 m_fileData[MAX_FILE_SIZE] = {};
 
     bool m_enabled = true;
 
     U32 m_packetCount = 0;
-    U32 m_fileCount = 0;
+    U32 m_regularFileCount = 0;
+    U32 m_firstBootFileCount = 0;
+    bool m_regularFileCountLoaded = false;
+    bool m_firstBootFileCountLoaded = false;
 
     Fw::ComBuffer m_packetArr[MAX_STORED_PACKETS] = {};
 };

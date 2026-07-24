@@ -15,6 +15,9 @@ module Components {
         sync input port run: Svc.Sched
         sync input port comIn: Fw.Com
 
+        @ Port for checking whether antenna deployment has completed
+        output port deploymentStateGet: Components.GetDeploymentState
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

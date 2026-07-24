@@ -342,6 +342,7 @@ module ReferenceDeployment {
     connections AntennaDeployment {
       antennaDeployer.burnStart -> burnwire.burnStart
       antennaDeployer.burnStop -> burnwire.burnStop
+      tlmArchive.deploymentStateGet -> antennaDeployer.deploymentStateGet
     }
 
     connections DetumbleManager {

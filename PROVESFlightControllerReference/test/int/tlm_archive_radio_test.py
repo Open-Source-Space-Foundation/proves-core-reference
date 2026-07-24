@@ -24,30 +24,33 @@ RECORD_TIMEOUT_S = 250
 FILE_RECEIVE_TIMEOUT_S = 180
 
 
-def _listed_tlm_files(fprime_test_api: IntegrationTestAPI) -> list[tuple[str, int]]:
-    """List //tlm and return the telemetry filenames and sizes received as events."""
+def _listed_tlm_files(
+    fprime_test_api: IntegrationTestAPI,
+) -> list[tuple[str, str, int]]:
+    """Return telemetry archive directories, filenames, and sizes."""
     # Directory listing entries are events sent separately from the command
     # response. Retry the listing when the lossy RF link drops all matching
     # entries even though the command response arrived.
-    for _ in range(3):
-        proves_send_and_assert_command(
-            fprime_test_api,
-            f"{FILE_MANAGER}.ListDirectory",
-            ["//tlm"],
-        )
-        entries = []
-        for event in fprime_test_api.get_event_test_history().retrieve():
-            if (
-                event.get_template().get_full_name()
-                != f"{FILE_MANAGER}.DirectoryListing"
-            ):
-                continue
-            directory, filename, size = (arg.val for arg in event.get_args())
-            if directory == "//tlm" and filename.endswith(".tlm"):
-                entries.append((filename, int(size)))
-        if entries:
-            return entries
-        time.sleep(2)
+    for archive_directory in ("//tlm", "//tlm/firstboot"):
+        for _ in range(3):
+            proves_send_and_assert_command(
+                fprime_test_api,
+                f"{FILE_MANAGER}.ListDirectory",
+                [archive_directory],
+            )
+            entries = []
+            for event in fprime_test_api.get_event_test_history().retrieve():
+                if (
+                    event.get_template().get_full_name()
+                    != f"{FILE_MANAGER}.DirectoryListing"
+                ):
+                    continue
+                directory, filename, size = (arg.val for arg in event.get_args())
+                if directory == archive_directory and filename.endswith(".tlm"):
+                    entries.append((directory, filename, int(size)))
+            if entries:
+                return entries
+            time.sleep(2)
     return []
 
 
@@ -112,10 +115,12 @@ def test_tlm_archive_downlinks_record_over_radio(
 
         entries = _listed_tlm_files(fprime_test_api)
         assert entries, "ListDirectory(//tlm) returned no telemetry archive files"
-        source_name, expected_size = max(entries, key=lambda entry: entry[0])
+        source_directory, source_name, expected_size = max(
+            entries, key=lambda entry: entry[1]
+        )
         assert expected_size > 0, f"Telemetry archive {source_name} is empty"
 
-        source_path = f"//tlm/{source_name}"
+        source_path = f"{source_directory}/{source_name}"
         destination_name = f"tlm_archive_{time.time_ns()}.tlm"
         artifact_dir = Path(
             os.environ.get(

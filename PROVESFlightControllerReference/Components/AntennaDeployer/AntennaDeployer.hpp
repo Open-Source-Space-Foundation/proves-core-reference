@@ -33,6 +33,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     // Handler implementations
     // ----------------------------------------------------------------------
     void schedIn_handler(FwIndexType portNum, U32 context) override;
+    bool deploymentStateGet_handler(FwIndexType portNum) override;
 
     // ----------------------------------------------------------------------
     // Command handlers
@@ -63,6 +64,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     U32 m_totalAttempts = 0;
     bool m_stopRequested = false;
     U32 m_burnTicksThisAttempt = 0;
+    bool m_deployed = false;
 };
 
 }  // namespace Components
