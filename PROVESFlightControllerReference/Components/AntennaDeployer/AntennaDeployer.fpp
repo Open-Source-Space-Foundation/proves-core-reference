@@ -4,6 +4,9 @@ module Components {
         DEPLOY_RESULT_ABORT   @< Deployment aborted via command
         DEPLOY_RESULT_FAILED  @< Deployment failed after exhausting retries
     }
+
+    @ Port for querying the persistent antenna deployment state
+    port GetDeploymentState -> bool
 }
 
 module Components {
@@ -78,6 +81,9 @@ module Components {
         ######################################################################
         @ Port receiving calls from the rate group
         sync input port schedIn: Svc.Sched
+
+        @ Port returning whether antenna deployment has completed
+        sync input port deploymentStateGet: Components.GetDeploymentState
 
         @ Port signaling the burnwire component to start heating
         output port burnStart: Fw.Signal
