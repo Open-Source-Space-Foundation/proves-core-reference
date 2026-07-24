@@ -11,9 +11,14 @@ telemetry packets ReferenceDeploymentPackets {
 
   packet Beacon id 1 group 1 {
     # Satellite Meta Data
-    ReferenceDeployment.lora.ModuleMode
     ReferenceDeployment.startupManager.BootCount
     ReferenceDeployment.modeManager.CurrentMode
+
+    #LoRa config data
+    ReferenceDeployment.lora.ModuleDataRate
+    ReferenceDeployment.lora.ModuleCodingRate
+    ReferenceDeployment.lora.ModuleBandwidth
+    ReferenceDeployment.lora.ModuleTransmitState
 
     # Essential Sensor Data
     ReferenceDeployment.detumbleManager.AngularVelocityMagnitude
