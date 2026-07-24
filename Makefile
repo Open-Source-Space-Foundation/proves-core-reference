@@ -342,8 +342,19 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	    echo "  stopped $$label (port $$port)"; \
 	  fi; \
 	}; \
-	kill_udp_port 50001 'serial adapter'; \
-	kill_udp_port 50000 'TM UDP sender'; \
+	if [ -f "$(YAMCS_DEPLOYMENTS)" ]; then \
+	  py="$(VIRTUAL_ENV)/bin/python"; [ -x "$$py" ] || py=python3; \
+	  ports="$$($$py -c 'import yaml; data=yaml.safe_load(open("$(YAMCS_DEPLOYMENTS)")); print(" ".join(str(d[p]) for d in data.get("deployments", []) for p in ("tm_port", "tc_port") if p in d))' 2>/dev/null || true)"; \
+	  if [ -n "$$ports" ]; then \
+	    for port in $$ports; do kill_udp_port "$$port" 'YAMCS adapter'; done; \
+	  else \
+	    kill_udp_port 50001 'serial adapter'; \
+	    kill_udp_port 50000 'TM UDP sender'; \
+	  fi; \
+	else \
+	  kill_udp_port 50001 'serial adapter'; \
+	  kill_udp_port 50000 'TM UDP sender'; \
+	fi; \
 	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
 	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
 	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
@@ -358,13 +369,18 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	done
 	@echo "Done."
 
-# Spacecraft ID(s) passed to the adapter. May be a comma-separated list
-# (e.g. SPACECRAFT_ID=68,67) — the adapter accepts TM from all listed SCIDs
-# and uses the first for TC framing. Must include the SCID baked into the
-# FSW build (ComCfg.fpp) and registered in the YAMCS instance config.
-# Defaults to the production value (68 / 0x0044). CI sets this to 67 /
-# 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
+# Spacecraft ID used by the adapter's single-deployment fallback. Defaults to
+# the production value (68 / 0x0044). CI sets this to 67 / 0x0043 via
+# `make-ci-spacecraft-id` to avoid collisions with dev machines.
 SPACECRAFT_ID ?= 68
+
+# Multi-deployment adapter configuration. When this file exists, make yamcs
+# passes it to the adapter so TM and TC are routed by deployment SCID/ports.
+YAMCS_DEPLOYMENTS ?= yamcs/deployments.yaml
+
+# Generated multi-instance YAMCS configuration tree (gitignored; produced by
+# 'make yamcs-deployments', consumed by 'make yamcs-multi').
+YAMCS_MULTI_DIR ?= yamcs/deployments
 
 .PHONY: yamcs
 yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
@@ -388,12 +404,51 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
+	@echo "Starting serial adapter on $(UART_DEVICE) (deployments=$(YAMCS_DEPLOYMENTS), fallback spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
 	    --uart-device $(UART_DEVICE) \
 	    --uart-baud 115200 \
+	    $(if $(wildcard $(YAMCS_DEPLOYMENTS)),--yamcs-deployments $(YAMCS_DEPLOYMENTS),) \
 	    --spacecraft-id $(SPACECRAFT_ID)
+
+.PHONY: yamcs-deployments
+yamcs-deployments: fprime-venv ## Generate multi-instance YAMCS configs from F Prime dictionaries (DICTS="a.json b.json")
+	@if [ -z "$(DICTS)" ]; then echo "Error: set DICTS=\"dict1.json dict2.json\""; exit 1; fi
+	$(UV_RUN) python3 tools/yamcs/generate_deployments.py $(DICTS) --output $(YAMCS_MULTI_DIR)
+
+.PHONY: yamcs-multi
+yamcs-multi: fprime-venv ## Run generated multi-instance YAMCS + adapter (UART_DEVICE=/dev/ttyXXX)
+	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+	@if [ ! -f "$(YAMCS_MULTI_DIR)/etc/yamcs.yaml" ]; then \
+	  echo "Error: $(YAMCS_MULTI_DIR)/etc/yamcs.yaml not found. Run 'make yamcs-deployments DICTS=\"...\"' first."; exit 1; fi
+	@$(MAKE) yamcs-stop YAMCS_DEPLOYMENTS=$(YAMCS_MULTI_DIR)/deployments.yaml
+	@echo "Starting multi-instance YAMCS (requires Java 11+ and Maven)..."
+	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
+	@POM=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/pom.xml 2>/dev/null | head -1); \
+	  if [ -z "$$POM" ]; then echo "Error: fprime_yamcs pom.xml not found (run 'make fprime-venv')"; exit 1; fi; \
+	  mvn -f $$POM yamcs:run \
+	    -Dyamcs.configurationDirectory=$(shell pwd)/$(YAMCS_MULTI_DIR) \
+	    -Dyamcs.directory=$(shell pwd)/yamcs/yamcs-runtime &
+	@echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."
+	@i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 180 ]; then echo "ERROR: YAMCS did not open :8090 within 180s"; exit 1; fi; \
+	  sleep 1; \
+	done; \
+	echo "YAMCS up after $${i}s"
+	@echo "Starting fprime-yamcs-events bridges (one per deployment)..."
+	@$(VIRTUAL_ENV)/bin/python -c 'import yaml; [print(d["name"], d["dictionary"]) for d in yaml.safe_load(open("$(YAMCS_MULTI_DIR)/deployments.yaml"))["deployments"]]' | \
+	  while read name dict; do \
+	    echo "  events bridge: $$name"; \
+	    $(UV_RUN) fprime-yamcs-events --instance "$$name" --dictionary "$$dict" & \
+	  done
+	@echo "Starting serial adapter on $(UART_DEVICE) (deployments=$(YAMCS_MULTI_DIR)/deployments.yaml)..."
+	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
+	    --mode serial \
+	    --uart-device $(UART_DEVICE) \
+	    --uart-baud 115200 \
+	    --yamcs-deployments $(YAMCS_MULTI_DIR)/deployments.yaml
 
 .PHONY: yamcs-server
 yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
