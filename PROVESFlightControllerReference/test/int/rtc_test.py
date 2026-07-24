@@ -104,7 +104,22 @@ def uplink_sequence_and_await_completion(
             msg = f"Failed to generate sequence binary from {sequence_path}: {exc}"
             fprime_test_api.__log(msg, TestLogger.RED)
             raise
+        # Wait for the directory to actually exist before uplinking: firing the
+        # uplink immediately races CreateDirectory on-board, and a START packet
+        # arriving first fails with FileOpenError and poisons the transfer.
+        fprime_test_api.clear_histories()
         fprime_test_api.send_command(f"{fileManager}.CreateDirectory", ["/seq"])
+        if (
+            fprime_test_api.await_event(
+                f"{fileManager}.CreateDirectorySucceeded", timeout=5
+            )
+            is None
+        ):
+            # Directory may already exist from an earlier test -- the error
+            # completion is fine, we only need the command to have finished.
+            fprime_test_api.await_event(
+                f"{fileManager}.DirectoryCreateError", timeout=2
+            )
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
