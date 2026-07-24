@@ -26,7 +26,8 @@ module ComCcsdsConfig {
         # issue #471: depth 1 silently dropped any telemetry packet that
         # arrived while another was queued (QueueOverflow at index 1), which
         # is why buffer-pool health channels never reached the ground.
-        constant tlm         = 8
+        # (main independently raised this to 50, which supersedes our 8)
+        constant tlm         = 50
         constant file        = 1
     }
 

@@ -9,18 +9,8 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
+	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
@@ -47,6 +37,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs constants-order fix..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
 
 
 .PHONY: zephyr-setup
