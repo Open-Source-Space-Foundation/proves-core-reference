@@ -249,7 +249,7 @@ telemetry packets ReferenceDeploymentPackets {
 } omit {
   # issue #457: peripheralUartDriver is the secondary/payload UART; only the
   # primary comDriver's RxOverrunCount is included in a packet (HealthWarnings).
-  ReferenceDeployment.peripheralUartDriver.RxOverrunCount
+  peripheralUartDriver.RxOverrunCount
 
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
