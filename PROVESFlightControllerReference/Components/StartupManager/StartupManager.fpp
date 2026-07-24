@@ -33,6 +33,10 @@ module Components {
         event BootCountUpdateFailure() severity warning low \
             format "Failed to update boot count file"
 
+        @ Event emitted when the boot count file holds an implausible value (torn or corrupt write)
+        event BootCountCorrupted(raw: I64) severity warning high \
+            format "Boot count file corrupt (raw value {}) - treating as unreadable"
+
         @ Event emitted when the quiescence file was not updated
         event QuiescenceFileInitFailure() severity warning low \
             format "Failed to initialize quiescence start time file"
