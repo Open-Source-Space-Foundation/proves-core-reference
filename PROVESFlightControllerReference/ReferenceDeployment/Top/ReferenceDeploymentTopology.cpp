@@ -9,6 +9,7 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
+#include <Fw/Cmd/CmdArgBuffer.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
@@ -118,6 +119,45 @@ void setupTopology(const TopologyState& state) {
     readParameters();
     // Autocoded parameter loading. Function provided by autocoder.
     loadParameters();
+
+    // issue #457 fix: force downlinkRepeater.CHANNEL_ENABLED to UART-only [ENABLED, DISABLED, DISABLED]
+    // on every boot, overriding whatever loadParameters() just restored from PrmDb.
+    //
+    // Root cause: BufferRepeater (lib/fprime-extras) only returns a downlink buffer to fileDownlink
+    // once EVERY enabled+connected multiOut channel has independently returned it. The component's
+    // own default is all-channels-ENABLED, but LoRa TX defaults to DISABLED on every flight reset (see
+    // lora.start(..., Zephyr::TransmitState::DISABLED) just below) and a disabled LoRa radio never
+    // drains its comQueue's FILE buffer -> fileDownlink wedges permanently on the very first downlink
+    // (matches issues #457/#344; confirmed via HIL A/B test: disabling the LoRa channel here is the
+    // difference between an instant, correct UART downlink and a downlink that hangs forever).
+    //
+    // This is a safe-default fix, not a general one: it does not touch BufferRepeater's fan-out logic,
+    // so if LoRa downlink is ever wanted, the LoRa channel (index 1) MUST be explicitly re-enabled
+    // in lockstep with turning lora.TRANSMIT on (e.g. via CHANNEL_ENABLED_PRM_SET before/at the same
+    // time as lora.TRANSMIT ENABLED) -- enabling TRANSMIT alone does not fix an already-wedged transfer
+    // and, per HIL testing, even a fresh transfer only drains slowly and unpredictably relative to the
+    // configured downlinkDelay cadence. SBand (index 2) is disabled here too since it is commented out
+    // of the topology entirely (see ComCcsds_FileHandling connections in topology.fpp) and would wedge
+    // fileDownlink identically if it were ever wired back in without an operational com driver behind it.
+    //
+    // NOTE: because this runs after loadParameters(), any operator PRM_SAVE of CHANNEL_ENABLED will be
+    // silently overwritten by this default on the next boot -- that's intentional for now (safe default
+    // takes priority over a saved override) but worth revisiting if per-mission persistence is needed.
+    {
+        // BufferRepeater's paramSet_CHANNEL_ENABLED() is private (only the command-dispatch path may
+        // call it), so drive it the same way a real CHANNEL_ENABLED_PRM_SET command would: build the
+        // command argument buffer and invoke the component's cmdIn port directly. Opcode 0x0 is
+        // OPCODE_CHANNEL_ENABLED_SET (see generated BufferRepeaterComponentAc.hpp) -- the first/only
+        // settable param on this component, stable as long as BufferRepeater.fpp isn't changed.
+        Utilities::BufferRepeater_OutputChannelEnables uartOnlyChannelEnables(
+            {Fw::Enabled::ENABLED, Fw::Enabled::DISABLED, Fw::Enabled::DISABLED});
+        Fw::CmdArgBuffer channelEnablesArgs;
+        (void)channelEnablesArgs.serialize(uartOnlyChannelEnables);
+        constexpr FwOpcodeType OPCODE_CHANNEL_ENABLED_SET = 0x0;
+        downlinkRepeater.get_cmdIn_InputPort(0)->invoke(downlinkRepeater.getIdBase() + OPCODE_CHANNEL_ENABLED_SET, 0,
+                                                        channelEnablesArgs);
+    }
+
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 

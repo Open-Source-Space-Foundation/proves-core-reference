@@ -277,6 +277,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> ComCcsdsUart.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
@@ -455,6 +456,12 @@ module ReferenceDeployment {
       # Allows ModeManager to detect unintended reboots
       resetManager.prepareForReboot -> modeManager.prepareForReboot
       watchdog.prepareForReboot -> modeManager.prepareForReboot
+      # issue #461/#473: persist the exact TC sequence number on planned reboots so
+      # ground does not have to resync through the write-ahead gap after reset
+      resetManager.prepareForReboot -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      resetManager.prepareForReboot -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
 
       # Signal from PROVES routers to reset the command loss timer in ModeManager
       ComCcsdsLora.provesRouter.packetRouted -> modeManager.packetRouted

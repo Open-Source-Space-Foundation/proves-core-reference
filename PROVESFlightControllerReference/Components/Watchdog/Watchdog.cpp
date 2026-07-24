@@ -46,8 +46,16 @@ void Watchdog ::start_handler(FwIndexType portNum) {
 }
 
 void Watchdog ::stop_handler(FwIndexType portNum) {
-    // Stop the watchdog
+    // Stopping the watchdog leads to a hardware reset once petting ceases, so this
+    // IS the planned-reboot notification point for every stop path (ground command
+    // via STOP_WATCHDOG and ModeManager's safe-mode stopWatchdog port alike).
+    for (FwIndexType i = 0; i < this->getNum_prepareForReboot_OutputPorts(); i++) {
+        if (this->isConnected_prepareForReboot_OutputPort(i)) {
+            this->prepareForReboot_out(i);
+        }
+    }
 
+    // Stop the watchdog
     this->m_run = false;
 
     // Report watchdog stopped
@@ -67,8 +75,7 @@ void Watchdog ::START_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void Watchdog ::STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // call stop handler
-    this->prepareForReboot_out(0);
+    // call stop handler (which fans out prepareForReboot to all listeners)
     this->stop_handler(0);
     // Provide command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);

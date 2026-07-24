@@ -48,8 +48,21 @@ module Components {
         @ SequenceNumberWriteFailed indicates that there was an error writing the sequence number to file
         event SequenceNumberWriteFailed(status: Os.FileStatus) severity warning high id 8 format "Failed to write sequence number, error: {}" throttle 2
 
+        @ SequenceNumberPersistFailed indicates that the write-ahead high-water persist (issue #461)
+        @ failed to reach disk. The in-RAM high-water mark is deliberately NOT advanced in this case
+        @ (that would reopen the anti-replay window on a subsequent reboot) -- a retry is scheduled
+        @ after a bounded number of further accepted frames instead of retrying on every single one.
+        event SequenceNumberPersistFailed(status: Os.FileStatus, accepted_seq_num: U32) severity warning high id 10 format "Write-ahead sequence-number persist failed, error: {} (accepted seq {}); retrying after a bounded backoff, not every frame" throttle 2
+
         @ SequenceNumberInvalid indicates that a received packet had a sequence number that was outside of the acceptable window
         event SequenceNumberInvalid(packet_seq_num: U32, seq_num: U32, window: U32) severity warning high id 2 format "Sequence number less than last accepted or out of window: Received={}, LastAccepted={}, Window={}" throttle 2
+
+        @ SequenceNumberRecordInvalid indicates that the persisted sequence-number record failed its
+        @ torn-write validation (checksum mismatch) on boot, or could not be read for another reason.
+        @ The runtime sequence number falls back to 0 (same as a genuine first boot) so command
+        @ capability is never blocked on this outcome; ground may issue SET_SEQ_NUM to fast-forward
+        @ past any previously-used sequence numbers if the real last-used value is known.
+        event SequenceNumberRecordInvalid(stored_value: U32) severity warning high id 9 format "Persisted sequence-number record failed validation (raw value read: {}); falling back to 0 -- use SET_SEQ_NUM to fast-forward if needed"
 
         @ AuthenticationFailed indicates that a received packet failed authentication
         event AuthenticationFailed(auth_status: PacketAuthenticatorStatus, rc: I32) severity warning high id 1 format "Authentication failed: Status={}, PSA Return Code={}" throttle 2
@@ -81,6 +94,12 @@ module Components {
 
         @ Port receiving back ownership of buffers sent on dataOut
         sync input port dataReturnIn: Svc.ComDataWithContext
+
+        @ Called before an intentional reboot: persist the EXACT current sequence
+        @ number (instead of the write-ahead high-water mark) so ground stays in
+        @ sync across planned reboots and does not need to burn through the
+        @ written-ahead gap (issue #461 write-ahead persistence).
+        sync input port prepareForReboot: Fw.Signal
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

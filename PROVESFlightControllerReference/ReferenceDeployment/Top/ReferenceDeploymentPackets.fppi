@@ -121,6 +121,10 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.commsBufferManager.HiBuffs
 #    ComCcsdsSband.comQueue.comQueueDepth
 #    ComCcsdsSband.commsBufferManager.HiBuffs
+    # issue #471: UART comms buffer pool exhaustion diagnostics
+    ComCcsdsUart.commsBufferManager.TotalBuffs
+    ComCcsdsUart.commsBufferManager.CurrBuffs
+    ComCcsdsUart.commsBufferManager.HiBuffs
     CdhCore.cmdDisp.CommandsDispatched
     CdhCore.cmdDisp.CommandsDropped
     rateGroup50Hz.RgMaxTime
@@ -141,6 +145,8 @@ telemetry packets ReferenceDeploymentPackets {
     rateGroup50Hz.RgCycleSlips
     rateGroup10Hz.RgCycleSlips
     rateGroup1Hz.RgCycleSlips
+    # issue #457: UART RX ring-buffer overrun counter (ZephyrUartDriver)
+    comDriver.RxOverrunCount
   }
 
 
@@ -241,6 +247,10 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
 } omit {
+  # issue #457: peripheralUartDriver is the secondary/payload UART; only the
+  # primary comDriver's RxOverrunCount is included in a packet (HealthWarnings).
+  peripheralUartDriver.RxOverrunCount
+
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02
@@ -288,9 +298,6 @@ telemetry packets ReferenceDeploymentPackets {
 
   # Moved to omit as they are not useful in normal ops
   ComCcsdsUart.comQueue.comQueueDepth
-  ComCcsdsUart.commsBufferManager.HiBuffs
-  ComCcsdsUart.commsBufferManager.TotalBuffs
-  ComCcsdsUart.commsBufferManager.CurrBuffs
   ComCcsdsUart.comQueue.buffQueueDepth
 
   ComCcsdsLora.commsBufferManager.EmptyBuffs

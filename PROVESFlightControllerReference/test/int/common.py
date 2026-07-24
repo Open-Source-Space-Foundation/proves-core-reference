@@ -53,6 +53,35 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     _radio_recover_fn = fn
 
 
+def resync_sequence_number(
+    fprime_test_api: IntegrationTestAPI,
+    deframer: str = "ComCcsdsUart.tcSecurityDeframer",
+) -> None:
+    """Fast-forward the framer plugin's sequence file to the board's counter.
+
+    After a reboot the board resumes from its write-ahead persisted sequence
+    number (issue #461), which can be ahead of the ground counter -- every
+    authenticated command is then rejected until ground catches up. GET_SEQ_NUM
+    is bypass-listed so it works even while desynced. Ground being ahead is
+    normal and left untouched.
+    """
+    fprime_test_api.clear_histories()
+    fprime_test_api.send_command(f"{deframer}.GET_SEQ_NUM")
+    evt = fprime_test_api.await_event(f"{deframer}.SequenceNumberGet", timeout=5)
+    if evt is None:
+        return
+    board_seq = int(evt.args[0].val)
+    seq_file = "./Framing/src/sequence_number.bin"
+    try:
+        with open(seq_file, "r", encoding="utf-8") as f:
+            ground_seq = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        ground_seq = -1
+    if board_seq > ground_seq:
+        with open(seq_file, "w", encoding="utf-8") as f:
+            f.write(str(board_seq))
+
+
 def proves_send_and_assert_command(
     fprime_test_api: IntegrationTestAPI,
     command: str,
@@ -98,6 +127,15 @@ def proves_send_and_assert_command(
                 and (attempt + 1) % RADIO_RECOVER_THRESHOLD == 0
             ):
                 _radio_recover_fn()
+            # A mid-test reboot (safe-mode entry, reset, watchdog) leaves the
+            # board expecting a written-ahead sequence number (issue #461) and
+            # silently rejecting every authenticated command. GET_SEQ_NUM is
+            # bypass-listed, so resyncing here works even in that state and
+            # costs one round-trip per failed attempt.
+            try:
+                resync_sequence_number(fprime_test_api)
+            except Exception:  # noqa: BLE001 -- recovery must not mask the retry
+                pass
             # Fibonacci backoff with ±50% jitter before the next retry.
             # The LoRa radio link is half-duplex: the satellite cannot receive
             # an uplink command while it is transmitting events/telemetry

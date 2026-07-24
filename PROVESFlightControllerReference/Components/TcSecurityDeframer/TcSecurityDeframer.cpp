@@ -26,7 +26,9 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
     : TcSecurityDeframerComponentBase(compName),
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
-      m_sequenceNumberWindow(0) {}
+      m_sequenceNumberWindow(0),
+      m_persistedHighWater(0),
+      m_persistRetryBackoff(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -56,6 +58,17 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
     {
         Os::ScopeLock lock(this->m_sequenceNumberLock);
 
+        // NOTE: there is deliberately NO "unarmed / reject everything" gate here. An earlier
+        // version of this fix rejected all frames -- including SET_SEQ_NUM itself -- whenever the
+        // persisted record failed validation, which is a self-inflicted deadlock: SET_SEQ_NUM is
+        // itself an authenticated command frame that must pass through this same handler, so a
+        // blanket reject can never be un-done by ground. Instead, an invalid/unreadable persisted
+        // record falls back to the same behavior as a genuine first boot (sequence number 0,
+        // frames accepted normally from there) -- see readSequenceNumber() -- with a distinct
+        // SequenceNumberRecordInvalid event so the anomaly is visible and ground can choose to
+        // fast-forward via SET_SEQ_NUM if they know the real last-used value, without that ever
+        // being required to restore basic command capability.
+
         // --- Validate SPI and anti-replay sequence number ---
         const PacketValidator::Status validationStatus =
             validatePacket(parseResult.securityHeader, this->m_sequenceNumber, this->m_sequenceNumberWindow);
@@ -79,11 +92,15 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
             } else {
                 this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
-                // --- Accept: persist new sequence number ---
+                // --- Accept: advance the in-RAM sequence number (authoritative for runtime
+                // acceptance decisions) and persist a write-ahead high-water mark only every
+                // SEQ_NUM_PERSIST_STRIDE frames (issue #461: the previous per-command persist here
+                // raced FileUplink/FileManager/FileDownlink/PrmDb's own filesystem access on the
+                // shared SD-card-backed FatFs mount).
                 // Only fully verified frames advance the counter, so bypass and replayed
                 // frames can never desync ground and spacecraft (issue #426)
                 this->m_sequenceNumber = parseResult.securityHeader.sequenceNumber;
-                this->writeSequenceNumber(this->m_sequenceNumber);
+                this->writeAheadPersistIfNeeded(this->m_sequenceNumber);
                 this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
                 contextOut.set_authenticated(true);
             }
@@ -129,7 +146,9 @@ void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
 void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
 
-    // Write the sequence number to the file system
+    // Explicit ground command: persist immediately (not subject to the write-ahead stride --
+    // an operator-issued SET_SEQ_NUM is inherently infrequent and is the one path that should take
+    // effect durably right away, e.g. to fast-forward past a SequenceNumberRecordInvalid reset).
     Os::File::Status status = this->writeSequenceNumber(seq_num);
     if (status != Os::File::OP_OK) {
         // Return execution error response
@@ -137,8 +156,9 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
         return;
     }
 
-    // Set runtime sequence number to the new value
+    // Set runtime sequence number to the new value and track the persisted high-water mark
     this->m_sequenceNumber = seq_num;
+    this->m_persistedHighWater = seq_num;
 
     // Telemeter the updated sequence number
     this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
@@ -166,12 +186,15 @@ void TcSecurityDeframer ::configure() {
     this->m_sequenceNumberFilePath = this->paramGet_SEQ_NUM_FILE_PATH(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    // Get the sequence number from the file system. On a read failure (already evented
-    // by readSequenceNumber) fall back to 0 rather than refusing to boot; the operator
-    // can correct the counter with SET_SEQ_NUM.
+    // Get the persisted high-water mark from the file system. readSequenceNumber() falls back to
+    // 0 (same as a genuine first boot) on any read/validation failure -- including a torn-write
+    // checksum mismatch -- while emitting SequenceNumberRecordInvalid so the anomaly is visible.
+    // The window always starts at this value (unchanged semantics from before this fix); command
+    // capability is never blocked on this outcome.
     U32 sequenceNumber = 0;
     (void)this->readSequenceNumber(sequenceNumber);
     this->m_sequenceNumber = sequenceNumber;
+    this->m_persistedHighWater = sequenceNumber;
 
     // Telemeter the current sequence number
     this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
@@ -186,28 +209,78 @@ void TcSecurityDeframer ::configure() {
 // ----------------------------------------------------------------------
 
 Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
-    // Read the sequence number from the file system
-    Os::File::Status status = Utilities::FileHelper::readFromFile(this->m_sequenceNumberFilePath.toChar(), value);
-    if (status != Os::File::OP_OK) {
-        // Log the failure to read the sequence number
-        this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
-    } else {
-        // Clear throttle for sequence number read failure
-        this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
-    }
+    // Persisted record layout: a single U64 = (value:32 << 32) | (~value:32). This is a minimal
+    // torn-write guard -- if power is lost mid-write, FatFs/the SD card may leave a partially
+    // written U64 whose two halves don't correspond, which the checksum catches. (See issue #461
+    // for how this record is now written -- write-ahead, batched -- rather than on every command.)
+    U64 record = 0;
+    Os::File::Status status = Utilities::FileHelper::readFromFile(this->m_sequenceNumberFilePath.toChar(), record);
 
-    // If the sequence number file does not exist, write it to disk with the default value of 0
     if (status == Os::File::DOESNT_EXIST) {
+        // Genuine first boot: no risk of replay since nothing has ever been accepted. Bootstrap
+        // to 0 -- unchanged from the pre-fix behavior for this specific case.
+        this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
+        value = 0;
         return this->writeSequenceNumber(0);
     }
 
-    return status;
+    if (status != Os::File::OP_OK) {
+        // Genuine I/O failure (not a missing file, not (yet) a checksum question). Fall back to 0,
+        // same as a first boot -- see the SequenceNumberRecordInvalid rationale below. Deliberately
+        // does NOT block command capability: an early version of this fix rejected all frames
+        // (including the SET_SEQ_NUM recovery command itself) whenever this path was hit, which is
+        // a self-inflicted deadlock. Ground can always fast-forward the counter with SET_SEQ_NUM if
+        // they know the real last-used value; they are never required to in order to command again.
+        this->log_WARNING_HI_SequenceNumberReadFailed(static_cast<Os::FileStatus::T>(status));
+        this->log_WARNING_HI_SequenceNumberRecordInvalid(0);
+        value = 0;
+        return status;
+    }
+    this->log_WARNING_HI_SequenceNumberReadFailed_ThrottleClear();
+
+    const U32 storedValue = static_cast<U32>(record >> 32);
+    const U32 storedChecksum = static_cast<U32>(record & 0xFFFFFFFFu);
+    if (storedChecksum != static_cast<U32>(~storedValue)) {
+        // Checksum mismatch: torn write or corruption. Falls back to 0 (same as first boot) rather
+        // than trusting a possibly-garbage stored value -- but, per the note above, this does NOT
+        // block command capability. This is a narrower guarantee than fully preventing replay of
+        // any sequence number ever used before the corruption; the tradeoff is deliberate, since a
+        // design that could brick command capability on a single flipped bit is a worse operational
+        // risk than a bounded, visible (see SequenceNumberRecordInvalid) reopening of the window.
+        this->log_WARNING_HI_SequenceNumberRecordInvalid(storedValue);
+        value = 0;
+        return Os::File::Status::OTHER_ERROR;
+    }
+
+    value = storedValue;
+    return Os::File::Status::OP_OK;
+}
+
+void TcSecurityDeframer ::prepareForReboot_handler(FwIndexType portNum) {
+    // Planned reboot: persist the EXACT current sequence number, not the write-ahead
+    // high-water mark. On the next boot the counter resumes at precisely the last
+    // accepted value, so ground (at lastAccepted + 1) stays inside the acceptance
+    // window with no resync needed. Unplanned reboots (crash/power loss) still resume
+    // from the write-ahead mark -- that direction is the security-conservative one.
+    Os::ScopeLock lock(this->m_sequenceNumberLock);
+    const Os::File::Status status = this->writeSequenceNumber(this->m_sequenceNumber);
+    if (status == Os::File::OP_OK) {
+        // Disk now equals lastAccepted: the next accepted frame is at/above the mark,
+        // which re-triggers a normal write-ahead persist after the reboot.
+        this->m_persistedHighWater = this->m_sequenceNumber;
+        this->m_persistRetryBackoff = 0;
+    }
+    // On failure writeSequenceNumber already emitted SequenceNumberWriteFailed; the
+    // stale (higher) write-ahead record stays on disk, which is safe -- it just means
+    // ground must resync forward after this reboot, same as before this handler existed.
 }
 
 Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
-    Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), value);
+    const U64 record = (static_cast<U64>(value) << 32) | static_cast<U64>(~value);
+    Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), record);
     if (status != Os::File::OP_OK) {
-        // Log the failure to write the default sequence number
+        // Log the failure to write the sequence number (throttled -- see writeAheadPersistIfNeeded,
+        // this can now only fire at most once per SEQ_NUM_PERSIST_STRIDE accepted frames)
         this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));
     } else {
         // Clear throttle for sequence number write failure
@@ -215,6 +288,44 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     }
 
     return status;
+}
+
+void TcSecurityDeframer ::writeAheadPersistIfNeeded(U32 acceptedSeqNum) {
+    // Only consider persisting when the accepted sequence number has caught up to (or passed) the
+    // last write-ahead high-water mark, AND we are not currently backing off after a prior
+    // failure. This bounds filesystem writes to at most once every SEQ_NUM_PERSIST_STRIDE accepted
+    // frames in the steady state instead of once per frame (issue #461's original bug).
+    if (this->m_persistRetryBackoff > 0) {
+        --this->m_persistRetryBackoff;
+        return;
+    }
+
+    if (acceptedSeqNum >= this->m_persistedHighWater) {
+        // Write comfortably ahead of what we've actually seen so a burst of N-1 more accepted
+        // frames doesn't require another persist before the next stride boundary.
+        const U32 newHighWater = acceptedSeqNum + SEQ_NUM_PERSIST_STRIDE;
+        Os::File::Status status = this->writeSequenceNumber(newHighWater);
+        if (status == Os::File::OP_OK) {
+            // CORE INVARIANT: only advance m_persistedHighWater on a CONFIRMED successful write.
+            // An earlier version of this method advanced it unconditionally (including on
+            // failure), reasoning it would only cause "the on-disk value to be a bit stale" --
+            // that was a real security regression: it let accepted sequence numbers advance
+            // arbitrarily far past a STALE on-disk value while persist writes kept failing, so a
+            // reboot during a failure streak could reopen a replay window for that entire gap
+            // (not bounded by SEQ_NUM_PERSIST_STRIDE at all). Only a confirmed-successful write
+            // is allowed to move the high-water mark forward.
+            this->m_persistedHighWater = newHighWater;
+            this->m_persistRetryBackoff = 0;
+        } else {
+            // Fail safe, not fail open: do NOT advance the high-water mark, so the invariant
+            // (disk >= last accepted, whenever a persist has ever succeeded) keeps holding for
+            // every frame accepted between now and the next successful write. Do NOT retry on
+            // every subsequent frame either (that degrades back to the original #461 race) --
+            // back off for a bounded number of frames instead, and make noise every time.
+            this->m_persistRetryBackoff = SEQ_NUM_PERSIST_RETRY_BACKOFF;
+            this->log_WARNING_HI_SequenceNumberPersistFailed(static_cast<Os::FileStatus::T>(status), acceptedSeqNum);
+        }
+    }
 }
 
 }  // namespace Components

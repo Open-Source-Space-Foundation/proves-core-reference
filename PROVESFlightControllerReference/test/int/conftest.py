@@ -10,7 +10,7 @@ import threading
 import time
 
 import pytest
-from common import cmdDispatch, set_radio_recover_fn
+from common import cmdDispatch, resync_sequence_number, set_radio_recover_fn
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # After TRANSMIT is first enabled the satellite flushes the event backlog that
@@ -172,6 +172,50 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
     # can re-enable TRANSMIT after RADIO_RECOVER_THRESHOLD consecutive failures.
     # The lambda captures fprime_test_api for this test's function scope.
     set_radio_recover_fn(lambda: _enable_radio(fprime_test_api))
+
+
+@pytest.fixture(autouse=True)
+def resync_sequence_number_after_reboot(
+    request: pytest.FixtureRequest,
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+):
+    """Keep the ground authentication sequence number aligned across in-suite
+    reboots (issue #473 CI cascade).
+
+    The TcSecurityDeframer persists a write-ahead high-water mark (issue #461),
+    so after a reboot the board can legitimately expect a sequence number ahead
+    of the ground counter, and every authenticated command is rejected until
+    ground catches up. Reboots happen mid-suite (safe-mode entry, reset tests,
+    watchdog tests), so before each test read the board's counter via
+    GET_SEQ_NUM (bypass-listed, works even while desynced) and fast-forward the
+    framer plugin's sequence file if the board is ahead. Ground being ahead is
+    normal and left alone (the acceptance window extends forward).
+    """
+    # Don't recurse into the dedicated sync/format plumbing tests.
+    if request.node.get_closest_marker("sync_sequence_number") or (
+        request.node.get_closest_marker("format_filesystem")
+    ):
+        yield
+        return
+
+    link = request.config.getoption("--sync-deframer", default=None)
+    if link is None:
+        link = (
+            "lora"
+            if request.config.getoption("--with-radio", default=False)
+            else "uart"
+        )
+    deframer = {
+        "uart": "ComCcsdsUart.tcSecurityDeframer",
+        "lora": "ComCcsdsLora.tcSecurityDeframer",
+    }[link]
+
+    try:
+        resync_sequence_number(fprime_test_api, deframer)
+    except Exception:  # noqa: BLE001 -- recovery must never fail a test itself
+        pass
+    yield
 
 
 @pytest.fixture(autouse=True)

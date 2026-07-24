@@ -23,6 +23,10 @@ module ComCcsdsConfig {
     # Queue configuration constants
     module QueueDepths {
         constant events      = 50
+        # issue #471: depth 1 silently dropped any telemetry packet that
+        # arrived while another was queued (QueueOverflow at index 1), which
+        # is why buffer-pool health channels never reached the ground.
+        # (main independently raised this to 50, which supersedes our 8)
         constant tlm         = 50
         constant file        = 1
     }
@@ -39,7 +43,11 @@ module ComCcsdsConfig {
         constant commsBuffSize         = 1024 # Size of ring buffer
         constant commsFileBuffSize     = 1024
         constant commsBuffCount        = 5
-        constant commsFileBuffCount    = 5
+        # issue #471: must exceed FileHandling fileUplink queue size (10) plus
+        # in-pipeline slack, or a stalled SD write exhausts the pool mid-uplink
+        # and the AllocationError FATALs the board (HiBuffs measured at 10/10
+        # during a single 204KB uplink with the old count of 5).
+        constant commsFileBuffCount    = 20
         constant commsBuffMgrId        = 200
     }
 }
