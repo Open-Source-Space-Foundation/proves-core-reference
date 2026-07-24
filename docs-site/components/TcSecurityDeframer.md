@@ -206,5 +206,4 @@ Opcode-based bypass policy (formerly AUTH002) is owned by ProvesRouter; see its 
 | Date | Description |
 | --- | --- |
 | 2025-11-26 | Initial design. |
-| 2026-05-01 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. |
-| 2026-07-17 | Pass-through interface between TcDeframer and SpacePacketDeframer; verification result carried in frame context; policy enforcement moved to ProvesRouter. |
+| 2026-07-17 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. Pass-through interface between TcDeframer and SpacePacketDeframer; verification result carried in frame context; policy enforcement moved to ProvesRouter. |
