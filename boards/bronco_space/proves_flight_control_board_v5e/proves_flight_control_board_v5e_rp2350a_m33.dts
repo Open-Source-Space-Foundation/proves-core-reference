@@ -55,9 +55,12 @@
 	 *                 in-tree Zephyr lora driver (semtech,sx1262) from
 	 *                 claiming this device.  LORA_BASICS_MODEM_DRIVERS
 	 *                 depends on !LORA so exactly one driver binds.
-	 *   spi-max-frequency: kept at 125000 Hz from the GRC bring-up value;
-	 *                 may be a board-level SPI signal-integrity workaround
-	 *                 (kept from v5e bring-up; revisit before production).
+	 *   spi-max-frequency: 4 MHz (SX1262 max 16 MHz).  The 125 kHz
+	 *                 bring-up value cost ~18 ms of SPI time per TX frame
+	 *                 (HWIL 2026-07-24: onPreTx config+FIFO upload 31 ms
+	 *                 at 125 kHz vs 12 ms at 4 MHz); validated on the HIL
+	 *                 bench with bidirectional P4_GFSK_75K link + 178 KB
+	 *                 file downlink (byte-identical, 1.53x throughput).
 	 *   tx/rx-enable-gpios: USP upstream has no external RF-switch support;
 	 *                 carried via our patch (spikes/patches/0001-feat-…).
 	 *   dio3-as-tcxo-control + tcxo-voltage: replaces dio3-tcxo-voltage in
@@ -68,13 +71,17 @@
 	lora0_usp: sx1262_usp@0 {
 		compatible = "semtech,sx1262-new";
 		reg = <0>;
-		spi-max-frequency = <125000>; /* kept from v5e bring-up; revisit */
+		spi-max-frequency = <4000000>; /* was 125000 (bring-up); HWIL-validated 2026-07-24 */
 		reset-gpios  = <&gpio0 6  GPIO_ACTIVE_LOW>;
 		busy-gpios   = <&gpio0 13 GPIO_ACTIVE_HIGH>;
 		dio1-gpios   = <&gpio0 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
 		dio3-as-tcxo-control;
 		tcxo-voltage     = <SX126X_TCXO_SUPPLY_1_8V>;
-		tcxo-wakeup-time = <10>;
+		tcxo-wakeup-time = <5>; /* was 10; radio planner sleeps the radio after every
+		                         * TX task, so this delay is paid per frame.  5 ms
+		                         * HWIL-validated 2026-07-24 (link + file integrity);
+		                         * confirm against the E22-400M30S TCXO startup spec
+		                         * before flight. */
 		reg-mode         = <SX126X_REG_MODE_LDO>;
 		rx-boosted;
 		tx-enable-gpios  = <&gpio0 21 GPIO_ACTIVE_HIGH>;
