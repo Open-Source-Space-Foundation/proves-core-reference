@@ -22,6 +22,7 @@ ARCHIVE_TELEMETRY_DIVIDER = 4
 ARCHIVE_DOWNLINK_DIVIDER = 3
 RECORD_TIMEOUT_S = 250
 FILE_RECEIVE_TIMEOUT_S = 180
+FILE_DOWNLINK_COMMAND_TIMEOUT_S = 30
 
 
 def _listed_tlm_files(
@@ -134,6 +135,7 @@ def test_tlm_archive_downlinks_record_over_radio(
             fprime_test_api,
             f"{FILE_DOWNLINK}.SendFile",
             [source_path, destination_name],
+            timeout=FILE_DOWNLINK_COMMAND_TIMEOUT_S,
         )
         # The completed local file is the end-to-end assertion: unlike the
         # FileSent event, it proves every radio packet reached GDS.

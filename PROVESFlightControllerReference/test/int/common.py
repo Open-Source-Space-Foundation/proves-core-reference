@@ -59,6 +59,7 @@ def proves_send_and_assert_command(
     args: list[str] = [],
     events: list[event_predicate] = [],
     retries: int | None = None,
+    timeout: float = 10,
 ):
     """Send command and assert completion
 
@@ -67,7 +68,8 @@ def proves_send_and_assert_command(
     take longer to complete. This function clears histories before sending
     the command, sets a longer timeout for command completion, and retries
     up to `retries` times if command assertion fails (default: module-level
-    _DEFAULT_RETRIES, bumped to 5 for radio runs via --with-radio).
+    _DEFAULT_RETRIES, bumped to 5 for radio runs via --with-radio). The
+    completion timeout can be increased for long-running commands.
     """
     attempts = retries if retries is not None else _DEFAULT_RETRIES
     for attempt in range(attempts):
@@ -76,8 +78,8 @@ def proves_send_and_assert_command(
             fprime_test_api.send_and_assert_command(
                 command,
                 args,
-                timeout=10,
-                max_delay=10,
+                timeout=timeout,
+                max_delay=timeout,
                 events=[],
             )
             if events:
