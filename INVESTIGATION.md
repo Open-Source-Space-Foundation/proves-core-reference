@@ -18,6 +18,56 @@ symptom is **not yet confirmed on hardware** — see "Next steps".
 
 ---
 
+## ✅ ROOT CAUSE CONFIRMED ON HARDWARE (2026-07-24) — supersedes every hypothesis below
+
+Reproduced on a local board (SWD via the raspberrypi OpenOCD fork + Zephyr-SDK
+GDB, symbols from the matching local `zephyr.elf`). The board is in the failed
+state: **no F' telemetry for 38 s** (spanning the 30 s default cadence). The
+fault chain, read directly off the hung target, is:
+
+1. A worker context (unwinds through `FileHandling::fileDownlink`, faulting
+   `pc = 0x20010480`) **branches through a corrupted pointer into a RAM/data
+   address** (`0x20010480` is *inside* the `FileHandling::fileManager` object,
+   not code; stacked `lr = 0x1019` is garbage). Executing a data address raises
+   a **UsageFault** (`z_arm_usage_fault` -> `z_arm_fault`, `fault.c:1090`).
+2. Zephyr's fault handler judges it **non-recoverable** (`recoverable = false`)
+   and calls `z_arm_fatal_error`, which lands in the fatal-halt loop:
+   ```
+   msr BASEPRI_MAX, r3   ; mask interrupts
+   isb
+   b .                   ; spin forever  (addr2line mislabels this "get_fat")
+   ```
+   Confirmed stable: PC pinned here across 16 halts + 30 single-steps
+   (`b .` self-branch), `primask=1`, `basepri=0x10`, MSP/handler mode.
+3. The masked spin means the **SysTick ISR never runs** -> the system clock is
+   **frozen** (`cycle_count`/`curr_tick` byte-identical 4 s apart, stuck at
+   ~8.1 s uptime = when the fault fired).
+4. With no ticks, the F' rate-group loop `startRateGroups()` ->
+   `timer.cycle()` -> **`k_timer_status_sync()` never returns** (main thread
+   parked in `arch_swap`, confirmed by walking `_kernel.threads`). Rate groups
+   never cycle -> no telemetry -> the GDS/CI `comm.py` sees
+   "device disconnected / no data". **This is the CI symptom.**
+
+**What this means for the prior analysis:** the flash-size fix
+(`DT_SIZE_M(4)`->`16`) was real and correct, but everything downstream of it in
+this document — the littlefs mount/format theory, the interrupt-stall-from-
+flash-erase theory, the "wild PC at `fs_open`" reading (the CI PC-sweep almost
+certainly caught this *same* `b .` fatal-halt loop, just mislabeled `fs_open`
+in the CI build the way it's mislabeled `get_fat` locally), and the
+**recommended littlefs->NVS rework** — are **not the bug** and would not fix it.
+The SWD "masked-IRQ spin" reading (`PRIMASK=1`, `ISRPENDING=1`) was pointing at
+this fatal-halt loop, not a flash lock.
+
+**Still open (the actual defect):** *why* control jumps to `0x20010480` — a
+wild/corrupted function pointer or return address (candidates: a stack overflow
+in a worker thread, an uninitialized/garbage F' port or handler pointer, or a
+buffer overrun near the `fileManager` instance). That corruption — not the
+filesystem — is what must be fixed. The fatal-halt-with-interrupts-masked
+behavior is also worth revisiting (it converts one fault into a total, silent
+system death), but it is the symptom amplifier, not the cause.
+
+---
+
 ## Finding 1 — Reads do NOT disable interrupts (contradicts PROBLEM.md hypothesis #2)
 
 `lib/zephyr-workspace/zephyr/drivers/flash/flash_rpi_pico.c`:
