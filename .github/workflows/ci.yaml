@@ -141,6 +141,14 @@ jobs:
             -c "adapter speed 5000" \
             -f "$GITHUB_WORKSPACE/scripts/diag/hang_forensics.tcl" || true
 
+      # TEMPORARY DIAGNOSTIC (remove once root-caused): v3 -- attach GDB to the
+      # OpenOCD gdb server for a DWARF backtrace + single-step, to decide
+      # wild-jump vs. panic vs. lock-spin at the /keys hang. Read-only; skips
+      # gracefully if no arm/multiarch gdb is on the runner. See INVESTIGATION.md
+      # and scripts/diag/hang_gdb.sh.
+      - name: Hang Forensics GDB Backtrace
+        run: bash "$GITHUB_WORKSPACE/scripts/diag/hang_gdb.sh" || true
+
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do

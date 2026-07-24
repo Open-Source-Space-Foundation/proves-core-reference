@@ -298,6 +298,119 @@ bug entirely regardless of which exact mechanism is at fault, since NVS
 doesn't take a global fs lock and its record writes are simple, bounded
 `flash_area_write`/`erase` calls with well-understood timing.
 
+One thing that's **ruled out** as the mechanism: a stale
+`PICO_FLASH_SIZE_BYTES` hard_assert in the Pico SDK's
+`flash_range_erase`/`flash_range_program` (`hard_assert(flash_offs + count <=
+PICO_FLASH_SIZE_BYTES)`) — that macro is not defined anywhere in this Zephyr
+build (confirmed via grep across `lib/zephyr-workspace/zephyr/` and the
+generated build's compile flags), so the `#ifdef`-guarded assert is compiled
+out entirely and cannot be firing.
+
+### Recommended fix
+
+> **Superseded / caveated by the SWD register forensics below (runs
+> 30051402310 + 30052303346).** Those runs **ruled out** a wedged flash/XIP
+> interface — the scenario in which switching to `flash_area_*`/NVS would have
+> been wasted effort — but they also showed the hang is a *software*
+> control-flow failure (interrupts masked via `PRIMASK`, an off-boundary PC,
+> starved IRQ), not a clean littlefs mutex block. So "avoid the littlefs
+> format path" is no longer established as *the* fix; the exact software cause
+> is still being pinned (GDB backtrace, v3). Read the forensics section before
+> acting on the recommendation below.
+
+Regardless of which exact mechanism is at fault, both candidates above point
+at the same remedy: **avoid littlefs's mount/format/first-file-create path on
+this partition entirely.** Replace the `/keys` littlefs mount with raw
+`flash_area_*` calls or the Zephyr NVS backend for this fixed-size key store +
+sequence-number counter. This is a nontrivial rework of
+`TcSecurityDeframer`'s `loadKeyStore()`/`writeKeyStore()`/`writeSequenceNumber()`
+(currently built on Zephyr's `fs_open`/`fs_read`/`fs_write` POSIX-ish file
+API) to instead use `flash_area_open`/`flash_area_read`/`flash_area_write`/
+`flash_area_erase` directly against `keystore_partition`, or to adopt the NVS
+subsystem's key-value API instead. Either avoids the littlefs mount/format
+path entirely. **Not yet implemented.**
+
+### Diagnostic history (all reverted except the flash-size fix; CI is currently back to pre-diagnostic state otherwise)
+
+| run | change | result | reverted commit |
+|-----|--------|--------|------------------|
+| 30026433728 | (baseline, pre-fix) | fail, same USB-disconnect symptom | — |
+| 30034861047 | flash0 `DT_SIZE_M(4)` → `DT_SIZE_M(16)` (kept, not reverted) | fail, same symptom; confirmed chip is 16MB | n/a — this is the real fix |
+| 30036653676 | `CONFIG_CONSOLE`/`CONFIG_LOG` enabled | fail (expected); boot log silent after ~1.16s | `3cdfa541` |
+| 30043983799 | SWD PC-sweep at t=+2s/+10s/+20s | fail (expected); cm0 frozen at `fs_open+2` throughout | `59b8178c` |
+| 30051402310 | SWD forensics: SCB fault regs + QMI/XIP state (`hang_forensics.tcl`) | fail (expected); no fault/lockup, XIP healthy, `ISRPENDING`=1 — see forensics section | pending |
+| 30052303346 | SWD forensics v2: capture-wrapped reg/stack + PRIMASK/BASEPRI | fail (expected); `PRIMASK`=1, off-boundary PC, shallow garbage stack | pending |
+
+The `hmac-to-storage` branch currently carries the flash-size fix (kept) plus
+the **read-only SWD forensics diagnostic** (`scripts/diag/hang_forensics.tcl`
+and a `Hang Forensics Diagnostic` step in `integration-uart`) — this one is
+still active (not reverted) because the GDB-backtrace follow-up (v3) builds on
+it. It must be reverted before merge, same as the earlier diagnostics. The
+prior console/PC-sweep diagnostics remain cleanly reverted.
+
+## SWD register/QMI/stack forensics (runs 30051402310 + 30052303346, 2026-07-24)
+
+Read-only SWD capture (`scripts/diag/hang_forensics.tcl`): reset, free-run 8 s
+so boot reaches the hang, halt cm0 once, and read the core registers, the
+Cortex-M fault status block, the QMI/XIP peripheral state, and an SRAM stack
+window. Deliberately reads **no** `0x10xx_xxxx` (XIP flash) address over SWD —
+if the flash interface were wedged, such a read could stall the adapter. Two
+runs: v1 got the fault/QMI reads; v2 fixed a capture bug (bare `reg`/`mdw`
+output does not reach CI stdout in batch mode — only `echo`/`capture` does) and
+added the register/stack dump plus the interrupt-mask registers.
+
+**Two hardware hypotheses ruled out (confirmed on both runs):**
+
+- **Not a CPU fault or lockup.** `CFSR = HFSR = DFSR = 0`; `DHCSR = 0x00130003`
+  → `S_HALT=1` but `S_LOCKUP=0` and `S_SLEEP=0` (not locked up, not in WFI).
+- **Not a wedged flash/XIP interface** — this is the scenario in which a
+  littlefs→`flash_area_*`/NVS rewrite would have been *wasted*, because NVS
+  hits the same `flash_range_erase`. Ruled out: `XIP_CTRL=0x00000083` (XIP
+  enabled), `QMI_M0_RCMD=0x000000eb` (quad-read `0xEB` command intact),
+  `QMI_DIRECT_CSR=0x00c10800` (EN=0, BUSY=0 — not stuck in a direct/serial
+  transaction). The flash controller is idle and healthy.
+
+**Also ruled out:** SMP/second-core bringup. `CONFIG_MP_MAX_NUM_CPUS=1` — this
+is a single-core build, so the `idle.c` SMP-without-IPI spin path is not
+compiled and cm1 sitting in the bootrom (per the PC sweep) is expected and
+irrelevant.
+
+**What the state actually is (v2, run 30052303346):**
+
+| register | value | reading |
+|----------|-------|---------|
+| `PRIMASK`  | `0x01` | IRQs masked by `cpsid i` — **not** Zephyr's normal `irq_lock` (which uses `BASEPRI`, here `0x00`) |
+| `ICSR`     | `0x00400000` | `ISRPENDING=1`: an IRQ is pending and **starved** — this is what drops the USB CDC link |
+| `control`  | `0x02` | privileged thread on PSP |
+| `pc`       | `0x101864b8` | **not an instruction boundary** — `fs_open` opens with a 4-byte `stmdb` at `0x101864b6`; `…b8` is the second halfword, *inside* it |
+| `lr` / `r5`| `0x1010fb69` (`idle+0x21`) / `0x1010fb49` (`&idle`) | but `idle()` never calls `fs_open` — incoherent as a live frame |
+| `r1`       | `0x0` | if this were `fs_open`'s `file_name` arg it is NULL, which returns `-EINVAL` immediately (`fs.c:145`) — can't hang *inside* `fs_open` |
+| stack > SP | 2 words (`k_is_pre_kernel` ×2) then uninitialized garbage | shallow, not a coherent call chain |
+
+The earlier "`fs_open+2` = its first real instruction" reading (PC-sweep
+section) was **wrong**: `0x101864b8` is mid-`stmdb`, not an instruction
+boundary. Taken together — IRQs masked via `PRIMASK`, an off-boundary PC, an
+incoherent LR, a shallow garbage stack, and no CPU fault — this is **not** a
+clean mutex/lock block. It reads as execution gone off the rails: a
+wild/corrupted PC, or a software panic-spin (`arch_system_halt()` also does
+`cpsid`+infinite-loop with no CPU fault set), reached right when the keystore
+feature first touches the filesystem.
+
+**Net for the fix decision:** the failure is a *firmware control-flow* bug, not
+a flash/XIP hardware wedge — so this is not the case where moving off littlefs
+is provably futile. But it is also not the clean fs-lock the rework was pitched
+against, so the rework is not yet established as *the* fix either. The exact
+software cause (wild jump vs. a tripped `__ASSERT`/`SPIN_VALIDATE` panic —
+`CONFIG_ASSERT=y`, `CONFIG_SPIN_VALIDATE=y` are both set — vs. a lock-spin)
+needs one more probe.
+
+**Next diagnostic (v3, in progress):** attach `arm-zephyr-eabi-gdb` to the
+OpenOCD gdb server (port 3333, already opened by the same step) for a real
+DWARF backtrace + `info threads` (`_current` thread) + a few single-steps to
+see whether the PC advances and whether a `z_fatal_error`/`arch_system_halt`
+frame is present. That distinguishes panic vs. wild-jump vs. lock-spin
+directly and decides the fix.
+
 ## Original next steps (superseded above, kept for the 4 MB fallback)
 
 Everything below was written before hardware confirmation; kept for
