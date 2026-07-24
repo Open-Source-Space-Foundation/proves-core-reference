@@ -85,12 +85,6 @@ jobs:
         run: |
           make generate
 
-      - name: Set Authentication Key
-        env:
-          AUTH_KEY: ${{ secrets.AUTH_KEY }}
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
-
       - name: Build MCUBoot
         run: |
           make build-mcuboot
@@ -133,6 +127,28 @@ jobs:
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
 
+      # TEMPORARY DIAGNOSTIC (remove once root-caused): read-only SWD forensics
+      # to distinguish core-fault vs. wedged-XIP vs. fs-lock at the /keys boot
+      # hang, before deciding on the littlefs->NVS rework. See INVESTIGATION.md
+      # and scripts/diag/hang_forensics.tcl. Halt/read only; no firmware or
+      # config change, so the rest of the (still-failing) GDS flow below is
+      # undisturbed.
+      - name: Hang Forensics Diagnostic
+        run: |
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -f "$GITHUB_WORKSPACE/scripts/diag/hang_forensics.tcl" || true
+
+      # TEMPORARY DIAGNOSTIC (remove once root-caused): v3 -- attach GDB to the
+      # OpenOCD gdb server for a DWARF backtrace + single-step, to decide
+      # wild-jump vs. panic vs. lock-spin at the /keys hang. Read-only; skips
+      # gracefully if no arm/multiarch gdb is on the runner. See INVESTIGATION.md
+      # and scripts/diag/hang_gdb.sh.
+      - name: Hang Forensics GDB Backtrace
+        run: bash "$GITHUB_WORKSPACE/scripts/diag/hang_gdb.sh" || true
+
       - name: Load .env file
         run: |
           while IFS= read -r line || [ -n "$line" ]; do
@@ -154,12 +170,6 @@ jobs:
           # here to keep the YAMCS instance config / adapter in sync.
           make make-ci-spacecraft-id
 
-      - name: Set Authentication Key
-        env:
-          AUTH_KEY: ${{ secrets.AUTH_KEY }}
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
-
       - name: Install Framer Plugin
         run: |
           make framer-plugin
@@ -177,9 +187,17 @@ jobs:
           pkill -9 python || true
 
       - name: Start GDS
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           echo $! > server.pid
+
+      - name: Provision Key
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          make test-integration FILTER=provision_key
 
       - name: Sync Sequence Number
         run: |
@@ -205,6 +223,8 @@ jobs:
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Start GDS
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds.log 2>&1 &
           echo $! > server.pid
@@ -413,12 +433,6 @@ jobs:
         run: |
           make submodules fprime-venv
 
-      - name: Set Authentication Key
-        env:
-          AUTH_KEY: ${{ secrets.AUTH_KEY }}
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
-
       - name: Install Framer Plugin
         run: |
           make framer-plugin
@@ -432,6 +446,8 @@ jobs:
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Bootstrap Sequence Number over UART
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           # DIVIDER_PRM_SET and lora.TRANSMIT both pass through the authentication
           # router and require the GDS-side sequence number to match FSW. On a
@@ -446,6 +462,11 @@ jobs:
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
           sleep 5
+          # Provision the HMAC key on the UART deframer instance; the key store
+          # is shared board-wide (see TcSecurityDeframer key-store propagation),
+          # so the LoRa instance picks it up on its next frame without a
+          # separate provision over radio.
+          make test-integration FILTER=provision_key
           # Sync against the LoRa deframer instance: the radio traffic that
           # follows is validated by it, not by the UART instance this
           # bootstrap link talks through.
@@ -469,6 +490,8 @@ jobs:
           echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
 
       - name: Sync Sequence Number over UART
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-sync.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
@@ -522,6 +545,8 @@ jobs:
           pkill -9 python || true
 
       - name: Start GDS on LoRa Passthrough
+        env:
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           # Capture GDS's own stdout/stderr for the whole session (not just what
           # pytest captures on failure) so a crash mid-run has a full record of
@@ -544,7 +569,7 @@ jobs:
         env:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not provision_key and not uart_only" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()

@@ -35,8 +35,9 @@ bool hexToNibble(char ch, uint8_t& nibble) {
     return false;
 }
 
+}  // namespace
+
 // Parse a 32-character hex string (16 bytes) into a byte array.
-// Returns true on success and fills `keyBytes` with the parsed bytes.
 bool parseHexKey(const char* key, uint8_t (&keyBytes)[Ccsds355_0_B_2::kTCSecurityTrailer]) {
     if (key == nullptr) {
         return false;
@@ -58,20 +59,13 @@ bool parseHexKey(const char* key, uint8_t (&keyBytes)[Ccsds355_0_B_2::kTCSecurit
     return true;
 }
 
-}  // namespace
-
-// Import an HMAC key into PSA for message verification.
-PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& keyId) {
+// Import a raw 128-bit HMAC key into PSA for message verification.
+PacketAuthenticator::KeyImportResult importHmacKeyBytes(const uint8_t (&keyBytes)[Ccsds355_0_B_2::kTCSecurityTrailer],
+                                                        uint32_t& keyId) {
     // Initialize PSA crypto library
     const psa_status_t initStatus = psa_crypto_init();
     if (initStatus != PSA_SUCCESS) {
         return {PacketAuthenticator::KeyImportStatus::InitError, initStatus};
-    }
-
-    // Parse the hex-encoded default key into raw bytes
-    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
-    if (!parseHexKey(key, keyBytes)) {
-        return {PacketAuthenticator::KeyImportStatus::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 
     // Set up the key attributes
@@ -84,11 +78,10 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& ke
     psa_set_key_lifetime(&attributes, PSA_KEY_LIFETIME_VOLATILE);
 
     // Import the key into PSA key store
-    const psa_status_t status = psa_import_key(&attributes, keyBytes, sizeof(keyBytes), &keyId);
+    const psa_status_t status = psa_import_key(&attributes, keyBytes, Ccsds355_0_B_2::kTCSecurityTrailer, &keyId);
 
     // Clean up sensitive data regardless of import outcome
     psa_reset_key_attributes(&attributes);
-    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
 
     if (status != PSA_SUCCESS) {
         return {PacketAuthenticator::KeyImportStatus::ImportKeyError, status};
@@ -97,10 +90,27 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& ke
     return {PacketAuthenticator::KeyImportStatus::Success, PSA_SUCCESS};
 }
 
+// Parse a hex-encoded key and import it into PSA for message verification.
+PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& keyId) {
+    // Parse the hex-encoded key into raw bytes
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    if (!parseHexKey(key, keyBytes)) {
+        return {PacketAuthenticator::KeyImportStatus::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
+    }
+
+    const PacketAuthenticator::KeyImportResult result = importHmacKeyBytes(keyBytes, keyId);
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
+    return result;
+}
+
+void destroyHmacKey(uint32_t keyId) {
+    (void)psa_destroy_key(keyId);
+}
+
 PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* dataBuffer,
                                                              size_t dataSize,
                                                              const Mac& hmac,
-                                                             uint32_t& keyId) {
+                                                             uint32_t keyId) {
     // Basic input validation: buffer present and at least trailer-sized
     if (!dataBuffer || dataSize < Ccsds355_0_B_2::kTCSecurityTrailer) {
         return {PacketAuthenticator::AuthenticationStatus::VerifyError, PSA_ERROR_INVALID_ARGUMENT};

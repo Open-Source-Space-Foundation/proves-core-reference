@@ -19,54 +19,31 @@ _SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
 SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
 
 
-def get_default_auth_key_from_header() -> str:
+def get_auth_key_from_env() -> str:
     """
-    Read the authentication key from AuthDefaultKey.h file.
+    Read the authentication key from the PROVES_AUTH_KEY environment variable.
+
+    The key is never compiled into the flight image (see issue #220), so ground
+    tooling must be told the key out-of-band: via --authentication-key or this
+    environment variable.
 
     Returns:
-        Default authentication key (without 0x prefix) from AuthDefaultKey.h
+        Authentication key as a hex string (without 0x prefix) from PROVES_AUTH_KEY
 
     Raises:
-        FileNotFoundError: If AuthDefaultKey.h file is not found
-        ValueError: If AuthDefaultKey.h does not contain a valid key
-        IOError: If there is an error reading the file
+        ValueError: If PROVES_AUTH_KEY is not set
     """
-    path = (
-        "PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h"
-    )
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"AuthDefaultKey.h not found at {path}. "
-            "Authentication plugin requires AuthDefaultKey.h to be present. "
-            "Ensure the file exists or run 'make generate-auth-key' to create it."
+    key = os.environ.get("PROVES_AUTH_KEY")
+    if not key:
+        raise ValueError(
+            "No authentication key available: pass --authentication-key or set "
+            "the PROVES_AUTH_KEY environment variable. The key is provisioned "
+            "onto the satellite with the PROVISION_KEY command and is never "
+            "compiled into the flight image."
         )
-
-    try:
-        with open(path, "r") as f:
-            for line in f:
-                # Look for line like: #define AUTH_DEFAULT_KEY "4916d208d40612daad6edbc7333c4c13"
-                if "AUTH_DEFAULT_KEY" in line and '"' in line:
-                    # Extract key from between quotes
-                    start = line.find('"') + 1
-                    end = line.find('"', start)
-                    if start > 0 and end > start:
-                        key = line[start:end]
-                        # Remove 0x prefix if present (shouldn't be, but handle it)
-                        if key.startswith("0x") or key.startswith("0X"):
-                            key = key[2:]
-                        return key
-    except (IOError, OSError) as e:
-        raise IOError(
-            f"Error reading AuthDefaultKey.h from {path}: {e}. "
-            "Authentication plugin cannot proceed without a valid AuthDefaultKey.h file."
-        ) from e
-
-    # If we get here, file exists but contains no valid key
-    raise ValueError(
-        f"No valid key found in {path}. "
-        'AuthDefaultKey.h must contain a line with: #define AUTH_DEFAULT_KEY "<key>"'
-    )
+    if key.startswith("0x") or key.startswith("0X"):
+        key = key[2:]
+    return key
 
 
 # pragma: no cover
@@ -87,7 +64,7 @@ class AuthenticateFramer(FramerDeframer):
             spi: Security Parameter Index (default: 0)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
-            authentication_key: Authentication key as hex string without 0x prefix (default: reads from spi_dict.txt)
+            authentication_key: Authentication key as hex string without 0x prefix (default: reads from PROVES_AUTH_KEY env var)
             **kwargs: Additional keyword arguments (ignored for now)
         """
         super().__init__()
@@ -101,9 +78,9 @@ class AuthenticateFramer(FramerDeframer):
         self.spi = spi
         self.window_size = window_size
         self.authentication_type = authentication_type
-        # Use provided key or read from AuthDefaultKey.h
+        # Use provided key or read from the PROVES_AUTH_KEY environment variable
         if authentication_key is None:
-            authentication_key = get_default_auth_key_from_header()
+            authentication_key = get_auth_key_from_env()
         self.authentication_key = authentication_key
 
     def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
@@ -177,11 +154,6 @@ class AuthenticateFramer(FramerDeframer):
     @classmethod
     def get_arguments(cls) -> dict:
         """Return CLI argument definitions for this plugin"""
-        # Get default key from AuthDefaultKey.h for help text
-        try:
-            default_key = get_default_auth_key_from_header()
-        except (FileNotFoundError, ValueError, IOError):
-            default_key = "<not found - run 'make generate-auth-key'>"
         return {
             ("--spi",): {
                 "type": int,
@@ -200,8 +172,8 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--authentication-key",): {
                 "type": str,
-                "help": f"Authentication key as hex string without 0x prefix (default: {default_key} from AuthDefaultKey.h)",
-                "default": None,  # Will be set to key from AuthDefaultKey.h in __init__
+                "help": "Authentication key as hex string without 0x prefix (default: reads from PROVES_AUTH_KEY env var)",
+                "default": None,  # Will be set from PROVES_AUTH_KEY in __init__
             },
         }
 

@@ -132,7 +132,7 @@ docs-build: uv ## Build MkDocs documentation site
 	@$(UVX) --from mkdocs-material mkdocs build
 
 .PHONY: generate
-generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
+generate: submodules fprime-venv zephyr keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util generate --force
 
 .PHONY: generate-if-needed
@@ -152,21 +152,6 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
 check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
 	@$(UV_RUN) python3 scripts/check_console_disabled.py "$(ZEPHYR_CONFIG)"
-
-##@ Authentication Keys
-
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
-AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
-
-.PHONY: generate-auth-key
-generate-auth-key: ## Generate AuthDefaultKey.h with a random HMAC key
-	@if [ -f "$(AUTH_DEFAULT_KEY_HEADER)" ]; then \
-		echo "$(AUTH_DEFAULT_KEY_HEADER) already exists. Skipping generation."; \
-	else \
-		echo "Generating $(AUTH_DEFAULT_KEY_HEADER) with random key..."; \
-		$(UV_RUN) python3 scripts/generate_auth_key_header.py --output $(AUTH_DEFAULT_KEY_HEADER) --template $(AUTH_KEY_TEMPLATE); \
-	fi
-	@echo "Generated $(AUTH_DEFAULT_KEY_HEADER)"
 
 keys/proves.pem:
 	@mkdir -p keys
@@ -224,7 +209,7 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
-FILTER ?= not sync_sequence_number and not format_filesystem
+FILTER ?= not sync_sequence_number and not format_filesystem and not provision_key
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -465,7 +450,6 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
