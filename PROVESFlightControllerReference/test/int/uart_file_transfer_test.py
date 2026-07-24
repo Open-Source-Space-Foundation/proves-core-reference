@@ -22,6 +22,7 @@ import zlib
 from pathlib import Path
 
 import pytest
+from common import resync_sequence_number
 from fprime_gds.common.files.helpers import FileStates
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -294,7 +295,7 @@ def test_three_consecutive_large_uplinks(
         # offset writes). One retry keeps that residual out of this test's
         # verdict -- #471 is about the board surviving, not link reliability.
         result = None
-        for attempt in range(2):
+        for attempt in range(3):
             local_path = _make_random_file(
                 tmp_path, 1000 * UPLINK_CHUNK_SIZE, f"consec_{i}.bin"
             )
@@ -311,6 +312,14 @@ def test_three_consecutive_large_uplinks(
                 f"[471-acceptance] uplink {i} attempt {attempt} bad "
                 f"(idle={result['uplink_idle']}), retrying"
             )
+            # A mid-suite reboot desyncs the auth sequence number and can eat
+            # the transfer's START packet; realign and let the board settle
+            # before the next attempt.
+            try:
+                resync_sequence_number(fprime_test_api)
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(5)
         assert result["uplink_idle"], f"uplink {i} hung"
         assert result["crc_event"] is not None, f"uplink {i}: file missing/empty"
         assert result["crc_event"].args[1].val == result["expected_crc"], (
