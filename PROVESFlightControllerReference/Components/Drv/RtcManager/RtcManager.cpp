@@ -168,6 +168,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Emit time set event, include previous time for reference
     this->log_ACTIVITY_HI_TimeSet(time_before_set.getSeconds(), time_before_set.getUSeconds());
+    this->log_ACTIVITY_HI_TimeBase(Fw::String("RTC"));
 
     // Send command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -179,10 +180,11 @@ void RtcManager ::TO_PROC_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     int64_t t = k_uptime_get();
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
-    this->log_ACTIVITY_HI_procTimeSet(seconds_since_boot);  // Log the current uptime in seconds
+    this->log_ACTIVITY_HI_ProcTimeSet(seconds_since_boot);  // Log the current uptime in seconds
 
     this->m_ProcTimeSet = true;  // proc time flag
     proc_time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+    this->log_ACTIVITY_HI_TimeBase(Fw::String("PROC"));
 
     // Command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);

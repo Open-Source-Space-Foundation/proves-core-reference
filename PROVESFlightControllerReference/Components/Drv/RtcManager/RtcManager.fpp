@@ -58,9 +58,15 @@ module Drv {
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
-        event procTimeSet(
+        @ ProcTimeSet event indicates that proc time was set
+        event ProcTimeSet(
             seconds: U32 @< Uptime in seconds
         ) severity activity high id 17 format "Proc time set, current uptime: {}"
+
+        @ Timebase even fires when the timebase changes and indicates the current timebase
+        event TimeBase(
+            timeBase: string size 4
+        ) severity activity high id 18 format "Timebase is currently: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
