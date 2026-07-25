@@ -436,3 +436,20 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmNotSet event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+@pytest.mark.uart_only(reason="Test functionality of to_proc_time")
+def test_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test for events emitted by proc time toggle"""
+
+    # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
+    curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
+    set_time(fprime_test_api, curiosity_landing)
+
+    # Assert that we receive a TimeBase event within 10 seconds
+    fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
+
+    fprime_test_api.send_command(f"{rtcManager}.TO_PROC_TIME")
+
+    # Assert that we receive a TimeBase event within 10 seconds
+    fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
