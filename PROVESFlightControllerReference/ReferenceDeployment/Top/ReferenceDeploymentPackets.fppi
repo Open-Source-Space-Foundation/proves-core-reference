@@ -313,6 +313,4 @@ telemetry packets ReferenceDeploymentPackets {
 
   watchdog.WatchdogTransitions
 
-  tlmArchive.RecordingEnabled
-
 }

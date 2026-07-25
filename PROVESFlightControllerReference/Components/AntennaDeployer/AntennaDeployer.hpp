@@ -64,7 +64,6 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     U32 m_totalAttempts = 0;
     bool m_stopRequested = false;
     U32 m_burnTicksThisAttempt = 0;
-    bool m_deployed = false;
 };
 
 }  // namespace Components
