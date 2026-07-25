@@ -229,7 +229,7 @@ module ReferenceDeployment {
       startupManager.disableTransmit -> lora.disableTransmit
 
       # --- Radio ever enabled this boot? ---
-      lora.loraEverOn -> startupManager.loraEverOn
+      lora.loraFirstStart -> startupManager.loraFirstStart
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence

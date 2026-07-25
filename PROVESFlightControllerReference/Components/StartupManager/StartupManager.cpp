@@ -212,7 +212,7 @@ void StartupManager ::payloadCompleteSequence_handler(FwIndexType portNum,
     this->onSequenceCompleted();
 }
 
-void StartupManager ::loraEverOn_handler(FwIndexType portNum) {
+void StartupManager ::loraFirstStart_handler(FwIndexType portNum) {
     (void)portNum;
     this->m_lora_ever_on = true;
     // Radio already came up; drop any deferred hardcoded enable

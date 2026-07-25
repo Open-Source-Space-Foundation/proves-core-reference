@@ -95,9 +95,9 @@ class StartupManager final : public StartupManagerComponentBase {
                                         const Fw::StringBase& fileName  //!< The sequence file
                                         ) override;
 
-    //! Handler implementation for loraEverOn
-    void loraEverOn_handler(FwIndexType portNum  //!< The port number
-                            ) override;
+    //! Handler implementation for loraFirstStart
+    void loraFirstStart_handler(FwIndexType portNum  //!< The port number
+                                ) override;
 
     //! Handler implementation for run
     //!

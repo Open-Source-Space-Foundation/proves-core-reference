@@ -26,7 +26,7 @@ module Components {
         sync input port payloadCompleteSequence: Fw.CmdResponse
 
         @ Port for receiving if Lora was ever on
-        sync input port loraEverOn: Fw.Signal
+        sync input port loraFirstStart: Fw.Signal
 
         @ Enable LoRa transmission
         output port enableTransmit: Fw.Signal
