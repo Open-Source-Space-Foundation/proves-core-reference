@@ -14,12 +14,6 @@ telemetry packets ReferenceDeploymentPackets {
     startupManager.BootCount
     modeManager.CurrentMode
 
-    #LoRa config data
-    ReferenceDeployment.lora.ModuleDataRate
-    ReferenceDeployment.lora.ModuleCodingRate
-    ReferenceDeployment.lora.ModuleBandwidth
-    ReferenceDeployment.lora.ModuleTransmitState
-
     # Essential Sensor Data
     detumbleManager.AngularVelocityMagnitude
 
