@@ -7,6 +7,7 @@
 #ifndef Components_TlmArchive_HPP
 #define Components_TlmArchive_HPP
 
+#include "Os/Mutex.hpp"
 #include "PROVESFlightControllerReference/Components/TlmArchive/TlmArchiveComponentAc.hpp"
 
 namespace Components {
@@ -22,6 +23,12 @@ class TlmArchive final : public TlmArchiveComponentBase {
 
   private:
     void comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 context) override;
+    void run_handler(FwIndexType portNum, U32 context) override;
+
+    Os::Mutex m_queueMutex;
+    Fw::ComBuffer m_pendingPacket;
+    bool m_packetPending = false;
+    bool m_antennasDeployed = false;
 };
 
 }  // namespace Components

@@ -8,6 +8,7 @@
 
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
+#include "Os/Models/FileStatusEnumAc.hpp"
 
 namespace Components {
 
@@ -26,21 +27,54 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
     (void)portNum;
     (void)context;
 
-    if (this->deploymentStateGet_out(0)) {
+    Os::ScopeLock lock(this->m_queueMutex);
+    if (!this->m_packetPending) {
+        this->m_pendingPacket = data;
+        this->m_packetPending = true;
+    }
+}
+
+void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
+    (void)portNum;
+    (void)context;
+
+    Fw::ComBuffer packet;
+    {
+        Os::ScopeLock lock(this->m_queueMutex);
+        if (!this->m_packetPending) {
+            return;
+        }
+        packet = this->m_pendingPacket;
+        this->m_packetPending = false;
+    }
+
+    if (!this->m_antennasDeployed) {
+        this->m_antennasDeployed = this->deploymentStateGet_out(0);
+    }
+
+    if (this->m_antennasDeployed) {
         return;
     }
 
     if (Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
+        this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("create_directory"));
         return;
     }
 
     Os::File file;
-    if (file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND) != Os::File::OP_OK) {
+    const Os::File::Status openStatus = file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND);
+    if (openStatus != Os::File::OP_OK) {
+        this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("open_append"));
         return;
     }
 
-    FwSizeType size = data.getSize();
-    (void)file.write(data.getBuffAddr(), size);
+    const FwSizeType requestedSize = packet.getSize();
+    FwSizeType writtenSize = requestedSize;
+    const Os::File::Status writeStatus = file.write(packet.getBuffAddr(), writtenSize);
+    if ((writeStatus != Os::File::OP_OK) || (writtenSize != requestedSize)) {
+        this->log_WARNING_HI_ArchiveWriteError(Os::FileStatus(static_cast<Os::FileStatus::T>(writeStatus)),
+                                               requestedSize, writtenSize);
+    }
     file.close();
 }
 
