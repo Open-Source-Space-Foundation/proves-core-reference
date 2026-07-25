@@ -10,6 +10,7 @@
 #include <Fw/Time/Time.hpp>
 #include <Fw/Types/String.hpp>
 
+#include "Bypasser.hpp"
 #include "Fw/Com/ComPacket.hpp"
 #include "Fw/FPrimeBasicTypes.hpp"
 #include "Fw/Logger/Logger.hpp"
@@ -21,7 +22,8 @@ namespace Svc {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-ProvesRouter ::ProvesRouter(const char* const compName) : ProvesRouterComponentBase(compName) {}
+ProvesRouter ::ProvesRouter(const char* const compName)
+    : ProvesRouterComponentBase(compName), m_routedPackets(0), m_bypassedPackets(0), m_rejectedPackets(0) {}
 ProvesRouter ::~ProvesRouter() {}
 
 // ----------------------------------------------------------------------
@@ -29,9 +31,28 @@ ProvesRouter ::~ProvesRouter() {}
 // ----------------------------------------------------------------------
 
 void ProvesRouter ::dataIn_handler(FwIndexType portNum, Fw::Buffer& packetBuffer, const ComCfg::FrameContext& context) {
-    Fw::ComPacketType packetType = context.get_apid();
+    // Validate that the packet is authenticated or can bypass authentication
+    bool allowed = context.get_authenticated() ||
+                   Components::PacketBypasser::bypassPacket(packetBuffer.getData(), packetBuffer.getSize());
+    if (!allowed) {
+        // Telemeter the rejection
+        this->m_rejectedPackets += 1;
+        this->tlmWrite_RejectedPackets(this->m_rejectedPackets);
+
+        // Return frame buffer ownership
+        this->dataReturnOut_out(0, packetBuffer, context);
+        return;
+    }
+
+    // Telemeter the bypass if the packet was allowed to bypass authentication
+    bool bypassed = !context.get_authenticated() && allowed;
+    if (bypassed) {
+        this->m_bypassedPackets += 1;
+        this->tlmWrite_BypassedPackets(this->m_bypassedPackets);
+    }
 
     // Route based on packet type
+    Fw::ComPacketType packetType = context.get_apid();
     switch (packetType) {
         case Fw::ComPacketType::FW_PACKET_COMMAND:
             this->handleCommandPacket(packetBuffer);
@@ -107,6 +128,9 @@ void ProvesRouter ::notifyPacketRouted() {
     if (this->isConnected_packetRouted_OutputPort(0)) {
         this->packetRouted_out(0);
     }
+
+    this->m_routedPackets += 1;
+    this->tlmWrite_RoutedPackets(this->m_routedPackets);
 }
 
 Fw::Buffer ProvesRouter ::allocateCopy(Fw::Buffer& src, ProvesRouter_AllocationReason reason) {
