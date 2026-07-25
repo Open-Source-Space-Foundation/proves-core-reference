@@ -43,7 +43,7 @@ void RtcManager ::configure(const struct device* dev) {
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
+void RtcManager ::timeGetPort_handler(FgwIndexType portNum, Fw::Time& time) {
     // Get system uptime
     int64_t t = k_uptime_get();
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
