@@ -63,7 +63,7 @@ module Drv {
             seconds: U32 @< Uptime in seconds
         ) severity activity high id 17 format "Proc time set, current uptime: {}"
 
-        @ Timebase even fires when the timebase changes and indicates the current timebase
+        @ Timebase event fires when the timebase changes and indicates the current timebase
         event TimeBase(
             timeBase: string size 4
         ) severity activity high id 18 format "Timebase is currently: {}"

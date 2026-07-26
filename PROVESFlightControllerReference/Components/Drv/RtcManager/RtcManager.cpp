@@ -175,6 +175,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 }
 
 void RtcManager ::TO_PROC_TIME_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    // Cancel any running sequences before setting time, as time change may impact their behavior
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
     // Switch the time source to proc time
     Fw::Time proc_time;
     int64_t t = k_uptime_get();
