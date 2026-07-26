@@ -56,10 +56,12 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    if (Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
+    if (!this->m_directoryInitialized &&
+        Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
         this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("create_directory"));
         return;
     }
+    this->m_directoryInitialized = true;
 
     this->log_ACTIVITY_LO_ArchiveWriteStart();
     Os::File file;

@@ -27,6 +27,7 @@ class TlmArchive final : public TlmArchiveComponentBase {
 
     Os::Mutex m_queueMutex;
     Fw::ComBuffer m_pendingPacket;
+    bool m_directoryInitialized = false;
     bool m_packetPending = false;
     bool m_antennasDeployed = false;
 };
