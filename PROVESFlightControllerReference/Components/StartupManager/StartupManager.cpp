@@ -142,8 +142,11 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
 }
 
 StartupManager::Status StartupManager ::persist_boot_count(const Fw::StringBase& file_path, FwSizeType value) {
-    // Write to a temp file, then rename over the target: littlefs renames are atomic, so a reset
-    // landing mid-update leaves either the old or the new file - never a torn one.
+    // Write to a temp file, then rename over the target. The flight FS is FAT (ELM FatFs), whose
+    // rename is not guaranteed power-cut atomic - but the new data is fully written and flushed
+    // before it replaces the old file, so a reset can no longer tear the value mid-write (the
+    // observed failure). Worst case during the rename window is a missing file, which reads as a
+    // failed read and re-initializes the count - detectable, unlike silent garbage.
     Fw::String temp_path(file_path);
     temp_path += ".tmp";
     StartupManager::Status status = write<FwSizeType, sizeof(FwSizeType)>(temp_path, value);

@@ -42,10 +42,11 @@ class StartupManager final : public StartupManagerComponentBase {
     //! \return The updated boot count
     FwSizeType get_boot_count(bool increment);
 
-    //! \brief durably persist the boot count via write-to-temp + atomic rename
+    //! \brief durably persist the boot count via write-to-temp + rename
     //!
-    //! littlefs renames are atomic, so a reset landing mid-update leaves either the old or the new
-    //! file — never a torn one.
+    //! The new value is fully written and flushed before it replaces the old file, so a reset
+    //! cannot tear the value mid-write. FAT's rename is not power-cut atomic; the residual worst
+    //! case is a missing file, which reads as a failed read rather than silent garbage.
     //!
     //! \return Status of the persist operation
     Status persist_boot_count(const Fw::StringBase& file_path, FwSizeType value);

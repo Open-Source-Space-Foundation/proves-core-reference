@@ -50,12 +50,12 @@ On each 1 Hz `run`, when `DEFAULT_STARTUP_VALUE == 1` and `m_transmit_enable_tic
 
 ### Boot count persistence
 
-The boot count lives in `BOOT_COUNT_FILE` on littlefs and is incremented lazily on the first 1 Hz `run` tick of each boot. Hard resets (e.g. the watchdog power cycle used for command-loss recovery) can land while a write is in flight, so the persistence path is hardened in four ways:
+The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM FatFs, see `prj.conf`) and is incremented lazily on the first 1 Hz `run` tick of each boot. Hard resets (e.g. the watchdog power cycle used for command-loss recovery) can land while a write is in flight, so the persistence path is hardened in four ways:
 
 1. **Corruption guard**: a read that returns a value above 1,000,000 is treated as a failed read (the file contained torn/junk data) and reported via `BootCountCorrupted` with the raw value. The count then re-initializes on the next increment instead of propagating garbage. Observed on HWIL: a torn write left the file reading `0x02FE191005000001`, and the next boot persisted exactly garbage+1.
 2. **Read-only queries**: `GET_BOOT_COUNT` never writes the file. Only the once-per-boot increment does, minimizing the window in which a reset can tear a write.
 3. **Increment retry**: if the first-tick persist fails (e.g. filesystem not ready), `run` re-attempts it each tick until it succeeds — the increment is delayed, not lost. `BootCountUpdateFailure` is emitted once per failure streak.
-4. **Atomic persist**: the value is written to `<BOOT_COUNT_FILE>.tmp`, flushed, and renamed over the target. littlefs renames are atomic, so a reset mid-update leaves either the old or the new file, never a torn one.
+4. **Write-then-rename persist**: the value is written to `<BOOT_COUNT_FILE>.tmp`, flushed, and renamed over the target. FAT's rename is not guaranteed power-cut atomic, but the new data is fully on storage before it replaces the old file, closing the torn-in-place-write window that produced the observed garbage. The residual worst case during the rename window is a missing file, which reads as a failed read (count re-initializes, visibly) rather than silent corruption.
 
 
 ## Port Descriptions
