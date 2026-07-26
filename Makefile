@@ -11,28 +11,6 @@ help: ## Display this help.
 submodules: ## Initialize and update git submodules
 	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying fprime ComAggregator bounded-timeout patch (issue #432)..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-com-aggregator-bounded-timeout.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-com-aggregator-bounded-timeout.patch && \
-			echo "✓ Applied ComAggregator bounded-timeout patch"; \
-		elif git apply --reverse --check ../../patches/fprime-com-aggregator-bounded-timeout.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply ComAggregator patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
-	@echo "Applying fprime sched-tick drop patch (issue #432 class)..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-sched-tick-drop.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-sched-tick-drop.patch && \
-			echo "✓ Applied sched-tick drop patch"; \
-		elif git apply --reverse --check ../../patches/fprime-sched-tick-drop.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply sched-tick drop patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
@@ -76,72 +54,10 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
 	}
 
-# USP_ZEPHYR_DIR: west places usp_zephyr at this path (see west.yml).
-USP_ZEPHYR_DIR ?= $(shell pwd)/lib/zephyr-workspace/modules/lib/usp_zephyr
-
-.PHONY: usp-patches
-usp-patches: ## Apply usp_zephyr patches (RF-switch GPIO + Zephyr 4.3 compat + wakeup-busy race fix)
-	@if [ ! -d "$(USP_ZEPHYR_DIR)" ]; then \
-		echo "❌ usp_zephyr not found at $(USP_ZEPHYR_DIR) — run 'west update usp_zephyr usp' first"; \
-		exit 1; \
-	fi
-	@echo "Applying usp_zephyr patches..."
-	@cd "$(USP_ZEPHYR_DIR)" && \
-	for p in $(shell pwd)/patches/0001-feat-sx126x-add-external-RF-switch-GPIO-support-tx-r.patch \
-	          $(shell pwd)/patches/0002-fix-zephyr-4.3-remove-select-ZEPHYR_LORA_BASICS_MODE.patch \
-	          $(shell pwd)/patches/0003-fix-usp-main-2025-fix-LR_FHSS_SRC_PATH-for-flattened.patch \
-	          $(shell pwd)/patches/0006-fix-sx126x-wakeup-busy-race-add-t_woff-settle-delay.patch \
-	          $(shell pwd)/patches/0008-fix-smtc-modem-hal-implement-rac-api-mutex.patch \
-	          $(shell pwd)/patches/0010-fix-boards-xiao-nrf54l15-full_name-zephyr-4.4-schema.patch; do \
-		name=$$(basename $$p); \
-		if git apply --check "$$p" 2>/dev/null; then \
-			git apply "$$p" && echo "✓ Applied $$name"; \
-		elif git apply --reverse --check "$$p" 2>/dev/null; then \
-			echo "⚠ Already applied: $$name"; \
-		else \
-			echo "❌ Cannot apply $$name — check usp_zephyr revision"; exit 1; \
-		fi; \
-	done
-
-# USP_DIR: the Semtech smtc_rac_lib west module (radio planner lives here).
-USP_DIR ?= $(shell pwd)/lib/zephyr-workspace/modules/lib/usp
-
-.PHONY: usp-core-patches
-usp-core-patches: ## Apply usp (smtc_rac_lib) patches (radio-planner failsafe unlock exemption)
-	@cd "$(USP_DIR)" && \
-	for p in $(shell pwd)/patches/0009-fix-radio-planner-failsafe-exempt-unlock-radio-access.patch; do \
-		name=$$(basename $$p); \
-		if git apply --check "$$p" 2>/dev/null; then \
-			git apply "$$p" && echo "✓ Applied $$name"; \
-		elif git apply --reverse --check "$$p" 2>/dev/null; then \
-			echo "⚠ Already applied: $$name"; \
-		else \
-			echo "❌ Cannot apply $$name — check usp revision"; exit 1; \
-		fi; \
-	done
-
-ZEPHYR_DIR ?= $(shell pwd)/lib/zephyr-workspace/zephyr
-
-.PHONY: zephyr-patches
-zephyr-patches: ## Apply Zephyr tree patches (CDC-ACM TX fixes)
-	@if [ ! -d "$(ZEPHYR_DIR)" ]; then \
-		echo "zephyr not found at $(ZEPHYR_DIR) — run 'west update' first"; \
-		exit 1; \
-	fi
-	@echo "Applying Zephyr patches..."
-	@cd "$(ZEPHYR_DIR)" && \
-	for p in \
-		$(shell pwd)/patches/0005-fix-usbd-cdc-acm-stuck-tx-fifo-busy-on-disable-and-retry.patch \
-		$(shell pwd)/patches/0007-fix-usbd-cdc-acm-bound-poll-out-backpressure-wait.patch; do \
-		name=$$(basename $$p); \
-		if git apply --check "$$p" 2>/dev/null; then \
-			git apply "$$p" && echo "OK Applied $$name"; \
-		elif git apply --reverse --check "$$p" 2>/dev/null; then \
-			echo "Already applied: $$name"; \
-		else \
-			echo "Cannot apply $$name — check Zephyr revision"; exit 1; \
-		fi; \
-	done
+# Carried module patches (usp-patches / usp-core-patches / zephyr-patches and
+# the fprime patch steps in `submodules`) were removed 2026-07-26: all module
+# fixes now live on the Open-Source-Space-Foundation fork integration branches
+# (feat/proves-usp-radio) pinned in west.yml / .gitmodules. See patches/README.md.
 
 ##@ Development
 

@@ -14,10 +14,12 @@ manifest:
   group-filter: [-babblesim, -optional]
 
   projects:
-    # Zephyr RTOS core
+    # Zephyr RTOS core — Open-Source-Space-Foundation fork, integration branch
+    # feat/proves-usp-radio (v4.4.1 + CDC-ACM fixes, formerly patches/0005+0007;
+    # constituent PRs tracked in OSSF/zephyr#3).
     - name: zephyr
-      repo-path: zephyr
-      revision: v4.4.1
+      url: https://github.com/Open-Source-Space-Foundation/zephyr
+      revision: 3838a2802c916accdfa671de77633ee45b69441c
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
@@ -89,19 +91,21 @@ manifest:
       path: lib/zephyr-workspace/modules/fatfs
 
     # USP radio stack (Semtech Unified Software Platform) — v5e+ boards only.
-    # usp_zephyr upstream is pinned at the commit immediately below our local
-    # RF-switch patch (commit a23856a in spikes/usp_zephyr).  Two Zephyr-4.3
-    # compat fixes are carried as patches (see patches/usp_zephyr-*.patch).
+    # Open-Source-Space-Foundation fork, integration branch feat/proves-usp-radio
+    # (RF-switch GPIO, Zephyr 4.3/4.4 compat, wakeup settle, RAC mutex — formerly
+    # patches/0001-0003,0006,0008,0010; constituent PRs tracked in OSSF/usp_zephyr#7).
     - name: usp_zephyr
-      url: https://github.com/Lora-net/usp_zephyr
-      revision: bfacd435f53935ebea1a0e95fb877f4ede119985
+      url: https://github.com/Open-Source-Space-Foundation/usp_zephyr
+      revision: 0bf3e208124d43c55fcb7f91bae6a9ac9812ee71
       path: lib/zephyr-workspace/modules/lib/usp_zephyr
 
     # USP core library (LBM + RAL) — pulled by usp_zephyr at runtime.
     # Path mirrors the usp_zephyr west.yml convention (modules/lib/usp).
+    # OSSF fork, integration branch feat/proves-usp-radio (radio-planner failsafe
+    # unlock exemption, formerly patches/0009; tracked in OSSF/usp#3).
     - name: usp
-      url: https://github.com/Lora-net/usp
-      revision: 351b2015350670eb4dfa3aec35eb04433e062654
+      url: https://github.com/Open-Source-Space-Foundation/usp
+      revision: 8a60e4a16092f1bfa030b18494da267d8ca6a3ba
       path: lib/zephyr-workspace/modules/lib/usp
 
   self:
