@@ -30,6 +30,9 @@ module Components {
         ) severity warning high \
           format "Pre-deployment telemetry archive write failed: status {}, requested {}, wrote {}"
 
+        @ Reports when telemetry archiving is disabled due to hitting the failure limit
+        event ArchiveWriteDisabled severity warning high format "Three filesystem failures counted; disabling further telemetry writes."
+
         @ Port for requesting the current time
         time get port timeCaller
 

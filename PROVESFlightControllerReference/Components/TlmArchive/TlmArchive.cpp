@@ -27,6 +27,10 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
     (void)portNum;
     (void)context;
 
+    if (this->m_failures >= 3) {
+        return;
+    }
+
     Os::ScopeLock lock(this->m_queueMutex);
     if (!this->m_packetPending) {
         this->m_pendingPacket = data;
@@ -59,6 +63,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     if (!this->m_directoryInitialized &&
         Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
         this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("create_directory"));
+        this->m_failures++;
         return;
     }
     this->m_directoryInitialized = true;
@@ -68,6 +73,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     const Os::File::Status openStatus = file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND);
     if (openStatus != Os::File::OP_OK) {
         this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("open_append"));
+        this->m_failures++;
         return;
     }
 
@@ -77,9 +83,15 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     if ((writeStatus != Os::File::OP_OK) || (writtenSize != requestedSize)) {
         this->log_WARNING_HI_ArchiveWriteError(Os::FileStatus(static_cast<Os::FileStatus::T>(writeStatus)),
                                                requestedSize, writtenSize);
+        this->m_failures++;
+    } else {
+        this->log_ACTIVITY_LO_ArchiveWriteFinish();
     }
     file.close();
-    this->log_ACTIVITY_LO_ArchiveWriteFinish();
+
+    if (this->m_failures >= 3) {
+        this->log_WARNING_HI_ArchiveWriteDisabled();
+    }
 }
 
 }  // namespace Components
