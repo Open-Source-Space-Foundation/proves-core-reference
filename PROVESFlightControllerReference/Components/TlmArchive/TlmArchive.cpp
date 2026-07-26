@@ -16,6 +16,8 @@ namespace {
 
 constexpr const char* TLM_DIRECTORY = "//tlm";
 constexpr const char* PRE_DEPLOYMENT_TLM_PATH = "//tlm/pre_deployment.tlm";
+constexpr const int MAX_FAILURES = 3;
+constexpr const FwSizeType MAX_FILE_SIZE = 10000;
 
 }  // namespace
 
@@ -27,7 +29,8 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
     (void)portNum;
     (void)context;
 
-    if (this->m_failures >= 3) {
+    if (this->m_failures >= MAX_FAILURES || this->m_fileSize >= MAX_FILE_SIZE) {
+        this->log_WARNING_HI_ArchiveWriteDisabled(MAX_FAILURES, MAX_FILE_SIZE);
         return;
     }
 
@@ -89,9 +92,20 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     }
     file.close();
 
-    if (this->m_failures >= 3) {
-        this->log_WARNING_HI_ArchiveWriteDisabled();
+    // File size not initialized yet
+    if (this->m_fileSize == 0) {
+        FwSizeType size_arg;
+        const Os::FileSystem::Status status = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, size_arg);
+        if (status != Os::FileSystem::OP_OK || size_arg == 0) {
+            this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("file size still 0 after write"));
+            return;
+        }
+
+        this->m_fileSize = size_arg;
+        return;
     }
+
+    this->m_fileSize += requestedSize;
 }
 
 }  // namespace Components

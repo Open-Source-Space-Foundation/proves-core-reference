@@ -31,7 +31,10 @@ module Components {
           format "Pre-deployment telemetry archive write failed: status {}, requested {}, wrote {}"
 
         @ Reports when telemetry archiving is disabled due to hitting the failure limit
-        event ArchiveWriteDisabled severity warning high format "Three filesystem failures counted; disabling further telemetry writes."
+        event ArchiveWriteDisabled(
+            count: I8
+            maxSize: FwSizeType
+        ) severity warning high format "{} filesystem failures counted and/or {}b file size limit reached; disabling further telemetry writes." throttle 1
 
         @ Port for requesting the current time
         time get port timeCaller
