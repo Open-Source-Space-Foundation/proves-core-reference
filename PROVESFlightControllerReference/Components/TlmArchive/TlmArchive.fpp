@@ -10,6 +10,12 @@ module Components {
         @ Port for checking whether antenna deployment has completed
         output port deploymentStateGet: Components.GetDeploymentState
 
+        @ Report when file write has started
+        event ArchiveWriteStart severity activity low format "Beginning write to pre_deployment.tlm"
+
+        @ Report when file write has finished
+        event ArchiveWriteFinish severity activity low format "Write to pre_deployment.tlm successful"
+
         @ Reports archive directory and open failures
         event ArchiveFileError(
             operation: string @< Filesystem operation that failed

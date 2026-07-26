@@ -61,6 +61,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
+    this->log_ACTIVITY_LO_ArchiveWriteStart();
     Os::File file;
     const Os::File::Status openStatus = file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND);
     if (openStatus != Os::File::OP_OK) {
@@ -76,6 +77,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
                                                requestedSize, writtenSize);
     }
     file.close();
+    this->log_ACTIVITY_LO_ArchiveWriteFinish();
 }
 
 }  // namespace Components
