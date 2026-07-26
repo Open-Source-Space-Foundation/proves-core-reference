@@ -1,9 +1,9 @@
 [submodule "lib/fprime"]
 	path = lib/fprime
-	url = https://github.com/nasa/fprime.git
+	url = https://github.com/Open-Source-Space-Foundation/fprime.git
 [submodule "lib/zephyr-workspace/zephyr"]
 	path = lib/zephyr-workspace/zephyr
-	url = https://github.com/zephyrproject-rtos/zephyr.git
+	url = https://github.com/Open-Source-Space-Foundation/zephyr.git
 [submodule "lib/fprime-zephyr"]
 	path = lib/fprime-zephyr
 	url = https://github.com/Open-Source-Space-Foundation/fprime-zephyr.git
