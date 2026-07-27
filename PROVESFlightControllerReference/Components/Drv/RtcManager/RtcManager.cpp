@@ -72,7 +72,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     const int rc = rtc_get_time(this->m_dev, &time_rtc);
     if (rc != 0) {
         this->log_CONSOLE_RtcGetTimeFailed(rc);
-        this->m_ProcTimeSet = true;  // proc time flag
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
@@ -88,7 +87,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
     if (errno == ERANGE) {
         this->log_CONSOLE_RtcInvalidTime();
-        this->m_ProcTimeSet = true;  // proc time flag
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
