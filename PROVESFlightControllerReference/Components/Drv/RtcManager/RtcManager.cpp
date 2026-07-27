@@ -96,8 +96,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     }
     this->log_CONSOLE_RtcInvalidTime_ThrottleClear();
 
-    this->m_ProcTimeSet = false;  // proc time flag
-
     // Set FPrime time object
     time.set(TimeBase::TB_SC_TIME, 0, seconds_real_time,
              this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
