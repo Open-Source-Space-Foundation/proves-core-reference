@@ -129,6 +129,12 @@ target_include_directories(proves_router_bypasser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# ComDelay ComDelayLogic (header-only tick/divider/latch state machine)
+add_library(comdelay_logic INTERFACE)
+target_include_directories(comdelay_logic INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h)
 find_library(MBEDCRYPTO_LIB mbedcrypto)
@@ -162,6 +168,7 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_authenticator
         rtc_manager_rtc_helper
         proves_router_bypasser
+        comdelay_logic
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})

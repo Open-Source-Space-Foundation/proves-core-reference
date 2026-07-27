@@ -7,9 +7,8 @@
 #ifndef Components_ComDelay_HPP
 #define Components_ComDelay_HPP
 
-#include <atomic>
-
 #include "PROVESFlightControllerReference/Components/ComDelay/ComDelayComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/ComDelay/ComDelayLogic.hpp"
 
 namespace Components {
 
@@ -49,12 +48,8 @@ class ComDelay final : public ComDelayComponentBase {
                      ) override;
 
   private:
-    //! Count of incoming run ticks
-    U8 m_tick_count;
-    //! Stores if the last status is currently valid
-    std::atomic<bool> m_last_status_valid;
-    //! Stores the last status
-    Fw::Success m_last_status;
+    //! Tick-paced divider/latch state machine (host-testable; see ComDelayLogic.hpp)
+    ComDelayLogic m_logic;
 };
 
 }  // namespace Components
