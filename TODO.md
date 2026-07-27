@@ -126,12 +126,11 @@ Status legend: [ ] todo, [~] in progress, [x] done
       `flash_rpi_erase`, both of which hold `irq_lock()` for the entire
       erase/program call with no yielding — i.e. the original `PROBLEM.md`
       interrupt-stall theory may be correct after all, it just couldn't fire before
-      (every op was rejected by `-EINVAL` pre-`irq_lock`). See `INVESTIGATION.md`
-      "Revised theory" section. **Next: a temporary `CONFIG_LOG=y` diagnostic CI
+      (every op was rejected by `-EINVAL` pre-`irq_lock`). (That theory was later disproved; see commit `ec0bdb37`.) **Next: a temporary `CONFIG_LOG=y` diagnostic CI
       run** (same pattern as the prior fault-register diagnostic commits) to see
       whether the stall is the one-time format or ongoing per-frame reloads.
 
-## CI blocker — ROOT-CAUSED AND FIXED (2026-07-27), see INVESTIGATION.md
+## CI blocker — ROOT-CAUSED AND FIXED (2026-07-27), see commit ec0bdb37
 
 - [x] **Root cause: CommandDispatcher opcode-table overflow.**
       `project/config/CommandDispatcherImplCfg.hpp` had
@@ -192,24 +191,46 @@ Status legend: [ ] todo, [~] in progress, [x] done
       resolved. (The Sband entry `0x2300B002` is still unconfirmed -- that
       instance is not built.)
 
-- [ ] **Could not get `provision_key_test.py` to pass through the pytest
-      fixture path on the bench.** The firmware side is proven (item 2 above --
-      the same command sent directly provisions the board), but
-      `start_gds`'s `CdhCore.cmdDisp.CMD_NO_OP` kept timing out, and
-      `recover_from_safe_mode` is `autouse=True` and depends on `start_gds`, so
-      every test in the directory errors in setup. The board *is* dispatching
-      those commands (`bypassed=3 rejected=0`), so this looks like a GDS-side
-      downlink desync from my reset-heavy bench session -- GDS logged
-      `APID 2 received sequence count: 4 (expected: 1)` after each board reset,
-      and CI power-cycles before starting GDS, which would avoid it. **Not
-      confirmed either way -- re-check once CI runs.**
+## Current goal: integration tests green on the local bench AND in CI
 
-- [ ] **No over-the-air recovery from a mis-provisioned key.** PROVISION_KEY is
-      refused once the store is non-empty (`NotEmpty`) and REMOVE_KEY refuses to
-      remove the last key, so a board provisioned with the wrong key cannot be
-      re-keyed from the ground -- it needs a physical SWD flash erase of
-      `keystore_partition` (which is how the bench board was recovered). Worth a
-      deliberate decision before flight.
+Tracked in `INVESTIGATION.md`. The firmware blockers are fixed and verified on
+hardware; what is left is the test path plus one design decision.
+
+- [ ] **Make `provision_key_test.py` pass on the bench and in CI.** It currently
+      errors in *setup*, so the test body never runs: `start_gds` loops for 30s
+      on `CdhCore.cmdDisp.CMD_NO_OP` (`conftest.py:113`) and its two-item event
+      sequence always times out. `recover_from_safe_mode` (`conftest.py:177`) is
+      `autouse=True` and depends on `start_gds`, so **every** test in
+      `test/int/` errors with it.
+      Firmware side is proven -- the identical PROVISION_KEY sent outside pytest
+      provisions the board, and the router showed `routed=3 bypassed=3
+      rejected=0`, i.e. keyless commands are dispatched and none rejected.
+      Leading (unconfirmed) hypothesis: GDS downlink desync from resetting the
+      board underneath a long-lived GDS -- it logged `APID 2 received sequence
+      count: 4 (expected: 1)` after each reset. CI power-cycles before starting
+      GDS so it should not be exposed. **Counter-evidence: only 3 bypassed
+      packets were counted against more attempts than that, so uplink loss is
+      not ruled out.** Ordered next steps in `INVESTIGATION.md` -- start with a
+      clean-slate bench run in CI order (power-cycle, then GDS, then test, no
+      SWD attached), and push to let CI settle it.
+
+- [ ] **Decouple the autouse fixture from `start_gds` regardless of the cause.**
+      One uncooperative `CMD_NO_OP` currently takes out the whole suite in
+      setup -- including the very test whose job is to bootstrap a keyless board
+      into a commandable state. Make `recover_from_safe_mode` opt-in, or have it
+      tolerate an unavailable link, so failures report as failures rather than
+      errors.
+
+- [ ] **Decide how a mis-provisioned key is recovered.** Confirmed behaviour,
+      needs an explicit call rather than a quiet patch: `PROVISION_KEY` is
+      refused on a non-empty store (`NotEmpty`), `REMOVE_KEY` refuses the last
+      key (`LastKey`), and `ADD_KEY` needs an already-authenticated link -- so a
+      board keyed with the wrong value is unreachable from the ground. Recovery
+      on the bench required an SWD erase of `keystore_partition`. Fine on the
+      bench, fatal in flight. Options weighed in `INVESTIGATION.md` (accept it
+      with a verified ground procedure; bypass-allowlist `ADD_KEY`; authenticated
+      `CLEAR_KEY_STORE`; two-slot bootstrap provisioning; time-boxed post-boot
+      bypass window) -- each trades security against recoverability.
 
 - [ ] **Watch the other zero-headroom config constants.** Same failure mode,
       same file tree: `MAX_PACKETIZER_CHANNELS = 202` vs 191 channels in use,
@@ -241,7 +262,7 @@ Status legend: [ ] todo, [~] in progress, [x] done
         exception frame (LR `+0x14`, PC `+0x18`); callee regs live in the
         `k_thread`. Reading `+0x34`/`+0x38` yields F' object addresses that look
         exactly like plausible wild pointers -- this produced a multi-day red
-        herring in `INVESTIGATION.md`.
+        herring in the earlier investigation (git history, pre-`ec0bdb37`).
       - `PRIMASK=1` at `arch_cpu_idle+18` is the **normal** idle sequence, not a
         masked spin.
       - Prefer monotonic `base.usage.total` over saved psp/PC when asking "did
@@ -302,7 +323,7 @@ the stale config, and it invalidated several intermediate bisect results.
       key-store file for the first time). cm1 sampled `pc=0x19e` (a bootrom
       address) unchanged too — cm1 was never launched into Zephyr code at all,
       this app runs single-core. Two candidate mechanisms (both point at the
-      same fix, see `INVESTIGATION.md` "PC-sweep diagnostic" for full
+      same fix, see the earlier investigation in git history for full
       reasoning): (a) something in the mount/format path already holds
       `irq_lock()` in a flash erase/program that never returns, and `fs_open`'s
       first action (a shared fs mutex) blocks on it forever; (b) a dual-core
@@ -329,7 +350,7 @@ the stale config, and it invalidated several intermediate bisect results.
       bytes in 15s from the board CDC. Telemetry is produced and aggregated but
       never dequeued to the com driver, and the USB device stack is dormant.
       **Next: chase the UART/USB downlink path**, not the filesystem. See
-      `INVESTIGATION.md` "v5 thread-walk probe: THERE IS NO HANG".
+      the earlier investigation in git history (pre-`ec0bdb37`).
 - [ ] **Robustness follow-ups (evaluate once the stall is diagnosed):** (a) consider
       raw `flash_area_*`/NVS instead of littlefs for this fixed-size store (avoids
       the format-time erase burst and any long single-call erase/program under
