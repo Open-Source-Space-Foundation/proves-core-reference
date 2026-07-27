@@ -79,18 +79,27 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
 
     const FwSizeType requestedSize = packet.getSize();
     FwSizeType currentSize = 0;
-    const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
-    if ((sizeStatus != Os::FileSystem::OP_OK) && (sizeStatus != Os::FileSystem::DOESNT_EXIST)) {
-        this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("get_file_size"));
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_failures++;
-        }
-        return;
-    }
+    bool fileSizeInitialized = false;
     {
         Os::ScopeLock lock(this->m_queueMutex);
-        this->m_fileSize = currentSize;
+        currentSize = this->m_fileSize;
+        fileSizeInitialized = this->m_fileSizeInitialized;
+    }
+    if (!fileSizeInitialized) {
+        const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
+        if ((sizeStatus != Os::FileSystem::OP_OK) && (sizeStatus != Os::FileSystem::DOESNT_EXIST)) {
+            this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("get_file_size"));
+            {
+                Os::ScopeLock lock(this->m_queueMutex);
+                this->m_failures++;
+            }
+            return;
+        }
+        {
+            Os::ScopeLock lock(this->m_queueMutex);
+            this->m_fileSize = currentSize;
+            this->m_fileSizeInitialized = true;
+        }
     }
 
     if ((currentSize > MAX_FILE_SIZE) || (requestedSize > (MAX_FILE_SIZE - currentSize))) {

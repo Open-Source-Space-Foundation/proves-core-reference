@@ -40,7 +40,8 @@ require an explicit configuration call.
 3. On the next 1 Hz `run` call, the component removes the pending packet and
    queries the antenna deployment state.
 4. If the antenna is not deployed, the component creates `//tlm` when needed,
-   reads the current archive size, verifies that the pending packet fits, opens
+   reads the existing archive size if it has not already been initialized,
+   verifies that the pending packet fits, opens
    `//tlm/pre_deployment.tlm` in append mode, writes the raw `Fw.ComBuffer`
    bytes, and closes the file.
 5. If the antenna is deployed, the pending packet is discarded without
@@ -70,6 +71,7 @@ classDiagram
             -m_fileSize: FwSizeType
             -m_failures: int
             -m_directoryInitialized: bool
+            -m_fileSizeInitialized: bool
             -m_packetPending: bool
             -m_antennasDeployed: bool
         }
@@ -98,9 +100,10 @@ the following internal state:
 |---|---:|---|
 | `m_pendingPacket` | Empty buffer | Storage for the single pending telemetry packet. |
 | `m_packetPending` | `false` | Indicates whether the mailbox contains a packet. |
-| `m_fileSize` | `0` | Tracked archive size. Refreshed from the filesystem before each append attempt and advanced by the actual bytes written after a successful write. |
+| `m_fileSize` | `0` | Cached archive size. Initialized once from the filesystem and advanced by the actual bytes written after each successful write. |
 | `m_failures` | `0` | Cumulative count of directory, stat, size-limit, open, and write failures. |
 | `m_directoryInitialized` | `false` | Becomes true after `//tlm` is successfully initialized, preventing repeated directory creation attempts. |
+| `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read or the archive is confirmed missing, preventing later size queries. |
 | `m_antennasDeployed` | `false` | In-memory latch set when AntennaDeployer first reports a deployed state. |
 | `m_queueMutex` | Unlocked | Protects the mailbox, tracked size, and failure count shared by the input and rate-group contexts. |
 
@@ -121,10 +124,12 @@ observed.
 ### Archive Size Tracking
 
 The archive is opened in append mode, so data from an existing archive is
-preserved. Before each append attempt, the component reads the current on-disk
-size. A missing archive is treated as an empty archive; other stat failures are
-reported and counted. The pending packet is rejected when its requested size
-would make the archive exceed 10,000 bytes.
+preserved. Before the first append attempt, the component reads the existing
+on-disk size. A missing archive is treated as an empty archive; other stat
+failures are reported and counted. After a successful initialization, the
+component uses the cached size rather than querying the filesystem again. The
+pending packet is rejected when its requested size would make the cached
+archive size exceed 10,000 bytes.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
@@ -182,7 +187,9 @@ sequenceDiagram
             opt Directory not initialized
                 Archive->>FS: createDirectory("//tlm")
             end
-            Archive->>FS: getFileSize()
+            opt File size not initialized
+                Archive->>FS: getFileSize()
+            end
             alt Stat fails or packet exceeds limit
                 Archive->>Archive: Count failure and discard packet
             else Packet fits
@@ -244,7 +251,7 @@ There are currently no component-specific unit tests for TlmArchive.
 | `TLM_ARCHIVE_002` | The component shall append buffered telemetry packet bytes to `//tlm/pre_deployment.tlm` while the antenna deployment state is false. | Inspection |
 | `TLM_ARCHIVE_003` | The component shall stop writing telemetry after observing a deployed antenna state. | Inspection |
 | `TLM_ARCHIVE_004` | The component shall reject new packets after three counted failures. | Inspection |
-| `TLM_ARCHIVE_005` | The component shall reject a write when the current on-disk archive size plus the pending packet size would exceed 10,000 bytes. | Inspection |
+| `TLM_ARCHIVE_005` | The component shall reject a write when the cached archive size plus the pending packet size would exceed 10,000 bytes. | Inspection |
 | `TLM_ARCHIVE_006` | The component shall report archive start, filesystem error, write error, and disabled conditions through events. | Inspection |
 
 ## Change Log

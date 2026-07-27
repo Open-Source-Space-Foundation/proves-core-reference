@@ -30,6 +30,7 @@ class TlmArchive final : public TlmArchiveComponentBase {
     FwSizeType m_fileSize = 0;
     int m_failures = 0;
     bool m_directoryInitialized = false;
+    bool m_fileSizeInitialized = false;
     bool m_packetPending = false;
     bool m_antennasDeployed = false;
 };
