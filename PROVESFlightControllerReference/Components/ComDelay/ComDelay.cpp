@@ -6,16 +6,13 @@
 
 #include "PROVESFlightControllerReference/Components/ComDelay/ComDelay.hpp"
 
-#include "PROVESFlightControllerReference/Components/ComDelay/FppConstantsAc.hpp"
-
 namespace Components {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-ComDelay ::ComDelay(const char* const compName)
-    : ComDelayComponentBase(compName), m_last_status_valid(false), m_last_status(Fw::Success::FAILURE) {}
+ComDelay ::ComDelay(const char* const compName) : ComDelayComponentBase(compName) {}
 
 ComDelay ::~ComDelay() {}
 
@@ -39,33 +36,26 @@ void ComDelay ::parameterUpdated(FwPrmIdType id) {
 // ----------------------------------------------------------------------
 
 void ComDelay ::comStatusIn_handler(FwIndexType portNum, Fw::Success& condition) {
-    this->m_last_status = condition;
-    this->m_last_status_valid = true;
+    this->m_logic.latchStatus(condition == Fw::Success::SUCCESS);
 }
 
 void ComDelay ::run_handler(FwIndexType portNum, U32 context) {
-    // On the cycle after the tick count is reset, attempt to output any current com status
-    if (this->m_tick_count == 0) {
-        bool expected = true;
-        // Receive the current "last status" validity flag and atomically exchange it with false. This effectively
-        // "consumes" a valid status.  When valid, the last status is sent out.
-        bool valid = this->m_last_status_valid.compare_exchange_strong(expected, false);
-        if (valid) {
-            this->comStatusOut_out(0, this->m_last_status);
-        }
-    }
-
     // Unless there is corruption, the parameter should always be valid via its default value; however, in the interest
     // of failing-safe and continuing some sort of communication we default the current_divisor to the default value.
     Fw::ParamValid is_valid;
     U16 current_divisor = this->paramGet_DIVIDER(is_valid);
+    bool divider_valid = (is_valid != Fw::ParamValid::INVALID) && (is_valid != Fw::ParamValid::UNINIT);
 
-    // Increment and module the tick count by the divisor
-    if ((is_valid == Fw::ParamValid::INVALID) || (is_valid == Fw::ParamValid::UNINIT)) {
-        current_divisor = Components::DEFAULT_DIVIDER;
+    // Delegate to the extracted, host-testable tick/divider/latch state machine. This preserves the exact
+    // pre-existing behavior (including the U8 tick-counter width): on the cycle the counter is at 0, attempt
+    // to consume (exactly once) any latched status and emit it, then advance/reset the counter against the
+    // current divisor (or the default divisor, if the parameter is not currently valid).
+    bool status_bit = false;
+    bool should_emit = this->m_logic.tick(current_divisor, divider_valid, status_bit);
+    if (should_emit) {
+        Fw::Success condition = status_bit ? Fw::Success::SUCCESS : Fw::Success::FAILURE;
+        this->comStatusOut_out(0, condition);
     }
-    // Count this new tick, resetting whenever the current count is at or higher than the current divider.
-    this->m_tick_count = (this->m_tick_count >= current_divisor) ? 0 : this->m_tick_count + 1;
 }
 
 }  // namespace Components
