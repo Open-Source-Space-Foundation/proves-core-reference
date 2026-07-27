@@ -70,16 +70,25 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    if (!this->m_directoryInitialized &&
-        Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
-        this->log_WARNING_HI_FileError(Fw::LogStringArg("create_directory"));
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_failures++;
+    if (!this->m_directoryInitialized) {
+        if (Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
+            this->log_WARNING_HI_FileError(Fw::LogStringArg("create_directory"));
+            {
+                Os::ScopeLock lock(this->m_queueMutex);
+                this->m_failures++;
+            }
+            return;
         }
-        return;
+        if (Os::FileSystem::touch(PRE_DEPLOYMENT_TLM_PATH) != Os::FileSystem::OP_OK) {
+            this->log_WARNING_HI_FileError(Fw::LogStringArg("create_file"));
+            {
+                Os::ScopeLock lock(this->m_queueMutex);
+                this->m_failures++;
+            }
+            return;
+        }
+        this->m_directoryInitialized = true;
     }
-    this->m_directoryInitialized = true;
 
     const FwSizeType requestedSize = packet.getSize();
     FwSizeType currentSize = 0;
@@ -91,7 +100,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     }
     if (!fileSizeInitialized) {
         const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
-        if ((sizeStatus != Os::FileSystem::OP_OK) && (sizeStatus != Os::FileSystem::DOESNT_EXIST)) {
+        if (sizeStatus != Os::FileSystem::OP_OK) {
             this->log_WARNING_HI_FileError(Fw::LogStringArg("get_file_size"));
             {
                 Os::ScopeLock lock(this->m_queueMutex);

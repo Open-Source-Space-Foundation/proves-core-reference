@@ -13,7 +13,7 @@ module Components {
         @ Report when file write has started
         event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.tlm" throttle 1
 
-        @ Reports archive directory and open failures
+        @ Reports archive initialization, size, and open failures
         event FileError(
             operation: string @< Filesystem operation that failed
         ) severity warning high \
