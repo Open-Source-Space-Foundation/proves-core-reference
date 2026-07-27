@@ -77,6 +77,31 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     }
     this->m_directoryInitialized = true;
 
+    const FwSizeType requestedSize = packet.getSize();
+    FwSizeType currentSize = 0;
+    const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
+    if ((sizeStatus != Os::FileSystem::OP_OK) && (sizeStatus != Os::FileSystem::DOESNT_EXIST)) {
+        this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("get_file_size"));
+        {
+            Os::ScopeLock lock(this->m_queueMutex);
+            this->m_failures++;
+        }
+        return;
+    }
+    {
+        Os::ScopeLock lock(this->m_queueMutex);
+        this->m_fileSize = currentSize;
+    }
+
+    if ((currentSize > MAX_FILE_SIZE) || (requestedSize > (MAX_FILE_SIZE - currentSize))) {
+        this->log_WARNING_HI_ArchiveWriteDisabled(MAX_FAILURES, MAX_FILE_SIZE);
+        {
+            Os::ScopeLock lock(this->m_queueMutex);
+            this->m_failures++;
+        }
+        return;
+    }
+
     this->log_ACTIVITY_LO_ArchiveWriteStart();
     Os::File file;
     const Os::File::Status openStatus = file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND);
@@ -89,7 +114,6 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    const FwSizeType requestedSize = packet.getSize();
     FwSizeType writtenSize = requestedSize;
     const Os::File::Status writeStatus = file.write(packet.getBuffAddr(), writtenSize);
     if ((writeStatus != Os::File::OP_OK) || (writtenSize != requestedSize)) {
@@ -99,33 +123,14 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
             Os::ScopeLock lock(this->m_queueMutex);
             this->m_failures++;
         }
+        file.close();
+        return;
     }
     file.close();
 
-    // File size not initialized yet
-    bool fileSizeUninitialized = false;
     {
         Os::ScopeLock lock(this->m_queueMutex);
-        fileSizeUninitialized = this->m_fileSize == 0;
-    }
-    if (fileSizeUninitialized) {
-        FwSizeType size_arg;
-        const Os::FileSystem::Status status = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, size_arg);
-        if (status != Os::FileSystem::OP_OK || size_arg == 0) {
-            this->log_WARNING_HI_ArchiveFileError(Fw::LogStringArg("file size still 0 after write"));
-            return;
-        }
-
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_fileSize = size_arg;
-        }
-        return;
-    }
-
-    {
-        Os::ScopeLock lock(this->m_queueMutex);
-        this->m_fileSize += requestedSize;
+        this->m_fileSize += writtenSize;
     }
 }
 
