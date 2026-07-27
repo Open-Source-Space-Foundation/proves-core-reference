@@ -29,7 +29,13 @@ manifest:
           - picolibc   # C library
           - mbedtls    # Crypto library
           - mcuboot    # Bootloader support
-          - fatfs      # FatFS (file system) support
+          - fatfs      # FatFS (file system) support (SD card, mounted at /)
+          - littlefs   # LittleFS - internal-flash key store, mounted at /keys.
+                       # Without this the module is not in zephyr_modules.txt,
+                       # so ZEPHYR_LITTLEFS_MODULE is undefined and Kconfig
+                       # SILENTLY drops CONFIG_FILE_SYSTEM_LITTLEFS=y ("LittleFS
+                       # module not available") -- the build stays clean and
+                       # /keys simply never exists.
           - hal_st     # Required for certain sensors
 
     - name: loramac-node
@@ -86,6 +92,14 @@ manifest:
     - name: fatfs
       revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
       path: lib/zephyr-workspace/modules/fatfs
+
+    # Pinned explicitly, like every other module here, so it lands under
+    # lib/zephyr-workspace/ instead of the workspace topdir: the allowlist
+    # import above only makes the project visible, it keeps Zephyr's own
+    # `path: modules/fs/littlefs`, which resolves to the repo root.
+    - name: littlefs
+      revision: 8f5ca347843363882619d8f96c00d8dbd88a8e79
+      path: lib/zephyr-workspace/modules/fs/littlefs
 
   self:
     path: .

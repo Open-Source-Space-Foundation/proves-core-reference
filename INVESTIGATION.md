@@ -1,70 +1,348 @@
-# Investigation: hmac-to-storage CI hardware failure — root-cause re-analysis
+# Investigation: hmac-to-storage CI hardware failure
 
-Follow-up to `PROBLEM.md`. This document records a static re-analysis of the
-`integration-uart` / `integration-radio` failure on branch `hmac-to-storage`
-(PR #472), tracing the device tree, the RP2350 flash driver, the littlefs
-automount path, and the `TcSecurityDeframer` hot path.
+## ROOT CAUSE — CONFIRMED ON HARDWARE (2026-07-27), single-variable A/B
 
-**Headline conclusion:** the "internal-flash writes disable interrupts and stall
-USB" hypothesis in `PROBLEM.md` is very likely a phantom. The keystore littlefs
-partition is placed **beyond the declared flash boundary**, so every keystore
-flash operation is rejected with `-EINVAL` *before* any interrupt is disabled,
-and `/keys` can never mount. The most probable real fix is a one-line flash-size
-correction in the device tree.
+**The branch overflows the CommandDispatcher opcode table.**
 
-Confidence: the partition-out-of-bounds and read-vs-write facts below are
-**code-confirmed**. Whether the mount failure is the *sole* cause of the USB
-symptom is **not yet confirmed on hardware** — see "Next steps".
+`PROVESFlightControllerReference/project/config/CommandDispatcherImplCfg.hpp`
+sized `CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 350` against a deployment that
+already had **348** commands. This branch adds `PROVISION_KEY`, `ADD_KEY` and
+`REMOVE_KEY` to `TcSecurityDeframer`, and there are **two** deframer instances
+(`ComCcsdsUart`, `ComCcsdsLora`) — 3 x 2 = **6 new commands, total 354 > 350**.
+
+`CommandDispatcherImpl::compCmdReg_handler` inserts every opcode into a
+fixed-capacity `Fw::RedBlackTreeMap` and asserts on failure:
+
+```c
+const Fw::Success status = this->m_entryTable.insert(opCode, portNum);
+FW_ASSERT(status == Fw::Success::SUCCESS, ...);   // CommandDispatcherImpl.cpp:35
+```
+
+So the 351st registration **panics the board during boot command registration**.
+The downlink never comes up, GDS sees `device disconnected` / no response to
+`CMD_NO_OP`, and `integration-uart` / `integration-radio` fail. There is no CPU
+fault — it is a `k_panic` (`z_fatal_error(reason=4)` via `z_arm_svc`), which is
+why every fault-vector probe in this document came up empty.
+
+### Evidence (local bench, board `/dev/tty.usbmodem1101`, probe `/dev/tty.usbmodem102`)
+
+Bytes of F' telemetry read from the board CDC in a 25 s window after flashing,
+each a full clean `make generate build`:
+
+| build | telemetry |
+|---|---|
+| `main` | **1328 bytes**, first at t+1.0 s |
+| `hmac-to-storage` (as shipped) | **0 bytes** |
+| `hmac-to-storage` + table 512 | **1392 bytes**, first at t+1.01 s |
+| `hmac-to-storage` + table back to 350 | **0 bytes** |
+
+The last two differ **only** in that one constant, both fully regenerated — this
+is the root cause, not a correlate.
+
+### The fix
+
+```
+CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 350  ->  512
+```
+
+Raised to 512 rather than 354 so the next few commands do not repeat this. Note
+the same zero-headroom pattern elsewhere in `project/config`:
+`MAX_PACKETIZER_CHANNELS = 202` vs 191 channels in use, and
+`MAX_PACKETIZER_PACKETS = 22` vs exactly 22 packets. Any of these overflowing
+fails the same way — a boot-time `FW_ASSERT`, not a graceful degradation.
+**Adding commands, channels or packets to this deployment requires checking
+these constants against the generated dictionary.**
 
 ---
 
-## ✅ ROOT CAUSE CONFIRMED ON HARDWARE (2026-07-24) — supersedes every hypothesis below
+## Second, independent defect found and fixed: littlefs was never compiled in
 
-Reproduced on a local board (SWD via the raspberrypi OpenOCD fork + Zephyr-SDK
-GDB, symbols from the matching local `zephyr.elf`). The board is in the failed
-state: **no F' telemetry for 38 s** (spanning the 30 s default cadence). The
-fault chain, read directly off the hung target, is:
+`prj.conf` sets `CONFIG_FILE_SYSTEM_LITTLEFS=y`, but the repo's `west.yml`
+`name-allowlist` imports `fatfs` and **not `littlefs`**. Without the module in
+`zephyr_modules.txt`, `ZEPHYR_LITTLEFS_MODULE` is undefined and Kconfig
+**silently drops** the symbol (`# LittleFS module not available.`). The build
+stayed clean and `/keys` simply never existed: no `lfs_*` symbols in the image,
+every `fs_open("/keys/...")` in `TcSecurityDeframer` failing, the whole key-store
+feature inert.
 
-1. A worker context (unwinds through `FileHandling::fileDownlink`, faulting
-   `pc = 0x20010480`) **branches through a corrupted pointer into a RAM/data
-   address** (`0x20010480` is *inside* the `FileHandling::fileManager` object,
-   not code; stacked `lr = 0x1019` is garbage). Executing a data address raises
-   a **UsageFault** (`z_arm_usage_fault` -> `z_arm_fault`, `fault.c:1090`).
-2. Zephyr's fault handler judges it **non-recoverable** (`recoverable = false`)
-   and calls `z_arm_fatal_error`, which lands in the fatal-halt loop:
-   ```
-   msr BASEPRI_MAX, r3   ; mask interrupts
-   isb
-   b .                   ; spin forever  (addr2line mislabels this "get_fat")
-   ```
-   Confirmed stable: PC pinned here across 16 halts + 30 single-steps
-   (`b .` self-branch), `primask=1`, `basepri=0x10`, MSP/handler mode.
-3. The masked spin means the **SysTick ISR never runs** -> the system clock is
-   **frozen** (`cycle_count`/`curr_tick` byte-identical 4 s apart, stuck at
-   ~8.1 s uptime = when the fault fired).
-4. With no ticks, the F' rate-group loop `startRateGroups()` ->
-   `timer.cycle()` -> **`k_timer_status_sync()` never returns** (main thread
-   parked in `arch_swap`, confirmed by walking `_kernel.threads`). Rate groups
-   never cycle -> no telemetry -> the GDS/CI `comm.py` sees
-   "device disconnected / no data". **This is the CI symptom.**
+Fixed by adding `littlefs` to the allowlist **and** pinning it as an explicit
+project (like every other module here) so it lands under `lib/zephyr-workspace/`
+instead of the workspace topdir. Verified: `CONFIG_FILE_SYSTEM_LITTLEFS=y`,
+`CONFIG_FS_LITTLEFS_FSTAB_AUTOMOUNT=y`, 20 `lfs_*` symbols in the ELF.
 
-**What this means for the prior analysis:** the flash-size fix
-(`DT_SIZE_M(4)`->`16`) was real and correct, but everything downstream of it in
-this document — the littlefs mount/format theory, the interrupt-stall-from-
-flash-erase theory, the "wild PC at `fs_open`" reading (the CI PC-sweep almost
-certainly caught this *same* `b .` fatal-halt loop, just mislabeled `fs_open`
-in the CI build the way it's mislabeled `get_fat` locally), and the
-**recommended littlefs->NVS rework** — are **not the bug** and would not fix it.
-The SWD "masked-IRQ spin" reading (`PRIMASK=1`, `ISRPENDING=1`) was pointing at
-this fatal-halt loop, not a flash lock.
+This was *not* the cause of the CI failure (the branch failed identically with
+littlefs absent and with it present) but the feature cannot work without it.
 
-**Still open (the actual defect):** *why* control jumps to `0x20010480` — a
-wild/corrupted function pointer or return address (candidates: a stack overflow
-in a worker thread, an uninitialized/garbage F' port or handler pointer, or a
-buffer overrun near the `fileManager` instance). That corruption — not the
-filesystem — is what must be fixed. The fatal-halt-with-interrupts-masked
-behavior is also worth revisiting (it converts one fault into a total, silent
-system death), but it is the symptom amplifier, not the cause.
+## Build-system trap that cost several hours
+
+**`make build` does not re-derive Kconfig from device-tree changes.** After
+editing the board `.dtsi`, `make build` left a stale `CONFIG_FLASH_SIZE=4096`
+while the DTS said 16 MB, putting `keystore_partition` out of bounds so
+`get_block_size()` returned 0 and the `/keys` automount hit
+`__ASSERT_NO_MSG(block_size != 0)` (`littlefs_fs.c:787`) — a boot panic that was
+purely an artifact of the stale config. **Always `make generate build` when the
+device tree changes.** Several intermediate bisect results in this session were
+invalidated by this and had to be re-run.
+
+## Diagnostics built this session (remove before merge)
+
+- `scripts/diag/hang_thread_walk.{sh,gdb}` — reset, free-run, halt twice N s
+  apart; dumps clock/SysTick/interrupt state, walks `_kernel.threads` (naming
+  each F' task by symbolizing `entry.parameter1`, since `CONFIG_THREAD_NAME` is
+  off), dumps `timeout_list` and the whole downlink chain's state, and diffs the
+  two halts using each thread's monotonic `base.usage.total`.
+- `scripts/diag/downlink_trace.{sh,gdb}` — breakpoints every hop of the
+  `comStub -> framer -> aggregator -> spacePacketFramer -> comQueue` status path.
+- Pre-existing: `hang_forensics.tcl`, `hang_gdb.sh`, `hang_fault_bp.{sh,gdb}`.
+- Stray capture files to delete: `board-serial.log`,
+  `hang-thread-walk-openocd.log`, `downlink-trace-openocd.log`.
+
+## Corrections to earlier conclusions in this document
+
+Everything below this line predates the hardware A/B and is **wrong in its
+conclusions**, kept only for the audit trail:
+
+- There is **no hang, no wild jump, no stack overflow, no fs-lock deadlock and
+  no flash/XIP wedge.** With the failure present the system is fully healthy:
+  clock advancing, all three rate groups cycling, ~89% idle. Only the downlink
+  is dead.
+- `PRIMASK=1` at `arch_cpu_idle+18` is the **normal** `cpsid i; wfi; cpsie i`
+  idle sequence, not a masked spin.
+- `pc=0x101864b8` "inside `fs_open`" and `pc=0x20010480` "inside `fileManager`"
+  were artifacts — a stale FPB breakpoint, and callee-saved registers misread as
+  a PC. (A swapped-out Cortex-M thread's `callee_saved.psp` points straight at
+  the exception frame: stacked LR at +0x14, PC at +0x18. Reading +0x34/+0x38
+  yields F' object addresses that look exactly like plausible wild pointers.)
+- The `DT_SIZE_M(4) -> DT_SIZE_M(16)` flash-size fix is correct and necessary
+  (the chip really is a 16 MB w25q128), but it was never the CI blocker.
+- The recommended littlefs -> NVS rework is **not** needed for this failure.
+
+---
+
+## Local-bench result (2026-07-27) — v5 thread-walk probe: THERE IS NO HANG
+
+Built and ran the thread-walk probe INVESTIGATION.md called for
+(`scripts/diag/hang_thread_walk.{sh,gdb}`): reset, free-run 12 s into the failed
+state, halt, dump the clock/SysTick/interrupt state, walk every thread in
+`_kernel.threads`, dump `kernel/timeout.c`'s `timeout_list`, then free-run 4 s
+more and repeat, comparing the two halts. Board CDC `/dev/tty.usbmodem1101`,
+Debug Probe `/dev/tty.usbmodem102`, current `zephyr.elf` (carries the
+`DT_SIZE_M(16)` fix).
+
+**The firmware is not hung, not faulted, and not blocked. It is running
+normally.** Measured across the two halts 4 s apart:
+
+| observation | value |
+|---|---|
+| `curr_tick` | 119896 → 159936 (**+40040 ticks = 4.004 s** at 10 kHz) |
+| `cycle_count` | +600,603,820 (150 MHz, exactly 4 s) |
+| `SYST_CSR` | `0x7` (ENABLE+TICKINT+CLKSOURCE), `SYST_CVR` advancing |
+| `PRIMASK`/`BASEPRI`/`CFSR`/`HFSR` | `0`/`0`/`0`/`0` |
+| `timeout_list` | 1 entry: `z_timer_expiration_handler`, `dticks=10` (the 1 ms base-rate `k_timer`, re-armed every ms) |
+| thread CPU time (`base.usage.total`, summed) | +597,388,374 cycles in 4 s |
+
+Per-thread CPU consumed in that 4 s window (probe names each thread by
+symbolizing `entry.parameter1`, since `CONFIG_THREAD_NAME` is off and all 21
+F′ tasks share the `zephyrEntryWrapper` entry symbol):
+
+```
+rateGroup50Hz  19.2M    cmdSeq        2.2M    fileManager   0.59M   CdhCore::cmdDisp  0.19M
+bg_thread_main 19.9M    safeModeSeq   1.6M    ComCcsdsLora::comQueue 0.41M
+rateGroup1Hz    7.2M    payloadSeq    1.6M    fileDownlink  0.26M   CdhCore::events   0.09M
+rateGroup10Hz   5.3M    ComCcsdsUart::aggregator 1.4M      prmDb    0.16M   CdhCore::tlmSend 0.08M
+idle          537.2M  (89% idle)                          fileUplink 0.13M
+```
+
+All three rate groups cycle, `CdhCore::tlmSend`/`events`/`cmdDisp` run, and the
+main thread is looping through `startRateGroups()` → `timer.cycle()` →
+`k_timer_status_sync()` exactly as designed. One halt caught the main thread
+mid-`Svc::ActiveRateGroup::CycleIn_handlerBase` → `Os::Queue::send` to
+`rateGroup50Hz`; another caught the CPU inside `sys_clock_isr` →
+`z_timer_expiration_handler`.
+
+**Every prior "hang" reading was a misread of a healthy idle CPU.** `PRIMASK=1`
++ `pc=arch_cpu_idle+18` is not a masked spin — it is the normal
+`cpsid i; wfi; cpsie i` idle sequence, halted at the `cpsie i`. `pc=0x101864b8`
+"inside `fs_open`" and `pc=0x20010480` "inside `fileManager`" were likewise
+artifacts (a stale FPB breakpoint, and callee-saved register values misread as
+a PC). There is no wild jump, no stack overflow, no fs-lock deadlock, no
+flash/XIP wedge, and no fatal-halt loop. **Items 1–4 of the "Next steps" below
+are chasing a defect that does not exist.**
+
+### What IS broken: the downlink, not the system
+
+Three threads consumed **exactly zero** cycles in the 4 s window:
+
+- `usbd_thread` — parked in `k_msgq_get`, never woken
+- `udc_rpi_pico_thread_0` — parked in `k_event_wait`, never woken
+- `ComCcsdsUart::comQueue` — parked on its queue condvar, never woken, **while
+  `ComCcsdsUart::aggregator` on the same path burned 1.4M cycles**
+
+and the host sees **0 bytes in 15 s** on the board's CDC. (Checked against
+`/dev/cu.usbmodem1101`, not `/dev/tty.*` — on macOS a `tty.` open blocks on
+carrier detect and would produce a false "no data". The silence is real either
+way.)
+
+So the CI symptom — GDS `device disconnected`, `CMD_NO_OP` never answered — is a
+**dead USB CDC / UART downlink path on a fully healthy flight system**, not a
+boot hang. That is where the investigation goes next: telemetry is aggregated
+but never dequeued to the com driver, and the USB device stack is dormant.
+
+### Notes on the probe itself
+
+- Register resync matters: run/halt is sequenced with `monitor`, so gdb keeps
+  serving registers cached from the reset halt unless forced to re-read. The
+  first version reported `pc=z_arm_reset` at a halt 12 s into the run.
+  `monitor gdb sync` + `stepi` is the usual recipe but resumes the target when
+  the halt lands mid-ISR; the probe detaches and reconnects instead.
+- The first "did anything move?" metric summed each thread's saved `psp` +
+  resume PC. That is **unsound** — a healthy thread that blocks at the same
+  line every cycle reproduces byte-identical values, and it reported
+  "IDENTICAL: no thread made any progress" on a running system. The probe now
+  sums `base.usage.total` (`CONFIG_SCHED_THREAD_USAGE=y`), which is monotonic.
+- A swapped-out Cortex-M thread's `callee_saved.psp` points *straight at* the
+  hardware exception frame (stacked LR at `+0x14`, PC at `+0x18`); the callee
+  registers live in the `k_thread`, not on the stack. Reading them at `+0x34`/
+  `+0x38` yields F′ object addresses that look like plausible wild pointers —
+  which is very likely the origin of the `0x20010480` red herring above.
+
+## Local-bench result (2026-07-27) — v6 downlink trace: ComQueue never leaves WAITING
+
+Follow-on to the v5 thread-walk. `scripts/diag/downlink_trace.{sh,gdb}` traces
+the status path that is supposed to release the downlink, live from reset.
+
+**`Svc::ComQueue` is constructed in `WAITING` (`ComQueue.cpp:35`) and only ever
+reaches `READY` via `comStatusIn` carrying `SUCCESS` (`ComQueue.cpp:236-247`).
+Until that happens it never dequeues, so nothing is framed and the link is
+silent from boot.** On this board it never happens, on *both* Com paths:
+
+| read | ComCcsdsUart | ComCcsdsLora |
+|---|---|---|
+| `comQueue.m_state` | `WAITING` | `WAITING` |
+| `framer.m_masterFrameCount` | **0** | **0** |
+| `aggregator.m_allow_timeout` | true (FILL) | false (WAIT_STATUS) |
+| `comStub.m_reinitialize` | 0 (ready seen) | n/a (no comStub) |
+
+`m_masterFrameCount = 0` means **no TM frame has ever been framed on either
+link** — this is not "telemetry stopped", it is "downlink never started".
+
+The status path is `comStub.comStatusOut -> framer -> aggregator ->
+spacePacketFramer -> comQueue.comStatusIn`. Breakpointing every hop:
+
+- `ComStub::drvConnected_handler` **fires**, from
+  `ZephyrUartDriver::configure` ← `setupTopology`, and emits its one status.
+- `ComAggregator::preamble` **fires for both aggregators** — this is the F′
+  active-component preamble and the only place the aggregator emits an
+  unprovoked `comStatusOut` (`ComAggregator.cpp:24-27`); its other one is in
+  `doFill`, which needs data that cannot flow until ComQueue is released.
+- `ComAggregator::comStatusIn_handler` **fires** with `condition.e = SUCCESS`.
+- `SpacePacketFramer::comStatusIn_handler` **fires for both instances** — the
+  last hop before ComQueue, and a pure pass-through
+  (`SpacePacketFramer.cpp:79-83`).
+- `ComQueue::comStatusIn_handler` **never fires, on either instance.**
+
+The gap is not wiring. Both `comStatusOut` ports are connected at runtime —
+`ComCcsdsUart::spacePacketFramer.m_comStatusOut_OutputPort[0].m_port ==
+&ComCcsdsUart::comQueue.m_comStatusIn_InputPort[0]` (and likewise for LoRa),
+matching `ReferenceDeploymentTopologyAc.cpp:2396`. Nor is it a dead thread:
+`ComCcsdsLora::comQueue.run_handler` is dispatched every second on that same
+comQueue thread, so the thread is alive and draining its queue — it simply
+never receives a `comStatusIn` message.
+
+Two things this rules out, both of which looked promising:
+
+- **`ComCcsdsUart.comQueue.run` being unconnected is NOT the bug.** It really is
+  unconnected (only `ComCcsdsLora.comQueue.run` is wired, `topology.fpp:268`),
+  but `ComQueue::run_handler` only publishes queue-depth telemetry
+  (`ComQueue.cpp:257`); the dequeue is driven by `comStatusIn`. It is also
+  unconnected on `main`. Cost: one missing telemetry channel.
+- **The v5 per-thread zeros were partly a short-window artifact.** A single 4 s
+  sample showed `ComCcsdsUart::comQueue` at 0 cycles and `ComCcsdsLora::
+  aggregator` at 0 while their opposite numbers ran — a mirror-image asymmetry
+  that does not survive contact with the trace above (both paths are equally
+  stuck). The probe now takes a configurable window (`WINDOW_A_MS`/
+  `WINDOW_B_MS`, default 12 s / 20 s) so a thread that merely had nothing to do
+  is not read as wedged.
+
+**What this means for the branch.** `git diff main...HEAD` touches *no* code in
+the com path — `topology.fpp`, `instances.fpp` and all of `lib/fprime` are
+byte-identical to `main`. So if this is a regression it is being caused
+indirectly, and the only boot-time behavioural change the branch makes is the
+new `/keys` littlefs automount (`prj.conf` `CONFIG_FILE_SYSTEM_LITTLEFS=y` plus
+the `lfs1` fstab node + `keystore_partition` in the board `.dtsi`).
+
+**Control experiment (in progress):** same tree, `automount` removed from the
+`lfs1` node so `/keys` is not mounted at boot, everything else unchanged. If the
+downlink returns, the boot-time littlefs mount is the cause and the key store
+must move off an automounted filesystem; if it does not, the failure predates
+the branch's config and the next control is a `main` build on this bench.
+
+## Next steps (post-root-cause) — pin *why* control jumps to `0x20010480`
+
+> **Caveat (see local-bench result above):** on the current build the hang does
+> **not** raise a CPU fault, so steps 1–2's fault-entry breakpoints won't fire
+> as written. Treat the "wild jump to `0x20010480`" framing as unconfirmed on
+> today's build — the observed state is a no-fault idle/starved-scheduler hang.
+> The stack-overflow-vs-wild-pointer question is still the crux, but the catch
+> mechanism must change (watchpoint / thread walk, not a fault breakpoint).
+
+Ordered by diagnostic-value-per-effort. The whole task now is separating the two
+live candidates: a **stack overflow** in a worker thread that smashed a
+neighbouring return address / function pointer, vs. a **wild/uninitialized
+pointer** (bad F′ port or handler) branched through directly.
+
+**1. Catch the fault at ENTRY, not after the halt (do this first — no rebuild).**
+Every diagnostic so far halted the board *after* `z_arm_fatal_error` had already
+run and masked IRQs, which is why the backtrace is garbage (`lr=0x1019`, shallow
+stack). Set a **hardware** breakpoint on the UsageFault vector entry
+`z_arm_usage_fault` (`0x10104fa0`), `monitor reset halt`, `continue`, and let it
+hit at ~8 s with the exception frame fresh and `EXC_RETURN` still in `LR`. From
+that frame, read the **true stacked PC** (the faulting instruction), the
+**stacked LR** (the real caller/return), and compare the **pre-fault SP** to the
+faulting thread's `stack_info.start/size` (valid — `CONFIG_THREAD_STACK_INFO=y`).
+That single frame decides overflow (SP past its bound) vs. wild pointer (SP
+sane, PC/LR corrupted), and the UFSR bits (`INVSTATE`/`UNDEFINSTR` @ `0xE000ED28`)
+confirm "executed a data address". Runs on the *current* build over SWD — zero
+turnaround. Script: **`scripts/diag/hang_fault_bp.sh`** + `hang_fault_bp.gdb`.
+If the fault doesn't route through the UsageFault vector (e.g. a HardFault
+escalation), rerun with `FAULT_SYM=z_arm_fault` to break on the common C handler
+instead (it reads `EXC_RETURN`/`msp`/`psp` from `r2`/`r0`/`r1` per `fault.c:1025`).
+This supersedes the earlier "walk `_kernel.threads` on the hung state" idea (same
+data, but you'd have to dig the frame out of post-halt state by hand).
+
+**2. If (1) points at overflow, prove the site with a rebuild.** The build has
+**both** stack-overflow traps OFF — `# CONFIG_HW_STACK_PROTECTION is not set`,
+`# CONFIG_STACK_SENTINEL is not set` — so an overrun silently corrupts adjacent
+RAM (exactly the "wild pointer *inside* the `fileManager` object" signature). A
+diagnostic build with `CONFIG_HW_STACK_PROTECTION=y` (+ `CONFIG_STACK_SENTINEL=y`,
+`CONFIG_THREAD_ANALYZER=y`) faults on the *overflowing write* and names the
+thread + high-water mark — earlier and more precise than waiting for the eventual
+wild jump.
+
+**3. Audit the branch's new on-stack buffers.** `TcSecurityDeframer.cpp:185` and
+`:219` put `uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer]` on the stack
+(plus HMAC scratch) in the +289-line feature. Verify `kTCSecurityTrailer` sizing
+against every write into `keyBytes`, and check the F′ thread stack the deframer
+runs on. A bounded overrun in the hot path the flash-size fix newly unblocked
+fits the timeline.
+
+**4. Make the fatal handler talk before it spins (kills the guessing loop).**
+Override `k_sys_fatal_error_handler` (or set `CONFIG_EXTRA_EXCEPTION_INFO=y`) to
+emit faulting-thread + real stacked PC/LR/CFSR over SWD/RTT *before* the masked
+`b .`.
+
+**5. Treat the amplifier as its own defect (post-root-cause follow-up).** One
+non-recoverable fault → IRQs masked → infinite spin → dead SysTick → silent
+system death is a reliability hole independent of the cause. Track a hardware
+watchdog so the board *resets* (CI sees a reboot, not a permanent "disconnect")
+instead of going dark.
+
+**Housekeeping:** `scripts/diag/hang_fault_bp.{sh,gdb}` and
+`scripts/diag/hang_thread_walk.{sh,gdb}` join the existing
+`hang_forensics.tcl` / `hang_gdb.sh` diagnostics that **must be removed before
+merge**, along with the `board-serial.log` / `hang-thread-walk-openocd.log`
+capture files they drop in the repo root. (These v4/v5 scripts are local-bench
+only — no `ci.yaml` change — so nothing new to revert in CI.)
 
 ---
 

@@ -131,7 +131,144 @@ Status legend: [ ] todo, [~] in progress, [x] done
       run** (same pattern as the prior fault-register diagnostic commits) to see
       whether the stall is the one-time format or ongoing per-frame reloads.
 
-## Suggested fix (blocked CI) — see INVESTIGATION.md
+## CI blocker — ROOT-CAUSED AND FIXED (2026-07-27), see INVESTIGATION.md
+
+- [x] **Root cause: CommandDispatcher opcode-table overflow.**
+      `project/config/CommandDispatcherImplCfg.hpp` had
+      `CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 350` against a deployment already at
+      **348** commands. This branch adds PROVISION_KEY/ADD_KEY/REMOVE_KEY to
+      `TcSecurityDeframer`, and there are **two** instances (ComCcsdsUart,
+      ComCcsdsLora) -> 6 new commands, **354 > 350**.
+      `CommandDispatcherImpl.cpp:35` `FW_ASSERT`s when the RedBlackTreeMap
+      insert fails, so the 351st registration **panics the board during boot**
+      (`z_fatal_error(reason=4)` via `z_arm_svc` -- a `k_panic`, not a CPU
+      fault, which is why every fault-vector probe found nothing). Downlink
+      never starts -> GDS `device disconnected` -> CI fails.
+      **Fix: raised to 512.**
+      Confirmed on the local bench with a single-variable A/B, both full clean
+      `make generate build`s, measuring F' telemetry bytes off the board CDC in
+      a 25s window: `main` 1328 bytes @t+1.0s; branch as-shipped **0**; branch +
+      table 512 **1392 bytes @t+1.01s**; branch + table back to 350 **0**.
+      Final verified build: **2200 bytes in 30s @t+1.01s**.
+
+- [x] **Second, independent defect: littlefs was never compiled in.**
+      `west.yml`'s `name-allowlist` imported `fatfs` but not `littlefs`, so the
+      module never reached `zephyr_modules.txt`, `ZEPHYR_LITTLEFS_MODULE` was
+      undefined, and Kconfig **silently dropped** `CONFIG_FILE_SYSTEM_LITTLEFS=y`
+      ("LittleFS module not available"). No `lfs_*` symbols in the image, `/keys`
+      never existed, every `fs_open("/keys/...")` failed -- the entire key-store
+      feature was inert while the build stayed clean.
+      **Fix: added `littlefs` to the allowlist and pinned it as an explicit
+      project** (like every other module) so it lands under `lib/zephyr-workspace/`
+      rather than the workspace topdir. Verified `CONFIG_FILE_SYSTEM_LITTLEFS=y`,
+      `CONFIG_FS_LITTLEFS_FSTAB_AUTOMOUNT=y`, 20 `lfs_*` symbols in the ELF.
+      Not the CI blocker, but the feature cannot work without it.
+
+- [x] **Feature verified end to end on hardware (2026-07-27).** Board on
+      `/dev/tty.usbmodem1101`, GDS on the USB CDC, state read back over SWD:
+      1. **`/keys` mounts and formats on internal flash.** littlefs superblock
+         magic present at `0x10400008` with block_size 0x1000 and block_count
+         0x40 -- exactly the 256 KB `keystore_partition` geometry.
+      2. **PROVISION_KEY works on a keyless board** over the unauthenticated
+         (bypass-allowlisted) link: `m_keyStore.elements[0]` went to
+         `valid=1 spi=0` with the provisioned key bytes.
+      3. **The key survives a cold reboot.** After `reset` (RAM re-zeroed by
+         `arch_bss_zero`), slot 0 is `valid=1` with the same bytes -- i.e.
+         `configure()` -> `loadKeyStore()` read it back off flash.
+      4. **The flash-stored key authenticates uplink.** `SET_SEQ_NUM 12345`
+         requires authentication (not bypass-allowlisted) and took effect:
+         `m_sequenceNumber == 12345`.
+      5. **The sequence number survives a cold reboot**: still 12345 after
+         reset, read back from `/keys/sequence_number.bin`, key still valid.
+      6. **Erasing the partition re-formats cleanly.** After erasing
+         `0x10400000+0x40000` over SWD the board came back keyless
+         (`valid=0`, `seqnum=0`) with a fresh littlefs superblock.
+      7. **Bypass path confirmed:** on a keyless board the router shows
+         `routed=3 bypassed=3 rejected=0` -- allowlisted opcodes are dispatched
+         without a key, which is what makes bootstrap possible.
+      **Section 3 opcodes re-verified against the fresh dictionary:**
+      `ComCcsdsUart/Lora.tcSecurityDeframer.PROVISION_KEY` are `0x2100B002` /
+      `0x2200B002`, matching `Bypasser.cpp` exactly. The TODO caveat there is
+      resolved. (The Sband entry `0x2300B002` is still unconfirmed -- that
+      instance is not built.)
+
+- [ ] **Could not get `provision_key_test.py` to pass through the pytest
+      fixture path on the bench.** The firmware side is proven (item 2 above --
+      the same command sent directly provisions the board), but
+      `start_gds`'s `CdhCore.cmdDisp.CMD_NO_OP` kept timing out, and
+      `recover_from_safe_mode` is `autouse=True` and depends on `start_gds`, so
+      every test in the directory errors in setup. The board *is* dispatching
+      those commands (`bypassed=3 rejected=0`), so this looks like a GDS-side
+      downlink desync from my reset-heavy bench session -- GDS logged
+      `APID 2 received sequence count: 4 (expected: 1)` after each board reset,
+      and CI power-cycles before starting GDS, which would avoid it. **Not
+      confirmed either way -- re-check once CI runs.**
+
+- [ ] **No over-the-air recovery from a mis-provisioned key.** PROVISION_KEY is
+      refused once the store is non-empty (`NotEmpty`) and REMOVE_KEY refuses to
+      remove the last key, so a board provisioned with the wrong key cannot be
+      re-keyed from the ground -- it needs a physical SWD flash erase of
+      `keystore_partition` (which is how the bench board was recovered). Worth a
+      deliberate decision before flight.
+
+- [ ] **Watch the other zero-headroom config constants.** Same failure mode,
+      same file tree: `MAX_PACKETIZER_CHANNELS = 202` vs 191 channels in use,
+      `MAX_PACKETIZER_PACKETS = 22` vs exactly 22 packets. Adding commands,
+      channels or packets to this deployment requires checking these against the
+      generated dictionary -- they assert at boot rather than degrading.
+
+- [ ] **Write up the SWD/GDB diagnostic helpers as an ADR, and point the agent
+      instructions at it.** The probes built while root-causing this branch are
+      generally useful for any "board is silent / GDS sees nothing" failure on
+      this hardware, and re-deriving them cost most of a session. Capture in a
+      new ADR (there is no `docs/adr/` yet -- this would be the first):
+      - `scripts/diag/hang_thread_walk.{sh,gdb}` -- reset, free-run, halt twice
+        N s apart; clock/SysTick/interrupt state, a walk of `_kernel.threads`
+        naming each F' task, the `timeout_list`, the whole downlink chain's
+        state, and a per-thread CPU-time diff between the two halts.
+      - `scripts/diag/downlink_trace.{sh,gdb}` -- breakpoints on every hop of
+        the `comStub -> framer -> aggregator -> spacePacketFramer -> comQueue`
+        com-status path.
+      - The older `hang_forensics.tcl` / `hang_gdb.sh` / `hang_fault_bp.*`.
+      Non-obvious things the ADR should record, all of which cost real time:
+      - Use the **raspberrypi OpenOCD fork**, not a nix/brew build.
+      - Sequencing run/halt via `monitor` leaves gdb serving **stale registers**;
+        detach + reconnect to resync (`monitor gdb sync` + `stepi` can resume the
+        target when the halt lands mid-ISR).
+      - **Always resume the target** before detaching -- a halted board drops its
+        USB CDC, which makes GDS see nothing and silently no-ops any command.
+      - A swapped-out Cortex-M thread's `callee_saved.psp` points straight at the
+        exception frame (LR `+0x14`, PC `+0x18`); callee regs live in the
+        `k_thread`. Reading `+0x34`/`+0x38` yields F' object addresses that look
+        exactly like plausible wild pointers -- this produced a multi-day red
+        herring in `INVESTIGATION.md`.
+      - `PRIMASK=1` at `arch_cpu_idle+18` is the **normal** idle sequence, not a
+        masked spin.
+      - Prefer monotonic `base.usage.total` over saved psp/PC when asking "did
+        this thread make progress" -- a healthy thread re-blocking at the same
+        line reproduces byte-identical values.
+      - **`make build` does not re-derive Kconfig from device-tree changes**; use
+        `make generate build`.
+      Then add a diagnostics section to the repo's agent instructions pointing at
+      the ADR. **Note:** the repo has `AGENTS.md`, not `CLAUDE.md` -- decide
+      whether to add the section to `AGENTS.md`, or add a `CLAUDE.md` (symlink or
+      stub) so both agent toolchains pick it up.
+
+- [ ] **Remove the diagnostics before merge:** `scripts/diag/hang_thread_walk.*`,
+      `scripts/diag/downlink_trace.*`, `scripts/diag/hang_fault_bp.*`,
+      `scripts/diag/hang_forensics.tcl`, `scripts/diag/hang_gdb.sh`, the
+      `Hang Forensics Diagnostic` step in `ci.yaml`, and the stray capture logs.
+
+### Build-system trap (cost several hours this session)
+`make build` does **not** re-derive Kconfig from device-tree changes -- it left
+`CONFIG_FLASH_SIZE=4096` while the DTS said 16 MB, putting `keystore_partition`
+out of bounds so the `/keys` automount panicked on
+`__ASSERT_NO_MSG(block_size != 0)` (`littlefs_fs.c:787`). Purely an artifact of
+the stale config, and it invalidated several intermediate bisect results.
+**Always `make generate build` after touching the device tree.**
+
+## Superseded — original "Suggested fix" notes, kept for the audit trail
+
 - [x] **Primary fix**: changed `&flash0 { reg = <0x10000000 DT_SIZE_M(4)>; }` →
       `DT_SIZE_M(16)` in `proves_flight_control_board_v5.dtsi` (shared by v5c/v5d/v5e).
       Confirmed correct by CI hardware run 30034861047: OpenOCD reports the real chip
@@ -176,6 +313,23 @@ Status legend: [ ] todo, [~] in progress, [x] done
       regardless of exact mechanism — see Robustness follow-ups below), or dig
       further into which specific call inside the mount/format/create path
       never returns.**
+      **2026-07-27 — the "stall" does not exist.** Built and ran the v5
+      thread-walk probe (`scripts/diag/hang_thread_walk.{sh,gdb}`) on the local
+      bench. Across two halts 4s apart the board is *fully healthy*: clock
+      advancing (+40040 ticks = 4.004s), no fault (`CFSR=HFSR=0`), no masked
+      IRQs, the 1ms base-rate `k_timer` queued and firing, all three rate
+      groups cycling, main looping in `startRateGroups()`, and 89% idle. Every
+      earlier "hang" reading was a misread healthy idle CPU (`PRIMASK=1` +
+      `arch_cpu_idle` is the normal `cpsid i; wfi; cpsie i`), a stale FPB
+      breakpoint, or callee-saved registers misread as a PC — there is no wild
+      jump, stack overflow, fs-lock deadlock or fatal-halt spin.
+      **The real failure is the downlink:** `usbd_thread`,
+      `udc_rpi_pico_thread_0` and `ComCcsdsUart::comQueue` consume *zero* CPU
+      cycles while `ComCcsdsUart::aggregator` burns 1.4M, and the host reads 0
+      bytes in 15s from the board CDC. Telemetry is produced and aggregated but
+      never dequeued to the com driver, and the USB device stack is dormant.
+      **Next: chase the UART/USB downlink path**, not the filesystem. See
+      `INVESTIGATION.md` "v5 thread-walk probe: THERE IS NO HANG".
 - [ ] **Robustness follow-ups (evaluate once the stall is diagnosed):** (a) consider
       raw `flash_area_*`/NVS instead of littlefs for this fixed-size store (avoids
       the format-time erase burst and any long single-call erase/program under
