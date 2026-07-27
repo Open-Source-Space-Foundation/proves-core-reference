@@ -2,16 +2,16 @@
 
 The TlmArchive component preserves telemetry generated before antenna
 deployment by appending serialized telemetry packets to
-`//tlm/pre_deployment.tlm`. It uses a one-packet mailbox to move filesystem
-work out of the telemetry path and into the 1 Hz rate group.
+`//tlm/pre_deployment.tlm`. It uses a one-packet, latest-value mailbox to move
+filesystem work out of the telemetry path and into the 1 Hz rate group.
 
 ## Overview
 
 TlmArchive is a passive component with two execution paths. The synchronous
-`comIn` handler receives telemetry and copies at most one packet into an
+`comIn` handler receives telemetry and stores the most recent packet in an
 in-memory mailbox. The synchronous `run` handler drains that mailbox and
-performs the filesystem work. A mutex protects state shared by the two calling
-contexts.
+performs the filesystem work. A mutex protects the mailbox, cached size, and
+failure count shared by the two calling contexts.
 
 The reference topology connects the component as follows:
 
@@ -22,9 +22,10 @@ The reference topology connects the component as follows:
   `AntennaDeployer.deploymentStateGet`.
 
 Archiving stops for the remainder of the component's lifetime after it
-observes a deployed antenna state. New packets are disabled after three
-counted failures. An individual write is rejected when the current archive
-size plus the pending packet would exceed 10,000 bytes.
+observes a deployed antenna state. `comIn` also rejects new packets after three
+counted failures or when the cached archive size reaches 10,000 bytes. A
+pending packet is rejected and counted as a failure when appending it would
+exceed the size limit.
 
 ## Usage Examples
 
@@ -34,9 +35,8 @@ The component is instantiated and connected during topology setup; it does not
 require an explicit configuration call.
 
 1. A serialized telemetry packet arrives on `comIn`.
-2. If writing is enabled and the mailbox is empty, the packet is copied into
-   the mailbox. A new packet arriving while the mailbox is full is silently
-   dropped.
+2. If writing is enabled, the packet is copied into the mailbox. A new packet
+   arriving while another packet is pending replaces the older packet.
 3. On the next 1 Hz `run` call, the component removes the pending packet and
    queries the antenna deployment state.
 4. If the antenna is not deployed, the component creates `//tlm` when needed,
@@ -46,7 +46,7 @@ require an explicit configuration call.
    bytes, and closes the file.
 5. If the antenna is deployed, the pending packet is discarded without
    filesystem access. The true deployment state is latched so it is not queried
-   again.
+   again, and subsequent `comIn` calls reject new packets.
 
 The one-packet mailbox prevents filesystem access from blocking the telemetry
 producer. Because `run` executes at 1 Hz, at most one buffered packet is
@@ -84,7 +84,7 @@ classDiagram
 
 | Name | Type | Direction | Description |
 |---|---|---|---|
-| `comIn` | `Fw.Com` | sync input | Receives serialized telemetry packets. Copies a packet into the mailbox when writing is enabled and the mailbox is empty. |
+| `comIn` | `Fw.Com` | sync input | Receives serialized telemetry packets. When writing is enabled, stores the packet in the mailbox, replacing any packet already pending. |
 | `run` | `Svc.Sched` | sync input | Drains one pending packet, checks deployment state, and performs archive filesystem work. Connected to the 1 Hz rate group. |
 | `deploymentStateGet` | `Components.GetDeploymentState` | output | Queries AntennaDeployer for its persistent deployed state. |
 | `timeCaller` | time get | time get | Supplies timestamps for emitted events. |
@@ -105,21 +105,20 @@ the following internal state:
 | `m_directoryInitialized` | `false` | Becomes true after `//tlm` is successfully initialized, preventing repeated directory creation attempts. |
 | `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read or the archive is confirmed missing, preventing later size queries. |
 | `m_antennasDeployed` | `false` | In-memory latch set when AntennaDeployer first reports a deployed state. |
-| `m_queueMutex` | Unlocked | Protects the mailbox, tracked size, and failure count shared by the input and rate-group contexts. |
+| `m_queueMutex` | Unlocked | Protects the mailbox, cached size, and failure count shared by the input and rate-group contexts. |
 
 Conceptually, the component operates in these states:
 
 | Name | Description |
 |---|---|
 | `WAITING` | Writing is enabled and no packet is pending. |
-| `PACKET_PENDING` | One packet is waiting for the next `run` invocation. Additional packets are dropped. |
-| `DEPLOYED` | A true antenna deployment state has been latched. Pending packets are discarded and no more archive writes occur. |
-| `WRITE_DISABLED` | The failure count has reached its limit or the tracked file size has reached 10,000 bytes. New packets are rejected by `comIn`. |
+| `PACKET_PENDING` | One packet is waiting for the next `run` invocation. A newer packet replaces the pending packet. |
+| `DEPLOYED` | A true antenna deployment state has been latched. The packet that observed deployment is discarded, and subsequent packets are rejected by `comIn`. |
+| `WRITE_DISABLED` | The failure count has reached its limit or the cached file size has reached 10,000 bytes. New packets are rejected by `comIn`. |
 
-After deployment, `comIn` can still place a packet in the mailbox because the
-deployment latch is evaluated by `run`. The next `run` invocation removes and
-discards that packet. No telemetry is written after the deployed state has been
-observed.
+The `run` handler does not emit an event when it first observes deployment.
+The throttled `AntennasDeployed` event is emitted if another packet later
+arrives on `comIn`.
 
 ### Archive Size Tracking
 
@@ -133,11 +132,12 @@ archive size exceed 10,000 bytes.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
-limit is reached.
+limit is reached. Changes made to the archive by another component after size
+initialization are not reflected in the cache.
 
 ### Failure Handling
 
-Filesystem failures are cumulative and are not reset after a successful write.
+Counted failures are cumulative and are not reset after a successful write.
 The following failures increment `m_failures`:
 
 - failure to create `//tlm`;
@@ -149,6 +149,9 @@ The following failures increment `m_failures`:
 A missing archive during the size check is expected and is treated as a
 zero-byte file. Once three counted failures have occurred, subsequent `comIn`
 calls reject new packets. The packet that encountered an error is not retried.
+A size-limit rejection in `run` increments the failure count without emitting
+an event; `FailureLimitReached` is emitted if a later `comIn` call observes the
+failure cutoff.
 
 ## Sequence Diagrams
 
@@ -164,12 +167,14 @@ sequenceDiagram
 
     Producer->>Archive: comIn(packet)
     Archive->>Archive: Lock and check failure/size limits
-    alt Writing disabled
-        Archive->>Archive: Emit ArchiveWriteDisabled
-    else Mailbox empty
-        Archive->>Archive: Copy packet into mailbox
-    else Mailbox full
-        Archive->>Archive: Drop new packet
+    alt Failure limit reached
+        Archive->>Archive: Emit FailureLimitReached
+    else Size limit reached
+        Archive->>Archive: Emit SizeLimitReached
+    else Deployment latched
+        Archive->>Archive: Emit AntennasDeployed
+    else Writing enabled
+        Archive->>Archive: Store packet, replacing pending packet
     end
 
     Rate->>Archive: run()
@@ -190,10 +195,12 @@ sequenceDiagram
             opt File size not initialized
                 Archive->>FS: getFileSize()
             end
-            alt Stat fails or packet exceeds limit
+            alt Stat fails
+                Archive->>Archive: Count failure and discard packet
+            else Packet exceeds size limit
                 Archive->>Archive: Count failure and discard packet
             else Packet fits
-                Archive->>Archive: Emit ArchiveWriteStart
+                Archive->>Archive: Emit WriteStart
                 Archive->>FS: open("//tlm/pre_deployment.tlm", append)
                 Archive->>FS: write(packet bytes)
                 Archive->>FS: close()
@@ -213,7 +220,7 @@ implementation constants control its behavior:
 | `TLM_DIRECTORY` | `//tlm` | Directory containing the archive. |
 | `PRE_DEPLOYMENT_TLM_PATH` | `//tlm/pre_deployment.tlm` | Append-only pre-deployment telemetry archive. |
 | `MAX_FAILURES` | `3` | Counted stat, limit, directory, open, or write failures after which new packets are rejected. |
-| `MAX_FILE_SIZE` | `10000` bytes | Maximum permitted on-disk archive size after an append. |
+| `MAX_FILE_SIZE` | `10000` bytes | Maximum cached archive size permitted after a component-managed append. |
 
 ## Commands
 
@@ -225,13 +232,17 @@ implementation constants control its behavior:
 
 | Name | Severity | Throttle | Parameters | Description |
 |---|---|---:|---|---|
-| `ArchiveWriteStart` | Activity Low | 1 | None | Emitted immediately before each attempt to open the archive. |
-| `ArchiveFileError` | Warning High | None | `operation: string` | Reports directory creation, pre-write file-size lookup, or archive open errors. Current operation strings are `create_directory`, `get_file_size`, and `open_append`. |
-| `ArchiveWriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
-| `ArchiveWriteDisabled` | Warning High | 1 | `count: I8`, `maxSize: FwSizeType` | Reports that the failure or size cutoff has disabled writes. The implementation supplies the configured limits (`3` and `10000`). |
+| `WriteStart` | Activity Low | 1 | None | Emitted immediately before each attempt to open the archive. |
+| `FileError` | Warning High | None | `operation: string` | Reports directory creation, initial file-size lookup, or archive open errors. Current operation strings are `create_directory`, `get_file_size`, and `open_append`. |
+| `WriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
+| `FailureLimitReached` | Warning High | 1 | `count: I8` | Emitted by `comIn` when the cumulative failure count is at least three. The implementation supplies `3`. |
+| `AntennasDeployed` | Warning Low | 1 | None | Emitted by `comIn` when deployment has been latched and a new packet is rejected. |
+| `SizeLimitReached` | Warning Low | 1 | `maxSize: FwSizeType` | Emitted by `comIn` when the cached archive size is at least 10,000 bytes. The implementation supplies `10000`. |
 
 The throttled events have no corresponding throttle-clear calls, so only their
-first occurrence is reported during the component's lifetime.
+first occurrence is reported during the component's lifetime. The `comIn`
+checks are ordered failure limit, size limit, then antenna deployment; if more
+than one condition is true, only the first applicable event is invoked.
 
 ## Telemetry
 
@@ -247,15 +258,16 @@ There are currently no component-specific unit tests for TlmArchive.
 
 | Name | Description | Validation |
 |---|---|---|
-| `TLM_ARCHIVE_001` | The component shall buffer at most one telemetry packet outside the telemetry producer's filesystem path. | Inspection |
+| `TLM_ARCHIVE_001` | The component shall buffer at most one telemetry packet outside the telemetry producer's filesystem path, replacing a pending packet when newer telemetry arrives. | Inspection |
 | `TLM_ARCHIVE_002` | The component shall append buffered telemetry packet bytes to `//tlm/pre_deployment.tlm` while the antenna deployment state is false. | Inspection |
 | `TLM_ARCHIVE_003` | The component shall stop writing telemetry after observing a deployed antenna state. | Inspection |
 | `TLM_ARCHIVE_004` | The component shall reject new packets after three counted failures. | Inspection |
 | `TLM_ARCHIVE_005` | The component shall reject a write when the cached archive size plus the pending packet size would exceed 10,000 bytes. | Inspection |
-| `TLM_ARCHIVE_006` | The component shall report archive start, filesystem error, write error, and disabled conditions through events. | Inspection |
+| `TLM_ARCHIVE_006` | The component shall report archive start, filesystem errors, write errors, failure-limit rejection, size-limit rejection, and deployed-state rejection through events. | Inspection |
 
 ## Change Log
 
 | Date | Description |
 |---|---|
 | 2026-07-26 | Documented the mailbox, deployment-state handling, archive workflow, limits, events, topology connections, and failure behavior. |
+| 2026-07-27 | Updated mailbox replacement behavior, cached-size handling, rejection paths, and the current event interface. |
