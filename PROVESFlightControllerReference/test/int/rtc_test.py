@@ -439,7 +439,7 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
 
 
 @pytest.mark.uart_only(reason="Test functionality of to_proc_time")
-def test_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
+def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by proc time toggle"""
 
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)

@@ -11,12 +11,21 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `TIME_SET` command with the desired time
 3. On each command, the component:
+    - Cancels any running sequences
     - Validates the time data (year >= 1900, month [1-12], day [1-31], hour [0-23], minute [0-59], second [0-59])
     - Emits validation failure events if any field is invalid
     - Sets the time on the RTC if validation passes
     - Emits a `TimeSet` event with the previous time if the time is set successfully
+    - Emits a `TimeBase` event with RTC time if time was set successfully
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
+
+#### `TO_PROC_TIME` Command Usage
+1. A ground station sends a `TO_PROC_TIME` command to switch the timebase
+2. When the command is received the component:
+    - Cancels any running sequences
+    - Emits a `TimeBase` event with proc time
+    - Emits a `ProcTimeSet` event with seconds since boot
 
 #### `ALARM_SET` Command Usage
 1. The component is instantiated and initialized during system startup
@@ -99,6 +108,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 | RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
+| RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
 
 
 ## Port Descriptions
@@ -320,6 +330,24 @@ sequenceDiagram
     Zephyr RTC API-->>RTC Manager: Return failure (status != 0)
     RTC Manager->>Event Log: Emit TimeNotSet event
     RTC Manager-->>Ground Station: Command response EXECUTION_ERROR
+```
+
+### `TO_PROC_TIME` Command
+
+The `TO_PROC_TIME` command is called to toggle the timebase
+
+#### Success
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant Event Log
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant RTC Sensor
+
+    Ground Station->>RTC Manager: Command TO_PROC_TIME
+    RTC Manager->>RTC Manager: set m_ProcTimeSet to true
 ```
 
 ### `ALARM_SET` Command
