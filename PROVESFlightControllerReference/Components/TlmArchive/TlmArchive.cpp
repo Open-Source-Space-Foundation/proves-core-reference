@@ -99,8 +99,6 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
             Os::ScopeLock lock(this->m_queueMutex);
             this->m_failures++;
         }
-    } else {
-        this->log_ACTIVITY_LO_ArchiveWriteFinish();
     }
     file.close();
 
