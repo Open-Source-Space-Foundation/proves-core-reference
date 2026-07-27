@@ -18,8 +18,17 @@ Codifies the Phase A bench evidence (logs/HIL-REGRESSION-REPORT-phaseA.md):
      running GRC-USP firmware.  Skipped unless the ground-side environment
      hooks are configured (see below).
 
+  6. GFSK/GMSK first-TX-after-switch wedge kill recipe (regression for the
+     Phase B anomaly-B wedge, fixed in fprime-zephyr PR #21): healthy P0
+     radio traffic → brief idle → P0→P4/P5 switch → immediate TX.  Pre-fix,
+     the first TX after switching into a (G)FSK profile hit an ACTIVE RX and
+     hung the SX126x in TX (SendFailed -116 → COMSTATUS FAILURE latch).
+
 Runtime knobs (env vars; defaults are CI-sane, raise them for hammer runs):
   RF_PROFILE_HAMMER_CYCLES  post-wake switch cycles (default 5; bench hammer 100)
+  RF_WEDGE_KILL_CYCLES      kill-recipe repetitions per profile (default 2;
+                            bench matrix used 4+ reps x idle sweep)
+  RF_WEDGE_IDLE_S           idle seconds before the kill-recipe switch (default 1)
   RF_PROFILE_WAKE_IDLE_S    idle seconds before each post-wake switch (default 3)
   RF_PROFILE_LONG_IDLE_S    idle seconds for the post-idle sanity test (default 90)
   USP_GROUND_DATA_TTY       ground radio data-CDC device; downlinked RF frames
@@ -51,15 +60,28 @@ pytestmark = [pytest.mark.uart_only]
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
 radio = "ReferenceDeployment.uspRadio"
+tlmSend = "CdhCore.tlmSend"
+
+# TlmPacketizer packet id used to force an immediate downlink frame (and thus
+# an immediate radio TX while TRANSMIT is ENABLED): Health, id 2.
+HEALTH_PACKET_ID = 2
 
 # Events that indicate the radio rejected or failed a reconfiguration.
 PROFILE_ERROR_EVENTS = ("ConfigurationFailed", "InvalidProfile")
 RADIO_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 # LinkProfileId sweep order (P0 is the boot default, so the sweep ends by
-# restoring it).  Matches the Phase A rung-6 pairing order.
-# P4_GFSK_75K is excluded: not yet exercised on the bench baseline.
-PROFILE_SWEEP = ["P1_LORA_SF10", "P2_LORA_SF5", "P3_GFSK_38K", "P0_LORA_SF8"]
+# restoring it).  Matches the Phase A rung-6 pairing order, extended with
+# P4/P5 (validated on the bench in Phase B: throughput ladder + wedge-fix
+# matrix; profile table v2).
+PROFILE_SWEEP = [
+    "P1_LORA_SF10",
+    "P2_LORA_SF5",
+    "P3_GFSK_38K",
+    "P4_GFSK_75K",
+    "P5_GMSK_83K",
+    "P0_LORA_SF8",
+]
 BOOT_PROFILE = "P0_LORA_SF8"
 
 # Numeric LinkProfileId values for the ground-side command template.
@@ -68,6 +90,8 @@ PROFILE_IDS = {
     "P1_LORA_SF10": 1,
     "P2_LORA_SF5": 2,
     "P3_GFSK_38K": 3,
+    "P4_GFSK_75K": 4,
+    "P5_GMSK_83K": 5,
 }
 
 # Continuous-wave burst duration (seconds); kept short so the command stays
@@ -80,6 +104,8 @@ CW_SECONDS = 5
 NO_REVERT = 0
 
 HAMMER_CYCLES = int(os.environ.get("RF_PROFILE_HAMMER_CYCLES", "5"))
+WEDGE_KILL_CYCLES = int(os.environ.get("RF_WEDGE_KILL_CYCLES", "2"))
+WEDGE_IDLE_S = float(os.environ.get("RF_WEDGE_IDLE_S", "1"))
 WAKE_IDLE_S = float(os.environ.get("RF_PROFILE_WAKE_IDLE_S", "3"))
 LONG_IDLE_S = float(os.environ.get("RF_PROFILE_LONG_IDLE_S", "90"))
 
@@ -245,6 +271,112 @@ def test_05_post_idle_profile_switch(fprime_test_api: IntegrationTestAPI, start_
     _switch_profile(fprime_test_api, "RX", "P1_LORA_SF10")
     _switch_profile(fprime_test_api, "RX", BOOT_PROFILE)
     proves_send_and_assert_command(fprime_test_api, f"{cmdDispatch}.CMD_NO_OP")
+
+
+def _force_tx_and_await_advance(
+    fprime_test_api: IntegrationTestAPI,
+    floor: int | None,
+    context: str,
+    timeout: float = 45.0,
+) -> int:
+    """Force an immediate radio TX (SEND_PKT with TRANSMIT ENABLED) and wait
+    for uspRadio.BytesSent to advance past ``floor``.
+
+    Channel movement is the robust TX-health signal here (per the bench flake
+    ledger): BytesSent increments only when a radio transmission actually
+    completes, so a delta both proves the TX went out and avoids the
+    short-timeout event-window flakiness of bare assert_event checks.
+    """
+    proves_send_and_assert_command(
+        fprime_test_api, f"{tlmSend}.SEND_PKT", [HEALTH_PACKET_ID, "REALTIME"]
+    )
+    deadline = time.monotonic() + timeout
+    last_seen = floor
+    while time.monotonic() < deadline:
+        result = fprime_test_api.await_telemetry(f"{radio}.BytesSent", timeout=5)
+        if result is not None:
+            val = int(result.get_val())
+            last_seen = val
+            if floor is None or val > floor:
+                return val
+    raise AssertionError(
+        f"uspRadio.BytesSent did not advance past {floor} within {timeout}s "
+        f"{context} (last seen: {last_seen})"
+    )
+
+
+@pytest.mark.parametrize("target_profile", ["P4_GFSK_75K", "P5_GMSK_83K"])
+def test_08_gfsk_wedge_kill_recipe(
+    fprime_test_api: IntegrationTestAPI, start_gds, target_profile
+):
+    """Regression for the Phase B anomaly-B TX wedge (fixed in fprime-zephyr
+    PR #21, fix/usp-radio-gfsk-rx-tx-wedge).
+
+    Pre-fix kill recipe (deterministic within <=3 cycles on the bench): healthy
+    P0 radio traffic → brief idle → P0→P4/P5 profile switch → the FIRST TX
+    after switching into a (G)FSK profile aborted the freshly armed continuous
+    RX without quiescing the chip, so SetTx hit an ACTIVE GFSK/GMSK RX and hung
+    the SX126x in TX forever (SendFailed -116 + XOSC_START_ERR, then the
+    COMSTATUS FAILURE latch parked ComQueue → downlink dead until reboot).
+    LoRa RX tolerates the same abuse, which is why P0 was clean for months.
+
+    Post-fix, every first-TX-after-switch must complete: no SendFailed /
+    ConfigurationFailed, and uspRadio.BytesSent must keep advancing (channel
+    movement, not just event silence) at the target profile AND after the
+    return to P0.  Repeat RF_WEDGE_KILL_CYCLES times (default small for CI;
+    the bench validation matrix ran 4 reps x idle {0,0.25,1,5}s x {P4,P5}).
+    """
+    proves_send_and_assert_command(fprime_test_api, f"{radio}.TRANSMIT", ["ENABLED"])
+    try:
+        for cycle in range(WEDGE_KILL_CYCLES):
+            ctx = f"(cycle {cycle + 1}/{WEDGE_KILL_CYCLES}, {target_profile})"
+
+            # 1. Healthy P0 traffic: prove the radio TX path is moving before
+            #    the switch so a post-switch stall is unambiguous.
+            baseline = _force_tx_and_await_advance(
+                fprime_test_api, None, f"at P0 baseline {ctx}"
+            )
+
+            # 2. Brief command-idle window before the switch (the pre-fix
+            #    wedge fired across idle lengths 0-5 s; default 1 s).
+            time.sleep(WEDGE_IDLE_S)
+
+            # 3. P0 -> target profile switch...
+            start = _now_start()
+            _switch_profile(fprime_test_api, "TX", target_profile)
+
+            # 4. ...then IMMEDIATE TX: the first TX after switching into
+            #    GFSK/GMSK was the exact pre-fix kill moment.
+            baseline = _force_tx_and_await_advance(
+                fprime_test_api, baseline, f"on first TX after P0->{ctx}"
+            )
+            for evt in RADIO_ERROR_EVENTS:
+                result = fprime_test_api.await_event(
+                    f"{radio}.{evt}", start=start, timeout=0
+                )
+                assert result is None, (
+                    f"Unexpected {radio}.{evt} after switch to {target_profile} "
+                    f"{ctx}: {result}"
+                )
+
+            # 5. Return to P0 and prove TX still advances (the pre-fix latch
+            #    survived a P4->P5 switch; any wedge must show up here too).
+            start = _now_start()
+            _switch_profile(fprime_test_api, "TX", BOOT_PROFILE)
+            _force_tx_and_await_advance(
+                fprime_test_api, baseline, f"after return to P0 {ctx}"
+            )
+            for evt in RADIO_ERROR_EVENTS:
+                result = fprime_test_api.await_event(
+                    f"{radio}.{evt}", start=start, timeout=0
+                )
+                assert result is None, (
+                    f"Unexpected {radio}.{evt} after return to P0 {ctx}: {result}"
+                )
+    finally:
+        proves_send_and_assert_command(
+            fprime_test_api, f"{radio}.TRANSMIT", ["DISABLED"]
+        )
 
 
 # ---------------------------------------------------------------------------
