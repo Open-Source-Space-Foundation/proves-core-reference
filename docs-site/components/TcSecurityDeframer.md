@@ -20,9 +20,13 @@ Component state is the last accepted sequence number and the on-flash key store 
 
 The HMAC authentication key is **never compiled into the firmware image** (issue #220). It is persisted at `KEY_STORE_FILE_PATH` (default `/keys/authkeys.bin`) on a dedicated littlefs `keystore_partition` on internal flash, holding up to 2 slots (`{valid, spi, key}`). `configure()` loads the store and imports every valid slot into PSA; a missing/empty store is not an error — a keyless board still boots so it can be provisioned. The sequence-number file lives on the same partition (`SEQ_NUM_FILE_PATH`, default `/keys/sequence_number.bin`).
 
-The store is shared across all `TcSecurityDeframer` instances (UART/LoRa/Sband): on an unknown SPI, `dataIn_handler` reloads the store from disk once and retries validation before rejecting the frame, so a rotation issued over one link is picked up by the others without a separate command per link.
+The store is shared across all `TcSecurityDeframer` instances (UART/LoRa/Sband): on an unknown SPI, `dataIn_handler` reloads the store from disk once and retries validation before rejecting the frame, so a rotation issued over one link is picked up by the others without a separate command per link. That reload is gated on a process-wide generation counter bumped by every successful store write: SPI validation runs before MAC verification, so the path is reachable by unauthenticated frames, and without the gate a stream of bogus-SPI frames would drive a flash read plus a full PSA re-import per frame on the com thread while holding the lock shared by all three uplinks.
 
-Three commands manage the store (see [Commands](#commands)): `PROVISION_KEY` (bootstrap, only while the store is empty), `ADD_KEY` (rotation, fails at 2 active keys), and `REMOVE_KEY` (rotation, fails at 1 remaining key). All three re-import the store into PSA and update `ActiveKeyCount` telemetry on success.
+Three commands manage the store (see [Commands](#commands)): `PROVISION_KEY` (bootstrap, only while the store is empty), `ADD_KEY` (rotation, fails at 2 active keys), and `REMOVE_KEY` (rotation, fails at 1 remaining key). All three re-read the store from flash first, then re-import it into PSA and update `ActiveKeyCount` telemetry on success.
+
+All three also refuse to act (`StoreUnreadable`) when that re-read fails with anything other than "file does not exist", because the store's contents are then unknown. For `ADD_KEY`/`REMOVE_KEY` that prevents a read-modify-write from persisting a stale guess over the real store. For `PROVISION_KEY` it is a security property: the command is bypass-allowlisted so it works on a keyless board, so trust-on-first-use must be gated on *proof* that the store is empty. Treating an unreadable store as keyless would let anyone in radio range induce a read failure and install their own key while a valid one still sits on flash.
+
+`REMOVE_KEY` zeroizes the revoked slot's key bytes before persisting, so a removed key is not recoverable from the on-flash record; the slot is restored if the durable write fails.
 
 Primary data path connections:
 
@@ -121,7 +125,7 @@ The MAC is HMAC-SHA-256 truncated to 16 bytes, computed over the Security Header
 ## Behavior
 
 1. Parse the Security Header and Trailer. If the frame is too short to contain them it cannot be stripped for downstream deframing: log ParsingFailed and return the buffer upstream (drop).
-2. Validate the SPI (must match a valid slot in the active key store — see [Key Storage](#key-storage)) and the anti-replay sequence number (must be strictly ahead of the last accepted value, within SEQ_NUM_WINDOW, with U32 wraparound handled). On an unknown SPI, the key store is reloaded from disk once and validation retried, so a rotation issued over another link is picked up here.
+2. Validate the SPI (must match a valid slot in the active key store — see [Key Storage](#key-storage)) and the anti-replay sequence number (must be strictly ahead of the last accepted value, within SEQ_NUM_WINDOW, with U32 wraparound handled). On an unknown SPI, the key store is reloaded from disk once and validation retried — but only if another instance has written the store since this one last read it — so a rotation issued over another link is picked up here without letting unauthenticated frames drive repeated flash reads.
 3. If validation passes, look up the PSA key id for the packet's SPI and verify the MAC with it.
 4. Only when all checks pass: store and persist the received sequence number, telemeter it, and set `authenticated = true` in the frame context. Frames failing any check never advance the sequence number (issue #426).
 5. Strip the Security Header and Trailer and forward on dataOut with the resulting `authenticated` flag. ProvesRouter rejects unauthenticated packets unless their opcode is on the bypass allowlist.
@@ -171,11 +175,11 @@ Routed/bypassed/rejected packet counts are telemetered by ProvesRouter, which ow
 | KeyStoreReadFailed | Warning High (throttle 2) | status: Os.FileStatus | Logged when the key store read fails (not thrown for a missing file — that's the keyless state). Format: "Failed to read key store, error: {}" |
 | KeyStoreWriteFailed | Warning High (throttle 2) | status: Os.FileStatus | Logged when the key store write fails. Format: "Failed to write key store, error: {}" |
 | KeyProvisioned | Activity High | spi: U16 | Logged by PROVISION_KEY on success. Format: "Key provisioned for SPI={}" |
-| KeyProvisionFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when PROVISION_KEY fails (store not empty, bad hex key, or write failure). Format: "Key provisioning failed: {}" |
+| KeyProvisionFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when PROVISION_KEY fails (store not empty, unreadable store, bad hex key, write failure, or PSA import failure). Format: "Key provisioning failed: {}" |
 | KeyAdded | Activity High | spi: U16 | Logged by ADD_KEY on success. Format: "Key added for SPI={}" |
-| KeyAddFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when ADD_KEY fails (store full, bad hex key, or write failure). Format: "Key add failed: {}" |
+| KeyAddFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when ADD_KEY fails (store full, duplicate SPI, unreadable store, bad hex key, write failure, or PSA import failure). Format: "Key add failed: {}" |
 | KeyRemoved | Activity High | spi: U16 | Logged by REMOVE_KEY on success. Format: "Key removed for SPI={}" |
-| KeyRemoveFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when REMOVE_KEY fails (last remaining key, SPI not found, or write failure). Format: "Key remove failed: {}" |
+| KeyRemoveFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when REMOVE_KEY fails (last remaining key, SPI not found, unreadable store, write failure, or PSA import failure). Format: "Key remove failed: {}" |
 
 ## Commands
 

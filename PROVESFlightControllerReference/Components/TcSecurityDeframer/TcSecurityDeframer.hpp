@@ -166,6 +166,10 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     Fw::String m_keyStoreFilePath;          //!< File path where the key store is stored
     AuthKeyStore m_keyStore;                //!< The active key store, up to 2 slots
     uint32_t m_keyIds[AuthKeyStore::SIZE];  //!< PSA key ids parallel to m_keyStore, valid iff the slot is valid
+    //! Value of keyStoreGeneration() when m_keyStore was last read from flash. Lets an unknown-SPI
+    //! frame tell "another instance rotated the store" from "this SPI is simply not ours" without
+    //! re-reading flash. Initialized to a sentinel no generation takes, so the first check reloads.
+    U32 m_keyStoreGeneration;
 };
 
 }  // namespace Components

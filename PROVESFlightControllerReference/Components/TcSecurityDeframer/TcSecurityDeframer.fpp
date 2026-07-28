@@ -35,6 +35,7 @@ module Components {
         WriteError,   @< The updated store could not be written to the file system
         ImportError,  @< The updated key could not be imported into PSA
         DuplicateSpi, @< ADD_KEY was rejected because a slot already holds the given SPI
+        StoreUnreadable, @< The store could not be read back, so its contents are unknown
     }
 
     @ Component placed between the TcDeframer and SpacePacketDeframer components. It

@@ -50,14 +50,16 @@ def exit_safe_mode(fprime_test_api: IntegrationTestAPI) -> None:
     EXIT_SAFE_MODE first clears the condition long enough for a short test to
     run (auto-entry re-arms only after SafeModeDebounceSeconds).
 
-    Best-effort: EXIT_SAFE_MODE is a no-op when the board is already in NORMAL,
-    and a failure here should surface as the real test's failure, not as a
-    setup error.
+    EXIT_SAFE_MODE is a no-op that still responds OK when the board is already
+    in NORMAL, so the command completing is a meaningful precondition rather
+    than something to swallow: if it never lands, deployment stays inhibited and
+    the face load switches stay off, and the caller's real assertion fails for a
+    reason that has nothing to do with what it was testing.  Asserting here (with
+    the usual retries) points at the actual cause.
     """
-    try:
-        fprime_test_api.send_command("ReferenceDeployment.modeManager.EXIT_SAFE_MODE")
-    except Exception:  # noqa: BLE001 - advisory only; the test itself is the assertion
-        pass
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.modeManager.EXIT_SAFE_MODE"
+    )
 
 
 def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:

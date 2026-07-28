@@ -21,6 +21,11 @@ enum class KeyImportStatus {
     ImportKeyError,  //!< There was an error importing the authentication key
 };
 
+//! Mirror of PSA_SUCCESS, so callers can check a psaStatus without including <psa/crypto.h>
+//! (this header is part of the pure-C++ layer covered by the gtest unit tests). Authenticator.cpp
+//! static_asserts that it still matches.
+constexpr int32_t kPsaSuccess = 0;
+
 struct KeyImportResult {
     KeyImportStatus status;  //!< The status of the key import attempt
     int32_t psaStatus;       //!< The status code returned by the PSA crypto functions
@@ -59,7 +64,9 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key,  //!< The he
 );
 
 //! Destroy a previously-imported PSA key. Used to release the old key on rotation.
-void destroyHmacKey(uint32_t keyId  //!< The PSA key ID to destroy
+//! Returns the PSA status: a failed destroy leaves the old key usable in PSA, which the caller
+//! must not silently treat as a released slot.
+int32_t destroyHmacKey(uint32_t keyId  //!< The PSA key ID to destroy
 );
 
 //! Check the validity of the packet HMAC

@@ -19,6 +19,44 @@ _SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
 SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
 
 
+# The flight side (Authenticator.cpp parseHexKey) accepts exactly a 128-bit key as 32 hex
+# characters. Anything else either blows up later in bytes.fromhex() during framing or produces
+# frames the board silently rejects, so both key sources are normalized and checked here instead.
+AUTH_KEY_HEX_LENGTH = 32
+
+
+def normalize_auth_key(key: str, source: str) -> str:
+    """Strip any 0x prefix and validate the key is exactly 128 bits of hex.
+
+    Args:
+        key: The key as supplied by the operator
+        source: Where it came from, for the error message
+
+    Returns:
+        The key as 32 hex characters, without 0x prefix
+
+    Raises:
+        ValueError: If the key is not exactly 32 hexadecimal characters
+    """
+    normalized = key.strip()
+    if normalized[:2].lower() == "0x":
+        normalized = normalized[2:]
+
+    if len(normalized) != AUTH_KEY_HEX_LENGTH:
+        raise ValueError(
+            f"Authentication key from {source} is {len(normalized)} hex characters; "
+            f"expected exactly {AUTH_KEY_HEX_LENGTH} (a 128-bit key)."
+        )
+    try:
+        bytes.fromhex(normalized)
+    except ValueError as exc:
+        raise ValueError(
+            f"Authentication key from {source} is not valid hexadecimal: {exc}"
+        ) from exc
+
+    return normalized
+
+
 def get_auth_key_from_env() -> str:
     """
     Read the authentication key from the PROVES_AUTH_KEY environment variable.
@@ -31,7 +69,7 @@ def get_auth_key_from_env() -> str:
         Authentication key as a hex string (without 0x prefix) from PROVES_AUTH_KEY
 
     Raises:
-        ValueError: If PROVES_AUTH_KEY is not set
+        ValueError: If PROVES_AUTH_KEY is unset or not a 128-bit hex key
     """
     key = os.environ.get("PROVES_AUTH_KEY")
     if not key:
@@ -41,9 +79,7 @@ def get_auth_key_from_env() -> str:
             "onto the satellite with the PROVISION_KEY command and is never "
             "compiled into the flight image."
         )
-    if key.startswith("0x") or key.startswith("0X"):
-        key = key[2:]
-    return key
+    return normalize_auth_key(key, "the PROVES_AUTH_KEY environment variable")
 
 
 # pragma: no cover
@@ -78,9 +114,15 @@ class AuthenticateFramer(FramerDeframer):
         self.spi = spi
         self.window_size = window_size
         self.authentication_type = authentication_type
-        # Use provided key or read from the PROVES_AUTH_KEY environment variable
+        # Use provided key or read from the PROVES_AUTH_KEY environment variable. Either way the
+        # key is validated up front, so a malformed key fails at startup with a clear message
+        # rather than mid-run inside frame().
         if authentication_key is None:
             authentication_key = get_auth_key_from_env()
+        else:
+            authentication_key = normalize_auth_key(
+                authentication_key, "--authentication-key"
+            )
         self.authentication_key = authentication_key
 
     def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
@@ -130,12 +172,9 @@ class AuthenticateFramer(FramerDeframer):
 
         # Security Trailer of 16 octets in length (TM Baseline)
         # the output MAC is 2*128 bits in total length. (32 bytes)
-        # Convert hex string to bytes (16 bytes)
-        # Keys are stored without 0x prefix, but handle it if present for backward compatibility
-        key_hex = self.authentication_key
-        if key_hex.startswith("0x") or key_hex.startswith("0X"):
-            key_hex = key_hex[2:]
-        key = bytes.fromhex(key_hex)
+        # Convert hex string to bytes (16 bytes). The key was normalized and validated in
+        # __init__, so this cannot fail here.
+        key = bytes.fromhex(self.authentication_key)
 
         hmac_object = hmac.new(key, data, hashlib.sha256)
 

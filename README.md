@@ -154,6 +154,14 @@ If you regenerate/replace the bootloader (or switch computers and flash a bootlo
 
 You also want to make sure the authentication key the gds runs with is the same as the authentication key provisioned on the board. The board's key lives in its on-flash key store (never in the image); ground reads its key from the `--authentication-key` CLI arg or the `PROVES_AUTH_KEY` env var. Make sure these match the key you provisioned with `PROVISION_KEY`/`ADD_KEY`.
 
+The board holds up to two active keys so a rotation never leaves you locked out. Ground uses exactly one key at a time (whichever `--authentication-key`/`PROVES_AUTH_KEY` it was started with), so rotate in this order:
+
+1. Keep running GDS with the **old** key and send `ADD_KEY(new_spi, new_key)` — the command itself has to authenticate under the old key.
+2. Restart GDS with the **new** key (and `--spi new_spi`), and confirm commands are accepted.
+3. Only then send `REMOVE_KEY(old_spi)`, authenticated under the new key.
+
+Doing step 3 before step 2 works too, but leaves nothing to fall back on if the new key turns out to be wrong. `REMOVE_KEY` refuses to remove the last remaining key.
+
 ## Running Integration Tests
 
 First, start GDS with:

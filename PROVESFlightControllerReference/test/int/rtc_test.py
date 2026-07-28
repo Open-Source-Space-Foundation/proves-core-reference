@@ -110,7 +110,7 @@ def uplink_sequence_and_await_completion(
         # with FileOpenError before the mkdir lands.  Wait for the command to
         # resolve either way first - "already exists" comes back as
         # DirectoryCreateError, which is just as good for our purposes.
-        fprime_test_api.await_event(
+        create_evt = fprime_test_api.await_event(
             is_a_member_of(
                 [
                     fprime_test_api.translate_event_name(
@@ -122,6 +122,12 @@ def uplink_sequence_and_await_completion(
                 ]
             ),
             timeout=timeout,
+        )
+        # Falling through on a timeout would put us back in the race this wait exists to close,
+        # and report it as a confusing FileOpenError/FileReceived timeout further downstream.
+        assert create_evt is not None, (
+            "No CreateDirectorySucceeded/DirectoryCreateError from "
+            f"{fileManager} within {timeout}s of CreateDirectory"
         )
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)

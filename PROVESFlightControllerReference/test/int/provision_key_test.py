@@ -11,8 +11,11 @@ rather than a failure, since the store already holds the CI secret key.
 """
 
 import os
+import random
+import time
 
 import pytest
+from common import FIB_BACKOFF
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import is_a_member_of
@@ -50,17 +53,27 @@ def test_provision_key(
         fprime_test_api.translate_event_name(f"{deframer}.KeyProvisionFailed"),
     ]
 
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_command(f"{deframer}.PROVISION_KEY", ["0", key])
+    # Every authenticated test downstream depends on this one, so a single dropped uplink must not
+    # fail the whole provisioning gate. proves_send_and_assert_command can't be used here (the
+    # outcome is an either/or event pair, and a command response alone doesn't tell us which), so
+    # retry by hand on the same Fibonacci backoff it uses to absorb LoRa's half-duplex collisions.
+    evt: EventData | None = None
+    for attempt in range(len(FIB_BACKOFF)):
+        fprime_test_api.clear_histories()
+        fprime_test_api.send_command(f"{deframer}.PROVISION_KEY", ["0", key])
 
-    evt: EventData = fprime_test_api.await_event(
-        is_a_member_of(outcome_ids),
-        timeout=10,
-    )
+        evt = fprime_test_api.await_event(
+            is_a_member_of(outcome_ids),
+            timeout=10,
+        )
+        if evt is not None:
+            break
+
+        time.sleep(FIB_BACKOFF[attempt] * random.uniform(0.5, 1.5))
 
     assert evt is not None, (
-        f"No KeyProvisioned/KeyProvisionFailed event from {deframer} within 10s of "
-        "PROVISION_KEY; the command may not have reached the board"
+        f"No KeyProvisioned/KeyProvisionFailed event from {deframer} after "
+        f"{len(FIB_BACKOFF)} PROVISION_KEY attempts; the command may not be reaching the board"
     )
 
     if evt.template.get_full_name().endswith("KeyProvisionFailed"):

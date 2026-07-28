@@ -10,6 +10,8 @@
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
 #include <Os/FileSystem.hpp>
+#include <cstring>
+#include <limits>
 #include <utility>
 
 #include "Authenticator.hpp"
@@ -36,6 +38,18 @@ Os::Mutex& keyStoreLock() {
     return lock;
 }
 
+//! Counter bumped by every successful writeKeyStore(), read under keyStoreLock().
+//!
+//! An instance whose in-memory copy is at the current generation knows no one has rewritten the
+//! store since it last read, so an unknown SPI really is unknown and needs no flash read. Without
+//! this, any unauthenticated frame carrying a bogus SPI - SPI validation runs before MAC
+//! verification - would drive a littlefs read plus a full PSA destroy/re-import of every slot, on
+//! the com thread, holding the lock shared by all three uplinks.
+U32& keyStoreGeneration() {
+    static U32 generation = 0;
+    return generation;
+}
+
 }  // namespace
 
 // ----------------------------------------------------------------------
@@ -49,7 +63,10 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
       m_sequenceNumberWindow(0),
       m_keyStoreFilePath(),
       m_keyStore(),
-      m_keyIds{0} {}
+      m_keyIds{0},
+      // Sentinel: no generation ever takes this value, so the first unknown-SPI check reloads even
+      // if configure() has not run.
+      m_keyStoreGeneration(std::numeric_limits<U32>::max()) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -86,11 +103,18 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
         PacketValidator::Status validationStatus = validatePacket(parseResult.securityHeader, this->m_sequenceNumber,
                                                                   this->m_sequenceNumberWindow, this->activeSpiSlots());
 
-        if (validationStatus == PacketValidator::Status::SpiInvalid) {
+        if (validationStatus == PacketValidator::Status::SpiInvalid &&
+            this->m_keyStoreGeneration != keyStoreGeneration()) {
             // The key store is shared across all TcSecurityDeframer instances (UART/LoRa/Sband).
             // A rotation issued over one link is picked up here so the others don't need their
             // own commands re-run: reload from disk once and retry before giving up.
-            this->loadKeyStore();
+            //
+            // Gated on the generation counter because this path is reachable by an unauthenticated
+            // frame: SPI validation runs before MAC verification, so without the gate a stream of
+            // bogus-SPI frames would serialize all three uplinks behind a flash read and a full PSA
+            // re-import per frame. Every writer of the store is in this process and bumps the
+            // counter under the same lock, so the reload is exact and free in the common case.
+            (void)this->loadKeyStore();
             validationStatus = validatePacket(parseResult.securityHeader, this->m_sequenceNumber,
                                               this->m_sequenceNumberWindow, this->activeSpiSlots());
         }
@@ -200,7 +224,19 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
     // Refresh from disk before inspecting the store: this instance's in-memory copy may predate a
     // rotation issued over another link, and the trust-on-first-use check below is only meaningful
     // against the store that is actually on flash.
-    (void)this->loadKeyStore();
+    const Os::File::Status loadStatus = this->loadKeyStore();
+
+    // Trust-on-first-use must be gated on proof that the store is empty, not merely on the absence
+    // of a key we managed to read. PROVISION_KEY is bypass-allowlisted so it works on a keyless
+    // board, so if an unreadable store (a truncated record reading back as BAD_SIZE, a littlefs
+    // error, a mount not ready yet) counted as "keyless", anyone in radio range could induce a read
+    // failure and install their own key while a valid one still sits on flash. DOESNT_EXIST is the
+    // one failure that *is* proof of emptiness.
+    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+        this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::StoreUnreadable);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
     // PROVISION_KEY is trust-on-first-use bootstrap: only honored while the store is empty.
     // Once any key exists, rotation must go through ADD_KEY/REMOVE_KEY (which require auth).
@@ -212,6 +248,9 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
 
     uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
     if (!parseHexKey(key.toChar(), keyBytes)) {
+        // parseHexKey fills the buffer as it scans, so a key rejected part-way through leaves a
+        // prefix of real key bytes behind on this stack frame.
+        mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
         this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::ParseKeyError);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -225,6 +264,9 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
 
     if (this->writeKeyStore() != Os::File::OP_OK) {
         this->m_keyStore[0].set_valid(false);
+        // Don't leave the rejected key's bytes in an invalid slot: a later successful write would
+        // persist them to flash.
+        mbedtls_platform_zeroize(this->m_keyStore[0].get_key(), sizeof(AuthKeySlot::Type_of_key));
         this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::WriteError);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -251,7 +293,16 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
     // Refresh from disk before the read-modify-write below. Without this, an instance whose
     // in-memory store predates a rotation issued over another link would write its stale copy
     // back, resurrecting a revoked key on flash and dropping the current one.
-    (void)this->loadKeyStore();
+    const Os::File::Status loadStatus = this->loadKeyStore();
+
+    // If the store could not be read back, its contents are unknown, and the read-modify-write
+    // below would persist a guess: writing the last in-memory copy over whatever is actually on
+    // flash. Refuse rather than risk dropping a live key.
+    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+        this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::StoreUnreadable);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
     const U8 count = this->activeKeyCount();
     if (count >= AuthKeyStore::SIZE) {
@@ -270,6 +321,8 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
 
     uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
     if (!parseHexKey(key.toChar(), keyBytes)) {
+        // See PROVISION_KEY: a partially-parsed key leaves real key bytes on the stack.
+        mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
         this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::ParseKeyError);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -293,6 +346,8 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
 
     if (this->writeKeyStore() != Os::File::OP_OK) {
         this->m_keyStore[emptySlot].set_valid(false);
+        // See PROVISION_KEY: an invalid slot must not carry key bytes into a later write.
+        mbedtls_platform_zeroize(this->m_keyStore[emptySlot].get_key(), sizeof(AuthKeySlot::Type_of_key));
         this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::WriteError);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -317,7 +372,14 @@ void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
     // Refresh from disk before the read-modify-write below, for the same reason as ADD_KEY. This
     // also keeps the LastKey and SpiNotFound rejections below truthful against the current store
     // rather than a stale copy.
-    (void)this->loadKeyStore();
+    const Os::File::Status loadStatus = this->loadKeyStore();
+
+    // See ADD_KEY: an unreadable store makes the read-modify-write a guess.
+    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+        this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::StoreUnreadable);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
     if (this->activeKeyCount() <= 1) {
         this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::LastKey);
@@ -339,10 +401,24 @@ void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
         return;
     }
 
-    this->m_keyStore[targetSlot].set_valid(false);
+    // Clearing `valid` alone would leave the revoked key's raw bytes in the fixed-layout record on
+    // flash, recoverable by anyone who can read the partition. Wipe the slot's key material too,
+    // keeping a copy only long enough to restore the slot if the durable write fails.
+    uint8_t revokedKey[Ccsds355_0_B_2::kTCSecurityTrailer];
+    static_assert(sizeof(revokedKey) == sizeof(AuthKeySlot::Type_of_key), "key slot size mismatch");
+    std::memcpy(revokedKey, this->m_keyStore[targetSlot].get_key(), sizeof revokedKey);
 
-    if (this->writeKeyStore() != Os::File::OP_OK) {
+    this->m_keyStore[targetSlot].set_valid(false);
+    mbedtls_platform_zeroize(this->m_keyStore[targetSlot].get_key(), sizeof(AuthKeySlot::Type_of_key));
+
+    const Os::File::Status writeStatus = this->writeKeyStore();
+    if (writeStatus != Os::File::OP_OK) {
+        this->m_keyStore[targetSlot].set_key(revokedKey);
         this->m_keyStore[targetSlot].set_valid(true);
+    }
+    mbedtls_platform_zeroize(revokedKey, sizeof revokedKey);
+
+    if (writeStatus != Os::File::OP_OK) {
         this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::WriteError);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -457,6 +533,11 @@ Os::File::Status TcSecurityDeframer ::loadKeyStore() {
         this->log_WARNING_HI_KeyStoreReadFailed(static_cast<Os::FileStatus::T>(status));
     }
 
+    // m_keyStore now reflects the store as of this generation, whether or not the read succeeded:
+    // on a failure a retry would read the same bytes, so re-reading per frame buys nothing. The
+    // next writer bumps the generation and forces a fresh attempt.
+    this->m_keyStoreGeneration = keyStoreGeneration();
+
     // Import failures are surfaced to the operator by the command handlers, which call
     // importKeyStore() directly; a reload has no command context to report into.
     (void)this->importKeyStore();
@@ -496,22 +577,33 @@ Os::File::Status TcSecurityDeframer ::writeKeyStore() {
         this->log_WARNING_HI_KeyStoreWriteFailed(static_cast<Os::FileStatus::T>(status));
     } else {
         this->log_WARNING_HI_KeyStoreWriteFailed_ThrottleClear();
+        // Tell the other instances their copy is stale, and record that ours is not: m_keyStore is
+        // exactly what was just written.
+        keyStoreGeneration()++;
+        this->m_keyStoreGeneration = keyStoreGeneration();
     }
 
     return status;
 }
 
 bool TcSecurityDeframer ::importKeyStore() {
+    bool allImported = true;
+
     // Release any previously-imported keys before re-importing, so rotation (and reloads that
     // pick up another link's rotation) never leaves a stale key importable in PSA.
     for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
         if (this->m_keyIds[i] != 0) {
-            destroyHmacKey(this->m_keyIds[i]);
+            // A failed destroy leaves the old key live in PSA, so the slot is not actually
+            // recycled. Nothing more can be done here, but the caller must not report success:
+            // on REMOVE_KEY in particular that would tell the operator a key is revoked when it
+            // can still authenticate frames.
+            if (destroyHmacKey(this->m_keyIds[i]) != PacketAuthenticator::kPsaSuccess) {
+                allImported = false;
+            }
             this->m_keyIds[i] = 0;
         }
     }
 
-    bool allImported = true;
     for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
         if (!this->m_keyStore[i].get_valid()) {
             continue;

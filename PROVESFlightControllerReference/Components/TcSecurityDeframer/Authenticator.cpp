@@ -11,6 +11,9 @@
 #include <cstring>
 
 namespace Components {
+
+static_assert(PacketAuthenticator::kPsaSuccess == PSA_SUCCESS, "kPsaSuccess must mirror PSA_SUCCESS");
+
 namespace {
 
 constexpr size_t kKeyHexLength =
@@ -103,8 +106,8 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& ke
     return result;
 }
 
-void destroyHmacKey(uint32_t keyId) {
-    (void)psa_destroy_key(keyId);
+int32_t destroyHmacKey(uint32_t keyId) {
+    return psa_destroy_key(keyId);
 }
 
 PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* dataBuffer,
