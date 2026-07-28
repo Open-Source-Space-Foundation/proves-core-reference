@@ -65,6 +65,9 @@ module Components {
         @ Port for dispatching the safe mode command sequence
         output port runSequence: Svc.CmdSeqIn
 
+        @ Passthrough of safeModeSeq.seqDone for listeners that also need completion status
+        output port sequenceDoneNotify: Fw.CmdResponse
+
         @ Ports to turn on LoadSwitch instances (6 face switches + 2 payload switches)
         output port loadSwitchTurnOn: [8] Fw.Signal
 
