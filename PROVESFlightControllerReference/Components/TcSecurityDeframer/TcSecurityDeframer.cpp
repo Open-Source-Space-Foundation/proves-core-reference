@@ -5,8 +5,11 @@
 
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframer.hpp"
 
+#include <mbedtls/platform_util.h>
+
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
+#include <Os/FileSystem.hpp>
 #include <utility>
 
 #include "Authenticator.hpp"
@@ -14,6 +17,26 @@
 #include "Types.hpp"
 
 namespace Components {
+
+namespace {
+
+//! Mutex protecting the key store, shared by every TcSecurityDeframer instance.
+//!
+//! All three instances (UART/LoRa/Sband) back onto a single key store file, so this cannot be a
+//! per-instance member: without a shared lock, a PROVISION_KEY/ADD_KEY on one instance's command
+//! thread can rewrite the file while another instance's dataIn_handler is reading it on the com
+//! thread, which at worst yields a half-old/half-new fixed-layout record whose valid byte is set
+//! but whose key bytes are mixed. It also guards each instance's in-memory m_keyStore/m_keyIds,
+//! which is per-instance state; one lock covering both is sufficient and keeps the lock order
+//! simple, since contention here is limited to key rotation and SPI misses.
+//!
+//! Function-local static so initialization order relative to component construction is defined.
+Os::Mutex& keyStoreLock() {
+    static Os::Mutex lock;
+    return lock;
+}
+
+}  // namespace
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
@@ -56,7 +79,7 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
     {
         // Lock order: key store lock, then sequence number lock. Every other handler that takes
         // both locks (none currently do) must follow the same order to avoid deadlock.
-        Os::ScopeLock keyLock(this->m_keyStoreLock);
+        Os::ScopeLock keyLock(keyStoreLock());
         Os::ScopeLock seqLock(this->m_sequenceNumberLock);
 
         // --- Validate SPI and anti-replay sequence number ---
@@ -172,7 +195,12 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
                                                    U32 cmdSeq,
                                                    U16 spi,
                                                    const Fw::CmdStringArg& key) {
-    Os::ScopeLock lock(this->m_keyStoreLock);
+    Os::ScopeLock lock(keyStoreLock());
+
+    // Refresh from disk before inspecting the store: this instance's in-memory copy may predate a
+    // rotation issued over another link, and the trust-on-first-use check below is only meaningful
+    // against the store that is actually on flash.
+    (void)this->loadKeyStore();
 
     // PROVISION_KEY is trust-on-first-use bootstrap: only honored while the store is empty.
     // Once any key exists, rotation must go through ADD_KEY/REMOVE_KEY (which require auth).
@@ -192,6 +220,8 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
     this->m_keyStore[0].set_valid(true);
     this->m_keyStore[0].set_spi(spi);
     this->m_keyStore[0].set_key(keyBytes);
+    // The key now lives in m_keyStore; drop the plaintext copy from this stack frame.
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
 
     if (this->writeKeyStore() != Os::File::OP_OK) {
         this->m_keyStore[0].set_valid(false);
@@ -200,18 +230,40 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
         return;
     }
 
-    this->importKeyStore();
+    // The store is durable at this point. A PSA import failure is reported but not rolled back:
+    // the key stays on flash so a reboot or a later reload can retry the import, and discarding a
+    // key the operator may not be able to re-send would be the worse outcome.
+    const bool imported = this->importKeyStore();
     this->tlmWrite_ActiveKeyCount(this->activeKeyCount());
+    if (!imported) {
+        this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::ImportError);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
     this->log_ACTIVITY_HI_KeyProvisioned(spi);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 spi, const Fw::CmdStringArg& key) {
-    Os::ScopeLock lock(this->m_keyStoreLock);
+    Os::ScopeLock lock(keyStoreLock());
+
+    // Refresh from disk before the read-modify-write below. Without this, an instance whose
+    // in-memory store predates a rotation issued over another link would write its stale copy
+    // back, resurrecting a revoked key on flash and dropping the current one.
+    (void)this->loadKeyStore();
 
     const U8 count = this->activeKeyCount();
     if (count >= AuthKeyStore::SIZE) {
         this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::StoreFull);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
+    // Two slots with the same SPI are unusable: findKeyIdForSpi only ever returns the first match,
+    // so the new key would authenticate nothing while REMOVE_KEY would clear only one of the two.
+    if (this->hasSpi(spi)) {
+        this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::DuplicateSpi);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
@@ -236,6 +288,8 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
     this->m_keyStore[emptySlot].set_valid(true);
     this->m_keyStore[emptySlot].set_spi(spi);
     this->m_keyStore[emptySlot].set_key(keyBytes);
+    // The key now lives in m_keyStore; drop the plaintext copy from this stack frame.
+    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
 
     if (this->writeKeyStore() != Os::File::OP_OK) {
         this->m_keyStore[emptySlot].set_valid(false);
@@ -244,14 +298,26 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
         return;
     }
 
-    this->importKeyStore();
+    // See PROVISION_KEY: a durable store with a failed import is reported, not rolled back.
+    const bool imported = this->importKeyStore();
     this->tlmWrite_ActiveKeyCount(this->activeKeyCount());
+    if (!imported) {
+        this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::ImportError);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
     this->log_ACTIVITY_HI_KeyAdded(spi);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 spi) {
-    Os::ScopeLock lock(this->m_keyStoreLock);
+    Os::ScopeLock lock(keyStoreLock());
+
+    // Refresh from disk before the read-modify-write below, for the same reason as ADD_KEY. This
+    // also keeps the LastKey and SpiNotFound rejections below truthful against the current store
+    // rather than a stale copy.
+    (void)this->loadKeyStore();
 
     if (this->activeKeyCount() <= 1) {
         this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::LastKey);
@@ -282,8 +348,16 @@ void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
         return;
     }
 
-    this->importKeyStore();
+    // See PROVISION_KEY: a durable store with a failed import is reported, not rolled back. On
+    // removal the failure can only concern the surviving slot(s), which are re-imported here.
+    const bool imported = this->importKeyStore();
     this->tlmWrite_ActiveKeyCount(this->activeKeyCount());
+    if (!imported) {
+        this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::ImportError);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
     this->log_ACTIVITY_HI_KeyRemoved(spi);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -318,7 +392,7 @@ void TcSecurityDeframer ::configure() {
     }
 
     {
-        Os::ScopeLock lock(this->m_keyStoreLock);
+        Os::ScopeLock lock(keyStoreLock());
 
         // Get the key store file path from the parameter
         this->m_keyStoreFilePath = this->paramGet_KEY_STORE_FILE_PATH(is_valid);
@@ -383,12 +457,41 @@ Os::File::Status TcSecurityDeframer ::loadKeyStore() {
         this->log_WARNING_HI_KeyStoreReadFailed(static_cast<Os::FileStatus::T>(status));
     }
 
-    this->importKeyStore();
+    // Import failures are surfaced to the operator by the command handlers, which call
+    // importKeyStore() directly; a reload has no command context to report into.
+    (void)this->importKeyStore();
     return status;
 }
 
 Os::File::Status TcSecurityDeframer ::writeKeyStore() {
-    Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_keyStoreFilePath.toChar(), this->m_keyStore);
+    // Write to a temp file, flush, then rename over the target - the same pattern as
+    // StartupManager::persist_boot_count, and for a more serious failure mode. Overwriting the
+    // live store in place meant a reset mid-write (e.g. the watchdog power cycle used for
+    // command-loss recovery) could leave a truncated file, which reads back as BAD_SIZE and boots
+    // the board keyless with no authenticated way back in. The rename is not guaranteed power-cut
+    // atomic on the flight FS, but the new store is fully written and flushed before it replaces
+    // the old one, so the worst case shrinks to a missing file during the rename window.
+    Fw::String tempPath(this->m_keyStoreFilePath);
+    tempPath += ".tmp";
+
+    Os::File file;
+    Os::File::Status status =
+        file.open(tempPath.toChar(), Os::File::Mode::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE);
+    if (status == Os::File::OP_OK) {
+        status = Utilities::FileHelper::writeToFile(file, this->m_keyStore);
+        if (status == Os::File::OP_OK) {
+            // close() returns void and cannot report a flush failure, so flush explicitly before
+            // the rename makes the new store authoritative.
+            status = file.flush();
+        }
+        (void)file.close();
+    }
+
+    if (status == Os::File::OP_OK &&
+        Os::FileSystem::rename(tempPath.toChar(), this->m_keyStoreFilePath.toChar()) != Os::FileSystem::OP_OK) {
+        status = Os::File::OTHER_ERROR;
+    }
+
     if (status != Os::File::OP_OK) {
         this->log_WARNING_HI_KeyStoreWriteFailed(static_cast<Os::FileStatus::T>(status));
     } else {
@@ -398,7 +501,7 @@ Os::File::Status TcSecurityDeframer ::writeKeyStore() {
     return status;
 }
 
-void TcSecurityDeframer ::importKeyStore() {
+bool TcSecurityDeframer ::importKeyStore() {
     // Release any previously-imported keys before re-importing, so rotation (and reloads that
     // pick up another link's rotation) never leaves a stale key importable in PSA.
     for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
@@ -408,6 +511,7 @@ void TcSecurityDeframer ::importKeyStore() {
         }
     }
 
+    bool allImported = true;
     for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
         if (!this->m_keyStore[i].get_valid()) {
             continue;
@@ -417,17 +521,32 @@ void TcSecurityDeframer ::importKeyStore() {
         const PacketAuthenticator::KeyImportResult result = importHmacKeyBytes(this->m_keyStore[i].get_key(), keyId);
         if (result.status == PacketAuthenticator::KeyImportStatus::Success) {
             this->m_keyIds[i] = keyId;
+        } else {
+            // The slot stays without a usable PSA key id, so findKeyIdForSpi will miss it and every
+            // frame for that SPI fails authentication. The store on disk is unaffected, so a
+            // subsequent reload/rotation can recover once the underlying PSA issue clears - but the
+            // caller must not report success, or the operator would believe a key is live that the
+            // board cannot actually use.
+            allImported = false;
         }
-        // On import failure the slot stays without a usable PSA key id; the store on disk is
-        // unaffected, so a subsequent reload/rotation can recover once the underlying PSA issue
-        // clears.
     }
+
+    return allImported;
 }
 
 bool TcSecurityDeframer ::findKeyIdForSpi(uint32_t spi, uint32_t& keyId) const {
     for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
         if (this->m_keyStore[i].get_valid() && this->m_keyStore[i].get_spi() == spi && this->m_keyIds[i] != 0) {
             keyId = this->m_keyIds[i];
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TcSecurityDeframer ::hasSpi(uint16_t spi) const {
+    for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
+        if (this->m_keyStore[i].get_valid() && this->m_keyStore[i].get_spi() == spi) {
             return true;
         }
     }

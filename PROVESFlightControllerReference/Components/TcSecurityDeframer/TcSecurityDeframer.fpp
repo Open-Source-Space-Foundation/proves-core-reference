@@ -34,6 +34,7 @@ module Components {
         ParseKeyError,  @< The supplied key was not a valid 32-character hex string
         WriteError,   @< The updated store could not be written to the file system
         ImportError,  @< The updated key could not be imported into PSA
+        DuplicateSpi, @< ADD_KEY was rejected because a slot already holds the given SPI
     }
 
     @ Component placed between the TcDeframer and SpacePacketDeframer components. It

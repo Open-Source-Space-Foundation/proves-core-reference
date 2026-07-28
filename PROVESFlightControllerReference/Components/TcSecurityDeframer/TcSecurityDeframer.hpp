@@ -119,26 +119,31 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     );
 
     //! Loads the key store from the file system into m_keyStore and (re)imports every valid slot
-    //! into PSA, destroying any previously-imported keys first. Must be called with m_keyStoreLock held.
-    //! On a missing/unreadable file, m_keyStore is left with no valid slots (keyless state).
+    //! into PSA, destroying any previously-imported keys first. Must be called with the key store
+    //! lock held. On a missing/unreadable file, m_keyStore is left with no valid slots (keyless state).
     Os::File::Status loadKeyStore();
 
-    //! Writes m_keyStore to the file system. Must be called with m_keyStoreLock held.
+    //! Writes m_keyStore to the file system. Must be called with the key store lock held.
     Os::File::Status writeKeyStore();
 
     //! (Re)imports every valid slot in m_keyStore into PSA, destroying any previously-imported
-    //! keys first, and updates m_keyIds. Must be called with m_keyStoreLock held.
-    void importKeyStore();
+    //! keys first, and updates m_keyIds. Returns false if any valid slot failed to import, leaving
+    //! that slot's m_keyIds entry at 0. Must be called with the key store lock held.
+    bool importKeyStore();
 
     //! Finds the PSA key id for the given SPI among currently-imported keys.
-    //! Must be called with m_keyStoreLock held.
+    //! Must be called with the key store lock held.
     bool findKeyIdForSpi(uint32_t spi, uint32_t& keyId) const;
 
-    //! Returns the number of valid slots in m_keyStore. Must be called with m_keyStoreLock held.
+    //! Returns true if any valid slot already holds the given SPI.
+    //! Must be called with the key store lock held.
+    bool hasSpi(uint16_t spi) const;
+
+    //! Returns the number of valid slots in m_keyStore. Must be called with the key store lock held.
     U8 activeKeyCount() const;
 
     //! Projects m_keyStore's valid/spi fields into the plain-C++ ActiveSpiSlots type consumed by
-    //! the pure-C++ Validator. Must be called with m_keyStoreLock held.
+    //! the pure-C++ Validator. Must be called with the key store lock held.
     ActiveSpiSlots activeSpiSlots() const;
 
   private:
@@ -154,9 +159,10 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
     // Key store state is coupled between in-memory runtime state (m_keyStore/m_keyIds) and on-disk
-    // persistent storage; protected by the same mutex to keep PSA-imported keys consistent with the
-    // on-disk store shared across all TcSecurityDeframer instances (UART/LoRa/Sband)
-    Os::Mutex m_keyStoreLock;               //!< Mutex protecting key store state atomicity
+    // persistent storage; both are protected by keyStoreLock() in the .cpp. That mutex is
+    // deliberately NOT a member: the store file is shared across all TcSecurityDeframer instances
+    // (UART/LoRa/Sband), so a per-instance lock would let one instance rewrite the file while
+    // another is reading it. See keyStoreLock() for the full rationale.
     Fw::String m_keyStoreFilePath;          //!< File path where the key store is stored
     AuthKeyStore m_keyStore;                //!< The active key store, up to 2 slots
     uint32_t m_keyIds[AuthKeyStore::SIZE];  //!< PSA key ids parallel to m_keyStore, valid iff the slot is valid
