@@ -3,11 +3,25 @@
 **Goal: `provision_key_test.py` and the rest of the integration suite pass both
 on the local bench and in CI, on a board that starts keyless.**
 
-Status as of 2026-07-28: **the bench is green — 30 passed, 0 failed**, on a
-flight control board with a face attached, no battery board, no antenna board
-and JP6 open. Both key-store paths are verified on hardware: a freshly erased
-(keyless) board provisions and then authenticates, and an already-provisioned
-board reports `NotEmpty` and is treated as success.
+Status as of 2026-07-28: **both are green.**
+
+- **Bench: 30 passed, 0 failed**, on a flight control board with a face
+  attached, no battery board, no antenna board and JP6 open.
+- **CI: run 30321256393 passes all six jobs** — `lint`, `unit-test`, `build`,
+  `yamcs-build`, `integration-uart`, `integration-radio`. First green CI on
+  this branch.
+
+Both key-store paths are verified on hardware: a freshly erased (keyless) board
+provisions and then authenticates, and an already-provisioned board reports
+`NotEmpty` and is treated as success. CI exercises the keyless path for real —
+its board had never been provisioned, since no prior run on this branch got
+past boot.
+
+The last CI-only defect was `Start YAMCS Stack` missing `PROVES_AUTH_KEY`: it
+runs `make yamcs` → `tools/yamcs/proves_adapter.py`, which resolves the HMAC key
+at construction. Free while the key was compiled into the image; with the key on
+the satellite the adapter died at startup, YAMCS had no uplink, and
+`test_noop_round_trip` timed out. Fixed in `622d8661`.
 
 One item remains open, and it is a design decision rather than a defect:
 recovery from a board provisioned with the wrong key (§2).

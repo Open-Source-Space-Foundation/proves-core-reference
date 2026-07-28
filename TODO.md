@@ -234,11 +234,25 @@ hardware; what is left is the test path plus one design decision.
       `requires_watchdog_jumper`). Markers are inert in CI, which never passes
       `--bare-flight-controler-board`.
 
-- [ ] **Get CI green.** Bench is green and the remote branch is 3 commits
-      behind, so CI has never run with the CommandDispatcher table fix. Removed
-      the two `Hang Forensics` diagnostic steps from `ci.yaml` -- they halted the
-      target over SWD immediately before GDS started, which is precisely the
-      failure mode that made Issue 1 look real.
+- [x] **CI green (run 30321256393, 2026-07-28).** All six jobs pass: `lint`,
+      `unit-test`, `build`, `yamcs-build`, `integration-uart`,
+      `integration-radio`. First green CI on this branch.
+      Two things had to change beyond the bench work:
+      - Removed the two `Hang Forensics` diagnostic steps -- they halted the
+        target over SWD immediately before GDS started, which is precisely the
+        failure mode that made Issue 1 look real.
+      - **`Start YAMCS Stack` was missing `PROVES_AUTH_KEY`.** It runs
+        `make yamcs` -> `tools/yamcs/proves_adapter.py`, which resolves the HMAC
+        key at construction. That was free while the key was compiled into the
+        image; with the key provisioned onto the satellite the adapter died at
+        startup (`ValueError: No authentication key available`), YAMCS came up
+        with no uplink path, and `test_noop_round_trip` timed out after 18
+        `CMD_NO_OP` attempts. This was the *only* failure in run 30316568128 --
+        Provision Key, Sync Sequence Number, Run UART Integration Tests and the
+        entire `integration-radio` job all passed there, on a keyless board.
+        Audited the rest of the workflow: the only other `make yamcs` matches
+        are `yamcs-stop` and `yamcs-build-check`, neither of which starts a
+        framing process.
 
 - [ ] **Decide how a mis-provisioned key is recovered.** Confirmed behaviour,
       needs an explicit call rather than a quiet patch: `PROVISION_KEY` is
