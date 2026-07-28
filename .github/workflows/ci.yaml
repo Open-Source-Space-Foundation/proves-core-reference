@@ -282,6 +282,12 @@ jobs:
       - name: Start YAMCS Stack
         env:
           PYTHONUNBUFFERED: "1"
+          # proves_adapter.py builds the same authenticated framing the GDS
+          # plugin does, so it needs the key at construction. Now that the key
+          # is provisioned onto the satellite instead of compiled into the
+          # image, this step has to be given it explicitly like every other
+          # step that starts a framing process.
+          PROVES_AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
           # SPACECRAFT_ID=67 matches the override applied by `make
           # make-ci-spacecraft-id` in the build job so the adapter syncs on
