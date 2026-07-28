@@ -115,7 +115,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         }
     }
 
-    if ((currentSize > MAX_FILE_SIZE) || (requestedSize > (MAX_FILE_SIZE - currentSize))) {
+    if ((currentSize > MAX_FILE_SIZE)) {
         {
             Os::ScopeLock lock(this->m_queueMutex);
             this->m_failures++;
