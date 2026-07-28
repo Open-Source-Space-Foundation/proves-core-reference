@@ -18,7 +18,7 @@ from fprime_gds.common.logger.test_logger import TestLogger
 from fprime_gds.common.models.serialize.numerical_types import U32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from fprime_gds.common.testing_fw.predicates import event_predicate
+from fprime_gds.common.testing_fw.predicates import event_predicate, is_a_member_of
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
 rtcManager = "ReferenceDeployment.rtcManager"
@@ -105,6 +105,24 @@ def uplink_sequence_and_await_completion(
             fprime_test_api.__log(msg, TestLogger.RED)
             raise
         fprime_test_api.send_command(f"{fileManager}.CreateDirectory", ["/seq"])
+        # CreateDirectory is dispatched asynchronously.  Uplinking straight away
+        # races it, and when /seq does not already exist the receiving end fails
+        # with FileOpenError before the mkdir lands.  Wait for the command to
+        # resolve either way first - "already exists" comes back as
+        # DirectoryCreateError, which is just as good for our purposes.
+        fprime_test_api.await_event(
+            is_a_member_of(
+                [
+                    fprime_test_api.translate_event_name(
+                        f"{fileManager}.CreateDirectorySucceeded"
+                    ),
+                    fprime_test_api.translate_event_name(
+                        f"{fileManager}.DirectoryCreateError"
+                    ),
+                ]
+            ),
+            timeout=timeout,
+        )
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 

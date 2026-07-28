@@ -196,30 +196,49 @@ Status legend: [ ] todo, [~] in progress, [x] done
 Tracked in `INVESTIGATION.md`. The firmware blockers are fixed and verified on
 hardware; what is left is the test path plus one design decision.
 
-- [ ] **Make `provision_key_test.py` pass on the bench and in CI.** It currently
-      errors in *setup*, so the test body never runs: `start_gds` loops for 30s
-      on `CdhCore.cmdDisp.CMD_NO_OP` (`conftest.py:113`) and its two-item event
-      sequence always times out. `recover_from_safe_mode` (`conftest.py:177`) is
-      `autouse=True` and depends on `start_gds`, so **every** test in
-      `test/int/` errors with it.
-      Firmware side is proven -- the identical PROVISION_KEY sent outside pytest
-      provisions the board, and the router showed `routed=3 bypassed=3
-      rejected=0`, i.e. keyless commands are dispatched and none rejected.
-      Leading (unconfirmed) hypothesis: GDS downlink desync from resetting the
-      board underneath a long-lived GDS -- it logged `APID 2 received sequence
-      count: 4 (expected: 1)` after each reset. CI power-cycles before starting
-      GDS so it should not be exposed. **Counter-evidence: only 3 bypassed
-      packets were counted against more attempts than that, so uplink loss is
-      not ruled out.** Ordered next steps in `INVESTIGATION.md` -- start with a
-      clean-slate bench run in CI order (power-cycle, then GDS, then test, no
-      SWD attached), and push to let CI settle it.
+- [x] **`provision_key_test.py` passes on the bench (2026-07-28).** The GDS
+      desync hypothesis was **wrong**. Two real causes:
+      1. **Mis-built predicate.** `await_event(satisfies_any([event_pred, ...]))`
+         -- `get_event_pred` only passes an argument through when it is already
+         an `event_predicate`, so a `satisfies_any` was used as the *event-ID*
+         predicate and its inner `EventData` checks were evaluated against an
+         int. Never matched; `evt` came back `None` and blew up as
+         `AttributeError`. Fixed with
+         `is_a_member_of([translate_event_name(...), ...])` + an explicit
+         `assert evt is not None`.
+      2. **A halted board.** Earlier sessions left the target halted under SWD,
+         which drops the USB CDC, so `start_gds`'s `CMD_NO_OP` failed and
+         errored the whole directory in setup.
+      Verified on hardware both ways: keyless board (keystore erased over SWD)
+      -> `KeyProvisioned` -> `sync_sequence_number` passes, i.e. the
+      flash-stored key authenticates; and already-provisioned board ->
+      `NotEmpty` -> treated as success.
 
-- [ ] **Decouple the autouse fixture from `start_gds` regardless of the cause.**
-      One uncooperative `CMD_NO_OP` currently takes out the whole suite in
-      setup -- including the very test whose job is to bootstrap a keyless board
-      into a commandable state. Make `recover_from_safe_mode` opt-in, or have it
-      tolerate an unavailable link, so failures report as failures rather than
-      errors.
+- [x] **`start_gds` now explains itself.** The bare `assert gds_working` is
+      replaced by a message naming the command, the attempt count and the last
+      exception -- it gates every test in the directory, so its failure used to
+      surface as 40-odd unexplained setup errors. The redundant `start_gds`
+      dependency was also dropped from `recover_from_safe_mode`; note the
+      originally-planned "make it opt-in" fix would **not** have helped, because
+      every test file already requests `start_gds` directly.
+
+- [x] **Full bench suite green: 30 passed, 0 failed (2026-07-28).** Four
+      unrelated bench failures diagnosed and resolved (table in
+      `INVESTIGATION.md`): LOW_BATTERY auto-safe-mode cycling the face load
+      switch until the face I2C bus wedged (new `--no-battery` option drops
+      `SafeModeEntryVoltage` to 0 per test); a real pre-existing race in
+      `rtc_test`'s `uplink_sequence_and_await_completion`, which uplinked
+      without waiting for `CreateDirectory /seq` to land; `/antenna` missing
+      after a format until the next boot; and two tests that genuinely need
+      hardware this bench lacks (`drv2605` -> `requires_battery`, `safe_09` ->
+      `requires_watchdog_jumper`). Markers are inert in CI, which never passes
+      `--bare-flight-controler-board`.
+
+- [ ] **Get CI green.** Bench is green and the remote branch is 3 commits
+      behind, so CI has never run with the CommandDispatcher table fix. Removed
+      the two `Hang Forensics` diagnostic steps from `ci.yaml` -- they halted the
+      target over SWD immediately before GDS started, which is precisely the
+      failure mode that made Issue 1 look real.
 
 - [ ] **Decide how a mis-provisioned key is recovered.** Confirmed behaviour,
       needs an explicit call rather than a quiet patch: `PROVISION_KEY` is

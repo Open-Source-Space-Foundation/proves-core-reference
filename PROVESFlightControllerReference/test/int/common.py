@@ -40,6 +40,26 @@ def set_default_retries(n: int) -> None:
     _DEFAULT_RETRIES = n
 
 
+def exit_safe_mode(fprime_test_api: IntegrationTestAPI) -> None:
+    """Command FSW out of SAFE_MODE so that face hardware stays powered.
+
+    On a bench with no power at the battery terminals the power monitor reads
+    ~0 V, so modeManager auto-enters SAFE_MODE with reason=LOW_BATTERY and the
+    safe-mode sequence switches the face load switches off.  Any subsequent
+    sensor read on that face then fails with EXECUTION_ERROR.  Sending
+    EXIT_SAFE_MODE first clears the condition long enough for a short test to
+    run (auto-entry re-arms only after SafeModeDebounceSeconds).
+
+    Best-effort: EXIT_SAFE_MODE is a no-op when the board is already in NORMAL,
+    and a failure here should surface as the real test's failure, not as a
+    setup error.
+    """
+    try:
+        fprime_test_api.send_command("ReferenceDeployment.modeManager.EXIT_SAFE_MODE")
+    except Exception:  # noqa: BLE001 - advisory only; the test itself is the assertion
+        pass
+
+
 def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     """Register a callable to re-establish the radio link.
 

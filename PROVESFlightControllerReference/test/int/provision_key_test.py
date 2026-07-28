@@ -15,7 +15,7 @@ import os
 import pytest
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from fprime_gds.common.testing_fw.predicates import satisfies_any
+from fprime_gds.common.testing_fw.predicates import is_a_member_of
 
 
 @pytest.mark.provision_key
@@ -41,17 +41,26 @@ def test_provision_key(
             "PROVES_AUTH_KEY environment variable not set; cannot provision key"
         )
 
+    # await_event coerces any non-event_predicate into an *id* predicate, so the
+    # "either outcome" match has to be expressed over event IDs. Passing a list of
+    # event_predicates here would silently never match (they'd be evaluated against
+    # an int).
+    outcome_ids = [
+        fprime_test_api.translate_event_name(f"{deframer}.KeyProvisioned"),
+        fprime_test_api.translate_event_name(f"{deframer}.KeyProvisionFailed"),
+    ]
+
     fprime_test_api.clear_histories()
     fprime_test_api.send_command(f"{deframer}.PROVISION_KEY", ["0", key])
 
     evt: EventData = fprime_test_api.await_event(
-        satisfies_any(
-            [
-                fprime_test_api.get_event_pred(f"{deframer}.KeyProvisioned"),
-                fprime_test_api.get_event_pred(f"{deframer}.KeyProvisionFailed"),
-            ]
-        ),
+        is_a_member_of(outcome_ids),
         timeout=10,
+    )
+
+    assert evt is not None, (
+        f"No KeyProvisioned/KeyProvisionFailed event from {deframer} within 10s of "
+        "PROVISION_KEY; the command may not have reached the board"
     )
 
     if evt.template.get_full_name().endswith("KeyProvisionFailed"):

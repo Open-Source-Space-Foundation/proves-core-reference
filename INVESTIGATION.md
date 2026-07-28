@@ -3,124 +3,115 @@
 **Goal: `provision_key_test.py` and the rest of the integration suite pass both
 on the local bench and in CI, on a board that starts keyless.**
 
-The firmware-side blockers are fixed and verified on hardware (see commit
-`ec0bdb37`; the previous edition of this file, which chased a boot "hang" that
-turned out not to exist, is in git history and is superseded). What remains is
-getting the *test path* to work, plus one design decision the provisioning flow
-forces.
+Status as of 2026-07-28: **the bench is green — 30 passed, 0 failed**, on a
+flight control board with a face attached, no battery board, no antenna board
+and JP6 open. Both key-store paths are verified on hardware: a freshly erased
+(keyless) board provisions and then authenticates, and an already-provisioned
+board reports `NotEmpty` and is treated as success.
 
-Two open items:
-
-1. `provision_key_test.py` errors in pytest setup on the bench — **cause not yet
-   established**.
-2. A mis-provisioned key cannot be recovered from the ground — **needs a
-   deliberate decision**.
+One item remains open, and it is a design decision rather than a defect:
+recovery from a board provisioned with the wrong key (§2).
 
 ---
 
-## Issue 1 — `provision_key_test.py` never reaches its test body
+## Issue 1 — `provision_key_test.py` never reached its test body — RESOLVED
 
-### Status: unconfirmed. Firmware side proven; test/GDS side not.
+The previous edition of this file suspected a GDS downlink desync caused by
+resetting the board underneath a long-lived GDS. **That theory was wrong.** Two
+real defects were behind it, plus one bench-procedure artifact.
 
-`make test-integration FILTER=provision_key` fails with
-`ERROR ... test_provision_key` — an error in *setup*, not an assertion failure.
-The test body never runs.
+### Cause A (the actual test failure): a mis-built event predicate
 
-### What is proven
+`provision_key_test.py` awaited "either KeyProvisioned or KeyProvisionFailed"
+with
 
-- **The firmware provisioning path works.** Sending the identical command
-  outside pytest —
-  `fprime-cli command-send ComCcsdsUart.tcSecurityDeframer.PROVISION_KEY
-  --arguments 0 <32 hex chars>` — provisions the board: the key store went to
-  `valid=1 spi=0` with the expected bytes, survived a cold reboot, and
-  subsequently authenticated an uplink `SET_SEQ_NUM`.
-- **The bypass allowlist works on a keyless board.** `CMD_NO_OP`
-  (`0x01000000`) and `PROVISION_KEY` (`0x2100B002` / `0x2200B002`) are all in
-  `kBypassOpCodes` (`Bypasser.cpp`), and the opcodes match a freshly generated
-  dictionary.
-- **Commands were reaching the dispatcher.** After a bench session containing
-  several `CMD_NO_OP` attempts, `ComCcsdsUart::provesRouter` read
-  `routed=3 bypassed=3 rejected=0` over SWD — some uplink commands were accepted
-  and dispatched with no key present, and **nothing** was rejected.
-- **The board was healthy and transmitting** during the failing runs: telemetry
-  flowing on the CDC, and GDS's `comm.py.log` showing deframed downlink.
-
-### What fails
-
-`start_gds` (`test/int/conftest.py:113`, session-scoped) loops for 30 s doing
-`send_and_assert_command("CdhCore.cmdDisp.CMD_NO_OP")`, which waits on a
-two-item event sequence (`OpCodeDispatched` + `OpCodeCompleted`). That sequence
-search times out on every attempt.
-
-Because `recover_from_safe_mode` (`conftest.py:177`) is `autouse=True` **and**
-depends on `start_gds`, that fixture runs for *every* test in
-`PROVESFlightControllerReference/test/int/` — so when it fails, the whole
-directory errors in setup, including `provision_key_test.py`.
-
-### Leading hypothesis (not yet tested)
-
-A GDS-side downlink desync caused by the bench workflow rather than a product
-defect. After every board reset during the session GDS logged
-
-```
-[WARNING] framing: APID 2 received sequence count: 4 (expected: 1)
+```python
+await_event(satisfies_any([get_event_pred(...), get_event_pred(...)]))
 ```
 
-i.e. its deframer's expected space-packet sequence count was stale relative to a
-board that had rebooted underneath a long-lived GDS process. If GDS is
-discarding out-of-sequence frames, the command *is* dispatched on the board (the
-router counters agree) but the responding events never reach the test API — an
-exact match for the observed symptom.
+`IntegrationTestAPI.get_event_pred` returns its argument unchanged only when it
+is already an `event_predicate`. A `satisfies_any` is a predicate but *not* an
+`event_predicate`, so it fell through to being used as the **event-ID**
+predicate — the two inner `EventData` checks were evaluated against an integer
+id and could never be true. The search timed out even though the event had
+arrived, and `evt` came back `None`, which then blew up as
+`AttributeError: 'NoneType' object has no attribute 'template'`.
 
-CI does not have this exposure: `.github/actions/flash-firmware` power-cycles the
-board (korad) *before* flashing and again after, and GDS is started afterwards,
-so GDS never outlives a board reset.
+Fixed by matching over ids instead:
 
-**Counter-evidence that keeps this unconfirmed:** the router counted only 3
-bypassed packets, while the failing runs plus the manual send should have
-produced more `CMD_NO_OP` attempts than that. So it is *not* established that
-every attempt reached the board; some may have been lost on the uplink instead.
-Do not treat the desync theory as settled.
+```python
+await_event(is_a_member_of([translate_event_name(...), translate_event_name(...)]))
+```
 
-### How to settle it
+plus an explicit `assert evt is not None` so a genuine no-response failure
+reports as itself rather than as an `AttributeError`.
 
-Cheapest first:
+### Cause B (why it looked like a setup error): a halted board
 
-1. **Clean-slate bench run, mimicking CI ordering.** Power-cycle (or
-   `reset run`) the board, *then* start GDS, *then* run
-   `make test-integration FILTER=provision_key` — with no SWD session attached
-   and no resets while GDS lives. If it passes, the desync theory holds and the
-   bench procedure (not the code) was at fault.
-2. **Count uplink arrivals directly.** Before/after a single `CMD_NO_OP`, read
-   `ComCcsdsUart::provesRouter.m_routedPackets` / `m_bypassedPackets` /
-   `m_rejectedPackets` over SWD. A `+1` per attempt proves the uplink is intact
-   and moves the problem entirely to the downlink/GDS side; no change proves the
-   uplink is dropping frames. **Resume the target before detaching** — a halted
-   board drops its USB CDC, which silently no-ops everything (this bit us).
-3. **If it is the downlink**, check whether GDS's space-packet sequence check
-   should reset on a detected discontinuity, and whether the deframer's APID
-   sequence state needs a resync path after a spacecraft reboot. Note there is
-   already a `sync-sequence-number` make target and a "Sync Sequence Number"
-   CI step for the *anti-replay* counter — a different counter, but the same
-   class of ground/flight desync.
-4. **Let CI settle it.** CI has never been green on this branch, so the
-   dispatch-table fix may simply expose this step for the first time. Push and
-   read the result before doing more bench work.
+The earlier bench sessions had left the target halted under SWD. A halted board
+drops its USB CDC, so GDS saw nothing and `start_gds`'s `CMD_NO_OP` loop failed
+— erroring every test in the directory during setup. With the board simply left
+running, `start_gds` passes first time.
 
-### Independent of the cause: the fixture coupling is worth fixing
+`start_gds` used a bare `assert gds_working`, which is why this presented as an
+unexplained error on 40-odd tests. It now reports the command, the attempt
+count and the last exception.
 
-`recover_from_safe_mode` is `autouse=True` and pulls in `start_gds` for every
-test in the directory, so one uncooperative `CMD_NO_OP` takes out the entire
-suite in setup — including the very test whose job is to bootstrap the board
-into a state where commanding works. Making that fixture opt-in (or having it
-tolerate an unavailable link) would decouple "the board is keyless" from "no
-test can run", and would make failures report as failures rather than errors.
+### Not a cause: the space-packet sequence-count warning
+
+GDS does log
+
+```
+[WARNING] framing: APID 2 received sequence count: 35 (expected: 1)
+```
+
+on every startup against an already-running board, but it is a warning only —
+GDS adopts the received count and carries on. `reset_manager`'s cold- and
+warm-reset tests both pass with GDS running across the reboot.
+
+---
+
+## Bench-only failures, and what they actually were
+
+Four tests failed on the bench for reasons unrelated to the key store. Each is
+now either fixed or correctly marked.
+
+| Test | Cause | Resolution |
+| --- | --- | --- |
+| `tmp112`, `veml6031` | With nothing at the battery terminals the power monitor reads 0.012 V, so modeManager auto-enters SAFE_MODE (`reason=LOW_BATTERY`) every debounce period; its safe-mode sequence switches the face load switch **off**, and enough of those cycles wedges the face I2C bus for the rest of the session. | New `--no-battery` pytest option drops `SafeModeEntryVoltage` to 0 before each test, so auto-entry never fires. Verified: 0 `AutoSafeModeEntry` events in a full run. |
+| `antenna_deployer::test_deployment_prevention_after_success` | After `format_filesystem`, `/antenna` no longer exists, so `SET_DEPLOYMENT_STATE` fails with `FileOperationError ... on file open_write`. The directory is recreated at boot. | Bench procedure: power-cycle after formatting, which is what CI already does (`Format Filesystem` → `Power-Cycle Satellite`). Also added an `exit_safe_mode` to its fixture, since deployment is inhibited in safe mode. |
+| `rtc_test::test_04_sequence_cancellation_on_time_set` | `uplink_sequence_and_await_completion` fired `CreateDirectory /seq` and uplinked immediately, racing the mkdir: `FileOpenError: Could not open file /seq/no_op.bin` 30 ms *before* `CreateDirectorySucceeded`. Only visible when `/seq` did not already exist. | Real pre-existing race, fixed: wait for `CreateDirectorySucceeded` **or** `DirectoryCreateError` (already-exists) before uplinking. |
+| `drv2605::test_01_magnetorquer_power_draw` | Asserts a ≥0.3 W rise in INA219 system power; that rail reads 0.0 W in both samples without a battery. No command can fix an unpowered rail. | Marked `requires_battery` in addition to `requires_face`. |
+| `mode_manager::test_safe_09` | Asserts the boot count increments after a watchdog-driven hardware power cycle; with JP6 open the reboot never happens (177 → 177). The command-loss detection and SAFE_MODE entry it also asserts both pass. | Marked `requires_watchdog_jumper`. |
+
+These markers are inert in CI: CI never passes `--bare-flight-controler-board`,
+which is the only thing that acts on them.
+
+### Reproducing the green bench run
+
+```sh
+# 1. board running and NOT halted under SWD; no GDS yet
+PROVES_AUTH_KEY=<32 hex chars> make gds-integration UART_DEVICE=/dev/cu.usbmodem1101 &
+
+# 2. bootstrap, in CI's order
+make test-integration FILTER=provision_key
+make test-integration FILTER=sync_sequence_number
+
+# 3. the suite
+make test-integration \
+  FILTER="not sync_sequence_number and not format_filesystem and not provision_key \
+          and not requires_antenna and not requires_battery and not requires_watchdog_jumper" \
+  PYTEST_ARGS=--no-battery
+```
+
+If you run `format_filesystem`, reset the board before the suite so `/antenna`
+and friends are recreated.
 
 ---
 
 ## Issue 2 — No over-the-air recovery from a mis-provisioned key
 
-### Status: confirmed behaviour, needs a decision.
+### Status: confirmed behaviour, still needs a decision.
 
 The key store cannot be re-keyed from the ground once it holds a wrong key:
 
@@ -133,15 +124,15 @@ The key store cannot be re-keyed from the ground once it holds a wrong key:
 
 Together these mean a board provisioned with the wrong value is unreachable:
 every recovery command needs either an empty store or a valid key, and neither
-is obtainable. Hit during this session's bench work; recovery required a
-physical SWD erase of `keystore_partition`:
+is obtainable. Recovery on the bench requires a physical SWD erase:
 
 ```
 openocd ... -c "init; halt; flash erase_address 0x10400000 0x40000; reset run; exit"
 ```
 
-after which littlefs re-formatted the partition on the next boot and the board
-came back keyless (`valid=0`, `seqnum=0`).
+after which littlefs re-formats the partition on the next boot and the board
+comes back keyless (`valid=0`, `seqnum=0`). This was used repeatedly during
+this session's verification and works reliably.
 
 This is fine on the bench and fatal in flight.
 
@@ -170,18 +161,25 @@ project owners should make explicitly, not a bug to be quietly patched.
 ## Bench procedure notes (learned the hard way)
 
 - **Always resume the target before detaching from OpenOCD/GDB.** A halted board
-  drops its USB CDC; GDS then sees nothing and commands silently no-op. Several
-  hours of this session were spent chasing failures that were only a halted
-  board.
-- **Do not reset the board while GDS is running** — it desyncs the downlink
-  deframer and is the leading suspect for Issue 1. Restart GDS after any reset.
+  drops its USB CDC; GDS then sees nothing and commands silently no-op. This was
+  the single biggest time sink across two sessions, and it is what made Issue 1
+  look like a product defect.
+- Resetting the board while GDS runs is **fine** — GDS logs a sequence-count
+  warning and resyncs. (The earlier claim to the contrary was wrong.)
+- After `format_filesystem`, **reset the board** before running the suite:
+  `/antenna` and `/seq` are recreated at boot.
 - **`make build` does not re-derive Kconfig from device-tree changes.** Use
   `make generate build`; a stale `CONFIG_FLASH_SIZE` invalidated several bisect
-  results in this session.
+  results in an earlier session.
 - Use `/dev/cu.*`, not `/dev/tty.*`, when reading the board CDC from macOS — a
   `tty.` open blocks on carrier detect and looks like a dead link.
+- OpenOCD lives at `~/code/github.com/raspberrypi/openocd` (the raspberrypi
+  fork — do not substitute a nix/brew build).
 - The `--active` flag on the vendored `uv` can resolve to a stale system
   `fprime_gds`; `fprime-venv/bin/fprime-cli` is the reliable path, and it needs
   `--deployment build-artifacts/zephyr/fprime-zephyr-deployment`.
 
-Diagnostics live in `scripts/diag/` (see the ADR item in `TODO.md`).
+Diagnostics live in `scripts/diag/` (see the ADR item in `TODO.md`). The
+`Hang Forensics` CI steps that drove them have been removed — they halted the
+target over SWD immediately before GDS started, which is the exact failure mode
+above.
