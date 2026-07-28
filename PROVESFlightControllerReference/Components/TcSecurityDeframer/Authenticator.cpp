@@ -5,7 +5,6 @@
 
 #include "Authenticator.hpp"
 
-#include <mbedtls/platform_util.h>
 #include <psa/crypto.h>
 
 #include <cstring>
@@ -91,19 +90,6 @@ PacketAuthenticator::KeyImportResult importHmacKeyBytes(const uint8_t (&keyBytes
     }
 
     return {PacketAuthenticator::KeyImportStatus::Success, PSA_SUCCESS};
-}
-
-// Parse a hex-encoded key and import it into PSA for message verification.
-PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& keyId) {
-    // Parse the hex-encoded key into raw bytes
-    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
-    if (!parseHexKey(key, keyBytes)) {
-        return {PacketAuthenticator::KeyImportStatus::ParseKeyError, PSA_ERROR_INVALID_ARGUMENT};
-    }
-
-    const PacketAuthenticator::KeyImportResult result = importHmacKeyBytes(keyBytes, keyId);
-    mbedtls_platform_zeroize(keyBytes, sizeof keyBytes);
-    return result;
 }
 
 int32_t destroyHmacKey(uint32_t keyId) {

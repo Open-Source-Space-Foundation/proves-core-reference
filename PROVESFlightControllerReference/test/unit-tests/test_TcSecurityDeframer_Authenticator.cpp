@@ -17,8 +17,11 @@ static const std::vector<uint8_t> kTestPacket = {1,    2,    3,    4,    5,    6
 
 //! Import the test key, asserting success, and return the PSA key id
 static uint32_t importTestKey() {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    EXPECT_TRUE(parseHexKey(kTestKeyHex, keyBytes));
+
     uint32_t keyId = 0;
-    auto res = importHmacKey(kTestKeyHex, keyId);
+    auto res = importHmacKeyBytes(keyBytes, keyId);
     EXPECT_EQ(res.status, PacketAuthenticator::KeyImportStatus::Success);
     EXPECT_EQ(res.psaStatus, PSA_SUCCESS);
     return keyId;
@@ -29,20 +32,6 @@ static Mac macOf(const std::vector<uint8_t>& packet) {
     Mac mac{};
     std::copy(packet.end() - static_cast<long>(mac.size()), packet.end(), mac.begin());
     return mac;
-}
-
-TEST(PacketAuthenticatorTest, ImportInvalidHexKey) {
-    uint32_t keyId = 0;
-    auto res = importHmacKey("invalidkey", keyId);
-    EXPECT_EQ(res.status, PacketAuthenticator::KeyImportStatus::ParseKeyError);
-    EXPECT_EQ(res.psaStatus, PSA_ERROR_INVALID_ARGUMENT);
-}
-
-TEST(PacketAuthenticatorTest, ImportNullKey) {
-    uint32_t keyId = 0;
-    auto res = importHmacKey(nullptr, keyId);
-    EXPECT_EQ(res.status, PacketAuthenticator::KeyImportStatus::ParseKeyError);
-    EXPECT_EQ(res.psaStatus, PSA_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(ParseHexKeyTest, ValidLowercaseKey) {

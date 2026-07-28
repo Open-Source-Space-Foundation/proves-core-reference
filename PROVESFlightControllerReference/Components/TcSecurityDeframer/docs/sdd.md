@@ -10,7 +10,7 @@ The component is a thin stateful shell over pure-function namespaces:
 
 - `Ccsds355_0_B_2::parse` (Parser) — Security Header (SPI, sequence number) and Trailer (MAC) extraction
 - `Components::validatePacket` (Validator) — SPI validation against the active key store and anti-replay sequence-number window validation
-- `Components::authenticatePacket` / `importHmacKey` / `importHmacKeyBytes` (Authenticator) — HMAC-SHA-256 (truncated to 16 bytes) verification via PSA crypto
+- `Components::authenticatePacket` / `parseHexKey` / `importHmacKeyBytes` (Authenticator) — HMAC-SHA-256 (truncated to 16 bytes) verification via PSA crypto
 
 `Validator` takes the active SPI set as a plain `ActiveSpiSlots` array (`Types.hpp`) rather than the FPP-generated key store type directly, so it — and its unit tests — stay pure C++ with no F Prime dependency; `TcSecurityDeframer::activeSpiSlots()` projects the real key store into that shape before calling `validatePacket`.
 
@@ -76,7 +76,9 @@ class PacketValidator {
 
 class PacketAuthenticator {
   <<namespace>>
-  +importHmacKey(key, keyId) KeyImportResult
+  +parseHexKey(key, keyBytes) bool
+  +importHmacKeyBytes(keyBytes, keyId) KeyImportResult
+  +destroyHmacKey(keyId) int32_t
   +authenticatePacket(buffer, size, mac, keyId) AuthenticationResult
 }
 
