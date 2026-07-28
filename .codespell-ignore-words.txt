@@ -1,5 +1,4 @@
 ALS
-FRAM
 comIn
 bufferIn
 commandIn
