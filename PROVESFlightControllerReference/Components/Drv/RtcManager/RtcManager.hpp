@@ -96,8 +96,9 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Handler implementation for command TO_PROC_TIME
     //!
     //! Switches the time source to use proc time
-    void TO_PROC_TIME_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                 U32 cmdSeq            //!< The command sequence number
+    void SET_TIMEBASE_cmdHandler(FwOpcodeType opCode,    //!< The opcode
+                                 U32 cmdSeq,             //!< The command sequence number
+                                 FwTimeBaseStoreType tb  //!< The timebase to use
                                  ) override;
 
   private:

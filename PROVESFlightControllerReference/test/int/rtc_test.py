@@ -442,14 +442,17 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by proc time toggle"""
 
-    # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
-    curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
-    set_time(fprime_test_api, curiosity_landing)
-
+    # Test that we can set timebase to proc time
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 1)
     # Assert that we receive a TimeBase event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
 
-    fprime_test_api.send_command(f"{rtcManager}.TO_PROC_TIME")
+    # Test that we can set timebase to RTC time
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 3)
+    # Assert that we receive a TimeBase event within 10 seconds
+    fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
 
+    # Test that invalid times are filtered out
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 0)
     # Assert that we receive a TimeBase event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)

@@ -32,7 +32,9 @@ module Drv {
         )
 
         @ TO_PROC_TIME command to use proc time instead of RTC time
-        sync command TO_PROC_TIME()
+        sync command SET_TIMEBASE(
+            tb: FwTimeBaseStoreType @< TimeBase to use
+        )
 
         @ ALARM_SET command to set an alarm on the RTC
         sync command ALARM_SET(
@@ -58,14 +60,12 @@ module Drv {
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
-        @ ProcTimeSet event indicates that proc time was set
-        event ProcTimeSet(
-            seconds: U32 @< Uptime in seconds
-        ) severity activity high id 17 format "Proc time set, current uptime: {}"
+        @ InvalidTimebase event indicates that timebase given was invalid
+        event InvalidTimeBase() severity warning high id 17 format "Timebase entered invalid (1: proc time 3: RTC time)"
 
         @ Timebase event fires when the timebase changes and indicates the current timebase
         event TimeBase(
-            timeBase: string size 4
+            timeBase: FwTimeBaseStoreType
         ) severity activity high id 18 format "Timebase is currently: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
