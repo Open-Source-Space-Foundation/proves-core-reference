@@ -443,16 +443,16 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by proc time toggle"""
 
     # Test that we can set timebase to proc time
-    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 1)
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", [1])
     # Assert that we receive a TimeBase event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
 
     # Test that we can set timebase to RTC time
-    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 3)
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", [3])
     # Assert that we receive a TimeBase event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
 
     # Test that invalid times are filtered out
-    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", 0)
+    fprime_test_api.send_command(f"{rtcManager}.SET_TIMEBASE", [0])
     # Assert that we receive a TimeBase event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.TimeBase", timeout=10)
