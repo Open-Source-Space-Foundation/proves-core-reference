@@ -29,20 +29,19 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
     (void)portNum;
     (void)context;
 
+    if (this->m_failures.load() >= MAX_FAILURES) {
+        this->log_WARNING_HI_FailureLimitReached(MAX_FAILURES);
+        return;
+    } else if (this->m_fileSize.load() >= MAX_FILE_SIZE) {
+        this->log_WARNING_LO_SizeLimitReached(MAX_FILE_SIZE);
+        return;
+    } else if (this->m_antennasDeployed.load()) {
+        this->log_WARNING_LO_AntennasDeployed();
+        return;
+    }
+
     {
         Os::ScopeLock lock(this->m_queueMutex);
-
-        if (this->m_failures >= MAX_FAILURES) {
-            this->log_WARNING_HI_FailureLimitReached(MAX_FAILURES);
-            return;
-        } else if (this->m_fileSize >= MAX_FILE_SIZE) {
-            this->log_WARNING_LO_SizeLimitReached(MAX_FILE_SIZE);
-            return;
-        } else if (this->m_antennasDeployed) {
-            this->log_WARNING_LO_AntennasDeployed();
-            return;
-        }
-
         this->m_pendingPacket = data;
         this->m_packetPending = true;
     }
@@ -62,64 +61,45 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         this->m_packetPending = false;
     }
 
-    if (!this->m_antennasDeployed) {
-        this->m_antennasDeployed = this->deploymentStateGet_out(0);
+    if (!this->m_antennasDeployed.load()) {
+        this->m_antennasDeployed.store(this->deploymentStateGet_out(0));
     }
 
-    if (this->m_antennasDeployed) {
+    if (this->m_antennasDeployed.load()) {
         return;
     }
 
     if (!this->m_directoryInitialized) {
         if (Os::FileSystem::createDirectory(TLM_DIRECTORY, false) != Os::FileSystem::OP_OK) {
             this->log_WARNING_HI_FileError(Fw::LogStringArg("create_directory"));
-            {
-                Os::ScopeLock lock(this->m_queueMutex);
-                this->m_failures++;
-            }
+            this->m_failures.fetch_add(1);
             return;
         }
         if (Os::FileSystem::touch(PRE_DEPLOYMENT_TLM_PATH) != Os::FileSystem::OP_OK) {
             this->log_WARNING_HI_FileError(Fw::LogStringArg("create_file"));
-            {
-                Os::ScopeLock lock(this->m_queueMutex);
-                this->m_failures++;
-            }
+            this->m_failures.fetch_add(1);
             return;
         }
         this->m_directoryInitialized = true;
     }
 
     const FwSizeType requestedSize = packet.getSize();
-    FwSizeType currentSize = 0;
-    bool fileSizeInitialized = false;
-    {
-        Os::ScopeLock lock(this->m_queueMutex);
-        currentSize = this->m_fileSize;
-        fileSizeInitialized = this->m_fileSizeInitialized;
-    }
-    if (!fileSizeInitialized) {
+    FwSizeType currentSize = this->m_fileSize.load();
+    if (!this->m_fileSizeInitialized) {
         const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
         if (sizeStatus != Os::FileSystem::OP_OK) {
             this->log_WARNING_HI_FileError(Fw::LogStringArg("get_file_size"));
-            {
-                Os::ScopeLock lock(this->m_queueMutex);
-                this->m_failures++;
-            }
+            this->m_failures.fetch_add(1);
             return;
         }
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_fileSize = currentSize;
-            this->m_fileSizeInitialized = true;
-        }
+        const U32 cachedSize =
+            (currentSize > MAX_FILE_SIZE) ? static_cast<U32>(MAX_FILE_SIZE) : static_cast<U32>(currentSize);
+        this->m_fileSize.store(cachedSize);
+        this->m_fileSizeInitialized = true;
     }
 
     if ((currentSize > MAX_FILE_SIZE)) {
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_failures++;
-        }
+        this->m_failures.fetch_add(1);
         return;
     }
 
@@ -128,10 +108,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     const Os::File::Status openStatus = file.open(PRE_DEPLOYMENT_TLM_PATH, Os::File::OPEN_APPEND);
     if (openStatus != Os::File::OP_OK) {
         this->log_WARNING_HI_FileError(Fw::LogStringArg("open_append"));
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_failures++;
-        }
+        this->m_failures.fetch_add(1);
         return;
     }
 
@@ -140,19 +117,13 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     if ((writeStatus != Os::File::OP_OK) || (writtenSize != requestedSize)) {
         this->log_WARNING_HI_WriteError(Os::FileStatus(static_cast<Os::FileStatus::T>(writeStatus)), requestedSize,
                                         writtenSize);
-        {
-            Os::ScopeLock lock(this->m_queueMutex);
-            this->m_failures++;
-        }
+        this->m_failures.fetch_add(1);
         file.close();
         return;
     }
     file.close();
 
-    {
-        Os::ScopeLock lock(this->m_queueMutex);
-        this->m_fileSize += writtenSize;
-    }
+    this->m_fileSize.fetch_add(static_cast<U32>(writtenSize));
 }
 
 }  // namespace Components

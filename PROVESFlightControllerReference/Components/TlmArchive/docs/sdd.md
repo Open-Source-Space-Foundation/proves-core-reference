@@ -10,8 +10,9 @@ filesystem work out of the telemetry path and into the 1 Hz rate group.
 TlmArchive is a passive component with two execution paths. The synchronous
 `comIn` handler receives telemetry and stores the most recent packet in an
 in-memory mailbox. The synchronous `run` handler drains that mailbox and
-performs the filesystem work. A mutex protects the mailbox, cached size, and
-failure count shared by the two calling contexts.
+performs the filesystem work. A mutex protects the non-atomic packet mailbox,
+while atomics synchronize the cached size, failure count, and deployment latch
+shared by the two calling contexts.
 
 The reference topology connects the component as follows:
 
@@ -68,12 +69,12 @@ classDiagram
             -run_handler(portNum: FwIndexType, context: U32)
             -m_queueMutex: Os.Mutex
             -m_pendingPacket: Fw.ComBuffer
-            -m_fileSize: FwSizeType
-            -m_failures: int
+            -m_fileSize: atomic~U32~
+            -m_failures: atomic~int~
+            -m_antennasDeployed: atomic~bool~
             -m_directoryInitialized: bool
             -m_fileSizeInitialized: bool
             -m_packetPending: bool
-            -m_antennasDeployed: bool
         }
     }
 
@@ -100,12 +101,12 @@ the following internal state:
 |---|---:|---|
 | `m_pendingPacket` | Empty buffer | Storage for the single pending telemetry packet. |
 | `m_packetPending` | `false` | Indicates whether the mailbox contains a packet. |
-| `m_fileSize` | `0` | Cached archive size. Initialized once from the filesystem and advanced by the actual bytes written after each successful write. |
-| `m_failures` | `0` | Cumulative count of directory, stat, size-limit, open, and write failures. |
+| `m_fileSize` | `0` | Atomic cached archive size. Initialized once from the filesystem and advanced by the actual bytes written after each successful write. |
+| `m_failures` | `0` | Atomic cumulative count of directory, stat, size-limit, open, and write failures. |
 | `m_directoryInitialized` | `false` | Becomes true after both `//tlm` and `//tlm/pre_deployment.tlm` are successfully initialized, preventing repeated creation attempts. |
 | `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read, preventing later size queries. |
-| `m_antennasDeployed` | `false` | In-memory latch set when AntennaDeployer first reports a deployed state. |
-| `m_queueMutex` | Unlocked | Protects the mailbox, cached size, and failure count shared by the input and rate-group contexts. |
+| `m_antennasDeployed` | `false` | Atomic in-memory latch set when AntennaDeployer first reports a deployed state. |
+| `m_queueMutex` | Unlocked | Protects the pending packet and its availability flag while the packet is copied between calling contexts. |
 
 Conceptually, the component operates in these states:
 
@@ -139,6 +140,10 @@ reported by the file API. The archive is not truncated or deleted when the
 limit is reached. Changes made to the archive by another component after size
 initialization are not reflected in the cache.
 
+The atomic cache uses the target's native 32-bit `U32` width. This is lossless
+for all permitted archive sizes; an existing on-disk size above the 10,000-byte
+limit is represented by the limit value so packet admission remains disabled.
+
 ### Failure Handling
 
 Counted failures are cumulative and are not reset after a successful write.
@@ -170,7 +175,7 @@ sequenceDiagram
     participant FS as Filesystem
 
     Producer->>Archive: comIn(packet)
-    Archive->>Archive: Lock and check failure/size limits
+    Archive->>Archive: Atomically check failure/size/deployment state
     alt Failure limit reached
         Archive->>Archive: Emit FailureLimitReached
     else Size limit reached
@@ -277,3 +282,4 @@ There are currently no component-specific unit tests for TlmArchive.
 |---|---|
 | 2026-07-26 | Documented the mailbox, deployment-state handling, archive workflow, limits, events, topology connections, and failure behavior. |
 | 2026-07-27 | Updated mailbox replacement behavior, non-destructive storage initialization, cached-size handling, rejection paths, and the current event interface. |
+| 2026-07-30 | Replaced mutex-protected scalar state updates with atomics; retained the mutex only for packet mailbox copies. |

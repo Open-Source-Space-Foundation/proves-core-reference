@@ -7,6 +7,8 @@
 #ifndef Components_TlmArchive_HPP
 #define Components_TlmArchive_HPP
 
+#include <atomic>
+
 #include "Os/Mutex.hpp"
 #include "PROVESFlightControllerReference/Components/TlmArchive/TlmArchiveComponentAc.hpp"
 
@@ -27,12 +29,12 @@ class TlmArchive final : public TlmArchiveComponentBase {
 
     Os::Mutex m_queueMutex;
     Fw::ComBuffer m_pendingPacket;
-    FwSizeType m_fileSize = 0;
-    int m_failures = 0;
+    std::atomic<U32> m_fileSize{0};
+    std::atomic<int> m_failures{0};
+    std::atomic<bool> m_antennasDeployed{false};
     bool m_directoryInitialized = false;
     bool m_fileSizeInitialized = false;
     bool m_packetPending = false;
-    bool m_antennasDeployed = false;
 };
 
 }  // namespace Components
