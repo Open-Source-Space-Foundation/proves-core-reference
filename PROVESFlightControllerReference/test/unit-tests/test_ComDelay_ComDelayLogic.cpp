@@ -239,3 +239,83 @@ TEST(ComDelayLogicTest, ValidZeroDividerIsNotTreatedAsInvalid) {
     ASSERT_TRUE(logic.tick(/*divider=*/0, /*dividerValid=*/true, status));
     EXPECT_TRUE(status);
 }
+
+// ----------------------------------------------------------------------
+// (10)-(12) Divider-0 passthrough (perf/comdelay-divider0-passthrough):
+// when the effective divider is 0, an incoming status is forwarded
+// immediately by acceptStatus() and never latched, so downlink is paced
+// purely by radio TX-done rather than the rate group. Mirrors the coverage
+// intended by (closed) PR #478.
+// ----------------------------------------------------------------------
+
+TEST(ComDelayLogicTest, DividerZeroForwardsImmediatelyWithoutLatching) {
+    ComDelayLogic logic;
+    bool forwarded = false;
+
+    // DIVIDER == 0: forwarded immediately, latch never set.
+    ASSERT_TRUE(logic.acceptStatus(/*status=*/true, /*divider=*/0, /*dividerValid=*/true, forwarded));
+    EXPECT_TRUE(forwarded);
+    EXPECT_FALSE(logic.hasLatchedStatus());
+
+    // FAILURE statuses pass through too, preserving the value.
+    ASSERT_TRUE(logic.acceptStatus(false, 0, true, forwarded));
+    EXPECT_FALSE(forwarded);
+    EXPECT_FALSE(logic.hasLatchedStatus());
+
+    // Because nothing was latched, subsequent ticks emit nothing (no
+    // duplication of a passthrough status by run_handler).
+    int emissions = countEmissions(logic, /*divider=*/0, /*dividerValid=*/true, 4);
+    EXPECT_EQ(emissions, 0);
+}
+
+TEST(ComDelayLogicTest, DividerZeroToNTransitionLatchesAgain) {
+    ComDelayLogic logic;
+    bool forwarded = false;
+
+    // Run in passthrough mode first.
+    ASSERT_TRUE(logic.acceptStatus(true, 0, true, forwarded));
+    EXPECT_FALSE(logic.hasLatchedStatus());
+
+    // Divider raised to N > 0 at runtime: statuses latch again and are
+    // released tick-paced, exactly as the pre-passthrough behavior.
+    EXPECT_FALSE(logic.acceptStatus(true, /*divider=*/3, /*dividerValid=*/true, forwarded));
+    EXPECT_TRUE(logic.hasLatchedStatus());
+
+    bool status = false;
+    ASSERT_TRUE(logic.tick(3, true, status));  // counter at 0 -> release
+    EXPECT_TRUE(status);
+    EXPECT_FALSE(logic.hasLatchedStatus());
+}
+
+TEST(ComDelayLogicTest, NToZeroTransitionWithLatchedStatusNeitherLosesNorDoubleEmits) {
+    ComDelayLogic logic;
+    bool forwarded = false;
+    bool status = false;
+
+    // Latch a status under DIVIDER > 0, mid-cycle (counter != 0 so it is
+    // pending, not yet released).
+    EXPECT_FALSE(logic.tick(/*divider=*/3, /*dividerValid=*/true, status));  // counter 0 -> 1
+    EXPECT_FALSE(logic.acceptStatus(true, 3, true, forwarded));
+    EXPECT_TRUE(logic.hasLatchedStatus());
+
+    // Divider switched to 0 at runtime. A new incoming status passes straight
+    // through and does NOT disturb the latched one.
+    ASSERT_TRUE(logic.acceptStatus(false, 0, true, forwarded));
+    EXPECT_FALSE(forwarded);
+    EXPECT_TRUE(logic.hasLatchedStatus());
+
+    // The earlier latched status is still consumed by the tick path,
+    // exactly once (compare_exchange consume) -- no loss, no double emit.
+    int emissions = countEmissions(logic, /*divider=*/0, /*dividerValid=*/true, 5);
+    EXPECT_EQ(emissions, 1);
+    EXPECT_FALSE(logic.hasLatchedStatus());
+}
+
+TEST(ComDelayLogicTest, InvalidDividerParamDoesNotPassthrough) {
+    // Fallback divider is 299 (nonzero), so an invalid parameter must latch,
+    // never passthrough -- mirrors the handler's fail-safe fallback.
+    ComDelayLogic logic;
+    bool forwarded = false;
+    EXPECT_FALSE(logic.acceptStatus(true, /*divider=*/0, /*dividerValid=*/false, forwarded));
+    EXPECT_TRUE(logic.hasLatchedStatus());
+}
