@@ -10,6 +10,14 @@ module Drv {
     }
 }
 
+module Rtc {
+    @ Parameter for timebase
+    enum TimeBase: FwTimeBaseStoreType {
+        TB_PROC_TIME = 1 @< timebase is in proc time
+        TB_SC_TIME = 3   @< timebase is in RTC time
+    } default TB_SC_TIME
+}
+
 # Port definition
 module Drv {
     port TimeSet(t: TimeData)
@@ -24,16 +32,16 @@ module Drv {
     passive component RtcManager {
         import Svc.Time
 
+        ### PARAMETERS ###
+
+        @ Time base as a parameter
+        param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
+
         ### COMMANDS ###
 
         @ TIME_SET command to set the time on the RTC
         sync command TIME_SET(
             t: Drv.TimeData @< Set the time
-        )
-
-        @ TO_PROC_TIME command to use proc time instead of RTC time
-        sync command SET_TIMEBASE(
-            tb: FwTimeBaseStoreType @< TimeBase to use
         )
 
         @ ALARM_SET command to set an alarm on the RTC
@@ -60,13 +68,10 @@ module Drv {
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
-        @ InvalidTimebase event indicates that timebase given was invalid
-        event InvalidTimeBase() severity warning high id 17 format "Timebase entered invalid (1: proc time 3: RTC time)"
-
         @ Timebase event fires when the timebase changes and indicates the current timebase
-        event TimeBase(
+        event TimeBaseSwitch(
             timeBase: FwTimeBaseStoreType
-        ) severity activity high id 18 format "Timebase is currently: {}"
+        ) severity activity high id 18 format "Timebase switched to: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
@@ -147,6 +152,13 @@ module Drv {
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
+
+        @ Port for getting parameters
+        param get port prmGetOut
+
+        @ Port for setting parameters
+        param set port prmSetOut
+
         @ Port for requesting the current time
         time get port timeCaller
 

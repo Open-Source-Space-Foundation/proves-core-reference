@@ -93,18 +93,14 @@ class RtcManager final : public RtcManagerComponentBase {
                                U32 cmdSeq            //!< The command sequence number
                                ) override;
 
-    //! Handler implementation for command TO_PROC_TIME
-    //!
-    //! Switches the time source to use proc time
-    void SET_TIMEBASE_cmdHandler(FwOpcodeType opCode,    //!< The opcode
-                                 U32 cmdSeq,             //!< The command sequence number
-                                 FwTimeBaseStoreType tb  //!< The timebase to use
-                                 ) override;
-
   private:
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+
+    //! Parameter update method. Runs when parameter for timebase is changed and cancels all running sequences to avoid
+    //! conflict
+    void parameterUpdated(FwPrmIdType id) override;
 
     //! Alarm callback kicker method. Must be static but cannot reference this in a static context
     static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
@@ -143,7 +139,6 @@ class RtcManager final : public RtcManagerComponentBase {
     std::atomic<bool> m_RtcNotReadyThrottle;       //!< Throttle for RtcNotReady
     std::atomic<bool> m_RtcGetTimeFailedThrottle;  //!< Throttle for RtcGetTimeFailed
     std::atomic<bool> m_RtcInvalidTimeThrottle;    //!< Throttle for RtcInvalidTime
-    std::atomic<bool> m_ProcTimeSet;               //!< Proc time flag
 
     // rtc alarm members
     U16 m_curr_mask;               //!< The mask of the alarm present on hardware

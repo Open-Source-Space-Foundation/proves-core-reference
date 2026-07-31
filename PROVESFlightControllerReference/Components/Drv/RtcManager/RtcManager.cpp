@@ -17,8 +17,7 @@ RtcManager ::RtcManager(const char* const compName)
       m_rtcHelper(),
       m_RtcNotReadyThrottle(false),
       m_RtcGetTimeFailedThrottle(false),
-      m_RtcInvalidTimeThrottle(false),
-      m_ProcTimeSet(false) {
+      m_RtcInvalidTimeThrottle(false) {
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
@@ -50,7 +49,9 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
     // check if proc time mode is set
-    if (this->m_ProcTimeSet) {
+    Fw::ParamValid is_valid;
+    FwTimeBaseStoreType curr_tb = this->paramGet_TIMEBASE(is_valid);
+    if (curr_tb == Rtc::TimeBase::TB_PROC_TIME) {
         // use proc time
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
@@ -167,7 +168,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void RtcManager ::SET_TIMEBASE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, FwTimeBaseStoreType tb) {
+void RtcManager ::parameterUpdated(FwPrmIdType id) {
     // Cancel any running sequences before setting time, as time change may impact their behavior
     for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
         if (!this->isConnected_cancelSequences_OutputPort(i)) {
@@ -176,54 +177,7 @@ void RtcManager ::SET_TIMEBASE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, FwTim
         this->cancelSequences_out(i);
     }
 
-    // Retrieve time and it's associated base enum
-    FwTimeBaseStoreType curr_time_base = this->getTime().getTimeBase();
-
-    bool valid = false;
-
-    // Check if TimeBase is already correct
-    if (tb == curr_time_base) {
-        // Exit command early, log event
-        this->log_ACTIVITY_HI_TimeBase(curr_time_base);
-        valid = true;
-
-        // Command response
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-        return;
-    }
-
-    // If it's not we switch to the other TimeBase while rejecting invalid ones (proc time is 1, RTC is 3)
-
-    // set to proc
-    if (tb == 1) {
-        this->m_ProcTimeSet = true;
-
-        this->log_ACTIVITY_HI_TimeBase(tb);
-        valid = true;
-
-        // Command response
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-        return;
-    }
-
-    // Set to spacecraft
-    if (tb == 3) {
-        this->m_ProcTimeSet = false;
-
-        this->log_ACTIVITY_HI_TimeBase(tb);
-        valid = true;
-
-        // Command response
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-        return;
-    }
-
-    if (!valid) {
-        // If a valid TimeBase value wasn't entered
-        this->log_WARNING_HI_InvalidTimeBase();
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
-        return;
-    }
+    this->log_ACTIVITY_HI_TimeBaseSwitch(id);
 }
 
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
