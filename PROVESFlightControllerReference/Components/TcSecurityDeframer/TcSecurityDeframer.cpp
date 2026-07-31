@@ -50,6 +50,34 @@ U32& keyStoreGeneration() {
     return generation;
 }
 
+//! Asks the filesystem holding `filePath` whether it is actually mounted.
+//!
+//! fs_statvfs resolves the mount point and queries the underlying FS, so a success is direct
+//! evidence that /keys is up. This is the signal that makes "stat says the file is missing" safe to
+//! act on: on Zephyr, fs_stat returns -ENOENT for an unmounted mount point just as it does for a
+//! missing file (subsys/fs/fs.c: fs_get_mnt_point), so absence alone proves nothing.
+KeyStore::MountProbe probeMount(const char* filePath) {
+    char directory[64];
+    const char* const lastSlash = std::strrchr(filePath, '/');
+    if (lastSlash == nullptr || lastSlash == filePath) {
+        directory[0] = '/';
+        directory[1] = '\0';
+    } else {
+        const size_t length = static_cast<size_t>(lastSlash - filePath);
+        if (length >= sizeof directory) {
+            return KeyStore::MountProbe::Unknown;
+        }
+        std::memcpy(directory, filePath, length);
+        directory[length] = '\0';
+    }
+
+    FwSizeType totalBytes = 0;
+    FwSizeType freeBytes = 0;
+    return (Os::FileSystem::getFreeSpace(directory, totalBytes, freeBytes) == Os::FileSystem::OP_OK)
+               ? KeyStore::MountProbe::Live
+               : KeyStore::MountProbe::Unknown;
+}
+
 }  // namespace
 
 // ----------------------------------------------------------------------
@@ -230,9 +258,17 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
     // of a key we managed to read. PROVISION_KEY is bypass-allowlisted so it works on a keyless
     // board, so if an unreadable store (a truncated record reading back as BAD_SIZE, a littlefs
     // error, a mount not ready yet) counted as "keyless", anyone in radio range could induce a read
-    // failure and install their own key while a valid one still sits on flash. DOESNT_EXIST is the
-    // one failure that *is* proof of emptiness.
-    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+    // failure and install their own key while a valid one still sits on flash.
+    //
+    // The proof cannot come from loadStatus alone: on the Zephyr target an absent file reports
+    // OTHER_ERROR, not DOESNT_EXIST, so gating on the status made a factory-fresh (or /keys-erased)
+    // board refuse its own bootstrap forever - keyless and unprovisionable, i.e. total command
+    // loss. probeKeyStore() asks the filesystem instead. See Components::KeyStore in Types.hpp.
+    KeyStore::MountProbe mountProbe = KeyStore::MountProbe::Unknown;
+    KeyStore::StoreProbe storeProbe = KeyStore::StoreProbe::Unreadable;
+    this->probeKeyStore(loadStatus, mountProbe, storeProbe);
+
+    if (!KeyStore::storeStateIsKnown(mountProbe, storeProbe)) {
         this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::StoreUnreadable);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -240,7 +276,7 @@ void TcSecurityDeframer ::PROVISION_KEY_cmdHandler(FwOpcodeType opCode,
 
     // PROVISION_KEY is trust-on-first-use bootstrap: only honored while the store is empty.
     // Once any key exists, rotation must go through ADD_KEY/REMOVE_KEY (which require auth).
-    if (this->activeKeyCount() != 0) {
+    if (!KeyStore::storeIsProvisionable(mountProbe, storeProbe, this->activeKeyCount())) {
         this->log_WARNING_HI_KeyProvisionFailed(KeyStoreProvisionStatus::NotEmpty);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -297,8 +333,13 @@ void TcSecurityDeframer ::ADD_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U1
 
     // If the store could not be read back, its contents are unknown, and the read-modify-write
     // below would persist a guess: writing the last in-memory copy over whatever is actually on
-    // flash. Refuse rather than risk dropping a live key.
-    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+    // flash. Refuse rather than risk dropping a live key. As in PROVISION_KEY, "could not be read"
+    // has to be established by probing the filesystem, not by reading loadStatus.
+    KeyStore::MountProbe mountProbe = KeyStore::MountProbe::Unknown;
+    KeyStore::StoreProbe storeProbe = KeyStore::StoreProbe::Unreadable;
+    this->probeKeyStore(loadStatus, mountProbe, storeProbe);
+
+    if (!KeyStore::storeStateIsKnown(mountProbe, storeProbe)) {
         this->log_WARNING_HI_KeyAddFailed(KeyStoreProvisionStatus::StoreUnreadable);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -375,7 +416,11 @@ void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
     const Os::File::Status loadStatus = this->loadKeyStore();
 
     // See ADD_KEY: an unreadable store makes the read-modify-write a guess.
-    if (loadStatus != Os::File::OP_OK && loadStatus != Os::File::DOESNT_EXIST) {
+    KeyStore::MountProbe mountProbe = KeyStore::MountProbe::Unknown;
+    KeyStore::StoreProbe storeProbe = KeyStore::StoreProbe::Unreadable;
+    this->probeKeyStore(loadStatus, mountProbe, storeProbe);
+
+    if (!KeyStore::storeStateIsKnown(mountProbe, storeProbe)) {
         this->log_WARNING_HI_KeyRemoveFailed(KeyStoreProvisionStatus::StoreUnreadable);
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
@@ -542,6 +587,34 @@ Os::File::Status TcSecurityDeframer ::loadKeyStore() {
     // importKeyStore() directly; a reload has no command context to report into.
     (void)this->importKeyStore();
     return status;
+}
+
+void TcSecurityDeframer ::probeKeyStore(const Os::File::Status loadStatus,
+                                        KeyStore::MountProbe& mount,
+                                        KeyStore::StoreProbe& store) const {
+    if (loadStatus == Os::File::OP_OK) {
+        // A full, successful read is self-evidently proof the filesystem served the file.
+        mount = KeyStore::MountProbe::Live;
+        store = KeyStore::StoreProbe::Present;
+        return;
+    }
+
+    // The read failed. Do not infer why from its status: ZephyrFile::open collapses every fs_open
+    // errno into OTHER_ERROR, so on flight hardware a missing file and a corrupt filesystem are
+    // indistinguishable here. Ask the filesystem directly instead.
+    //
+    // Os::FileSystem::getPathType() is deliberately not used: it folds every error into NOT_EXIST,
+    // which would turn an I/O error into a false "absent" and re-open the very hole this gate
+    // exists to close. Go through the interface to keep the real status.
+    Os::FileSystem::PathType pathType = Os::FileSystem::PathType::NOT_EXIST;
+    const Os::FileSystem::Status statStatus =
+        Os::FileSystem::getSingleton()._getPathType(this->m_keyStoreFilePath.toChar(), pathType);
+
+    // DOESNT_EXIST from stat is a positive answer ("this path is not there"), but on Zephyr it is
+    // also what an unmounted /keys reports, so it only counts once probeMount() corroborates it.
+    store =
+        (statStatus == Os::FileSystem::DOESNT_EXIST) ? KeyStore::StoreProbe::Absent : KeyStore::StoreProbe::Unreadable;
+    mount = probeMount(this->m_keyStoreFilePath.toChar());
 }
 
 Os::File::Status TcSecurityDeframer ::writeKeyStore() {
