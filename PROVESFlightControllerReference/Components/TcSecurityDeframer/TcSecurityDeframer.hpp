@@ -123,6 +123,15 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     //! lock held. On a missing/unreadable file, m_keyStore is left with no valid slots (keyless state).
     Os::File::Status loadKeyStore();
 
+    //! Determines what is actually known about the on-flash key store after a loadKeyStore()
+    //! attempt, by interrogating the filesystem rather than trusting the read status (which cannot
+    //! distinguish "missing" from "broken" on the Zephyr target). Feeds the pure
+    //! Components::KeyStore policy predicates. Must be called with the key store lock held.
+    void probeKeyStore(const Os::File::Status loadStatus,  //!< Status returned by loadKeyStore()
+                       KeyStore::MountProbe& mount,        //!< Set to whether /keys is demonstrably mounted
+                       KeyStore::StoreProbe& store         //!< Set to what is known about the store file
+    ) const;
+
     //! Writes m_keyStore to the file system. Must be called with the key store lock held.
     Os::File::Status writeKeyStore();
 

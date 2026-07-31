@@ -78,7 +78,45 @@ def test_provision_key(
 
     if evt.template.get_full_name().endswith("KeyProvisionFailed"):
         status = evt.args[0].val
+        # NotEmpty is the ONLY tolerated failure, and only because CI boards keep the key store on
+        # a littlefs partition that survives reflashing, so every run after the first re-provisions
+        # a board that is already provisioned.
+        #
+        # StoreUnreadable in particular must never be tolerated here. On a board that already holds
+        # a key it means the store went unreadable (a real fault); on a keyless board it is the
+        # signature of the cold-provisioning lockout - the board cannot be commanded at all, and
+        # letting this pass is precisely how that shipped. See test_cold_provision_gap below.
         assert status == "NotEmpty", (
             f"PROVISION_KEY failed with unexpected status {status!r}; "
             "board should either be keyless or already hold the CI key"
         )
+
+
+@pytest.mark.provision_key
+def test_cold_provision_gap():
+    """Placeholder for the cold-provision path, which is not yet reachable from CI.
+
+    The bug this file's assertions now guard against (PROVISION_KEY refused with StoreUnreadable on
+    a board whose key store file does not exist) can only be exercised against a *genuinely blank*
+    key store. Nothing in the test fleet can produce that state:
+
+      * every bench/CI board was provisioned under an earlier firmware revision, and the littlefs
+        keystore_partition survives reflashing, so the store is never absent;
+      * the existing ``fsFormat.FORMAT`` command formats the FatFS root ``/``, NOT the littlefs
+        ``/keys`` partition, so it cannot clear the store either.
+
+    Automating this therefore needs new firmware capability - either a command that erases the
+    keystore partition (which must itself be authenticated, since it is a remote-bricking primitive
+    if it is not) or a CI step that flashes a blank keystore partition image over SWD. Rather than
+    fake a cold board with a mock that would re-hide the host/target divergence, the invariant is
+    covered exhaustively at the unit level in
+    ``test/unit-tests/test_TcSecurityDeframer_KeyStorePolicy.cpp``, and this test is left as an
+    explicit, visible gap.
+
+    TODO(#472): implement once /keys can be erased or pre-flashed blank from CI.
+    """
+    pytest.skip(
+        "Cold-provision path needs a blank /keys partition; no mechanism exists yet to produce "
+        "one from CI (fsFormat.FORMAT targets FatFS /, not littlefs /keys). Covered at unit level "
+        "by test_TcSecurityDeframer_KeyStorePolicy.cpp."
+    )
