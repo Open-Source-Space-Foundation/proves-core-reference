@@ -50,6 +50,18 @@ target_compile_definitions(test_RadioHeadShim PRIVATE LINK_PROFILES_USE_HOST_TYP
 target_link_libraries(test_RadioHeadShim gtest_main)
 add_test(NAME test_RadioHeadShim COMMAND test_RadioHeadShim)
 
+# --- UspRadio: TxOutcomePolicy host-side test (GFSK wedge-fix item 3) ---
+# TxOutcomePolicy.hpp is header-only and free of F'/USP/Zephyr includes.
+add_executable(test_TxOutcomePolicy
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr/fprime-zephyr/Drv/UspRadio/test/ut/test_TxOutcomePolicy.cpp
+)
+target_include_directories(test_TxOutcomePolicy PRIVATE
+    # Exposes #include "fprime-zephyr/Drv/UspRadio/TxOutcomePolicy.hpp"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/fprime-zephyr
+)
+target_link_libraries(test_TxOutcomePolicy gtest_main)
+add_test(NAME test_TxOutcomePolicy COMMAND test_TxOutcomePolicy)
+
 # --- Helper Libraries ---
 
 # DetumbleManager BDot
