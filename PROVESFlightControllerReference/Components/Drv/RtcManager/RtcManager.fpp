@@ -68,10 +68,10 @@ module Drv {
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
-        @ Timebase event fires when the timebase changes and indicates the current timebase
-        event TimeBaseSwitch(
-            timeBase: FwTimeBaseStoreType
-        ) severity activity high id 18 format "Timebase switched to: {}"
+        @ TimeBaseChanged event fires when the timebase parameter changes and indicates the new timebase
+        event TimeBaseChanged(
+            timeBase: Rtc.TimeBase @< The timebase now in use
+        ) severity activity high id 18 format "Timebase changed to: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
