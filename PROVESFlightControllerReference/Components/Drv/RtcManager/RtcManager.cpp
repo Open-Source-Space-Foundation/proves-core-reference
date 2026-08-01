@@ -167,7 +167,17 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 }
 
 void RtcManager ::parameterUpdated(FwPrmIdType id) {
-    // Cancel any running sequences before setting time, as time change may impact their behavior
+    if (id != RtcManager::PARAMID_TIMEBASE) {
+        return;
+    }
+
+    Fw::ParamValid valid;
+    const Rtc::TimeBase timeBase = this->paramGet_TIMEBASE(valid);
+    if ((valid == Fw::ParamValid::INVALID) || (valid == Fw::ParamValid::UNINIT)) {
+        return;
+    }
+
+    // Cancel any running sequences, as the change in reported time may impact their behavior
     for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
         if (!this->isConnected_cancelSequences_OutputPort(i)) {
             continue;
@@ -175,7 +185,7 @@ void RtcManager ::parameterUpdated(FwPrmIdType id) {
         this->cancelSequences_out(i);
     }
 
-    this->log_ACTIVITY_HI_TimeBaseSwitch(id);
+    this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
 }
 
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
