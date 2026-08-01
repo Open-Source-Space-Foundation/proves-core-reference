@@ -60,7 +60,6 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
-        // Don't set the proc time flag if device is not ready
 
         // Use uptime as fallback
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
