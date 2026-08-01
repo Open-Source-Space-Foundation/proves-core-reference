@@ -48,12 +48,11 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
-    // check if proc time mode is set
-    Fw::ParamValid is_valid;
-    FwTimeBaseStoreType curr_tb = this->paramGet_TIMEBASE(is_valid);
-    if (curr_tb == Rtc::TimeBase::TB_PROC_TIME) {
-        // use proc time
-        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+    // Use proc time directly when the timebase parameter selects it
+    Fw::ParamValid timeBaseValid;
+    const Rtc::TimeBase timeBase = this->paramGet_TIMEBASE(timeBaseValid);
+    if (timeBase == Rtc::TimeBase::TB_PROC_TIME) {
+        time.set(::TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
 
