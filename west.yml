@@ -15,11 +15,15 @@ manifest:
 
   projects:
     # Zephyr RTOS core — Open-Source-Space-Foundation fork, integration branch
-    # feat/proves-usp-radio (v4.4.1 + CDC-ACM fixes, formerly patches/0005+0007;
-    # constituent PRs tracked in OSSF/zephyr#3).
+    # feat/proves-usp-radio-trimmed (v4.4.1 + the CDC-ACM TX-FIFO drain fix,
+    # formerly patches/0005; constituent PR tracked in OSSF/zephyr#1).
+    # The poll_out bounded-wait layer (OSSF/zephyr#2) was pruned 2026-08-01:
+    # its added bound sits behind data->flow_ctrl, which is false on the v5e
+    # from both devicetree and the explicit UART_CFG_FLOW_CTRL_NONE configure,
+    # so the code was unreachable in the flight image.
     - name: zephyr
       url: https://github.com/Open-Source-Space-Foundation/zephyr
-      revision: 3838a2802c916accdfa671de77633ee45b69441c
+      revision: 144acbce8713ff856e15577487b8bd5dd571c5c2
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
