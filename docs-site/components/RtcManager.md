@@ -118,9 +118,9 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | ALARM_LIST | Responds with info about the current set alarm |
 
 ## Parameters
-| Name | Description |
-|---|---|
-| TIMEBASE | Decides the timebase that timeGetPort reports |
+| Name | Description | Type | Default |
+|---|---|---|---|
+| TIMEBASE | Decides the timebase that timeGetPort reports | Rtc.TimeBase | TB_SC_TIME |
 
 ## Events
 | Name | Description |
@@ -128,6 +128,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
 | TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
+| TimeBaseChanged | Emitted when the TimeBase param is updated to signal the current TimeBase |
 | AlarmSet | Emitted when alarm is successfully set |
 | AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
 | AlarmTriggered | Emitted when an alarm fires |
@@ -203,7 +204,7 @@ classDiagram
 
 ### `timeGetPort` port
 
-The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to uptime if the RTC is unavailable.
+The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to uptime if the RTC is unavailable. When the TimeBase parameter is TB_PROC_TIME it returns uptime without touching the RTC.
 
 #### Success (RTC Available)
 
@@ -247,6 +248,21 @@ sequenceDiagram
     Note over RTC Manager: Device not ready
     RTC Manager->>Console Log: Log "RTC not ready" (throttled)
     RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_PROC_TIME`
+```
+
+
+### `parameterUpdated`
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant RTC Manager
+
+    Ground Station->>RTC Manager: Command TIMEBASE_PRM_SET sent
+    RTC Manager->>RTC Manager: Validate the command
+    RTC Manager->>RTC Manager: Cancel running sequences
+    RTC Manager->>Ground Station: Command response ok
+    Note over RTC Manager: Command for saving the parameter to memory is TIMEBASE_PRM_SAVE which flows the same except it persists across boots.
 ```
 
 ### `TIME_SET` Command

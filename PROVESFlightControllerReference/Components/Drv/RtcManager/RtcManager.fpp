@@ -10,6 +10,8 @@ module Drv {
     }
 }
 
+@ Timebase parameter for the RtcManager component
+# Under RTC so that it does not shadow the TimeBase generated in the DRV module
 module Rtc {
     @ Parameter for timebase
     enum TimeBase: FwTimeBaseStoreType {
