@@ -13,8 +13,8 @@
 
 #include "PROVESFlightControllerReference/Components/ComDelay/ComDelayLogic.hpp"
 
-using Components::ComDelayLogic;
 using Components::COM_DELAY_DEFAULT_DIVIDER;
+using Components::ComDelayLogic;
 
 namespace {
 
@@ -54,7 +54,7 @@ TEST(ComDelayLogicTest, LatchedStatusNotReleasedUntilCounterIsZero) {
     // Ticks while counter is nonzero must not release it.
     EXPECT_FALSE(logic.tick(3, true, status));  // tick_count 1 -> 2
     EXPECT_FALSE(logic.tick(3, true, status));  // tick_count 2 -> 3
-    EXPECT_TRUE(logic.hasLatchedStatus());       // still latched, not lost
+    EXPECT_TRUE(logic.hasLatchedStatus());      // still latched, not lost
 
     // tick_count was 3 (>= divider 3) so it resets to 0 on this call, but the
     // *release check* for this call examines the counter as it was going in
@@ -172,7 +172,7 @@ TEST(ComDelayLogicTest, DividerChangeMidCycleDoesNotLoseOrDoubleEmitLatch) {
     // per the state machine's rules, the release check for this same call
     // used the counter as it entered (3, not 0), so still no release yet.
     EXPECT_FALSE(logic.tick(3, true, status));  // tick_count 3 -> 0 (reset by new, smaller divider)
-    EXPECT_TRUE(logic.hasLatchedStatus());        // still latched -- not lost
+    EXPECT_TRUE(logic.hasLatchedStatus());      // still latched -- not lost
 
     // The very next tick sees counter==0 and releases exactly the one latched status.
     ASSERT_TRUE(logic.tick(3, true, status));
