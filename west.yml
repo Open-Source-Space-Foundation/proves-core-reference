@@ -22,8 +22,7 @@ manifest:
     # from both devicetree and the explicit UART_CFG_FLOW_CTRL_NONE configure,
     # so the code was unreachable in the flight image.
     - name: zephyr
-      url: https://github.com/Open-Source-Space-Foundation/zephyr
-      revision: 144acbce8713ff856e15577487b8bd5dd571c5c2
+      revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
