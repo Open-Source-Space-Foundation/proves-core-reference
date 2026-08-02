@@ -96,6 +96,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
     )
+    parser.addoption(
+        "--ota-image",
+        default=None,
+        help="Path to the signed flight-software image (zephyr.signed.bin) uplinked "
+        "by the OTA image-swap tests (ota_update_test.py). When unset those tests skip.",
+    )
+    parser.addoption(
+        "--ota-build-id",
+        default=None,
+        help="Unique marker string baked into the --ota-image build (e.g. its git "
+        "describe / project version). The OTA swap test asserts this string appears in "
+        "the CdhCore.version.ProjectVersion event after booting the new image, and is "
+        "absent again after the MCUBoot auto-revert. Required for ota_update_test.py.",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -318,3 +332,23 @@ def tlm_sampler(
     stop.set()
     t.join(timeout=3)
     fprime_test_api_session.remove_telemetry_subhistory(subhist)
+
+
+@pytest.fixture
+def ota_config(request: pytest.FixtureRequest):
+    """Provide the OTA image path and build-id marker, skipping if either is unset.
+
+    The OTA image-swap tests (ota_update_test.py) need a real signed image to
+    uplink and a unique marker string to prove which image is running. Both are
+    supplied on the command line via --ota-image / --ota-build-id; without them
+    there is nothing meaningful to test, so the tests skip rather than fail.
+    """
+    image = request.config.getoption("--ota-image", default=None)
+    build_id = request.config.getoption("--ota-build-id", default=None)
+    if not image or not build_id:
+        pytest.skip(
+            "OTA tests require --ota-image=<signed.bin> and --ota-build-id=<marker>"
+        )
+    if not os.path.isfile(image):
+        pytest.skip(f"OTA image not found: {image}")
+    return image, build_id
