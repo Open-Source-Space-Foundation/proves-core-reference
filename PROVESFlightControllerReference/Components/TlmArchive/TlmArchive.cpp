@@ -55,6 +55,13 @@ TlmArchive ::TlmArchive(const char* const compName) : TlmArchiveComponentBase(co
 
 TlmArchive ::~TlmArchive() {}
 
+void TlmArchive::clearPacketQueue() {
+    Os::ScopeLock lock(this->m_queueMutex);
+    this->m_queueHead = 0;
+    this->m_queueTail = 0;
+    this->m_queueSize = 0;
+}
+
 void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 context) {
     (void)portNum;
     (void)context;
@@ -71,6 +78,7 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
         this->log_WARNING_HI_FailureLimitReached(maxFailures);
         return;
     } else if (this->m_fileSize.load() >= maxFileSize) {
+        this->clearPacketQueue();
         this->log_WARNING_LO_SizeLimitReached(maxFileSize);
         return;
     } else if (this->m_antennasDeployed.load()) {
@@ -179,7 +187,8 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     csvRecord[recordSize++] = '\n';
 
     if (currentSize > maxFileSize) {
-        this->m_failures.fetch_add(1);
+        this->clearPacketQueue();
+        this->log_WARNING_LO_SizeLimitReached(maxFileSize);
         return;
     }
 

@@ -167,8 +167,10 @@ size. Stat failures are reported and counted. After a successful size
 initialization, the component uses the cached size rather than querying the
 filesystem again. Once a successful write brings the cached archive size to or
 above the configured `MAX_FILE_SIZE`, subsequent packets are rejected by
-`comIn`. The final write may therefore make the archive larger than the
-threshold by one CSV record.
+`comIn` and all remaining queued packets are discarded. The worker also clears
+the queue if it observes that the archive is already over the limit. The final
+write may therefore make the archive larger than the threshold by one CSV
+record.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
@@ -292,7 +294,7 @@ The remaining compile-time implementation constants are:
 | `WriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
 | `FailureLimitReached` | Warning High | 1 | `count: U32` | Emitted by `comIn` when the cumulative failure count reaches the configured limit. |
 | `AntennasDeployed` | Warning Low | 1 | None | Emitted by `comIn` when deployment has been latched and a new packet is rejected. |
-| `SizeLimitReached` | Warning Low | 1 | `maxSize: U32` | Emitted by `comIn` when the cached archive size reaches the configured maximum. |
+| `SizeLimitReached` | Warning Low | 1 | `maxSize: U32` | Emitted by `comIn` when the cached archive size reaches the configured maximum, or by `run` when a queued packet observes that the size has exceeded it. |
 
 `QueueFull` has an explicit throttle-clear call so each distinct full period
 can be reported. The other throttled events report only their first occurrence
@@ -336,3 +338,5 @@ There are currently no component-specific unit tests for TlmArchive.
 | 2026-08-02 | Removed the empty-queue event and its throttle state. |
 | 2026-08-02 | Converted the archive size and filesystem failure limits to runtime F Prime parameters. |
 | 2026-08-02 | Added validity assertions after reading runtime parameters. |
+| 2026-08-02 | Reported the size-limit event when the archive worker observes an oversized file. |
+| 2026-08-02 | Cleared queued telemetry whenever the archive size limit is observed. |

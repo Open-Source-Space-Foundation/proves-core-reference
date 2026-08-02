@@ -28,6 +28,7 @@ class TlmArchive final : public TlmArchiveComponentBase {
     static constexpr FwSizeType PACKET_QUEUE_CAPACITY = Svc::MAX_PACKETIZER_PACKETS;
     static_assert(PACKET_QUEUE_CAPACITY > 0, "Telemetry archive packet queue must have storage");
 
+    void clearPacketQueue();
     void comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 context) override;
     void run_handler(FwIndexType portNum, U32 context) override;
 
