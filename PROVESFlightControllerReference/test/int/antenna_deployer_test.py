@@ -9,6 +9,8 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.uart_only]
+
 antenna_deployer = "ReferenceDeployment.antennaDeployer"
 burnwire = "ReferenceDeployment.burnwire"
 
@@ -22,15 +24,15 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
         ("MAX_DEPLOY_ATTEMPTS", 1),
     ]
 
-    fprime_test_api.send_and_assert_command(
-        f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False], timeout=5
-    )
-
     defaults: list[tuple[str, int]] = [
         ("RETRY_DELAY_SEC", 30),
         ("BURN_DURATION_SEC", 8),
         ("MAX_DEPLOY_ATTEMPTS", 3),
     ]
+
+    proves_send_and_assert_command(
+        fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]
+    )
 
     # Ensure a clean starting point
     fprime_test_api.clear_histories()
@@ -79,6 +81,7 @@ def test_deploy_without_distance_sensor(fprime_test_api: IntegrationTestAPI, sta
     assert finish_event.args[1].val == 1, "Exactly one attempt should be recorded"
 
 
+@pytest.mark.uart_only
 def test_multiple_deploy_attempts(fprime_test_api: IntegrationTestAPI, start_gds):
     """Changes the deploy attempts parameter and ensures the burnwire deploys multiple times"""
 

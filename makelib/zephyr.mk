@@ -47,9 +47,25 @@ clean-zephyr-export: ## Remove Zephyr exported files
 	rm -rf $(CMAKE_PACKAGES)/Zephyr $(CMAKE_PACKAGES)/ZephyrUnittest/
 
 .PHONY: zephyr-sdk
+ZEPHYR_SDK_INSTALL_RETRIES ?= 3
 zephyr-sdk: fprime-venv ## Install Zephyr SDK
-	@test -d $(ZEPHYR_SDK_PATH) || { \
-		$(WEST) sdk install --toolchains arm-zephyr-eabi; \
+	@test -d $(ZEPHYR_SDK_PATH)/gnu/arm-zephyr-eabi || { \
+		i=1; \
+		until $(WEST) sdk install --toolchains arm-zephyr-eabi; do \
+			if [ "$$i" -ge $(ZEPHYR_SDK_INSTALL_RETRIES) ]; then \
+				echo "❌ Error: Zephyr SDK install failed after $(ZEPHYR_SDK_INSTALL_RETRIES) attempts"; \
+				exit 1; \
+			fi; \
+			echo "⚠ Zephyr SDK install failed (attempt $$i/$(ZEPHYR_SDK_INSTALL_RETRIES))"; \
+			if [ -f $(ZEPHYR_SDK_PATH)/setup.sh ]; then \
+				echo "  Patching setup.sh's macOS host-arch detection (Rosetta-translated shells misreport HOSTTYPE), then retrying in place..."; \
+				$(UV_RUN) python3 tools/patch-zephyr-sdk-toolchain-download.py $(ZEPHYR_SDK_PATH)/setup.sh; \
+			else \
+				echo "  Retrying with a clean SDK dir..."; \
+				rm -rf $(ZEPHYR_SDK_PATH); \
+			fi; \
+			i=$$((i + 1)); \
+		done; \
 	}
 
 .PHONY: clean-zephyr-sdk
@@ -58,4 +74,4 @@ clean-zephyr-sdk: ## Remove Zephyr SDK
 
 .PHONY: zephyr-python-deps
 zephyr-python-deps: fprime-venv ## Install Zephyr Python dependencies
-	@$(WEST) uv pip --install -- --prerelease=allow --quiet
+	@UV="$(UV)" $(WEST) uv pip --install -- --prerelease=allow --quiet

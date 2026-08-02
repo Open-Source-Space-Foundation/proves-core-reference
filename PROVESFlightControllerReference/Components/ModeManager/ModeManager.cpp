@@ -9,7 +9,9 @@
 #include <algorithm>
 #include <cstring>
 
+#include "Fw/Time/Time.hpp"
 #include "Fw/Types/Assert.hpp"
+#include "ModeManager.hpp"
 
 namespace Components {
 
@@ -24,7 +26,9 @@ ModeManager ::ModeManager(const char* const compName)
       m_runCounter(0),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0) {
+      m_recoveryVoltageCounter(0),
+      m_commandLossCounter(0),
+      m_commandLossDebounce(false) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -46,6 +50,10 @@ void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
+    {
+        Os::ScopeLock lock(m_commandLossMutex);
+        this->m_commandLossCounter++;  // keep track of seconds since last packet
+    }
 
     // Get current voltage (used by mode-specific voltage monitoring)
     bool valid = false;
@@ -107,6 +115,9 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
         this->m_safeModeVoltageCounter = 0;
     }
 
+    // Check for command loss and trigger safe mode if timeout has expired
+    commandLossCheck();
+
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
     this->tlmWrite_CurrentSafeModeReason(this->m_safeModeReason);
@@ -147,8 +158,6 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
                                             U32 cmdSeq,
                                             const Fw::CmdResponse& response) {
     (void)portNum;
-    (void)opCode;
-    (void)cmdSeq;
 
     if (response == Fw::CmdResponse::OK) {
         // log that sequence completed successfully
@@ -156,6 +165,11 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
     } else {
         // log that sequence failed
         this->log_WARNING_LO_SafeModeSequenceFailed(response);
+    }
+
+    // Forward completion to other listeners (e.g. StartupManager active-sequence tracking)
+    if (this->isConnected_sequenceDoneNotify_OutputPort(0)) {
+        this->sequenceDoneNotify_out(0, opCode, cmdSeq, response);
     }
 }
 
@@ -200,6 +214,12 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     }
 
     file.close();
+}
+
+void ModeManager ::packetRouted_handler(FwIndexType portNum) {
+    Os::ScopeLock lock(m_commandLossMutex);
+    this->m_commandLossCounter = 0;
+    this->m_commandLossDebounce = false;
 }
 
 // ----------------------------------------------------------------------
@@ -397,6 +417,9 @@ void ModeManager ::enterSafeMode(Components::SafeModeReason reason) {
         case Components::SafeModeReason::LORA:
             reasonStr = "LoRa communication fault";
             break;
+        case Components::SafeModeReason::COMMAND_LOSS:
+            reasonStr = "Loss of contact with ground";
+            break;
         default:
             reasonStr = "Unknown";
             break;
@@ -504,6 +527,32 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
     // Do NOT return a fake value that could mask a real brown-out condition
     valid = false;
     return 0.0f;
+}
+
+void ModeManager::commandLossCheck() {
+    // Protect against concurrent access to command loss state
+    Os::ScopeLock lock(this->m_commandLossMutex);
+
+    // Get command loss period from parameter
+    Fw::ParamValid paramValid;
+    Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
+    FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
+
+    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() && !this->m_commandLossDebounce) {
+        // Debounce so we don't repeatedly re-trigger command loss behavior
+        this->m_commandLossDebounce = true;
+
+        // Telemeter the command loss duration
+        U32 commandLossDuration = this->m_commandLossCounter;
+        this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
+
+        // Trigger safe mode entry due to command loss
+        this->runSafeModeSequence();
+        this->enterSafeMode(Components::SafeModeReason::COMMAND_LOSS);
+
+        // Stop the watchdog to trigger a hardware power cycle as a last resort for recovery
+        this->stopWatchdog_out(0);
+    }
 }
 
 }  // namespace Components

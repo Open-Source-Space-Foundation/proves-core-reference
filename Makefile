@@ -9,18 +9,8 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
+	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
@@ -47,6 +37,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs constants-order fix..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
 
 
 .PHONY: zephyr-setup
@@ -73,6 +67,10 @@ fmt: pre-commit-install ## Lint and format files
 .PHONY: data-budget
 data-budget: fprime-venv ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
 	@$(UV_RUN) python3 tools/data_budget.py $(if $(VERBOSE),--verbose,)
+
+.PHONY: data-diagram
+data-diagram: fprime-venv ## Generate Mermaid packet wire diagrams as Markdown (use OUTPUT=file.md to save to a file)
+	@$(UV_RUN) python3 tools/data_budget.py --diagram $(if $(OUTPUT),--output $(OUTPUT),)
 
 ##@ Documentation
 
@@ -118,8 +116,8 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
 	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
-	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
+	@cp PROVESFlightControllerReference/Components/TcSecurityDeframer/docs/sdd.md docs-site/components/TcSecurityDeframer.md
+	@cp PROVESFlightControllerReference/Components/ProvesRouter/docs/sdd.md docs-site/components/ProvesRouter.md
 	@# Copy images
 	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
 	@echo "✓ Synced 32 component SDDs and images"
@@ -143,14 +141,21 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
+BUILD_YAMCS_MDB ?= 1
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
+	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
+
+.PHONY: check-console-disabled
+ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
+check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
+	@$(UV_RUN) python3 scripts/check_console_disabled.py "$(ZEPHYR_CONFIG)"
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -176,16 +181,55 @@ build-mcuboot: submodules zephyr fprime-venv
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
+##@ Debugging / OpenOCD
+
+OPENOCD_DIR ?= $(shell pwd)/tools/openocd
+OPENOCD_REPO ?= https://github.com/raspberrypi/openocd.git
+OPENOCD_REF ?= acff23f
+OPENOCD_BIN ?= $(OPENOCD_DIR)/src/openocd
+OPENOCD_JOBS ?= 4
+OPENOCD_FLASH_SPEED ?= 5000
+OPENOCD_COMMON_FLAGS ?= -s $(OPENOCD_DIR)/tcl -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed $(OPENOCD_FLASH_SPEED)"
+
+$(OPENOCD_DIR)/.built:
+	@if [ ! -d "$(OPENOCD_DIR)" ]; then \
+		git clone "$(OPENOCD_REPO)" "$(OPENOCD_DIR)"; \
+	fi
+	@cd "$(OPENOCD_DIR)" && \
+		git checkout "$(OPENOCD_REF)" || { echo "Failed to checkout $(OPENOCD_REF)"; exit 1; } && \
+		./bootstrap && \
+		./configure --disable-werror --enable-cmsis-dap --enable-cmsis-dap-v2 && \
+		$(MAKE) -j$(OPENOCD_JOBS)
+	@touch "$(OPENOCD_DIR)/.built"
+
+.PHONY: debug
+debug: $(OPENOCD_DIR)/.built ## Run OpenOCD against the debug probe and stream board debug output
+	@"$(OPENOCD_BIN)" $(OPENOCD_COMMON_FLAGS)
+
+.PHONY: debug-install
+debug-install: $(OPENOCD_DIR)/.built ## Flash a file via SWD with OpenOCD. Usage: make debug-install <filename>
+	@TARGET_FILE="$(firstword $(filter-out $@,$(MAKECMDGOALS)))"; \
+	if [ -z "$$TARGET_FILE" ]; then \
+		echo "Usage: make debug-install <filename>"; \
+		exit 1; \
+	fi; \
+	if [ ! -f "$$TARGET_FILE" ]; then \
+		echo "File not found: $$TARGET_FILE"; \
+		exit 1; \
+	fi; \
+	"$(OPENOCD_BIN)" $(OPENOCD_COMMON_FLAGS) -c "program $$TARGET_FILE verify reset exit"
+
 test-unit: ## Run unit tests
 	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
+FILTER ?= not sync_sequence_number and not format_filesystem
+
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
 	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
 	TARGETS=""; \
-	FILTER="not flaky"; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
 			*.py) TARGETS="PROVESFlightControllerReference/test/int/$(TEST)" ;; \
@@ -193,7 +237,6 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		esac; \
 		[ -e "$$TARGETS" ] || { echo "Specified test file $$TARGETS not found"; exit 1; }; \
 	elif [ -n "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
-		FILTER=""; \
 		for test in $(filter-out $@,$(MAKECMDGOALS)); do \
 			case "$$test" in \
 				*.py) TARGETS="$$TARGETS PROVESFlightControllerReference/test/int/$$test" ;; \
@@ -204,29 +247,20 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$$FILTER"
+	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:
 
+.PHONY: sync-sequence-number
+sync-sequence-number: uv ## Synchronize GDS/flight sequence number
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
 	@$(UV_RUN) python PROVESFlightControllerReference/test/run_interactive_tests.py $(ARGS)
-
-.PHONY: bootloader
-bootloader: uv
-	@if picotool info ; then \
-		echo "RP2350 already in bootloader mode - skipping trigger"; \
-	else \
-		echo "RP2350 not in bootloader mode - triggering bootloader"; \
-		$(UV_RUN) pytest PROVESFlightControllerReference/test/bootloader_trigger.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment; \
-	fi
-
-.PHONY: sync-sequence-number
-sync-sequence-number: fprime-venv ## Synchronize sequence number between GDS and flight software
-	@echo "Synchronizing sequence number; ensure you have the GDS open."
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/sync_sequence_number.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: clean
 clean: ## Remove all gitignored files
@@ -242,6 +276,47 @@ yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-ar
 	  echo "Generating XTCE from $$DICT"; \
 	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
 	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
+
+.PHONY: yamcs-mdb
+yamcs-mdb: yamcs-dict ## Build the YAMCS Mission Database (alias for yamcs-dict, runs after build)
+
+.PHONY: yamcs-build-check
+yamcs-build-check: ## Validate YAMCS server boots via docker compose with the current MDB
+	@set -e; \
+	if [ ! -f yamcs/yamcs-data/mdb/fprime.xtce.xml ]; then \
+	  echo "Error: yamcs/yamcs-data/mdb/fprime.xtce.xml missing — run 'make yamcs-mdb' first"; \
+	  exit 1; \
+	fi; \
+	command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required for yamcs-build-check"; exit 1; }; \
+	trap 'status=$$?; \
+	  if [ $$status -ne 0 ]; then docker compose -f yamcs/docker-compose.yml logs || true; fi; \
+	  docker compose -f yamcs/docker-compose.yml down || true' EXIT INT TERM; \
+	echo "Pre-pulling YAMCS images (excluded from readiness budget)..."; \
+	docker compose -f yamcs/docker-compose.yml pull; \
+	echo "Starting YAMCS server (docker compose)..."; \
+	docker compose -f yamcs/docker-compose.yml up -d; \
+	echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."; \
+	i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 180 ]; then \
+	    echo "ERROR: YAMCS did not respond on :8090 within 180s"; \
+	    exit 1; \
+	  fi; \
+	  sleep 1; \
+	done; \
+	echo "Checking that instance fprime-project is RUNNING..."; \
+	state=$$(curl -fsS http://localhost:8090/api/instances/fprime-project | jq -r '.state'); \
+	if [ "$$state" != "RUNNING" ]; then \
+	  echo "ERROR: instance fprime-project did not reach RUNNING (state=$$state)"; \
+	  curl -sS http://localhost:8090/api/instances/fprime-project || true; \
+	  exit 1; \
+	fi; \
+	echo "YAMCS build check passed."
+
+.PHONY: test-yamcs
+test-yamcs: fprime-venv ## Run YAMCS round-trip tests (assumes 'make yamcs UART_DEVICE=...' is running)
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/yamcs \
+	  --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: yamcs-stop
 yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
@@ -283,6 +358,14 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 	done
 	@echo "Done."
 
+# Spacecraft ID(s) passed to the adapter. May be a comma-separated list
+# (e.g. SPACECRAFT_ID=68,67) — the adapter accepts TM from all listed SCIDs
+# and uses the first for TC framing. Must include the SCID baked into the
+# FSW build (ComCfg.fpp) and registered in the YAMCS instance config.
+# Defaults to the production value (68 / 0x0044). CI sets this to 67 /
+# 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
+SPACECRAFT_ID ?= 68
+
 .PHONY: yamcs
 yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
 	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
@@ -296,14 +379,21 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	    --communication-selection none \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
 	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
-	@sleep 5
+	@echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."
+	@i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 180 ]; then echo "ERROR: YAMCS did not open :8090 within 180s"; exit 1; fi; \
+	  sleep 1; \
+	done; \
+	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE)..."
+	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
 	    --uart-device $(UART_DEVICE) \
-	    --uart-baud 115200
+	    --uart-baud 115200 \
+	    --spacecraft-id $(SPACECRAFT_ID)
 
 .PHONY: yamcs-server
 yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
@@ -349,7 +439,7 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
-	@$(GDS_COMMAND) --gui=none --uart-device=/dev/ttyBOARD
+	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
 DoL_test:
@@ -359,7 +449,12 @@ DoL_test:
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
-	@ cd Framing && $(UV_RUN) pip install -e .
+	@# Use `uv pip` (installs into $(VIRTUAL_ENV)) rather than `uv run` inside
+	@# Framing/: `uv run` treats Framing as its own uv project and syncs its
+	@# lockfile into the shared venv, uninstalling/reinstalling dozens of
+	@# packages. When gds-integration runs in the background this churn races
+	@# any concurrently starting pytest and breaks its imports mid-flight.
+	@ $(UV) pip install -e Framing
 
 .PHONY: copy-secrets
 copy-secrets:
@@ -370,15 +465,19 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
-make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
+make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
 	@echo "Generating unique spacecraft ID for CI build..."
 	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
+	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
+	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
+	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 
 include makelib/build-tools.mk
 include makelib/ci.mk

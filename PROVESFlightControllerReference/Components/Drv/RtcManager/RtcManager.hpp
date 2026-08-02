@@ -98,6 +98,10 @@ class RtcManager final : public RtcManagerComponentBase {
     // Private helper methods
     // ----------------------------------------------------------------------
 
+    //! Parameter update method. Runs when parameter for timebase is changed and cancels all running sequences to avoid
+    //! conflict
+    void parameterUpdated(FwPrmIdType id) override;
+
     //! Alarm callback kicker method. Must be static but cannot reference this in a static context
     static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
 

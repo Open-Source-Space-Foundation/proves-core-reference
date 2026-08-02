@@ -21,21 +21,34 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
-resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
-ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
-safeModeSeq = "ReferenceDeployment.safeModeSeq"
 fileManager = "FileHandling.fileManager"
+modeManager = "ReferenceDeployment.modeManager"
+watchdog = "ReferenceDeployment.watchdog"
 
 
 @pytest.fixture(autouse=True)
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    # fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+    # Set the time back to current time
     set_time(fprime_test_api)
+
+    # Set mode back to normal after each test in case we entered safe mode by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{modeManager}.EXIT_SAFE_MODE",
+    )
+
+    # Re-enable the watchdog in case it was stopped by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{watchdog}.START_WATCHDOG",
+    )
+
+    # Clear event history
     fprime_test_api.clear_histories()
 
 
@@ -96,8 +109,16 @@ def uplink_sequence_and_await_completion(
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
+
+    # Sync the RTC to the test runner's clock first so the "previous time"
+    # reported by the next TIME_SET is known (a fresh boot starts at 2000-01-01)
+    set_time(fprime_test_api)
+    fprime_test_api.clear_histories()
 
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
     curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
@@ -123,18 +144,19 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert previously set time is within 30 seconds of now
-    pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(previously_set_time - datetime.now(timezone.utc)) <= timedelta(
+        seconds=30
+    ), f"Previous time {previously_set_time} should be within 30s of now"
 
     # Assert event time is within 30 seconds of curiosity landing
-    pytest.approx(event_time, abs=30) == curiosity_landing
-
-    # Fetch event data
-    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
-
-    # Assert time is within 30 seconds of now
-    pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(event_time - curiosity_landing) <= timedelta(seconds=30), (
+        f"Event time {event_time} should be within 30s of {curiosity_landing}"
+    )
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
@@ -175,6 +197,9 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     }, Updated: {updated_time}"
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 
@@ -209,6 +234,9 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_04_sequence_cancellation_on_time_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -254,6 +282,9 @@ def test_04_sequence_cancellation_on_time_set(
 
 
 # set and trigger test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
@@ -282,6 +313,9 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # cancellation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
@@ -308,6 +342,9 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
 
 
 # validation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_07_rtc_alarm_cancel_no_alarm_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -322,6 +359,9 @@ def test_07_rtc_alarm_cancel_no_alarm_set(
 
 
 # list test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can list RTC alarms and that the information is correct"""
 
@@ -348,6 +388,9 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmSet", timeout=10)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that setting an alarm in the past results in an error and does not set the alarm"""
     # Set an alarm for 5 seconds in the past
@@ -367,6 +410,9 @@ def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     """Ensure that double setting an alarm will result in a rejection from the system"""
     # Set an alarm for 5 seconds in the future
@@ -390,3 +436,22 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmNotSet event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+@pytest.mark.uart_only(reason="Test functionality of the timebase parameter")
+def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test for events emitted by the timebase parameter"""
+
+    try:
+        # Test that we can set timebase to proc time
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
+        )
+        # Assert that we receive a TimeBaseChanged event within 10 seconds
+        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+    finally:
+        # Restore spacecraft time so subsequent tests see RTC-backed timestamps
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+        )
+        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
