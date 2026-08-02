@@ -479,6 +479,46 @@ make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also re
 	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
 	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 
+##@ OTA Test Image
+
+# Build a uniquely-marked, MCUBoot-signed OTA test image. Reuses the exact same
+# FSW build + signing pipeline as `make build` (same board defconfig, same
+# prj.conf CONFIG_MCUBOOT_SIGNATURE_KEY_FILE="keys/proves.pem", same swap-using-
+# offset footer), changing nothing about signing. The only difference is that the
+# supplied OTA_BUILD_ID is injected into the project version string that
+# Svc::Version reports at startup, so the running image can be identified over the
+# link via the `CdhCore.version.ProjectVersion` event/telemetry.
+#
+# Injection mechanism: F' derives PROJECT_VERSION from `git describe --tags` run
+# in the project root (lib/fprime/cmake/target/version/generate_version_info.py).
+# We create an ephemeral lightweight tag at HEAD carrying the id so `git describe`
+# resolves to it (0 commits distance => exact match), then delete it afterwards.
+# No tracked file is modified. Keep OTA_BUILD_ID <= 30 chars: the ProjectVersion
+# event string is capped at 40 chars and git may append a "-dirty" suffix.
+OTA_BUILD_DIR ?= $(shell pwd)/build-ota-test
+OTA_IMAGE ?= $(OTA_BUILD_DIR)/ota-test-image.signed.bin
+OTA_TAG_PREFIX ?= ota-test
+OTA_SIGNED_BIN ?= $(shell pwd)/build-artifacts/zephyr.signed.bin
+
+.PHONY: ota-test-image
+ota-test-image: submodules zephyr fprime-venv generate-if-needed ## Build a uniquely-marked MCUBoot-signed OTA test image (OTA_BUILD_ID=<id>)
+	@if [ -z "$(OTA_BUILD_ID)" ]; then \
+		echo "Error: set OTA_BUILD_ID=<id>. Usage: make ota-test-image OTA_BUILD_ID=<id>"; \
+		echo "       <id> lands in the CdhCore.version.ProjectVersion startup event; keep it <=30 chars."; \
+		exit 1; \
+	fi
+	@echo "Building OTA test image (OTA_BUILD_ID=$(OTA_BUILD_ID))"
+	@TAG="$(OTA_TAG_PREFIX)-$(OTA_BUILD_ID)"; \
+	  git tag -f "$$TAG" >/dev/null 2>&1 || { echo "Error: failed to create version tag $$TAG"; exit 1; }; \
+	  trap 'git tag -d "'"$$TAG"'" >/dev/null 2>&1 || true' EXIT INT TERM; \
+	  echo "Injected project version: $$(git describe --tags --always --dirty --broken)"; \
+	  rm -f "$(BUILD_DIR)/versions/version.cpp" "$(BUILD_DIR)/versions/version.hpp" "$(BUILD_DIR)/versions/version.json"; \
+	  $(UV_RUN) fprime-util build || exit 1; \
+	  test -f "$(OTA_SIGNED_BIN)" || { echo "Error: signed image not found at $(OTA_SIGNED_BIN)"; exit 1; }; \
+	  mkdir -p "$(OTA_BUILD_DIR)"; \
+	  cp "$(OTA_SIGNED_BIN)" "$(OTA_IMAGE)"; \
+	  $(UV_RUN) python3 -c "import sys,zlib; d=open(sys.argv[1],'rb').read(); print('OTA image:  '+sys.argv[1]); print('Size:       %d bytes'%len(d)); print('CRC32 (fileManager.CalculateCrc): 0x%08x'%((zlib.crc32(d)&0xffffffff)^0xffffffff))" "$(OTA_IMAGE)"
+
 include makelib/build-tools.mk
 include makelib/ci.mk
 include makelib/zephyr.mk
