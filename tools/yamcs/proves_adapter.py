@@ -23,10 +23,11 @@ import argparse
 import socket
 import sys
 import threading
+import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-import time
+
 import pass_triage
 
 # Flush stdout on every print so diagnostic messages appear immediately even
@@ -191,15 +192,17 @@ def _forward_tm_serial(
             flush=True,
         )
         if stream_csv_file is not None:
-            stream_csv_file.write(
-                f"{ts},{byte_index},0x{byte_val:02x},{state}\n"
-            )
+            stream_csv_file.write(f"{ts},{byte_index},0x{byte_val:02x},{state}\n")
 
     def _log_classified_frame(raw_frame: bytes, base_index: int) -> None:
         nonlocal packet_count
         ts = _format_timestamp()
         frame_scid = ((raw_frame[0] << 8) | raw_frame[1]) >> 4 & 0x3FF
         vc_count = raw_frame[3]
+        print(
+            f"[TM] frame | {ts} | offset={base_index} | SCID={frame_scid} | VC={vc_count}",
+            flush=True,
+        )
         for offset, byte_val in enumerate(raw_frame):
             byte_index = base_index + offset
             print(
@@ -207,9 +210,7 @@ def _forward_tm_serial(
                 flush=True,
             )
             if stream_csv_file is not None:
-                stream_csv_file.write(
-                    f"{ts},{byte_index},0x{byte_val:02x},frame\n"
-                )
+                stream_csv_file.write(f"{ts},{byte_index},0x{byte_val:02x},frame\n")
         if stream_csv_file is not None:
             stream_csv_file.flush()
         if packets_hex_file is not None:
