@@ -25,11 +25,14 @@ The reference topology connects the component as follows:
 - `rateGroup1Hz.RateGroupMemberOut[19]` invokes `TlmArchive.run`.
 - `TlmArchive.deploymentStateGet` queries
   `AntennaDeployer.deploymentStateGet`.
+- The topology command and parameter patterns connect the generated parameter
+  commands and parameter database ports.
 
 Archiving stops for the remainder of the component's lifetime after it
-observes a deployed antenna state. `comIn` also rejects new packets after three
-counted failures or when the cached archive size reaches 25,000 bytes. A
-packet that brings the archive to or above the threshold is written; subsequent
+observes a deployed antenna state. `comIn` also rejects new packets when the
+counted failures reach `MAX_FAILURES` or the cached archive size reaches
+`MAX_FILE_SIZE`. Their defaults are three failures and 50,000 bytes. A packet
+that brings the archive to or above the threshold is written; subsequent
 packets are rejected by `comIn` and report the size-limit event.
 
 ## Usage Examples
@@ -94,7 +97,7 @@ classDiagram
             -m_queueTail: FwSizeType
             -m_queueSize: FwSizeType
             -m_fileSize: atomic~U32~
-            -m_failures: atomic~int~
+            -m_failures: atomic~U32~
             -m_antennasDeployed: atomic~bool~
             -m_directoryInitialized: bool
             -m_fileSizeInitialized: bool
@@ -112,8 +115,13 @@ classDiagram
 | `run` | `Svc.Sched` | sync input | Drains the oldest queued packet, checks deployment state, and performs archive filesystem work. Connected to the 1 Hz rate group. |
 | `deploymentStateGet` | `Components.GetDeploymentState` | output | Queries AntennaDeployer for its persistent deployed state. |
 | `timeCaller` | time get | time get | Supplies timestamps for emitted events. |
+| `cmdRegOut` | command reg | output | Registers the generated parameter set/save commands. |
+| `cmdIn` | command recv | input | Receives the generated parameter set/save commands. |
+| `cmdResponseOut` | command resp | output | Reports generated parameter command completion. |
 | `logOut` | event | output | Sends binary event records. |
 | `logTextOut` | text event | output | Sends text-formatted event records. |
+| `prmGetOut` | param get | output | Loads parameter values from the parameter database. |
+| `prmSetOut` | param set | output | Saves parameter values to the parameter database. |
 
 ## Component Behavior and States
 
@@ -140,7 +148,7 @@ Conceptually, the component operates in these states:
 | `WAITING` | Writing is enabled and the packet queue is empty. |
 | `PACKETS_QUEUED` | One or more packets are waiting and are processed oldest-first, one per `run` invocation. |
 | `DEPLOYED` | A true antenna deployment state has been latched. The packet that observed deployment is discarded, and subsequent packets are rejected by `comIn`. |
-| `WRITE_DISABLED` | The failure count has reached its limit or the cached file size has reached 25,000 bytes. New packets are rejected by `comIn`. |
+| `WRITE_DISABLED` | The failure count has reached `MAX_FAILURES` or the cached file size has reached `MAX_FILE_SIZE`. New packets are rejected by `comIn`. |
 
 The `run` handler does not emit an event when it first observes deployment.
 The throttled `AntennasDeployed` event is emitted if another packet later
@@ -158,17 +166,18 @@ Before the first append attempt, the component reads the existing on-disk
 size. Stat failures are reported and counted. After a successful size
 initialization, the component uses the cached size rather than querying the
 filesystem again. Once a successful write brings the cached archive size to or
-above 25,000 bytes, subsequent packets are rejected by `comIn`. The final write
-may therefore make the archive larger than the threshold by one CSV record.
+above the configured `MAX_FILE_SIZE`, subsequent packets are rejected by
+`comIn`. The final write may therefore make the archive larger than the
+threshold by one CSV record.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
 limit is reached. Changes made to the archive by another component after size
 initialization are not reflected in the cache.
 
-The atomic cache uses the target's native 32-bit `U32` width. This is lossless
-for all permitted archive sizes; an existing on-disk size above the 25,000-byte
-limit is represented by the limit value so packet admission remains disabled.
+The atomic cache uses the target's native 32-bit `U32` width and retains the
+actual initial file size. This allows increasing `MAX_FILE_SIZE` at runtime
+without losing track of bytes already present in the archive.
 
 ### Failure Handling
 
@@ -182,10 +191,10 @@ The following failures increment `m_failures`:
 - failure to open the archive for append; and
 - a failed or short file write.
 
-Once three counted failures have occurred, subsequent `comIn` calls reject new
-packets. The packet that encountered an error is not retried. An archive that
-is already larger than the threshold when its size is first read is rejected in
-`run` and increments the failure count without emitting an event.
+Once the counted failures reach `MAX_FAILURES`, subsequent `comIn` calls reject
+new packets. The packet that encountered an error is not retried. An archive
+that is already larger than `MAX_FILE_SIZE` when its size is first read is
+rejected in `run` and increments the failure count without emitting an event.
 
 ## Sequence Diagrams
 
@@ -247,23 +256,31 @@ sequenceDiagram
 
 ## Parameters
 
-The component defines no runtime F Prime parameters. The following compile-time
-implementation constants control its behavior:
+| Name | Type | Default | Description |
+|---|---|---:|---|
+| `MAX_FILE_SIZE` | `U32` | `50000` | Cached archive-size threshold in bytes after which subsequent packets are rejected. One final record may cross the threshold. |
+| `MAX_FAILURES` | `U32` | `3` | Counted stat, limit, directory, open, or write failures after which new packets are rejected. |
+
+The parameters are loaded during topology startup and may be set or saved at
+runtime through their generated F Prime parameter commands. Changes affect the
+next packet admission or archive processing check. Each parameter read asserts
+that F Prime returned either a valid stored value or the declared default.
+
+The remaining compile-time implementation constants are:
 
 | Name | Value | Description |
 |---|---:|---|
 | `TLM_DIRECTORY` | `//tlm` | Directory containing the archive. |
 | `PRE_DEPLOYMENT_TLM_PATH` | `//tlm/pre_deployment.csv` | Append-only, one-packet-per-row pre-deployment telemetry archive. |
-| `STORED_PACKET_IDS` | All currently configured telemetry packet IDs | Compile-time allowlist in `TlmArchive.cpp`. Packets whose IDs are absent are discarded before enqueueing. |
+| `STORED_PACKET_IDS` | Beacon (`1`) and Imu (`7`) | Compile-time allowlist in `TlmArchive.cpp`. Packets whose IDs are absent are discarded before enqueueing. |
 | `PACKET_QUEUE_CAPACITY` | `Svc::MAX_PACKETIZER_PACKETS` (currently 22) | Maximum packets held between the telemetry producer and 1 Hz filesystem worker. |
-| `MAX_FAILURES` | `3` | Counted stat, limit, directory, open, or write failures after which new packets are rejected. |
-| `MAX_FILE_SIZE` | `25000` bytes | Cached archive-size threshold after which subsequent packets are rejected. One final record may cross the threshold. |
 
 ## Commands
 
 | Name | Description |
 |---|---|
-| N/A | The component defines no commands. |
+| `MAX_FILE_SIZE_PRM_SET` / `MAX_FILE_SIZE_PRM_SAVE` | Generated F Prime commands that update or persist the maximum archive size. |
+| `MAX_FAILURES_PRM_SET` / `MAX_FAILURES_PRM_SAVE` | Generated F Prime commands that update or persist the filesystem failure limit. |
 
 ## Events
 
@@ -273,9 +290,9 @@ implementation constants control its behavior:
 | `QueueFull` | Warning High | 1 | `capacity: FwSizeType` | Emitted when an incoming packet cannot be enqueued. Its throttle is cleared after a later enqueue succeeds. |
 | `FileError` | Warning High | None | `operation: string` | Reports directory creation, archive creation, record formatting, initial file-size lookup, or archive open errors. Current operation strings are `create_directory`, `create_file`, `format_record`, `get_file_size`, and `open_append`. |
 | `WriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
-| `FailureLimitReached` | Warning High | 1 | `count: I8` | Emitted by `comIn` when the cumulative failure count is at least three. The implementation supplies `3`. |
+| `FailureLimitReached` | Warning High | 1 | `count: U32` | Emitted by `comIn` when the cumulative failure count reaches the configured limit. |
 | `AntennasDeployed` | Warning Low | 1 | None | Emitted by `comIn` when deployment has been latched and a new packet is rejected. |
-| `SizeLimitReached` | Warning Low | 1 | `maxSize: FwSizeType` | Emitted by `comIn` when the cached archive size is at least 25,000 bytes. The implementation supplies `25000`. |
+| `SizeLimitReached` | Warning Low | 1 | `maxSize: U32` | Emitted by `comIn` when the cached archive size reaches the configured maximum. |
 
 `QueueFull` has an explicit throttle-clear call so each distinct full period
 can be reported. The other throttled events report only their first occurrence
@@ -300,8 +317,8 @@ There are currently no component-specific unit tests for TlmArchive.
 | `TLM_ARCHIVE_001` | The component shall enqueue telemetry packets in arrival order in a bounded FIFO sized for one complete packetizer send cycle. | Inspection |
 | `TLM_ARCHIVE_002` | The component shall append buffered telemetry as versioned, one-packet-per-row CSV records to `//tlm/pre_deployment.csv` while the antenna deployment state is false. | Inspection |
 | `TLM_ARCHIVE_003` | The component shall stop writing telemetry after observing a deployed antenna state. | Inspection |
-| `TLM_ARCHIVE_004` | The component shall reject new packets after three counted failures. | Inspection |
-| `TLM_ARCHIVE_005` | The component shall reject new packets after the cached archive size reaches 25,000 bytes. The write that crosses the threshold is permitted. | Inspection |
+| `TLM_ARCHIVE_004` | The component shall reject new packets after the counted failures reach the configurable `MAX_FAILURES` parameter. | Inspection |
+| `TLM_ARCHIVE_005` | The component shall reject new packets after the cached archive size reaches the configurable `MAX_FILE_SIZE` parameter. The write that crosses the threshold is permitted. | Inspection |
 | `TLM_ARCHIVE_006` | The component shall report archive start, filesystem errors, write errors, failure-limit rejection, size-limit rejection, and deployed-state rejection through events. | Inspection |
 | `TLM_ARCHIVE_007` | The component shall create the archive when missing without truncating an existing archive. | Inspection |
 | `TLM_ARCHIVE_008` | The component shall enqueue only valid packetized telemetry whose packet ID appears in the compile-time `STORED_PACKET_IDS` allowlist. | Inspection |
@@ -317,3 +334,5 @@ There are currently no component-specific unit tests for TlmArchive.
 | 2026-08-01 | Replaced the latest-value mailbox with a bounded FIFO and added repeatable empty/full queue diagnostics. |
 | 2026-08-01 | Added a compile-time packet ID allowlist that filters telemetry before enqueueing. |
 | 2026-08-02 | Removed the empty-queue event and its throttle state. |
+| 2026-08-02 | Converted the archive size and filesystem failure limits to runtime F Prime parameters. |
+| 2026-08-02 | Added validity assertions after reading runtime parameters. |

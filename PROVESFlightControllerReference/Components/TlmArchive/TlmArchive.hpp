@@ -37,7 +37,7 @@ class TlmArchive final : public TlmArchiveComponentBase {
     FwSizeType m_queueTail = 0;
     FwSizeType m_queueSize = 0;
     std::atomic<U32> m_fileSize{0};
-    std::atomic<int> m_failures{0};
+    std::atomic<U32> m_failures{0};
     std::atomic<bool> m_antennasDeployed{false};
     bool m_directoryInitialized = false;
     bool m_fileSizeInitialized = false;

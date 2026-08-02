@@ -10,6 +10,12 @@ module Components {
         @ Port for checking whether antenna deployment has completed
         output port deploymentStateGet: Components.GetDeploymentState
 
+        @ Maximum archive size in bytes
+        param MAX_FILE_SIZE: U32 default 50000 id 0
+
+        @ Number of counted filesystem failures that disables archiving
+        param MAX_FAILURES: U32 default 3 id 1
+
         @ Report when file write has started
         event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.csv" throttle 1
 
@@ -34,7 +40,7 @@ module Components {
 
         @ Reports when telemetry archiving is disabled due to hitting the failure limit
         event FailureLimitReached(
-            count: I8
+            count: U32
         ) severity warning high format "{} filesystem failures counted; disabling further telemetry writes." throttle 1
 
         @ Reports when telemetry archiving is disabled due to antennas being deployed
@@ -42,16 +48,31 @@ module Components {
 
         @ Reports when telemetry archiving is disabled due to pre_deployment.csv hitting the size limit
         event SizeLimitReached(
-            maxSize: FwSizeType
+            maxSize: U32
         ) severity warning low format "pre_deployment.csv file size limit of {}b reached; disabling further telemetry writes." throttle 1
 
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending command registrations
+        command reg port cmdRegOut
+
+        @ Port for receiving commands
+        command recv port cmdIn
+
+        @ Port for sending command responses
+        command resp port cmdResponseOut
 
         @ Port for sending textual representation of events
         text event port logTextOut
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Port for getting parameter values
+        param get port prmGetOut
+
+        @ Port for setting parameter values
+        param set port prmSetOut
     }
 }

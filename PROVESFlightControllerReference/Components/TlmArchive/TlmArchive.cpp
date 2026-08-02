@@ -23,8 +23,6 @@ constexpr const char* PRE_DEPLOYMENT_TLM_PATH = "//tlm/pre_deployment.csv";
 constexpr char CSV_HEADER[] = "format_version,packet_size_bytes,packet_hex\n";
 constexpr char HEX_DIGITS[] = "0123456789ABCDEF";
 constexpr FwSizeType CSV_RECORD_BUFFER_SIZE = (FW_COM_BUFFER_MAX_SIZE * 2) + sizeof(CSV_HEADER) + 32;
-constexpr const int MAX_FAILURES = 3;
-constexpr const FwSizeType MAX_FILE_SIZE = 50000;
 
 // Only packetized telemetry IDs in this list are stored in the archive.
 constexpr FwTlmPacketizeIdType STORED_PACKET_IDS[] = {
@@ -61,11 +59,19 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
     (void)portNum;
     (void)context;
 
-    if (this->m_failures.load() >= MAX_FAILURES) {
-        this->log_WARNING_HI_FailureLimitReached(MAX_FAILURES);
+    Fw::ParamValid maxFailuresValid;
+    const U32 maxFailures = this->paramGet_MAX_FAILURES(maxFailuresValid);
+    FW_ASSERT(maxFailuresValid == Fw::ParamValid::VALID || maxFailuresValid == Fw::ParamValid::DEFAULT);
+
+    Fw::ParamValid maxFileSizeValid;
+    const U32 maxFileSize = this->paramGet_MAX_FILE_SIZE(maxFileSizeValid);
+    FW_ASSERT(maxFileSizeValid == Fw::ParamValid::VALID || maxFileSizeValid == Fw::ParamValid::DEFAULT);
+
+    if (this->m_failures.load() >= maxFailures) {
+        this->log_WARNING_HI_FailureLimitReached(maxFailures);
         return;
-    } else if (this->m_fileSize.load() >= MAX_FILE_SIZE) {
-        this->log_WARNING_LO_SizeLimitReached(MAX_FILE_SIZE);
+    } else if (this->m_fileSize.load() >= maxFileSize) {
+        this->log_WARNING_LO_SizeLimitReached(maxFileSize);
         return;
     } else if (this->m_antennasDeployed.load()) {
         this->log_WARNING_LO_AntennasDeployed();
@@ -134,6 +140,9 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
 
     const FwSizeType packetSize = packet.getSize();
     FwSizeType currentSize = this->m_fileSize.load();
+    Fw::ParamValid maxFileSizeValid;
+    const U32 maxFileSize = this->paramGet_MAX_FILE_SIZE(maxFileSizeValid);
+    FW_ASSERT(maxFileSizeValid == Fw::ParamValid::VALID || maxFileSizeValid == Fw::ParamValid::DEFAULT);
     if (!this->m_fileSizeInitialized) {
         const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
         if (sizeStatus != Os::FileSystem::OP_OK) {
@@ -141,9 +150,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
             this->m_failures.fetch_add(1);
             return;
         }
-        const U32 cachedSize =
-            (currentSize > MAX_FILE_SIZE) ? static_cast<U32>(MAX_FILE_SIZE) : static_cast<U32>(currentSize);
-        this->m_fileSize.store(cachedSize);
+        this->m_fileSize.store(static_cast<U32>(currentSize));
         this->m_fileSizeInitialized = true;
     }
 
@@ -171,7 +178,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     }
     csvRecord[recordSize++] = '\n';
 
-    if (currentSize > MAX_FILE_SIZE) {
+    if (currentSize > maxFileSize) {
         this->m_failures.fetch_add(1);
         return;
     }
