@@ -100,28 +100,14 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     (void)context;
 
     Fw::ComBuffer packet;
-    bool queueEmpty = false;
-    bool clearQueueEmptyThrottle = false;
     {
         Os::ScopeLock lock(this->m_queueMutex);
         if (this->m_queueSize == 0) {
-            this->m_queueWasEmpty = true;
-            queueEmpty = true;
-        } else {
-            packet = this->m_packetQueue[this->m_queueHead];
-            this->m_queueHead = (this->m_queueHead + 1) % PACKET_QUEUE_CAPACITY;
-            this->m_queueSize--;
-            clearQueueEmptyThrottle = this->m_queueWasEmpty;
-            this->m_queueWasEmpty = false;
+            return;
         }
-    }
-
-    if (queueEmpty) {
-        this->log_ACTIVITY_LO_QueueEmpty();
-        return;
-    }
-    if (clearQueueEmptyThrottle) {
-        this->log_ACTIVITY_LO_QueueEmpty_ThrottleClear();
+        packet = this->m_packetQueue[this->m_queueHead];
+        this->m_queueHead = (this->m_queueHead + 1) % PACKET_QUEUE_CAPACITY;
+        this->m_queueSize--;
     }
 
     if (!this->m_antennasDeployed.load()) {

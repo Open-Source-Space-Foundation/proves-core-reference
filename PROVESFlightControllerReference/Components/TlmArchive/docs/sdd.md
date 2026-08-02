@@ -72,9 +72,7 @@ Prime topology dictionary to produce named, typed telemetry values.
 
 The queue prevents filesystem access from blocking the telemetry producer.
 Because `run` executes at 1 Hz, one buffered packet is processed per rate-group
-tick. `QueueEmpty` reports the transition into an empty period once; its
-throttle is cleared after a later dequeue succeeds so the next empty period is
-reported again.
+tick. An empty queue causes `run` to return without emitting an event.
 
 ## Class Diagram
 
@@ -100,7 +98,6 @@ classDiagram
             -m_antennasDeployed: atomic~bool~
             -m_directoryInitialized: bool
             -m_fileSizeInitialized: bool
-            -m_queueWasEmpty: bool
         }
     }
 
@@ -134,8 +131,7 @@ the following internal state:
 | `m_directoryInitialized` | `false` | Becomes true after both `//tlm` and `//tlm/pre_deployment.csv` are successfully initialized, preventing repeated creation attempts. |
 | `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read, preventing later size queries. |
 | `m_antennasDeployed` | `false` | Atomic in-memory latch set when AntennaDeployer first reports a deployed state. |
-| `m_queueMutex` | Unlocked | Protects the ring storage, indices, count, and empty-period state. |
-| `m_queueWasEmpty` | `false` | Records that an empty period was observed so the `QueueEmpty` throttle can be cleared after the next successful dequeue. |
+| `m_queueMutex` | Unlocked | Protects the ring storage, indices, and count. |
 
 Conceptually, the component operates in these states:
 
@@ -217,11 +213,9 @@ sequenceDiagram
 
     Rate->>Archive: run()
     alt Queue empty
-        Archive->>Archive: Emit QueueEmpty (throttled)
         Archive-->>Rate: Return
     else Packet queued
         Archive->>Archive: Remove oldest packet from FIFO
-        Archive->>Archive: Clear QueueEmpty throttle after an empty period
         opt Deployment state not yet latched
             Archive->>Deploy: deploymentStateGet()
             Deploy-->>Archive: deployed
@@ -276,7 +270,6 @@ implementation constants control its behavior:
 | Name | Severity | Throttle | Parameters | Description |
 |---|---|---:|---|---|
 | `WriteStart` | Activity Low | 1 | None | Emitted immediately before each attempt to open the archive. |
-| `QueueEmpty` | Activity Low | 1 | None | Emitted once per empty period. Its throttle is cleared when a later dequeue succeeds. |
 | `QueueFull` | Warning High | 1 | `capacity: FwSizeType` | Emitted when an incoming packet cannot be enqueued. Its throttle is cleared after a later enqueue succeeds. |
 | `FileError` | Warning High | None | `operation: string` | Reports directory creation, archive creation, record formatting, initial file-size lookup, or archive open errors. Current operation strings are `create_directory`, `create_file`, `format_record`, `get_file_size`, and `open_append`. |
 | `WriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
@@ -284,11 +277,11 @@ implementation constants control its behavior:
 | `AntennasDeployed` | Warning Low | 1 | None | Emitted by `comIn` when deployment has been latched and a new packet is rejected. |
 | `SizeLimitReached` | Warning Low | 1 | `maxSize: FwSizeType` | Emitted by `comIn` when the cached archive size is at least 25,000 bytes. The implementation supplies `25000`. |
 
-`QueueEmpty` and `QueueFull` have explicit throttle-clear calls so each distinct
-empty or full period can be reported. The other throttled events report only
-their first occurrence during the component's lifetime. The `comIn` checks are
-ordered failure limit, size limit, then antenna deployment; if more than one
-condition is true, only the first applicable event is invoked.
+`QueueFull` has an explicit throttle-clear call so each distinct full period
+can be reported. The other throttled events report only their first occurrence
+during the component's lifetime. The `comIn` checks are ordered failure limit,
+size limit, then antenna deployment; if more than one condition is true, only
+the first applicable event is invoked.
 
 ## Telemetry
 
@@ -323,3 +316,4 @@ There are currently no component-specific unit tests for TlmArchive.
 | 2026-08-01 | Replaced the concatenated binary archive with a versioned, one-packet-per-row CSV archive and documented the dictionary-backed ground decoder. |
 | 2026-08-01 | Replaced the latest-value mailbox with a bounded FIFO and added repeatable empty/full queue diagnostics. |
 | 2026-08-01 | Added a compile-time packet ID allowlist that filters telemetry before enqueueing. |
+| 2026-08-02 | Removed the empty-queue event and its throttle state. |

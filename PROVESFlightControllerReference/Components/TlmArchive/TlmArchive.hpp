@@ -41,7 +41,6 @@ class TlmArchive final : public TlmArchiveComponentBase {
     std::atomic<bool> m_antennasDeployed{false};
     bool m_directoryInitialized = false;
     bool m_fileSizeInitialized = false;
-    bool m_queueWasEmpty = false;
 };
 
 }  // namespace Components

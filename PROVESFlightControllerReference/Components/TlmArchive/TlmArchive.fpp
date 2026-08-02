@@ -13,9 +13,6 @@ module Components {
         @ Report when file write has started
         event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.csv" throttle 1
 
-        @ Reports an empty packet queue. The throttle is cleared after a later dequeue succeeds.
-        event QueueEmpty() severity activity low format "Telemetry archive packet queue is empty" throttle 1
-
         @ Reports that a packet could not be enqueued because the queue is full
         event QueueFull(
             capacity: FwSizeType @< Maximum number of queued telemetry packets
