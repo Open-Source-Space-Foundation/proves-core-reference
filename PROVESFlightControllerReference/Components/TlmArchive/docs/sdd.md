@@ -2,7 +2,9 @@
 
 The TlmArchive component preserves telemetry generated before antenna
 deployment by appending serialized telemetry packets to
-`//tlm/pre_deployment.tlm`. It uses a one-packet, latest-value mailbox to move
+`//tlm/pre_deployment.csv`. Each packet is stored as one self-delimiting CSV
+record containing the archive format version, packet byte count, and uppercase
+hexadecimal packet payload. It uses a one-packet, latest-value mailbox to move
 filesystem work out of the telemetry path and into the 1 Hz rate group.
 
 ## Overview
@@ -41,13 +43,26 @@ require an explicit configuration call.
 3. On the next 1 Hz `run` call, the component removes the pending packet and
    queries the antenna deployment state.
 4. If the antenna is not deployed, the component creates `//tlm` and
-   `//tlm/pre_deployment.tlm` when needed, reads the existing archive size if it
+   `//tlm/pre_deployment.csv` when needed, reads the existing archive size if it
    has not already been initialized, verifies that the pending packet fits, opens
-   `//tlm/pre_deployment.tlm` in append mode, writes the raw `Fw.ComBuffer`
-   bytes, and closes the file.
+   `//tlm/pre_deployment.csv` in append mode, writes one CSV record, and closes
+   the file. The CSV header is included with the first record in an empty file.
 5. If the antenna is deployed, the pending packet is discarded without
    filesystem access. The true deployment state is latched so it is not queried
    again, and subsequent `comIn` calls reject new packets.
+
+The archive schema is:
+
+```csv
+format_version,packet_size_bytes,packet_hex
+1,4,00040102
+```
+
+`packet_hex` contains the complete `Fw.ComBuffer`, including its F Prime packet
+descriptor, packet ID, timestamp, and serialized channel values. One line is
+one packet; `packet_size_bytes` independently detects truncated or malformed
+rows. `tools/decode_tlm_archive.py` combines these records with the generated F
+Prime topology dictionary to produce named, typed telemetry values.
 
 The one-packet mailbox prevents filesystem access from blocking the telemetry
 producer. Because `run` executes at 1 Hz, at most one buffered packet is
@@ -103,7 +118,7 @@ the following internal state:
 | `m_packetPending` | `false` | Indicates whether the mailbox contains a packet. |
 | `m_fileSize` | `0` | Atomic cached archive size. Initialized once from the filesystem and advanced by the actual bytes written after each successful write. |
 | `m_failures` | `0` | Atomic cumulative count of directory, stat, size-limit, open, and write failures. |
-| `m_directoryInitialized` | `false` | Becomes true after both `//tlm` and `//tlm/pre_deployment.tlm` are successfully initialized, preventing repeated creation attempts. |
+| `m_directoryInitialized` | `false` | Becomes true after both `//tlm` and `//tlm/pre_deployment.csv` are successfully initialized, preventing repeated creation attempts. |
 | `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read, preventing later size queries. |
 | `m_antennasDeployed` | `false` | Atomic in-memory latch set when AntennaDeployer first reports a deployed state. |
 | `m_queueMutex` | Unlocked | Protects the pending packet and its availability flag while the packet is copied between calling contexts. |
@@ -126,14 +141,15 @@ arrives on `comIn`.
 The archive is opened in append mode, so data from an existing archive is
 preserved. During one-time storage initialization, `createDirectory` ensures
 that `//tlm` exists and `FileSystem::touch` ensures that
-`//tlm/pre_deployment.tlm` exists. `touch` creates a missing archive without
+`//tlm/pre_deployment.csv` exists. `touch` creates a missing archive without
 truncating an existing archive.
 
 Before the first append attempt, the component reads the existing on-disk
 size. Stat failures are reported and counted. After a successful size
 initialization, the component uses the cached size rather than querying the
-filesystem again. The pending packet is rejected when its requested size would
-make the cached archive size exceed 10,000 bytes.
+filesystem again. The pending packet is rejected when its encoded CSV record,
+including the header when necessary, would make the cached archive size exceed
+10,000 bytes.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
@@ -150,7 +166,7 @@ Counted failures are cumulative and are not reset after a successful write.
 The following failures increment `m_failures`:
 
 - failure to create `//tlm`;
-- failure to create or open `//tlm/pre_deployment.tlm` during initialization;
+- failure to create or open `//tlm/pre_deployment.csv` during initialization;
 - failure to read the size of an existing archive;
 - rejection of a packet that would exceed the archive size limit;
 - failure to open the archive for append; and
@@ -200,7 +216,7 @@ sequenceDiagram
         else Antenna not deployed
             opt Storage not initialized
                 Archive->>FS: createDirectory("//tlm")
-                Archive->>FS: touch("//tlm/pre_deployment.tlm")
+                Archive->>FS: touch("//tlm/pre_deployment.csv")
             end
             opt File size not initialized
                 Archive->>FS: getFileSize()
@@ -211,8 +227,8 @@ sequenceDiagram
                 Archive->>Archive: Count failure and discard packet
             else Packet fits
                 Archive->>Archive: Emit WriteStart
-                Archive->>FS: open("//tlm/pre_deployment.tlm", append)
-                Archive->>FS: write(packet bytes)
+                Archive->>FS: open("//tlm/pre_deployment.csv", append)
+                Archive->>FS: write(CSV header if empty + one packet record)
                 Archive->>FS: close()
                 Archive->>Archive: Add actual bytes written to tracked size
             end
@@ -228,7 +244,7 @@ implementation constants control its behavior:
 | Name | Value | Description |
 |---|---:|---|
 | `TLM_DIRECTORY` | `//tlm` | Directory containing the archive. |
-| `PRE_DEPLOYMENT_TLM_PATH` | `//tlm/pre_deployment.tlm` | Append-only pre-deployment telemetry archive. |
+| `PRE_DEPLOYMENT_TLM_PATH` | `//tlm/pre_deployment.csv` | Append-only, one-packet-per-row pre-deployment telemetry archive. |
 | `MAX_FAILURES` | `3` | Counted stat, limit, directory, open, or write failures after which new packets are rejected. |
 | `MAX_FILE_SIZE` | `10000` bytes | Maximum cached archive size permitted after a component-managed append. |
 
@@ -243,7 +259,7 @@ implementation constants control its behavior:
 | Name | Severity | Throttle | Parameters | Description |
 |---|---|---:|---|---|
 | `WriteStart` | Activity Low | 1 | None | Emitted immediately before each attempt to open the archive. |
-| `FileError` | Warning High | None | `operation: string` | Reports directory creation, archive creation, initial file-size lookup, or archive open errors. Current operation strings are `create_directory`, `create_file`, `get_file_size`, and `open_append`. |
+| `FileError` | Warning High | None | `operation: string` | Reports directory creation, archive creation, record formatting, initial file-size lookup, or archive open errors. Current operation strings are `create_directory`, `create_file`, `format_record`, `get_file_size`, and `open_append`. |
 | `WriteError` | Warning High | None | `status: Os.FileStatus`, `requested: FwSizeType`, `written: FwSizeType` | Reports a failed or incomplete archive write. |
 | `FailureLimitReached` | Warning High | 1 | `count: I8` | Emitted by `comIn` when the cumulative failure count is at least three. The implementation supplies `3`. |
 | `AntennasDeployed` | Warning Low | 1 | None | Emitted by `comIn` when deployment has been latched and a new packet is rejected. |
@@ -269,10 +285,10 @@ There are currently no component-specific unit tests for TlmArchive.
 | Name | Description | Validation |
 |---|---|---|
 | `TLM_ARCHIVE_001` | The component shall buffer at most one telemetry packet outside the telemetry producer's filesystem path, replacing a pending packet when newer telemetry arrives. | Inspection |
-| `TLM_ARCHIVE_002` | The component shall append buffered telemetry packet bytes to `//tlm/pre_deployment.tlm` while the antenna deployment state is false. | Inspection |
+| `TLM_ARCHIVE_002` | The component shall append buffered telemetry as versioned, one-packet-per-row CSV records to `//tlm/pre_deployment.csv` while the antenna deployment state is false. | Inspection |
 | `TLM_ARCHIVE_003` | The component shall stop writing telemetry after observing a deployed antenna state. | Inspection |
 | `TLM_ARCHIVE_004` | The component shall reject new packets after three counted failures. | Inspection |
-| `TLM_ARCHIVE_005` | The component shall reject a write when the cached archive size plus the pending packet size would exceed 10,000 bytes. | Inspection |
+| `TLM_ARCHIVE_005` | The component shall reject a write when the cached archive size plus the encoded CSV record would exceed 10,000 bytes. | Inspection |
 | `TLM_ARCHIVE_006` | The component shall report archive start, filesystem errors, write errors, failure-limit rejection, size-limit rejection, and deployed-state rejection through events. | Inspection |
 | `TLM_ARCHIVE_007` | The component shall create the archive when missing without truncating an existing archive. | Inspection |
 
@@ -283,3 +299,4 @@ There are currently no component-specific unit tests for TlmArchive.
 | 2026-07-26 | Documented the mailbox, deployment-state handling, archive workflow, limits, events, topology connections, and failure behavior. |
 | 2026-07-27 | Updated mailbox replacement behavior, non-destructive storage initialization, cached-size handling, rejection paths, and the current event interface. |
 | 2026-07-30 | Replaced mutex-protected scalar state updates with atomics; retained the mutex only for packet mailbox copies. |
+| 2026-08-01 | Replaced the concatenated binary archive with a versioned, one-packet-per-row CSV archive and documented the dictionary-backed ground decoder. |

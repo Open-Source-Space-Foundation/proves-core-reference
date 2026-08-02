@@ -11,7 +11,7 @@ module Components {
         output port deploymentStateGet: Components.GetDeploymentState
 
         @ Report when file write has started
-        event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.tlm" throttle 1
+        event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.csv" throttle 1
 
         @ Reports archive initialization, size, and open failures
         event FileError(
@@ -35,10 +35,10 @@ module Components {
         @ Reports when telemetry archiving is disabled due to antennas being deployed
         event AntennasDeployed() severity warning low format "Antennas deployed; disabling further telemetry writes." throttle 1
 
-        @ Reports when telemetry archiving is disabled due to pre_deployment.tlm hitting the size limit
+        @ Reports when telemetry archiving is disabled due to pre_deployment.csv hitting the size limit
         event SizeLimitReached(
             maxSize: FwSizeType
-        ) severity warning low format "pre_deployment.tlm file size limit of {}b reached; disabling further telemetry writes." throttle 1
+        ) severity warning low format "pre_deployment.csv file size limit of {}b reached; disabling further telemetry writes." throttle 1
 
         @ Port for requesting the current time
         time get port timeCaller

@@ -6,6 +6,9 @@
 
 #include "PROVESFlightControllerReference/Components/TlmArchive/TlmArchive.hpp"
 
+#include <cstdio>
+#include <cstring>
+
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "Os/Models/FileStatusEnumAc.hpp"
@@ -15,7 +18,10 @@ namespace Components {
 namespace {
 
 constexpr const char* TLM_DIRECTORY = "//tlm";
-constexpr const char* PRE_DEPLOYMENT_TLM_PATH = "//tlm/pre_deployment.tlm";
+constexpr const char* PRE_DEPLOYMENT_TLM_PATH = "//tlm/pre_deployment.csv";
+constexpr char CSV_HEADER[] = "format_version,packet_size_bytes,packet_hex\n";
+constexpr char HEX_DIGITS[] = "0123456789ABCDEF";
+constexpr FwSizeType CSV_RECORD_BUFFER_SIZE = (FW_COM_BUFFER_MAX_SIZE * 2) + sizeof(CSV_HEADER) + 32;
 constexpr const int MAX_FAILURES = 3;
 constexpr const FwSizeType MAX_FILE_SIZE = 10000;
 
@@ -83,7 +89,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         this->m_directoryInitialized = true;
     }
 
-    const FwSizeType requestedSize = packet.getSize();
+    const FwSizeType packetSize = packet.getSize();
     FwSizeType currentSize = this->m_fileSize.load();
     if (!this->m_fileSizeInitialized) {
         const Os::FileSystem::Status sizeStatus = Os::FileSystem::getFileSize(PRE_DEPLOYMENT_TLM_PATH, currentSize);
@@ -98,7 +104,31 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         this->m_fileSizeInitialized = true;
     }
 
-    if ((currentSize > MAX_FILE_SIZE)) {
+    char csvRecord[CSV_RECORD_BUFFER_SIZE];
+    FwSizeType recordSize = 0;
+    if (currentSize == 0) {
+        static_assert(sizeof(CSV_HEADER) > 1, "CSV header must not be empty");
+        (void)std::memcpy(csvRecord, CSV_HEADER, sizeof(CSV_HEADER) - 1);
+        recordSize = sizeof(CSV_HEADER) - 1;
+    }
+
+    const int prefixSize = std::snprintf(&csvRecord[recordSize], sizeof(csvRecord) - recordSize, "1,%llu,",
+                                         static_cast<unsigned long long>(packetSize));
+    if ((prefixSize < 0) || (static_cast<FwSizeType>(prefixSize) >= (sizeof(csvRecord) - recordSize))) {
+        this->log_WARNING_HI_FileError(Fw::LogStringArg("format_record"));
+        this->m_failures.fetch_add(1);
+        return;
+    }
+    recordSize += static_cast<FwSizeType>(prefixSize);
+
+    const U8* const packetBytes = packet.getBuffAddr();
+    for (FwSizeType index = 0; index < packetSize; index++) {
+        csvRecord[recordSize++] = HEX_DIGITS[(packetBytes[index] >> 4) & 0x0F];
+        csvRecord[recordSize++] = HEX_DIGITS[packetBytes[index] & 0x0F];
+    }
+    csvRecord[recordSize++] = '\n';
+
+    if ((currentSize > MAX_FILE_SIZE) || (recordSize > (MAX_FILE_SIZE - currentSize))) {
         this->m_failures.fetch_add(1);
         return;
     }
@@ -112,10 +142,11 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    FwSizeType writtenSize = requestedSize;
-    const Os::File::Status writeStatus = file.write(packet.getBuffAddr(), writtenSize);
-    if ((writeStatus != Os::File::OP_OK) || (writtenSize != requestedSize)) {
-        this->log_WARNING_HI_WriteError(Os::FileStatus(static_cast<Os::FileStatus::T>(writeStatus)), requestedSize,
+    FwSizeType writtenSize = recordSize;
+    const Os::File::Status writeStatus =
+        file.write(reinterpret_cast<const U8*>(csvRecord), writtenSize, Os::File::WaitType::WAIT);
+    if ((writeStatus != Os::File::OP_OK) || (writtenSize != recordSize)) {
+        this->log_WARNING_HI_WriteError(Os::FileStatus(static_cast<Os::FileStatus::T>(writeStatus)), recordSize,
                                         writtenSize);
         this->m_failures.fetch_add(1);
         file.close();
