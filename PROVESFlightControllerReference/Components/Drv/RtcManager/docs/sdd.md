@@ -19,6 +19,15 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
 
+#### `TIMEBASE` Parameter Usage
+1. A ground station sends `TIMEBASE_PRM_SET` with `TB_PROC_TIME` or `TB_SC_TIME`, and `TIMEBASE_PRM_SAVE` to persist the choice across boots
+2. When the parameter is updated the component:
+    - Cancels any running sequences, since the change in reported time may affect them
+    - Emits a `TimeBaseChanged` event with the timebase now in use
+3. On each `timeGetPort` call, if the parameter is `TB_PROC_TIME` the component returns uptime without touching the RTC
+
+The parameter uses `Rtc.TimeBase`, a component-local copy of the upstream F Prime `TimeBase` enum carrying only the bases this component can source (`TB_PROC_TIME` and `TB_SC_TIME`). It lives in its own `Rtc` module because a `Drv.TimeBase` would shadow the global `TimeBase` enum inside generated `Drv` code. The default is `TB_SC_TIME`.
+
 #### `ALARM_SET` Command Usage
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `ALARM_SET` command with the desired time
@@ -49,6 +58,7 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 1. The component is instantiated and initialized during system startup
 2. In a deployment topology, a `time connection` relation is made to sync FPrime's internal clock
 3. On each call, the component:
+    - Returns uptime with the `TB_PROC_TIME` time base if the `TIMEBASE` parameter is `TB_PROC_TIME`
     - Checks if the RTC device is ready
     - If the RTC is ready:
         - Fetches time from the RTC hardware
@@ -169,6 +179,8 @@ classDiagram
             - ALARM_SET_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, t: Drv::TimeData) void
             - ALARM_CANCEL_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, ID: U16) void
             - ALARM_LIST_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32) void
+
+            - parameterUpdated(id: FwPrmIdType) void
 
             - static_alarm_callback_t(dev: const device*, id: uint16_t, user_data: void*) void$
             - alarm_callback_t(dev: const device*, id: uint16_t) void
