@@ -27,8 +27,8 @@ The reference topology connects the component as follows:
 Archiving stops for the remainder of the component's lifetime after it
 observes a deployed antenna state. `comIn` also rejects new packets after three
 counted failures or when the cached archive size reaches 10,000 bytes. A
-pending packet is rejected and counted as a failure when appending it would
-exceed the size limit.
+packet that brings the archive to or above the threshold is written; subsequent
+packets are rejected by `comIn` and report the size-limit event.
 
 ## Usage Examples
 
@@ -117,7 +117,7 @@ the following internal state:
 | `m_pendingPacket` | Empty buffer | Storage for the single pending telemetry packet. |
 | `m_packetPending` | `false` | Indicates whether the mailbox contains a packet. |
 | `m_fileSize` | `0` | Atomic cached archive size. Initialized once from the filesystem and advanced by the actual bytes written after each successful write. |
-| `m_failures` | `0` | Atomic cumulative count of directory, stat, size-limit, open, and write failures. |
+| `m_failures` | `0` | Atomic cumulative count of directory, stat, oversized-existing-archive, open, and write failures. |
 | `m_directoryInitialized` | `false` | Becomes true after both `//tlm` and `//tlm/pre_deployment.csv` are successfully initialized, preventing repeated creation attempts. |
 | `m_fileSizeInitialized` | `false` | Becomes true after the initial archive size is read, preventing later size queries. |
 | `m_antennasDeployed` | `false` | Atomic in-memory latch set when AntennaDeployer first reports a deployed state. |
@@ -147,9 +147,9 @@ truncating an existing archive.
 Before the first append attempt, the component reads the existing on-disk
 size. Stat failures are reported and counted. After a successful size
 initialization, the component uses the cached size rather than querying the
-filesystem again. The pending packet is rejected when its encoded CSV record,
-including the header when necessary, would make the cached archive size exceed
-10,000 bytes.
+filesystem again. Once a successful write brings the cached archive size to or
+above 10,000 bytes, subsequent packets are rejected by `comIn`. The final write
+may therefore make the archive larger than the threshold by one CSV record.
 
 After a successful write, `m_fileSize` is incremented by the actual byte count
 reported by the file API. The archive is not truncated or deleted when the
@@ -168,15 +168,14 @@ The following failures increment `m_failures`:
 - failure to create `//tlm`;
 - failure to create or open `//tlm/pre_deployment.csv` during initialization;
 - failure to read the size of an existing archive;
-- rejection of a packet that would exceed the archive size limit;
+- rejection when the archive was already larger than the size threshold at initialization;
 - failure to open the archive for append; and
 - a failed or short file write.
 
 Once three counted failures have occurred, subsequent `comIn` calls reject new
-packets. The packet that encountered an error is not retried. A size-limit
-rejection in `run` increments the failure count without emitting an event;
-`FailureLimitReached` is emitted if a later `comIn` call observes the failure
-cutoff.
+packets. The packet that encountered an error is not retried. An archive that
+is already larger than the threshold when its size is first read is rejected in
+`run` and increments the failure count without emitting an event.
 
 ## Sequence Diagrams
 
@@ -223,9 +222,9 @@ sequenceDiagram
             end
             alt Stat fails
                 Archive->>Archive: Count failure and discard packet
-            else Packet exceeds size limit
+            else Existing archive exceeds size threshold
                 Archive->>Archive: Count failure and discard packet
-            else Packet fits
+            else Packet is ready
                 Archive->>Archive: Emit WriteStart
                 Archive->>FS: open("//tlm/pre_deployment.csv", append)
                 Archive->>FS: write(CSV header if empty + one packet record)
@@ -246,7 +245,7 @@ implementation constants control its behavior:
 | `TLM_DIRECTORY` | `//tlm` | Directory containing the archive. |
 | `PRE_DEPLOYMENT_TLM_PATH` | `//tlm/pre_deployment.csv` | Append-only, one-packet-per-row pre-deployment telemetry archive. |
 | `MAX_FAILURES` | `3` | Counted stat, limit, directory, open, or write failures after which new packets are rejected. |
-| `MAX_FILE_SIZE` | `10000` bytes | Maximum cached archive size permitted after a component-managed append. |
+| `MAX_FILE_SIZE` | `10000` bytes | Cached archive-size threshold after which subsequent packets are rejected. One final record may cross the threshold. |
 
 ## Commands
 
@@ -288,7 +287,7 @@ There are currently no component-specific unit tests for TlmArchive.
 | `TLM_ARCHIVE_002` | The component shall append buffered telemetry as versioned, one-packet-per-row CSV records to `//tlm/pre_deployment.csv` while the antenna deployment state is false. | Inspection |
 | `TLM_ARCHIVE_003` | The component shall stop writing telemetry after observing a deployed antenna state. | Inspection |
 | `TLM_ARCHIVE_004` | The component shall reject new packets after three counted failures. | Inspection |
-| `TLM_ARCHIVE_005` | The component shall reject a write when the cached archive size plus the encoded CSV record would exceed 10,000 bytes. | Inspection |
+| `TLM_ARCHIVE_005` | The component shall reject new packets after the cached archive size reaches 10,000 bytes. The write that crosses the threshold is permitted. | Inspection |
 | `TLM_ARCHIVE_006` | The component shall report archive start, filesystem errors, write errors, failure-limit rejection, size-limit rejection, and deployed-state rejection through events. | Inspection |
 | `TLM_ARCHIVE_007` | The component shall create the archive when missing without truncating an existing archive. | Inspection |
 

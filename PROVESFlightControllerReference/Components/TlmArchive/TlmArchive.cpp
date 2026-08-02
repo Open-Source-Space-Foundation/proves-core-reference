@@ -128,7 +128,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     }
     csvRecord[recordSize++] = '\n';
 
-    if ((currentSize > MAX_FILE_SIZE) || (recordSize > (MAX_FILE_SIZE - currentSize))) {
+    if (currentSize > MAX_FILE_SIZE) {
         this->m_failures.fetch_add(1);
         return;
     }
