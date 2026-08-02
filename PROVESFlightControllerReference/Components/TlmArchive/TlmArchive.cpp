@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "Fw/Com/ComPacket.hpp"
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "Os/Models/FileStatusEnumAc.hpp"
@@ -24,6 +25,31 @@ constexpr char HEX_DIGITS[] = "0123456789ABCDEF";
 constexpr FwSizeType CSV_RECORD_BUFFER_SIZE = (FW_COM_BUFFER_MAX_SIZE * 2) + sizeof(CSV_HEADER) + 32;
 constexpr const int MAX_FAILURES = 3;
 constexpr const FwSizeType MAX_FILE_SIZE = 25000;
+
+// Only packetized telemetry IDs in this list are stored in the archive.
+constexpr FwTlmPacketizeIdType STORED_PACKET_IDS[] = {
+    1,  // Beacon
+    7,  // Imu
+};
+
+bool shouldStorePacket(const Fw::ComBuffer& data) {
+    Fw::ComBuffer packet = data;
+    FwPacketDescriptorType descriptor = 0;
+    FwTlmPacketizeIdType packetId = 0;
+
+    if ((packet.deserializeTo(descriptor) != Fw::FW_SERIALIZE_OK) ||
+        (descriptor != static_cast<FwPacketDescriptorType>(Fw::ComPacketType::FW_PACKET_PACKETIZED_TLM)) ||
+        (packet.deserializeTo(packetId) != Fw::FW_SERIALIZE_OK)) {
+        return false;
+    }
+
+    for (const FwTlmPacketizeIdType storedPacketId : STORED_PACKET_IDS) {
+        if (packetId == storedPacketId) {
+            return true;
+        }
+    }
+    return false;
+}
 
 }  // namespace
 
@@ -46,10 +72,26 @@ void TlmArchive::comIn_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 con
         return;
     }
 
+    if (!shouldStorePacket(data)) {
+        return;
+    }
+
+    bool queueFull = false;
     {
         Os::ScopeLock lock(this->m_queueMutex);
-        this->m_pendingPacket = data;
-        this->m_packetPending = true;
+        if (this->m_queueSize >= PACKET_QUEUE_CAPACITY) {
+            queueFull = true;
+        } else {
+            this->m_packetQueue[this->m_queueTail] = data;
+            this->m_queueTail = (this->m_queueTail + 1) % PACKET_QUEUE_CAPACITY;
+            this->m_queueSize++;
+        }
+    }
+
+    if (queueFull) {
+        this->log_WARNING_HI_QueueFull(PACKET_QUEUE_CAPACITY);
+    } else {
+        this->log_WARNING_HI_QueueFull_ThrottleClear();
     }
 }
 
@@ -58,13 +100,28 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
     (void)context;
 
     Fw::ComBuffer packet;
+    bool queueEmpty = false;
+    bool clearQueueEmptyThrottle = false;
     {
         Os::ScopeLock lock(this->m_queueMutex);
-        if (!this->m_packetPending) {
-            return;
+        if (this->m_queueSize == 0) {
+            this->m_queueWasEmpty = true;
+            queueEmpty = true;
+        } else {
+            packet = this->m_packetQueue[this->m_queueHead];
+            this->m_queueHead = (this->m_queueHead + 1) % PACKET_QUEUE_CAPACITY;
+            this->m_queueSize--;
+            clearQueueEmptyThrottle = this->m_queueWasEmpty;
+            this->m_queueWasEmpty = false;
         }
-        packet = this->m_pendingPacket;
-        this->m_packetPending = false;
+    }
+
+    if (queueEmpty) {
+        this->log_ACTIVITY_LO_QueueEmpty();
+        return;
+    }
+    if (clearQueueEmptyThrottle) {
+        this->log_ACTIVITY_LO_QueueEmpty_ThrottleClear();
     }
 
     if (!this->m_antennasDeployed.load()) {

@@ -1,10 +1,10 @@
 module Components {
     @ Stores telemetry generated before antenna deployment
     passive component TlmArchive {
-        @ Telemetry packet to buffer. Drop new packets while the one-packet mailbox is full.
+        @ Telemetry packet to enqueue for deferred archival
         sync input port comIn: Fw.Com
 
-        @ Drains the telemetry mailbox and performs filesystem work
+        @ Drains one queued telemetry packet and performs filesystem work
         sync input port run: Svc.Sched
 
         @ Port for checking whether antenna deployment has completed
@@ -12,6 +12,14 @@ module Components {
 
         @ Report when file write has started
         event WriteStart severity activity low format "Beginning telemetry archival to pre_deployment.csv" throttle 1
+
+        @ Reports an empty packet queue. The throttle is cleared after a later dequeue succeeds.
+        event QueueEmpty() severity activity low format "Telemetry archive packet queue is empty" throttle 1
+
+        @ Reports that a packet could not be enqueued because the queue is full
+        event QueueFull(
+            capacity: FwSizeType @< Maximum number of queued telemetry packets
+        ) severity warning high format "Telemetry archive packet queue is full at {} packets" throttle 1
 
         @ Reports archive initialization, size, and open failures
         event FileError(
