@@ -24,7 +24,7 @@ constexpr char CSV_HEADER[] = "format_version,packet_size_bytes,packet_hex\n";
 constexpr char HEX_DIGITS[] = "0123456789ABCDEF";
 constexpr FwSizeType CSV_RECORD_BUFFER_SIZE = (FW_COM_BUFFER_MAX_SIZE * 2) + sizeof(CSV_HEADER) + 32;
 constexpr const int MAX_FAILURES = 3;
-constexpr const FwSizeType MAX_FILE_SIZE = 25000;
+constexpr const FwSizeType MAX_FILE_SIZE = 50000;
 
 // Only packetized telemetry IDs in this list are stored in the archive.
 constexpr FwTlmPacketizeIdType STORED_PACKET_IDS[] = {
