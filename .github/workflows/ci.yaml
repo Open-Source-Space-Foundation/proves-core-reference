@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Nightly run (03:00 UTC) exercises the slow/over-the-air OTA variant on
+    # the radio rig; PR/push runs only do the fast UART OTA test.
+    - cron: "0 3 * * *"
 
 jobs:
   lint:
@@ -118,10 +122,95 @@ jobs:
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
+  ota-test-image:
+    # Builds the dedicated OTA update image consumed by ota_update_test.py.
+    # Runs in PARALLEL with the `build` job (no `needs:`) so it does not
+    # gate the main firmware build; both feed the integration jobs.
+    runs-on: deathstar
+    outputs:
+      ota-build-id: ${{ steps.ota-build-id.outputs.id }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download bin tools
+        if: steps.cache-bin.outputs.cache-hit != 'true'
+        run: |
+          make download-bin
+
+      - name: Setup submodules
+        if: steps.cache-submodules.outputs.cache-hit != 'true'
+        run: |
+          make submodules
+
+      - name: Create python venv
+        run: |
+          make fprime-venv
+
+      - name: Setup Zephyr
+        if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-workspace
+
+      - name: Setup Zephyr SDK
+        if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-sdk
+
+      - name: Setup Zephyr Export
+        run: |
+          make zephyr-export
+
+      - name: Install Zephyr Python Dependencies
+        run: |
+          make zephyr-python-deps
+
+      - name: Change to CI Spacecraft ID
+        run: |
+          make make-ci-spacecraft-id
+
+      - name: Generate
+        run: |
+          make generate
+
+      - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+      - name: Build MCUBoot
+        run: |
+          make build-mcuboot
+
+      - name: Derive OTA build ID
+        id: ota-build-id
+        run: |
+          # Unique per run so the FSW can distinguish this image from the one
+          # currently flashed; consumed as pytest --ota-build-id in the
+          # integration jobs via this job's `ota-build-id` output.
+          OTA_BUILD_ID="${GITHUB_SHA::8}-${GITHUB_RUN_ID}"
+          echo "id=$OTA_BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "OTA_BUILD_ID=$OTA_BUILD_ID" >> "$GITHUB_ENV"
+          echo "Derived OTA_BUILD_ID=$OTA_BUILD_ID"
+
+      - name: Build OTA Test Image
+        run: |
+          make ota-test-image OTA_BUILD_ID="$OTA_BUILD_ID"
+
+      - name: Upload OTA test image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-test-image
+          path: |
+            build-ota-test/ota-test-image.signed.bin
+          retention-days: 30
+
   integration-uart:
     runs-on:
       - integration
-    needs: build
+    needs:
+      - build
+      - ota-test-image
     steps:
       - uses: actions/checkout@v6
 
@@ -129,6 +218,12 @@ jobs:
         with:
           name: artifacts
           path: .
+
+      - name: Download OTA test image
+        uses: actions/download-artifact@v6
+        with:
+          name: ota-test-image
+          path: ota-image
 
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
@@ -216,6 +311,15 @@ jobs:
       - name: Run UART Integration Tests
         run: |
           make test-integration
+
+      - name: Run OTA Update Test (UART)
+        # Runs LAST in the GDS phase: ota_update_test.py reboots the board
+        # twice, so it must not precede the other UART tests. FILTER clears the
+        # default marker exclusions so the (fast, non-slow) UART OTA variant runs.
+        run: |
+          make test-integration TEST=ota_update_test.py \
+            FILTER="not slow" \
+            PYTEST_ARGS="--ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-test-image.outputs.ota-build-id }}"
 
       - name: Format Filesystem
         if: always()
@@ -390,6 +494,7 @@ jobs:
       - integration
     needs:
       - build
+      - ota-test-image
     steps:
       - uses: actions/checkout@v6
 
@@ -397,6 +502,15 @@ jobs:
         with:
           name: artifacts
           path: .
+
+      - name: Download OTA test image
+        # Only the nightly schedule runs the slow over-the-air OTA variant, so
+        # only fetch the image on that path.
+        if: github.event_name == 'schedule'
+        uses: actions/download-artifact@v6
+        with:
+          name: ota-test-image
+          path: ota-image
 
       - name: Flash Firmware
         uses: ./.github/actions/flash-firmware
@@ -545,6 +659,19 @@ jobs:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
           make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+
+      - name: Run OTA Update Test (LoRa, nightly)
+        # Nightly-only: the LoRa OTA variant is marked slow and takes the full
+        # over-the-air transfer time. Runs after the other radio tests and
+        # reboots the board twice. Gated to the schedule event, mirroring how
+        # the slow variant is kept off the per-PR path.
+        if: github.event_name == 'schedule'
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_ota.csv
+        run: |
+          make test-integration TEST=ota_update_test.py \
+            FILTER="slow" \
+            PYTEST_ARGS="--with-radio --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-test-image.outputs.ota-build-id }}"
 
       - name: Format Filesystem
         if: always()
