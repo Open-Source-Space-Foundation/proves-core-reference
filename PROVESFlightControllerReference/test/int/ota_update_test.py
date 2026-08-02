@@ -31,6 +31,8 @@ context: OTA image-swap integration coverage.
 """
 
 import os
+import shutil
+import tempfile
 import time
 import zlib
 from datetime import datetime
@@ -87,9 +89,16 @@ def _onboard_crc(api: IntegrationTestAPI, dest: str, timeout: float = 30) -> int
 def _uplink_uart(
     api: IntegrationTestAPI, local: str, dest: str, timeout: float
 ) -> bool:
-    """Enqueue ``local`` for uplink to ``dest`` and poll the uplinker to IDLE."""
+    """Enqueue ``local`` for uplink to ``dest`` and poll the uplinker to IDLE.
+
+    The GDS uplinker deletes its source file once the transfer completes (it
+    expects a staging copy), so enqueue a sacrificial temp copy of ``local``.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
+        staged = tmp.name
+    shutil.copyfile(local, staged)
     uplinker = api.pipeline.files.uplinker
-    uplinker.enqueue(local, dest)
+    uplinker.enqueue(staged, dest)
     deadline = time.time() + timeout
     time.sleep(1)
     while time.time() < deadline and uplinker.state != FileStates.IDLE:
@@ -141,9 +150,9 @@ def _uplink_and_verify_crc(
         idle = _uplink_uart(api, local, dest, UART_UPLINK_TIMEOUT_S)
         assert idle, f"UART uplinker did not return to IDLE for {dest}"
         actual = _onboard_crc(api, dest)
+        actual_str = "None" if actual is None else f"0x{actual:08x}"
         assert actual == expected, (
-            f"on-board CRC 0x{actual if actual is None else actual:08x} != "
-            f"expected 0x{expected:08x} for {dest}"
+            f"on-board CRC {actual_str} != expected 0x{expected:08x} for {dest}"
         )
     return expected
 
@@ -190,7 +199,10 @@ def _cold_reset(api: IntegrationTestAPI) -> TimeType:
 
 
 def _project_version_after_boot(
-    api: IntegrationTestAPI, start: TimeType, timeout: float = BOOT_TIMEOUT_S
+    api: IntegrationTestAPI,
+    start: TimeType,
+    request: pytest.FixtureRequest,
+    timeout: float = BOOT_TIMEOUT_S,
 ) -> str:
     """Wait for the boot to complete and return the reported project version string.
 
@@ -198,13 +210,19 @@ def _project_version_after_boot(
     reset_manager_test, which keys restart detection off FrameworkVersion). We wait
     for FrameworkVersion to confirm the reboot, then read ProjectVersion — falling
     back to an explicit VERSION[PROJECT] command if the boot-time event was missed.
+    The fallback must resync the auth sequence number first: commands sent before
+    resyncing after a reboot are silently rejected by the security deframer.
     """
     api.assert_event(f"{VERSION}.FrameworkVersion", start=start, timeout=timeout)
     evt = api.await_event(f"{VERSION}.ProjectVersion", timeout=5)
     if evt is None:
-        # Boot-time ProjectVersion event not captured — request it explicitly.
-        api.send_command(f"{VERSION}.VERSION", ["PROJECT"])
-        evt = api.await_event(f"{VERSION}.ProjectVersion", timeout=10)
+        _resync_sequence_number(api, request)
+        for _ in range(3):
+            api.send_command(f"{VERSION}.VERSION", ["PROJECT"])
+            evt = api.await_event(f"{VERSION}.ProjectVersion", timeout=10)
+            if evt is not None:
+                break
+            _resync_sequence_number(api, request)
     assert evt is not None, "no ProjectVersion event after reboot"
     return str(evt.args[0].val)
 
@@ -265,7 +283,7 @@ def test_ota_swap_and_revert(
 
         # (d) Reboot into the TEST image and assert the new build is running.
         start = _cold_reset(api)
-        version = _project_version_after_boot(api, start)
+        version = _project_version_after_boot(api, start, request)
         _resync_sequence_number(api, request)
         assert build_id in version, (
             f"booted project version {version!r} does not contain build id "
@@ -274,7 +292,7 @@ def test_ota_swap_and_revert(
 
         # (e) Do NOT CONFIRM_UPDATE. Reboot again; MCUBoot must auto-revert.
         start = _cold_reset(api)
-        reverted = _project_version_after_boot(api, start)
+        reverted = _project_version_after_boot(api, start, request)
         _resync_sequence_number(api, request)
         assert build_id not in reverted, (
             f"project version {reverted!r} still contains build id {build_id!r} "
@@ -302,23 +320,34 @@ def test_ota_negative_paths(
 ):
     """Failure-mode coverage that does NOT reboot the board.
 
+    * UPDATE_IMAGE_FROM without a prior PREPARE_UPDATE -> FlashWorker.NoImagePrepared
+      (the no-prepare gate lives in the worker's updateImage handler, not in
+      CONFIGURE_NEXT_BOOT, which is an unconditional boot_request_upgrade).
     * UPDATE_IMAGE_FROM with a wrong CRC -> FlashWorker.ImageFileCrcMismatch.
-    * CONFIGURE_NEXT_BOOT with no image prepared -> FlashWorker.NoImagePrepared.
 
     Both worker faults surface as (warning) events; the async commands themselves
     dispatch successfully, so we assert on the events rather than a command error.
+    The no-prepare case must run FIRST, before this test issues any PREPARE_UPDATE.
     """
     image, _build_id = ota_config
     api = fprime_test_api
     dest = f"/otaneg{os.getpid() % 100000}.bin"
 
     try:
-        # Upload a good image, then claim a deliberately-wrong CRC.
+        # Upload a good image so UPDATE_IMAGE_FROM has a real file to point at.
         idle = _uplink_uart(api, image, dest, UART_UPLINK_TIMEOUT_S)
         assert idle, f"UART uplinker did not return to IDLE for {dest}"
         good_crc = _onboard_crc(api, dest)
         assert good_crc is not None, "could not read on-board CRC of uploaded image"
         wrong_crc = (good_crc ^ 0xFFFFFFFF) & 0xFFFFFFFF
+
+        # UPDATE_IMAGE_FROM with no prior PREPARE_UPDATE -> NoImagePrepared.
+        api.clear_histories()
+        api.send_command(f"{UPDATER}.UPDATE_IMAGE_FROM", [dest, str(good_crc)])
+        evt = api.await_event(f"{WORKER}.NoImagePrepared", timeout=30)
+        assert evt is not None, (
+            "expected NoImagePrepared for UPDATE_IMAGE_FROM without PREPARE_UPDATE"
+        )
 
         api.clear_histories()
         proves_send_and_assert_command(api, f"{UPDATER}.PREPARE_UPDATE")
@@ -331,15 +360,6 @@ def test_ota_negative_paths(
             f"{WORKER}.ImageFileCrcMismatch", timeout=UPDATE_TIMEOUT_S
         )
         assert evt is not None, "expected ImageFileCrcMismatch on wrong-CRC update"
-
-        # CONFIGURE_NEXT_BOOT with no valid prepared image -> NoImagePrepared.
-        # (A CRC-mismatched write leaves no prepared image behind.)
-        api.clear_histories()
-        api.send_command(f"{UPDATER}.CONFIGURE_NEXT_BOOT", ["TEST"])
-        evt = api.await_event(f"{WORKER}.NoImagePrepared", timeout=30)
-        assert evt is not None, (
-            "expected NoImagePrepared when configuring next boot with no image"
-        )
     finally:
         try:
             api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "true"])
