@@ -24,6 +24,10 @@ pytestmark = [pytest.mark.uart_only]
 
 mosaicManager = "ReferenceDeployment.mosaicManager"
 fileManager = "FileHandling.fileManager"
+modeManager = "ReferenceDeployment.modeManager"
+
+# Time for the mode manager to leave SAFE_MODE and release the load switches
+SAFE_MODE_EXIT_SETTLE_SECONDS = 5
 
 # MosaicManager serializes each sample as U32 seconds + U16 ADC + U16 millivolts
 RECORD_SIZE = 8
@@ -39,9 +43,39 @@ def _now() -> TimeType:
     )
 
 
+def _exit_safe_mode_if_needed(fprime_test_api: IntegrationTestAPI) -> None:
+    """Bring the FSW out of SAFE_MODE so payload power can be commanded on.
+
+    mode_manager_test.py sorts immediately before this file and its
+    test_safe_09 case deliberately drives the FSW into SAFE_MODE and reboots.
+    Its own teardown normally recovers, but when that test fails the recovery
+    does not complete, and conftest's recover_from_safe_mode fixture only runs
+    on the radio pass. In SAFE_MODE the mode manager holds the payload load
+    switch off, so MOSAIC is unpowered and every assertion here fails for a
+    reason that has nothing to do with MosaicManager. Recover explicitly rather
+    than inheriting whatever the previous file left behind.
+    """
+    try:
+        fprime_test_api.clear_histories()
+        fprime_test_api.send_and_assert_command(
+            f"{modeManager}.GET_CURRENT_MODE", timeout=10, max_delay=10
+        )
+        evt = fprime_test_api.await_event(
+            f"{modeManager}.CurrentModeReading", timeout=5
+        )
+        if evt is not None and "SAFE_MODE" in str(evt.args[0].val).upper():
+            fprime_test_api.send_command(f"{modeManager}.EXIT_SAFE_MODE")
+            time.sleep(SAFE_MODE_EXIT_SETTLE_SECONDS)
+    except AssertionError:
+        # The board may still be rebooting out of test_safe_09; powering the
+        # payload below will fail loudly enough on its own.
+        pass
+
+
 @pytest.fixture(autouse=True)
 def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to power the MOSAIC payload before each test"""
+    _exit_safe_mode_if_needed(fprime_test_api)
     proves_send_and_assert_command(
         fprime_test_api,
         "ReferenceDeployment.payloadPowerLoadSwitch.TURN_ON",
