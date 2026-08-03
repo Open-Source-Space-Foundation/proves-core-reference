@@ -170,6 +170,8 @@ The board holds up to two active keys so a rotation never leaves you locked out.
 
 Doing step 3 before step 2 works too, but leaves nothing to fall back on if the new key turns out to be wrong. `REMOVE_KEY` refuses to remove the last remaining key.
 
+Lost track of what's provisioned on a board? Send `GET_ACTIVE_KEYS()` (bypass-allowlisted, like `PROVISION_KEY`, so it works even without the key). It logs one `ActiveKeyInfo(spi, fingerprint)` event per active slot — the SPI plus a non-reversible fingerprint of the key, never the key itself — so you can identify which key is which without knowing the key material.
+
 ## Running Integration Tests
 
 First, start GDS with:

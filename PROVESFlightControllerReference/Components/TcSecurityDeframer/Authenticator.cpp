@@ -96,6 +96,31 @@ int32_t destroyHmacKey(uint32_t keyId) {
     return psa_destroy_key(keyId);
 }
 
+bool computeKeyFingerprint(const uint8_t (&keyBytes)[Ccsds355_0_B_2::kTCSecurityTrailer],
+                           char (&hexOut)[kKeyFingerprintHexLength + 1]) {
+    const psa_status_t initStatus = psa_crypto_init();
+    if (initStatus != PSA_SUCCESS) {
+        return false;
+    }
+
+    uint8_t hash[PSA_HASH_LENGTH(PSA_ALG_SHA_256)];
+    size_t hashLength = 0;
+    const psa_status_t hashStatus =
+        psa_hash_compute(PSA_ALG_SHA_256, keyBytes, Ccsds355_0_B_2::kTCSecurityTrailer, hash, sizeof hash, &hashLength);
+    if (hashStatus != PSA_SUCCESS || hashLength < kKeyFingerprintBytes) {
+        return false;
+    }
+
+    static constexpr char kHexDigits[] = "0123456789abcdef";
+    for (size_t i = 0; i < kKeyFingerprintBytes; i++) {
+        hexOut[i * 2] = kHexDigits[hash[i] >> 4];
+        hexOut[i * 2 + 1] = kHexDigits[hash[i] & 0x0F];
+    }
+    hexOut[kKeyFingerprintHexLength] = '\0';
+
+    return true;
+}
+
 PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* dataBuffer,
                                                              size_t dataSize,
                                                              const Mac& hmac,

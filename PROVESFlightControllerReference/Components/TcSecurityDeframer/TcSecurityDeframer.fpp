@@ -66,6 +66,12 @@ module Components {
         @ would drop the key count below 1
         sync command REMOVE_KEY(spi: U16)
 
+        @ Command to report the active SPI(s) and a non-reversible key fingerprint for each, so an
+        @ operator who has lost track of what was provisioned can identify the slots without knowing
+        @ the key material. Bypass-allowlisted, like GET_SEQ_NUM, so it stays reachable from a link
+        @ whose key is unknown. Emits one ActiveKeyInfo event per active slot
+        sync command GET_ACTIVE_KEYS()
+
         ### Telemetry ###
 
         @ Telemetry for the current sequence number, updated on each successfully authenticated packet
@@ -123,6 +129,13 @@ module Components {
 
         @ KeyRemoveFailed indicates REMOVE_KEY was rejected or failed
         event KeyRemoveFailed(status: KeyStoreProvisionStatus) severity warning high id 15 format "Key remove failed: {}" throttle 2
+
+        @ ActiveKeyInfo reports one active key slot in response to GET_ACTIVE_KEYS: its SPI and a
+        @ truncated SHA-256 fingerprint of the key, never the key itself
+        event ActiveKeyInfo(spi: U16, fingerprint: string size 9) severity activity high id 18 format "Active key: SPI={}, fingerprint={}"
+
+        @ NoActiveKeys indicates GET_ACTIVE_KEYS found no active keys in the store
+        event NoActiveKeys() severity activity high id 19 format "No active keys in the key store"
 
         ### Parameters ###
 

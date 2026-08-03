@@ -40,6 +40,21 @@ TEST(BypasserTest, AllowsSbandGetSeqNum) {
     EXPECT_TRUE(bypassPacket(buf.data(), buf.size()));
 }
 
+TEST(BypasserTest, AllowsUartGetActiveKeys) {
+    auto buf = makePacket(0x2100B005);
+    EXPECT_TRUE(bypassPacket(buf.data(), buf.size()));
+}
+
+TEST(BypasserTest, AllowsLoraGetActiveKeys) {
+    auto buf = makePacket(0x2200B005);
+    EXPECT_TRUE(bypassPacket(buf.data(), buf.size()));
+}
+
+TEST(BypasserTest, AllowsSbandGetActiveKeys) {
+    auto buf = makePacket(0x2300B005);
+    EXPECT_TRUE(bypassPacket(buf.data(), buf.size()));
+}
+
 TEST(BypasserTest, AllowsTellJoke) {
     auto buf = makePacket(0x10065000);
     EXPECT_TRUE(bypassPacket(buf.data(), buf.size()));
