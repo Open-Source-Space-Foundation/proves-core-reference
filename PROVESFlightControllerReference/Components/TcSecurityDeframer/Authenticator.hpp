@@ -63,6 +63,15 @@ PacketAuthenticator::KeyImportResult importHmacKeyBytes(
 int32_t destroyHmacKey(uint32_t keyId  //!< The PSA key ID to destroy
 );
 
+//! Compute a non-reversible fingerprint of a raw HMAC key for ground-facing display: the first
+//! kKeyFingerprintBytes bytes of SHA-256(key), hex-encoded. Lets an operator who has lost track of
+//! what was provisioned identify a key slot without ever exposing the key itself.
+//! Returns true on success and fills `hexOut` with a NUL-terminated lowercase hex string.
+bool computeKeyFingerprint(
+    const uint8_t (&keyBytes)[Ccsds355_0_B_2::kTCSecurityTrailer],  //!< The raw key bytes to fingerprint
+    char (&hexOut)[kKeyFingerprintHexLength + 1]                    //!< The hex-encoded fingerprint, NUL-terminated
+);
+
 //! Check the validity of the packet HMAC
 PacketAuthenticator::AuthenticationResult authenticatePacket(
     const uint8_t* buffer,  //!< The packet data buffer

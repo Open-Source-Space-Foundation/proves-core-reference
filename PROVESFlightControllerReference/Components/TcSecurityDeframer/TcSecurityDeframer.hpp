@@ -95,6 +95,11 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                                U16 spi               //!< The SPI to remove
                                ) override;
 
+    //! Handler implementation for command GET_ACTIVE_KEYS
+    void GET_ACTIVE_KEYS_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq            //!< The command sequence number
+                                    ) override;
+
   public:
     // ----------------------------------------------------------------------
     // Public helper methods

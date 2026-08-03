@@ -483,6 +483,29 @@ void TcSecurityDeframer ::REMOVE_KEY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq,
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
+void TcSecurityDeframer ::GET_ACTIVE_KEYS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    Os::ScopeLock lock(keyStoreLock());
+
+    bool anyActive = false;
+    for (U32 i = 0; i < AuthKeyStore::SIZE; i++) {
+        if (!this->m_keyStore[i].get_valid()) {
+            continue;
+        }
+        anyActive = true;
+
+        char fingerprintHex[kKeyFingerprintHexLength + 1];
+        if (computeKeyFingerprint(this->m_keyStore[i].get_key(), fingerprintHex)) {
+            this->log_ACTIVITY_HI_ActiveKeyInfo(this->m_keyStore[i].get_spi(), Fw::LogStringArg(fingerprintHex));
+        }
+    }
+
+    if (!anyActive) {
+        this->log_ACTIVITY_HI_NoActiveKeys();
+    }
+
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
 // ----------------------------------------------------------------------
 // Public helper methods
 // ----------------------------------------------------------------------

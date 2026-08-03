@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <psa/crypto.h>
 
+#include <cstring>
+#include <string>
 #include <vector>
 
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
@@ -131,6 +133,45 @@ TEST(PacketAuthenticatorTest, ShortBuffer) {
     auto res = authenticatePacket(packet.data(), packet.size(), mac, keyId);
     EXPECT_EQ(res.status, PacketAuthenticator::AuthenticationStatus::VerifyError);
     EXPECT_EQ(res.psaStatus, PSA_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(KeyFingerprintTest, DeterministicForSameKey) {
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    ASSERT_TRUE(parseHexKey(kTestKeyHex, keyBytes));
+
+    char first[kKeyFingerprintHexLength + 1];
+    char second[kKeyFingerprintHexLength + 1];
+    ASSERT_TRUE(computeKeyFingerprint(keyBytes, first));
+    ASSERT_TRUE(computeKeyFingerprint(keyBytes, second));
+
+    EXPECT_STREQ(first, second);
+    EXPECT_EQ(std::strlen(first), kKeyFingerprintHexLength);
+}
+
+TEST(KeyFingerprintTest, DiffersForDifferentKeys) {
+    uint8_t keyA[Ccsds355_0_B_2::kTCSecurityTrailer];
+    uint8_t keyB[Ccsds355_0_B_2::kTCSecurityTrailer];
+    ASSERT_TRUE(parseHexKey(kTestKeyHex, keyA));
+    ASSERT_TRUE(parseHexKey("00000000000000000000000000000000", keyB));
+
+    char fingerprintA[kKeyFingerprintHexLength + 1];
+    char fingerprintB[kKeyFingerprintHexLength + 1];
+    ASSERT_TRUE(computeKeyFingerprint(keyA, fingerprintA));
+    ASSERT_TRUE(computeKeyFingerprint(keyB, fingerprintB));
+
+    EXPECT_STRNE(fingerprintA, fingerprintB);
+}
+
+TEST(KeyFingerprintTest, NeverContainsKeyBytesAsSubstring) {
+    // The fingerprint must be non-reversible: at minimum, it should never simply echo the key's own
+    // hex encoding back to the caller.
+    uint8_t keyBytes[Ccsds355_0_B_2::kTCSecurityTrailer];
+    ASSERT_TRUE(parseHexKey(kTestKeyHex, keyBytes));
+
+    char fingerprint[kKeyFingerprintHexLength + 1];
+    ASSERT_TRUE(computeKeyFingerprint(keyBytes, fingerprint));
+
+    EXPECT_EQ(std::string(kTestKeyHex).find(fingerprint), std::string::npos);
 }
 
 TEST(PacketAuthenticatorTest, MinimumSizeBuffer) {

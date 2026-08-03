@@ -47,6 +47,9 @@ static constexpr uint32_t kBypassOpCodes[] = {
     0x2100B002,  //!< ComCcsdsUart.tcSecurityDeframer.PROVISION_KEY
     0x2200B002,  //!< ComCcsdsLora.tcSecurityDeframer.PROVISION_KEY
     0x2300B002,  //!< ComCcsdsSband.tcSecurityDeframer.PROVISION_KEY
+    0x2100B005,  //!< ComCcsdsUart.tcSecurityDeframer.GET_ACTIVE_KEYS
+    0x2200B005,  //!< ComCcsdsLora.tcSecurityDeframer.GET_ACTIVE_KEYS
+    0x2300B005,  //!< ComCcsdsSband.tcSecurityDeframer.GET_ACTIVE_KEYS
     0x10065000,  //!< ReferenceDeployment.amateurRadio.TELL_JOKE
 };
 

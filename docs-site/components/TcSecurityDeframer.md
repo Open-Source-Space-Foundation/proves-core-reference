@@ -24,6 +24,8 @@ The store is shared across all `TcSecurityDeframer` instances (UART/LoRa/Sband):
 
 Three commands manage the store (see [Commands](#commands)): `PROVISION_KEY` (bootstrap, only while the store is empty), `ADD_KEY` (rotation, fails at 2 active keys), and `REMOVE_KEY` (rotation, fails at 1 remaining key). All three re-read the store from flash first, then re-import it into PSA and update `ActiveKeyCount` telemetry on success.
 
+A fourth command, `GET_ACTIVE_KEYS`, lets an operator who has lost track of what was provisioned identify the active slot(s) without knowing the key material: it logs one `ActiveKeyInfo` event per valid slot, reporting the SPI alongside a fingerprint of the key — the first 4 bytes of SHA-256(key), hex-encoded (`computeKeyFingerprint` in `Authenticator.cpp`) — never the key itself. Like `PROVISION_KEY`, it is bypass-allowlisted in `ProvesRouter`, since an operator who does not know the key cannot send an authenticated command to ask.
+
 All three also refuse to act (`StoreUnreadable`) unless the store's contents are *known*, because otherwise they would be acting on a guess.
 
 "Known" cannot be decided from the read status. On the Zephyr target `ZephyrFile::open` discards `fs_open`'s errno and reports `OTHER_ERROR` for every failure, so `Os::File::DOESNT_EXIST` is unreachable on flight hardware even though it is the normal result for a missing file on the POSIX host. Gating on the status therefore made a factory-fresh (or `/keys`-erased) board refuse `PROVISION_KEY` forever: keyless *and* unprovisionable, i.e. total command loss. Instead `probeKeyStore()` interrogates the filesystem — `fs_stat` on the store file for a positive absence answer, plus `fs_statvfs` on the mount point to prove `/keys` is actually mounted — and feeds the pure predicates in `Components::KeyStore` (`Types.hpp`). Both signals are required: Zephyr returns `-ENOENT` for an unmounted mount point exactly as it does for a missing file, so absence alone proves nothing. For `ADD_KEY`/`REMOVE_KEY` that prevents a read-modify-write from persisting a stale guess over the real store. For `PROVISION_KEY` it is a security property: the command is bypass-allowlisted so it works on a keyless board, so trust-on-first-use must be gated on *proof* that the store is empty. Treating an unreadable store as keyless would let anyone in radio range induce a read failure and install their own key while a valid one still sits on flash.
@@ -52,6 +54,7 @@ class TcSecurityDeframer {
   -PROVISION_KEY_cmdHandler(opCode, cmdSeq, spi, key)
   -ADD_KEY_cmdHandler(opCode, cmdSeq, spi, key)
   -REMOVE_KEY_cmdHandler(opCode, cmdSeq, spi)
+  -GET_ACTIVE_KEYS_cmdHandler(opCode, cmdSeq)
   -readSequenceNumber(value)
   -writeSequenceNumber(value)
   -loadKeyStore()
@@ -82,6 +85,7 @@ class PacketAuthenticator {
   +importHmacKeyBytes(keyBytes, keyId) KeyImportResult
   +destroyHmacKey(keyId) int32_t
   +authenticatePacket(buffer, size, mac, keyId) AuthenticationResult
+  +computeKeyFingerprint(keyBytes, hexOut) bool
 }
 
 class TCSecurityHeader {
@@ -184,6 +188,8 @@ Routed/bypassed/rejected packet counts are telemetered by ProvesRouter, which ow
 | KeyAddFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when ADD_KEY fails (store full, duplicate SPI, unreadable store, bad hex key, write failure, or PSA import failure). Format: "Key add failed: {}" |
 | KeyRemoved | Activity High | spi: U16 | Logged by REMOVE_KEY on success. Format: "Key removed for SPI={}" |
 | KeyRemoveFailed | Warning High (throttle 2) | status: KeyStoreProvisionStatus | Logged when REMOVE_KEY fails (last remaining key, SPI not found, unreadable store, write failure, or PSA import failure). Format: "Key remove failed: {}" |
+| ActiveKeyInfo | Activity High | spi: U16, fingerprint: string | Logged by GET_ACTIVE_KEYS once per active slot: the SPI and a truncated-SHA-256 fingerprint of the key, never the key itself. Format: "Active key: SPI={}, fingerprint={}" |
+| NoActiveKeys | Activity High | None | Logged by GET_ACTIVE_KEYS when the store holds no active keys. Format: "No active keys in the key store" |
 
 ## Commands
 
@@ -194,6 +200,7 @@ Routed/bypassed/rejected packet counts are telemetered by ProvesRouter, which ow
 | PROVISION_KEY | Sync | spi: U16, key: string | Bootstrap: writes the first key slot and imports it into PSA. Only succeeds while the store is empty; bypass-allowlisted in ProvesRouter so it works on a keyless board (KeyProvisioned/KeyProvisionFailed events). |
 | ADD_KEY | Sync | spi: U16, key: string | Rotation: adds a key to an empty slot. Requires an authenticated frame (not bypass-allowlisted); fails if 2 keys are already active (KeyAdded/KeyAddFailed events). |
 | REMOVE_KEY | Sync | spi: U16 | Rotation: invalidates the slot matching `spi`. Requires an authenticated frame (not bypass-allowlisted); fails if it would drop the active key count below 1 (KeyRemoved/KeyRemoveFailed events). |
+| GET_ACTIVE_KEYS | Sync | None | Reports the active SPI(s) and a non-reversible key fingerprint for each (one ActiveKeyInfo event per active slot, or NoActiveKeys if the store is empty). Bypass-allowlisted in ProvesRouter, like GET_SEQ_NUM. |
 
 ## Unit Tests
 
@@ -204,7 +211,7 @@ TcSecurityDeframer helper functionality is covered by unit tests in PROVESFlight
 | test_TcSecurityDeframer_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, and MAC size checks. |
 | test_TcSecurityDeframer_Validator.cpp | SPI validation against the active `ActiveSpiSlots` set (single slot, second slot, no valid slots), out-of-window and replayed sequence numbers, window boundary, and wraparound handling. |
 | test_TcSecurityDeframer_KeyStorePolicy.cpp | The key store admission predicates (`Components::KeyStore::storeStateIsKnown` / `storeIsProvisionable`) over the exhaustive mount x store-probe x active-key-count matrix: a cold board on a live mount is provisionable; an unreadable store never is; an absent store on an unproven mount never is; and a regression test documenting why a gate written over `Os::File::Status` diverges between host and target. |
-| test_TcSecurityDeframer_Authenticator.cpp | `parseHexKey` (valid upper/lowercase, null, wrong length, non-hex characters), key import via hex and raw bytes, `destroyHmacKey`, successful MAC verification, and failed verification with corrupted MAC, corrupted data, or a destroyed key. |
+| test_TcSecurityDeframer_Authenticator.cpp | `parseHexKey` (valid upper/lowercase, null, wrong length, non-hex characters), key import via hex and raw bytes, `destroyHmacKey`, successful MAC verification, failed verification with corrupted MAC, corrupted data, or a destroyed key, and `computeKeyFingerprint` (deterministic for the same key, differs for different keys, never echoes the key's own hex encoding). |
 
 These cover only the pure-function layer (Parser/Validator/Authenticator; no F Prime or Zephyr dependency). The key store mutation rules enforced in the command handlers (`PROVISION_KEY`/`ADD_KEY`/`REMOVE_KEY` — provision-only-when-empty, add fails at 2, remove fails at 1) are F-Prime-component-dependent and are not covered here; see the commented-out `register_fprime_ut` block in `CMakeLists.txt` for a future on-target/component test pass.
 
@@ -242,6 +249,7 @@ The authentication key is no longer compiled into the image, so there is nothing
 | AUTH005-A | The component shall not mark packets as authenticated where the computed MAC does not match the security trailer MAC. | Unit Test |
 | AUTH006 | For any parseable frame, the component shall remove the Security Header and Security Trailer and forward the remaining packet data with the verification result recorded in the frame context. | Inspection, Integration Test |
 | AUTH007 | The component shall provide a command and telemetry channel to report the current sequence number to enable ground station synchronization. | Inspection, Integration Test |
+| AUTH008 | The component shall provide a command to report the active SPI(s) and a non-reversible fingerprint of each associated key, without ever exposing the key itself. | Unit Test, Integration Test |
 
 Opcode-based bypass policy (formerly AUTH002) is owned by ProvesRouter; see its SDD.
 
@@ -252,3 +260,4 @@ Opcode-based bypass policy (formerly AUTH002) is owned by ProvesRouter; see its 
 | 2025-11-26 | Initial design. |
 | 2026-07-17 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. Pass-through interface between TcDeframer and SpacePacketDeframer; verification result carried in frame context; policy enforcement moved to ProvesRouter. |
 | 2026-07-23 | Moved the authentication key off the compiled-in image onto a littlefs key store on internal flash, alongside the sequence-number file (issue #220). Added PROVISION_KEY/ADD_KEY/REMOVE_KEY commands supporting up to 2 active keys; SPI validation now checks the active key store instead of a hard-coded SPI 0. |
+| 2026-08-03 | Added GET_ACTIVE_KEYS (issue #488): reports the active SPI(s) and a truncated-SHA-256 fingerprint of each key via the new ActiveKeyInfo/NoActiveKeys events, so an operator who has lost track of what was provisioned can identify slots without knowing the key material. Bypass-allowlisted like PROVISION_KEY/GET_SEQ_NUM. |
