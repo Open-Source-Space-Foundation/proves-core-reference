@@ -121,8 +121,24 @@ def _uplink_lora_until_crc(
     once CalculateCrc reports a match, False if all attempts are exhausted.
     """
     for attempt in range(attempts):
+        # Half-duplex: the flight's own TM transmissions blind its receiver, so
+        # uplink into a silent board (commanding works with TX disabled) and only
+        # re-enable the downlink to read the CRC back.
+        api.send_command("ReferenceDeployment.lora.TRANSMIT", ["DISABLED"])
+        time.sleep(5)
         _uplink_uart(api, local, dest, timeout)
-        actual = _onboard_crc(api, dest, timeout=60)
+        api.send_command("ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET", [20])
+        time.sleep(2)
+        api.send_command("ReferenceDeployment.lora.TRANSMIT", ["ENABLED"])
+        time.sleep(10)
+        # A 700KB on-board CRC plus a divider-paced radio downlink far exceeds
+        # the UART-tuned default timeout; retry the command itself as well since
+        # a single command frame can be lost over the air.
+        actual = None
+        for _ in range(3):
+            actual = _onboard_crc(api, dest, timeout=240)
+            if actual is not None:
+                break
         if actual == expected_crc:
             return True
         print(
@@ -184,6 +200,24 @@ def _resync_sequence_number(
         f.write(str(seq_num))
 
 
+def _reenable_radio_after_boot(api: IntegrationTestAPI, transport: str) -> None:
+    """Blindly re-enable the flight LoRa downlink after a reboot (lora only).
+
+    TRANSMIT resets to DISABLED on every flight reset, so post-reboot boot events
+    never downlink over the radio until we re-enable. The uplink direction works
+    with TX disabled, so these fire-and-forget sends get through; the divider must
+    be set while TX is still DISABLED (parameters latch on enable).
+    """
+    if transport != "lora":
+        return
+    time.sleep(10)  # let the board finish booting before commanding
+    for _ in range(3):
+        api.send_command("ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET", [20])
+        time.sleep(2)
+        api.send_command("ReferenceDeployment.lora.TRANSMIT", ["ENABLED"])
+        time.sleep(8)
+
+
 def _cold_reset(api: IntegrationTestAPI) -> TimeType:
     """Issue COLD_RESET without expecting an OK response and return the send time.
 
@@ -203,6 +237,7 @@ def _project_version_after_boot(
     start: TimeType,
     request: pytest.FixtureRequest,
     timeout: float = BOOT_TIMEOUT_S,
+    transport: str = "uart",
 ) -> str:
     """Wait for the boot to complete and return the reported project version string.
 
@@ -213,8 +248,14 @@ def _project_version_after_boot(
     The fallback must resync the auth sequence number first: commands sent before
     resyncing after a reboot are silently rejected by the security deframer.
     """
-    api.assert_event(f"{VERSION}.FrameworkVersion", start=start, timeout=timeout)
-    evt = api.await_event(f"{VERSION}.ProjectVersion", timeout=5)
+    if transport == "lora":
+        # Boot-time events are emitted while LoRa TX is still DISABLED (the
+        # default after every reset) and are lost over the air; go straight to
+        # the commanded fallback below.
+        evt = None
+    else:
+        api.assert_event(f"{VERSION}.FrameworkVersion", start=start, timeout=timeout)
+        evt = api.await_event(f"{VERSION}.ProjectVersion", timeout=5)
     if evt is None:
         _resync_sequence_number(api, request)
         for _ in range(3):
@@ -283,7 +324,8 @@ def test_ota_swap_and_revert(
 
         # (d) Reboot into the TEST image and assert the new build is running.
         start = _cold_reset(api)
-        version = _project_version_after_boot(api, start, request)
+        _reenable_radio_after_boot(api, transport)
+        version = _project_version_after_boot(api, start, request, transport=transport)
         _resync_sequence_number(api, request)
         assert build_id in version, (
             f"booted project version {version!r} does not contain build id "
@@ -292,7 +334,8 @@ def test_ota_swap_and_revert(
 
         # (e) Do NOT CONFIRM_UPDATE. Reboot again; MCUBoot must auto-revert.
         start = _cold_reset(api)
-        reverted = _project_version_after_boot(api, start, request)
+        _reenable_radio_after_boot(api, transport)
+        reverted = _project_version_after_boot(api, start, request, transport=transport)
         _resync_sequence_number(api, request)
         assert build_id not in reverted, (
             f"project version {reverted!r} still contains build id {build_id!r} "
