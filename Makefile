@@ -100,6 +100,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
 	@cp PROVESFlightControllerReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
 	@cp PROVESFlightControllerReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
+	@cp PROVESFlightControllerReference/Components/MosaicManager/docs/sdd.md docs-site/components/MosaicManager.md
 	@# Copy Sensor Components
 	@cp PROVESFlightControllerReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
 	@cp PROVESFlightControllerReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
