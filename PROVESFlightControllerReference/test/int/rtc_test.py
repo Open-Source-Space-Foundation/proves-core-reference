@@ -328,7 +328,7 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
     fprime_test_api.clear_histories()
 
     # Set an alarm for 5 seconds in the future
-    alarm_time = datetime.now(timezone.utc) + timedelta(seconds=10)
+    alarm_time = datetime.now(timezone.utc) + timedelta(seconds=60)
     alarm_time_data = dict(
         Year=alarm_time.year,
         Month=alarm_time.month,
