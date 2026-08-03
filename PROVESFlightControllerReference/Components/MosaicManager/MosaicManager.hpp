@@ -77,7 +77,10 @@ class MosaicManager final : public MosaicManagerComponentBase {
     bool ensureFileOpen();
 
     //! Flush and close the current sample file and reset state
-    void closeFile();
+    //! \param complete true when the file holds only whole records and is ready
+    //!        for downlink, so SampleFileClosed is reported; false when it is
+    //!        being abandoned after a write failure
+    void closeFile(bool complete = true);
 
     // ----------------------------------------------------------------------
     // Constants

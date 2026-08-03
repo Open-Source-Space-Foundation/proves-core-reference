@@ -153,7 +153,10 @@ void MosaicManager ::recordSample(U16 adc, U16 millivolts) {
     const Os::File::Status status = m_file.write(record, writeSize, Os::File::WaitType::WAIT);
     if ((status != Os::File::OP_OK) || (writeSize != RECORD_SIZE)) {
         this->log_WARNING_HI_FileWriteError(static_cast<U32>(status));
-        this->closeFile();
+        // A short write leaves a torn record on the end of the file, so the
+        // file is abandoned rather than closed: reporting SampleFileClosed
+        // here would advertise a clean, downlinkable file that isn't one.
+        this->closeFile(false);
         return;
     }
 
@@ -200,14 +203,16 @@ bool MosaicManager ::ensureFileOpen() {
     return true;
 }
 
-void MosaicManager ::closeFile() {
+void MosaicManager ::closeFile(bool complete) {
     Fw::FileNameString path;
     path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
 
     m_file.flush();
     m_file.close();
 
-    this->log_ACTIVITY_HI_SampleFileClosed(path, m_samplesInFile);
+    if (complete) {
+        this->log_ACTIVITY_HI_SampleFileClosed(path, m_samplesInFile);
+    }
 
     m_fileOpen = false;
     m_samplesInFile = 0;
