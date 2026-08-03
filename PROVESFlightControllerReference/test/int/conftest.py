@@ -10,7 +10,11 @@ import threading
 import time
 
 import pytest
-from common import cmdDispatch, set_radio_recover_fn
+from common import (
+    cmdDispatch,
+    proves_send_and_assert_command,
+    set_radio_recover_fn,
+)
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # After TRANSMIT is first enabled the satellite flushes the event backlog that
@@ -118,27 +122,34 @@ def start_gds(
 
     GDS is used to send commands and receive telemetry/events.
     """
-    gds_working = False
-    timeout_time = time.time() + 30
-    while time.time() < timeout_time:
-        try:
-            if request.config.getoption("--with-radio"):
-                _enable_radio(fprime_test_api_session)
-            fprime_test_api_session.send_and_assert_command(
-                command=f"{cmdDispatch}.CMD_NO_OP"
-            )
-            gds_working = True
-            break
-        except Exception:
-            time.sleep(1)
-    assert gds_working
-
     if request.config.getoption("--with-radio"):
-        # Allow the boot-time event backlog to drain before any test commands
-        # are issued.  Without this wait the initial burst of queued events can
-        # swamp command-ack events and cause the first test assertions to fail.
+        # Enable transmission once, then allow the boot-time event backlog to
+        # drain before probing the half-duplex link. Sending NO_OP immediately
+        # after TRANSMIT collides with that initial downlink burst, and
+        # re-sending the setup commands on every retry only adds more traffic.
+        _enable_radio(fprime_test_api_session)
         time.sleep(RADIO_STABILIZE_S)
         fprime_test_api_session.clear_histories()
+
+        # Use the shared jittered retry path so attempts do not remain locked
+        # to the periodic LoRa downlink cadence.
+        proves_send_and_assert_command(
+            fprime_test_api_session,
+            command=f"{cmdDispatch}.CMD_NO_OP",
+        )
+    else:
+        gds_working = False
+        timeout_time = time.time() + 30
+        while time.time() < timeout_time:
+            try:
+                fprime_test_api_session.send_and_assert_command(
+                    command=f"{cmdDispatch}.CMD_NO_OP"
+                )
+                gds_working = True
+                break
+            except Exception:
+                time.sleep(1)
+        assert gds_working
 
     yield
 
