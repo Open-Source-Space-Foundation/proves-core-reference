@@ -116,12 +116,12 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
   packet Mosaic id 23 group 4 {
-    ReferenceDeployment.mosaicManager.Recording
-    ReferenceDeployment.mosaicManager.SamplesRecorded
-    ReferenceDeployment.mosaicManager.FilesWritten
-    ReferenceDeployment.mosaicManager.ParseErrors
-    ReferenceDeployment.mosaicManager.LatestAdc
-    ReferenceDeployment.mosaicManager.LatestMillivolts
+    mosaicManager.Recording
+    mosaicManager.SamplesRecorded
+    mosaicManager.FilesWritten
+    mosaicManager.ParseErrors
+    mosaicManager.LatestAdc
+    mosaicManager.LatestMillivolts
   }
 
   ### Health and Status Packets ###
@@ -159,7 +159,6 @@ telemetry packets ReferenceDeploymentPackets {
 #    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     mosaicBufferManager.HiBuffs
-    CdhCore.tlmSend.SendLevel
     CdhCore.tlmSend.SectionEnabled
   }
 
