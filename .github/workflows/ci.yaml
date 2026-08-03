@@ -660,6 +660,17 @@ jobs:
           name: ota-image
           path: ota-image
 
+      - name: Power On Satellite
+        run: |
+          # Every other integration job's first hardware action is the
+          # flash-firmware composite, which powers the cube up before it talks
+          # to OpenOCD. This job reaches for OpenOCD first, and every job on
+          # this runner ends with "Power Off Satellite", so without this the
+          # erase below would run against an unpowered board and fail to
+          # attach.
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
       - name: Erase the MCUboot staging slot
         run: |
           # slot1_partition is 0x200000..0x300000 within the 4 MB QSPI flash
