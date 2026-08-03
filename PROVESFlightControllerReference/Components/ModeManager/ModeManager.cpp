@@ -158,8 +158,6 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
                                             U32 cmdSeq,
                                             const Fw::CmdResponse& response) {
     (void)portNum;
-    (void)opCode;
-    (void)cmdSeq;
 
     if (response == Fw::CmdResponse::OK) {
         // log that sequence completed successfully
@@ -167,6 +165,11 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
     } else {
         // log that sequence failed
         this->log_WARNING_LO_SafeModeSequenceFailed(response);
+    }
+
+    // Forward completion to other listeners (e.g. StartupManager active-sequence tracking)
+    if (this->isConnected_sequenceDoneNotify_OutputPort(0)) {
+        this->sequenceDoneNotify_out(0, opCode, cmdSeq, response);
     }
 }
 

@@ -14,13 +14,15 @@ manifest:
   group-filter: [-babblesim, -optional]
 
   projects:
-    # Zephyr RTOS core — Open-Source-Space-Foundation fork, integration branch
-    # feat/proves-usp-radio-trimmed (v4.4.1 + the CDC-ACM TX-FIFO drain fix,
-    # formerly patches/0005; constituent PR tracked in OSSF/zephyr#1).
-    # The poll_out bounded-wait layer (OSSF/zephyr#2) was pruned 2026-08-01:
-    # its added bound sits behind data->flow_ctrl, which is false on the v5e
-    # from both devicetree and the explicit UART_CFG_FLOW_CTRL_NONE configure,
-    # so the code was unreachable in the flight image.
+    # Zephyr RTOS core — stock upstream zephyrproject-rtos/zephyr v4.4.1.
+    # No OSSF fork and no carried patches: the 2026-08-01 trim eliminated both
+    # Zephyr changes we used to carry, so this now tracks upstream verbatim.
+    #   - CDC-ACM TX-FIFO drain fix (formerly patches/0005, OSSF/zephyr#1) is
+    #     no longer required by the flight image.
+    #   - poll_out bounded-wait layer (OSSF/zephyr#2) was pruned: its added
+    #     bound sits behind data->flow_ctrl, which is false on the v5e from
+    #     both devicetree and the explicit UART_CFG_FLOW_CTRL_NONE configure,
+    #     so the code was unreachable in the flight image.
     - name: zephyr
       revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb
       path: lib/zephyr-workspace/zephyr

@@ -4,7 +4,6 @@
     uspRadio.BytesSent
     uspRadio.TxProfile
     uspRadio.RxProfile
-    uspRadio.ProfileTableVersion
     uspRadio.RxReverts
     uspRadio.RxDropped
   }
