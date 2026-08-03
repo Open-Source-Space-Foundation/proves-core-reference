@@ -36,6 +36,16 @@ RECORD_SIZE = 8
 # arrive without making the suite slow.
 SAMPLE_ACCUMULATION_SECONDS = 5
 
+# Telemetry packets are gated by telemetryDelay (Utilities.RateDelay on the 1 Hz
+# rate group), which releases CdhCore.tlmSend.Run every 30 s -- the packetizer's
+# ON_CHANGE_MIN/min=0/max=0 group config does not make packets any more frequent
+# than that. proves_send_and_assert_command clears the histories before sending,
+# so a telemetry assertion after a command always waits for a fresh packet.
+# Allow two and a half downlink periods so a single missed window is not a
+# failure. Events are not gated this way, which is why they use short timeouts.
+TLM_DOWNLINK_PERIOD_SECONDS = 30
+TLM_TIMEOUT_SECONDS = 75
+
 
 def _now() -> TimeType:
     return TimeType().set_datetime(
@@ -108,7 +118,7 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
     # proves_send_and_assert_command clears the histories immediately before
     # sending, so the history already starts at the command.
     fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", value=False, timeout=15
+        f"{mosaicManager}.Recording", value=False, timeout=TLM_TIMEOUT_SECONDS
     )
 
     start = _now()
@@ -120,7 +130,7 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
         f"{mosaicManager}.RecordingStarted", start=start, timeout=10
     )
     fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", value=True, timeout=15
+        f"{mosaicManager}.Recording", value=True, timeout=TLM_TIMEOUT_SECONDS
     )
 
 
@@ -129,7 +139,7 @@ def test_02_samples_recorded(fprime_test_api: IntegrationTestAPI, start_gds):
     time.sleep(SAMPLE_ACCUMULATION_SECONDS)
 
     result = fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.SamplesRecorded", timeout=10
+        f"{mosaicManager}.SamplesRecorded", timeout=TLM_TIMEOUT_SECONDS
     )
     assert result.get_val() > 0, (
         "MosaicManager recorded no samples; is the MOSAIC payload attached to "
@@ -138,8 +148,12 @@ def test_02_samples_recorded(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # A parsed sample must also surface the raw reading, proving the ASCII
     # protocol was decoded rather than just bytes being counted.
-    fprime_test_api.assert_telemetry(f"{mosaicManager}.LatestAdc", timeout=10)
-    fprime_test_api.assert_telemetry(f"{mosaicManager}.LatestMillivolts", timeout=10)
+    fprime_test_api.assert_telemetry(
+        f"{mosaicManager}.LatestAdc", timeout=TLM_TIMEOUT_SECONDS
+    )
+    fprime_test_api.assert_telemetry(
+        f"{mosaicManager}.LatestMillivolts", timeout=TLM_TIMEOUT_SECONDS
+    )
 
 
 def test_03_flush_writes_file_to_filesystem(
