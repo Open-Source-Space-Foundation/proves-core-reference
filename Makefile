@@ -408,13 +408,13 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 	@$(UV_RUN) fprime-seqgen sequences/$(SEQ).seq -d $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment
 
 .PHONY: gds
-gds: ## Run FPrime GDS
+gds: ## Run FPrime GDS (set SPI=<n> to authenticate with a non-default key slot)
 	@echo "Running FPrime GDS..."
 	@if [ -n "$(UART_DEVICE)" ]; then \
 		echo "Using UART_DEVICE=$(UART_DEVICE)"; \
-		$(GDS_COMMAND) --uart-device $(UART_DEVICE); \
+		$(GDS_COMMAND) --uart-device $(UART_DEVICE) $(if $(SPI),--spi $(SPI)); \
 	fi
-	$(GDS_COMMAND)
+	$(GDS_COMMAND) $(if $(SPI),--spi $(SPI))
 
 .PHONY: delete-shadow-gds
 delete-shadow-gds:
