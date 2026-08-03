@@ -49,6 +49,7 @@ updater = "Update.updater"
 worker = "Update.worker"
 version = "CdhCore.version"
 fileManager = "FileHandling.fileManager"
+downlinkRepeater = "ReferenceDeployment.downlinkRepeater"
 
 # Directory on the satellite filesystem that holds the staged image.
 UPDATE_DIR = "/update"
@@ -270,6 +271,15 @@ def test_03_full_ota_cycle(
     #    already exist from an earlier run, and fileManager errors on that.
     fprime_test_api.send_command(f"{fileManager}.CreateDirectory", [UPDATE_DIR])
     time.sleep(1)
+
+    # Route file traffic over UART only. Confirm the parameter command before
+    # starting the long uplink so another output cannot consume its buffers.
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{downlinkRepeater}.CHANNEL_ENABLED_PRM_SET",
+        [json.dumps(["ENABLED", "DISABLED", "DISABLED"])],
+    )
+
     fprime_test_api.clear_histories()
     fprime_test_api.uplink_file(str(ota_image), destination)
     assert (
