@@ -436,3 +436,22 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     # Assert that we receive an AlarmNotSet event within 10 seconds
     fprime_test_api.await_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+@pytest.mark.uart_only(reason="Test functionality of the timebase parameter")
+def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test for events emitted by the timebase parameter"""
+
+    try:
+        # Test that we can set timebase to proc time
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
+        )
+        # Assert that we receive a TimeBaseChanged event within 10 seconds
+        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+    finally:
+        # Restore spacecraft time so subsequent tests see RTC-backed timestamps
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+        )
+        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
