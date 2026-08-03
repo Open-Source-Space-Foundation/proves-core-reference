@@ -154,6 +154,14 @@ If you regenerate/replace the bootloader (or switch computers and flash a bootlo
 
 You also want to make sure the authentication key the gds runs with is the same as the authentication key provisioned on the board. The board's key lives in its on-flash key store (never in the image); ground reads its key from the `--authentication-key` CLI arg or the `PROVES_AUTH_KEY` env var. Make sure these match the key you provisioned with `PROVISION_KEY`/`ADD_KEY`.
 
+##### Provisioning your first key
+
+A freshly flashed board boots with an empty on-flash key store — no authentication key ever ships in the image. Because the store is empty, the board allows exactly one unauthenticated command: `PROVISION_KEY`. Once any key is provisioned, `PROVISION_KEY` is refused, so this only works the first time (or again after every key has been removed).
+
+1. Start GDS as normal (`make gds`).
+2. From the GDS command view, send `PROVISION_KEY(spi=<n>, key=<32 hex chars>)`, e.g. `PROVISION_KEY(0, 00112233445566778899aabbccddeeff)`.
+3. Tell ground to use the same key for every command after that: set `PROVES_AUTH_KEY` to the same hex string (or pass `--authentication-key`). If you provisioned a non-zero SPI, also run gds with `make gds SPI=<n>` (or pass `--spi <n>` directly) so ground's outgoing frames carry the matching SPI.
+
 The board holds up to two active keys so a rotation never leaves you locked out. Ground uses exactly one key at a time (whichever `--authentication-key`/`PROVES_AUTH_KEY` it was started with), so rotate in this order:
 
 1. Keep running GDS with the **old** key and send `ADD_KEY(new_spi, new_key)` — the command itself has to authenticate under the old key.
