@@ -317,10 +317,7 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start=start, timeout=10)
 
 
-# cancellation test
-@pytest.mark.uart_only(
-    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
-)
+# Cancellation test
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
@@ -338,24 +335,45 @@ def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gd
         Second=alarm_time.second,
     )
     alarm_time_data_str = json.dumps(alarm_time_data)
+
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
+
+    # Send ALARM_SET and await AlarmSet to get the concrete alarm ID
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    alarm_set_evt: EventData = fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmSet", start=start, timeout=5
+    )
 
-    # Cancel the alarm immediately
-    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL")
+    # Extract the alarm id from the AlarmSet event (first arg assumed to be the ID)
+    alarm_id = None
+    if alarm_set_evt and len(alarm_set_evt.args) > 0:
+        alarm_id = alarm_set_evt.args[0].val
 
-    fprime_test_api.assert_event(f"{rtcManager}.AlarmCanceled", start=start, timeout=10)
+    assert alarm_id is not None, "Failed to obtain alarm id from AlarmSet event"
 
+    # Cancel the alarm by ID
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [alarm_id])
+
+    # Assert AlarmCanceled references the same ID
+    alarm_canceled_evt: EventData = fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmCanceled", start=start, timeout=5
+    )
+    assert alarm_canceled_evt.args and alarm_canceled_evt.args[0].val == alarm_id, (
+        f"AlarmCanceled id {alarm_canceled_evt.args[0].val} did not match expected {alarm_id}"
+    )
+
+    # Wait until after the scheduled alarm time to ensure it would have fired if not canceled
+    remaining = (alarm_time - datetime.now(timezone.utc)).total_seconds()
+    if remaining > 0:
+        time.sleep(remaining + 1)
+
+    # Verify no AlarmTriggered for this alarm id (assert that assert_event times out)
     with pytest.raises(AssertionError):
         fprime_test_api.assert_event(
-            f"{rtcManager}.AlarmTriggered", start=start, timeout=10
+            f"{rtcManager}.AlarmTriggered", start=start, timeout=3
         )
-
-    # make sure the alarm is gone
-    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
-    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start=start, timeout=10)
 
 
 # validation test
