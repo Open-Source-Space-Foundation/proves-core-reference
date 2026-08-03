@@ -423,8 +423,12 @@ delete-shadow-gds:
 	@$(UV_RUN) pkill -9 -f fprime-gds
 
 .PHONY: gds-integration
+# GDS_EXTRA_ARGS appends to the options in fprime-gds.yml. Mainly a tuning lever
+# for file uplink: at the repo default (--file-uplink-cooldown 0.400,
+# --file-uplink-chunk-size 204) a 1.4 MB firmware image takes ~48 minutes to
+# uplink, so the OTA job lowers the cooldown.
 gds-integration: framer-plugin
-	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
+	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD) $(GDS_EXTRA_ARGS)
 
 .PHONY: DoL_test
 DoL_test:

@@ -310,8 +310,30 @@ It is excluded from the default integration run because it erases a flash slot,
 uplinks a large file and reboots the board:
 
 ```shell
-make test-integration TEST=ota FILTER=ota
+make test-integration TEST=ota_test.py FILTER=ota
 ```
+
+Run against the build in your working tree, it uplinks the image the board is
+already running, so the post-swap version check passes trivially. To make the
+check meaningful, point `--ota-image` at a *different* build:
+
+```shell
+make test-integration TEST=ota_test.py FILTER=ota \
+  PYTEST_ARGS="--ota-image=/path/to/other/zephyr.signed.bin --ota-expect-version=v1.2.3"
+```
+
+In CI this is the `integration-ota` job. It is not part of the normal PR run —
+it ties up the integration cube for the better part of an hour. Trigger it by
+running the `ci` workflow manually with **Run the hardware over-the-air update
+test** checked, or by adding the `test-ota` label to a PR. The job builds a
+second image under a throwaway git tag so the project version differs from the
+one flashed on the board, which is what lets it prove a swap actually happened.
+
+Uplink dominates the runtime: at the `fprime-gds.yml` defaults
+(`file-uplink-chunk-size: 204`, `file-uplink-cooldown: 0.400`) a 1.4 MB image is
+about 7100 chunks, ~48 minutes. Lower the cooldown to go faster — locally via
+`make gds-integration GDS_EXTRA_ARGS="--file-uplink-cooldown 0.05"`, or in CI via
+the workflow's uplink-cooldown input.
 
 ### If an update goes wrong
 
