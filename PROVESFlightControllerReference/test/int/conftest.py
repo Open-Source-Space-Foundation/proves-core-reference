@@ -101,6 +101,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "SafeModeEntryVoltage to 0 before each test so the auto-entry never fires.",
     )
     parser.addoption(
+        "--ota-image",
+        default="build-artifacts/zephyr.signed.bin",
+        help="Signed MCUboot image the OTA test uplinks and swaps to. Defaults to "
+        "the artifact produced by 'make build'.",
+    )
+    parser.addoption(
+        "--ota-expect-version",
+        default=None,
+        help="Project version string the board must report after the OTA swap. "
+        "Defaults to the project_version in build-fprime-automatic-zephyr/versions/"
+        "version.json, which is only right when --ota-image came from that build.",
+    )
+    parser.addoption(
         "--bare-flight-controler-board",
         action="store_true",
         default=False,

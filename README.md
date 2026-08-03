@@ -242,23 +242,90 @@ You can control the specific command lists of the satellite by writing a sequenc
 
 ## Conducting Over the Air Updates
 
-When you run the gds,
+Updates are performed by MCUboot in swap mode. Flash is divided into a bootloader
+partition, a **primary slot** (`slot0_partition`, where the running firmware
+lives) and a **secondary slot** (`slot1_partition`, the staging area). You uplink
+a new signed image to the on-board filesystem, copy it into the secondary slot,
+mark it for boot, and reboot — MCUboot swaps the two slots and runs the new
+image. If the new image is booted in `TEST` mode and never confirmed, the next
+reboot swaps back.
 
-``` fprime-gds --file-uplink-cooldown 0.8```
+Both slots are 1 MB (see
+`boards/bronco_space/proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi`),
+so an image must fit in 1 MB minus the MCUboot trailer.
 
-Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the file uplink file
+### Prerequisites
 
+- The board is running the MCUboot bootloader (see [Bootloader (MCUBoot)](#bootloader-mcuboot)).
+- `keys/proves.pem` is the key the installed bootloader was built with. An image
+  signed with a different key will be rejected by MCUboot and the board will
+  fall back to the old image.
+- A signed image to install: `make build` writes `build-artifacts/zephyr.signed.bin`.
 
-1. prepare image
-2. update from (pass in the path)
-3. configure_next_boot = test
+### Procedure
 
-to find the crc ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
+Start the GDS with a file-uplink cooldown, since the image is large:
 
-(either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
+```shell
+fprime-gds --file-uplink-cooldown 0.8
+```
 
-Go to components/flashworker
+1. **Compute the image CRC.** Flight software verifies it before writing a
+   single byte, so this must be the value the flight-side CRC produces:
 
-regionnumber = 1 try instead region number=2
+   ```shell
+   ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
+   ```
 
-(redo all the stuff)
+2. **Uplink the image** to the satellite filesystem with the GDS file uplink
+   panel, e.g. to `/update/zephyr.signed.bin`.
+
+3. **`Update.updater.PREPARE_UPDATE`** — erases the secondary slot. Wait for
+   `PrepareUpdateSucceeded`.
+
+4. **`Update.updater.UPDATE_IMAGE_FROM`** with the uplinked path and the CRC
+   from step 1. Wait for `UpdateSucceeded`. A CRC mismatch surfaces as
+   `Update.worker.ImageFileCrcMismatch`.
+
+5. **`Update.updater.CONFIGURE_NEXT_BOOT`** with `TEST`. Use `TEST`, not
+   `PERMANENT`: a `TEST` image that fails to boot is automatically reverted,
+   a `PERMANENT` one is not.
+
+6. **Reboot** — `ReferenceDeployment.resetManager.COLD_RESET`, or power cycle.
+   MCUboot performs the swap during boot, which takes noticeably longer than a
+   normal reset.
+
+7. **Verify** the new image is running: send `CdhCore.version.VERSION` with
+   `PROJECT` and check the `ProjectVersion` event against the version of the
+   build you uplinked.
+
+8. **`Update.updater.CONFIRM_UPDATE`** — makes the swap permanent. Until you do
+   this, the *next* reboot reverts to the previous image.
+
+### Testing it
+
+`PROVESFlightControllerReference/test/int/ota_test.py` runs this whole cycle
+against real hardware and checks the reported project version after the swap.
+It is excluded from the default integration run because it erases a flash slot,
+uplinks a large file and reboots the board:
+
+```shell
+make test-integration TEST=ota FILTER=ota
+```
+
+### If an update goes wrong
+
+- **The board stops responding right after `PREPARE_UPDATE`.** That means the
+  erase hit the running slot instead of the staging slot. `FlashWorker` resolves
+  the target from the `slot1_partition` devicetree label
+  (`PARTITION_ID(slot1_partition)`); do **not** replace this with a literal
+  number. Zephyr assigns flash-area IDs in devicetree dependency-ordinal order,
+  so adding any partition anywhere in the devicetree renumbers every area, and a
+  hardcoded ID starts pointing at a different partition. Recover by copying
+  `bootable.uf2` onto the board in UF2 bootloader mode, or over SWD with
+  `make debug-install bootable.signed.hex`.
+- **The board boots the old image after the swap reboot.** MCUboot rejected the
+  staged image — usually a signature mismatch (`keys/proves.pem` does not match
+  the installed bootloader) or an image that overflows the slot.
+- **The new image works, then disappears after a later reboot.** `CONFIRM_UPDATE`
+  was never sent, so MCUboot reverted the trial boot.
