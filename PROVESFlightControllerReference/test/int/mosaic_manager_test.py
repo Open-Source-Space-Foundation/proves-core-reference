@@ -100,11 +100,15 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
     fprime_test_api.assert_event(
         f"{mosaicManager}.RecordingStopped", start=start, timeout=10
     )
-    # Match on the value rather than taking the first sample in the window: the
-    # 1 Hz rate group also emits Recording, so a sample published between the
-    # command being sent and the handler running still carries the old value.
+    # Match on the value, and do not pass start=: the 1 Hz rate group also
+    # publishes Recording, so a sample emitted between the command being sent
+    # and the handler running still carries the old value, and a start= built
+    # from the host's datetime.now() is compared against board timestamps --
+    # any clock skew silently excludes every sample that follows.
+    # proves_send_and_assert_command clears the histories immediately before
+    # sending, so the history already starts at the command.
     fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", value=False, start=start, timeout=15
+        f"{mosaicManager}.Recording", value=False, timeout=15
     )
 
     start = _now()
@@ -116,7 +120,7 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
         f"{mosaicManager}.RecordingStarted", start=start, timeout=10
     )
     fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", value=True, start=start, timeout=15
+        f"{mosaicManager}.Recording", value=True, timeout=15
     )
 
 
