@@ -2,6 +2,15 @@ name: ci
 
 on:
   pull_request:
+    # `labeled` is not in the default set. Without it, adding `test-ota` to an
+    # open PR does nothing and the OTA job can only be reached by pushing a
+    # commit after the label is already on. Listing the types restores the
+    # defaults and makes labelling an actual trigger.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
   push:
     branches:
       - main
