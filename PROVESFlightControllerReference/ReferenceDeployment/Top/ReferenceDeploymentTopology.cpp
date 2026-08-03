@@ -9,9 +9,7 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
-#include <Fw/Types/FileNameString.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
-#include <Os/Directory.hpp>
 #include <Os/FileSystem.hpp>
 
 #include <zephyr/drivers/gpio.h>
@@ -189,9 +187,12 @@ void setupTopology(const TopologyState& state) {
 
     fsFormat.configure(state.storagePartitionId);
 
-    // MOSAIC gamma ray samples are stored under /mosaic for later downlink
-    Os::Directory mosaicDir;
-    mosaicDir.open("/mosaic", Os::Directory::OpenMode::CREATE_IF_MISSING);
+    // MOSAIC gamma ray samples are stored under /mosaic for later downlink.
+    // createDirectory rather than Os::Directory::open: opening a directory
+    // handle here would force FW_DIRECTORY_HANDLE_MAX_SIZE up to hold
+    // ZephyrDirectory's 256-byte rewind() path, growing every Os::Directory in
+    // the deployment. This only needs the directory to exist.
+    (void)Os::FileSystem::createDirectory("/mosaic");
 }
 
 void startRateGroups() {
