@@ -3,6 +3,13 @@ module Components {
     @ payload over UART and stores it on disk under the /mosaic directory.
     @ MOSAIC streams ASCII lines of the form "ADC=<raw>,MV=<millivolts>\n".
     @ The manager only listens; it never sends commands to the payload.
+    @
+    @ Ports and commands are guarded, not sync: dataIn is driven from the 10Hz
+    @ rate group thread, run from the 1Hz rate group thread, and the commands
+    @ from the command dispatcher thread. All three mutate the open sample file
+    @ and its counters, so they must serialize on the component mutex --
+    @ otherwise a STOP_RECORDING or a stale-file flush can close the file out
+    @ from under an in-flight sample write.
     passive component MosaicManager {
 
         # ----------------------------------------------------------------------
@@ -10,13 +17,13 @@ module Components {
         # ----------------------------------------------------------------------
 
         @ Start recording received samples to the filesystem (default on boot)
-        sync command START_RECORDING()
+        guarded command START_RECORDING()
 
         @ Stop recording; flushes and closes the current file
-        sync command STOP_RECORDING()
+        guarded command STOP_RECORDING()
 
         @ Flush the current file to disk and close it now
-        sync command FLUSH()
+        guarded command FLUSH()
 
         # ----------------------------------------------------------------------
         # Events
@@ -84,13 +91,13 @@ module Components {
         # ----------------------------------------------------------------------
 
         @ Receives raw byte stream from the MOSAIC UART driver
-        sync input port dataIn: Drv.ByteStreamData
+        guarded input port dataIn: Drv.ByteStreamData
 
         @ Returns receive buffers to the UART driver
         output port bufferReturn: Fw.BufferSend
 
         @ Rate group input for periodic telemetry and file flush
-        sync input port run: Svc.Sched
+        guarded input port run: Svc.Sched
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

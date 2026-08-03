@@ -7,6 +7,7 @@ The MOSAIC payload streams ASCII CSV lines of the form `ADC=<raw>,MV=<millivolts
 ## Design
 
 - Bytes arriving on `dataIn` are accumulated into lines and parsed into raw ADC/millivolts samples.
+- The input ports and the commands are **guarded**, not sync. `dataIn` is invoked from the 10 Hz rate group thread, `run` from the 1 Hz rate group thread, and the commands from the command dispatcher thread; all three mutate the open file handle and its counters. Guarding serializes them on the component mutex so a `STOP_RECORDING` or a stale-file flush cannot close the file out from under an in-flight sample write.
 - Samples are appended as fixed-size binary records (`seconds: U32` time tag, `adc: U16`, `millivolts: U16`, 8 bytes total) directly to an `Os::File` opened under `/mosaic`.
 - A file is closed when it fills (100 samples) or when a partially filled file is older than 60 seconds (checked on the 1 Hz rate group), on `FLUSH`, or on `STOP_RECORDING`. The next sample reopens a new file.
 - Files are named `/mosaic/gamma_<seq>.dat` and can be downlinked with the existing file downlink chain (via a ground-commanded file send — there is no automatic catalog/scan).
@@ -65,3 +66,4 @@ Turn on the payload power load switch; MOSAIC begins streaming immediately and t
 | 2026-07-18 | Initial Draft |
 | 2026-07-19 | Replaced F Prime data products with direct filesystem writes under /mosaic (DataProducts catalog did not fit in memory on rp2350) |
 | 2026-07-19 | Fixed cross-reboot file overwrite: probe for an unused file index before opening, since the Zephyr file delegate ignores NO_OVERWRITE |
+| 2026-08-03 | Made the input ports and commands guarded; they run on three different threads and raced on the open file handle |
