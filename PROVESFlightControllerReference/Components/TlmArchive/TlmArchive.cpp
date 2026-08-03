@@ -115,7 +115,7 @@ void TlmArchive::run_handler(FwIndexType portNum, U32 context) {
 
     // Don't write for the first 30s of boot to attempt to mitigate
     // any conflicts with other filesystem writes/actions
-    if (!(this->m_ticks <= 30)) {
+    if (this->m_ticks <= 30) {
         this->m_ticks++;
         return;
     }
