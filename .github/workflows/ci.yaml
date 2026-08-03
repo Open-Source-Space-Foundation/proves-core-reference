@@ -5,6 +5,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      run_ota:
+        description: "Run the hardware over-the-air update test"
+        type: boolean
+        default: false
+      ota_uplink_cooldown:
+        description: "Seconds between file-uplink chunks during the OTA test (repo default is 0.400)"
+        type: string
+        default: "0.400"
 
 jobs:
   lint:
@@ -117,6 +127,40 @@ jobs:
             build-artifacts/zephyr/fprime-zephyr-deployment
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
+
+      # --- OTA staging image -------------------------------------------------
+      # The OTA test has to prove a *swap* happened, not merely that the update
+      # commands returned OK, so the image it uplinks must be distinguishable
+      # from the one flashed on the board. Project version comes from
+      # `git describe --tags --always --dirty`, so a throwaway tag renames this
+      # build and changes nothing else about it.
+      #
+      # The rm is required: fprime generates version.{hpp,cpp,json} from a cmake
+      # custom command with no declared inputs, so ninja considers it up to date
+      # as soon as the outputs exist and a rebuild would keep the old string.
+      #
+      # This runs after the artifact upload above, so overwriting bootable.* here
+      # cannot affect the image the other integration jobs flash.
+      - name: Build OTA staging image
+        if: (github.event_name == 'workflow_dispatch' && inputs.run_ota) || contains(github.event.pull_request.labels.*.name, 'test-ota')
+        run: |
+          git tag "ota-ci-${GITHUB_RUN_ID}"
+          rm -f build-fprime-automatic-zephyr/versions/version.hpp \
+                build-fprime-automatic-zephyr/versions/version.cpp \
+                build-fprime-automatic-zephyr/versions/version.json
+          BUILD_YAMCS_MDB=0 make build
+          mkdir -p ota-image
+          cp build-artifacts/zephyr.signed.bin ota-image/
+          cp build-fprime-automatic-zephyr/versions/version.json ota-image/
+          echo "OTA staging image version: $(cat ota-image/version.json)"
+
+      - name: Upload OTA staging image
+        if: (github.event_name == 'workflow_dispatch' && inputs.run_ota) || contains(github.event.pull_request.labels.*.name, 'test-ota')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-image
+          path: ota-image
+          retention-days: 7
 
   integration-uart:
     runs-on:
@@ -581,6 +625,187 @@ jobs:
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+
+  integration-ota:
+    # Not part of the normal PR run. It monopolises the single integration cube
+    # for the better part of an hour (a 1.4 MB uplink at the default cooldown is
+    # ~48 min on its own), erases a flash slot, and reboots the board twice.
+    # Trigger it deliberately: run the workflow manually with "Run the hardware
+    # over-the-air update test" checked, or put the `test-ota` label on a PR.
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_ota) || contains(github.event.pull_request.labels.*.name, 'test-ota')
+    runs-on:
+      - integration
+    needs: build
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: ota-image
+          path: ota-image
+
+      - name: Erase the MCUboot staging slot
+        run: |
+          # slot1_partition is 0x200000..0x300000 within the 4 MB QSPI flash
+          # mapped at 0x10000000 (see
+          # boards/bronco_space/proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi).
+          #
+          # A previous run can leave a staged image plus swap flags in slot1. If
+          # those survive, MCUboot may swap it in on the first boot after we
+          # flash the primary slot below, and the job would silently test the
+          # wrong firmware. Erasing first makes the starting state unambiguous.
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "init; halt; flash erase_address 0x10200000 0x100000; reset run; exit"
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          make make-ci-spacecraft-id
+
+      - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Record the staged image version
+        env:
+          # Quoted through the environment rather than interpolated into the
+          # shell, so a workflow input cannot inject a command.
+          UPLINK_COOLDOWN: ${{ inputs.ota_uplink_cooldown || '0.400' }}
+        run: |
+          OTA_VERSION=$(./fprime-venv/bin/python -c \
+            'import json; print(json.load(open("ota-image/version.json"))["project_version"])')
+          echo "Board will be flashed with the default build; OTA will uplink: $OTA_VERSION"
+          echo "OTA_VERSION=$OTA_VERSION" >> $GITHUB_ENV
+          echo "GDS_EXTRA_ARGS=--file-uplink-cooldown $UPLINK_COOLDOWN" >> $GITHUB_ENV
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" GDS_EXTRA_ARGS="$GDS_EXTRA_ARGS" > gds-bootstrap.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Format Filesystem
+        run: |
+          # The uplinked image is ~1.4 MB and lands in /update. Starting from a
+          # formatted filesystem keeps a previous run's copy from filling it.
+          make test-integration FILTER=format_filesystem
+
+      - name: Power-Cycle Satellite
+        run: |
+          # /seq, /antenna and friends are only recreated at boot, so the format
+          # above has to be followed by a reboot before anything else runs.
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" GDS_EXTRA_ARGS="$GDS_EXTRA_ARGS" > gds.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Run OTA Integration Test
+        run: |
+          make test-integration TEST=ota_test.py FILTER=ota \
+            PYTEST_ARGS="--ota-image=ota-image/zephyr.signed.bin --ota-expect-version=$OTA_VERSION"
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-ota
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
+          sleep 2
+
+      - name: Restore the board
+        if: always()
+        run: |
+          # The board is left running the OTA staging image, and slot1 holds
+          # whatever the swap displaced. Put both slots back to a known state so
+          # the next job on this runner starts from the artifact build, not from
+          # a leftover OTA image.
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "init; halt; flash erase_address 0x10200000 0x100000; reset run; exit" || true
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "program bootable.signed.hex verify reset exit" || true
+
+      - name: Power Off Satellite
+        if: always()
+        run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
 
   yamcs-build:

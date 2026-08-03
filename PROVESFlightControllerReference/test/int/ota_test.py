@@ -19,7 +19,7 @@ The whole module is marked ``ota`` and is excluded from the default integration
 run: it erases a flash slot, uplinks a ~1.4 MB file, and reboots the board.
 Run it deliberately:
 
-    make test-integration TEST=ota FILTER=ota
+    make test-integration TEST=ota_test.py FILTER=ota
 
 By default it re-flashes the image in ``build-artifacts/zephyr.signed.bin``,
 i.e. the build sitting in the working tree. Point somewhere else with
@@ -52,10 +52,13 @@ fileManager = "FileHandling.fileManager"
 # Directory on the satellite filesystem that holds the staged image.
 UPDATE_DIR = "/update"
 
-# Uplinking ~1.4 MB in file-uplink packets takes minutes even over UART, and the
-# flash write that follows walks the image in CONFIG_IMG_BLOCK_BUF_SIZE (512 B)
-# chunks with a 5 ms settle delay per chunk.
-UPLINK_TIMEOUT_S = 45 * 60
+# Uplink is the long pole. fprime-gds.yml sets file-uplink-chunk-size 204 and
+# file-uplink-cooldown 0.400, so a 1.4 MB image is ~7100 chunks -> ~48 min at the
+# repo default. Lower the cooldown (GDS_EXTRA_ARGS on `make gds-integration`) to
+# go faster; this ceiling is sized so the default still fits.
+UPLINK_TIMEOUT_S = 90 * 60
+# The flash write walks the image in CONFIG_IMG_BLOCK_BUF_SIZE (512 B) chunks
+# with a 5 ms settle delay per chunk, reading each chunk back off littlefs.
 IMAGE_WRITE_TIMEOUT_S = 15 * 60
 # Cold reset plus an MCUboot swap of two 1 MB slots, then a full FSW boot.
 SWAP_REBOOT_TIMEOUT_S = 180
