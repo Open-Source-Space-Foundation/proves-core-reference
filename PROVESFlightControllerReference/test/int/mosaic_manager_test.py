@@ -66,10 +66,13 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
     fprime_test_api.assert_event(
         f"{mosaicManager}.RecordingStopped", start=start, timeout=10
     )
+    # Take the window start *after* the event: the 1 Hz rate group also emits
+    # Recording, so a sample published between the command being sent and the
+    # handler running would still carry the old value.
     recording = fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", start=start, timeout=10
+        f"{mosaicManager}.Recording", start=_now(), timeout=10
     )
-    assert recording.get_val() is False
+    assert not recording.get_val()
 
     start = _now()
     proves_send_and_assert_command(
@@ -80,9 +83,9 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
         f"{mosaicManager}.RecordingStarted", start=start, timeout=10
     )
     recording = fprime_test_api.assert_telemetry(
-        f"{mosaicManager}.Recording", start=start, timeout=10
+        f"{mosaicManager}.Recording", start=_now(), timeout=10
     )
-    assert recording.get_val() is True
+    assert recording.get_val()
 
 
 def test_02_samples_recorded(fprime_test_api: IntegrationTestAPI, start_gds):
