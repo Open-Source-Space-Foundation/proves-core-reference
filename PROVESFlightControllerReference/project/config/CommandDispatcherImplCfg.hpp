@@ -11,7 +11,11 @@
 // Define configuration values for dispatcher
 
 enum {
-    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 350,  // !< The size of the table holding opcodes to dispatch
+    // !< The size of the table holding opcodes to dispatch. Must be >= the
+    // number of commands in the deployment (351 as of MosaicManager); when the
+    // table fills, the next compCmdReg_handler registration FW_ASSERTs and the
+    // FSW FATALs during topology setup rather than failing at build time.
+    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 400,
     CMD_DISPATCHER_SEQUENCER_TABLE_SIZE = 10,  // !< The size of the table holding commands in progress
 };
 
