@@ -581,7 +581,7 @@ After compiling, upload the sequence through GDS for execution on the board.
 
 ### Authentication & Security
 
-Commands can be HMAC-authenticated using the `Authenticate` component. The authentication key is stored in `PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h`.
+Commands can be HMAC-authenticated using the `TcSecurityDeframer` component. The authentication key is stored in `PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h`.
 
 ```bash
 make generate-auth-key   # Generate a new random HMAC key (only if file doesn't exist)

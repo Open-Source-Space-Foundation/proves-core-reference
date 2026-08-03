@@ -93,7 +93,7 @@ Voltage thresholds and command loss timeout are configurable via F-Prime paramet
 | SafeModeEntryVoltage | F32 | 6.7 | Voltage (V) below which safe mode is entered |
 | SafeModeRecoveryVoltage | F32 | 8.0 | Voltage (V) above which safe mode can be exited |
 | SafeModeDebounceSeconds | U32 | 10 | Consecutive seconds required for transitions |
-| COMM_LOSS_TIME | Fw.TimeIntervalValue | {seconds=86400} | Time without an authenticated packet before command loss safe mode entry (default: 3 days) |
+| COMM_LOSS_TIME | Fw.TimeIntervalValue | {seconds=3*60*60*24} | Time without an authenticated packet before command loss safe mode entry (default: 3 days) |
 
 Parameters can be modified at runtime via `PRM_SET` commands.
 

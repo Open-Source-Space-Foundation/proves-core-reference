@@ -11,22 +11,22 @@ module Svc {
         # Router Interface
         # ----------------------------------------------------------------------
 
-        # Receiving data (Fw::Buffer) to be routed with optional context to help with routing
+        @ Receiving data (Fw::Buffer) to be routed with optional context to help with routing
         sync input port dataIn: Svc.ComDataWithContext
 
-        # Port for returning ownership of data (includes Fw.Buffer) received on dataIn
+        @ Port for returning ownership of data (includes Fw.Buffer) received on dataIn
         output port dataReturnOut: Svc.ComDataWithContext
 
-        # Port for sending file packets as Fw::Buffer (ownership passed to receiver)
+        @ Port for sending file packets as Fw::Buffer (ownership passed to receiver)
         output port fileOut: Fw.BufferSend
 
-        # Port for receiving ownership back of buffers sent on fileOut
+        @ Port for receiving ownership back of buffers sent on fileOut
         sync input port fileBufferReturnIn: Fw.BufferSend
 
-        # Port for sending command packets as Fw::ComBuffers
+        @ Port for sending command packets as Fw::ComBuffers
         output port commandOut: Fw.Com
 
-        # Port for receiving command responses from a command dispatcher (can be a no-op)
+        @ Port for receiving command responses from a command dispatcher (can be a no-op)
         sync input port cmdResponseIn: Fw.CmdResponse
 
         @ Port for forwarding non-recognized packet types
@@ -43,6 +43,8 @@ module Svc {
         @ Port to signal that a packet has been authenticated and routed
         output port packetRouted: Fw.Signal
 
+        ### Events ###
+
         @ An error occurred while serializing a com buffer
         event SerializationError(
                 status: U32 @< The status of the operation
@@ -53,6 +55,17 @@ module Svc {
         @ An allocation error occurred
         event AllocationError(reason: AllocationReason) severity warning high \
             format "Buffer allocation for {} failed"
+
+        ### Telemetry ###
+
+        @ Telemetry count of routed packets
+        telemetry RoutedPackets : U32
+
+        @ Telemetry count of bypassed packets
+        telemetry BypassedPackets : U32
+
+        @ Telemetry count of rejected packets
+        telemetry RejectedPackets : U32
 
         ###############################################################################
         # Standard AC Ports for Events
@@ -66,6 +79,9 @@ module Svc {
 
         @ Port for sending events to downlink
         event port logOut
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Parameter get port
         param get port prmGetOut

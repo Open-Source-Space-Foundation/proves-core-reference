@@ -16,31 +16,34 @@
 
 register_fprime_library(
     AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Authenticate.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/TcSecurityDeframer.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/Authenticate.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Authenticator.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/TcSecurityDeframer.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Parser.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/Validator.cpp"
     DEPENDS
         kernel
         FprimeExtras_Utilities_FileHelper
 )
 
 # Add mbedTLS include directories for PSA crypto headers
-# F Prime creates targets based on path: PROVESFlightControllerReference_Components_Authenticate
-set(AUTHENTICATE_TARGET "PROVESFlightControllerReference_Components_Authenticate")
+# F Prime creates targets based on path: PROVESFlightControllerReference_Components_TcSecurityDeframer
+set(PACKET_PARSER_TARGET "PROVESFlightControllerReference_Components_TcSecurityDeframer")
 
 # Add mbedTLS include path - check multiple possible locations
 if(DEFINED ZEPHYR_MBEDTLS_MODULE_DIR)
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${ZEPHYR_MBEDTLS_MODULE_DIR}/include"
     )
 elseif(DEFINED ZEPHYR_BASE)
     # Use ZEPHYR_BASE which is set by find_package(Zephyr)
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${ZEPHYR_BASE}/../modules/crypto/mbedtls/include"
     )
 else()
     # Final fallback: use relative path from project root
-    target_include_directories(${AUTHENTICATE_TARGET} PRIVATE
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${CMAKE_SOURCE_DIR}/lib/zephyr-workspace/modules/crypto/mbedtls/include"
     )
 endif()
@@ -48,10 +51,10 @@ endif()
 ### Unit Tests ###
 # register_fprime_ut(
 #     AUTOCODER_INPUTS
-#         "${CMAKE_CURRENT_LIST_DIR}/Authenticate.fpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/TcSecurityDeframer.fpp"
 #     SOURCES
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticateTestMain.cpp"
-#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/AuthenticateTester.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/TcSecurityDeframerTestMain.cpp"
+#         "${CMAKE_CURRENT_LIST_DIR}/test/ut/TcSecurityDeframerTester.cpp"
 #     DEPENDS
 #         STest # For rules-based testing
 #     UT_AUTO_HELPERS

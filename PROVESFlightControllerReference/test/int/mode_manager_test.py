@@ -542,6 +542,7 @@ def test_safe_08_clean_reboot_no_safe_mode(
 
 
 @pytest.mark.slow
+@pytest.mark.uart_only(reason="Requires reboot and GDS reconnect")
 def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):

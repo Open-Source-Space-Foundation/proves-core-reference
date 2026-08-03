@@ -25,6 +25,9 @@ if (
     print("⚠ fprime-yamcs instance config fix already applied")
     sys.exit(0)
 
+# The fprime-yamcs template renamed its placeholder classes in 0.1.3
+# (My{Packet,Command}Pre/Postprocessor -> Fprime{Packet,Command}Pre/Postprocessor).
+# Handle both spellings so this fix survives across template versions.
 fixes = [
     # Replace placeholder preprocessor with CfsPacketPreprocessor + useLocalGenerationTime.
     # YAMCS 5.12 requires packetPreprocessorClassName (mandatory field in VcDownlinkManagedParameters).
@@ -37,9 +40,19 @@ fixes = [
         "        packetPreprocessorArgs:\n"
         "          useLocalGenerationTime: true\n",
     ),
+    (
+        "        packetPreprocessorClassName: com.example.myproject.FprimePacketPreprocessor\n",
+        "        packetPreprocessorClassName: org.yamcs.tctm.cfs.CfsPacketPreprocessor\n"
+        "        packetPreprocessorArgs:\n"
+        "          useLocalGenerationTime: true\n",
+    ),
     # Remove placeholder postprocessor class (not required for TC)
     (
         "        commandPostprocessorClassName: com.example.myproject.MyCommandPostprocessor\n",
+        "",
+    ),
+    (
+        "        commandPostprocessorClassName: com.example.myproject.FprimeCommandPostprocessor\n",
         "",
     ),
     # Correct frame length (template default 1024 is wrong for PROVES: 248 bytes)
