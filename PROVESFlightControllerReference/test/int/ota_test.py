@@ -39,6 +39,7 @@ import pytest
 from common import cmdDispatch, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.models.serialize.time_type import TimeType
+from fprime_gds.common.testing_fw import predicates
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # OTA severs the RF link (it reboots the board), so it only makes sense on UART.
@@ -62,25 +63,78 @@ UPLINK_TIMEOUT_S = 90 * 60
 IMAGE_WRITE_TIMEOUT_S = 15 * 60
 # Cold reset plus an MCUboot swap of two 1 MB slots, then a full FSW boot.
 SWAP_REBOOT_TIMEOUT_S = 180
-# Erasing the whole 1 MB staging slot outruns the command-ack window that
-# proves_send_and_assert_command allows, so PREPARE_UPDATE is awaited by event.
+# Erasing the whole 1 MB staging slot is awaited by event rather than through
+# proves_send_and_assert_command's ack window. Measured at 2.8 s on the CI cube.
 PREPARE_TIMEOUT_S = 120
+
+# The TC replay window silently drops any frame whose sequence number the board
+# has already accepted, and the GDS has been observed emitting the same sequence
+# number twice for the first two commands of a session. Every other command in
+# the suite absorbs that through proves_send_and_assert_command's retries; the
+# commands here are awaited by event instead, so they need their own. Retrying
+# is keyed on the component's "started" event rather than its completion event,
+# so a retry can never re-issue work that is already underway.
+COMMAND_ATTEMPTS = 3
+DISPATCH_TIMEOUT_S = 20
 
 # Svc.Version declares its version strings as `string size 40`, so anything
 # longer is truncated in flight before it reaches telemetry.
 VERSION_STRING_SIZE = 40
 
 
+def send_and_confirm_dispatch(
+    fprime_test_api: IntegrationTestAPI,
+    command: str,
+    started_event: str,
+    args: list[str] | None = None,
+) -> None:
+    """Send a command, retrying until the flight side reports it started.
+
+    Clears histories before each attempt, so the caller can search from index 0
+    for whatever the command goes on to emit.
+    """
+    for _ in range(COMMAND_ATTEMPTS):
+        fprime_test_api.clear_histories()
+        fprime_test_api.send_command(command, args or [])
+        if (
+            fprime_test_api.await_event(started_event, timeout=DISPATCH_TIMEOUT_S)
+            is not None
+        ):
+            return
+    raise AssertionError(
+        f"{command} never reached the flight software in {COMMAND_ATTEMPTS} attempts"
+    )
+
+
+def await_outcome(
+    fprime_test_api: IntegrationTestAPI, names: list[str], timeout: int
+) -> EventData:
+    """Await whichever of ``names`` lands first, searching the whole history.
+
+    ``await_event`` coerces a non-predicate argument into an event-*ID*
+    predicate, which is why ``satisfies_any`` of event_predicates silently never
+    matches here; a member-of over translated IDs is the form that works.
+    """
+    ids = [fprime_test_api.translate_event_name(name) for name in names]
+    return fprime_test_api.await_event(
+        predicates.is_a_member_of(ids), timeout=timeout, start=0
+    )
+
+
 def prepare_update(fprime_test_api: IntegrationTestAPI) -> None:
     """Erase the staging slot and wait for the erase to report success."""
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_command(f"{updater}.PREPARE_UPDATE")
-    assert (
-        fprime_test_api.await_event(
-            f"{updater}.PrepareUpdateSucceeded", timeout=PREPARE_TIMEOUT_S
-        )
-        is not None
-    ), "PREPARE_UPDATE did not report success"
+    send_and_confirm_dispatch(
+        fprime_test_api, f"{updater}.PREPARE_UPDATE", f"{updater}.PrepareUpdate"
+    )
+    outcome = await_outcome(
+        fprime_test_api,
+        [f"{updater}.PrepareUpdateSucceeded", f"{updater}.PrepareUpdateFailed"],
+        timeout=PREPARE_TIMEOUT_S,
+    )
+    assert outcome is not None, "PREPARE_UPDATE reported neither success nor failure"
+    assert outcome.template.get_name() == "PrepareUpdateSucceeded", (
+        f"PREPARE_UPDATE failed: {outcome.get_str()}"
+    )
 
 
 def fprime_crc32(path: Path) -> int:
@@ -225,16 +279,23 @@ def test_03_full_ota_cycle(
 
     # 3. Copy it into the staging slot. The CRC is checked flight-side before a
     #    single byte is written, so a mismatch here means the uplink was lossy.
-    fprime_test_api.clear_histories()
-    fprime_test_api.send_command(
-        f"{updater}.UPDATE_IMAGE_FROM", [destination, str(crc32)]
+    send_and_confirm_dispatch(
+        fprime_test_api,
+        f"{updater}.UPDATE_IMAGE_FROM",
+        f"{updater}.Update",
+        [destination, str(crc32)],
     )
-    assert (
-        fprime_test_api.await_event(
-            f"{updater}.UpdateSucceeded", timeout=IMAGE_WRITE_TIMEOUT_S
-        )
-        is not None
-    ), "image write to the staging slot did not succeed"
+    outcome = await_outcome(
+        fprime_test_api,
+        [f"{updater}.UpdateSucceeded", f"{updater}.UpdateFailed"],
+        timeout=IMAGE_WRITE_TIMEOUT_S,
+    )
+    assert outcome is not None, (
+        "image write to the staging slot reported neither success nor failure"
+    )
+    assert outcome.template.get_name() == "UpdateSucceeded", (
+        f"image write to the staging slot failed: {outcome.get_str()}"
+    )
 
     # 4. Arm the one-shot trial boot. TEST rather than PERMANENT so that a bad
     #    image reverts on the following reboot instead of stranding the board.
