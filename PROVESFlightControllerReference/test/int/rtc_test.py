@@ -318,6 +318,9 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
 
 
 # Cancellation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can cancel an RTC alarm and that it does not trigger"""
 
