@@ -58,3 +58,6 @@ yamcs/yamcs-runtime/
 /circuit-python-passthrough/firmware.uf2
 /circuit-python-passthrough/lib/
 /circuit-python-passthrough/tools/
+
+# Locally staged OTA uplink image (see ota_test.py --ota-image)
+ota-image/
