@@ -10,7 +10,6 @@
 
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
-#include <Os/FileSystem.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
@@ -186,13 +185,6 @@ void setupTopology(const TopologyState& state) {
     picoTempManager.configure(state.dieTempDevice);
 
     fsFormat.configure(state.storagePartitionId);
-
-    // MOSAIC gamma ray samples are stored under /mosaic for later downlink.
-    // createDirectory rather than Os::Directory::open: opening a directory
-    // handle here would force FW_DIRECTORY_HANDLE_MAX_SIZE up to hold
-    // ZephyrDirectory's 256-byte rewind() path, growing every Os::Directory in
-    // the deployment. This only needs the directory to exist.
-    (void)Os::FileSystem::createDirectory("/mosaic");
 }
 
 void startRateGroups() {

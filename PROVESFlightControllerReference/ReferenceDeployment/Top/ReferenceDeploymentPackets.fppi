@@ -120,6 +120,7 @@ telemetry packets ReferenceDeploymentPackets {
     mosaicManager.SamplesRecorded
     mosaicManager.FilesWritten
     mosaicManager.ParseErrors
+    mosaicManager.FilesystemErrors
     mosaicManager.LatestAdc
     mosaicManager.LatestMillivolts
   }

@@ -22,6 +22,18 @@ MosaicManager ::MosaicManager(const char* const compName) : MosaicManagerCompone
 
 MosaicManager ::~MosaicManager() {}
 
+void MosaicManager ::init(FwEnumStoreType instance) {
+    MosaicManagerComponentBase::init(instance);
+
+    // Create the sample directory if it does not exist
+    const Os::FileSystem::Status dirStatus = Os::FileSystem::createDirectory(SAMPLE_DIR, false);
+    if (dirStatus != Os::FileSystem::OP_OK) {
+        const Fw::LogStringArg logFilePath(SAMPLE_DIR);
+        const Fw::LogStringArg logOperation("create_directory");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(dirStatus));
+    }
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
@@ -60,7 +72,7 @@ void MosaicManager ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
 
 void MosaicManager ::run_handler(FwIndexType portNum, U32 context) {
     // Flush a partially filled file that has been sitting too long
-    if (m_fileOpen && m_samplesInFile > 0) {
+    if (m_fileOpen && ((m_samplesInFile + m_bufferedSamples) > 0)) {
         const U32 now = this->getTime().getSeconds();
         if ((now - m_fileStartSeconds) >= FLUSH_TIMEOUT_SECONDS) {
             this->closeFile();
@@ -71,6 +83,7 @@ void MosaicManager ::run_handler(FwIndexType portNum, U32 context) {
     this->tlmWrite_SamplesRecorded(m_samplesRecorded);
     this->tlmWrite_FilesWritten(m_filesWritten);
     this->tlmWrite_ParseErrors(m_parseErrors);
+    this->tlmWrite_FilesystemErrors(m_filesystemErrors);
 }
 
 // ----------------------------------------------------------------------
@@ -78,7 +91,9 @@ void MosaicManager ::run_handler(FwIndexType portNum, U32 context) {
 // ----------------------------------------------------------------------
 
 void MosaicManager ::START_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    m_filesystemErrors = 0;
     m_recording = true;
+    this->tlmWrite_FilesystemErrors(m_filesystemErrors);
     this->tlmWrite_Recording(m_recording);
     this->log_ACTIVITY_HI_RecordingStarted();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -86,7 +101,7 @@ void MosaicManager ::START_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq)
 
 void MosaicManager ::STOP_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     m_recording = false;
-    if (m_fileOpen && m_samplesInFile > 0) {
+    if (m_fileOpen && ((m_samplesInFile + m_bufferedSamples) > 0)) {
         this->closeFile();
     }
     this->tlmWrite_Recording(m_recording);
@@ -95,7 +110,7 @@ void MosaicManager ::STOP_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) 
 }
 
 void MosaicManager ::FLUSH_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (m_fileOpen && m_samplesInFile > 0) {
+    if (m_fileOpen && ((m_samplesInFile + m_bufferedSamples) > 0)) {
         this->closeFile();
     }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -143,33 +158,78 @@ void MosaicManager ::recordSample(U16 adc, U16 millivolts) {
         return;
     }
 
-    const U32 seconds = this->getTime().getSeconds();
-    U8 record[RECORD_SIZE];
-    std::memcpy(&record[0], &seconds, sizeof(seconds));
-    std::memcpy(&record[sizeof(seconds)], &adc, sizeof(adc));
-    std::memcpy(&record[sizeof(seconds) + sizeof(adc)], &millivolts, sizeof(millivolts));
+    Fw::ParamValid paramValid;
+    U32 samplesPerFile = this->paramGet_SAMPLES_PER_FILE(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+    if (samplesPerFile == 0) {
+        samplesPerFile = 1;
+    }
 
-    FwSizeType writeSize = RECORD_SIZE;
-    const Os::File::Status status = m_file.write(record, writeSize, Os::File::WaitType::WAIT);
-    if ((status != Os::File::OP_OK) || (writeSize != RECORD_SIZE)) {
-        this->log_WARNING_HI_FileWriteError(static_cast<U32>(status));
-        // A short write leaves a torn record on the end of the file, so the
-        // file is abandoned rather than closed: reporting SampleFileClosed
-        // here would advertise a clean, downlinkable file that isn't one.
-        this->closeFile(false);
+    U32 samplesPerWrite = this->paramGet_SAMPLES_PER_WRITE(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+    if (samplesPerWrite == 0) {
+        samplesPerWrite = 1;
+    }
+
+    // If SAMPLES_PER_FILE was reduced while this file was open, finish the
+    // current file before placing another sample in it.
+    if ((m_samplesInFile + m_bufferedSamples) >= samplesPerFile) {
+        this->closeFile();
+        if (!this->ensureFileOpen()) {
+            return;
+        }
+    }
+
+    const U32 seconds = this->getTime().getSeconds();
+    const FwSizeType offset = m_bufferedSamples * RECORD_SIZE;
+    std::memcpy(&m_writeBuffer[offset], &seconds, sizeof(seconds));
+    std::memcpy(&m_writeBuffer[offset + sizeof(seconds)], &adc, sizeof(adc));
+    std::memcpy(&m_writeBuffer[offset + sizeof(seconds) + sizeof(adc)], &millivolts, sizeof(millivolts));
+
+    if ((m_samplesInFile + m_bufferedSamples) == 0) {
+        m_fileStartSeconds = seconds;
+    }
+    m_bufferedSamples++;
+
+    // The per-file limit takes precedence so the last, possibly partial, batch
+    // is written and the file is closed as soon as its configured size is met.
+    if ((m_samplesInFile + m_bufferedSamples) >= samplesPerFile) {
+        this->closeFile();
         return;
     }
 
-    if (m_samplesInFile == 0) {
-        m_fileStartSeconds = this->getTime().getSeconds();
+    if ((m_bufferedSamples >= samplesPerWrite) && !this->writeBufferedSamples()) {
+        // A short write leaves a torn batch on the end of the file. Abandon it
+        // rather than advertising the file as complete and downlinkable.
+        this->closeFile(false);
     }
-    m_samplesInFile++;
-    m_samplesRecorded++;
-    this->tlmWrite_SamplesRecorded(m_samplesRecorded);
+}
 
-    if (m_samplesInFile >= SAMPLES_PER_FILE) {
-        this->closeFile();
+bool MosaicManager ::writeBufferedSamples() {
+    if (m_bufferedSamples == 0) {
+        return true;
     }
+
+    const U32 samplesToWrite = m_bufferedSamples;
+    const FwSizeType expectedSize = samplesToWrite * RECORD_SIZE;
+    FwSizeType writeSize = expectedSize;
+    const Os::File::Status status = m_file.write(m_writeBuffer, writeSize, Os::File::WaitType::WAIT);
+    if ((status != Os::File::OP_OK) || (writeSize != expectedSize)) {
+        Fw::FileNameString path;
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+        const Fw::LogStringArg logFilePath(path.toChar());
+        const Fw::LogStringArg logOperation("write");
+        this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(status));
+        this->recordFilesystemError();
+        m_bufferedSamples = 0;
+        return false;
+    }
+
+    m_bufferedSamples = 0;
+    m_samplesInFile += samplesToWrite;
+    m_samplesRecorded += samplesToWrite;
+    this->tlmWrite_SamplesRecorded(m_samplesRecorded);
+    return true;
 }
 
 bool MosaicManager ::ensureFileOpen() {
@@ -177,35 +237,50 @@ bool MosaicManager ::ensureFileOpen() {
         return true;
     }
 
+    Fw::ParamValid paramValid;
+    const U32 maxFileCount = this->paramGet_MAX_FILE_COUNT(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+
     // The Zephyr Os::File delegate truncates on OPEN_CREATE regardless of the NO_OVERWRITE flag
     // (its handling of `overwrite` is unimplemented), and m_filesWritten resets to 0 on every reboot.
     // Without this check, reusing a stale index would silently wipe a file from a previous boot that
     // has not yet been downlinked. Search forward for the first name not already on disk.
     Fw::FileNameString path;
-    U32 searched = 0;
-    do {
+    while (m_filesWritten < maxFileCount) {
         path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
         if (Os::FileSystem::getPathType(path.toChar()) == Os::FileSystem::NOT_EXIST) {
             break;
         }
         m_filesWritten++;
-        searched++;
-    } while (searched < MAX_FILE_INDEX_SEARCH);
+    }
+
+    if (m_filesWritten >= maxFileCount) {
+        m_recording = false;
+        this->tlmWrite_Recording(m_recording);
+        this->log_WARNING_HI_MaxFilesReached(maxFileCount);
+        return false;
+    }
 
     const Os::File::Status status = m_file.open(path.toChar(), Os::File::OPEN_CREATE, Os::File::NO_OVERWRITE);
     if (status != Os::File::OP_OK) {
         this->log_WARNING_HI_FileOpenError(path, static_cast<U32>(status));
+        this->recordFilesystemError();
         return false;
     }
 
     m_fileOpen = true;
     m_samplesInFile = 0;
+    m_bufferedSamples = 0;
     return true;
 }
 
 void MosaicManager ::closeFile(bool complete) {
     Fw::FileNameString path;
     path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+
+    if (complete && !this->writeBufferedSamples()) {
+        complete = false;
+    }
 
     m_file.flush();
     m_file.close();
@@ -216,8 +291,24 @@ void MosaicManager ::closeFile(bool complete) {
 
     m_fileOpen = false;
     m_samplesInFile = 0;
+    m_bufferedSamples = 0;
     m_filesWritten++;
     this->tlmWrite_FilesWritten(m_filesWritten);
+}
+
+void MosaicManager ::recordFilesystemError() {
+    m_filesystemErrors++;
+    this->tlmWrite_FilesystemErrors(m_filesystemErrors);
+
+    Fw::ParamValid paramValid;
+    const U32 maxFilesystemErrors = this->paramGet_MAX_FILESYSTEM_ERRORS(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+
+    if (m_filesystemErrors >= maxFilesystemErrors) {
+        m_recording = false;
+        this->tlmWrite_Recording(m_recording);
+        this->log_WARNING_HI_ErrorLimitReached(m_filesystemErrors);
+    }
 }
 
 }  // namespace Components

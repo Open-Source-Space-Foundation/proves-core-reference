@@ -46,6 +46,24 @@ SAMPLE_ACCUMULATION_SECONDS = 5
 TLM_DOWNLINK_PERIOD_SECONDS = 30
 TLM_TIMEOUT_SECONDS = 75
 
+# Use a larger per-file limit during the tests so the 10 Hz payload cannot
+# automatically close the current file just before an explicit FLUSH. The CI
+# filesystem is formatted before and after the suite, so the flight file-count
+# limit can remain unchanged.
+TEST_PARAMETERS = {
+    "SAMPLES_PER_FILE": 1000,
+    "SAMPLES_PER_WRITE": 10,
+    "MAX_FILE_COUNT": 40,
+    "MAX_FILESYSTEM_ERRORS": 5,
+}
+
+DEFAULT_PARAMETERS = {
+    "SAMPLES_PER_FILE": 100,
+    "SAMPLES_PER_WRITE": 10,
+    "MAX_FILE_COUNT": 40,
+    "MAX_FILESYSTEM_ERRORS": 5,
+}
+
 
 def _now() -> TimeType:
     return TimeType().set_datetime(
@@ -84,19 +102,42 @@ def _exit_safe_mode_if_needed(fprime_test_api: IntegrationTestAPI) -> None:
 
 @pytest.fixture(autouse=True)
 def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Fixture to power the MOSAIC payload before each test"""
+    """Power and configure MOSAIC, then restore flight defaults after each test."""
     _exit_safe_mode_if_needed(fprime_test_api)
+
+    # Stop first so configuration changes cannot race an open sample file left
+    # behind by an earlier test.
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.STOP_RECORDING",
+    )
+
+    for param, value in TEST_PARAMETERS.items():
+        proves_send_and_assert_command(
+            fprime_test_api, f"{mosaicManager}.{param}_PRM_SET", [value]
+        )
+
     proves_send_and_assert_command(
         fprime_test_api,
         "ReferenceDeployment.payloadPowerLoadSwitch.TURN_ON",
     )
-    time.sleep(SAMPLE_ACCUMULATION_SECONDS)  # Payload powers on and starts streaming
-    # Every test below assumes recording is active; a previous test that failed
-    # midway through test_01 could otherwise leave it stopped.
     proves_send_and_assert_command(
         fprime_test_api,
         f"{mosaicManager}.START_RECORDING",
     )
+    time.sleep(SAMPLE_ACCUMULATION_SECONDS)  # Payload powers on and starts streaming
+
+    yield
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.STOP_RECORDING",
+    )
+    for param, value in DEFAULT_PARAMETERS.items():
+        proves_send_and_assert_command(
+            fprime_test_api, f"{mosaicManager}.{param}_PRM_SET", [value]
+        )
+    fprime_test_api.clear_histories()
 
 
 def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -131,6 +172,11 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
     )
     fprime_test_api.assert_telemetry(
         f"{mosaicManager}.Recording", value=True, timeout=TLM_TIMEOUT_SECONDS
+    )
+    fprime_test_api.assert_telemetry(
+        f"{mosaicManager}.FilesystemErrors",
+        value=0,
+        timeout=TLM_TIMEOUT_SECONDS,
     )
 
 
@@ -197,3 +243,49 @@ def test_03_flush_writes_file_to_filesystem(
         f"{file_name} holds {size} B on disk but {records} samples were "
         f"reported ({records * RECORD_SIZE} B expected)"
     )
+
+
+def test_04_max_file_count_stops_recording(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Test that reaching MAX_FILE_COUNT emits an event and stops recording."""
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.STOP_RECORDING",
+    )
+
+    try:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{mosaicManager}.MAX_FILE_COUNT_PRM_SET",
+            [0],
+        )
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{mosaicManager}.START_RECORDING",
+        )
+
+        reached = fprime_test_api.assert_event(
+            f"{mosaicManager}.MaxFilesReached", timeout=10
+        )
+        assert reached.args[0].val == 0
+        fprime_test_api.assert_telemetry(
+            f"{mosaicManager}.Recording",
+            value=False,
+            timeout=TLM_TIMEOUT_SECONDS,
+        )
+        fprime_test_api.assert_telemetry(
+            f"{mosaicManager}.FilesystemErrors",
+            value=0,
+            timeout=TLM_TIMEOUT_SECONDS,
+        )
+    finally:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{mosaicManager}.MAX_FILE_COUNT_PRM_SET",
+            [TEST_PARAMETERS["MAX_FILE_COUNT"]],
+        )
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{mosaicManager}.START_RECORDING",
+        )

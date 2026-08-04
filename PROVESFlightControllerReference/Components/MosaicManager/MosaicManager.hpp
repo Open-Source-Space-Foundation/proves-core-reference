@@ -27,6 +27,10 @@ class MosaicManager final : public MosaicManagerComponentBase {
     //! Destroy MosaicManager object
     ~MosaicManager();
 
+    //! Initialize the component
+    void init(FwEnumStoreType instance = 0  //!< Instance ID
+    );
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
@@ -72,6 +76,13 @@ class MosaicManager final : public MosaicManagerComponentBase {
     //! Record a parsed sample into the current sample file
     void recordSample(U16 adc, U16 millivolts);
 
+    //! Write all buffered samples to the current file in one filesystem operation
+    //! Returns true when the full batch was written
+    bool writeBufferedSamples();
+
+    //! Count a filesystem error and stop recording when the configured limit is reached
+    void recordFilesystemError();
+
     //! Open a fresh sample file if one is not already open
     //! Returns true if a file is available for writing
     bool ensureFileOpen();
@@ -89,20 +100,20 @@ class MosaicManager final : public MosaicManagerComponentBase {
     //! Maximum length of one "ADC=...,MV=..." line, including newline
     static constexpr U32 MAX_LINE_LENGTH = 64;
 
-    //! Samples collected per sample file
-    static constexpr U32 SAMPLES_PER_FILE = 100;
-
     //! Flush a partially filled file after this many seconds without filling
     static constexpr U32 FLUSH_TIMEOUT_SECONDS = 60;
 
     //! Directory where sample files are stored for later downlink
     static constexpr const char* SAMPLE_DIR = "/mosaic";
 
-    //! Maximum number of file names to probe when looking for an unused index on open
-    static constexpr U32 MAX_FILE_INDEX_SEARCH = 1000000;
-
     //! Serialized size of one sample record: U32 time seconds, then raw ADC code and millivolts, both U16
     static constexpr FwSizeType RECORD_SIZE = sizeof(U32) + 2 * sizeof(U16);
+
+    //! Maximum batch size representable by the U8 SAMPLES_PER_WRITE parameter
+    static constexpr FwSizeType WRITE_BUFFER_SAMPLE_CAPACITY = 0xFF;
+
+    //! Size of the batched filesystem write buffer
+    static constexpr FwSizeType WRITE_BUFFER_SIZE = WRITE_BUFFER_SAMPLE_CAPACITY * RECORD_SIZE;
 
     // ----------------------------------------------------------------------
     // Member variables
@@ -117,16 +128,21 @@ class MosaicManager final : public MosaicManagerComponentBase {
     bool m_fileOpen = false;
     U32 m_samplesInFile = 0;
 
+    //! Samples waiting to be written to the current file
+    U8 m_writeBuffer[WRITE_BUFFER_SIZE];
+    U32 m_bufferedSamples = 0;
+
     //! Time (seconds) when the current file received its first sample
     U32 m_fileStartSeconds = 0;
 
     //! Whether samples are recorded to the filesystem
-    bool m_recording = true;
+    bool m_recording = false;
 
     //! Counters for telemetry
     U32 m_samplesRecorded = 0;
     U32 m_filesWritten = 0;
     U32 m_parseErrors = 0;
+    U32 m_filesystemErrors = 0;
 };
 
 }  // namespace Components

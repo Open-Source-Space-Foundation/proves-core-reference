@@ -2,6 +2,18 @@
 
 This directory contains development and analysis tools for the PROVES Core Reference project.
 
+## MOSAIC File Decoder
+
+`decode_mosaic.py` decodes the binary `gamma_*.dat` sample files produced by `MosaicManager` and displays their time, raw ADC reading, and millivolt reading.
+
+```bash
+python3 tools/decode_mosaic.py gamma_000000.dat
+python3 tools/decode_mosaic.py --utc gamma_000000.dat
+python3 tools/decode_mosaic.py --csv gamma_000000.dat > gamma_000000.csv
+```
+
+The decoder uses only the Python standard library. It rejects files whose size is not a whole number of 8-byte records, which usually indicates an incomplete or corrupted downlink.
+
 ## Data Budget Tool
 
 The Data Budget Tool (`data_budget.py`) analyzes F Prime telemetry definitions to calculate the serialized byte size of telemetry channels and packets.

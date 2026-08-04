@@ -13,10 +13,26 @@ module Components {
     passive component MosaicManager {
 
         # ----------------------------------------------------------------------
+        # Parameters
+        # ----------------------------------------------------------------------
+
+        @ Maximum number of samples stored in each file; zero is treated as one
+        param SAMPLES_PER_FILE: U32 default 100
+
+        @ Samples buffered per filesystem write; zero is treated as one
+        param SAMPLES_PER_WRITE: U8 default 10
+
+        @ Maximum number of MOSAIC sample files allowed on the filesystem
+        param MAX_FILE_COUNT: U32 default 40
+
+        @ Filesystem errors allowed in one recording run before recording is stopped
+        param MAX_FILESYSTEM_ERRORS: U32 default 5
+
+        # ----------------------------------------------------------------------
         # Commands
         # ----------------------------------------------------------------------
 
-        @ Start recording received samples to the filesystem (default on boot)
+        @ Start recording received samples to the filesystem
         guarded command START_RECORDING()
 
         @ Stop recording; flushes and closes the current file
@@ -46,11 +62,25 @@ module Components {
             format "Failed to open MOSAIC sample file {} (status {})" \
             throttle 5
 
-        @ A write to the current sample file failed
-        event FileWriteError(status: U32) \
+        @ The configured file limit was reached and recording was stopped
+        event MaxFilesReached(maxFileCount: U32) \
             severity warning high \
-            format "Failed to write MOSAIC sample record (status {})" \
+            format "MOSAIC maximum file count {} reached; recording stopped"
+
+        @ A filesystem operation failed
+        event FileOperationError(
+            filePath: string @< The file path that failed
+            operation: string @< The operation that failed
+            status: U32 @< The filesystem status returned by the operation
+        ) \
+            severity warning high \
+            format "MOSAIC file operation failed for {} ({}, status {})" \
             throttle 5
+
+        @ The configured filesystem error limit was reached and recording was stopped
+        event ErrorLimitReached(errorCount: U32) \
+            severity warning high \
+            format "MOSAIC filesystem error limit reached after {} errors; recording stopped"
 
         @ A received line could not be parsed as a MOSAIC sample
         event LineParseError() \
@@ -79,6 +109,9 @@ module Components {
 
         @ Total lines that failed to parse
         telemetry ParseErrors: U32
+
+        @ Filesystem errors accumulated during the current recording run
+        telemetry FilesystemErrors: U32
 
         @ Most recent raw ADC reading
         telemetry LatestAdc: U16
@@ -122,6 +155,12 @@ module Components {
 
         @ Port for sending telemetry channels to downlink
         telemetry port tlmOut
+
+        @ Port to return the value of a parameter
+        param get port prmGetOut
+
+        @ Port to set the value of a parameter
+        param set port prmSetOut
 
     }
 }
