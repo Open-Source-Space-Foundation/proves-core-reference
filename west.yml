@@ -14,10 +14,17 @@ manifest:
   group-filter: [-babblesim, -optional]
 
   projects:
-    # Zephyr RTOS core
+    # Zephyr RTOS core — stock upstream zephyrproject-rtos/zephyr v4.4.1.
+    # No OSSF fork and no carried patches: the 2026-08-01 trim eliminated both
+    # Zephyr changes we used to carry, so this now tracks upstream verbatim.
+    #   - CDC-ACM TX-FIFO drain fix (formerly patches/0005, OSSF/zephyr#1) is
+    #     no longer required by the flight image.
+    #   - poll_out bounded-wait layer (OSSF/zephyr#2) was pruned: its added
+    #     bound sits behind data->flow_ctrl, which is false on the v5e from
+    #     both devicetree and the explicit UART_CFG_FLOW_CTRL_NONE configure,
+    #     so the code was unreachable in the flight image.
     - name: zephyr
-      repo-path: zephyr
-      revision: v4.4.1
+      revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
@@ -31,6 +38,7 @@ manifest:
           - mcuboot    # Bootloader support
           - fatfs      # FatFS (file system) support
           - hal_st     # Required for certain sensors
+          - segger     # SEGGER RTT (debug capture; inert without CONFIG_USE_SEGGER_RTT)
 
     - name: loramac-node
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
@@ -86,6 +94,24 @@ manifest:
     - name: fatfs
       revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
       path: lib/zephyr-workspace/modules/fatfs
+
+    # USP radio stack (Semtech Unified Software Platform) — v5e+ boards only.
+    # Open-Source-Space-Foundation fork, integration branch feat/proves-usp-radio
+    # (RF-switch GPIO, Zephyr 4.3/4.4 compat, wakeup settle, RAC mutex — formerly
+    # patches/0001-0003,0006,0008,0010; constituent PRs tracked in OSSF/usp_zephyr#7).
+    - name: usp_zephyr
+      url: https://github.com/Open-Source-Space-Foundation/usp_zephyr
+      revision: 0bf3e208124d43c55fcb7f91bae6a9ac9812ee71
+      path: lib/zephyr-workspace/modules/lib/usp_zephyr
+
+    # USP core library (LBM + RAL) — pulled by usp_zephyr at runtime.
+    # Path mirrors the usp_zephyr west.yml convention (modules/lib/usp).
+    # OSSF fork, integration branch feat/proves-usp-radio (radio-planner failsafe
+    # unlock exemption, formerly patches/0009; tracked in OSSF/usp#3).
+    - name: usp
+      url: https://github.com/Open-Source-Space-Foundation/usp
+      revision: 8a60e4a16092f1bfa030b18494da267d8ca6a3ba
+      path: lib/zephyr-workspace/modules/lib/usp
 
   self:
     path: .

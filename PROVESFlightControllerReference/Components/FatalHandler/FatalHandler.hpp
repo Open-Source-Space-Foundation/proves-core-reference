@@ -42,6 +42,10 @@ class FatalHandler final : public FatalHandlerComponentBase {
     void FatalReceive_handler(const FwIndexType portNum, /*!< The port number*/
                               FwEventIdType Id           /*!< The ID of the FATAL event*/
     );
+
+    //! Reboot the device
+    //!
+    void reboot();
 };
 
 }  // namespace Components

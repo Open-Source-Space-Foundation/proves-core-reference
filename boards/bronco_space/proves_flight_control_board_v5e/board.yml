@@ -1,6 +1,6 @@
 board:
   name: proves_flight_control_board_v5e
   full_name: PROVES Flight Control Board v5e
-  vendor: The Spacecraft Company LLC
+  vendor: Bronco Space
   socs:
   - name: rp2350a

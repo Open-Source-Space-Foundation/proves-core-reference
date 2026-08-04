@@ -15,9 +15,11 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 pytestmark = [pytest.mark.uart_only]
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
-lora = "ReferenceDeployment.lora"
+# v5e builds Zephyr::UspRadio (not the legacy Zephyr::LoRa component); TRANSMIT
+# and the error/warning event names are kept verbatim on UspRadio.fpp.
+radio = "ReferenceDeployment.uspRadio"
 
-LORA_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
+RADIO_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
 
 # Continuous-wave burst duration (seconds) for the CW regression test. Kept short so
 # the command stays within the GDS command-completion timeout while still exercising
@@ -36,28 +38,28 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     yield
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.TRANSMIT",
+        f"{radio}.TRANSMIT",
         ["DISABLED"],
     )
 
 
 def test_01_transmit_enabled(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Enabling transmit must not produce any LoRa error/warning events."""
+    """Enabling transmit must not produce any radio error/warning events."""
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
 
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.TRANSMIT",
+        f"{radio}.TRANSMIT",
         ["ENABLED"],
     )
 
     time.sleep(10)
 
-    for evt in LORA_ERROR_EVENTS:
-        result = fprime_test_api.await_event(f"{lora}.{evt}", start=start, timeout=0)
-        assert result is None, f"Unexpected {lora}.{evt}: {result}"
+    for evt in RADIO_ERROR_EVENTS:
+        result = fprime_test_api.await_event(f"{radio}.{evt}", start=start, timeout=0)
+        assert result is None, f"Unexpected {radio}.{evt}: {result}"
 
 
 def test_02_continuous_wave_repeated(fprime_test_api: IntegrationTestAPI, start_gds):
@@ -75,7 +77,7 @@ def test_02_continuous_wave_repeated(fprime_test_api: IntegrationTestAPI, start_
     # returned EXECUTION_ERROR, so send_and_assert_command would already fail here.
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.CONTINUOUS_WAVE",
+        f"{radio}.CONTINUOUS_WAVE",
         [CW_SECONDS],
     )
 
@@ -89,30 +91,30 @@ def test_02_continuous_wave_repeated(fprime_test_api: IntegrationTestAPI, start_
     )
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.CONTINUOUS_WAVE",
+        f"{radio}.CONTINUOUS_WAVE",
         [CW_SECONDS],
     )
     time.sleep(CW_SECONDS + 2)
 
     # The repeated CW must not have logged a modem configuration failure.
     result = fprime_test_api.await_event(
-        f"{lora}.ConfigurationFailed", start=start, timeout=0
+        f"{radio}.ConfigurationFailed", start=start, timeout=0
     )
     assert result is None, (
-        f"Unexpected {lora}.ConfigurationFailed after repeated CW: {result}"
+        f"Unexpected {radio}.ConfigurationFailed after repeated CW: {result}"
     )
 
     # The radio must still be usable for normal transmission after the CW bursts;
-    # a wedged modem would surface as LoRa error events here.
+    # a wedged modem would surface as radio error events here.
     start = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
     proves_send_and_assert_command(
         fprime_test_api,
-        f"{lora}.TRANSMIT",
+        f"{radio}.TRANSMIT",
         ["ENABLED"],
     )
     time.sleep(10)
-    for evt in LORA_ERROR_EVENTS:
-        result = fprime_test_api.await_event(f"{lora}.{evt}", start=start, timeout=0)
-        assert result is None, f"Unexpected {lora}.{evt} after repeated CW: {result}"
+    for evt in RADIO_ERROR_EVENTS:
+        result = fprime_test_api.await_event(f"{radio}.{evt}", start=start, timeout=0)
+        assert result is None, f"Unexpected {radio}.{evt} after repeated CW: {result}"

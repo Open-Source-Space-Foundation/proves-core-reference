@@ -54,6 +54,11 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
 	}
 
+# Carried module patches (usp-patches / usp-core-patches / zephyr-patches and
+# the fprime patch steps in `submodules`) were removed 2026-07-26: all module
+# fixes now live on the Open-Source-Space-Foundation fork integration branches
+# (feat/proves-usp-radio) pinned in west.yml / .gitmodules. See patches/README.md.
+
 ##@ Development
 
 .PHONY: pre-commit-install
@@ -176,6 +181,8 @@ SYSBUILD_PATH ?= $(shell pwd)/lib/zephyr-workspace/zephyr/samples/sysbuild/with_
 .PHONY: build-mcuboot
 build-mcuboot: submodules zephyr fprime-venv
 	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
+	@mkdir -p $(SYSBUILD_PATH)/sysbuild
+	@cp $(shell pwd)/bootloader/sysbuild/mcuboot.conf $(SYSBUILD_PATH)/sysbuild/mcuboot.conf
 
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
 	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
