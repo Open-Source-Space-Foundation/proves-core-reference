@@ -38,6 +38,7 @@ from pathlib import Path
 import pytest
 from common import cmdDispatch, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
+from fprime_gds.common.files.helpers import FileStates
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw import predicates
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
@@ -67,6 +68,42 @@ SWAP_REBOOT_TIMEOUT_S = 180
 # Erasing the whole 1 MB staging slot is awaited by event rather than through
 # proves_send_and_assert_command's ack window. Measured at 2.8 s on the CI cube.
 PREPARE_TIMEOUT_S = 120
+
+# fprime_gds's FileUplinker has no retry of its own: a Start packet is a bare
+# Fw::ComPacketType::FW_PACKET_FILE frame with no opcode, so it can never match
+# PacketBypasser's opcode allowlist. If it lands on the TC replay window (the
+# same GDS duplicate-sequence-number quirk every other command here works
+# around) it comes back unauthenticated and ProvesRouter silently drops it
+# (RejectedPackets telemetry, no event) -- the FileUplinker then just sits
+# until its own internal 20 s handshake timeout expires and quietly gives up.
+# Poll for read progress within that window and re-enqueue if none was made.
+UPLINK_START_TIMEOUT_S = 30
+UPLINK_START_ATTEMPTS = 5
+# Each accepted data packet produces a handshake and advances TransmitFile.seek.
+# If that value stops changing, a data packet or its reply was lost.
+UPLINK_PROGRESS_TIMEOUT_S = 45
+# IntegrationTestAPI owns a separate FileUplinker from the headless GDS process:
+# the pytest plugin builds its own StandardPipeline and never reads
+# fprime-gds.yml, so neither file-uplink-cooldown nor file-uplink-chunk-size
+# reaches it. Both have to be reapplied here.
+#
+# fprime_gds defaults the chunk to 256; fprime-gds.yml configures 204 to fit the
+# 248 B frame (frame-size) once the space packet header, the file packet header
+# and the TC security header with its 16 B MAC are accounted for. Match it.
+UPLINK_CHUNK_SIZE = 204
+# The cooldown is the one that bites, and for a reason that is easy to miss: the
+# flight side applies no back-pressure to file uplink. ProvesRouter copies each
+# file packet into a buffer from a pool of ComCcsdsConfig.BuffMgr
+# .commsFileBuffCount (5) before handing it to fileUplink, and when that pool is
+# empty it drops the packet -- while the ground goes on streaming at its full
+# configured rate. Uplink faster than the flight side can drain that pool and
+# the transfer *appears* to succeed: FileReceived is still emitted, the file is
+# still full length, and only the checksum reveals that everything after the
+# first ~5 packets was thrown away (PacketOutOfOrder reporting "packet N after
+# packet 5" is the tell). Measured on the bench against a 32 KB file checked
+# with fileManager.CalculateCrc: 0.100 corrupts, 0.400 and 1.000 are clean.
+# 0.400 is also what fprime-gds.yml configures, so the two agree.
+UPLINK_COOLDOWN_S = 0.4
 
 # The TC replay window silently drops any frame whose sequence number the board
 # has already accepted, and the GDS has been observed emitting the same sequence
@@ -136,6 +173,64 @@ def prepare_update(fprime_test_api: IntegrationTestAPI) -> None:
     assert outcome.template.get_name() == "PrepareUpdateSucceeded", (
         f"PREPARE_UPDATE failed: {outcome.get_str()}"
     )
+
+
+def uplink_with_retry(
+    fprime_test_api: IntegrationTestAPI,
+    image_path: Path,
+    destination: str,
+    timeout: int,
+) -> None:
+    """Uplink a file, restarting it if its start or any later handshake stalls.
+
+    Progress is detected via the uplinker's active TransmitFile.seek, which
+    only advances once a chunk is read in response to a received handshake.
+    A retry resets both ends: send_cancel_packet only emits the wire packet;
+    it does not release FileUplink's local queue after a lost data handshake.
+    """
+    uplinker = fprime_test_api.pipeline.files.uplinker
+    uplinker.chunk = UPLINK_CHUNK_SIZE
+    uplinker.cooldown = UPLINK_COOLDOWN_S
+    deadline = time.monotonic() + timeout
+
+    for attempt in range(UPLINK_START_ATTEMPTS):
+        fprime_test_api.clear_histories()
+        fprime_test_api.uplink_file(str(image_path), destination)
+
+        last_seek = 0
+        last_progress = time.monotonic()
+        while time.monotonic() < deadline:
+            active = uplinker.active
+            if active is not None and active.seek > last_seek:
+                last_seek = active.seek
+                last_progress = time.monotonic()
+            if fprime_test_api.await_event("FileReceived", timeout=1) is not None:
+                return
+            stall_timeout = (
+                UPLINK_START_TIMEOUT_S if last_seek == 0 else UPLINK_PROGRESS_TIMEOUT_S
+            )
+            if time.monotonic() - last_progress >= stall_timeout:
+                break
+        else:
+            break
+
+        # The flight-side receiver has no timeout. Tell it to abandon the
+        # partial file and release the GDS queue before enqueuing the retry.
+        #
+        # Only when the uplinker has not already torn itself down: its own 20 s
+        # handshake timeout calls finish(), which closes the handle and unlinks
+        # the up_store copy, so a second finish() here would raise
+        # FileNotFoundError. State, not `active`, is the thing to check --
+        # `active` stays set after a finish.
+        if uplinker.state != FileStates.IDLE:
+            uplinker.send_cancel_packet()
+            uplinker.finish(wait_for_handshake=False)
+        time.sleep(1)
+    else:
+        raise AssertionError(
+            f"uplink of {image_path} stalled in {UPLINK_START_ATTEMPTS} attempts"
+        )
+    raise AssertionError(f"uplink of {image_path} to {destination} timed out")
 
 
 def fprime_crc32(path: Path) -> int:
@@ -280,12 +375,7 @@ def test_03_full_ota_cycle(
         [json.dumps(["ENABLED", "DISABLED", "DISABLED"])],
     )
 
-    fprime_test_api.clear_histories()
-    fprime_test_api.uplink_file(str(ota_image), destination)
-    assert (
-        fprime_test_api.await_event("FileReceived", timeout=UPLINK_TIMEOUT_S)
-        is not None
-    ), f"uplink of {ota_image} to {destination} never completed"
+    uplink_with_retry(fprime_test_api, ota_image, destination, UPLINK_TIMEOUT_S)
 
     # 3. Copy it into the staging slot. The CRC is checked flight-side before a
     #    single byte is written, so a mismatch here means the uplink was lossy.
