@@ -10,7 +10,7 @@ import threading
 import time
 
 import pytest
-from common import cmdDispatch, set_radio_recover_fn
+from common import cmdDispatch, resync_sequence_number, set_radio_recover_fn
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 # After TRANSMIT is first enabled the satellite flushes the event backlog that
@@ -106,6 +106,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
+    )
+    parser.addoption(
+        "--ota-image",
+        default=None,
+        help="Path to the signed flight-software image (zephyr.signed.bin) uplinked "
+        "by the OTA image-swap tests (ota_update_test.py). When unset those tests skip.",
+    )
+    parser.addoption(
+        "--ota-build-id",
+        default=None,
+        help="Unique marker string baked into the --ota-image build (e.g. its git "
+        "describe / project version). The OTA swap test asserts this string appears in "
+        "the CdhCore.version.ProjectVersion event after booting the new image, and is "
+        "absent again after the MCUBoot auto-revert. Required for ota_update_test.py.",
     )
 
 
@@ -220,6 +234,50 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
 
 
 @pytest.fixture(autouse=True)
+def resync_sequence_number_after_reboot(
+    request: pytest.FixtureRequest,
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+):
+    """Keep the ground authentication sequence number aligned across in-suite
+    reboots (issue #473 CI cascade).
+
+    The TcSecurityDeframer persists a write-ahead high-water mark (issue #461),
+    so after a reboot the board can legitimately expect a sequence number ahead
+    of the ground counter, and every authenticated command is rejected until
+    ground catches up. Reboots happen mid-suite (safe-mode entry, reset tests,
+    watchdog tests), so before each test read the board's counter via
+    GET_SEQ_NUM (bypass-listed, works even while desynced) and fast-forward the
+    framer plugin's sequence file if the board is ahead. Ground being ahead is
+    normal and left alone (the acceptance window extends forward).
+    """
+    # Don't recurse into the dedicated sync/format plumbing tests.
+    if request.node.get_closest_marker("sync_sequence_number") or (
+        request.node.get_closest_marker("format_filesystem")
+    ):
+        yield
+        return
+
+    link = request.config.getoption("--sync-deframer", default=None)
+    if link is None:
+        link = (
+            "lora"
+            if request.config.getoption("--with-radio", default=False)
+            else "uart"
+        )
+    deframer = {
+        "uart": "ComCcsdsUart.tcSecurityDeframer",
+        "lora": "ComCcsdsLora.tcSecurityDeframer",
+    }[link]
+
+    try:
+        resync_sequence_number(fprime_test_api, deframer)
+    except Exception:  # noqa: BLE001 -- recovery must never fail a test itself
+        pass
+    yield
+
+
+@pytest.fixture(autouse=True)
 def recover_from_safe_mode(
     request: pytest.FixtureRequest,
     fprime_test_api: IntegrationTestAPI,
@@ -318,3 +376,23 @@ def tlm_sampler(
     stop.set()
     t.join(timeout=3)
     fprime_test_api_session.remove_telemetry_subhistory(subhist)
+
+
+@pytest.fixture
+def ota_config(request: pytest.FixtureRequest):
+    """Provide the OTA image path and build-id marker, skipping if either is unset.
+
+    The OTA image-swap tests (ota_update_test.py) need a real signed image to
+    uplink and a unique marker string to prove which image is running. Both are
+    supplied on the command line via --ota-image / --ota-build-id; without them
+    there is nothing meaningful to test, so the tests skip rather than fail.
+    """
+    image = request.config.getoption("--ota-image", default=None)
+    build_id = request.config.getoption("--ota-build-id", default=None)
+    if not image or not build_id:
+        pytest.skip(
+            "OTA tests require --ota-image=<signed.bin> and --ota-build-id=<marker>"
+        )
+    if not os.path.isfile(image):
+        pytest.skip(f"OTA image not found: {image}")
+    return image, build_id
