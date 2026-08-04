@@ -15,6 +15,13 @@ and a secondary slot (``slot1_partition``, the staging area). An update is:
 6. ``CONFIRM_UPDATE``   -- make the swap permanent. Without this, the *next*
    reboot reverts to the previous image.
 
+Both outcomes of step 6 are covered, because both are flight-critical: a good
+image must stick, and a bad one must roll itself back without a ground pass.
+The trial image is staged twice from a single uplink -- once left unconfirmed
+to observe the revert, once confirmed to observe it stick -- since re-flashing
+the staging slot costs minutes while re-uplinking costs the better part of an
+hour.
+
 The whole module is marked ``ota`` and is excluded from the default integration
 run: it erases a flash slot, uplinks a ~1.4 MB file, and reboots the board.
 Run it deliberately:
@@ -118,6 +125,12 @@ DISPATCH_TIMEOUT_S = 20
 # Svc.Version declares its version strings as `string size 40`, so anything
 # longer is truncated in flight before it reaches telemetry.
 VERSION_STRING_SIZE = 40
+
+# The version the board was running before the update, captured by test_03 and
+# asserted by test_04 after the revert. Module state rather than a fixture
+# because it has to outlive a test, and the value can only be read from the
+# board while the pre-update image is still the one running.
+_pre_update_version: str | None = None
 
 
 def send_and_confirm_dispatch(
@@ -248,6 +261,67 @@ def fprime_crc32(path: Path) -> int:
     return ~crc & 0xFFFFFFFF
 
 
+def stage_image(
+    fprime_test_api: IntegrationTestAPI, destination: str, crc32: int
+) -> None:
+    """Erase the staging slot and copy an already-uplinked image into it.
+
+    The CRC is checked flight-side before a single byte is written, so a
+    mismatch here means the file on the filesystem is not what ground sent.
+    """
+    prepare_update(fprime_test_api)
+
+    send_and_confirm_dispatch(
+        fprime_test_api,
+        f"{updater}.UPDATE_IMAGE_FROM",
+        f"{updater}.Update",
+        [destination, str(crc32)],
+    )
+    outcome = await_outcome(
+        fprime_test_api,
+        [f"{updater}.UpdateSucceeded", f"{updater}.UpdateFailed"],
+        timeout=IMAGE_WRITE_TIMEOUT_S,
+    )
+    assert outcome is not None, (
+        "image write to the staging slot reported neither success nor failure"
+    )
+    assert outcome.template.get_name() == "UpdateSucceeded", (
+        f"image write to the staging slot failed: {outcome.get_str()}"
+    )
+
+
+def arm_trial_boot(fprime_test_api: IntegrationTestAPI) -> None:
+    """Mark the staged image for a one-shot trial boot.
+
+    TEST rather than PERMANENT so that an image that fails to come up reverts
+    on the following reboot instead of stranding the board.
+    """
+    fprime_test_api.clear_histories()
+    proves_send_and_assert_command(
+        fprime_test_api, f"{updater}.CONFIGURE_NEXT_BOOT", ["TEST"]
+    )
+    fprime_test_api.assert_event(f"{updater}.SetNextBoot", timeout=10)
+
+
+def reboot(fprime_test_api: IntegrationTestAPI, why: str) -> None:
+    """Cold-reset the board and wait for the boot-time version events.
+
+    COLD_RESET is sent without expecting a completion: the board reboots before
+    it can be acknowledged. FrameworkVersion is emitted at startup, so a fresh
+    one after the send time is what proves the restart happened.
+    """
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
+    fprime_test_api.send_command("ReferenceDeployment.resetManager.COLD_RESET")
+    assert (
+        fprime_test_api.await_event(
+            f"{version}.FrameworkVersion", start=start, timeout=SWAP_REBOOT_TIMEOUT_S
+        )
+        is not None
+    ), f"board did not come back after the {why} reboot"
+
+
 def read_project_version(fprime_test_api: IntegrationTestAPI) -> str:
     """Ask the running image which project version it is."""
     proves_send_and_assert_command(fprime_test_api, f"{version}.VERSION", ["PROJECT"])
@@ -276,18 +350,21 @@ def ota_image(request: pytest.FixtureRequest) -> Path:
 def expected_version(request: pytest.FixtureRequest, ota_image: Path) -> str:
     """The project version the board must report once ``ota_image`` is running.
 
-    Taken from ``--ota-expect-version`` when given, otherwise from the
-    ``version.json`` the F Prime build writes next to the image. Either way it
-    is checked against the image bytes, so a stale version.json cannot quietly
-    turn the post-reboot assertion into a no-op.
+    Taken from ``--ota-expect-version`` when given, otherwise from a
+    ``version.json`` beside the image (``make ota-test-image`` copies one there)
+    and failing that from the build tree. Either way it is checked against the
+    image bytes, so a stale version.json cannot quietly turn the post-reboot
+    assertion into a no-op.
     """
     override = request.config.getoption("--ota-expect-version")
     if override:
         candidate = override
     else:
-        version_json = (
-            Path("build-fprime-automatic-zephyr") / "versions" / "version.json"
-        )
+        version_json = ota_image.parent / "version.json"
+        if not version_json.is_file():
+            version_json = (
+                Path("build-fprime-automatic-zephyr") / "versions" / "version.json"
+            )
         if not version_json.is_file():
             pytest.skip(
                 f"{version_json} not found and --ota-expect-version not given; "
@@ -348,22 +425,24 @@ def test_02_update_image_without_prepare_is_rejected(
     assert_board_responsive(fprime_test_api)
 
 
-def test_03_full_ota_cycle(
+def test_03_trial_image_boots_after_the_swap(
     fprime_test_api: IntegrationTestAPI,
     start_gds,
     ota_image: Path,
     expected_version: str,
 ):
-    """Stage an image, swap to it across a reboot, and confirm it."""
-    before = read_project_version(fprime_test_api)
-    crc32 = fprime_crc32(ota_image)
+    """Uplink an image, stage it as a trial boot, and swap to it.
+
+    Leaves the board running the *unconfirmed* trial image, which is what
+    test_04 goes on to reboot out of, and leaves the uplinked file on the
+    filesystem for test_05 to re-stage without a second uplink.
+    """
+    global _pre_update_version
+    _pre_update_version = read_project_version(fprime_test_api)
     destination = f"{UPDATE_DIR}/{ota_image.name}"
 
-    # 1. Erase the staging slot.
-    prepare_update(fprime_test_api)
-
-    # 2. Uplink the signed image. CreateDirectory is best-effort: /update may
-    #    already exist from an earlier run, and fileManager errors on that.
+    # Uplink the signed image. CreateDirectory is best-effort: /update may
+    # already exist from an earlier run, and fileManager errors on that.
     fprime_test_api.send_command(f"{fileManager}.CreateDirectory", [UPDATE_DIR])
     time.sleep(1)
 
@@ -377,78 +456,75 @@ def test_03_full_ota_cycle(
 
     uplink_with_retry(fprime_test_api, ota_image, destination, UPLINK_TIMEOUT_S)
 
-    # 3. Copy it into the staging slot. The CRC is checked flight-side before a
-    #    single byte is written, so a mismatch here means the uplink was lossy.
-    send_and_confirm_dispatch(
-        fprime_test_api,
-        f"{updater}.UPDATE_IMAGE_FROM",
-        f"{updater}.Update",
-        [destination, str(crc32)],
-    )
-    outcome = await_outcome(
-        fprime_test_api,
-        [f"{updater}.UpdateSucceeded", f"{updater}.UpdateFailed"],
-        timeout=IMAGE_WRITE_TIMEOUT_S,
-    )
-    assert outcome is not None, (
-        "image write to the staging slot reported neither success nor failure"
-    )
-    assert outcome.template.get_name() == "UpdateSucceeded", (
-        f"image write to the staging slot failed: {outcome.get_str()}"
-    )
+    stage_image(fprime_test_api, destination, fprime_crc32(ota_image))
+    arm_trial_boot(fprime_test_api)
+    reboot(fprime_test_api, "swap")
 
-    # 4. Arm the one-shot trial boot. TEST rather than PERMANENT so that a bad
-    #    image reverts on the following reboot instead of stranding the board.
-    fprime_test_api.clear_histories()
-    proves_send_and_assert_command(
-        fprime_test_api, f"{updater}.CONFIGURE_NEXT_BOOT", ["TEST"]
-    )
-    fprime_test_api.assert_event(f"{updater}.SetNextBoot", timeout=10)
-
-    # 5. Reboot and let MCUboot perform the swap.
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
-    )
-    fprime_test_api.send_command("ReferenceDeployment.resetManager.COLD_RESET")
-    assert (
-        fprime_test_api.await_event(
-            f"{version}.FrameworkVersion", start=start, timeout=SWAP_REBOOT_TIMEOUT_S
-        )
-        is not None
-    ), "board did not come back after the swap reboot"
-
-    # 6. The swapped-in image must be the one we uplinked.
     after = read_project_version(fprime_test_api)
     assert after == expected_version, (
         f"running version {after!r} after the swap, expected {expected_version!r} "
-        f"(was {before!r} before the update)"
+        f"(was {_pre_update_version!r} before the update)"
     )
 
-    # 7. Make it permanent. Skipping this would revert on the next reboot.
+
+def test_04_unconfirmed_image_reverts_on_the_next_reboot(
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+    expected_version: str,
+):
+    """An image that is never confirmed is rolled back by MCUboot.
+
+    This is the property that makes a bad update survivable without a ground
+    pass: an image that comes up broken enough never to send CONFIRM_UPDATE
+    gets undone by the next watchdog reset on its own. test_03 deliberately
+    left the trial image unconfirmed so this reboot exercises that path.
+    """
+    assert _pre_update_version is not None, (
+        "test_03 did not run, so the version to revert to is unknown"
+    )
+    assert read_project_version(fprime_test_api) == expected_version, (
+        "board is not running the trial image; test_03 must run first"
+    )
+
+    reboot(fprime_test_api, "revert")
+
+    reverted = read_project_version(fprime_test_api)
+    assert reverted == _pre_update_version, (
+        f"running version {reverted!r} after the second reboot, expected the "
+        f"pre-update {_pre_update_version!r} -- an unconfirmed image did not revert"
+    )
+
+
+def test_05_confirmed_image_survives_the_next_reboot(
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+    ota_image: Path,
+    expected_version: str,
+):
+    """After CONFIRM_UPDATE the image sticks across the following reboot.
+
+    The same image test_03 uplinked is still on the filesystem -- test_04
+    reverted the flash slots, not the file -- so this re-stages from it rather
+    than paying for another uplink.
+    """
+    destination = f"{UPDATE_DIR}/{ota_image.name}"
+
+    stage_image(fprime_test_api, destination, fprime_crc32(ota_image))
+    arm_trial_boot(fprime_test_api)
+    reboot(fprime_test_api, "second swap")
+
+    assert read_project_version(fprime_test_api) == expected_version, (
+        "trial image did not boot on the second swap"
+    )
+
     fprime_test_api.clear_histories()
     proves_send_and_assert_command(fprime_test_api, f"{updater}.CONFIRM_UPDATE")
     fprime_test_api.assert_event(f"{updater}.ConfirmBoot", timeout=10)
 
+    reboot(fprime_test_api, "confirmation")
 
-def test_04_survives_a_second_reboot(fprime_test_api: IntegrationTestAPI, start_gds):
-    """After CONFIRM_UPDATE the image sticks -- no revert on the next boot.
-
-    This is the assertion that separates a confirmed update from a trial one: an
-    unconfirmed TEST image is rolled back by MCUboot here.
-    """
-    expected = read_project_version(fprime_test_api)
-
-    start: TimeType = TimeType().set_datetime(
-        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
-    )
-    fprime_test_api.send_command("ReferenceDeployment.resetManager.COLD_RESET")
-    assert (
-        fprime_test_api.await_event(
-            f"{version}.FrameworkVersion", start=start, timeout=SWAP_REBOOT_TIMEOUT_S
-        )
-        is not None
-    ), "board did not come back after the confirmation reboot"
-
-    assert read_project_version(fprime_test_api) == expected, (
-        "image reverted after reboot -- CONFIRM_UPDATE did not take"
+    after = read_project_version(fprime_test_api)
+    assert after == expected_version, (
+        f"running version {after!r} after the confirmation reboot, expected "
+        f"{expected_version!r} -- CONFIRM_UPDATE did not take"
     )

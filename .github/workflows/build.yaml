@@ -91,30 +91,17 @@ jobs:
           retention-days: 30
 
       # --- OTA staging image -------------------------------------------------
-      # The OTA test has to prove a *swap* happened, not merely that the update
-      # commands returned OK, so the image it uplinks must be distinguishable
-      # from the one flashed on the board. Project version comes from
-      # `git describe --tags --always --dirty`, so a throwaway tag renames this
-      # build and changes nothing else about it.
+      # A second build of the same sources under a throwaway tag, so the image
+      # the OTA test uplinks reports a different project version than the one
+      # flashed on the board. See the `ota-test-image` target for why that
+      # matters and why the version files have to be deleted first.
       #
-      # The rm is required: fprime generates version.{hpp,cpp,json} from a cmake
-      # custom command with no declared inputs, so ninja considers it up to date
-      # as soon as the outputs exist and a rebuild would keep the old string.
-      #
-      # This runs after the artifact upload above, so overwriting bootable.* here
-      # cannot affect the image the other integration jobs flash.
+      # This runs after the artifact upload above, so the rebuilt
+      # build-artifacts/ cannot affect what the other integration jobs flash.
       - name: Build OTA staging image
         if: inputs.build_ota_image
         run: |
-          git tag "ota-ci-${GITHUB_RUN_ID}"
-          rm -f build-fprime-automatic-zephyr/versions/version.hpp \
-                build-fprime-automatic-zephyr/versions/version.cpp \
-                build-fprime-automatic-zephyr/versions/version.json
-          BUILD_YAMCS_MDB=0 make build
-          mkdir -p ota-image
-          cp build-artifacts/zephyr.signed.bin ota-image/
-          cp build-fprime-automatic-zephyr/versions/version.json ota-image/
-          echo "OTA staging image version: $(cat ota-image/version.json)"
+          make ota-test-image OTA_TAG="ota-ci-${GITHUB_RUN_ID}"
 
       - name: Upload OTA staging image
         if: inputs.build_ota_image
