@@ -289,29 +289,38 @@ fprime-gds --file-uplink-cooldown 0.8
 ### Testing it
 
 `PROVESFlightControllerReference/test/int/ota_test.py` runs this whole cycle
-against real hardware and checks the reported project version after the swap.
-It is excluded from the default integration run because it erases a flash slot,
-uplinks a large file and reboots the board:
+against real hardware, checks the reported project version after the swap, and
+covers both endings: an unconfirmed image must revert on the next reboot, and a
+confirmed one must stick. It is excluded from the default integration run
+because it erases a flash slot, uplinks a large file and reboots the board:
 
 ```shell
 make test-integration TEST=ota_test.py FILTER=ota
 ```
 
-Run against the build in your working tree, it uplinks the image the board is
-already running, so the post-swap version check passes trivially. To make the
-check meaningful, point `--ota-image` at a *different* build:
+Run against the build in your working tree, it would uplink the image the board
+is already running, so the post-swap version check would pass trivially. Build a
+distinctly-versioned image first — `make ota-test-image` rebuilds the same
+sources under a throwaway git tag, so only the project version changes:
 
 ```shell
+make build                  # flash bootable.uf2 / bootable.signed.hex
+make ota-test-image         # -> ota-image/{zephyr.signed.bin,version.json}
 make test-integration TEST=ota_test.py FILTER=ota \
-  PYTEST_ARGS="--ota-image=/path/to/other/zephyr.signed.bin --ota-expect-version=v1.2.3"
+  PYTEST_ARGS="--ota-image=ota-image/zephyr.signed.bin"
 ```
+
+The expected version is read from the `version.json` written beside the image,
+and is checked against the image bytes before the test runs, so a stale
+version.json skips the test rather than turning the post-swap assertion into a
+no-op. `--ota-expect-version` overrides it for an image built elsewhere.
 
 In CI this lives in its own `ota` workflow, separate from `ci`, because it ties
 up the integration cube for the better part of an hour. It runs on a schedule at
 10:00 UTC daily, and can be triggered on demand by running the `ota` workflow
-manually. The workflow builds a second image under a throwaway git tag so the
-project version differs from the one flashed on the board, which is what lets it
-prove a swap actually happened.
+manually. It uses the same `make ota-test-image` target to get an image whose
+version differs from the one flashed on the board, which is what lets it prove a
+swap actually happened.
 
 Uplink dominates the runtime: at the `fprime-gds.yml` defaults
 (`file-uplink-chunk-size: 204`, `file-uplink-cooldown: 0.400`) a 1.4 MB image is

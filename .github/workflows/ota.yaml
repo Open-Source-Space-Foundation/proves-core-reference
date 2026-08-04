@@ -28,7 +28,10 @@ jobs:
     runs-on:
       - integration
     needs: build
-    timeout-minutes: 150
+    # Uplink alone is ~48 min at the default cooldown; on top of that the suite
+    # writes the staging slot twice (once for the revert path, once for the
+    # confirm path) and reboots the board four times.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
 

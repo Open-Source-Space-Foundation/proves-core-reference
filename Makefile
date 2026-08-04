@@ -148,6 +148,43 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
 	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
 
+# --- OTA staging image ------------------------------------------------------
+# The OTA test proves a *swap* really happened by asserting the board reports
+# the uplinked image's project version after the reboot, so that image has to
+# be distinguishable from the one already flashed -- uplinking the running
+# build makes the assertion vacuously true.
+#
+# Project version comes from `git describe --tags --always --dirty`, so a
+# throwaway tag renames the build and changes nothing else about it: same
+# sources, same config, same signing key. The tag is deleted again on the way
+# out, including on failure.
+#
+# `fprime-util build` is invoked directly rather than through `make build` so
+# bootable.uf2 / bootable.signed.hex keep pointing at the build you flash;
+# only build-artifacts/zephyr.signed.bin and the versions/ metadata move.
+OTA_IMAGE_DIR ?= $(shell pwd)/ota-image
+OTA_TAG ?= ota-$(shell date -u +%m%d%H%M%S)
+
+.PHONY: ota-test-image
+ota-test-image: submodules zephyr fprime-venv generate-if-needed ## Build a distinctly-versioned signed image for the OTA test (OTA_TAG=<tag>)
+	@if git rev-parse -q --verify "refs/tags/$(OTA_TAG)" >/dev/null; then \
+		echo "Error: tag $(OTA_TAG) already exists; pass OTA_TAG=<unused tag>"; \
+		exit 1; \
+	fi
+	@git tag "$(OTA_TAG)"
+	@trap 'git tag -d "$(OTA_TAG)" >/dev/null 2>&1 || true' EXIT INT TERM; \
+	  echo "Building OTA image as version $$(git describe --tags --always --dirty --broken)"; \
+	  rm -f $(BUILD_DIR)/versions/version.hpp \
+	        $(BUILD_DIR)/versions/version.cpp \
+	        $(BUILD_DIR)/versions/version.json; \
+	  $(UV_RUN) fprime-util build || exit 1; \
+	  mkdir -p $(OTA_IMAGE_DIR); \
+	  cp build-artifacts/zephyr.signed.bin $(OTA_IMAGE_DIR)/; \
+	  cp $(BUILD_DIR)/versions/version.json $(OTA_IMAGE_DIR)/; \
+	  echo "OTA image:   $(OTA_IMAGE_DIR)/zephyr.signed.bin"; \
+	  echo "Its version: $$($(UV_RUN) python3 -c \
+	    'import json; print(json.load(open("$(OTA_IMAGE_DIR)/version.json"))["project_version"])')"
+
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
 check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
