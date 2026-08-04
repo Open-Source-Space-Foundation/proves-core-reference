@@ -306,12 +306,12 @@ make test-integration TEST=ota_test.py FILTER=ota \
   PYTEST_ARGS="--ota-image=/path/to/other/zephyr.signed.bin --ota-expect-version=v1.2.3"
 ```
 
-In CI this is the `integration-ota` job. It is not part of the normal PR run —
-it ties up the integration cube for the better part of an hour. Trigger it by
-running the `ci` workflow manually with **Run the hardware over-the-air update
-test** checked, or by adding the `test-ota` label to a PR. The job builds a
-second image under a throwaway git tag so the project version differs from the
-one flashed on the board, which is what lets it prove a swap actually happened.
+In CI this lives in its own `ota` workflow, separate from `ci`, because it ties
+up the integration cube for the better part of an hour. It runs on a schedule at
+10:00 UTC daily, and can be triggered on demand by running the `ota` workflow
+manually. The workflow builds a second image under a throwaway git tag so the
+project version differs from the one flashed on the board, which is what lets it
+prove a swap actually happened.
 
 Uplink dominates the runtime: at the `fprime-gds.yml` defaults
 (`file-uplink-chunk-size: 204`, `file-uplink-cooldown: 0.400`) a 1.4 MB image is
