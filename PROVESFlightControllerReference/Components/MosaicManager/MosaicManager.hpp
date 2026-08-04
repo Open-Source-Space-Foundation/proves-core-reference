@@ -53,7 +53,8 @@ class MosaicManager final : public MosaicManagerComponentBase {
 
     //! Handler implementation for command START_RECORDING
     void START_RECORDING_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                                    U32 cmdSeq            //!< The command sequence number
+                                    U32 cmdSeq,           //!< The command sequence number
+                                    U32 fileCount         //!< Number of files to record before stopping
                                     ) override;
 
     //! Handler implementation for command STOP_RECORDING
@@ -65,6 +66,11 @@ class MosaicManager final : public MosaicManagerComponentBase {
     void FLUSH_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                           U32 cmdSeq            //!< The command sequence number
                           ) override;
+
+    //! Handler implementation for command CLEAR_DIRECTORY
+    void CLEAR_DIRECTORY_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                                    U32 cmdSeq            //!< The command sequence number
+                                    ) override;
 
     // ----------------------------------------------------------------------
     // Helper methods
@@ -82,6 +88,15 @@ class MosaicManager final : public MosaicManagerComponentBase {
 
     //! Count a filesystem error and stop recording when the configured limit is reached
     void recordFilesystemError();
+
+    //! Recover the monotonic file cursor from files left by an earlier boot
+    void initializeFileIndex(U32 maxFileCount);
+
+    //! Count file slots remaining above the monotonic file cursor
+    U32 countRemainingFileSlots(U32 maxFileCount);
+
+    //! Persist that the configured file limit was reached
+    void markFileLimitReached();
 
     //! Open a fresh sample file if one is not already open
     //! Returns true if a file is available for writing
@@ -106,6 +121,9 @@ class MosaicManager final : public MosaicManagerComponentBase {
     //! Directory where sample files are stored for later downlink
     static constexpr const char* SAMPLE_DIR = "/mosaic";
 
+    //! Persistent marker that prevents a reboot from bypassing the file limit
+    static constexpr const char* FILE_LIMIT_MARKER = "/mosaic/.file_limit_reached";
+
     //! Serialized size of one sample record: U32 time seconds, then raw ADC code and millivolts, both U16
     static constexpr FwSizeType RECORD_SIZE = sizeof(U32) + 2 * sizeof(U16);
 
@@ -126,6 +144,10 @@ class MosaicManager final : public MosaicManagerComponentBase {
     //! Current sample file
     Os::File m_file;
     bool m_fileOpen = false;
+    U32 m_currentFileIndex = 0;
+    U32 m_nextFileIndex = 0;
+    bool m_fileIndexInitialized = false;
+    bool m_fileLimitReached = false;
     U32 m_samplesInFile = 0;
 
     //! Samples waiting to be written to the current file
@@ -137,6 +159,9 @@ class MosaicManager final : public MosaicManagerComponentBase {
 
     //! Whether samples are recorded to the filesystem
     bool m_recording = false;
+
+    //! Complete files still requested in the current recording run
+    U32 m_filesRemainingToRecord = 0;
 
     //! Counters for telemetry
     U32 m_samplesRecorded = 0;

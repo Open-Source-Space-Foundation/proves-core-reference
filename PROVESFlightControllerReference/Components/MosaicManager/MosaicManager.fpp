@@ -32,14 +32,17 @@ module Components {
         # Commands
         # ----------------------------------------------------------------------
 
-        @ Start recording received samples to the filesystem
-        guarded command START_RECORDING()
+        @ Record up to fileCount files, then stop; zero leaves recording disabled
+        guarded command START_RECORDING(fileCount: U32)
 
         @ Stop recording; flushes and closes the current file
         guarded command STOP_RECORDING()
 
         @ Flush the current file to disk and close it now
         guarded command FLUSH()
+
+        @ Delete all MOSAIC sample files. Run only after all wanted files have been downlinked.
+        guarded command CLEAR_DIRECTORY()
 
         # ----------------------------------------------------------------------
         # Events
@@ -66,6 +69,16 @@ module Components {
         event MaxFilesReached(maxFileCount: U32) \
             severity warning high \
             format "MOSAIC maximum file count {} reached; recording stopped"
+
+        @ The requested recording count exceeded the available file slots
+        event RecordingFileCountLimited(requestedFileCount: U32, availableFileCount: U32) \
+            severity warning high \
+            format "Requested {} MOSAIC files but only {} slots remain; recording limited to available slots"
+
+        @ All managed sample files were deleted from the MOSAIC directory
+        event DirectoryCleared(filesRemoved: U32) \
+            severity activity high \
+            format "MOSAIC directory cleared; {} sample files removed"
 
         @ A filesystem operation failed
         event FileOperationError(

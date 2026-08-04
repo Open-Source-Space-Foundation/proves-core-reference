@@ -90,17 +90,36 @@ void MosaicManager ::run_handler(FwIndexType portNum, U32 context) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void MosaicManager ::START_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void MosaicManager ::START_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 fileCount) {
+    const U32 requestedFileCount = fileCount;
     m_filesystemErrors = 0;
-    m_recording = true;
     this->tlmWrite_FilesystemErrors(m_filesystemErrors);
+
+    Fw::ParamValid paramValid;
+    const U32 maxFileCount = this->paramGet_MAX_FILE_COUNT(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+
+    const U32 availableFileCount = this->countRemainingFileSlots(maxFileCount);
+
+    if (fileCount > availableFileCount) {
+        this->log_WARNING_HI_RecordingFileCountLimited(fileCount, availableFileCount);
+        fileCount = availableFileCount;
+    }
+
+    m_filesRemainingToRecord = fileCount;
+    m_recording = (m_filesRemainingToRecord > 0);
     this->tlmWrite_Recording(m_recording);
-    this->log_ACTIVITY_HI_RecordingStarted();
+    if (m_recording) {
+        this->log_ACTIVITY_HI_RecordingStarted();
+    } else if ((requestedFileCount > 0) && (availableFileCount == 0)) {
+        this->log_WARNING_HI_MaxFilesReached(maxFileCount);
+    }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void MosaicManager ::STOP_RECORDING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     m_recording = false;
+    m_filesRemainingToRecord = 0;
     if (m_fileOpen && ((m_samplesInFile + m_bufferedSamples) > 0)) {
         this->closeFile();
     }
@@ -114,6 +133,65 @@ void MosaicManager ::FLUSH_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         this->closeFile();
     }
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void MosaicManager ::CLEAR_DIRECTORY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    const bool wasRecording = m_recording;
+    m_recording = false;
+    m_filesRemainingToRecord = 0;
+    if (m_fileOpen) {
+        this->closeFile();
+    }
+    this->tlmWrite_Recording(m_recording);
+    if (wasRecording) {
+        this->log_ACTIVITY_HI_RecordingStopped();
+    }
+
+    Fw::ParamValid paramValid;
+    const U32 maxFileCount = this->paramGet_MAX_FILE_COUNT(paramValid);
+    FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
+
+    U32 filesRemoved = 0;
+    bool success = true;
+    const U32 filesToCheck = (m_nextFileIndex > maxFileCount) ? m_nextFileIndex : maxFileCount;
+    for (U32 index = 0; index < filesToCheck; index++) {
+        Fw::FileNameString path;
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, index);
+        if (Os::FileSystem::getPathType(path.toChar()) != Os::FileSystem::FILE) {
+            continue;
+        }
+
+        const Os::FileSystem::Status status = Os::FileSystem::removeFile(path.toChar());
+        if (status == Os::FileSystem::OP_OK) {
+            filesRemoved++;
+        } else {
+            const Fw::LogStringArg logFilePath(path.toChar());
+            const Fw::LogStringArg logOperation("remove");
+            this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(status));
+            this->recordFilesystemError();
+            success = false;
+        }
+    }
+
+    if (success && (Os::FileSystem::getPathType(FILE_LIMIT_MARKER) == Os::FileSystem::FILE)) {
+        const Os::FileSystem::Status status = Os::FileSystem::removeFile(FILE_LIMIT_MARKER);
+        if (status != Os::FileSystem::OP_OK) {
+            const Fw::LogStringArg logFilePath(FILE_LIMIT_MARKER);
+            const Fw::LogStringArg logOperation("remove");
+            this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(status));
+            this->recordFilesystemError();
+            success = false;
+        }
+    }
+
+    if (success) {
+        m_currentFileIndex = 0;
+        m_nextFileIndex = 0;
+        m_fileIndexInitialized = true;
+        m_fileLimitReached = false;
+        this->log_ACTIVITY_HI_DirectoryCleared(filesRemoved);
+    }
+    this->cmdResponse_out(opCode, cmdSeq, success ? Fw::CmdResponse::OK : Fw::CmdResponse::EXECUTION_ERROR);
 }
 
 // ----------------------------------------------------------------------
@@ -175,7 +253,7 @@ void MosaicManager ::recordSample(U16 adc, U16 millivolts) {
     // current file before placing another sample in it.
     if ((m_samplesInFile + m_bufferedSamples) >= samplesPerFile) {
         this->closeFile();
-        if (!this->ensureFileOpen()) {
+        if (!m_recording || !this->ensureFileOpen()) {
             return;
         }
     }
@@ -216,7 +294,7 @@ bool MosaicManager ::writeBufferedSamples() {
     const Os::File::Status status = m_file.write(m_writeBuffer, writeSize, Os::File::WaitType::WAIT);
     if ((status != Os::File::OP_OK) || (writeSize != expectedSize)) {
         Fw::FileNameString path;
-        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_currentFileIndex);
         const Fw::LogStringArg logFilePath(path.toChar());
         const Fw::LogStringArg logOperation("write");
         this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(status));
@@ -241,21 +319,31 @@ bool MosaicManager ::ensureFileOpen() {
     const U32 maxFileCount = this->paramGet_MAX_FILE_COUNT(paramValid);
     FW_ASSERT((paramValid == Fw::ParamValid::VALID) || (paramValid == Fw::ParamValid::DEFAULT));
 
+    this->initializeFileIndex(maxFileCount);
+
     // The Zephyr Os::File delegate truncates on OPEN_CREATE regardless of the NO_OVERWRITE flag
-    // (its handling of `overwrite` is unimplemented), and m_filesWritten resets to 0 on every reboot.
-    // Without this check, reusing a stale index would silently wipe a file from a previous boot that
-    // has not yet been downlinked. Search forward for the first name not already on disk.
+    // (its handling of `overwrite` is unimplemented). Move forward from the monotonic cursor and
+    // skip occupied names, but never wrap or reuse a lower index. CLEAR_DIRECTORY is the only
+    // operation that resets the cursor after the configured limit is reached.
     Fw::FileNameString path;
-    while (m_filesWritten < maxFileCount) {
-        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+    bool slotFound = false;
+    while (!m_fileLimitReached && (m_nextFileIndex < maxFileCount)) {
+        const U32 index = m_nextFileIndex;
+        m_nextFileIndex++;
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, index);
         if (Os::FileSystem::getPathType(path.toChar()) == Os::FileSystem::NOT_EXIST) {
+            m_currentFileIndex = index;
+            slotFound = true;
             break;
         }
-        m_filesWritten++;
     }
 
-    if (m_filesWritten >= maxFileCount) {
+    if (!slotFound) {
+        if (m_nextFileIndex >= maxFileCount) {
+            this->markFileLimitReached();
+        }
         m_recording = false;
+        m_filesRemainingToRecord = 0;
         this->tlmWrite_Recording(m_recording);
         this->log_WARNING_HI_MaxFilesReached(maxFileCount);
         return false;
@@ -265,10 +353,14 @@ bool MosaicManager ::ensureFileOpen() {
     if (status != Os::File::OP_OK) {
         this->log_WARNING_HI_FileOpenError(path, static_cast<U32>(status));
         this->recordFilesystemError();
+        m_nextFileIndex = m_currentFileIndex;
         return false;
     }
 
     m_fileOpen = true;
+    if (m_nextFileIndex >= maxFileCount) {
+        this->markFileLimitReached();
+    }
     m_samplesInFile = 0;
     m_bufferedSamples = 0;
     return true;
@@ -276,7 +368,7 @@ bool MosaicManager ::ensureFileOpen() {
 
 void MosaicManager ::closeFile(bool complete) {
     Fw::FileNameString path;
-    path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_filesWritten);
+    path.format("%s/gamma_%06u.dat", SAMPLE_DIR, m_currentFileIndex);
 
     if (complete && !this->writeBufferedSamples()) {
         complete = false;
@@ -292,8 +384,83 @@ void MosaicManager ::closeFile(bool complete) {
     m_fileOpen = false;
     m_samplesInFile = 0;
     m_bufferedSamples = 0;
-    m_filesWritten++;
-    this->tlmWrite_FilesWritten(m_filesWritten);
+    if (complete) {
+        m_filesWritten++;
+        this->tlmWrite_FilesWritten(m_filesWritten);
+
+        if (m_filesRemainingToRecord > 0) {
+            m_filesRemainingToRecord--;
+        }
+        if (m_recording && (m_filesRemainingToRecord == 0)) {
+            m_recording = false;
+            this->tlmWrite_Recording(m_recording);
+            this->log_ACTIVITY_HI_RecordingStopped();
+        }
+    }
+}
+
+void MosaicManager ::initializeFileIndex(U32 maxFileCount) {
+    if (m_fileIndexInitialized) {
+        return;
+    }
+
+    // Recover the cursor once after boot by locating the highest occupied
+    // index. Holes below it remain unavailable until CLEAR_DIRECTORY.
+    m_nextFileIndex = 0;
+    for (U32 index = 0; index < maxFileCount; index++) {
+        Fw::FileNameString path;
+        path.format("%s/gamma_%06u.dat", SAMPLE_DIR, index);
+        if (Os::FileSystem::getPathType(path.toChar()) != Os::FileSystem::NOT_EXIST) {
+            m_nextFileIndex = index + 1;
+        }
+    }
+    m_fileIndexInitialized = true;
+    m_fileLimitReached = (Os::FileSystem::getPathType(FILE_LIMIT_MARKER) == Os::FileSystem::FILE);
+    if (!m_fileLimitReached && (m_nextFileIndex >= maxFileCount)) {
+        this->markFileLimitReached();
+    }
+}
+
+U32 MosaicManager ::countRemainingFileSlots(U32 maxFileCount) {
+    this->initializeFileIndex(maxFileCount);
+
+    if (!m_fileLimitReached && (m_nextFileIndex >= maxFileCount)) {
+        this->markFileLimitReached();
+    }
+
+    U32 remainingFileSlots = 0;
+    if (!m_fileLimitReached && (m_nextFileIndex < maxFileCount)) {
+        remainingFileSlots = maxFileCount - m_nextFileIndex;
+    }
+    if (m_fileOpen) {
+        // The current partial file already occupies a slot, but it can still
+        // satisfy one file in the newly requested recording run.
+        remainingFileSlots++;
+    }
+    return remainingFileSlots;
+}
+
+void MosaicManager ::markFileLimitReached() {
+    if (m_fileLimitReached) {
+        return;
+    }
+
+    m_fileLimitReached = true;
+    if (Os::FileSystem::getPathType(FILE_LIMIT_MARKER) == Os::FileSystem::FILE) {
+        return;
+    }
+
+    Os::File markerFile;
+    const Os::File::Status status = markerFile.open(FILE_LIMIT_MARKER, Os::File::OPEN_CREATE, Os::File::NO_OVERWRITE);
+    if (status == Os::File::OP_OK) {
+        markerFile.close();
+        return;
+    }
+
+    const Fw::LogStringArg logFilePath(FILE_LIMIT_MARKER);
+    const Fw::LogStringArg logOperation("create");
+    this->log_WARNING_HI_FileOperationError(logFilePath, logOperation, static_cast<U32>(status));
+    this->recordFilesystemError();
 }
 
 void MosaicManager ::recordFilesystemError() {
@@ -306,6 +473,7 @@ void MosaicManager ::recordFilesystemError() {
 
     if (m_filesystemErrors >= maxFilesystemErrors) {
         m_recording = false;
+        m_filesRemainingToRecord = 0;
         this->tlmWrite_Recording(m_recording);
         this->log_WARNING_HI_ErrorLimitReached(m_filesystemErrors);
     }

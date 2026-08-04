@@ -57,6 +57,10 @@ TEST_PARAMETERS = {
     "MAX_FILESYSTEM_ERRORS": 5,
 }
 
+# Each test may open several files, but this remains within the configured
+# flight limit and is capped automatically if fewer slots happen to remain.
+TEST_RECORDING_FILE_COUNT = TEST_PARAMETERS["MAX_FILE_COUNT"]
+
 DEFAULT_PARAMETERS = {
     "SAMPLES_PER_FILE": 100,
     "SAMPLES_PER_WRITE": 10,
@@ -124,6 +128,7 @@ def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     proves_send_and_assert_command(
         fprime_test_api,
         f"{mosaicManager}.START_RECORDING",
+        [TEST_RECORDING_FILE_COUNT],
     )
     time.sleep(SAMPLE_ACCUMULATION_SECONDS)  # Payload powers on and starts streaming
 
@@ -166,6 +171,7 @@ def test_01_start_stop_recording(fprime_test_api: IntegrationTestAPI, start_gds)
     proves_send_and_assert_command(
         fprime_test_api,
         f"{mosaicManager}.START_RECORDING",
+        [TEST_RECORDING_FILE_COUNT],
     )
     fprime_test_api.assert_event(
         f"{mosaicManager}.RecordingStarted", start=start, timeout=10
@@ -263,6 +269,7 @@ def test_04_max_file_count_stops_recording(
         proves_send_and_assert_command(
             fprime_test_api,
             f"{mosaicManager}.START_RECORDING",
+            [1],
         )
 
         reached = fprime_test_api.assert_event(
@@ -287,5 +294,105 @@ def test_04_max_file_count_stops_recording(
         )
         proves_send_and_assert_command(
             fprime_test_api,
-            f"{mosaicManager}.START_RECORDING",
+            f"{mosaicManager}.CLEAR_DIRECTORY",
         )
+        proves_send_and_assert_command(
+            fprime_test_api,
+            f"{mosaicManager}.START_RECORDING",
+            [TEST_RECORDING_FILE_COUNT],
+        )
+
+
+def test_05_bounded_recording_requires_clear_to_reset(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Test bounded runs stay full until the destructive clear command."""
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.STOP_RECORDING",
+    )
+
+    # Clear while the flight limit is still 40 so every component-managed slot
+    # is covered. This command is intentionally only used after earlier tests
+    # have finished checking/downlinking the files they need.
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.CLEAR_DIRECTORY",
+    )
+    cleared = fprime_test_api.assert_event(
+        f"{mosaicManager}.DirectoryCleared", timeout=10
+    )
+    assert cleared.args[0].val > 0
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.MAX_FILE_COUNT_PRM_SET",
+        [2],
+    )
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.SAMPLES_PER_FILE_PRM_SET",
+        [5],
+    )
+
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.START_RECORDING",
+        [3],
+    )
+    limited = fprime_test_api.assert_event(
+        f"{mosaicManager}.RecordingFileCountLimited", timeout=10
+    )
+    assert [arg.val for arg in limited.args] == [3, 2]
+
+    closed = fprime_test_api.assert_event_count(
+        2,
+        f"{mosaicManager}.SampleFileClosed",
+        timeout=10,
+    )
+    assert [event.args[0].val for event in closed] == [
+        "/mosaic/gamma_000000.dat",
+        "/mosaic/gamma_000001.dat",
+    ]
+    fprime_test_api.assert_event(f"{mosaicManager}.RecordingStopped", timeout=10)
+
+    # Deleting an individual downlinked file does not reset the monotonic file
+    # cursor. Recording remains locked after the configured limit is reached.
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{fileManager}.RemoveFile",
+        ["/mosaic/gamma_000000.dat", False],
+    )
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.START_RECORDING",
+        [1],
+    )
+    limited = fprime_test_api.assert_event(
+        f"{mosaicManager}.RecordingFileCountLimited", timeout=10
+    )
+    assert [arg.val for arg in limited.args] == [1, 0]
+    reached = fprime_test_api.assert_event(
+        f"{mosaicManager}.MaxFilesReached", timeout=10
+    )
+    assert reached.args[0].val == 2
+
+    # Only the explicit folder reset clears the remaining files and returns
+    # the allocator to index zero.
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.CLEAR_DIRECTORY",
+    )
+    cleared = fprime_test_api.assert_event(
+        f"{mosaicManager}.DirectoryCleared", timeout=10
+    )
+    assert cleared.args[0].val == 1
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{mosaicManager}.START_RECORDING",
+        [1],
+    )
+    reset_file = fprime_test_api.assert_event(
+        f"{mosaicManager}.SampleFileClosed", timeout=10
+    )
+    assert reset_file.args[0].val == "/mosaic/gamma_000000.dat"
