@@ -288,6 +288,12 @@ def test_04_sequence_cancellation_on_time_set(
 def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set an RTC alarm and that it triggers at the correct time"""
 
+    # Ensure that we are not using proc time
+    proves_send_and_assert_command(
+        fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+    )
+    fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+
     # Clear histories
     fprime_test_api.clear_histories()
 
