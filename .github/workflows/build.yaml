@@ -1,0 +1,125 @@
+name: build
+
+# Reusable build job, called by `ci` and by `ota`. Both need the same firmware
+# artifacts; only the OTA workflow needs the extra staging image, which is
+# gated behind `build_ota_image`.
+on:
+  workflow_call:
+    inputs:
+      build_ota_image:
+        description: "Also build and upload a distinctly-versioned OTA staging image"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: deathstar
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download bin tools
+        if: steps.cache-bin.outputs.cache-hit != 'true'
+        run: |
+          make download-bin
+
+      - name: Setup submodules
+        if: steps.cache-submodules.outputs.cache-hit != 'true'
+        run: |
+          make submodules
+
+      - name: Create python venv
+        run: |
+          make fprime-venv
+
+      - name: Setup Zephyr
+        if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-workspace
+
+      - name: Setup Zephyr SDK
+        if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+        run: |
+          make zephyr-sdk
+
+      - name: Setup Zephyr Export
+        run: |
+          make zephyr-export
+
+      - name: Install Zephyr Python Dependencies
+        run: |
+          make zephyr-python-deps
+
+      - name: Change to CI Spacecraft ID
+        run: |
+          make make-ci-spacecraft-id
+
+      - name: Generate
+        run: |
+          make generate
+
+      - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+      - name: Build MCUBoot
+        run: |
+          make build-mcuboot
+
+      - name: Build Flight Software
+        run: |
+          make build
+
+      - name: Ensure console disabled
+        # The Zephyr console shares cdc_acm_uart0 with the F' downlink; if it is
+        # re-enabled, console text interleaves with the CCSDS TM frames and
+        # desyncs the GDS deframer. Fail the build so this cannot reach main.
+        run: |
+          make check-console-disabled
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: |
+            mcuboot.elf
+            bootable.uf2
+            bootable.signed.hex
+            build-artifacts/zephyr/fprime-zephyr-deployment
+            yamcs/yamcs-data/mdb/fprime.xtce.xml
+          retention-days: 30
+
+      # --- OTA staging image -------------------------------------------------
+      # The OTA test has to prove a *swap* happened, not merely that the update
+      # commands returned OK, so the image it uplinks must be distinguishable
+      # from the one flashed on the board. Project version comes from
+      # `git describe --tags --always --dirty`, so a throwaway tag renames this
+      # build and changes nothing else about it.
+      #
+      # The rm is required: fprime generates version.{hpp,cpp,json} from a cmake
+      # custom command with no declared inputs, so ninja considers it up to date
+      # as soon as the outputs exist and a rebuild would keep the old string.
+      #
+      # This runs after the artifact upload above, so overwriting bootable.* here
+      # cannot affect the image the other integration jobs flash.
+      - name: Build OTA staging image
+        if: inputs.build_ota_image
+        run: |
+          git tag "ota-ci-${GITHUB_RUN_ID}"
+          rm -f build-fprime-automatic-zephyr/versions/version.hpp \
+                build-fprime-automatic-zephyr/versions/version.cpp \
+                build-fprime-automatic-zephyr/versions/version.json
+          BUILD_YAMCS_MDB=0 make build
+          mkdir -p ota-image
+          cp build-artifacts/zephyr.signed.bin ota-image/
+          cp build-fprime-automatic-zephyr/versions/version.json ota-image/
+          echo "OTA staging image version: $(cat ota-image/version.json)"
+
+      - name: Upload OTA staging image
+        if: inputs.build_ota_image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-image
+          path: ota-image
+          retention-days: 7
