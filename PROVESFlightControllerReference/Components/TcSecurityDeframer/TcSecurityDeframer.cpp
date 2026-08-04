@@ -551,7 +551,23 @@ Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
 }
 
 Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
-    Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), value);
+    Os::File::Status status;
+
+    if (!this->m_sequenceNumberFile.isOpen()) {
+        status = this->m_sequenceNumberFile.open(this->m_sequenceNumberFilePath.toChar(), Os::File::Mode::OPEN_CREATE,
+                                                 Os::File::OverwriteType::OVERWRITE);
+        if (status != Os::File::OP_OK) {
+            this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));
+            return status;
+        }
+    }
+
+    // writeToFile(file, primitive) writes at the file's current position; rewind first since this
+    // handle stays open (and thus positioned after the previous write) across calls.
+    status = this->m_sequenceNumberFile.seek(0, Os::File::SeekType::ABSOLUTE);
+    if (status == Os::File::OP_OK) {
+        status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFile, value);
+    }
     if (status != Os::File::OP_OK) {
         // Log the failure to write the default sequence number
         this->log_WARNING_HI_SequenceNumberWriteFailed(static_cast<Os::FileStatus::T>(status));

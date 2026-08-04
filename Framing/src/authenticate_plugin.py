@@ -1,8 +1,10 @@
 """Authenticate Plugin for Framing Package."""
 
+import fcntl
 import hashlib
 import hmac
 import os
+import threading
 from typing import List, Type
 
 from fprime_gds.common.communication.ccsds.chain import ChainedFramerDeframer
@@ -105,11 +107,10 @@ class AuthenticateFramer(FramerDeframer):
         """
         super().__init__()
 
-        # Initialize sequence number from CLI argument or default to 0
-        seq_num = self.get_sequence_number_from_file(
-            SEQUENCE_NUMBER_FILE, addition=False
-        )
-        self.bytes_seq_num = seq_num.to_bytes(4, byteorder="big", signed=False)
+        # Guards against races within this process; see get_sequence_number_from_file
+        # for why cross-process races also need an OS-level file lock.
+        self._frame_lock = threading.Lock()
+
         # Store values from CLI arguments or defaults
         self.spi = spi
         self.window_size = window_size
@@ -131,19 +132,29 @@ class AuthenticateFramer(FramerDeframer):
         If addition is True, increment the sequence number and write back to file
         Otherwise just return what is on there
 
+        The GDS runs the file-uplink encoding chain in a separate process
+        (CustomDataHandlers) from the one framing commands (comm), so this
+        file is the only thing the two agree on -- each process's own
+        AuthenticateFramer instance has no other way to learn what sequence
+        number the other has already used. flock makes the read-modify-write
+        atomic across processes; without it, two frames built by different
+        processes at nearly the same time can both read the same pending
+        value and emit it as an on-wire duplicate, which the flight side then
+        correctly rejects as a replay (TcSecurityDeframer SequenceNumberInvalid).
         """
-        file_number = 0
-        try:
-            with open(filename, "r") as f:
-                file_number = int(f.read())
-            if addition:
-                file_number += 1
-                # Write the incremented value back to file
-                with open(filename, "w") as f:
+        with open(filename, "a+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                f.seek(0)
+                content = f.read()
+                file_number = int(content) if content else 0
+                if addition:
+                    file_number += 1
+                    f.seek(0)
+                    f.truncate()
                     f.write(str(file_number))
-        except FileNotFoundError:
-            with open(filename, "w") as f:
-                f.write(str(file_number))
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
 
         return file_number
 
@@ -156,14 +167,16 @@ class AuthenticateFramer(FramerDeframer):
         header = b""
         bytes_spi = self.spi.to_bytes(2, byteorder="big", signed=False)
         header += bytes_spi
-        # Sequence Number (32 bits/4 bytes, starts at 0x00000000):
-        header += self.bytes_seq_num
 
-        sequence_number = self.get_sequence_number_from_file(
-            SEQUENCE_NUMBER_FILE, addition=True
-        )
-
-        self.bytes_seq_num = sequence_number.to_bytes(4, byteorder="big", signed=False)
+        # Sequence Number (32 bits/4 bytes, starts at 0x00000000): always
+        # derive this frame's number directly from the shared file rather
+        # than an in-memory cache, so this instance can never emit a number
+        # another instance (in this process or another) has already used.
+        with self._frame_lock:
+            sequence_number = self.get_sequence_number_from_file(
+                SEQUENCE_NUMBER_FILE, addition=True
+            )
+        header += sequence_number.to_bytes(4, byteorder="big", signed=False)
 
         data = header + data
 
