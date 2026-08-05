@@ -517,16 +517,78 @@ def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
 def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by the timebase parameter"""
 
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
+
     try:
         # Test that we can set timebase to proc time
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
         )
         # Assert that we receive a TimeBaseChanged event within 10 seconds
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=start, timeout=10
+        )
     finally:
         # Restore spacecraft time so subsequent tests see RTC-backed timestamps
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
         )
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=start, timeout=10
+        )
+
+
+@pytest.mark.uart_only(reason="Test functionality of the timebase parameter")
+def test_12_param_update_conflict_check(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test for that RTC alarms no longer conflict with parameter updates and function properly"""
+
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
+
+    # Ensure that we are not using proc time
+    proves_send_and_assert_command(
+        fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+    )
+    fprime_test_api.assert_event(
+        f"{rtcManager}.TimeBaseChanged", start=start, timeout=10
+    )
+
+    # Set an alarm for 60 seconds in the future
+    alarm_time = datetime.now(timezone.utc) + timedelta(seconds=60)
+    alarm_time_data = dict(
+        Year=alarm_time.year,
+        Month=alarm_time.month,
+        Day=alarm_time.day,
+        Hour=alarm_time.hour,
+        Minute=alarm_time.minute,
+        Second=alarm_time.second,
+    )
+    alarm_time_data_str = json.dumps(alarm_time_data)
+    start: TimeType = TimeType().set_datetime(
+        datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
+    )
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+
+    # Switch to proc time to make sure it is canceled
+    proves_send_and_assert_command(
+        fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+    )
+
+    # make sure that it is gone
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start=start, timeout=10)
+
+    # Make sure we cannot set while in proc time
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", start=start, timeout=10)
+
+    # Set time back to RTC to avoid ruining other tests
+    proves_send_and_assert_command(
+        fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+    )
+    fprime_test_api.assert_event(
+        f"{rtcManager}.TimeBaseChanged", start=start, timeout=10
+    )

@@ -191,7 +191,6 @@ void RtcManager ::parameterUpdated(FwPrmIdType id) {
     if (rc != 0) {
         // log failure
         this->log_WARNING_HI_AlarmHardwareError(0, rc);
-        return;
     }
 
     this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
