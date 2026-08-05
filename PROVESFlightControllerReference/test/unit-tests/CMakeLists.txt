@@ -72,6 +72,30 @@ target_include_directories(proves_router_bypasser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# FlashWorker UpdateSequencer
+add_library(flash_worker_update_sequencer STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FlashWorker/UpdateSequencer.cpp
+)
+target_include_directories(flash_worker_update_sequencer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
+# FlashWorker SegmentPlan
+add_library(flash_worker_segment_plan STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FlashWorker/SegmentPlan.cpp
+)
+target_include_directories(flash_worker_segment_plan PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
+# FlashWorker PatchApplier
+add_library(flash_worker_patch_applier STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FlashWorker/PatchApplier.cpp
+)
+target_include_directories(flash_worker_patch_applier PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h)
 find_library(MBEDCRYPTO_LIB mbedcrypto)
@@ -105,6 +129,9 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_authenticator
         rtc_manager_rtc_helper
         proves_router_bypasser
+        flash_worker_update_sequencer
+        flash_worker_segment_plan
+        flash_worker_patch_applier
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
