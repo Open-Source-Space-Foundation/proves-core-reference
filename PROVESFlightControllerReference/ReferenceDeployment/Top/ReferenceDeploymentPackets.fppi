@@ -161,6 +161,8 @@ telemetry packets ReferenceDeploymentPackets {
     Update.worker.BytesWritten
     Update.worker.ImageTotalBytes
     Update.worker.LastUpdateStatus
+    Update.worker.RunningImageConfirmed
+    Update.worker.PendingConfirmSeconds
   }
 
   packet Security id 6 group 5 {

@@ -254,6 +254,32 @@ TEST(UpdateSequencerTest, ProgressDoesNotReportGoingBackwards) {
     EXPECT_FALSE(UpdateSequencer::progressReportDue(10, 50, 10));
 }
 
+// ----------------------------------------------------------------------
+// Automatic confirmation of a test-booted image
+// ----------------------------------------------------------------------
+
+TEST(UpdateSequencerTest, AutoConfirmNeverHappensUnlessArmedFromTheGround) {
+    // Confirmation changes which image the spacecraft keeps, so it stays operator-in-the-loop
+    // until the ground explicitly arms it
+    EXPECT_FALSE(UpdateSequencer::autoConfirmDue(false, false, 100000, 10));
+}
+
+TEST(UpdateSequencerTest, AutoConfirmSkipsAnAlreadyConfirmedImage) {
+    EXPECT_FALSE(UpdateSequencer::autoConfirmDue(true, true, 100000, 10));
+}
+
+TEST(UpdateSequencerTest, AutoConfirmWaitsForTheConfiguredTime) {
+    EXPECT_FALSE(UpdateSequencer::autoConfirmDue(true, false, 9, 10));
+    EXPECT_TRUE(UpdateSequencer::autoConfirmDue(true, false, 10, 10));
+    EXPECT_TRUE(UpdateSequencer::autoConfirmDue(true, false, 11, 10));
+}
+
+TEST(UpdateSequencerTest, AutoConfirmStillRequiresAnElapsedSecondAtZeroDelay) {
+    // A zero delay must not let an image that crashes immediately confirm itself
+    EXPECT_FALSE(UpdateSequencer::autoConfirmDue(true, false, 0, 0));
+    EXPECT_TRUE(UpdateSequencer::autoConfirmDue(true, false, 1, 0));
+}
+
 TEST(UpdateSequencerTest, RetryAfterCleanFailureCanSucceed) {
     UpdateSequencer sequencer = prepared();
     EXPECT_EQ(UpdateSequencer::Status::IMAGE_CRC_MISMATCH,

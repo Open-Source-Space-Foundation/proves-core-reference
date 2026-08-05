@@ -88,6 +88,14 @@ target_include_directories(flash_worker_segment_plan PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# FlashWorker LzssDecoder
+add_library(flash_worker_lzss_decoder STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FlashWorker/LzssDecoder.cpp
+)
+target_include_directories(flash_worker_lzss_decoder PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # FlashWorker PatchApplier
 add_library(flash_worker_patch_applier STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FlashWorker/PatchApplier.cpp
@@ -132,6 +140,7 @@ foreach(test_src ${TEST_SOURCES})
         flash_worker_update_sequencer
         flash_worker_segment_plan
         flash_worker_patch_applier
+        flash_worker_lzss_decoder
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})

@@ -22,6 +22,21 @@ module Components {
         @ progress events and less downlink spent reporting on an update in flight.
         param PROGRESS_STEP_PERCENT: U8 default 10
 
+        @ Whether the flight software may confirm a test-booted image without the ground.
+        @
+        @ An image booted in TEST mode reverts unless it is confirmed before the next reboot. If the
+        @ confirming pass is missed, a working image is thrown away along with the uplink that
+        @ delivered it. Arming this lets the spacecraft keep an image that has demonstrated it can
+        @ run. Defaults to disabled, so confirmation stays operator-in-the-loop until armed.
+        @
+        @ Set with AUTO_CONFIRM_ENABLED_PRM_SET followed by PRM_SAVE: the decision is made after the
+        @ reboot into the test image, so an unsaved value would be lost exactly when it is needed.
+        param AUTO_CONFIRM_ENABLED: bool default false
+
+        @ Seconds the test-booted image must run continuously before it confirms itself. Counted
+        @ from the start of the image that is pending confirmation, and reset by any reboot.
+        param AUTO_CONFIRM_DELAY_SECONDS: U32 default 1800
+
         @ Concatenate numbered uplink segments into a single image file.
         @
         @ A full image does not fit in one pass and file uplink cannot resume across passes, so an
@@ -57,6 +72,16 @@ module Components {
         @ Status reported by the most recent preparation or update operation
         telemetry LastUpdateStatus: Update.UpdateStatus
 
+        @ Whether the running image has been confirmed. False means this is a test boot that will
+        @ revert on the next reboot unless it is confirmed.
+        telemetry RunningImageConfirmed: bool
+
+        @ Seconds the running image has been up while pending confirmation
+        telemetry PendingConfirmSeconds: U32
+
+        @ Scheduled input used to age a test-booted image toward self-confirmation
+        sync input port run: Svc.Sched
+
         event UpdateProgress(written: U32, total: U32, percent: U8) severity activity low \
             format "Update progress: {}/{} bytes ({}%)"
 
@@ -86,6 +111,13 @@ module Components {
         @ indicates the image file changed underneath the update or the filesystem read is unstable.
         event ImageWriteCrcMismatch(expected: U32, actual: U32) severity warning high \
             format "Image written to flash failed verification: expected 0x{x} and actual 0x{x}"
+
+        @ The running image confirmed itself after demonstrating it can run
+        event AutoConfirmed(seconds: U32) severity activity high \
+            format "Test image confirmed automatically after {} seconds of operation"
+
+        event AutoConfirmFailed(error_number: I32) severity warning high \
+            format "Automatic confirmation failed (errno: {})"
 
         event AssembleStarted(segments: U16, destination: string) severity activity high \
             format "Assembling {} segments into {}"

@@ -8,6 +8,8 @@
 
 #include <Utils/Hash/libcrc/lib_crc.h>  // same CRC primitive Os::File::calculateCrc uses
 
+#include <limits>
+
 #include "Os/File.hpp"
 #include "Os/Task.hpp"
 #include <zephyr/dfu/flash_img.h>
@@ -75,7 +77,7 @@ static_assert(static_cast<U8>(UpdateSequencer::Stage::FAILED) == static_cast<U8>
 // ----------------------------------------------------------------------
 
 FlashWorker ::FlashWorker(const char* const compName)
-    : FlashWorkerComponentBase(compName), m_last_reported_percent(0) {}
+    : FlashWorkerComponentBase(compName), m_pending_confirm_seconds(0), m_last_reported_percent(0) {}
 
 FlashWorker ::~FlashWorker() {}
 
@@ -268,6 +270,44 @@ void FlashWorker ::updateImage_handler(FwIndexType portNum, const Fw::StringBase
     this->updateImageDone_out(0, return_status);
 }
 
+void FlashWorker ::run_handler(FwIndexType portNum, U32 context) {
+    // boot_is_img_confirmed reports whether the running image is already the permanent choice.
+    // While it is false this is a test boot that reverts on the next reboot unless confirmed.
+    const bool confirmed = (boot_is_img_confirmed() != 0);
+    this->tlmWrite_RunningImageConfirmed(confirmed);
+
+    if (confirmed) {
+        this->m_pending_confirm_seconds = 0;
+        this->tlmWrite_PendingConfirmSeconds(0);
+        return;
+    }
+
+    // Saturate rather than wrap, so a very long unconfirmed run cannot roll back under the delay
+    if (this->m_pending_confirm_seconds < std::numeric_limits<U32>::max()) {
+        this->m_pending_confirm_seconds++;
+    }
+    this->tlmWrite_PendingConfirmSeconds(this->m_pending_confirm_seconds);
+
+    Fw::ParamValid enabled_valid = Fw::ParamValid::INVALID;
+    Fw::ParamValid delay_valid = Fw::ParamValid::INVALID;
+    const bool enabled = this->paramGet_AUTO_CONFIRM_ENABLED(enabled_valid);
+    const U32 delay = this->paramGet_AUTO_CONFIRM_DELAY_SECONDS(delay_valid);
+
+    if (!UpdateSequencer::autoConfirmDue(enabled, confirmed, this->m_pending_confirm_seconds, delay)) {
+        return;
+    }
+
+    const int status = boot_write_img_confirmed();
+    if (status != 0) {
+        this->log_WARNING_HI_AutoConfirmFailed(static_cast<I32>(-1 * status));
+        // Leave the counter alone so the next tick retries; a transient flash error should not
+        // cost the image its chance to be kept
+        return;
+    }
+    this->log_ACTIVITY_HI_AutoConfirmed(this->m_pending_confirm_seconds);
+    this->m_pending_confirm_seconds = 0;
+}
+
 // ----------------------------------------------------------------------
 // Command handler implementations
 // ----------------------------------------------------------------------
@@ -384,6 +424,56 @@ class FlashWorker::PatchIo final : public PatchApplier::Io {
     Os::File& m_out;
 };
 
+//! Compressed patch bytes, read sequentially from the patch file
+class FlashWorker::PatchSource final : public LzssDecoder::Source {
+  public:
+    explicit PatchSource(Os::File& file) : m_file(file) {}
+    bool read(uint8_t* buffer, size_t size) override {
+        FwSizeType requested = static_cast<FwSizeType>(size);
+        return (this->m_file.read(buffer, requested) == Os::File::Status::OP_OK) &&
+               (requested == static_cast<FwSizeType>(size));
+    }
+
+  private:
+    Os::File& m_file;
+};
+
+//! Decoded patch bytes, appended to the scratch file
+class FlashWorker::PatchSink final : public LzssDecoder::Sink {
+  public:
+    explicit PatchSink(Os::File& file) : m_file(file) {}
+    bool write(const uint8_t* buffer, size_t size) override {
+        FwSizeType requested = static_cast<FwSizeType>(size);
+        return (this->m_file.write(buffer, requested) == Os::File::Status::OP_OK) &&
+               (requested == static_cast<FwSizeType>(size));
+    }
+
+  private:
+    Os::File& m_file;
+};
+
+bool FlashWorker ::decompressPatch(const Fw::StringBase& patch, const char* scratch_path, U32 expected_size) {
+    Os::File compressed;
+    Os::File plain;
+    if (compressed.open(patch.toChar(), Os::File::Mode::OPEN_READ) != Os::File::Status::OP_OK) {
+        return false;
+    }
+    // Skip the header; the payload is everything after it
+    if (compressed.seek(static_cast<FwSizeType>(PatchApplier::HEADER_SIZE), Os::File::SeekType::ABSOLUTE) !=
+        Os::File::Status::OP_OK) {
+        return false;
+    }
+    if (plain.open(scratch_path, Os::File::Mode::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE) !=
+        Os::File::Status::OP_OK) {
+        return false;
+    }
+    PatchSource source(compressed);
+    PatchSink sink(plain);
+    const LzssDecoder::Error error = LzssDecoder::decode(source, sink, expected_size, this->m_window);
+    plain.close();
+    return error == LzssDecoder::Error::NONE;
+}
+
 void FlashWorker ::APPLY_PATCH_cmdHandler(FwOpcodeType opCode,
                                           U32 cmdSeq,
                                           const Fw::CmdStringArg& patch,
@@ -446,22 +536,41 @@ void FlashWorker ::APPLY_PATCH_cmdHandler(FwOpcodeType opCode,
         return;
     }
 
-    // Three cursors into one patch file, one per stream, so the apply can interleave them
+    // A compressed patch is decoded once into a scratch file, so the apply always works on plain
+    // streams and needs no codec of its own
+    Fw::String stream_source(patch);
+    Fw::String scratch_path(destination);
+    scratch_path += ".streams";
+    const U32 stream_bytes = header.control_size + header.diff_size + header.extra_size;
+    FwSizeType stream_base = static_cast<FwSizeType>(PatchApplier::HEADER_SIZE);
+    if (header.compression != PatchApplier::Compression::NONE) {
+        if (!this->decompressPatch(patch, scratch_path.toChar(), stream_bytes)) {
+            flash_area_close(area);
+            this->log_WARNING_HI_PatchFailed(static_cast<U8>(PatchApplier::Error::PATCH_READ_FAILED));
+            this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+            return;
+        }
+        stream_source = scratch_path;
+        stream_base = 0;
+    }
+
+    // Three cursors into one file, one per stream, so the apply can interleave them
     Os::File control_file;
     Os::File diff_file;
     Os::File extra_file;
     Os::File out_file;
-    const FwSizeType control_start = static_cast<FwSizeType>(PatchApplier::HEADER_SIZE);
+    const FwSizeType control_start = stream_base;
     const FwSizeType diff_start = control_start + static_cast<FwSizeType>(header.control_size);
     const FwSizeType extra_start = diff_start + static_cast<FwSizeType>(header.diff_size);
-    const bool opened = (control_file.open(patch.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
-                        (diff_file.open(patch.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
-                        (extra_file.open(patch.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
-                        (out_file.open(destination.toChar(), Os::File::Mode::OPEN_CREATE,
-                                       Os::File::OverwriteType::OVERWRITE) == Os::File::Status::OP_OK) &&
-                        (control_file.seek(control_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK) &&
-                        (diff_file.seek(diff_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK) &&
-                        (extra_file.seek(extra_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK);
+    const bool opened =
+        (control_file.open(stream_source.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
+        (diff_file.open(stream_source.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
+        (extra_file.open(stream_source.toChar(), Os::File::Mode::OPEN_READ) == Os::File::Status::OP_OK) &&
+        (out_file.open(destination.toChar(), Os::File::Mode::OPEN_CREATE, Os::File::OverwriteType::OVERWRITE) ==
+         Os::File::Status::OP_OK) &&
+        (control_file.seek(control_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK) &&
+        (diff_file.seek(diff_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK) &&
+        (extra_file.seek(extra_start, Os::File::SeekType::ABSOLUTE) == Os::File::Status::OP_OK);
     if (!opened) {
         flash_area_close(area);
         this->log_WARNING_HI_PatchFailed(static_cast<U8>(PatchApplier::Error::PATCH_READ_FAILED));

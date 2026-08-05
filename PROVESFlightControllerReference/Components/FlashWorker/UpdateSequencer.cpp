@@ -110,6 +110,24 @@ uint8_t UpdateSequencer ::percentComplete(uint32_t written, uint32_t total) {
     return static_cast<uint8_t>(percent);
 }
 
+bool UpdateSequencer ::autoConfirmDue(bool enabled,
+                                      bool already_confirmed,
+                                      uint32_t pending_seconds,
+                                      uint32_t delay_seconds) {
+    // Never confirm on the spacecraft's own initiative unless the ground armed it
+    if (!enabled) {
+        return false;
+    }
+    // Nothing to do for an image that is not on trial
+    if (already_confirmed) {
+        return false;
+    }
+    // Require at least one elapsed second even when the delay is configured to zero, so that an
+    // image which crashes immediately cannot confirm itself
+    const uint32_t required = (delay_seconds == 0) ? 1U : delay_seconds;
+    return pending_seconds >= required;
+}
+
 bool UpdateSequencer ::progressReportDue(uint8_t percent, uint8_t last_reported, uint8_t step_percent) {
     // Completion is always worth reporting
     if (percent >= 100) {

@@ -11,28 +11,28 @@ carries the classic bsdiff instruction streams:
 
     magic      8 bytes  "PRVSPTCH"
     version    1 byte
-    codec      1 byte   0 = none
+    codec      1 byte   0 = none, 1 = LZ77 (Components::LzssDecoder)
     new_size   4 bytes  little endian, size of the reconstructed image
     ref_size   4 bytes  little endian, size of the reference the patch was built against
     ref_crc32  4 bytes  little endian, CRC32 of that reference
     ctrl_size  4 bytes  little endian
     diff_size  4 bytes  little endian
     extra_size 4 bytes  little endian
-    control    ctrl_size bytes   records of three little endian int32: copy, extra, seek
-    diff       diff_size bytes
-    extra      extra_size bytes
+    payload    the three streams concatenated, then compressed per codec
+
+The three stream lengths describe the decompressed data. The streams are, in order: control
+records of three little endian int32 (copy, extra, seek), the difference stream, and the
+literal stream.
 
 The reference size and CRC are carried so the spacecraft can prove it is patching against the
 image the ground actually diffed. Applying a patch to the wrong reference yields a plausible
 but corrupt image that would then be flashed and booted, so this is checked before any work.
 
-NOTE ON SIZE: codec 0 stores the streams verbatim, which makes the patch about the size of
-the image itself and so of no uplink value. The streams are ~84% zero bytes and compress
-extremely well (measured on real consecutive builds: ~60 KB with DEFLATE, ~47 KB with LZMA,
-~97 KB with heatshrink), but decoding one on the flight side needs a decompressor that this
-Zephyr workspace does not currently ship. Selecting that dependency is a project decision;
-until it is made, this tool refuses to emit a patch unless --allow-uncompressed is passed,
-so that nobody mistakes an uncompressed patch for something worth uplinking.
+The streams are ~84% zero bytes in short, close-together runs, so the LZ77 codec collapses
+them about 7x: a measured 728,388 byte patch becomes 101,171 bytes, turning ~24 minutes of
+uplink into ~3.3. The codec is deliberately small and self contained rather than a third
+party library, so the exact decoder that flies is round-tripped against real patches in host
+unit tests.
 """
 
 import argparse
@@ -45,6 +45,15 @@ from pathlib import Path
 MAGIC = b"PRVSPTCH"
 FORMAT_VERSION = 1
 COMPRESSION_NONE = 0
+COMPRESSION_LZSS = 1
+
+# Must match Components::LzssDecoder. A larger window saves under 8% on real patches, which does
+# not pay for the RAM on the flight side.
+LZSS_WINDOW = 4096
+LZSS_MIN_MATCH = 3
+LZSS_MAX_MATCH = 258
+# Bounds how far back the encoder searches for a match; larger is slower for little gain
+LZSS_MAX_CANDIDATES = 48
 
 # Ground station file uplink rate implied by fprime-gds.yml, used for the size report
 UPLINK_BYTES_PER_SECOND = 204 / 0.400
@@ -117,10 +126,92 @@ def transcode_control(control: bytes) -> bytes:
     return bytes(out)
 
 
+def lzss_compress(data: bytes) -> bytes:
+    """Compress with the LZ77 variant Components::LzssDecoder understands.
+
+    Tokens are grouped in eights behind a tag byte whose bit b is set when token b is a
+    literal. A literal is one byte; a match is a little endian uint16 distance backwards
+    followed by one byte holding length minus 3. Matches may overlap the bytes they produce,
+    which is how runs are encoded.
+
+    Args:
+        data: bytes to compress
+
+    Returns:
+        the compressed stream
+    """
+    tokens = []
+    table: dict[bytes, list[int]] = {}
+    position = 0
+    length = len(data)
+
+    while position < length:
+        best_length = 0
+        best_distance = 0
+        if position + LZSS_MIN_MATCH <= length:
+            key = data[position : position + LZSS_MIN_MATCH]
+            for candidate in reversed(table.get(key, [])):
+                distance = position - candidate
+                if distance > LZSS_WINDOW:
+                    break
+                match = LZSS_MIN_MATCH
+                while (
+                    match < LZSS_MAX_MATCH
+                    and position + match < length
+                    and data[candidate + match] == data[position + match]
+                ):
+                    match += 1
+                if match > best_length:
+                    best_length = match
+                    best_distance = distance
+                if match >= LZSS_MAX_MATCH:
+                    break
+
+        if best_length >= LZSS_MIN_MATCH:
+            tokens.append((False, best_distance, best_length))
+            step = best_length
+        else:
+            tokens.append((True, data[position], 0))
+            step = 1
+
+        for index in range(position, min(position + step, length)):
+            if index + LZSS_MIN_MATCH <= length:
+                bucket = table.setdefault(data[index : index + LZSS_MIN_MATCH], [])
+                bucket.append(index)
+                if len(bucket) > LZSS_MAX_CANDIDATES:
+                    bucket.pop(0)
+        position += step
+
+    out = bytearray()
+    for start in range(0, len(tokens), 8):
+        group = tokens[start : start + 8]
+        tag = 0
+        for bit, (is_literal, _, _) in enumerate(group):
+            if is_literal:
+                tag |= 1 << bit
+        out.append(tag)
+        for is_literal, value, match_length in group:
+            if is_literal:
+                out.append(value)
+            else:
+                out += struct.pack("<H", value)
+                out.append(match_length - LZSS_MIN_MATCH)
+    return bytes(out)
+
+
 def build_container(
-    control: bytes, diff: bytes, extra: bytes, new_size: int, reference: bytes
+    control: bytes,
+    diff: bytes,
+    extra: bytes,
+    new_size: int,
+    reference: bytes,
+    compress: bool = True,
 ) -> bytes:
     """Assemble the PROVES patch container.
+
+    The three streams are concatenated and compressed as one blob, so the flight side decodes
+    once into a scratch file and then applies the patch from it. The stream lengths in the header
+    describe the decompressed data.
 
     Args:
         control: re-encoded control stream
@@ -128,14 +219,16 @@ def build_container(
         extra: bsdiff literal stream
         new_size: size of the reconstructed image
         reference: the reference image, whose size and CRC bind the patch to it
+        compress: whether to LZ77 the streams
 
     Returns:
         the complete container
     """
+    payload = control + diff + extra
     header = MAGIC + struct.pack(
         "<BBIIIIII",
         FORMAT_VERSION,
-        COMPRESSION_NONE,
+        COMPRESSION_LZSS if compress else COMPRESSION_NONE,
         new_size,
         len(reference),
         crc32_fprime(reference),
@@ -143,7 +236,7 @@ def build_container(
         len(diff),
         len(extra),
     )
-    return header + control + diff + extra
+    return header + (lzss_compress(payload) if compress else payload)
 
 
 def crc32_fprime(data: bytes) -> int:
@@ -181,7 +274,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--allow-uncompressed",
         action="store_true",
-        help="Emit the patch even though no codec is selected and it will be impractically large",
+        help="Store the streams verbatim instead of compressing them. Produces a patch about the "
+        "size of the image itself; useful only for exercising the container end to end.",
     )
     return parser.parse_args()
 
@@ -214,7 +308,12 @@ def main() -> int:
     if new_size != len(target):
         raise ValueError("bsdiff reported a size that does not match the target image")
     container = build_container(
-        transcode_control(control), diff, extra, new_size, reference
+        transcode_control(control),
+        diff,
+        extra,
+        new_size,
+        reference,
+        compress=not args.allow_uncompressed,
     )
 
     minutes = len(container) / UPLINK_BYTES_PER_SECOND / 60
@@ -224,15 +323,6 @@ def main() -> int:
     print(f"target       {args.target}  {len(target)} bytes")
     print(f"patch        {len(container)} bytes  (~{minutes:.1f} min to uplink)")
     print(f"target CRC32 0x{crc32_fprime(target):08x}")
-
-    if not args.allow_uncompressed:
-        print(
-            "\nrefusing to write: no compression codec is selected, so this patch is about the\n"
-            "size of the image itself and is not worth uplinking. Pass --allow-uncompressed to\n"
-            "write it anyway, for testing the container and the flight side applier.",
-            file=sys.stderr,
-        )
-        return 2
 
     args.output.write_bytes(container)
     print(f"wrote        {args.output}")

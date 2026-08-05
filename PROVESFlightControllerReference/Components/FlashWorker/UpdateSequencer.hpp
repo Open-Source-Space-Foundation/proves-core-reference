@@ -114,6 +114,14 @@ class UpdateSequencer {
     //! produce a divide by zero or a nonsense percentage in telemetry.
     static uint8_t percentComplete(uint32_t written, uint32_t total);
 
+    //! Whether a test-booted image should confirm itself now.
+    //!
+    //! Confirmation is refused unless it was explicitly armed from the ground, the running image is
+    //! actually pending confirmation, and it has run continuously for the configured time. A delay
+    //! of zero still requires one elapsed second, so an armed spacecraft cannot confirm an image
+    //! that has not yet demonstrated it can stay up.
+    static bool autoConfirmDue(bool enabled, bool already_confirmed, uint32_t pending_seconds, uint32_t delay_seconds);
+
     //! Whether a progress report is due.
     //!
     //! Reports every step_percent of progress, and always reports completion. A step of 0 is

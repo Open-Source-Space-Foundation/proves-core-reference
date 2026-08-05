@@ -49,7 +49,8 @@ PatchApplier::Error PatchApplier ::decodeHeader(const uint8_t* buffer, size_t si
         return Error::UNSUPPORTED_VERSION;
     }
     const uint8_t compression = buffer[9];
-    if (compression != static_cast<uint8_t>(Compression::NONE)) {
+    if ((compression != static_cast<uint8_t>(Compression::NONE)) &&
+        (compression != static_cast<uint8_t>(Compression::LZSS))) {
         return Error::UNSUPPORTED_COMPRESSION;
     }
     header.compression = static_cast<Compression>(compression);
@@ -80,9 +81,7 @@ PatchApplier::Error PatchApplier ::apply(const Header& header,
     if ((scratch == nullptr) || (scratch_size < 2)) {
         return Error::CORRUPT_CONTROL;
     }
-    if (header.compression != Compression::NONE) {
-        return Error::UNSUPPORTED_COMPRESSION;
-    }
+    // The streams reach us through Io already decompressed, so the codec is the caller's concern
     // Patching against the wrong reference silently produces a plausible but corrupt image, which
     // would then be flashed and booted. Refuse unless the reference is exactly the one the ground
     // built the patch from. The caller checks the content; the size is checked here.

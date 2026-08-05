@@ -147,8 +147,8 @@ TEST(PatchApplierTest, RejectsForeignOrCorruptHeaders) {
     EXPECT_EQ(PatchApplier::Error::UNSUPPORTED_VERSION,
               PatchApplier::decodeHeader(future.data(), future.size(), header));
 
-    // A codec this build cannot decode must be refused, not silently treated as verbatim
-    const std::vector<uint8_t> compressed = buildHeaderWire(10, 10, 0, 12, 0, 10, PatchApplier::FORMAT_VERSION, 1);
+    // An unknown codec must be refused, not silently treated as verbatim
+    const std::vector<uint8_t> compressed = buildHeaderWire(10, 10, 0, 12, 0, 10, PatchApplier::FORMAT_VERSION, 9);
     EXPECT_EQ(PatchApplier::Error::UNSUPPORTED_COMPRESSION,
               PatchApplier::decodeHeader(compressed.data(), compressed.size(), header));
 

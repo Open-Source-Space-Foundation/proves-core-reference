@@ -8,6 +8,7 @@
 #define Update_FlashWorker_HPP
 #include "Os/File.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/FlashWorkerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/FlashWorker/LzssDecoder.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/PatchApplier.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/SegmentPlan.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/UpdateSequencer.hpp"
@@ -53,6 +54,14 @@ class FlashWorker final : public FlashWorkerComponentBase {
     //! Sources and sink used when applying a delta patch
     class PatchIo;
 
+    //! Compressed patch input and decoded output, used when a patch carries a codec
+    class PatchSource;
+    class PatchSink;
+
+    //! Decompress a patch payload into a scratch file, leaving the apply to operate on plain
+    //! streams. Returns true on success; the caller reports the failure.
+    bool decompressPatch(const Fw::StringBase& patch, const char* scratch_path, U32 expected_size);
+
     //! Handler implementation for command ASSEMBLE_IMAGE
     void ASSEMBLE_IMAGE_cmdHandler(FwOpcodeType opCode,                  //!< The opcode
                                    U32 cmdSeq,                           //!< The command sequence number
@@ -97,10 +106,19 @@ class FlashWorker final : public FlashWorkerComponentBase {
                              U32 crc32                    //!< Expected CRC32 of the file used to verify file integrity
                              ) override;
 
+    //! Handler implementation for run
+    //!
+    //! Ages a test-booted image toward self-confirmation
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
+
   private:
     UpdateSequencer m_sequencer;
-    U8 m_last_reported_percent;  //!< Percent at the most recent progress event, for step throttling
+    U32 m_pending_confirm_seconds;  //!< Seconds the running image has been up while unconfirmed
+    U8 m_last_reported_percent;     //!< Percent at the most recent progress event, for step throttling
     U8 m_data[CONFIG_IMG_BLOCK_BUF_SIZE];
+    U8 m_window[LzssDecoder::WINDOW_SIZE];  //!< History buffer for decoding a compressed patch
     struct flash_img_context m_flash_context;
 };
 

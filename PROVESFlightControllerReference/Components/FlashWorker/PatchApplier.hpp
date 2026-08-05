@@ -37,11 +37,12 @@ class PatchApplier {
 
     //! Payload codec applied to the three instruction streams.
     //!
-    //! An uncompressed patch is roughly the size of the image itself and so has no uplink value;
-    //! it exists so that the container and the applier can be exercised end to end while the
-    //! compressed codec is selected. See docs/sdd.md.
+    //! The streams are decompressed before apply() sees them, so the codec only tells the caller
+    //! what to do with the payload. An uncompressed patch is roughly the size of the image itself
+    //! and has no uplink value; it exists for testing the container end to end.
     enum class Compression : uint8_t {
         NONE = 0,  //!< Streams stored verbatim
+        LZSS = 1,  //!< Streams compressed together, see Components::LzssDecoder
     };
 
     //! Why an apply failed
