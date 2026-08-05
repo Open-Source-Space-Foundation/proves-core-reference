@@ -301,6 +301,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> Update.worker.run
 
     }
 

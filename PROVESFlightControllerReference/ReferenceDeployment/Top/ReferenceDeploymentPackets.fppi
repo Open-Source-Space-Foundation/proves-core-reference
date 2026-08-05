@@ -156,6 +156,15 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
+  packet SoftwareUpdate id 23 group 5 {
+    Update.worker.UpdateStage
+    Update.worker.BytesWritten
+    Update.worker.ImageTotalBytes
+    Update.worker.LastUpdateStatus
+    Update.worker.RunningImageConfirmed
+    Update.worker.PendingConfirmSeconds
+  }
+
   packet Security id 6 group 5 {
     #ComCcsdsSband.provesRouter.RoutedPackets
     ComCcsdsLora.provesRouter.RoutedPackets

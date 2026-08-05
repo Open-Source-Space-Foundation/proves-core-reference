@@ -20,6 +20,10 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/UpdateSequencer.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/SegmentPlan.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PatchApplier.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/LzssDecoder.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )

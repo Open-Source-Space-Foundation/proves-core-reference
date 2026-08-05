@@ -74,18 +74,21 @@ zephyr_udc0: &usbd {
             reg = <0x0 0x100000>;
         };
 
+        /* MCUBoot primary slot: the image that is currently running */
         slot0_partition: partition@100000 {
-            label = "current";
+            label = "primary";
             reg = <0x100000 0x100000>;
         };
 
+        /* MCUBoot secondary slot: staging area that OTA updates are written into */
         slot1_partition: partition@200000 {
-            label = "golden";
+            label = "secondary";
             reg = <0x200000 0x100000>;
         };
 
+        /* Reserved. Not used by MCUBoot in swap-using-offset mode with a single image. */
         slot2_partition: partition@300000 {
-            label = "test";
+            label = "reserved";
             reg = <0x300000 0x100000>;
         };
 
