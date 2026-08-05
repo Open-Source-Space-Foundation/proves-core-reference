@@ -570,7 +570,10 @@ def test_12_param_update_conflict_check(fprime_test_api: IntegrationTestAPI, sta
     start: TimeType = TimeType().set_datetime(
         datetime.now(), time_base=TimeType.TimeBase("TB_DONT_CARE")
     )
+
+    # Set an alarm
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", start=start, timeout=10)
 
     # Switch to proc time to make sure it is canceled
     proves_send_and_assert_command(
