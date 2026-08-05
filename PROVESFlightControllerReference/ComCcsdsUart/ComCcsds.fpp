@@ -199,6 +199,9 @@ module ComCcsdsUart {
             # Router buffer allocations
             provesRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
             provesRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
+
+            # PROTOTYPE: file-uplink ACK rides the EVENTS com queue (fan-in)
+            provesRouter.handshakeOut -> comQueue.comPacketQueueIn[Ports_ComPacketQueue.EVENTS]
         }
     } # end FramingSubtopology
 

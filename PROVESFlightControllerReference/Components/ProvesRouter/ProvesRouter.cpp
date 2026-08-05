@@ -88,7 +88,9 @@ void ProvesRouter::handleCommandPacket(Fw::Buffer& packetBuffer) {
     this->notifyPacketRouted();
 }
 
+extern "C" void uplink_trace(unsigned char, unsigned short);
 void ProvesRouter::handleFilePacket(Fw::Buffer& packetBuffer) {
+    uplink_trace(1, (unsigned short)packetBuffer.getSize());
     // Exit early if no components are connected
     if (!this->isConnected_fileOut_OutputPort(0)) {
         return;
@@ -97,7 +99,23 @@ void ProvesRouter::handleFilePacket(Fw::Buffer& packetBuffer) {
     // Copy buffer into a new allocated buffer. This lets us return the original buffer with dataReturnOut,
     // and ProvesRouter can handle the deallocation of the unknown buffer when it returns on bufferReturnIn
     Fw::Buffer copy = this->allocateCopy(packetBuffer, ProvesRouter_AllocationReason::FILE_UPLINK);
+    uplink_trace(copy.isValid() ? 2 : 3, (unsigned short)packetBuffer.getSize());
     if (copy.isValid()) {
+        // PROTOTYPE ACK: remember this packet's type+seq (bytes [4,9) after the U32
+        // descriptor) keyed by the copy's data pointer; echoed on buffer return.
+        if (packetBuffer.getSize() >= 12) {
+            this->m_hsMutex.lock();
+            for (FwIndexType i = 0; i < HS_STASH_DEPTH; i++) {
+                if (!this->m_hsStash[i].used) {
+                    this->m_hsStash[i].key = copy.getData();
+                    (void)memcpy(this->m_hsStash[i].bytes, packetBuffer.getData(), 12);
+                    this->m_hsStash[i].used = true;
+                    uplink_trace(7, (unsigned short)(i));
+                    break;
+                }
+            }
+            this->m_hsMutex.unlock();
+        }
         // Send the copied buffer to connected components
         this->fileOut_out(0, copy);
 
@@ -160,6 +178,35 @@ void ProvesRouter ::cmdResponseIn_handler(FwIndexType portNum,
 }
 
 void ProvesRouter ::fileBufferReturnIn_handler(FwIndexType portNum, Fw::Buffer& fwBuffer) {
+    // PROTOTYPE ACK: if this is a file-uplink copy we stashed, echo type+seq downlink
+    // with the FW_PACKET_HAND descriptor so the GDS uplinker paces on real consumption.
+    uplink_trace(10, (unsigned short)(this->isConnected_handshakeOut_OutputPort(0) ? 1 : 0));
+    if (this->isConnected_handshakeOut_OutputPort(0)) {
+        U8 ackBytes[12];
+        bool found = false;
+        this->m_hsMutex.lock();
+        for (FwIndexType i = 0; i < HS_STASH_DEPTH; i++) {
+            if (this->m_hsStash[i].used && (this->m_hsStash[i].key == fwBuffer.getData())) {
+                (void)memcpy(ackBytes, this->m_hsStash[i].bytes, 12);
+                this->m_hsStash[i].used = false;
+                found = true;
+                break;
+            }
+        }
+        this->m_hsMutex.unlock();
+        uplink_trace(8, (unsigned short)(found ? 1 : 0));
+        if (found) {
+            Fw::ComBuffer ack;
+            Fw::SerializeStatus st = ack.serializeFrom(static_cast<FwPacketDescriptorType>(0x00FE));
+            if (st == Fw::FW_SERIALIZE_OK) {
+                st = ack.serializeFrom(ackBytes, 12, Fw::Serialization::OMIT_LENGTH);
+            }
+            if (st == Fw::FW_SERIALIZE_OK) {
+                this->handshakeOut_out(0, ack, 0);
+                uplink_trace(9, 1);
+            }
+        }
+    }
     this->bufferDeallocate_out(0, fwBuffer);
 }
 

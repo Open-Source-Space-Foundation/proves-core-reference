@@ -43,6 +43,9 @@ module Svc {
         @ Port to signal that a packet has been authenticated and routed
         output port packetRouted: Fw.Signal
 
+        @ PROTOTYPE: per-file-packet ACK emitted when FileUplink returns the buffer
+        output port handshakeOut: Fw.Com
+
         ### Events ###
 
         @ An error occurred while serializing a com buffer

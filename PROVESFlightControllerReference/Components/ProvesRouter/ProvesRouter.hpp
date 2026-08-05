@@ -7,6 +7,8 @@
 #ifndef Svc_ProvesRouter_HPP
 #define Svc_ProvesRouter_HPP
 
+#include <Os/Mutex.hpp>
+
 #include "PROVESFlightControllerReference/Components/ProvesRouter/ProvesRouterComponentAc.hpp"
 
 namespace Svc {
@@ -79,7 +81,17 @@ class ProvesRouter final : public ProvesRouterComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    U32 m_routedPackets;    //!< The count of packets routed
+    U32 m_routedPackets;  //!< The count of packets routed
+
+    // PROTOTYPE file-uplink ACK: stash of {copy-buffer data ptr -> packet type+seq bytes}
+    struct HandshakeStash {
+        const U8* key;
+        U8 bytes[12];
+        bool used;
+    };
+    static const FwIndexType HS_STASH_DEPTH = 16;
+    HandshakeStash m_hsStash[HS_STASH_DEPTH] = {};
+    Os::Mutex m_hsMutex;
     U32 m_bypassedPackets;  //!< The count of packets bypassed
     U32 m_rejectedPackets;  //!< The count of packets rejected
 };

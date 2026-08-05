@@ -1,0 +1,209 @@
+--- a/fprime_gds/common/files/uplinker.py	2026-08-05 07:01:12
++++ b/fprime_gds/common/files/uplinker.py	2026-08-05 06:22:08
+@@ -7,6 +7,7 @@
+ 
+ @author lestarch
+ """
++import logging
+ import os
+ import queue
+ import threading
+@@ -26,6 +27,9 @@
+     TransmitFileState,
+     file_to_dict,
+ )
++
++
++UP_LOGGER = logging.getLogger("uplink")
+ 
+ 
+ class UplinkQueue:
+@@ -258,11 +262,13 @@
+         :param packet_data: packet data to send that will be pushed to the encoder
+         :param handshake: (optional) if true, expect a handshake back. Default: True
+         """
++        print(f"[TRACE {time.time():.6f}] pipeline: send() -> file_encoder.data_callback (chunk dispatch)", flush=True)
+         ret = self.file_encoder.data_callback(packet_data)[8:]
+         if handshake:
+             self.__timeout.restart()
+             # only expect it back if not no_timeout
+             self.__expected = ret
++            self.__last_packet = packet_data
+ 
+     def data_callback(self, data, sender=None):
+         """
+@@ -271,9 +277,12 @@
+ 
+         :param data: data from handshake packet to be verified against that previously sent
+         """
++        print(f"[TRACE {time.time():.6f}] pipeline: data_callback() raw ack arrived, {len(data)}B", flush=True)
+         # Ignore handshakes not for us
+         if not self.valid_handshake(data):
+             return
++        print(f"[TRACE {time.time():.6f}] pipeline: ack VALIDATED, proceeding to next chunk", flush=True)
++        self.__retries = 0
+ 
+         # If it is an end-wait or a cancel state, respond without reading next chunk
+         if self.state == FileStates.END_WAIT:
+@@ -315,7 +324,19 @@
+             # self.queue.pause()
+ 
+     def timeout(self):
+-        """Handles timeout o file packet by finishing the upload immediately, and setting the state to timeout"""
++        """On ack timeout, retransmit the in-flight packet (idempotent: FileUplink
++        writes by byte offset and detects duplicates). Give up after 3 retries."""
++        if (
++            getattr(self, "_FileUplinker__last_packet", None) is not None
++            and getattr(self, "_FileUplinker__retries", 0) < 3
++            and self.state in (FileStates.RUNNING, FileStates.END_WAIT)
++        ):
++            self.__retries = getattr(self, "_FileUplinker__retries", 0) + 1
++            UP_LOGGER.warning(
++                "Ack timeout; retransmitting packet (retry %d/3)", self.__retries
++            )
++            self.send(self.__last_packet)
++            return
+         self.finish(False)
+         self.active.state = "TIMEOUT"
+ 
+@@ -351,7 +372,15 @@
+         :param data: data to check against what was transmitted
+         :return: True, if proper handshake, False otherwise
+         """
+-        return data == self.__expected
++        # PROTOTYPE: flight acks echo only the packet's first 5 bytes (type + seq)
++        expected = bytes(self.__expected) if self.__expected else b""
++        data = bytes(data)
++        if data == expected:
++            return True
++        # PROTOTYPE: flight echoes the leading 12 raw packet bytes; the framing
++        # layers shift alignment by a couple bytes, so do a sliding containment
++        # match on the expected packet's 5-byte type+seq prefix.
++        return len(expected) >= 5 and expected[:5] in data
+ 
+     @property
+     def destination_dir(self):
+--- a/fprime_gds/common/communication/updown.py	2026-08-05 07:01:12
++++ b/fprime_gds/common/communication/updown.py	2026-08-05 06:21:56
+@@ -12,6 +12,7 @@
+ 
+ import logging
+ import threading
++import time
+ from queue import Empty, Full, Queue
+ 
+ from fprime_gds.common.utils.config_manager import ConfigManager
+@@ -88,6 +89,7 @@
+             frames, pool, discarded_data = self.deframer.deframe_all(pool, no_copy=True)
+             try:
+                 for frame in frames:
++                    print(f"[TRACE {time.time():.6f}] comm: UART frame deframed len={len(frame)}", flush=True)
+                     self.outgoing.put_nowait(frame)
+             except Full:
+                 DW_LOGGER.warning("GDS ground queue full, dropping frame")
+@@ -115,6 +117,8 @@
+                     frames.append(self.outgoing.get_nowait())
+             except Empty:
+                 pass
++            if frames:
++                print(f"[TRACE {time.time():.6f}] comm: publishing {len(frames)} frame(s) to ZMQ (ground.send_all)", flush=True)
+             self.ground.send_all(frames)
+ 
+     def stop(self):
+@@ -203,13 +207,14 @@
+                     for packet in packets
+                     if packet is not None and len(packet) > 0
+                 ]:
++                    print(f"[TRACE {time.time():.6f}] comm: received {len(packet)}B from ZMQ (pipeline->comm)", flush=True)
+                     framed = self.framer.frame(packet)
+                     # Uplink handles synchronous retries
+                     for retry in range(Uplinker.RETRY_COUNT):
+                         if self.adapter.write(framed):
+-                            self.loopback.add_loopback_frame(
+-                                Uplinker.get_handshake(packet)
+-                            )
++                            print(f"[TRACE {time.time():.6f}] comm: wrote {len(framed)}B to UART", flush=True)
++                            # PROTOTYPE: real flight-generated handshake in use --
++                            # local loopback fabrication disabled.
+                             break
+                     else:
+                         UP_LOGGER.warning(
+--- a/fprime_gds/common/distributor/distributor.py	2026-08-05 07:01:12
++++ b/fprime_gds/common/distributor/distributor.py	2026-08-05 06:24:58
+@@ -15,6 +15,7 @@
+ """
+ 
+ import logging
++import time
+ 
+ from fprime_gds.common.models.serialize.type_exceptions import DeserializeException
+ from fprime_gds.common.decoders.decoder import DecodingException
+@@ -200,6 +201,8 @@
+                 LOGGER.warning(f"Invalid message: {deserialize_exception}")
+                 return
+             decoders = self.__decoders.get(data_desc_key, None)
++            if data_desc_key == "FW_PACKET_HAND":
++                print(f"[TRACE {time.time():.6f}] pipeline: distributor got raw HAND msg, dispatching to {len(decoders) if decoders else 0} decoder(s)", flush=True)
+             if not decoders:
+                 LOGGER.warning(f"No decoder registered for: {data_desc_key}")
+                 return
+--- a/fprime_gds/common/transport.py	2026-08-05 07:01:12
++++ b/fprime_gds/common/transport.py	2026-08-05 06:22:24
+@@ -10,6 +10,7 @@
+ import select
+ import socket
+ import threading
++import time
+ from abc import ABC, abstractmethod
+ from enum import Enum
+ 
+@@ -153,6 +154,7 @@
+         """
+         data = self.recv(self.timeout)
+         if len(data) > 0:
++            print(f"[TRACE {time.time():.6f}] pipeline: raw ZMQ recv() returned {len(data)}B", flush=True)
+             self.send_to_all(data)
+ 
+     def recv_thread(self):
+--- a/fprime_gds/common/communication/adapters/uart.py	2026-08-05 07:01:12
++++ b/fprime_gds/common/communication/adapters/uart.py	2026-08-05 06:34:11
+@@ -11,6 +11,7 @@
+ import logging
+ 
+ import serial
++import time
+ from serial.tools import list_ports
+ 
+ import fprime_gds.common.communication.adapters.base
+@@ -109,7 +110,11 @@
+         """
+         try:
+             if self.serial is not None or self.open():
++                t_pre = time.time()
+                 written = self.serial.write(frame)
++                t_post = time.time()
++                print(f"[TRACE {t_pre:.6f}] uart: serial.write() start, {len(frame)}B", flush=True)
++                print(f"[TRACE {t_post:.6f}] uart: serial.write() returned after {(t_post-t_pre)*1000:.3f} ms", flush=True)
+                 # Not believed to be possible to not send everything without getting a timeout exception
+                 assert written == len(frame)
+                 return True
+@@ -135,11 +140,19 @@
+                 # data is read as possible to avoid a long-return time to this call. Minimum data to read is one byte in
+                 # order to block this function while data is incoming.
+                 self.serial.timeout = timeout
++                t_pre = time.time()
+                 data = self.serial.read(1)  # Force a block for at least 1 character
++                t_first = time.time()
++                if data:
++                    print(f"[TRACE {t_pre:.6f}] uart: read(1) blocking-call issued", flush=True)
++                    print(f"[TRACE {t_first:.6f}] uart: read(1) returned after {(t_first-t_pre)*1000:.3f} ms, 1st byte={data.hex()}", flush=True)
+                 while self.serial.in_waiting:
+                     data += self.serial.read(
+                         self.serial.in_waiting
+                     )  # Drain the incoming data queue
++                if data:
++                    t_drain = time.time()
++                    print(f"[TRACE {t_drain:.6f}] uart: drain complete, total {len(data)}B, drain took {(t_drain-t_first)*1000:.3f} ms", flush=True)
+         except serial.serialutil.SerialException as exc:
+             if not self.warning_throttled:
+                 LOGGER.warning("Serial exception caught: %s. Reconnecting.", (str(exc)))

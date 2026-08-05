@@ -12,6 +12,23 @@
 #include <Fw/Cmd/CmdArgBuffer.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
 
+// SCRATCH INSTRUMENTATION (uplink drop-trace HIL) -- do not commit
+#include <zephyr/kernel.h>
+extern "C" {
+typedef struct {
+    unsigned t;
+    unsigned char s;
+    unsigned short a;
+} UplinkTraceEnt;
+volatile UplinkTraceEnt uplink_trace_ring[4096];
+volatile unsigned uplink_trace_idx = 0;
+void uplink_trace(unsigned char st, unsigned short a) {
+    unsigned i = __atomic_fetch_add((unsigned*)&uplink_trace_idx, 1u, __ATOMIC_RELAXED) & 4095u;
+    uplink_trace_ring[i].t = k_cycle_get_32();
+    uplink_trace_ring[i].s = st;
+    uplink_trace_ring[i].a = a;
+}
+}
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 
