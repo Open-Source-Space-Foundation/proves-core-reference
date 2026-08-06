@@ -10,6 +10,9 @@
 
 #include <cstring>
 
+// PROTOTYPE uplink latency tracing (see ReferenceDeploymentTopology.cpp)
+extern "C" void uplink_trace(unsigned char st, unsigned short a);
+
 namespace Components {
 namespace {
 
@@ -108,9 +111,11 @@ PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* data
 
     // Verify the HMAC on the packet data
     const size_t authenticatedDataSize = dataSize - Ccsds355_0_B_2::kTCSecurityTrailer;
+    uplink_trace(35, static_cast<unsigned short>(authenticatedDataSize));  // PROTOTYPE: psa_mac_verify entry
     const psa_status_t status =
         psa_mac_verify(keyId, PSA_ALG_TRUNCATED_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256), Ccsds355_0_B_2::kTCSecurityTrailer),
                        dataBuffer, authenticatedDataSize, hmac.data(), hmac.size());
+    uplink_trace(36, static_cast<unsigned short>(status == PSA_SUCCESS ? 1 : 0));  // PROTOTYPE: psa_mac_verify exit
     if (status != PSA_SUCCESS) {
         return PacketAuthenticator::AuthenticationResult{PacketAuthenticator::AuthenticationStatus::VerifyError,
                                                          status};

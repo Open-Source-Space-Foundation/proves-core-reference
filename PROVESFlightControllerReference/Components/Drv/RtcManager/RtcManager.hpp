@@ -58,6 +58,20 @@ class RtcManager final : public RtcManagerComponentBase {
                              ) override;
 
   private:
+    // PROTOTYPE (uplink latency): cached time offset. The original
+    // timeGetPort did a live I2C rtc_get_time() on EVERY call -- and F´
+    // stamps every event/telemetry emission with a time lookup, so every
+    // emission in the topology paid ~4ms of I2C (measured via
+    // tlmWrite_CurrentSequenceNumber, median 4.4ms, max 23ms under bus
+    // contention). Instead: read the RTC once, cache (epoch_ms - uptime_ms),
+    // and serve subsequent lookups from k_uptime_get(). Invalidate on
+    // TIME_SET so a commanded time change takes effect immediately.
+    // Known prototype limitation: sub-second alignment to the RTC second
+    // boundary is uncalibrated (same as the pre-existing rescale behavior);
+    // no periodic re-sync against RTC drift yet.
+    bool m_timeCacheValid = false;
+    int64_t m_epochMsMinusUptimeMs = 0;
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------

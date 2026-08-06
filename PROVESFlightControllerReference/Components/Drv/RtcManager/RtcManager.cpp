@@ -48,6 +48,14 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
+    // PROTOTYPE (uplink latency): serve time from the cached RTC offset +
+    // uptime -- no per-call I2C. See the cache comment in RtcManager.hpp.
+    if (this->m_timeCacheValid) {
+        const int64_t now_ms = this->m_epochMsMinusUptimeMs + t;
+        time.set(TimeBase::TB_SC_TIME, 0, static_cast<U32>(now_ms / 1000), static_cast<U32>((now_ms % 1000) * 1000));
+        return;
+    }
+
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
@@ -84,6 +92,11 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         return;
     }
     this->log_CONSOLE_RtcInvalidTime_ThrottleClear();
+
+    // PROTOTYPE (uplink latency): first successful RTC read -- capture the
+    // offset so all subsequent lookups are uptime-based (no I2C).
+    this->m_epochMsMinusUptimeMs = static_cast<int64_t>(seconds_real_time) * 1000 - t;
+    this->m_timeCacheValid = true;
 
     // Set FPrime time object
     time.set(TimeBase::TB_SC_TIME, 0, seconds_real_time,
@@ -142,6 +155,10 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
 
     // Set time on RTC
     const int rc = rtc_set_time(this->m_dev, &time_rtc);
+    // PROTOTYPE (uplink latency): the RTC just changed (or the attempt left
+    // its state uncertain) -- drop the cached offset so the next timeGetPort
+    // re-reads the hardware and re-captures it.
+    this->m_timeCacheValid = false;
     if (rc != 0) {
         // Emit time not set event
         this->log_WARNING_HI_TimeNotSet(rc);
