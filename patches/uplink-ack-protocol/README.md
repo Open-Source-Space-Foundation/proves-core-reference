@@ -12,6 +12,21 @@ patch -p1 -d fprime-venv/lib/python3.13/site-packages < patches/uplink-ack-proto
 or `git apply --directory=fprime-venv/lib/python3.13/site-packages/fprime_gds ...`
 adjusted for the strip level, depending on tooling available.
 
+`gds-uplink-throughput-addendum.patch` applies **on top of** the base patch
+(same `-p1` invocation, run it second). It adds:
+
+1. **`common/zmq_transport.py`**: `ZmqGround.receive_all()` blocks only for
+   the FIRST message, then drains any backlog non-blocking. The old loop
+   re-applied the full 10ms RCVTIMEO after every received message, so every
+   uplink chunk paid a trailing ~10ms empty poll before being framed
+   (measured 14.5ms -> 0.8ms ground turnaround).
+2. **`common/files/uplinker.py`**: windowed uplink (go-back-N-lite credit
+   window; link is in-order/reliable). `UPLINK_WINDOW` env var sets the
+   number of unacked DATA packets in flight (default 1 = original
+   stop-and-wait). Acks match the oldest in-flight packet; END is only sent
+   after all data is acked; ack timeout retransmits the oldest packet.
+   W=2 is the validated sweet spot on HIL.
+
 ## What it does
 
 1. **`common/communication/updown.py`**: stops fabricating the uplink

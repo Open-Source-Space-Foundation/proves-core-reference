@@ -1,0 +1,198 @@
+--- a/fprime_gds/common/zmq_transport.py	2025-12-23 00:43:40
++++ b/fprime_gds/common/zmq_transport.py
+@@ -275,16 +275,18 @@
+         """
+         if self.zmq.zmq_socket_incoming is None:
+             self.zmq.connect_incoming()
++        # PROTOTYPE (uplink latency): block only for the FIRST message, then
++        # drain any backlog non-blocking. The previous loop re-applied the
++        # full 10ms timeout after EVERY received message, so each uplink
++        # chunk paid a trailing ~10ms empty poll before being framed/sent
++        # (measured 12.3ms pipeline->comm of a 37ms ack cycle).
+         messages = []
+-        data = None
++        data = self.zmq.recv(timeout=self.timeout)
+         while data != b"":
+-            data = self.zmq.recv(timeout=self.timeout)
+-            if data != b"":
+-                # TODO: we need to fix where this is being pulled off, should be done in the framing protocol for uplink
+-                data = data[
+-                    4:
+-                ]  # Strip off the size as this will be re-added by the framing protocol
+-                messages.append(data)
++            # TODO: we need to fix where this is being pulled off, should be done in the framing protocol for uplink
++            # Strip off the size as this will be re-added by the framing protocol
++            messages.append(data[4:])
++            data = self.zmq.recv(timeout=0)
+         return messages
+ 
+     def send_all(self, frames):
+--- a/fprime_gds/common/files/uplinker.py	2026-08-05 19:11:07
++++ b/fprime_gds/common/files/uplinker.py
+@@ -168,6 +168,13 @@
+         self.__timeout = Timeout()
+         self.__timeout.setup(self.timeout, timeout)
+         self.cooldown = cooldown
++        # PROTOTYPE (windowed uplink): allow up to `window` unacked DATA
++        # packets in flight (credit window over an in-order, reliable link).
++        # Window 1 == original stop-and-wait behavior. Acks are matched
++        # against the OLDEST in-flight packet; on each ack the window is
++        # topped back up. END is only sent once all data packets are acked.
++        self.window = max(1, int(os.environ.get("UPLINK_WINDOW", "1")))
++        self.__inflight = []  # list of (expected_ack_bytes, packet_data), oldest first
+ 
+     def enqueue(self, filepath, destination=None):
+         """
+@@ -246,6 +253,9 @@
+         self.state = FileStates.RUNNING
+         self.active = file_obj
+         self.active.open(TransmitFileState.READ)
++        # PROTOTYPE (windowed uplink): fresh per-file window state
++        self.__inflight = []
++        self.__file_exhausted = False
+         self.send(
+             StartPacketData(
+                 self.get_next_sequence(),
+@@ -266,9 +276,36 @@
+         ret = self.file_encoder.data_callback(packet_data)[8:]
+         if handshake:
+             self.__timeout.restart()
+-            # only expect it back if not no_timeout
+-            self.__expected = ret
++            # PROTOTYPE (windowed uplink): track every unacked packet, oldest first
++            self.__inflight.append((ret, packet_data))
++            self.__expected = ret  # kept for compatibility (single-packet states)
+             self.__last_packet = packet_data
++
++    def top_up_window(self):
++        """PROTOTYPE (windowed uplink): send DATA packets until the window is
++        full or the file is exhausted. Once the file is exhausted AND all data
++        packets are acked, send END (alone, so flight-side checksum compare
++        happens strictly after all data)."""
++        while (
++            self.state == FileStates.RUNNING
++            and self.active is not None
++            and not getattr(self, "_FileUplinker__file_exhausted", False)
++            and len(self.__inflight) < self.window
++        ):
++            outgoing = self.active.read(self.chunk)
++            if outgoing == b"":
++                self.__file_exhausted = True
++                break
++            self.active.checksum.update(outgoing, self.active.seek)
++            self.send(DataPacketData(self.get_next_sequence(), self.active.seek, outgoing))
++            self.active.seek += len(outgoing)
++        if (
++            self.state == FileStates.RUNNING
++            and getattr(self, "_FileUplinker__file_exhausted", False)
++            and len(self.__inflight) == 0
++        ):
++            self.send(EndPacketData(self.get_next_sequence(), self.active.checksum.value))
++            self.finish()
+ 
+     def data_callback(self, data, sender=None):
+         """
+@@ -278,14 +315,11 @@
+         :param data: data from handshake packet to be verified against that previously sent
+         """
+         print(f"[TRACE {time.time():.6f}] pipeline: data_callback() raw ack arrived, {len(data)}B", flush=True)
+-        # Ignore handshakes not for us
+-        if not self.valid_handshake(data):
+-            return
+-        print(f"[TRACE {time.time():.6f}] pipeline: ack VALIDATED, proceeding to next chunk", flush=True)
+-        self.__retries = 0
+-
+         # If it is an end-wait or a cancel state, respond without reading next chunk
+         if self.state == FileStates.END_WAIT:
++            if not self.valid_handshake(data):
++                return
++            self.__retries = 0
+             self.active.state = (
+                 "FINISHED" if self.active.state != "CANCELED" else "CANCELED"
+             )
+@@ -294,23 +328,24 @@
+             self.__timeout.stop()
+             return
+         if self.state == FileStates.CANCELED:
++            if not self.valid_handshake(data):
++                return
++            self.__retries = 0
++            self.__inflight.clear()
+             self.send(CancelPacketData(self.get_next_sequence()))
+             self.finish()
+             return
++        # PROTOTYPE (windowed uplink): RUNNING -- ack must match the OLDEST
++        # in-flight packet (link is in-order); pop it and top the window up.
++        if not self.__inflight or not self.match_ack(self.__inflight[0][0], data):
++            return
++        print(f"[TRACE {time.time():.6f}] pipeline: ack VALIDATED, proceeding to next chunk", flush=True)
++        self.__retries = 0
++        self.__inflight.pop(0)
++        if self.__inflight:
++            self.__timeout.restart()
+         time.sleep(self.cooldown)
+-        # Read next chunk of data.  b'' means the file is empty
+-        outgoing = self.active.read(self.chunk)
+-        if outgoing == b"":
+-            self.send(
+-                EndPacketData(self.get_next_sequence(), self.active.checksum.value)
+-            )
+-            self.finish()
+-        else:
+-            self.active.checksum.update(outgoing, self.active.seek)
+-            self.send(
+-                DataPacketData(self.get_next_sequence(), self.active.seek, outgoing)
+-            )
+-            self.active.seek += len(outgoing)
++        self.top_up_window()
+ 
+     def cancel(self):
+         """
+@@ -335,7 +370,17 @@
+             UP_LOGGER.warning(
+                 "Ack timeout; retransmitting packet (retry %d/3)", self.__retries
+             )
+-            self.send(self.__last_packet)
++            # PROTOTYPE (windowed uplink): the stalled ack belongs to the
++            # OLDEST in-flight packet; re-frame and resend it directly (flight
++            # writes are offset-idempotent). Do NOT go through send(): the
++            # packet must stay at inflight[0] for ack matching, not be
++            # re-tracked at the tail.
++            if self.__inflight:
++                stalled = self.__inflight[0][1]
++                self.file_encoder.data_callback(stalled)
++                self.__timeout.restart()
++            else:
++                self.send(self.__last_packet)
+             return
+         self.finish(False)
+         self.active.state = "TIMEOUT"
+@@ -350,6 +395,9 @@
+         self.active.close()
+         self.sequence = 0
+         self.state = FileStates.END_WAIT
++        # PROTOTYPE (windowed uplink): window is only meaningful while RUNNING
++        self.__inflight = []
++        self.__file_exhausted = False
+         os.remove(self.active.source)
+         # Immediate termination items
+         if not wait_for_handshake:
+@@ -364,6 +412,18 @@
+         self.sequence = self.sequence + 1
+         return tmp
+ 
++    @staticmethod
++    def match_ack(expected, data):
++        """PROTOTYPE (windowed uplink): does this raw flight ack correspond to
++        the given expected packet bytes? Flight echoes the leading 12 raw
++        packet bytes; framing shifts alignment, so use the sliding containment
++        match on the expected packet's 5-byte type+seq prefix."""
++        expected = bytes(expected) if expected else b""
++        data = bytes(data)
++        if data == expected:
++            return True
++        return len(expected) >= 5 and expected[:5] in data
++
+     def valid_handshake(self, data):
+         """
+         Check the handshake data and ensure that it is as expected. This will allow us to only handle handshakes that
