@@ -185,12 +185,28 @@ void RtcManager ::parameterUpdated(FwPrmIdType id) {
         this->cancelSequences_out(i);
     }
 
+    // Cancel pending alarm, as switching the timebase causes undefined behavior
+    uint16_t mask = 0;
+    int rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+    if (rc != 0) {
+        // log failure
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+    }
+
     this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
 }
 
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
-    // retrieve info about current alarm
+    // Check the TimeBase parameter to ensure that we are using RTC time
+    Fw::ParamValid valid;
+    const Rtc::TimeBase timeBase = this->paramGet_TIMEBASE(valid);
+    if (timeBase == Rtc::TimeBase::TB_PROC_TIME) {
+        this->log_WARNING_HI_AlarmNotSet(t, EINVAL);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
 
+    // retrieve info about current alarm
     uint16_t mask = this->m_curr_mask;
     int rc = rtc_alarm_get_time(this->m_dev, 0, &mask, &this->m_alarm_time);
 
