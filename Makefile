@@ -442,9 +442,10 @@ gds-integration: framer-plugin
 	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
-DoL_test:
+DOL_SERIAL_PORT ?= /dev/ttyACM0
+DoL_test: ## Run the day-in-the-life tests (DOL_SERIAL_PORT=/dev/ttyXXX)
 	@echo "make sure passthrough GDS is running"
-	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@DOL_SERIAL_PORT="$(DOL_SERIAL_PORT)" $(UV_RUN) pytest PROVESFlightControllerReference/test/day-in-the-life/test_day_in_the_life.py PROVESFlightControllerReference/test/day-in-the-life/test_edge_cases_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
