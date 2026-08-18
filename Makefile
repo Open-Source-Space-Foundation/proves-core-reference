@@ -14,33 +14,9 @@ submodules: ## Initialize and update git submodules
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
-FPRIME_YAMCS_MAIN ?= $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/__main__.py
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
-	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/pyyaml-override.txt
-	@echo "Applying fprime-yamcs noapp/path patch..."
-	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
-	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping patch"; exit 0; fi; \
-	  PATCH_DIR=$$(dirname $$TARGET); \
-	  if grep -q 'venv_bin = str(Path(sys.executable).parent)' $$TARGET; then \
-	    echo "⚠ fprime-yamcs patch already applied"; \
-	  elif patch --dry-run -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch > /dev/null 2>&1; then \
-	    patch -p2 -d $$PATCH_DIR < patches/fprime-yamcs-noapp-path.patch && echo "✓ Applied fprime-yamcs patch"; \
-	  else \
-	    echo "❌ Error: Unable to apply fprime-yamcs patch. Run 'ls $$TARGET' to check."; exit 1; \
-	  fi
-	@echo "Applying fprime-yamcs-events CPU fix..."
-	@EVENTS_PROC=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/events/processor.py 2>/dev/null | head -1); \
-	  if [ -z "$$EVENTS_PROC" ]; then echo "⚠ events processor not found, skipping"; exit 0; fi; \
-	  $(VIRTUAL_ENV)/bin/python tools/apply-events-cpu-fix.py "$$EVENTS_PROC"
-	@echo "Applying fprime-yamcs instance config fix..."
-	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
-	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
-	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
-	@echo "Applying fprime-yamcs constants-order fix..."
-	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
-	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
-	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt
 
 
 .PHONY: zephyr-setup
@@ -141,12 +117,10 @@ generate-if-needed:
 	@test -d $(BUILD_DIR) || $(MAKE) generate
 
 .PHONY: build
-BUILD_YAMCS_MDB ?= 1
 build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
 	@$(UV_RUN) fprime-util build
 	./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
-	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
 
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
@@ -268,144 +242,18 @@ clean: ## Remove all gitignored files
 
 ##@ YAMCS
 
-.PHONY: yamcs-dict
-yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-artifacts; run 'make build' first)
-	@mkdir -p yamcs/yamcs-data/mdb
-	@DICT=$$(find build-artifacts -name "*TopologyDictionary.json" | head -1); \
-	  if [ -z "$$DICT" ]; then echo "Error: run 'make build' first"; exit 1; fi; \
-	  echo "Generating XTCE from $$DICT"; \
-	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
-	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
+YAMCS_INPUT_DIR ?= ../yamcs-stack/server/inputs/proves
 
-.PHONY: yamcs-mdb
-yamcs-mdb: yamcs-dict ## Build the YAMCS Mission Database (alias for yamcs-dict, runs after build)
+.PHONY: yamcs-export
+yamcs-export: ## Export the dictionary and matching HMAC key for yamcs-stack/server
+	@python3 scripts/export_yamcs_bundle.py \
+	  --dictionary-root build-artifacts \
+	  --auth-header $(AUTH_DEFAULT_KEY_HEADER) \
+	  --output-dir $(YAMCS_INPUT_DIR)
 
-.PHONY: yamcs-build-check
-yamcs-build-check: ## Validate YAMCS server boots via docker compose with the current MDB
-	@set -e; \
-	if [ ! -f yamcs/yamcs-data/mdb/fprime.xtce.xml ]; then \
-	  echo "Error: yamcs/yamcs-data/mdb/fprime.xtce.xml missing — run 'make yamcs-mdb' first"; \
-	  exit 1; \
-	fi; \
-	command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required for yamcs-build-check"; exit 1; }; \
-	trap 'status=$$?; \
-	  if [ $$status -ne 0 ]; then docker compose -f yamcs/docker-compose.yml logs || true; fi; \
-	  docker compose -f yamcs/docker-compose.yml down || true' EXIT INT TERM; \
-	echo "Pre-pulling YAMCS images (excluded from readiness budget)..."; \
-	docker compose -f yamcs/docker-compose.yml pull; \
-	echo "Starting YAMCS server (docker compose)..."; \
-	docker compose -f yamcs/docker-compose.yml up -d; \
-	echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."; \
-	i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
-	  i=$$((i+1)); \
-	  if [ $$i -ge 180 ]; then \
-	    echo "ERROR: YAMCS did not respond on :8090 within 180s"; \
-	    exit 1; \
-	  fi; \
-	  sleep 1; \
-	done; \
-	echo "Checking that instance fprime-project is RUNNING..."; \
-	state=$$(curl -fsS http://localhost:8090/api/instances/fprime-project | jq -r '.state'); \
-	if [ "$$state" != "RUNNING" ]; then \
-	  echo "ERROR: instance fprime-project did not reach RUNNING (state=$$state)"; \
-	  curl -sS http://localhost:8090/api/instances/fprime-project || true; \
-	  exit 1; \
-	fi; \
-	echo "YAMCS build check passed."
-
-.PHONY: test-yamcs
-test-yamcs: fprime-venv ## Run YAMCS round-trip tests (assumes 'make yamcs UART_DEVICE=...' is running)
-	$(UV_RUN) pytest PROVESFlightControllerReference/test/yamcs \
-	  --deployment build-artifacts/zephyr/fprime-zephyr-deployment
-
-.PHONY: yamcs-stop
-yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
-	@echo "Stopping YAMCS processes..."
-	@find_repo_pids() { \
-	  marker="$$1"; \
-	  ps -eo pid=,args= | awk -v repo="$(CURDIR)" -v marker="$$marker" -v self="$$$$" 'index($$0, repo) && index($$0, marker) && $$1+0 != self+0 { print $$1 }'; \
-	}; \
-	stop_repo_processes() { \
-	  marker="$$1"; \
-	  label="$$2"; \
-	  pids="$$(find_repo_pids "$$marker" | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
-	  if [ -n "$$pids" ]; then \
-	    kill $$pids 2>/dev/null || true; \
-	    echo "  stopped $$label"; \
-	  fi; \
-	}; \
-	kill_udp_port() { \
-	  port="$$1"; label="$$2"; \
-	  pids="$$(lsof -tiUDP:$$port 2>/dev/null | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
-	  if [ -n "$$pids" ]; then \
-	    kill $$pids 2>/dev/null || true; \
-	    echo "  stopped $$label (port $$port)"; \
-	  fi; \
-	}; \
-	kill_udp_port 50001 'serial adapter'; \
-	kill_udp_port 50000 'TM UDP sender'; \
-	stop_repo_processes 'fprime-yamcs-events' 'fprime-yamcs-events'; \
-	stop_repo_processes 'fprime_yamcs' 'fprime-yamcs wrapper'; \
-	stop_repo_processes 'mvn' 'Maven yamcs runner'; \
-	stop_repo_processes 'org.yamcs.YamcsServer' 'YAMCS server'; \
-	i=0; while lsof -iTCP:8090 -sTCP:LISTEN >/dev/null 2>&1; do \
-	  sleep 0.5; i=$$((i+1)); if [ $$i -ge 10 ]; then \
-	    echo "  Warning: YAMCS server still running after 5s, forcing..."; \
-	    pids="$$(find_repo_pids 'org.yamcs.YamcsServer' | tr '\n' ' ' | sed 's/[[:space:]]*$$//')"; \
-	    [ -n "$$pids" ] && kill -9 $$pids 2>/dev/null || true; \
-	    break; \
-	  fi; \
-	done
-	@echo "Done."
-
-# Spacecraft ID(s) passed to the adapter. May be a comma-separated list
-# (e.g. SPACECRAFT_ID=68,67) — the adapter accepts TM from all listed SCIDs
-# and uses the first for TC framing. Must include the SCID baked into the
-# FSW build (ComCfg.fpp) and registered in the YAMCS instance config.
-# Defaults to the production value (68 / 0x0044). CI sets this to 67 /
-# 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
-SPACECRAFT_ID ?= 68
-
-.PHONY: yamcs
-yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
-	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
-	@$(MAKE) yamcs-stop
-	@echo "Starting YAMCS (requires Java 11+)..."
-	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
-	FPRIME_GDS_CONFIG_PATH=$(shell pwd)/yamcs/fprime-gds.yml \
-	$(UV_RUN) fprime-yamcs \
-	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
-	    --no-app \
-	    --communication-selection none \
-	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
-	    --yamcs-data-dir $(shell pwd)/yamcs/yamcs-runtime &
-	@echo "Waiting for YAMCS HTTP API on :8090 (up to 180s)..."
-	@i=0; until curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; do \
-	  i=$$((i+1)); \
-	  if [ $$i -ge 180 ]; then echo "ERROR: YAMCS did not open :8090 within 180s"; exit 1; fi; \
-	  sleep 1; \
-	done; \
-	echo "YAMCS up after $${i}s"
-	@echo "Starting fprime-yamcs-events bridge..."
-	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
-	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
-	    --mode serial \
-	    --uart-device $(UART_DEVICE) \
-	    --uart-baud 115200 \
-	    --spacecraft-id $(SPACECRAFT_ID)
-
-.PHONY: yamcs-server
-yamcs-server: yamcs-dict ## Start YAMCS server via Docker (Use Case 2: remote deployment)
-	docker compose -f yamcs/docker-compose.yml up
-
-.PHONY: yamcs-adapter-tcp
-yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_PORT=, YAMCS_HOST=)
-	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
-	    --mode tcp \
-	    --tcp-host $(GS_HOST) \
-	    --tcp-port $(GS_PORT) \
-	    --yamcs-host $(YAMCS_HOST)
+.PHONY: test-export-bundle
+test-export-bundle: ## Test the standalone Yamcs bundle exporter
+	@python3 -m unittest scripts.tests.test_export_yamcs_bundle
 
 ##@ Operations
 
@@ -470,15 +318,11 @@ copy-secrets:
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
-make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
+make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds
 	@echo "Generating unique spacecraft ID for CI build..."
 	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
 	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
-	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
-	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
-	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
-	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 
 include makelib/build-tools.mk
 include makelib/ci.mk

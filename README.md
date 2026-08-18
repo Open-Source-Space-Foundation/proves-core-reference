@@ -98,55 +98,30 @@ Finally, run the fprime-gds.
 make gds
 ```
 
-### Option B: YAMCS (Alternative Mission Control System)
+### Option B: Yamcs
 
-[YAMCS](https://www.yamcs.org/) (Yet Another Mission Control System) is an alternative ground station interface that provides a web-based mission control system with real-time telemetry visualization, commanding, and parameter trending.
-
-#### Setup and First Run
-
-Before running YAMCS for the first time, generate the F Prime dictionary and set up the Python environment:
+The Yamcs server and adapters live in the separate `yamcs-stack` repository.
+After building and flashing this firmware, export the matching dictionary and
+authentication key, then start Yamcs from its own project:
 
 ```shell
-make fprime-venv
-```
-
-This creates the YAMCS configuration and applies necessary patches (packet preprocessor configuration, TM stream root container, and CPU fixes for the event processor).
-
-Then start YAMCS with:
-
-```shell
+make yamcs-export
+cd ../yamcs-stack/server
+make setup
 UART_DEVICE=/dev/ttyXXX make yamcs
 ```
 
-YAMCS starts the following components:
-1. **YAMCS Server** – web interface and mission control backbone (available at `http://localhost:8090`)
-2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)
-3. **Events Bridge** – loads 655+ F Prime event definitions and streams events in real-time
+The export defaults to `../yamcs-stack/server/inputs/proves`. Override it with
+`YAMCS_INPUT_DIR=/path/to/inputs/proves` when the repositories are not siblings.
+Never use an exported bundle with a different firmware build.
 
-#### Web Interface
+See `yamcs-stack/server/README.md` for server-only, TCP adapter, test, and stop
+commands.
 
-Once YAMCS is running, open your browser to **`http://localhost:8090`** to see YAMCS running.
+### Ensuring your authentication/signing is correct
 
-#### Stopping YAMCS
-
-To cleanly shut down YAMCS and all its components:
-
-```shell
-make yamcs-stop
-```
-
-This kills the adapter, event bridge, and JVM, ensuring clean startup on the next `make yamcs` run.
-
-#### Troubleshooting YAMCS
-
-- **No parameters appearing:** Verify the `rootContainer` in `yamcs-data/mdb/fprime.xtce.xml` matches your deployment (e.g., `ReferenceDeployment`)
-- **Port 8090 in use:** Run `make yamcs-stop` to ensure previous YAMCS processes are cleaned up
-- **TM frame misalignment:** Caused by FSW console text on the serial UART. The adapter's rolling buffer and CRC validation handle this automatically
-- **UnsupportedPacketVersionException warnings:** Cosmetic — idle fill bytes have invalid CCSDS version but valid packets are processed correctly
-
-#### Ensuring your authentication/signing is correct
-
-The Makefile will ensure the authentication is correct if you run the code on the same computer you flash on. However, if you switch from a computer that compiled the code you will likely have issues with authentication. Here are some things you may encounter
+If you switch from the computer that compiled the firmware, ensure its signing
+and authentication material still matches the board.
 
 MCUBoot only boots images that are **signed with the same key** the bootloader is configured for. This repo’s app build is configured to sign using `keys/proves.pem` (see `CONFIG_MCUBOOT_SIGNATURE_KEY_FILE` in `prj.conf`), so you must ensure that file matches the bootloader you flashed.
 
