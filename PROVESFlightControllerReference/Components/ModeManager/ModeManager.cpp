@@ -38,8 +38,7 @@ ModeManager ::ModeManager(const char* const compName)
 
 ModeManager ::~ModeManager() {}
 
-void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
-    ModeManagerComponentBase::init(queueDepth, instance);
+void ModeManager ::restorePersistentState() {
     this->loadState();
 }
 
