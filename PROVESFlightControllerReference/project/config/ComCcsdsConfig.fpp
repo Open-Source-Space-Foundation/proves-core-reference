@@ -20,6 +20,11 @@ module ComCcsdsConfig {
         constant comQueue   = 8 # ComQueue has higher priority than data producers (e.g. events, telemetry)
     }
 
+    module CpuAffinities {
+        constant aggregator = Os.TASK_DEFAULT
+        constant comQueue   = Os.TASK_DEFAULT
+    }
+
     # Queue configuration constants
     module QueueDepths {
         constant events      = 50

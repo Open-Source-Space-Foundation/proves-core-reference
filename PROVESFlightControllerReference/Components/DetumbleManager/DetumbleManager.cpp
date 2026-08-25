@@ -104,7 +104,7 @@ void DetumbleManager ::systemModeChanged_handler(FwIndexType portNum, const Comp
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void DetumbleManager ::SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Components::DetumbleMode mode) {
+void DetumbleManager ::SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Components::DetumbleMode& mode) {
     this->setMode_handler(0, mode);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }

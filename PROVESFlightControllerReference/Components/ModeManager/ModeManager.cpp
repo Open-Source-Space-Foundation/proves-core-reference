@@ -150,7 +150,8 @@ void ModeManager ::runSafeModeSequence() {
     Fw::ParamValid is_valid;
     Fw::ParamString safe_mode_sequence = this->paramGet_SAFEMODE_SEQUENCE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    this->runSequence_out(0, safe_mode_sequence);
+    const Svc::SeqArgs no_args;
+    this->runSequence_out(0, safe_mode_sequence, no_args);
 }
 
 void ModeManager ::completeSequence_handler(FwIndexType portNum,
