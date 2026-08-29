@@ -109,6 +109,8 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
+**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `CONTEXT.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
+
 
 **Test Framework Details**:
 
@@ -295,19 +297,20 @@ make minimize-uv-cache # Minimize UV cache (CI optimization)
 
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
-**Jobs**:
+**Jobs** (every pull request and push to main):
 
-1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Build**: Full build with caching
-   - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
-   - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
+1. **lint** (ubuntu-latest): runs `make fmt` (pre-commit checks)
+2. **unit-test** (ubuntu-latest): runs `make test-unit` — host gtest helper tests, no hardware
+3. **build** (self-hosted `deathstar`): full Zephyr build — submodules/venv/Zephyr SDK setup, CI spacecraft-ID override (0x44 → 0x43), `make generate`, `make build-mcuboot`, `make build`, console-disabled guard; uploads firmware + GDS dictionary artifacts
+4. **integration-uart** (self-hosted `integration`): flashes a real board, runs the pytest integration suite over UART via GDS, then the YAMCS round-trip test
+5. **integration-radio** (self-hosted `integration`): runs the suite over the LoRa passthrough board with `--with-radio`
+6. **yamcs-build** (ubuntu-latest): YAMCS server boot smoke check against the generated MDB
 
 **Critical for CI Success**:
 
 - Always run `make fmt` before pushing
 - Ensure code builds with `make build` locally
-- Integration tests are NOT run in CI (require hardware)
+- Integration tests DO run in CI on self-hosted hardware runners (`integration-uart`, `integration-radio`)
 
 ## Common Issues & Workarounds
 
