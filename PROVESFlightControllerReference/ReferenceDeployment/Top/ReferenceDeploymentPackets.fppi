@@ -267,17 +267,21 @@ telemetry packets ReferenceDeploymentPackets {
   cmdSeq.CS_CommandsExecuted
   cmdSeq.CS_SequencesCompleted
   cmdSeq.CS_Errors
+  cmdSeq.CS_CurrentSequence
   payloadSeq.CS_LoadCommands
   payloadSeq.CS_CancelCommands
   payloadSeq.CS_CommandsExecuted
   payloadSeq.CS_SequencesCompleted
   payloadSeq.CS_Errors
+  payloadSeq.CS_CurrentSequence
   safeModeSeq.CS_LoadCommands
   safeModeSeq.CS_CancelCommands
   safeModeSeq.CS_CommandsExecuted
   safeModeSeq.CS_SequencesCompleted
   safeModeSeq.CS_Errors
+  safeModeSeq.CS_CurrentSequence
   FileHandling.fileUplink.FilesReceived
+  FileHandling.fileUplink.FilesReceivedFailed
   FileHandling.fileUplink.PacketsReceived
   FileHandling.fileDownlink.FilesSent
   FileHandling.fileDownlink.PacketsSent
@@ -312,5 +316,7 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.LibraryVersion01
 
   watchdog.WatchdogTransitions
+
+  CdhCore.events.EventsDropped
 
 }

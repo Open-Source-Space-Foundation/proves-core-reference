@@ -60,6 +60,11 @@ constant FwAssertTextSize = 256
 @ in FpConfig.h.
 constant AssertFatalAdapterEventFileSize = FileNameStringSize
 
+@ The maximum size in bytes for passing sequence arguments through CmdSeqIn ports
+@ Note: This must fit within FW_CMD_ARG_BUFFER_MAX_SIZE along with cmd arguments using Svc::SeqArgs
+@ Total serialized size: string length prefix + fileName + BlockState + SeqArgs(size + buffer)
+constant SequenceArgumentsMaxSize = FW_CMD_ARG_BUFFER_MAX_SIZE - sizeof(FwSizeStoreType) - FileNameStringSize - sizeof(U8) - sizeof(FwSizeType)
+
 # ----------------------------------------------------------------------
 # Hub connections. Connections on all deployments should mirror these settings.
 # ----------------------------------------------------------------------

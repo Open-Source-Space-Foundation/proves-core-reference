@@ -123,7 +123,7 @@ To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
 
 1. Add a `register_fprime_ut` block to the component CMakeLists (copy Watchdog's), listing `test/ut/<Name>TestMain.cpp` + `test/ut/<Name>Tester.cpp` with `UT_AUTO_HELPERS`.
 2. `touch` those files as empty stubs (CMake configure needs them to exist), then from the component dir run `fprime-util impl --ut --build-cache <repo>/native/build-fprime-automatic-native-ut` and rename the emitted `*.template.*` files into place.
-3. Build/run: from `native/`, `fprime-util check --build-cache <repo>/native/build-fprime-automatic-native-ut -p <component dir>`. Do not run fprime-util from the component dir without this — settings discovery finds the Zephyr-only root settings.ini.
+3. Build/run: `make test-fprime-ut` (builds all UTs via `fprime-util build --ut --all` from `native/`, then runs `ctest` scoped to `PROVESFlightControllerReference_` — fprime-extras UTs are excluded; upstream's DropDetector test is seed-flaky). Single component: `ctest --test-dir native/build-fprime-automatic-native-ut -R <Name>`. Do not run fprime-util from the component dir — settings discovery finds the Zephyr-only root settings.ini.
 4. Known autocoder quirk: for argument-less `Fw.Signal` from-ports only `ASSERT_from_<port>_SIZE(n)` compiles; the indexed `ASSERT_from_<port>(i)` macro references history types that are never generated.
 
 

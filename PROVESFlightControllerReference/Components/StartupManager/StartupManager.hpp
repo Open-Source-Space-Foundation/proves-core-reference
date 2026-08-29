@@ -78,8 +78,9 @@ class StartupManager final : public StartupManagerComponentBase {
                                          ) override;
 
     //! Handler implementation for startupsequenceStarted
-    void startupsequenceStarted_handler(FwIndexType portNum,            //!< The port number
-                                        const Fw::StringBase& fileName  //!< The file path for start-up sequence
+    void startupsequenceStarted_handler(FwIndexType portNum,             //!< The port number
+                                        const Fw::StringBase& fileName,  //!< The file path for start-up sequence
+                                        const Svc::SeqArgs& args         //!< Sequence arguments
                                         ) override;
 
     //! Handler implementation for safeModeCompleteSequence
@@ -90,8 +91,9 @@ class StartupManager final : public StartupManagerComponentBase {
                                           ) override;
 
     //! Handler implementation for safeModeSequenceStarted
-    void safeModeSequenceStarted_handler(FwIndexType portNum,            //!< The port number
-                                         const Fw::StringBase& fileName  //!< The sequence file
+    void safeModeSequenceStarted_handler(FwIndexType portNum,             //!< The port number
+                                         const Fw::StringBase& fileName,  //!< The sequence file
+                                         const Svc::SeqArgs& args         //!< Sequence arguments
                                          ) override;
 
     //! Handler implementation for payloadCompleteSequence
@@ -102,8 +104,9 @@ class StartupManager final : public StartupManagerComponentBase {
                                          ) override;
 
     //! Handler implementation for payloadSequenceStarted
-    void payloadSequenceStarted_handler(FwIndexType portNum,            //!< The port number
-                                        const Fw::StringBase& fileName  //!< The sequence file
+    void payloadSequenceStarted_handler(FwIndexType portNum,             //!< The port number
+                                        const Fw::StringBase& fileName,  //!< The sequence file
+                                        const Svc::SeqArgs& args         //!< Sequence arguments
                                         ) override;
 
     //! Handler implementation for loraFirstStart

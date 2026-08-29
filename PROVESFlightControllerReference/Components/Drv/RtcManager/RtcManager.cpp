@@ -102,7 +102,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
+void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& t) {
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         // Emit device not ready event
@@ -188,7 +188,7 @@ void RtcManager ::parameterUpdated(FwPrmIdType id) {
     this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
 }
 
-void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
+void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& t) {
     // retrieve info about current alarm
 
     uint16_t mask = this->m_curr_mask;

@@ -83,7 +83,7 @@ void ModeManagerTester ::testForceSafeModeCommand() {
 
     // The safe mode sequence is dispatched with the default sequence file
     ASSERT_from_runSequence_SIZE(1);
-    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE));
+    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE), Svc::SeqArgs());
 
     // All 8 load switches are commanded off and the mode change is broadcast
     // Note: only the _SIZE assertion exists for argument-less signal ports
@@ -198,7 +198,7 @@ void ModeManagerTester ::testForceSafeModePortDefaultsReason() {
     ASSERT_EVENTS_EnteringSafeMode_SIZE(1);
     ASSERT_EVENTS_EnteringSafeMode(0, "External component request");
     ASSERT_from_runSequence_SIZE(1);
-    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE));
+    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE), Svc::SeqArgs());
     ASSERT_from_loadSwitchTurnOff_SIZE(8);
     ASSERT_from_modeChanged_SIZE(1);
     ASSERT_from_modeChanged(0, Components::SystemMode::SAFE_MODE);
@@ -265,7 +265,7 @@ void ModeManagerTester ::testVoltageEntryThresholdBoundary() {
     ASSERT_EVENTS_EnteringSafeMode_SIZE(1);
     ASSERT_EVENTS_EnteringSafeMode(0, "Low battery voltage");
     ASSERT_from_runSequence_SIZE(1);
-    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE));
+    ASSERT_from_runSequence(0, Fw::String(SAFE_MODE_SEQUENCE_FILE), Svc::SeqArgs());
     ASSERT_from_loadSwitchTurnOff_SIZE(8);
     ASSERT_from_modeChanged_SIZE(1);
     ASSERT_from_modeChanged(0, Components::SystemMode::SAFE_MODE);
