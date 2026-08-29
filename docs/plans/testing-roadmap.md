@@ -17,7 +17,7 @@ Bring hardware-free testing online in tiers, so component logic and subsystem be
 | SITL Tier (new, phase 4) | full topology on native_sim + Reverse Drivers | Linux only | Zephyr driver API (fakes) | `sitl-smoke` (new) |
 | HWIL (exists) | real boards, real RF | self-hosted | reality | `integration-*` (exists) |
 
-Scope: components authored in this repo only. Submodule (`lib/`) testing belongs upstream; the fprime-zephyr platform-guard fix is the one upstream PR we file.
+Scope: components authored in this repo only. Submodule (`lib/`) testing belongs upstream; the fprime-zephyr platform guard is carried on the OSSF fork (Open-Source-Space-Foundation/fprime-zephyr#28), which the submodule now points at.
 
 ## Phase 0 — Housekeeping (hours)
 
@@ -30,11 +30,11 @@ Scope: components authored in this repo only. Submodule (`lib/`) testing belongs
 
 The native-toolchain plumbing everything else reuses.
 
-1. **Native build config.** New `native/` build entry (own `settings.ini`: same framework path, `library_locations` = fprime-extras only, default toolchain omitted so Linux/Darwin auto-detect). Root `CMakeLists.txt`: guard `find_package(Zephyr)` + `zephyr_include_directories()` on the Zephyr platform; delete the dead `add_subdirectory(tests)` BUILD_TESTING branch; stop force-caching UT flags off for native builds.
+1. **Native build config.** New `native/` build entry (own `settings.ini` + CMakeLists; full `library_locations` incl. the platform-guarded fprime-zephyr; toolchain omitted so Linux/Darwin auto-detect). The Zephyr-only root `CMakeLists.txt` stays untouched.
 2. **Zephyr-bound component guard.** In `Components/CMakeLists.txt` (and `Components/Drv/`), wrap Zephyr-header-bound components in `if(FPRIME_PLATFORM STREQUAL "Zephyr")`. Spike: shared port/type FPP used by portable consumers (e.g. `Drv.temperatureGet` consumed by ThermalManager) may need to move into the portable `Drv/Types` module so autocode resolves natively.
-3. **Upstream PR** to fprime-zephyr: platform-guard its module registrations (`fprime-zephyr.cmake`), so `library_locations` need not differ per toolchain long-term.
+3. **fprime-zephyr platform guard** (done): module registrations in `fprime-zephyr.cmake` are guarded on `FPRIME_PLATFORM=Zephyr` via the OSSF fork; the native build keeps fprime-zephyr in `library_locations`.
 4. **Exemplar Component UTs** (the pattern others copy): **Watchdog** (small; GPIO-port stub; regression for the unopened-GPIO lockup class) and **ModeManager** (safe-mode transitions incl. the cases HWIL permanently skips for needing manual voltage). Stretch: ProvesRouter. Uncomment `register_fprime_ut`, add `test/ut/` with autocoded Tester + gtest.
-5. **Vestigial-include cleanup**: drop unused `rtc.h`/`gpio.h`/`kernel.h` includes from StartupManager/LoadSwitch/AntennaDeployer — moves them into the portable set.
+5. **Vestigial-include cleanup**: drop unused Zephyr includes from LoadSwitch/AntennaDeployer/FsSpace — moves them into the portable set. (StartupManager turned out to genuinely call `k_uptime_seconds`; it stays Zephyr-guarded.)
 6. **Helper-extraction additions**: StartupManager boot-count/persistence logic (its real logic is Os::File + uptime; high incident history).
 7. **Wiring**: `make test-fprime-ut` (native generate + `fprime-util check`); CI job `fprime-ut` on ubuntu-latest (checkout, submodules, venv, no Zephyr SDK). Works locally on macOS via Darwin platform.
 
@@ -72,7 +72,6 @@ PR-blocking on ubuntu-latest: `lint`, `unit-test`, `fprime-ut`, `ztest`, `sil-ra
 ## Risks / open spikes
 
 - FPP port/type entanglement between portable consumers and Zephyr-bound manager modules (Phase 1.2) — biggest unknown in the native build.
-- ComCfg / zephyr-config config-module behavior under a native toolchain without fprime-zephyr in `library_locations`.
 - fprime-gds TCP adapter + auth framing plugin against a posix deployment (expected clean — ComStub path is transport-agnostic — but unproven here).
 - Twister/macOS silent-pass footgun (mitigated by guard in Phase 2).
-- Upstream fprime-zephyr PR timeline; the local `native/` settings.ini split removes the dependency until it lands.
+- OSSF-fork fprime-zephyr `main` tracks the fprime-4.3.0 upgrade; the guard commit is pinned off the 4.2.x-era base (60d395e) until this repo takes that upgrade.

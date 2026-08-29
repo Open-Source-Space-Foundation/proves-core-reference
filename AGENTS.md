@@ -117,7 +117,7 @@ Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-t
 make test-fprime-ut    # generate native UT cache if needed, build + run all component UTs
 ```
 
-The native build lives in `native/` (own `settings.ini`; excludes fprime-zephyr). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
+The native build lives in `native/` (own `settings.ini`; fprime-zephyr's module registration is platform-guarded so it stays in `library_locations`). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
 
 To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
 
