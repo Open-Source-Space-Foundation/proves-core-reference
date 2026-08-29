@@ -7,8 +7,6 @@
 #include "PROVESFlightControllerReference/Components/FsSpace/FsSpace.hpp"
 
 #include "Os/FileSystem.hpp"
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 namespace Components {
 

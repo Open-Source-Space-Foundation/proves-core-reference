@@ -14,6 +14,14 @@
 # root when not specifically overridden by the developer. i.e. The module defined by
 # `Ref/SignalGen/CMakeLists.txt` will be named `Ref_SignalGen`.
 
+# The Zephyr build gets PSA crypto from the Zephyr mbedTLS module; native builds
+# use a host mbedTLS install (same requirement as test/unit-tests).
+if(FPRIME_PLATFORM STREQUAL "Zephyr")
+    set(TCSEC_PLATFORM_DEPENDS kernel)
+else()
+    set(TCSEC_PLATFORM_DEPENDS)
+endif()
+
 register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/TcSecurityDeframer.fpp"
@@ -23,7 +31,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/Parser.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/Validator.cpp"
     DEPENDS
-        kernel
+        ${TCSEC_PLATFORM_DEPENDS}
         FprimeExtras_Utilities_FileHelper
 )
 
@@ -32,7 +40,16 @@ register_fprime_library(
 set(PACKET_PARSER_TARGET "PROVESFlightControllerReference_Components_TcSecurityDeframer")
 
 # Add mbedTLS include path - check multiple possible locations
-if(DEFINED ZEPHYR_MBEDTLS_MODULE_DIR)
+if(NOT FPRIME_PLATFORM STREQUAL "Zephyr")
+    # Host mbedTLS (e.g. brew install mbedtls / apt install libmbedtls-dev)
+    find_path(MBEDTLS_INCLUDE_DIR psa/crypto.h PATHS /opt/homebrew/include /usr/local/include /usr/include)
+    find_library(MBEDCRYPTO_LIBRARY mbedcrypto PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+    if(NOT MBEDTLS_INCLUDE_DIR OR NOT MBEDCRYPTO_LIBRARY)
+        message(FATAL_ERROR "Native TcSecurityDeframer build requires host mbedTLS (brew install mbedtls / apt install libmbedtls-dev)")
+    endif()
+    target_include_directories(${PACKET_PARSER_TARGET} PRIVATE "${MBEDTLS_INCLUDE_DIR}")
+    target_link_libraries(${PACKET_PARSER_TARGET} PRIVATE "${MBEDCRYPTO_LIBRARY}")
+elseif(DEFINED ZEPHYR_MBEDTLS_MODULE_DIR)
     target_include_directories(${PACKET_PARSER_TARGET} PRIVATE
         "${ZEPHYR_MBEDTLS_MODULE_DIR}/include"
     )

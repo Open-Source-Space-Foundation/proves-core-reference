@@ -73,8 +73,8 @@ target_include_directories(proves_router_bypasser PUBLIC
 )
 
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
-find_path(PSA_CRYPTO_H psa/crypto.h)
-find_library(MBEDCRYPTO_LIB mbedcrypto)
+find_path(PSA_CRYPTO_H psa/crypto.h PATHS /opt/homebrew/include /usr/local/include /usr/include)
+find_library(MBEDCRYPTO_LIB mbedcrypto PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
 
 if(NOT PSA_CRYPTO_H)
     message(FATAL_ERROR "psa/crypto.h not found; install Mbed TLS PSA provider headers or set CMAKE_INCLUDE_PATH to the directory containing psa/crypto.h")

@@ -111,6 +111,21 @@ Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-t
 
 **Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `CONTEXT.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
 
+**F Prime Component UTs** (native host build, no hardware):
+
+```bash
+make test-fprime-ut    # generate native UT cache if needed, build + run all component UTs
+```
+
+The native build lives in `native/` (own `settings.ini`; excludes fprime-zephyr). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
+
+To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
+
+1. Add a `register_fprime_ut` block to the component CMakeLists (copy Watchdog's), listing `test/ut/<Name>TestMain.cpp` + `test/ut/<Name>Tester.cpp` with `UT_AUTO_HELPERS`.
+2. `touch` those files as empty stubs (CMake configure needs them to exist), then from the component dir run `fprime-util impl --ut --build-cache <repo>/native/build-fprime-automatic-native-ut` and rename the emitted `*.template.*` files into place.
+3. Build/run: from `native/`, `fprime-util check --build-cache <repo>/native/build-fprime-automatic-native-ut -p <component dir>`. Do not run fprime-util from the component dir without this — settings discovery finds the Zephyr-only root settings.ini.
+4. Known autocoder quirk: for argument-less `Fw.Signal` from-ports only `ASSERT_from_<port>_SIZE(n)` compiles; the indexed `ASSERT_from_<port>(i)` macro references history types that are never generated.
+
 
 **Test Framework Details**:
 
@@ -606,3 +621,17 @@ These instructions are comprehensive and validated. **Only search for additional
 - You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
+
+## Agent skills
+
+### Issue tracker
+
+Issues tracked in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.

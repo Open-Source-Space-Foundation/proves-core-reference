@@ -224,6 +224,20 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
+NATIVE_UT_BUILD_DIR ?= native/build-fprime-automatic-native-ut
+
+.PHONY: generate-fprime-ut
+generate-fprime-ut: submodules fprime-venv ## Generate the native F Prime UT build cache (needs host mbedTLS)
+	cd native && $(UV_RUN) fprime-util generate --ut --force
+
+.PHONY: generate-fprime-ut-if-needed
+generate-fprime-ut-if-needed:
+	@test -d $(NATIVE_UT_BUILD_DIR) || $(MAKE) generate-fprime-ut
+
+.PHONY: test-fprime-ut
+test-fprime-ut: generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
+	cd native && $(UV_RUN) fprime-util check --all
+
 FILTER ?= not sync_sequence_number and not format_filesystem
 
 .PHONY: test-integration
