@@ -227,7 +227,7 @@ test-unit: ## Run unit tests
 NATIVE_UT_BUILD_DIR ?= native/build-fprime-automatic-native-ut
 
 .PHONY: generate-fprime-ut
-generate-fprime-ut: submodules fprime-venv ## Generate the native F Prime UT build cache (needs host mbedTLS)
+generate-fprime-ut: submodules fprime-venv generate-auth-key ## Generate the native F Prime UT build cache (needs host mbedTLS)
 	cd native && $(UV_RUN) fprime-util generate --ut --force
 
 .PHONY: generate-fprime-ut-if-needed
