@@ -189,17 +189,23 @@ Fw::Time StartupManager ::get_uptime() {
     return time;
 }
 
-void StartupManager ::startupsequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+void StartupManager ::startupsequenceStarted_handler(FwIndexType portNum,
+                                                     const Fw::StringBase& fileName,
+                                                     const Svc::SeqArgs& args) {
     (void)portNum;
     this->onSequenceStarted(fileName);
 }
 
-void StartupManager ::safeModeSequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+void StartupManager ::safeModeSequenceStarted_handler(FwIndexType portNum,
+                                                      const Fw::StringBase& fileName,
+                                                      const Svc::SeqArgs& args) {
     (void)portNum;
     this->onSequenceStarted(fileName);
 }
 
-void StartupManager ::payloadSequenceStarted_handler(FwIndexType portNum, const Fw::StringBase& fileName) {
+void StartupManager ::payloadSequenceStarted_handler(FwIndexType portNum,
+                                                     const Fw::StringBase& fileName,
+                                                     const Svc::SeqArgs& args) {
     (void)portNum;
     this->onSequenceStarted(fileName);
 }
@@ -291,7 +297,8 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
 
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-        this->runSequence_out(0, first_sequence);
+        const Svc::SeqArgs no_args;
+        this->runSequence_out(0, first_sequence, no_args);
         this->m_transmit_enable_ticks = this->paramGet_TRANSMIT_ENABLE_TICKS(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
     } else if (!this->m_boot_count_persisted) {

@@ -29,10 +29,13 @@ class ModeManager : public ModeManagerComponentBase {
     //! Destroy ModeManager object
     ~ModeManager();
 
-    //! Initialize the component
-    void init(FwSizeType queueDepth,        //!< Queue depth for async ports
-              FwEnumStoreType instance = 0  //!< Instance ID
-    );
+    //! Restore persisted mode and bring the hardware in line with it
+    //!
+    //! Must be called from the topology after ports are connected and the GPIO
+    //! drivers are open. This does real I/O -- it drives the load switches --
+    //! so it cannot run from init(), which the topology calls before
+    //! connectComponents() and configureTopology().
+    void restorePersistentState();
 
   private:
     // ----------------------------------------------------------------------
