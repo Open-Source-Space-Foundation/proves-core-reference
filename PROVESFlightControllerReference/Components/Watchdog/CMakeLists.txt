@@ -22,3 +22,13 @@ register_fprime_library(
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
+
+### Unit Tests ###
+register_fprime_ut(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/Watchdog.fpp"
+    SOURCES
+        "${CMAKE_CURRENT_LIST_DIR}/test/ut/WatchdogTestMain.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/test/ut/WatchdogTester.cpp"
+    UT_AUTO_HELPERS
+)
