@@ -1,0 +1,31 @@
+diff --git a/Svc/TlmPacketizer/TlmPacketizer.cpp b/Svc/TlmPacketizer/TlmPacketizer.cpp
+index 89af22e1d..ba1c68555 100644
+--- a/Svc/TlmPacketizer/TlmPacketizer.cpp
++++ b/Svc/TlmPacketizer/TlmPacketizer.cpp
+@@ -89,10 +89,10 @@ void TlmPacketizer::setPacketList(const TlmPacketizerPacketList& packetList,
+             entry.ignored = false;
+             entry.channelSize = packetList.list[pktEntry]->list[tlmEntry].size;
+             // the offset into the buffer will be the current packet length
+-            // the offset must fit within FwSignedSizeType to allow for negative values
+-            FW_ASSERT(packetLen <= static_cast<FwSizeType>(std::numeric_limits<FwSignedSizeType>::max()),
++            // the offset must fit within I16 to allow for the -1 sentinel value
++            FW_ASSERT(packetLen <= static_cast<FwSizeType>(std::numeric_limits<I16>::max()),
+                       static_cast<FwAssertArgType>(packetLen));
+-            entry.packetOffset[pktEntry] = static_cast<FwSignedSizeType>(packetLen);
++            entry.packetOffset[pktEntry] = static_cast<I16>(packetLen);
+ 
+             packetLen += entry.channelSize;
+ 
+diff --git a/Svc/TlmPacketizer/TlmPacketizer.hpp b/Svc/TlmPacketizer/TlmPacketizer.hpp
+index 7f80d76d2..ffb58fc5d 100644
+--- a/Svc/TlmPacketizer/TlmPacketizer.hpp
++++ b/Svc/TlmPacketizer/TlmPacketizer.hpp
+@@ -172,7 +172,7 @@ class TlmPacketizer final : public TlmPacketizerComponentBase, public Fw::ParamE
+         FwChanIdType id;  //!< telemetry id stored in slot
+         // Offsets into packet buffers.
+         // -1 means that channel is not in that packet
+-        FwSignedSizeType packetOffset[MAX_PACKETIZER_PACKETS];
++        I16 packetOffset[MAX_PACKETIZER_PACKETS];
+         FwSizeType channelSize;  //!< max serialized size of the channel in bytes
+         bool ignored;            //!< ignored channel id
+         bool hasValue;           //!< if the entry has received a value at least once
