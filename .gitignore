@@ -53,6 +53,10 @@ lib/fprime-extras/
 yamcs/yamcs-data/mdb/*.xml
 # YAMCS runtime data directory (created at startup by fprime-yamcs)
 yamcs/yamcs-runtime/
+# Generated multi-instance YAMCS deployments (make yamcs-deployments)
+yamcs/deployments/
+# Adapter drop log for TM frames with unconfigured spacecraft IDs
+unknown_pkts.json
 
 # CircuitPython passthrough
 /circuit-python-passthrough/firmware.uf2
