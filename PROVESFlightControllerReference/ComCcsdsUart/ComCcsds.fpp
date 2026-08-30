@@ -110,14 +110,16 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
-    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
+    instance tcSecurityDecryptor: Components.TcSecurityDecryptor base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
     {
         phase Fpp.ToCpp.Phases.startTasks """
         // configure() reads parameters, so it must run after loadParameters();
         // the startTasks phase is the first phase after parameters are loaded.
-        ComCcsdsUart::tcSecurityDeframer.configure();
+        ComCcsdsUart::tcSecurityDecryptor.configure();
         """
     }
+
+    instance sdlsDeframer: Svc.Ccsds.CcsdsSdlsDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0C000
 
     topology FramingSubtopology {
         # Usage Note:
@@ -147,7 +149,8 @@ module ComCcsdsUart {
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance tcSecurityDeframer
+        instance tcSecurityDecryptor
+        instance sdlsDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -181,13 +184,15 @@ module ComCcsdsUart {
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
-            # TcSecurityDeframer <-> SpacePacketDeframer
-            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
-
-            # TcDeframer <-> TcSecurityDeframer
-            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
-            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcDeframer <-> SdlsDeframer <-> SpacePacketDeframer
+            tcDeframer.dataOut                -> sdlsDeframer.dataIn
+            sdlsDeframer.dataReturnOut        -> tcDeframer.dataReturnIn
+            sdlsDeframer.dataOut              -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> sdlsDeframer.dataReturnIn
+            sdlsDeframer.decryptOut           -> tcSecurityDecryptor.decryptIn
+            tcSecurityDecryptor.decryptOut    -> sdlsDeframer.decryptIn
+            sdlsDeframer.decryptReturnOut     -> tcSecurityDecryptor.decryptReturnIn
+            tcSecurityDecryptor.bufferReturnOut -> sdlsDeframer.bufferReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn

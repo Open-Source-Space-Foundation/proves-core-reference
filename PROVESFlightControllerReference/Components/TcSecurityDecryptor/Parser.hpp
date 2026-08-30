@@ -18,7 +18,6 @@ namespace Parser {
 //! Must match the ParserStatus enum in the .fpp file
 enum class Status {
     Ok,                        //!< Transfer frame was successfully parsed
-    SpiParseError,             //!< SPI could not be parsed from transfer frame
     SequenceNumberParseError,  //!< Sequence number could not be parsed from transfer frame
     MacParseError,             //!< MAC could not be parsed from transfer frame
 };
@@ -35,7 +34,9 @@ struct Result {
 }  // namespace Parser
 }  // namespace TcTransferFrame
 
-//! Parse the TC Transfer Frame from a buffer and extract relevant information for validation and authentication
+//! Parse the TC Transfer Frame from a buffer and extract relevant information for validation and authentication.
+//! The buffer is [SeqNum(4) | Data | MAC(16)]: the Security Parameter Index has already been stripped
+//! by the upstream Svc.Ccsds.CcsdsSdlsDeframer.
 TcTransferFrame::Parser::Result parse(const uint8_t* buffer,  //!< The transfer frame buffer
                                       const size_t size       //!< The transfer frame size
 );

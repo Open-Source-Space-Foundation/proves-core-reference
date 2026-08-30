@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  Types.cpp
-// \brief  hpp file for to define types used by TcSecurityDeframer component
+// \brief  hpp file for to define types used by TcSecurityDecryptor component
 // ======================================================================
 
 #pragma once
@@ -18,9 +18,10 @@ using Mac = std::array<uint8_t, Ccsds355_0_B_2::kTCSecurityTrailer>;  //!< The M
 //! https://ccsds.org/Pubs/355x0b2.pdf
 namespace Ccsds355_0_B_2 {
 
-//! Describes the frame security header format for a Telecommand (TC) Transfer Frame
+//! Describes the frame security header format for a Telecommand (TC) Transfer Frame. The Security
+//! Parameter Index is not part of this header: it is stripped and delivered separately (as saIndex)
+//! by the upstream Svc.Ccsds.CcsdsSdlsDeframer.
 struct TCSecurityHeader {
-    uint32_t spi;             //!< The Security Parameter Index of the packet
     uint32_t sequenceNumber;  //!< The sequence number of the packet
 };
 

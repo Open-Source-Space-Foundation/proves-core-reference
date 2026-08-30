@@ -46,11 +46,14 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key,  //!< The he
                                                    uint32_t& keyId   //!< The key ID to use for the imported key
 );
 
-//! Check the validity of the packet HMAC
-PacketAuthenticator::AuthenticationResult authenticatePacket(
-    const uint8_t* buffer,  //!< The packet data buffer
+//! Check the validity of the frame HMAC. The MAC covers the security association index (2 bytes,
+//! big-endian) followed by the frame data; the SA index is supplied separately because the upstream
+//! Svc.Ccsds.CcsdsSdlsDeframer has already stripped it out of the buffer.
+PacketAuthenticator::AuthenticationResult authenticateFrame(
+    uint16_t saIndex,       //!< The security association index (participates in the MAC but not in the buffer)
+    const uint8_t* buffer,  //!< The frame data buffer
     size_t size,            //!< The size of the data buffer
-    const Mac& hmac,        //!< The HMAC extracted from the packet to validate against
+    const Mac& hmac,        //!< The HMAC extracted from the frame to validate against
     uint32_t& keyId         //!< The hex-encoded authentication key to use for validation
 );
 

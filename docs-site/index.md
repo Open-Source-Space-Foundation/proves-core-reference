@@ -38,8 +38,8 @@ Low-level driver components for specific hardware peripherals: [Drv2605 Manager]
 ### [Storage Components](components/FlashWorker.md)
 Components that manage persistent storage and filesystem operations: [Flash Worker](components/FlashWorker.md), [Fs Format](components/FsFormat.md), [Fs Space](components/FsSpace.md), [Null Prm Db](components/NullPrmDb.md)
 
-### [Security Components](components/TcSecurityDeframer.md)
-Components that handle authentication and security features: [TcSecurityDeframer](components/TcSecurityDeframer.md), [PROVES Router](components/ProvesRouter.md)
+### [Security Components](components/TcSecurityDecryptor.md)
+Components that handle authentication and security features: [TcSecurityDecryptor](components/TcSecurityDecryptor.md), [PROVES Router](components/ProvesRouter.md)
 
 ### [Additional Resources](additional-resources/board-list.md)
 Troubleshooting guides and additional configuration information:

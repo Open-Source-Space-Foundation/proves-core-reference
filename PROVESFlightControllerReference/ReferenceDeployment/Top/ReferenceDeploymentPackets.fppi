@@ -25,9 +25,9 @@ telemetry packets ReferenceDeploymentPackets {
     powerMonitor.TotalPowerGenerated
 
     # Communications Data
-    # ComCcsdsSband.tcSecurityDeframer.CurrentSequenceNumber
-    ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber
-    ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber
+    # ComCcsdsSband.tcSecurityDecryptor.CurrentSequenceNumber
+    ComCcsdsLora.tcSecurityDecryptor.CurrentSequenceNumber
+    ComCcsdsUart.tcSecurityDecryptor.CurrentSequenceNumber
 
     lora.BytesReceived
 

@@ -116,7 +116,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
 	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
 	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/TcSecurityDeframer/docs/sdd.md docs-site/components/TcSecurityDeframer.md
+	@cp PROVESFlightControllerReference/Components/TcSecurityDecryptor/docs/sdd.md docs-site/components/TcSecurityDecryptor.md
 	@cp PROVESFlightControllerReference/Components/ProvesRouter/docs/sdd.md docs-site/components/ProvesRouter.md
 	@# Copy images
 	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
@@ -155,7 +155,7 @@ check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it cor
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -466,7 +466,7 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDecryptor/
 	@echo "Copied secret files 🤫"
 
 .PHONY: make-ci-spacecraft-id
