@@ -29,13 +29,23 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     // Queue depth supplied to the component instance under test
     static const FwSizeType TEST_INSTANCE_QUEUE_DEPTH = 10;
 
+    // Per-test state file path (relative, so it lands in the current working
+    // directory) overriding the flight default /mode_state.bin
+    static constexpr const char* TEST_STATE_FILE = "ModeManagerTester_state.bin";
+
   public:
     // ----------------------------------------------------------------------
     // Construction and destruction
     // ----------------------------------------------------------------------
 
     //! Construct object ModeManagerTester
-    ModeManagerTester();
+    //!
+    //! deferBoot=false (default): parameters are loaded immediately, as the
+    //! non-persistence tests expect. deferBoot=true: the test seeds the state
+    //! file itself and then calls bootFromPersistentState(), which mirrors the
+    //! topology boot ordering (restorePersistentState() before
+    //! loadParameters(), see ReferenceDeploymentTopology.cpp).
+    explicit ModeManagerTester(bool deferBoot = false);
 
     //! Destroy object ModeManagerTester
     ~ModeManagerTester();
@@ -102,8 +112,31 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! packetRouted resets the command loss timer and debounce latch
     void testPacketRoutedResetsCommandLossTimer();
 
-    //! prepareForReboot logs the event without changing mode
+    //! prepareForReboot logs the event, persists cleanShutdown=1 without
+    //! changing mode, and the next boot does not flag an unintended reboot
     void testPrepareForReboot();
+
+    //! A state file with cleanShutdown=0 in NORMAL mode is an unintended
+    //! reboot: the component boots into SYSTEM_FAULT safe mode
+    void testRestoreUnintendedReboot();
+
+    //! A clean-shutdown state file restores NORMAL quietly and re-arms the
+    //! unclean flag for next-boot crash detection
+    void testRestoreCleanShutdown();
+
+    //! No state file (first boot): NORMAL, no warning, fresh unclean file
+    void testRestoreNoStateFile();
+
+    //! A persisted SAFE_MODE state is restored: switches off, reason and
+    //! entry count preserved, no fresh safe-mode entry side effects
+    void testRestoreSafeModeState();
+
+    //! A truncated state file falls back to defaults with a load-read warning
+    void testRestoreShortStateFile();
+
+    //! An invalid persisted mode value falls back to defaults with a
+    //! load-corrupt warning
+    void testRestoreCorruptModeValue();
 
   private:
     // ----------------------------------------------------------------------
@@ -130,6 +163,21 @@ class ModeManagerTester final : public ModeManagerGTestBase {
 
     //! Set the voltage debounce parameter and reload component parameters
     void setDebounceSeconds(U32 seconds);
+
+    //! Boot the component the way the topology does: restorePersistentState()
+    //! first, then loadParameters() (ReferenceDeploymentTopology.cpp ordering).
+    //! Only valid after construction with deferBoot=true.
+    void bootFromPersistentState();
+
+    //! Seed the state file with a PersistentState record
+    void seedStateFile(U8 mode, U32 safeModeEntryCount, U8 safeModeReason, U8 cleanShutdown);
+
+    //! Seed the state file with raw bytes (for truncation/corruption tests)
+    void seedRawStateFile(const U8* data, FwSizeType size);
+
+    //! Read the state file back into a PersistentState record; returns
+    //! whether a full record could be read
+    bool readStateFile(ModeManager::PersistentState& state);
 
   private:
     // ----------------------------------------------------------------------

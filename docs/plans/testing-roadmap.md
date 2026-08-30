@@ -11,7 +11,7 @@ Bring hardware-free testing online in tiers, so component logic and subsystem be
 | Tier | What runs | Where it runs | Injects at | CI job |
 |------|-----------|---------------|------------|--------|
 | Helper Test (exists) | Zephyr-free helper classes, gtest | macOS + ubuntu | function args | `unit-test` (exists) |
-| Component UT (new) | one component via autocoded Tester, `fprime-util check` | macOS + ubuntu | F Prime ports | `fprime-ut` (new) |
+| Component UT (new) | one component via autocoded Tester, `make test-fprime-ut` | macOS + ubuntu | F Prime ports | `fprime-ut` (new) |
 | Ztest Lane (new) | Zephyr-calling helpers vs emulated devices | Linux only | Zephyr driver API | `ztest` (new) |
 | SIL (new) | Subsystem Deployment + Behavioral Models + GDS pytest | macOS + ubuntu | F Prime ports (models) | `sil-radio` (new) |
 | SITL Tier (new, phase 4) | full topology on native_sim + Reverse Drivers | Linux only | Zephyr driver API (fakes) | `sitl-smoke` (new) |
@@ -36,7 +36,7 @@ The native-toolchain plumbing everything else reuses.
 4. **Exemplar Component UTs** (the pattern others copy): **Watchdog** (small; GPIO-port stub; regression for the unopened-GPIO lockup class) and **ModeManager** (safe-mode transitions incl. the cases HWIL permanently skips for needing manual voltage). Stretch: ProvesRouter. Uncomment `register_fprime_ut`, add `test/ut/` with autocoded Tester + gtest.
 5. **Vestigial-include cleanup**: drop unused Zephyr includes from LoadSwitch/AntennaDeployer/FsSpace — moves them into the portable set. (StartupManager turned out to genuinely call `k_uptime_seconds`; it stays Zephyr-guarded.)
 6. **Helper-extraction additions**: StartupManager boot-count/persistence logic (its real logic is Os::File + uptime; high incident history).
-7. **Wiring**: `make test-fprime-ut` (native generate + `fprime-util check`); CI job `fprime-ut` on ubuntu-latest (checkout, submodules, venv, no Zephyr SDK). Works locally on macOS via Darwin platform.
+7. **Wiring**: `make test-fprime-ut` (native generate + `fprime-util build --ut --all` + scoped ctest); CI job `fprime-ut` on ubuntu-latest (checkout, submodules, venv, no Zephyr SDK). Works locally on macOS via Darwin platform.
 
 Policy (agreed): tests-on-new-components is an AGENTS.md convention + review culture, not a coverage gate. Retrofit deliberately by incident history: radio path, startup/boot-count, watchdog first.
 

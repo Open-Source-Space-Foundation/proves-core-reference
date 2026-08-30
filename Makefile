@@ -232,12 +232,12 @@ generate-fprime-ut: submodules fprime-venv generate-auth-key ## Generate the nat
 
 .PHONY: generate-fprime-ut-if-needed
 generate-fprime-ut-if-needed:
-	@test -d $(NATIVE_UT_BUILD_DIR) || $(MAKE) generate-fprime-ut
+	@test -f $(NATIVE_UT_BUILD_DIR)/build.ninja || $(MAKE) generate-fprime-ut
 
 .PHONY: test-fprime-ut
-test-fprime-ut: generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
+test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
 	cd native && $(UV_RUN) fprime-util build --ut --all
-	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure -R "PROVESFlightControllerReference_"
+	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
 FILTER ?= not sync_sequence_number and not format_filesystem
 

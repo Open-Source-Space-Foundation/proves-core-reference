@@ -18,19 +18,17 @@ add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/UpdateStatus/")
 # Implementation calls Zephyr APIs. On non-Zephyr platforms register autocode
 # only, so this module's ports/types stay resolvable to portable consumers
 # (see docs/adr/0002).
+set(IMPL_SOURCES)
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
-        SOURCES
-            "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.cpp"
-    )
-else()
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
-    )
+    set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.cpp")
 endif()
+
+register_fprime_library(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
+    SOURCES
+        ${IMPL_SOURCES}
+)
 
 ### Unit Tests ###
 # register_fprime_ut(

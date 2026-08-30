@@ -15,9 +15,9 @@
 <!-- Tier definitions live in CONTEXT.md; rollout status in docs/plans/testing-roadmap.md -->
 
 - [ ] Helper tests (`make test-unit`)
-- [ ] Component UTs (F Prime `fprime-util check`)
-- [ ] Ztest lane (Twister / native_sim)
-- [ ] SIL (subsystem deployment + GDS pytest)
+- [ ] Component UTs (`make test-fprime-ut`)
+- [ ] Ztest lane (Twister / native_sim) (planned — see docs/plans/testing-roadmap.md)
+- [ ] SIL (subsystem deployment + GDS pytest) (planned — see docs/plans/testing-roadmap.md)
 - [ ] HWIL integration tests (CI `integration-*` or local board)
 - [ ] Manual testing (describe steps)
 

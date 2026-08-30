@@ -56,7 +56,8 @@ class WatchdogTester final : public WatchdogGTestBase {
     //! Transition count and GPIO state persist across a stop/start cycle
     void testTransitionCountAcrossStopStart();
 
-    //! A failing GPIO driver status is tolerated: no crash, petting continues
+    //! Pins current behavior: GPIO status is discarded, so a failing driver
+    //! status changes nothing (petting continues, nothing reported; see #512)
     void testGpioFailureIsTolerated();
 
   private:

@@ -9,7 +9,7 @@ A gtest of an extracted, Zephyr-free, F Prime-free helper class (e.g. `BDot`, `R
 _Avoid_: vanilla unit test, plain gtest
 
 **Component UT**:
-An F Prime unit test of a single component through its autocoded Tester base classes, built with a native (Linux/Darwin) toolchain and run via `fprime-util check`.
+An F Prime unit test of a single component through its autocoded Tester base classes, built with a native (Linux/Darwin) toolchain and run via `make test-fprime-ut`.
 _Avoid_: unit test (alone — ambiguous with Helper Test)
 
 **Ztest Lane**:

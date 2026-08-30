@@ -17,19 +17,17 @@
 # Implementation calls Zephyr APIs (k_uptime_seconds). On non-Zephyr platforms
 # register autocode only, so this module's ports/types stay resolvable to
 # portable consumers (see docs/adr/0002).
+set(IMPL_SOURCES)
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
-        SOURCES
-            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.cpp"
-    )
-else()
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
-    )
+    set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/StartupManager.cpp")
 endif()
+
+register_fprime_library(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
+    SOURCES
+        ${IMPL_SOURCES}
+)
 
 ### Unit Tests ###
 # register_fprime_ut(

@@ -5,7 +5,7 @@ date: 2026-08-29
 
 # UT lanes: helper extraction stays default; ztest only where real emulation exists
 
-Roughly 17 in-repo components include Zephyr (or pico) headers directly and cannot build under a native F Prime UT toolchain. We keep **helper extraction** (Zephyr-free logic classes tested in `test/unit-tests/`, the repo's existing pattern) as the default lane for them, and add a **narrow ztest/Twister lane on `native_sim`** only for components whose Zephyr APIs have real in-tree emulation: FlashWorker (`flash_simulator` + MCUBoot slot partitions), RtcManager (`rtc_emul` incl. alarms), FsFormat/FsSpace (FATFS over ramdisk), and a LoadSwitch+ZephyrGpioDriver integration test over `gpio_emul`. Portable (port-only) components get full Component UTs via `fprime-util check` with a native toolchain.
+Roughly 17 in-repo components include Zephyr (or pico) headers directly and cannot build under a native F Prime UT toolchain. We keep **helper extraction** (Zephyr-free logic classes tested in `test/unit-tests/`, the repo's existing pattern) as the default lane for them, and add a **narrow ztest/Twister lane on `native_sim`** only for components whose Zephyr APIs have real in-tree emulation: FlashWorker (`flash_simulator` + MCUBoot slot partitions), RtcManager (`rtc_emul` incl. alarms), FsFormat/FsSpace (FATFS over ramdisk), and a LoadSwitch+ZephyrGpioDriver integration test over `gpio_emul`. Portable (port-only) components get full Component UTs via `make test-fprime-ut` with a native toolchain.
 
 ## Rejected alternatives (recorded because they will be re-suggested)
 
@@ -18,4 +18,4 @@ Roughly 17 in-repo components include Zephyr (or pico) headers directly and cann
 
 - The ztest lane is Linux-only. On macOS, Twister filters all native platforms and **exits 0 with "0 executed"** — the `make` target must guard on Linux or assert executed-count > 0 from `twister.json`, or it will green-pass while running nothing.
 - The "Z Tests" checkbox in the PR template predates this decision and was never defined (arrived as boilerplate in PR #21); it should be replaced by the real tier names.
-- Vestigial Zephyr includes found during this analysis (StartupManager `rtc.h`, LoadSwitch `gpio.h`, AntennaDeployer `kernel.h` — zero calls) can be removed, shrinking the Zephyr-bound set.
+- Vestigial Zephyr includes found during this analysis (LoadSwitch `gpio.h`, AntennaDeployer `kernel.h`, FsSpace — zero calls) can be removed, shrinking the Zephyr-bound set. StartupManager, initially suspected vestigial, turned out to genuinely need Zephyr (`kernel.h` for `k_uptime_seconds()`) and stays Zephyr-guarded.

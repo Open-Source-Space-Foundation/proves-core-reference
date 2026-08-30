@@ -14,23 +14,22 @@
 # root when not specifically overridden by the developer. i.e. The module defined by
 # `Ref/SignalGen/CMakeLists.txt` will be named `Ref_SignalGen`.
 
-# Implementation calls Zephyr APIs. On non-Zephyr platforms register autocode
-# only, so this module's ports/types stay resolvable to portable consumers
-# (see docs/adr/0002).
+# RtcManager.cpp calls Zephyr APIs; on non-Zephyr platforms register autocode
+# only for it, so this module's ports/types stay resolvable to portable
+# consumers (see docs/adr/0002). RtcHelper.cpp is portable (no Zephyr
+# includes) and builds on every platform.
+set(IMPL_SOURCES)
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
-        SOURCES
-            "${CMAKE_CURRENT_LIST_DIR}/RtcManager.cpp"
-            "${CMAKE_CURRENT_LIST_DIR}/RtcHelper.cpp"
-    )
-else()
-    register_fprime_library(
-        AUTOCODER_INPUTS
-            "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
-    )
+    set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/RtcManager.cpp")
 endif()
+
+register_fprime_library(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
+    SOURCES
+        "${CMAKE_CURRENT_LIST_DIR}/RtcHelper.cpp"
+        ${IMPL_SOURCES}
+)
 
 ### Unit Tests ###
 # register_fprime_ut(

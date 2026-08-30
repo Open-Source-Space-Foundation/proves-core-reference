@@ -49,6 +49,13 @@ void WatchdogTester ::testRunTogglesGpioWhileStarted() {
 }
 
 void WatchdogTester ::testStartCommand() {
+    // The component boots with petting enabled, so first stop it via the signal
+    // port and prove that petting actually ceased before testing the start.
+    this->invoke_to_stop(0);
+    this->invoke_to_run(0, 0);
+    ASSERT_from_gpioSet_SIZE(0);
+    this->clearHistory();
+
     const U32 cmdSeq = 10;
     this->sendCmd_START_WATCHDOG(0, cmdSeq);
 
@@ -66,7 +73,7 @@ void WatchdogTester ::testStartCommand() {
     ASSERT_from_gpioSet_SIZE(0);
     ASSERT_from_prepareForReboot_SIZE(0);
 
-    // Petting is enabled: the next rate group call pets the GPIO
+    // Petting actually resumed: the next rate group call pets the GPIO
     this->invoke_to_run(0, 0);
     ASSERT_from_gpioSet_SIZE(1);
     ASSERT_from_gpioSet(0, Fw::Logic::HIGH);
@@ -149,9 +156,11 @@ void WatchdogTester ::testTransitionCountAcrossStopStart() {
 }
 
 void WatchdogTester ::testGpioFailureIsTolerated() {
-    // Historical incident: an unopened GPIO driver locked up the rate group.
-    // The component ignores the GPIO status by design, so a failing driver must
-    // neither crash nor stop the petting loop.
+    // Pins current behavior: the component discards the gpioSet return status
+    // (Watchdog.cpp run_handler), so a failing driver status changes nothing —
+    // petting and telemetry continue and nothing is reported. Whether the
+    // status should be checked/reported is tracked in issue #512; this test
+    // cannot exercise status handling that does not exist.
     this->m_gpioStatus = Drv::GpioStatus::NOT_OPENED;
 
     this->invoke_to_run(0, 0);

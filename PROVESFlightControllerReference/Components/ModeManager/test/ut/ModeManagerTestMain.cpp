@@ -106,6 +106,36 @@ TEST(Reboot, PrepareForReboot) {
     tester.testPrepareForReboot();
 }
 
+TEST(Persistence, RestoreUnintendedReboot) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreUnintendedReboot();
+}
+
+TEST(Persistence, RestoreCleanShutdown) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCleanShutdown();
+}
+
+TEST(Persistence, RestoreNoStateFile) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreNoStateFile();
+}
+
+TEST(Persistence, RestoreSafeModeState) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreSafeModeState();
+}
+
+TEST(Persistence, RestoreShortStateFile) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreShortStateFile();
+}
+
+TEST(Persistence, RestoreCorruptModeValue) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCorruptModeValue();
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
