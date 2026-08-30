@@ -2,6 +2,38 @@
 
 This directory contains development and analysis tools for the PROVES Core Reference project.
 
+## Telemetry Archive Decoder
+
+`decode_tlm_archive.py` decodes the CSV file written by the flight
+`TlmArchive` component. Use the topology dictionary from the same firmware
+build as the archive:
+
+```bash
+fprime-venv/bin/python tools/decode_tlm_archive.py \
+  pre_deployment.csv \
+  build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+```
+
+The default output identifies each packet and prints its timestamp and named,
+typed channel values. Machine-readable output is also available:
+
+```bash
+# One row per telemetry channel
+fprime-venv/bin/python tools/decode_tlm_archive.py \
+  pre_deployment.csv ReferenceDeploymentTopologyDictionary.json \
+  --format csv --output decoded.csv
+
+# One object per packet
+fprime-venv/bin/python tools/decode_tlm_archive.py \
+  pre_deployment.csv ReferenceDeploymentTopologyDictionary.json \
+  --format json --output decoded.json
+```
+
+The script checks the archive version, declared packet byte count, F Prime
+packet descriptor, packet ID, and dictionary-derived packet size. Always keep
+the dictionary artifact with its firmware image: a dictionary from a different
+build may assign different channel layouts or types.
+
 ## Data Budget Tool
 
 The Data Budget Tool (`data_budget.py`) analyzes F Prime telemetry definitions to calculate the serialized byte size of telemetry channels and packets.
