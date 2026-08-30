@@ -11,6 +11,7 @@ matching NoOpReceived event come back through the YAMCS event subscription,
 the full TC + TM + events path is healthy.
 """
 
+import logging
 import queue
 import time
 
@@ -71,4 +72,15 @@ def test_noop_round_trip(yamcs_client, yamcs_processor, yamcs_instance):
             f"{TOTAL_TIMEOUT_S}s after {attempts} CMD_NO_OP attempts"
         )
     finally:
-        subscription.cancel()
+        # websocket-client's WebSocketApp.close() has a check-then-use race on
+        # self.sock: the reader thread can null it between the truthiness check
+        # and the close_frame read, raising AttributeError out of teardown.  A
+        # teardown error would replace this test's real result (pass, or the
+        # AssertionError above) with a misleading traceback, so swallow it.
+        try:
+            subscription.cancel()
+        except Exception:  # noqa: BLE001 - teardown must not mask the test result
+            logging.getLogger(__name__).warning(
+                "Ignoring error while cancelling YAMCS event subscription",
+                exc_info=True,
+            )
