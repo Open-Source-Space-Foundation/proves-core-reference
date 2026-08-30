@@ -8,18 +8,20 @@ module Components {
     @ FPP shadow-enum representing Components::PacketParser::Status
     enum PacketParserStatus {
         Ok,                        @< Packet was successfully parsed
-        SpiParseError,             @< SPI could not be parsed from packet
         SequenceNumberParseError,  @< Sequence number could not be parsed from packet
         MacParseError,             @< MAC could not be parsed from packet
     }
 
-    @ Component placed between the TcDeframer and SpacePacketDeframer components. It
-    @ implements the TC ProcessSecurity flow of CCSDS 355.0-B-2: parse the Security
-    @ Header and Trailer, validate the SPI and anti-replay sequence number, and verify
-    @ the MAC. The verification result is recorded in the frame context
-    @ (authenticated flag); policy enforcement (reject or bypass) is owned downstream
-    @ by the router.
-    passive component TcSecurityDeframer {
+    @ Decryptor behind the upstream Svc.Ccsds.CcsdsSdlsDeframer, implementing
+    @ Svc.Ccsds.CcsdsSdlsDecrypt. Implements the TC ProcessSecurity flow of CCSDS 355.0-B-2:
+    @ parse the Security Trailer, validate the security association index and anti-replay
+    @ sequence number, and verify the MAC (which covers the security association index,
+    @ supplied by the deframer, and the frame data). The verification result is recorded in
+    @ the frame context (authenticated flag); policy enforcement (reject or bypass) is owned
+    @ downstream by the router.
+    passive component TcSecurityDecryptor {
+
+        import Svc.Ccsds.CcsdsSdlsDecrypt
 
         ### Commands ###
 
@@ -57,8 +59,8 @@ module Components {
         @ ParsingFailed indicates that there was an error parsing a received packet
         event ParsingFailed(parse_status: PacketParserStatus) severity warning high id 3 format "Parsing failed: {}" throttle 2
 
-        @ SpiInvalid indicates that a received packet had an invalid SPI value
-        event SpiInvalid(packet_spi: U32) severity warning high id 4 format "SPI invalid: Received={}" throttle 2
+        @ SpiInvalid indicates that a received packet had an invalid security association index
+        event SpiInvalid(sa_index: U32) severity warning high id 4 format "Security association index invalid: Received={}" throttle 2
 
         ### Parameters ###
 
@@ -67,20 +69,6 @@ module Components {
 
         @ Parameter for the file path where the current sequence number is stored
         param SEQ_NUM_FILE_PATH : string default "//sequence_number.txt"
-
-        ### Ports ###
-
-        @ Port receiving frames from TcDeframer: [Security Header | Data Field | Security Trailer]
-        guarded input port dataIn: Svc.ComDataWithContext
-
-        @ Port forwarding the Data Field to SpacePacketDeframer with the authenticated flag set in the context
-        output port dataOut: Svc.ComDataWithContext
-
-        @ Port returning ownership of structurally invalid frames back to TcDeframer
-        output port dataReturnOut: Svc.ComDataWithContext
-
-        @ Port receiving back ownership of buffers sent on dataOut
-        sync input port dataReturnIn: Svc.ComDataWithContext
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

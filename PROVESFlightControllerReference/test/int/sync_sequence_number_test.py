@@ -30,8 +30,8 @@ def test_sync_sequence_number(
             else "uart"
         )
     deframer = {
-        "uart": "ComCcsdsUart.tcSecurityDeframer",
-        "lora": "ComCcsdsLora.tcSecurityDeframer",
+        "uart": "ComCcsdsUart.tcSecurityDecryptor",
+        "lora": "ComCcsdsLora.tcSecurityDecryptor",
     }[link]
     proves_send_and_assert_command(fprime_test_api, f"{deframer}.GET_SEQ_NUM")
     evt: EventData = fprime_test_api.assert_event(

@@ -73,7 +73,7 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h",
+        default="PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h",
         help="Output path for AuthDefaultKey.h",
     )
     parser.add_argument(

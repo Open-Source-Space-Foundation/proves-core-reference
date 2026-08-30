@@ -89,7 +89,7 @@ jobs:
         env:
           AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h
 
       - name: Build MCUBoot
         run: |
@@ -158,7 +158,7 @@ jobs:
         env:
           AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |
@@ -417,7 +417,7 @@ jobs:
         env:
           AUTH_KEY: ${{ secrets.AUTH_KEY }}
         run: |
-          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h
 
       - name: Install Framer Plugin
         run: |

@@ -1,6 +1,6 @@
 // ======================================================================
 // \title  Const.cpp
-// \brief  hpp file for to define constants used by TcSecurityDeframer component
+// \brief  hpp file for to define constants used by TcSecurityDecryptor component
 // ======================================================================
 
 #pragma once
@@ -16,18 +16,16 @@ namespace Ccsds355_0_B_2 {
 //! Telecommand packet structure
 
 //! CCSDS 355.0-B-2 Section E2.2
+//! The Security Parameter Index is stripped by the upstream Svc.Ccsds.CcsdsSdlsDeframer before
+//! this component sees the frame; kSpiSize is kept only for the MAC-prefix fallback in Authenticator.
 constexpr const size_t kSpiSize = 2;             //!< The size of the Security Parameter Index field in bytes
 constexpr const size_t kSequenceNumberSize = 4;  //!< The size of the sequence number field in bytes
-constexpr const size_t kTCSecurityHeaderSize =
-    kSpiSize + kSequenceNumberSize;               //!< The telecommand security header size in bytes
-constexpr const size_t kTCPrimaryHeaderSize = 5;  //!< TC Primary Header is always 5 octets (CCSDS 232.0-B-4)
 
 //! CCSDS 355.0-B-2 Section E2.3
 constexpr const size_t kTCSecurityTrailer = 16;  //!< The telecommand security trailer size in bytes
 
 //! Helpers
-constexpr const size_t kMinAuthenticatedPacketSize =
-    kTCSecurityHeaderSize + kTCSecurityTrailer;  //!< Minimum packet size
+constexpr const size_t kMinAuthenticatedPacketSize = kSequenceNumberSize + kTCSecurityTrailer;  //!< Minimum packet size
 
 }  // namespace Ccsds355_0_B_2
 
