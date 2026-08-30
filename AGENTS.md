@@ -270,7 +270,6 @@ make generate          # Generate F Prime build cache (force)
 make generate-if-needed # Generate only if build directory missing
 make build             # Build firmware (runs generate-if-needed)
 make build-mcuboot     # Build firmware with MCUBoot bootloader signing
-make generate-auth-key # Generate AuthDefaultKey.h with a random HMAC key
 make fmt               # Run linters and formatters (pre-commit)
 make data-budget       # Analyze telemetry data budget (use VERBOSE=1 for details)
 make docs-sync         # Sync component SDD files to docs-site/components/
@@ -581,12 +580,21 @@ After compiling, upload the sequence through GDS for execution on the board.
 
 ### Authentication & Security
 
-Commands can be HMAC-authenticated using the `TcSecurityDeframer` component. The authentication key is stored in `PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h`.
+Commands can be HMAC-authenticated using the `TcSecurityDeframer` component. The authentication key is **never compiled into the firmware image** (see issue #220); it lives in a dedicated `keystore_partition` on internal flash, mounted as littlefs at `/keys` (`/keys/authkeys.bin`), separate from the SD-card FAT filesystem used for other storage. A keyless board still boots, so it can be provisioned in the field or on the bench.
+
+The key store holds up to 2 slots (`{valid, spi, key}`), keyed by the CCSDS Security Parameter Index (SPI) already present in every frame. Three commands manage it:
+
+- `PROVISION_KEY(spi, key)` — bootstrap. Bypass-allowlisted so it works on a keyless satellite, but the handler only honors it while the store is empty.
+- `ADD_KEY(spi, key)` — rotation. Requires an authenticated frame; fails once 2 keys already exist.
+- `REMOVE_KEY(spi)` — rotation. Requires an authenticated frame; fails if it would drop the active key count below 1.
+
+The store is the single source of truth shared by all `TcSecurityDeframer` instances (UART/LoRa/Sband): on an unknown SPI, a deframer reloads the store from disk once and retries before rejecting the frame, so a rotation issued over any one link propagates to the others automatically. The ground plugin (`Framing/src/authenticate_plugin.py`) sources its key from the `--authentication-key` CLI arg or the `PROVES_AUTH_KEY` env var — it no longer reads a compiled-in default.
 
 ```bash
-make generate-auth-key   # Generate a new random HMAC key (only if file doesn't exist)
-make copy-secrets SECRETS_DIR=<dir>  # Copy production keys and auth key from a secure directory
+make copy-secrets SECRETS_DIR=<dir>  # Copy production keys from a secure directory
 ```
+
+To provision a keyless board, uplink `PROVISION_KEY(spi=0, key=<hex key>)` over a trusted bench/CI link (see `PROVESFlightControllerReference/test/int/provision_key_test.py`), then give ground the same key via `PROVES_AUTH_KEY`.
 
 Firmware is signed with MCUBoot for secure boot. The signing key is at `keys/proves.pem` (copied from the MCUBoot test key or a production key). Build signed firmware with:
 

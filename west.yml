@@ -29,7 +29,8 @@ manifest:
           - picolibc   # C library
           - mbedtls    # Crypto library
           - mcuboot    # Bootloader support
-          - fatfs      # FatFS (file system) support
+          - fatfs      # FatFS (file system) support (SD card, mounted at /)
+          - littlefs   # LittleFS - internal-flash key store, mounted at /keys.
           - hal_st     # Required for certain sensors
 
     - name: loramac-node
@@ -86,6 +87,10 @@ manifest:
     - name: fatfs
       revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
       path: lib/zephyr-workspace/modules/fatfs
+
+    - name: littlefs
+      revision: 8f5ca347843363882619d8f96c00d8dbd88a8e79
+      path: lib/zephyr-workspace/modules/fs/littlefs
 
   self:
     path: .

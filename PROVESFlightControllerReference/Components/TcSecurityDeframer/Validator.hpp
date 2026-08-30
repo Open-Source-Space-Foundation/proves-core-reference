@@ -26,7 +26,8 @@ enum class Status {
 PacketValidator::Status validatePacket(
     const Ccsds355_0_B_2::TCSecurityHeader& secHeader,  //!< The parsed security header
     uint32_t sequenceNumber,                            //!< The current sequence number
-    uint32_t sequenceNumberWindow                       //!< The acceptable sequence number window
+    uint32_t sequenceNumberWindow,                      //!< The acceptable sequence number window
+    const ActiveSpiSlots& activeSpis                    //!< The active SPI slots, used to validate the SPI
 );
 
 }  // namespace Components

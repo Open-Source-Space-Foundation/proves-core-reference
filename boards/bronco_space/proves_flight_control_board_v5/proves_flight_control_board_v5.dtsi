@@ -23,6 +23,17 @@
                         disk-access;
                         mount-point = "/";
                 };
+                lfs1: lfs1 {
+                        compatible = "zephyr,fstab,littlefs";
+                        mount-point = "/keys";
+                        partition = <&keystore_partition>;
+                        automount;
+                        read-size = <16>;
+                        prog-size = <16>;
+                        cache-size = <64>;
+                        lookahead-size = <32>;
+                        block-cycles = <512>;
+                };
         };
 
 
@@ -63,7 +74,7 @@ zephyr_udc0: &usbd {
 };
 
 &flash0 {
-    reg = <0x10000000 DT_SIZE_M(4)>;
+    reg = <0x10000000 DT_SIZE_M(16)>;
     partitions {
         compatible = "fixed-partitions";
         #address-cells = <0x1>;
@@ -89,9 +100,14 @@ zephyr_udc0: &usbd {
             reg = <0x300000 0x100000>;
         };
 
-        storage_partition: partition@400000 {
+        keystore_partition: partition@400000 {
+            label = "keystore_partition";
+            reg = <0x400000 0x40000>;
+        };
+
+        storage_partition: partition@440000 {
             label = "storage_partition";
-            reg = <0x400000 0xC00000>;
+            reg = <0x440000 0xBC0000>;
         };
     };
 };

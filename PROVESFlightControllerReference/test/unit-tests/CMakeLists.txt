@@ -53,7 +53,6 @@ add_library(security_deframer_authenticator STATIC
 )
 target_include_directories(security_deframer_authenticator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-    ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
 
 # RtcManager RtcHelper
