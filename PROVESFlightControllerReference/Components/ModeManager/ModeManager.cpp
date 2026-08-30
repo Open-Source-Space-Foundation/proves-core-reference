@@ -38,8 +38,7 @@ ModeManager ::ModeManager(const char* const compName)
 
 ModeManager ::~ModeManager() {}
 
-void ModeManager ::init(FwSizeType queueDepth, FwEnumStoreType instance) {
-    ModeManagerComponentBase::init(queueDepth, instance);
+void ModeManager ::restorePersistentState() {
     this->loadState();
 }
 
@@ -150,7 +149,8 @@ void ModeManager ::runSafeModeSequence() {
     Fw::ParamValid is_valid;
     Fw::ParamString safe_mode_sequence = this->paramGet_SAFEMODE_SEQUENCE_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    this->runSequence_out(0, safe_mode_sequence);
+    const Svc::SeqArgs no_args;
+    this->runSequence_out(0, safe_mode_sequence, no_args);
 }
 
 void ModeManager ::completeSequence_handler(FwIndexType portNum,
@@ -158,8 +158,6 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
                                             U32 cmdSeq,
                                             const Fw::CmdResponse& response) {
     (void)portNum;
-    (void)opCode;
-    (void)cmdSeq;
 
     if (response == Fw::CmdResponse::OK) {
         // log that sequence completed successfully
@@ -167,6 +165,11 @@ void ModeManager ::completeSequence_handler(FwIndexType portNum,
     } else {
         // log that sequence failed
         this->log_WARNING_LO_SafeModeSequenceFailed(response);
+    }
+
+    // Forward completion to other listeners (e.g. StartupManager active-sequence tracking)
+    if (this->isConnected_sequenceDoneNotify_OutputPort(0)) {
+        this->sequenceDoneNotify_out(0, opCode, cmdSeq, response);
     }
 }
 

@@ -114,6 +114,9 @@ void setupTopology(const TopologyState& state) {
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
+    // Restore the persisted mode now that the ports are wired and the GPIO drivers are open.
+    // This drives the load switches, so it must not run any earlier.
+    modeManager.restorePersistentState();
     // Read parameters from persistent storage
     readParameters();
     // Autocoded parameter loading. Function provided by autocoder.
