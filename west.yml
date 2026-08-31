@@ -17,7 +17,7 @@ manifest:
     # Zephyr RTOS core
     - name: zephyr
       repo-path: zephyr
-      revision: v4.4.1
+      revision: v4.4.2
       path: lib/zephyr-workspace/zephyr
       west-commands: scripts/west-commands.yml
       import:
@@ -68,13 +68,13 @@ manifest:
 
     # Crypto libraries (commonly used)
     - name: mbedtls
-      revision: a3e190fe44c78d1ba67f55979e1257328cc7d0d8
+      revision: 098e120afb51877ed814bdc04443890ae12e0642
       path: lib/zephyr-workspace/modules/crypto/mbedtls
       groups:
         - crypto
 
     - name: tf-psa-crypto
-      revision: dc575a2ddcc8cb16275d24c42a52eaf79ebe2231
+      revision: fa92349590a54959ee2efc21b668e5afdb144726
       path: lib/zephyr-workspace/modules/crypto/mbedtls/tf-psa-crypto
       groups:
         - crypto
@@ -84,7 +84,7 @@ manifest:
       path: lib/zephyr-workspace/bootloader/mcuboot
 
     - name: fatfs
-      revision: f4ead3bf4a6dab3a07d7b5f5315795c073db568d
+      revision: 4f60a12c58c3de4246857ad87c40239ecd93349b
       path: lib/zephyr-workspace/modules/fatfs
 
   self:
