@@ -15,18 +15,12 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 
-// Phase 4: per-board radio startup
 #ifdef CONFIG_LORA_BASICS_MODEM_DRIVERS
-// v5e USP path: RalSessionImpl + UspRadio
 #include "fprime-zephyr/Drv/UspRadio/RalSessionImpl.hpp"
 #include "fprime-zephyr/Drv/UspRadio/UspRadio.hpp"
 
-// Static RalSessionImpl instance (lives for the entire flight).
-// 437.4 MHz / 70cm amateur band, matches GRC LoRaCfg DEFAULT_FREQ. TX power
-// capped at 10 dBm.
-static Zephyr::RalSessionImpl s_ralSession(437400000U,  // 437.4 MHz
-                                           10           // +10 dBm
-);
+// USP radio session: carrier frequency in Hz, TX power in dBm.
+static Zephyr::RalSessionImpl s_ralSession(437400000U, 10);
 #endif  // CONFIG_LORA_BASICS_MODEM_DRIVERS
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
@@ -136,24 +130,10 @@ void setupTopology(const TopologyState& state) {
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 
-    // We have a pipeline for both the radio and UART driver to allow for ground
-    // harness debugging and for over-the-air communications.
-    //
-    // Board selection (Phase 4 USP port):
-    //   v5e  (CONFIG_LORA_BASICS_MODEM_DRIVERS=y): UspRadio with RalSessionImpl
-    //   v5c/v5d (legacy):                           Zephyr LoRa driver
-    //
-    // Both paths boot with TX DISABLED; the startup sequence enables TX after
-    // the mode manager permits it (identical gating to the legacy LoRa path).
+    // The radio instance (uspRadio or lora) is selected by Top/CMakeLists.txt per board.
+    // Both radios boot with TX disabled; the startup sequence enables TX later.
 #ifdef CONFIG_LORA_BASICS_MODEM_DRIVERS
-    // v5e USP path.
-    // 1. Inject the RalSessionImpl (constructed at file scope above) into
-    //    the autocoded 'uspRadio' component via configure().
-    // 2. UspRadio::startRadio() calls session.init() which internally calls
-    //    zephyr_usp_initialization_wait() + zephyr_smtc_rac_init() (see
-    //    RalSessionImpl::init()), applies the P0 boot-default profile, and
-    //    starts continuous RX.  TX stays DISABLED until the startup-sequence
-    //    sends a TRANSMIT(ENABLED) command (same gating as the legacy path).
+    // startRadio() initialises the injected session, applies the boot profile and starts RX.
     uspRadio.configure(s_ralSession);
     if (!uspRadio.startRadio(Zephyr::UspTransmitState::DISABLED)) {
         Fw::Logger::log("[Topology] UspRadio startRadio() failed -- radio inactive\n");

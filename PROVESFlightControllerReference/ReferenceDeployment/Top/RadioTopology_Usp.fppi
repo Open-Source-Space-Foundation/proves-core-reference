@@ -1,9 +1,8 @@
-# Radio topology connections for v5e (Semtech USP path).
+# Radio connections for v5e (Semtech USP driver).
 # Included by topology.fpp inside topology ReferenceDeployment { }.
-# Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is set.
+# Selected by Top/CMakeLists.txt per board.
 #
-# UspRadio is active; no ComRetry shim needed (active-component queue provides
-# back-pressure). Direct framer -> uspRadio.dataIn path.
+# UspRadio is active, so its queue provides back-pressure and no ComRetry shim is needed.
 
     instance uspRadio
 
@@ -15,13 +14,13 @@
       uspRadio.dataOut -> ComCcsdsLora.frameAccumulator.dataIn
       ComCcsdsLora.frameAccumulator.dataReturnOut -> uspRadio.dataReturnIn
 
-      # UspRadio <-> Framer (Downlink, direct — no retry shim)
+      # UspRadio <-> Framer (Downlink)
       ComCcsdsLora.framer.dataOut    -> uspRadio.dataIn
       uspRadio.dataReturnOut         -> ComCcsdsLora.framer.dataReturnIn
       uspRadio.comStatusOut          -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut     -> ComCcsdsLora.framer.comStatusIn
 
-      # --- Startup / sequence wiring (identical for both radio variants) ---
+      # Startup and sequence wiring (same in RadioTopology_Lora.fppi)
       startupManager.runSequence -> cmdSeq.seqRunIn
 
       # StartupManager receives sequence status from CmdSeq
@@ -40,9 +39,7 @@
       startupManager.enableTransmit  -> uspRadio.enableTransmit
       startupManager.disableTransmit -> uspRadio.disableTransmit
 
-      # --- Radio ever enabled this boot? ---
-      # UspRadio names its first-start signal radioFirstStart (radio-agnostic);
-      # both ends are Fw.Signal so it binds to startupManager.loraFirstStart.
+      # Both ports are Fw.Signal, so the names may differ.
       uspRadio.radioFirstStart       -> startupManager.loraFirstStart
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
@@ -57,7 +54,6 @@
 
 
     connections RadioRateGroup {
-      # UspRadio run port: revert-deadline tick + telemetry flush at 1 Hz.
-      # Slot 20 is the first free slot after the legacy topology's highest used (19).
+      # 1 Hz tick for the revert deadline and telemetry flush. Slot 20 is the first unused rate-group slot.
       rateGroup1Hz.RateGroupMemberOut[20] -> uspRadio.run
     }

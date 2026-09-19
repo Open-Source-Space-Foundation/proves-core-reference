@@ -1,6 +1,6 @@
-# Radio instance declarations for v5c / v5d (Zephyr LoRa legacy path).
+# Radio instances for v5c / v5d (Zephyr LoRa driver).
 # Included by instances.fpp inside module ReferenceDeployment { }.
-# Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is not set.
+# Selected by Top/CMakeLists.txt per board.
 
   instance lora: Zephyr.LoRa base id 0x1001F000
 

@@ -1,6 +1,6 @@
-# Radio topology connections for v5c / v5d (Zephyr LoRa legacy path).
+# Radio connections for v5c / v5d (Zephyr LoRa driver).
 # Included by topology.fpp inside topology ReferenceDeployment { }.
-# Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is not set.
+# Selected by Top/CMakeLists.txt per board.
 
     instance lora
     instance loraRetry
@@ -24,7 +24,7 @@
       loraRetry.comStatusOut -> downlinkDelay.comStatusIn
       downlinkDelay.comStatusOut -> ComCcsdsLora.framer.comStatusIn
 
-      # --- Startup / sequence wiring (identical for both radio variants) ---
+      # Startup and sequence wiring (same in RadioTopology_Usp.fppi)
       startupManager.runSequence -> cmdSeq.seqRunIn
 
       # StartupManager receives sequence status from CmdSeq

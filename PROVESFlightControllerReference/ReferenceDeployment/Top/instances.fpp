@@ -103,9 +103,7 @@ module ReferenceDeployment {
 
   instance downlinkDelay: Components.ComDelay base id 0x1001E000
 
-  # lora / uspRadio instance: per-board variant selected by CMakeLists.txt.
-  # CMake writes RadioInstances.fppi -> RadioInstances_{Lora,Usp}.fppi
-  # before the FPP autocoder runs.
+  # Radio instances (lora + loraRetry, or uspRadio). Selected by Top/CMakeLists.txt per board.
   include "RadioInstances.fppi"
 
   instance comSplitterEvents: Svc.ComSplitter base id 0x10020000
@@ -218,7 +216,7 @@ module ReferenceDeployment {
   instance fileUplinkCollector: Utilities.BufferCollector base id 0x10060000
   instance telemetryDelay: Utilities.RateDelay base id 0x10061000
 
-  # loraRetry is included via RadioInstances.fppi (Lora path only).
+  # loraRetry is declared in RadioInstances.fppi (LoRa path only).
 
   instance downlinkRepeater: Utilities.BufferRepeater base id 0x10064000
 

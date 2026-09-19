@@ -43,8 +43,7 @@ class FatalHandler final : public FatalHandlerComponentBase {
                               FwEventIdType Id           /*!< The ID of the FATAL event*/
     );
 
-    //! Reboot the device
-    //!
+    //! Reboot the device via Zephyr sys_reboot()
     void reboot();
 };
 

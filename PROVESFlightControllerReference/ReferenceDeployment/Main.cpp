@@ -21,9 +21,7 @@
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
-// v5c/v5d: Zephyr LoRa driver device node.
-// v5e: USP does not use a Zephyr lora device; RalSessionImpl acquires the
-//      radio handle via smtc_rac_get_radio() in init().
+// The USP build (v5e) has no Zephyr lora device node; the radio is opened by RalSessionImpl.
 #ifndef CONFIG_LORA_BASICS_MODEM_DRIVERS
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
 #endif
@@ -83,11 +81,6 @@ int main(int argc, char* argv[]) {
     inputs.ina219SolDevice = ina219Sol;
 #ifndef CONFIG_LORA_BASICS_MODEM_DRIVERS
     inputs.loraDevice = lora;
-#else
-    // v5e USP path: freq/power passed instead of a device pointer.
-    // Constants match LoRaConfig values used by the legacy driver.
-    inputs.uspFreqHz = 915000000U;
-    inputs.uspTxPowerDbm = 14;
 #endif
     inputs.uartDevice = serial;
     inputs.lsm6dsoDevice = lsm6dso;

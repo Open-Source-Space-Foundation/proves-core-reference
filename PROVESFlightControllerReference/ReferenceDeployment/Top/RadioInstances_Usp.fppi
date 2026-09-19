@@ -1,9 +1,8 @@
-# Radio instance declarations for v5e (Semtech USP path).
+# Radio instances for v5e (Semtech USP driver).
 # Included by instances.fpp inside module ReferenceDeployment { }.
-# Selected by CMakeLists.txt when CONFIG_LORA_BASICS_MODEM_DRIVERS is set.
+# Selected by Top/CMakeLists.txt per board.
 #
-# UspRadio is an ACTIVE component (deferred-handler SBand pattern).
-# Queue = 20 (QUEUE_SIZE*2), stack = 4K, priority 11 (above rate groups).
+# UspRadio is an active component. Priority 11 is above the rate groups.
 
   instance uspRadio: Zephyr.UspRadio base id 0x1001F000 \
     queue size Default.QUEUE_SIZE * 2 \
