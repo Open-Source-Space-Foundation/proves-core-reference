@@ -1,0 +1,48 @@
+name: Flash Firmware (SWD, no PSU)
+description: Flash MCUBoot and flight software over SWD without the PSU power cycle.
+
+inputs:
+  probe-serial:
+    description: Debug probe serial number; empty uses the only attached probe.
+    required: false
+    default: ""
+  openocd-dir:
+    description: Path to the built openocd checkout (contains src/openocd and tcl/).
+    required: false
+    default: "~/openocd"
+
+runs:
+  using: composite
+  steps:
+    - name: Install MCUBoot and Flight Software
+      shell: bash
+      env:
+        PROBE_SERIAL: ${{ inputs.probe-serial }}
+        OPENOCD_DIR: ${{ inputs.openocd-dir }}
+      run: |
+        OPENOCD_DIR="${OPENOCD_DIR/#\~/$HOME}"
+        OPENOCD=("$OPENOCD_DIR/src/openocd" -s "$OPENOCD_DIR/tcl" -f interface/cmsis-dap.cfg)
+        if [ -n "$PROBE_SERIAL" ]; then
+          OPENOCD+=(-c "adapter serial $PROBE_SERIAL")
+        fi
+        OPENOCD+=(-f target/rp2350.cfg -c "adapter speed 5000")
+
+        # bootable.signed.hex only covers slot0, so MCUBoot goes first.
+        "${OPENOCD[@]}" -c "program mcuboot.elf verify reset exit"
+        "${OPENOCD[@]}" -c "program bootable.signed.hex verify reset exit"
+
+        # An SWD session can leave CPACR clobbered on RP2350; finish on a clean reset.
+        "${OPENOCD[@]}" -c "init; reset run; exit"
+
+    - name: Wait for board USB CDC ACM to enumerate
+      shell: bash
+      run: |
+        for i in $(seq 1 60); do
+          if ./tools/ci/detect-board-tty.sh >/dev/null 2>&1; then
+            echo "Board tty enumerated after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: board CDC ACM device did not enumerate within 60s after SWD flash"
+        exit 1

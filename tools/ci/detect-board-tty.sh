@@ -6,7 +6,19 @@
 # exits 1 with diagnostics on stderr if the device never appears.
 set -u
 
+find_tty_macos() {
+    ioreg -r -c IOUSBHostDevice -l -w0 | awk -F' = ' '
+        /"idVendor"/ { v = $2 }
+        /"idProduct"/ { p = $2 }
+        /"IOCalloutDevice"/ && v == 40 && p == 15 { gsub(/"/, "", $2); print $2; found = 1; exit }
+        END { exit !found }'
+}
+
 find_tty() {
+    if [ "$(uname)" = "Darwin" ]; then
+        find_tty_macos
+        return
+    fi
     local d v p path ifn tty
     for d in /sys/bus/usb/devices/*/idVendor; do
         v=$(cat "$d" 2>/dev/null)

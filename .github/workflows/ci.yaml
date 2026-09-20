@@ -42,6 +42,8 @@ jobs:
 
   build:
     runs-on: deathstar
+    outputs:
+      ota-build-id: ${{ steps.ota-build-id.outputs.id }}
     steps:
       - uses: actions/checkout@v6
 
@@ -116,6 +118,24 @@ jobs:
             bootable.signed.hex
             build-artifacts/zephyr/fprime-zephyr-deployment
             yamcs/yamcs-data/mdb/fprime.xtce.xml
+          retention-days: 30
+
+      # Overwrites the build outputs, so keep after the artifact upload.
+      - name: Derive OTA build ID
+        id: ota-build-id
+        run: |
+          echo "id=${GITHUB_SHA::8}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build OTA Test Image
+        run: |
+          make ota-test-image OTA_BUILD_ID="${{ steps.ota-build-id.outputs.id }}"
+
+      - name: Upload OTA test image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-test-image
+          path: |
+            build-ota-test/ota-test-image.signed.bin
           retention-days: 30
 
   integration-uart:
@@ -615,3 +635,159 @@ jobs:
             yamcs-compose-ps.txt
             yamcs-compose-logs.txt
           retention-days: 7
+
+  # OTA on a bare flight-controller board + debug probe (no PSU, no radio).
+  # Needs a self-hosted runner labelled `integration-fcb`. A host with several
+  # debug probes sets FCB_PROBE_SERIAL in ~/actions-runner/.env.
+  integration-ota-fcb:
+    runs-on:
+      - integration-fcb
+    needs:
+      - build
+    concurrency:
+      group: integration-fcb-board
+      cancel-in-progress: false
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Download OTA test image
+        uses: actions/download-artifact@v6
+        with:
+          name: ota-test-image
+          path: ota-image
+
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - name: Flash Firmware (SWD)
+        uses: ./.github/actions/flash-firmware-swd
+        with:
+          probe-serial: ${{ env.FCB_PROBE_SERIAL }}
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          # Match the SCID the build job compiled into the firmware.
+          make make-ci-spacecraft-id
+
+      - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Format Filesystem
+        run: |
+          make test-integration FILTER=format_filesystem || true
+
+      - name: Reset board over SWD (no PSU on this rig)
+        env:
+          PROBE_SERIAL: ${{ env.FCB_PROBE_SERIAL }}
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+          # No PSU on this rig: reset over SWD instead of power cycling.
+          OPENOCD=(~/openocd/src/openocd -s ~/openocd/tcl -f interface/cmsis-dap.cfg)
+          if [ -n "$PROBE_SERIAL" ]; then
+            OPENOCD+=(-c "adapter serial $PROBE_SERIAL")
+          fi
+          "${OPENOCD[@]}" -f target/rp2350.cfg -c "adapter speed 5000" -c "init; reset run; exit"
+          for i in $(seq 1 60); do
+            ./tools/ci/detect-board-tty.sh >/dev/null 2>&1 && break
+            sleep 1
+          done
+          sleep 15
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      # Cooldown 0.6 makes the uplink ~35 min; faster rates corrupt it until #457 is fixed.
+      - name: Run OTA Update Test (bare FCB, UART)
+        run: |
+          make test-integration TEST=ota_update_test.py FILTER="ota" \
+            PYTEST_ARGS="--bare-flight-controler-board --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
+
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make test-integration FILTER=format_filesystem || true
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-ota-fcb
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+          rm -f /tmp/fprime-server-* 2>/dev/null || true
+          fuser -k "$UART_DEVICE" 2>/dev/null || true
+
+      # A passing run confirms the OTA image, which only a reflash can undo.
+      - name: Restore original firmware
+        if: always()
+        uses: ./.github/actions/flash-firmware-swd
+        with:
+          probe-serial: ${{ env.FCB_PROBE_SERIAL }}

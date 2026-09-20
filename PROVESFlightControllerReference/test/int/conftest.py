@@ -96,6 +96,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
     )
+    parser.addoption(
+        "--ota-image",
+        default=None,
+        help="Signed image (zephyr.signed.bin) uplinked by ota_update_test.py; "
+        "those tests skip when unset.",
+    )
+    parser.addoption(
+        "--ota-build-id",
+        default=None,
+        help="Marker expected in CdhCore.version.ProjectVersion while --ota-image is running.",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -274,3 +285,17 @@ def tlm_sampler(
     stop.set()
     t.join(timeout=3)
     fprime_test_api_session.remove_telemetry_subhistory(subhist)
+
+
+@pytest.fixture(scope="module")
+def ota_config(request: pytest.FixtureRequest):
+    """Return (--ota-image, --ota-build-id), skipping when either is unset."""
+    image = request.config.getoption("--ota-image", default=None)
+    build_id = request.config.getoption("--ota-build-id", default=None)
+    if not image or not build_id:
+        pytest.skip(
+            "OTA tests require --ota-image=<signed.bin> and --ota-build-id=<marker>"
+        )
+    if not os.path.isfile(image):
+        pytest.skip(f"OTA image not found: {image}")
+    return image, build_id
