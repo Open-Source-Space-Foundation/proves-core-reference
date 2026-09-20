@@ -106,8 +106,15 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // they are protected by the same mutex to ensure atomicity of updates across both mediums
     Os::Mutex m_sequenceNumberLock;       //!< Mutex protecting sequence number state atomicity
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
-    U32 m_sequenceNumber;                 //!< The current sequence number
-    U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
+    // writeSequenceNumber persists on every accepted TC frame -- including every file-uplink
+    // Data packet, since those are TC frames too. Reopening+closing the file each call forces
+    // the flash-disk driver's single-page write-back cache to commit and reload on every frame,
+    // thrashing against FileUplink's own writes to a different file on the same disk. Keeping
+    // this handle open for the component's lifetime turns each persist into a seek+write against
+    // an already-open file, avoiding that churn.
+    Os::File m_sequenceNumberFile;  //!< Persistent handle for m_sequenceNumberFilePath
+    U32 m_sequenceNumber;           //!< The current sequence number
+    U32 m_sequenceNumberWindow;     //!< The allowed window for sequence number validation
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
