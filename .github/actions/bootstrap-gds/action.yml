@@ -1,0 +1,106 @@
+name: Bootstrap GDS over UART
+description: Start the GDS on the board's UART, sync the sequence number, format the filesystem, reboot the board and bring the GDS back up in sync. Exports UART_DEVICE.
+
+inputs:
+  power-cycle:
+    description: Reboot the board with the Korad PSU; "false" resets over SWD instead.
+    required: false
+    default: "true"
+  probe-serial:
+    description: Debug probe serial number for the SWD reset; empty uses the only attached probe.
+    required: false
+    default: ""
+  kill-all-python:
+    description: Kill every python process on the runner rather than only GDS processes; "false" on hosts that are not dedicated to CI.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Detect Board TTY
+      shell: bash
+      run: |
+        # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+        # /dev/serial/by-id does not list this device on the integration runner.
+        ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+        echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+        echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+    - name: Kill stale GDS processes
+      shell: bash
+      env:
+        KILL_ALL_PYTHON: ${{ inputs.kill-all-python }}
+      run: |
+        if [ "$KILL_ALL_PYTHON" = "true" ]; then
+          pkill -9 python || true
+        else
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+        fi
+
+    - name: Start GDS
+      shell: bash
+      run: |
+        nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
+        echo $! > server.pid
+
+    - name: Sync Sequence Number
+      shell: bash
+      run: |
+        make test-integration FILTER=sync_sequence_number
+
+    - name: Format Filesystem
+      shell: bash
+      run: |
+        make test-integration FILTER=format_filesystem
+
+    - name: Reboot board
+      shell: bash
+      env:
+        POWER_CYCLE: ${{ inputs.power-cycle }}
+        PROBE_SERIAL: ${{ inputs.probe-serial }}
+        KILL_ALL_PYTHON: ${{ inputs.kill-all-python }}
+      run: |
+        [ -f server.pid ] && kill $(cat server.pid) || true
+        if [ "$KILL_ALL_PYTHON" = "true" ]; then
+          pkill -9 python || true
+        else
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+        fi
+        if [ "$POWER_CYCLE" = "true" ]; then
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+        else
+          OPENOCD=(~/openocd/src/openocd -s ~/openocd/tcl -f interface/cmsis-dap.cfg)
+          if [ -n "$PROBE_SERIAL" ]; then
+            OPENOCD+=(-c "adapter serial $PROBE_SERIAL")
+          fi
+          "${OPENOCD[@]}" -f target/rp2350.cfg -c "adapter speed 5000" -c "init; reset run; exit"
+          for i in $(seq 1 60); do
+            ./tools/ci/detect-board-tty.sh >/dev/null 2>&1 && break
+            sleep 1
+          done
+          sleep 15
+        fi
+
+    - name: Detect Board TTY (after reboot)
+      shell: bash
+      run: |
+        ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+        echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+        echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+    - name: Start GDS (after reboot)
+      shell: bash
+      run: |
+        nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds.log 2>&1 &
+        echo $! > server.pid
+
+    - name: Sync Sequence Number (after reboot)
+      shell: bash
+      run: |
+        make test-integration FILTER=sync_sequence_number
