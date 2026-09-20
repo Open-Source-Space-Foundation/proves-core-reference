@@ -716,7 +716,7 @@ jobs:
 
       - name: Format Filesystem
         run: |
-          make test-integration FILTER=format_filesystem || true
+          make test-integration FILTER=format_filesystem
 
       - name: Reset board over SWD (no PSU on this rig)
         env:
