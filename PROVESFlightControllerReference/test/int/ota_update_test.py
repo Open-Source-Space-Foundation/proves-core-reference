@@ -210,6 +210,7 @@ def test_ota_negative_paths(
 
     _apply_uart_only_repeater(fprime_test_api)
     api = fprime_test_api
+    # Unique file name per run so a stale file on the SD card is never reused.
     dest = f"/otaneg{os.getpid() % 100000}.bin"
 
     junk_local = None
@@ -256,6 +257,58 @@ def test_ota_negative_paths(
                 pass
 
 
+def test_ota_invalid_image_is_not_booted(
+    fprime_test_api: IntegrationTestAPI,
+    start_gds,
+    ota_config,
+    restore_original_image,
+):
+    """A file that is not a signed image passes the CRC gate, but MCUBoot refuses to boot it."""
+    original, _ = restore_original_image
+    _assert_uplink_chunk(fprime_test_api)
+
+    _apply_uart_only_repeater(fprime_test_api)
+    api = fprime_test_api
+    # Unique file name per run so a stale file on the SD card is never reused.
+    dest = f"/otabad{os.getpid() % 100000}.bin"
+
+    junk_local = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
+            tmp.write(os.urandom(1024))
+            junk_local = tmp.name
+        crc = _uplink_and_verify_crc(api, junk_local, dest)
+
+        api.clear_histories()
+        proves_send_and_assert_command(api, f"{UPDATER}.PREPARE_UPDATE")
+        api.assert_event(f"{UPDATER}.PrepareUpdateSucceeded", timeout=PREPARE_TIMEOUT_S)
+
+        # The operator's CRC is correct, so the junk is written to slot1 and armed.
+        api.clear_histories()
+        proves_send_and_assert_command(
+            api, f"{UPDATER}.UPDATE_IMAGE_FROM", args=[dest, str(crc)]
+        )
+        api.assert_event(f"{UPDATER}.UpdateSucceeded", timeout=UPDATE_TIMEOUT_S)
+
+        _configure_next_boot(api, "TEST")
+
+        version = _reboot_and_get_version(api, swap_expected=True)
+        assert version == original, (
+            f"board is running {version!r}, not the original {original!r}, "
+            "after arming an invalid image"
+        )
+    finally:
+        try:
+            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "true"])
+        except Exception:
+            pass
+        if junk_local is not None:
+            try:
+                os.remove(junk_local)
+            except OSError:
+                pass
+
+
 def test_ota_swap_and_revert(
     fprime_test_api: IntegrationTestAPI,
     start_gds,
@@ -272,6 +325,7 @@ def test_ota_swap_and_revert(
 
     _apply_uart_only_repeater(fprime_test_api)
     api = fprime_test_api
+    # Unique file name per run so a stale file on the SD card is never reused.
     dest = f"/ota-{os.getpid() % 100000}.bin"
 
     try:
