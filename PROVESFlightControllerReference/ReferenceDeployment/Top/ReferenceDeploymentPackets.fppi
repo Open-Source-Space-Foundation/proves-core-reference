@@ -30,8 +30,7 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber
 
     # Radio bytes received: per-board instance name.
-    # RadioPackets.fppi is a symlink to RadioPackets_{Lora,Usp}.fppi
-    # created by CMakeLists.txt at configure time.
+    # Radio BytesReceived channel. Selected by Top/CMakeLists.txt per board.
     include "RadioPacketsBytesReceived.fppi"
 
   }
@@ -48,7 +47,7 @@ telemetry packets ReferenceDeploymentPackets {
     imuManager.MagnetometerSamplingFrequency
   }
 
-  # Radio packet: per-board instance name.
+  # Radio packet. Selected by Top/CMakeLists.txt per board.
   include "RadioPacketsRadio.fppi"
 
   packet PowerMonitor id 11 group 2 {

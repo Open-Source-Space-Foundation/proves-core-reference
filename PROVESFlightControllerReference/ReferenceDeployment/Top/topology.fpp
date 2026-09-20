@@ -30,8 +30,7 @@ module ReferenceDeployment {
     instance rateGroup1Hz
     instance rateGroupDriver
     instance timer
-    # lora / uspRadio instance declared in RadioInstances_Lora.fpp or
-    # RadioInstances_Usp.fpp (CMakeLists.txt picks per board).
+    # Radio instances are listed in RadioTopology.fppi.
     instance gpioWatchdog
     instance gpioBurnwire0
     instance gpioBurnwire1
@@ -191,10 +190,8 @@ module ReferenceDeployment {
       #  comDelaySband.comStatusOut -> ComCcsdsSband.framer.comStatusIn
     #}
 
-    # CommunicationsRadio connections: per-board variant selected by CMake.
-    # CMake writes RadioTopology.fppi -> RadioTopology_{Lora,Usp}.fppi
-    # before the FPP autocoder runs.  That file also carries the
-    # startup-sequence and RTC cancel-sequence wiring (identical for both).
+    # Radio instances, CommunicationsRadio connections, and the startup-sequence
+    # and RTC cancel-sequence wiring. Selected by Top/CMakeLists.txt per board.
     include "RadioTopology.fppi"
 
     connections CommunicationsUart {

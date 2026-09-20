@@ -3,10 +3,8 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
-      # patches/*.patch are machine-generated diffs applied via patch tooling;
-      # their context/removed lines must byte-match the real upstream files,
-      # which can legitimately have trailing whitespace. Stripping it here
-      # silently breaks patch application.
+      # patches/*.patch must byte-match upstream, including trailing
+      # whitespace, so whitespace hooks must not touch them.
       exclude: ^patches/
     - id: end-of-file-fixer
       exclude: ^patches/

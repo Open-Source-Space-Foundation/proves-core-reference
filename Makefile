@@ -54,11 +54,6 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 		$(UV) pip install --prerelease=allow -r lib/zephyr-workspace/bootloader/mcuboot/zephyr/requirements.txt; \
 	}
 
-# Carried module patches (usp-patches / usp-core-patches / zephyr-patches and
-# the fprime patch steps in `submodules`) were removed 2026-07-26: all module
-# fixes now live on the Open-Source-Space-Foundation fork integration branches
-# (feat/proves-usp-radio) pinned in west.yml / .gitmodules. See patches/README.md.
-
 ##@ Development
 
 .PHONY: pre-commit-install

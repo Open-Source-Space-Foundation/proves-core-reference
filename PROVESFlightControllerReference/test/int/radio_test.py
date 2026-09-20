@@ -15,8 +15,6 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 pytestmark = [pytest.mark.uart_only]
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
-# v5e builds Zephyr::UspRadio (not the legacy Zephyr::LoRa component); TRANSMIT
-# and the error/warning event names are kept verbatim on UspRadio.fpp.
 radio = "ReferenceDeployment.uspRadio"
 
 RADIO_ERROR_EVENTS = ("SendFailed", "ConfigurationFailed", "AllocationFailed")
