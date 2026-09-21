@@ -60,7 +60,9 @@ runs:
       shell: bash
       run: |
         for i in $(seq 1 60); do
-          if ./tools/ci/detect-board-tty.sh >/dev/null 2>&1; then
+          # --once so the detector's own retries do not multiply this loop
+          # out to ~20 minutes when the board never enumerates.
+          if ./tools/ci/detect-board-tty.sh --once >/dev/null 2>&1; then
             echo "Board tty enumerated after ${i}s"
             exit 0
           fi

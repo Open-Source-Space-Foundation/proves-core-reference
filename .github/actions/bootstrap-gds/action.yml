@@ -81,7 +81,8 @@ runs:
           fi
           "${OPENOCD[@]}" -f target/rp2350.cfg -c "adapter speed 5000" -c "init; reset run; exit"
           for i in $(seq 1 60); do
-            ./tools/ci/detect-board-tty.sh >/dev/null 2>&1 && break
+            # --once keeps this bounded at 60 s; see tools/ci/detect-board-tty.sh.
+            ./tools/ci/detect-board-tty.sh --once >/dev/null 2>&1 && break
             sleep 1
           done
           sleep 15

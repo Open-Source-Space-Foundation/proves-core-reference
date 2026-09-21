@@ -66,7 +66,7 @@ def resync_sequence_number(
     fprime_test_api.send_command(f"{deframer}.GET_SEQ_NUM")
     evt = fprime_test_api.await_event(f"{deframer}.SequenceNumberGet", timeout=5)
     if evt is None:
-        return
+        raise AssertionError(f"no {deframer}.SequenceNumberGet event within 5 seconds")
     board_seq = int(evt.args[0].val)
     seq_file = "./Framing/src/sequence_number.bin"
     try:

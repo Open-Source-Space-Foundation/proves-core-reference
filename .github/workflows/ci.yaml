@@ -6,11 +6,16 @@ on:
     branches:
       - main
 
+# The integration jobs only read the repository; artifact up/download uses the
+# per-run artifact scope, not contents: write.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Lint
         run: |
@@ -19,7 +24,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -45,7 +50,7 @@ jobs:
     outputs:
       ota-build-id: ${{ steps.ota-build-id.outputs.id }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
         if: steps.cache-bin.outputs.cache-hit != 'true'
@@ -109,7 +114,7 @@ jobs:
           make check-console-disabled
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: artifacts
           path: |
@@ -131,7 +136,7 @@ jobs:
           make ota-test-image OTA_BUILD_ID="${{ steps.ota-build-id.outputs.id }}"
 
       - name: Upload OTA test image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ota-test-image
           path: |
@@ -143,9 +148,9 @@ jobs:
       - integration
     needs: build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: artifacts
           path: .
@@ -172,7 +177,7 @@ jobs:
 
       - name: Upload GDS logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gds-log-uart
           path: |
@@ -224,7 +229,7 @@ jobs:
         run: ./tools/ci/restore-yamcs-mdb.sh
 
       - name: Set up Java 17 for YAMCS
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
@@ -322,7 +327,7 @@ jobs:
 
       - name: Upload YAMCS log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: yamcs-log
           path: yamcs.log
@@ -333,15 +338,23 @@ jobs:
         run: |
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
 
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
   integration-radio:
     runs-on:
       - integration
     needs:
       - build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: artifacts
           path: .
@@ -487,7 +500,7 @@ jobs:
 
       - name: Upload telemetry sample logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: radio-tlm-samples
           path: tlm_sample_*.csv
@@ -496,7 +509,7 @@ jobs:
 
       - name: Upload GDS logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gds-log-radio
           path: |
@@ -515,13 +528,21 @@ jobs:
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
 
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
   yamcs-build:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: artifacts
 
@@ -540,7 +561,7 @@ jobs:
 
       - name: Upload compose state on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: yamcs-build-compose-state
           path: |
@@ -561,15 +582,15 @@ jobs:
       cancel-in-progress: false
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: artifacts
           path: .
 
       - name: Download OTA test image
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: ota-test-image
           path: ota-image
@@ -596,7 +617,7 @@ jobs:
       - name: Run OTA Update Test (bare FCB, UART)
         run: |
           make test-integration TEST=ota_update_test.py FILTER="ota" \
-            PYTEST_ARGS="--bare-flight-controler-board --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
+            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
 
       - name: Format Filesystem
         if: always()
@@ -605,7 +626,7 @@ jobs:
 
       - name: Upload GDS logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gds-log-ota-fcb
           path: |
@@ -632,3 +653,11 @@ jobs:
         with:
           power-cycle: "false"
           probe-serial: ${{ env.FCB_PROBE_SERIAL }}
+
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h

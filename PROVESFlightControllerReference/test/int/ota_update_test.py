@@ -247,9 +247,19 @@ def test_ota_negative_paths(
         )
     finally:
         try:
-            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "true"])
-        except Exception:
-            pass
+            api.clear_histories()
+            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "false"])
+            ok = api.await_event(f"{FILE_MANAGER}.RemoveFileSucceeded", timeout=10)
+            if ok is None:
+                err = api.await_event(f"{FILE_MANAGER}.FileRemoveError", timeout=1)
+                print(
+                    f"cleanup: failed to remove {dest!r} from board "
+                    f"({err.args if err is not None else 'no RemoveFile event seen'})"
+                )
+        except Exception as cleanup_exc:
+            print(
+                f"cleanup: exception while removing {dest!r} from board: {cleanup_exc!r}"
+            )
         if junk_local is not None:
             try:
                 os.remove(junk_local)
@@ -299,9 +309,19 @@ def test_ota_invalid_image_is_not_booted(
         )
     finally:
         try:
-            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "true"])
-        except Exception:
-            pass
+            api.clear_histories()
+            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "false"])
+            ok = api.await_event(f"{FILE_MANAGER}.RemoveFileSucceeded", timeout=10)
+            if ok is None:
+                err = api.await_event(f"{FILE_MANAGER}.FileRemoveError", timeout=1)
+                print(
+                    f"cleanup: failed to remove {dest!r} from board "
+                    f"({err.args if err is not None else 'no RemoveFile event seen'})"
+                )
+        except Exception as cleanup_exc:
+            print(
+                f"cleanup: exception while removing {dest!r} from board: {cleanup_exc!r}"
+            )
         if junk_local is not None:
             try:
                 os.remove(junk_local)
@@ -378,6 +398,16 @@ def test_ota_swap_and_revert(
         )
     finally:
         try:
-            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "true"])
-        except Exception:
-            pass
+            api.clear_histories()
+            api.send_command(f"{FILE_MANAGER}.RemoveFile", [dest, "false"])
+            ok = api.await_event(f"{FILE_MANAGER}.RemoveFileSucceeded", timeout=10)
+            if ok is None:
+                err = api.await_event(f"{FILE_MANAGER}.FileRemoveError", timeout=1)
+                print(
+                    f"cleanup: failed to remove {dest!r} from board "
+                    f"({err.args if err is not None else 'no RemoveFile event seen'})"
+                )
+        except Exception as cleanup_exc:
+            print(
+                f"cleanup: exception while removing {dest!r} from board: {cleanup_exc!r}"
+            )
