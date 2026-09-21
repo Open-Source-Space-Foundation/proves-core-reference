@@ -1,0 +1,7 @@
+deployments:
+  - name: fprime-project
+    spacecraft_id: 68
+    vc_id: 1
+    yamcs_host: 127.0.0.1
+    tm_port: 50000
+    tc_port: 50001

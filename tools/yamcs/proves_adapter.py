@@ -5,6 +5,12 @@ Routes TM frames from the spacecraft to YAMCS (via UDP) and TC frames from
 YAMCS (via UDP) back to the spacecraft after wrapping them with the HMAC-SHA256
 authentication header/trailer required by the FSW Authenticate component.
 
+The TM side accepts valid CCSDS frames from any configured spacecraft ID and
+routes each frame to the matching YAMCS deployment port without rewriting the
+frame.  TC from each deployment is received on its configured UDP port and
+wrapped with that deployment's spacecraft ID before being written to the radio
+link.
+
 Use Case 1 (local UART):
     python proves_adapter.py --mode serial --uart-device /dev/ttyUSB0
 
@@ -14,11 +20,16 @@ Use Case 2 (remote TCP, skeleton):
 """
 
 import argparse
+import json
 import socket
 import sys
 import threading
 from collections import Counter
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+
+import yaml
 
 # Flush stdout on every print so diagnostic messages appear immediately even
 # when the adapter is run as a background process or piped to a log file.
@@ -34,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "Framing" / "src"))
 
 
 def _crc16_ccitt(data: bytes) -> int:
+    """Compute CRC16-CCITT over the given bytes."""
     crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
@@ -51,117 +63,256 @@ from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E40
 )
 
 # ---------------------------------------------------------------------------
+# YAMCS deployment configuration
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class YamcsDeployment:
+    """One YAMCS instance the adapter routes TM to and receives TC from."""
+
+    name: str
+    spacecraft_id: int
+    vc_id: int
+    yamcs_host: str
+    tm_port: int
+    tc_port: int
+
+
+def _validate_u10(value: int, field_name: str) -> None:
+    """Require a 10-bit unsigned value (CCSDS spacecraft ID range)."""
+    if not 0 <= value <= 0x3FF:
+        raise ValueError(f"{field_name} {value} out of range (expected 0..1023)")
+
+
+def _validate_vc_id(value: int, field_name: str) -> None:
+    """Require a 3-bit virtual channel ID."""
+    if not 0 <= value <= 0x7:
+        raise ValueError(f"{field_name} {value} out of range (expected 0..7)")
+
+
+def _deployment_from_mapping(
+    item: dict,
+    *,
+    default_host: str = "127.0.0.1",
+    default_vc_id: int = 1,
+) -> YamcsDeployment:
+    """Build a validated YamcsDeployment from one deployments.yaml entry."""
+    if not isinstance(item, dict):
+        raise ValueError("each deployment must be a mapping")
+
+    required = ("name", "spacecraft_id", "tm_port", "tc_port")
+    missing = [field for field in required if field not in item]
+    if missing:
+        raise ValueError(f"deployment missing required field(s): {', '.join(missing)}")
+
+    deployment = YamcsDeployment(
+        name=str(item["name"]),
+        spacecraft_id=int(item["spacecraft_id"]),
+        vc_id=int(item.get("vc_id", default_vc_id)),
+        yamcs_host=str(item.get("yamcs_host", default_host)),
+        tm_port=int(item["tm_port"]),
+        tc_port=int(item["tc_port"]),
+    )
+    _validate_u10(deployment.spacecraft_id, f"{deployment.name}.spacecraft_id")
+    _validate_vc_id(deployment.vc_id, f"{deployment.name}.vc_id")
+    for field_name in ("tm_port", "tc_port"):
+        port = getattr(deployment, field_name)
+        if not 1 <= port <= 65535:
+            raise ValueError(f"{deployment.name}.{field_name} {port} out of range")
+    if not deployment.name.strip():
+        raise ValueError("deployment name must not be empty")
+    return deployment
+
+
+def _validate_deployments(deployments: list[YamcsDeployment]) -> list[YamcsDeployment]:
+    """Reject empty deployment lists and duplicate names/SCIDs/TC ports."""
+    if not deployments:
+        raise ValueError("at least one YAMCS deployment is required")
+
+    seen_names: set[str] = set()
+    seen_scids: set[int] = set()
+    seen_tc_ports: set[int] = set()
+    for deployment in deployments:
+        if deployment.name in seen_names:
+            raise ValueError(f"duplicate YAMCS deployment name: {deployment.name}")
+        if deployment.spacecraft_id in seen_scids:
+            raise ValueError(f"duplicate spacecraft_id: {deployment.spacecraft_id}")
+        if deployment.tc_port in seen_tc_ports:
+            raise ValueError(f"duplicate tc_port: {deployment.tc_port}")
+        seen_names.add(deployment.name)
+        seen_scids.add(deployment.spacecraft_id)
+        seen_tc_ports.add(deployment.tc_port)
+    return deployments
+
+
+def load_yamcs_deployments(path: Path) -> list[YamcsDeployment]:
+    """Load and validate the deployments list from a YAML routing table."""
+    with path.open() as stream:
+        config = yaml.safe_load(stream)
+    if not isinstance(config, dict) or not isinstance(config.get("deployments"), list):
+        raise ValueError("deployment config must contain a 'deployments' list")
+    deployments = [_deployment_from_mapping(item) for item in config["deployments"]]
+    return _validate_deployments(deployments)
+
+
+def _default_deployments(args) -> list[YamcsDeployment]:
+    """Build the single-deployment fallback from the CLI arguments."""
+    primary_scid = args.spacecraft_ids[0]
+    return _validate_deployments(
+        [
+            YamcsDeployment(
+                name=f"scid-{primary_scid}",
+                spacecraft_id=primary_scid,
+                vc_id=args.vc_id,
+                yamcs_host=args.yamcs_host,
+                tm_port=args.yamcs_tm_port,
+                tc_port=args.yamcs_tc_port,
+            )
+        ]
+    )
+
+
+def resolve_yamcs_deployments(args) -> list[YamcsDeployment]:
+    """Return deployments from --yamcs-deployments or the CLI fallback."""
+    if args.yamcs_deployments is not None:
+        return load_yamcs_deployments(args.yamcs_deployments)
+    return _default_deployments(args)
+
+
+# ---------------------------------------------------------------------------
 # TM path helpers
 # ---------------------------------------------------------------------------
+
+
+def _extract_tm_scid(frame: bytes) -> int:
+    """Extract the 10-bit spacecraft ID from a TM frame header."""
+    return ((frame[0] << 8) | frame[1]) >> 4 & 0x3FF
+
+
+def _tm_route_for_frame(
+    frame: bytes, deployments_by_scid: dict[int, YamcsDeployment]
+) -> YamcsDeployment | None:
+    """Return the deployment whose SCID matches the frame, if configured."""
+    return deployments_by_scid.get(_extract_tm_scid(frame))
+
+
+# Default drop log for CRC-valid TM frames whose SCID matches no deployment.
+DEFAULT_UNKNOWN_PKTS_LOG = Path("unknown_pkts.json")
+
+
+def _log_unknown_frame(log_path: Path, frame: bytes) -> None:
+    """Append a CRC-valid frame with an unconfigured SCID to the drop log.
+
+    One JSON object per line (JSON Lines) so the file can be tailed, grepped,
+    or parsed incrementally while the adapter keeps running.  Logging failures
+    must never take down the TM path, so errors are reported and swallowed.
+    """
+    record = {
+        "time": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+        "scid": _extract_tm_scid(frame),
+        "vc_id": (frame[1] >> 1) & 0x7,
+        "vc_count": frame[3],
+        "length": len(frame),
+        "frame_hex": frame.hex(),
+    }
+    try:
+        with log_path.open("a") as stream:
+            stream.write(json.dumps(record) + "\n")
+    except OSError as exc:
+        print(f"[TM] failed to write {log_path}: {exc}")
 
 
 def _forward_tm_serial(
     ser,
     tm_sock,
-    yamcs_host: str,
-    tm_port: int,
+    deployments: list[YamcsDeployment],
     frame_length: int,
-    spacecraft_ids: list[int] | None = None,
-    vc_id: int = 1,
+    unknown_log: Path = DEFAULT_UNKNOWN_PKTS_LOG,
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
-    The FSW may interleave console/debug text (e.g. ``[Os::...]``) on the same
-    UART as CCSDS TM frames.  Rather than reading exactly *frame_length* bytes
-    and hoping they form a clean frame, we maintain a rolling buffer and scan for
-    the 2-byte sync header.  When found, we validate the CRC — if it passes the
-    frame is forwarded; if it fails the candidate is discarded and scanning
-    continues.  This makes the adapter resilient to arbitrary non-frame data on
-    the serial link without losing the frame that immediately follows.
+    Accepts frames from *any* spacecraft ID using a CRC-16/CCITT-only HUNT/LOCK
+    state machine.  Valid frames are forwarded unchanged to the deployment whose
+    configured SCID matches the frame header.  Valid frames with unknown SCIDs
+    are counted and dropped so operators can see unconfigured satellites.
 
-    *spacecraft_ids* may contain multiple SCIDs; the TM scanner accepts frames
-    from any of them.  Gap detection and frame counters are tracked per-SCID.
-    The TC path (not handled here) uses only the first entry.
+      HUNT — slide 1 byte at a time until a CRC-valid frame is found.
+      LOCK — once in sync, take the next frame exactly ``frame_length`` bytes
+             later; fall back to HUNT on CRC failure.
     """
     import time
 
-    if spacecraft_ids is None:
-        spacecraft_ids = [68]
-
-    print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
-    # Build sync headers: first 2 bytes of CCSDS TM primary header per SCID.
-    # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
-    syncs = []
-    for scid in spacecraft_ids:
-        word0 = (scid << 4) | (vc_id << 1)
-        syncs.append((scid, bytes([(word0 >> 8) & 0xFF, word0 & 0xFF])))
+    deployments_by_scid = {item.spacecraft_id: item for item in deployments}
+    print(
+        f"[TM] serial → routed UDP ({len(deployments)} deployment(s), frame_length={frame_length})"
+    )
+    for deployment in deployments:
+        print(
+            f"[TM] SCID {deployment.spacecraft_id} → "
+            f"{deployment.yamcs_host}:{deployment.tm_port} ({deployment.name})"
+        )
 
     buf = bytearray()
     frames_sent_by_scid: Counter[int] = Counter()
+    frames_dropped_by_scid: Counter[int] = Counter()
     last_vc_count: dict[int, int] = {}
     vc_frame_gaps = 0
     junk_bytes = 0
+    locked = False
     stats_time = time.monotonic()
 
-    sync_desc = " / ".join(f"{h.hex(' ')} (SCID {s})" for s, h in syncs)
-    print(f"[TM] Scanning for frames (sync headers: {sync_desc})...")
-
     def _maybe_print_stats() -> None:
-        nonlocal stats_time, junk_bytes
+        """Print and reset routing statistics every 30 seconds."""
+        nonlocal stats_time, junk_bytes, vc_frame_gaps
         now = time.monotonic()
         if now - stats_time >= 30.0:
             elapsed = now - stats_time
             total = sum(frames_sent_by_scid.values())
             rate = total / elapsed if elapsed else 0
             scid_counts = " | ".join(
-                f"SCID {s}: {frames_sent_by_scid[s]} frames" for s, _ in syncs
+                f"SCID {s}: {n} frames" for s, n in sorted(frames_sent_by_scid.items())
+            )
+            dropped_counts = " | ".join(
+                f"SCID {s}: {n} dropped"
+                for s, n in sorted(frames_dropped_by_scid.items())
             )
             print(
-                f"[TM] stats: {scid_counts} | {rate:.1f} f/s | "
-                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes"
+                f"[TM] stats: {scid_counts or 'no frames'} | {rate:.1f} f/s | "
+                f"{vc_frame_gaps} gap(s) | {junk_bytes} junk bytes | "
+                f"{dropped_counts or 'no dropped SCIDs'}"
             )
             stats_time = now
             frames_sent_by_scid.clear()
+            frames_dropped_by_scid.clear()
+            vc_frame_gaps = 0
             junk_bytes = 0
 
     while True:
-        # Read whatever is available (up to 4 KB) to keep the OS buffer drained.
         chunk = ser.read(max(1, ser.in_waiting or 1))
         if not chunk:
             _maybe_print_stats()
             continue
         buf.extend(chunk)
 
-        # Scan the buffer for complete, CRC-valid frames.
-        while True:
-            # Find the earliest occurrence of any sync header in the buffer.
-            best_idx = -1
-            for _, hdr in syncs:
-                pos = buf.find(hdr)
-                if pos != -1 and (best_idx == -1 or pos < best_idx):
-                    best_idx = pos
-
-            if best_idx == -1:
-                # No sync header anywhere — discard everything except the last
-                # byte (which could be the first byte of a future sync header).
-                if len(buf) > 1:
-                    junk_bytes += len(buf) - 1
-                    del buf[: len(buf) - 1]
-                break
-
-            # Discard any non-frame bytes before the sync header.
-            if best_idx > 0:
-                junk_bytes += best_idx
-                del buf[:best_idx]
-
-            # Need a full frame to validate.
-            if len(buf) < frame_length:
-                break  # wait for more data
-
+        while len(buf) >= frame_length:
             candidate = bytes(buf[:frame_length])
             if _crc16_ccitt(candidate[:-2]) == int.from_bytes(candidate[-2:], "big"):
-                # Valid frame — forward it.
+                frame_scid = _extract_tm_scid(candidate)
+                locked = True
                 del buf[:frame_length]
 
-                # Extract SCID from candidate header for per-SCID tracking.
-                frame_scid = ((candidate[0] << 8) | candidate[1]) >> 4 & 0x3FF
+                deployment = _tm_route_for_frame(candidate, deployments_by_scid)
+                if deployment is None:
+                    frames_dropped_by_scid[frame_scid] += 1
+                    _log_unknown_frame(unknown_log, candidate)
+                    if frames_dropped_by_scid[frame_scid] == 1:
+                        print(
+                            f"[TM] dropping unconfigured SCID {frame_scid} "
+                            f"(logging to {unknown_log})"
+                        )
+                    continue
 
-                # VC frame count gap detection (byte 3 of TM primary header).
                 vc_count = candidate[3]
                 if frame_scid in last_vc_count:
                     expected_vc = (last_vc_count[frame_scid] + 1) & 0xFF
@@ -175,28 +326,35 @@ def _forward_tm_serial(
                             )
                 last_vc_count[frame_scid] = vc_count
 
-                tm_sock.sendto(candidate, (yamcs_host, tm_port))
+                tm_sock.sendto(candidate, (deployment.yamcs_host, deployment.tm_port))
                 frames_sent_by_scid[frame_scid] += 1
             else:
-                # CRC mismatch — sync header was a false positive (or the
-                # frame was corrupted by interleaved text).  Skip past the
-                # 2 sync-header bytes and keep scanning from the next byte.
-                del buf[:2]
+                if locked:
+                    print("[TM] lost frame sync, hunting...")
+                    locked = False
+                junk_bytes += 1
+                del buf[:1]
 
-        # Periodic stats every 30 seconds.
         _maybe_print_stats()
 
 
 def _forward_tm_tcp(
-    tcp_sock, tm_sock, yamcs_host: str, tm_port: int, frame_length: int
+    tcp_sock,
+    tm_sock,
+    deployments: list[YamcsDeployment],
+    frame_length: int,
+    unknown_log: Path = DEFAULT_UNKNOWN_PKTS_LOG,
 ):
     """Read fixed-length TM frames from a TCP connection and forward to YAMCS via UDP.
 
-    TCP mode uses fixed-length reads (no sync scan), so multi-SCID accept-list
-    is not applied here — only the primary SCID (spacecraft_ids[0]) is relevant
-    for the TC path.
+    TCP mode uses fixed-length reads (no sync scan), but valid frames are still
+    routed by SCID to the matching deployment.
     """
-    print(f"[TM] TCP → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
+    deployments_by_scid = {item.spacecraft_id: item for item in deployments}
+    print(
+        f"[TM] TCP → routed UDP ({len(deployments)} deployment(s), "
+        f"frame_length={frame_length})"
+    )
     buf = b""
     while True:
         chunk = tcp_sock.recv(4096)
@@ -206,7 +364,12 @@ def _forward_tm_tcp(
         buf += chunk
         while len(buf) >= frame_length:
             frame, buf = buf[:frame_length], buf[frame_length:]
-            tm_sock.sendto(frame, (yamcs_host, tm_port))
+            deployment = _tm_route_for_frame(frame, deployments_by_scid)
+            if deployment is None:
+                _log_unknown_frame(unknown_log, frame)
+                print(f"[TM] dropping unconfigured SCID {_extract_tm_scid(frame)}")
+                continue
+            tm_sock.sendto(frame, (deployment.yamcs_host, deployment.tm_port))
 
 
 # ---------------------------------------------------------------------------
@@ -303,9 +466,14 @@ def _forward_tc_serial(
     ser,
     auth_framer: AuthenticateFramer,
     sdlink_framer: SpaceDataLinkFramerDeframer,
+    deployment: YamcsDeployment,
+    write_lock: threading.Lock,
 ):
     """Receive TC datagrams from YAMCS, extract SpacePacket, auth-wrap, re-frame, write to serial."""
-    print("[TC] UDP → extract SpacePacket → authenticate → TC frame → serial")
+    print(
+        f"[TC] {deployment.name} UDP:{deployment.tc_port} → authenticate → "
+        f"SCID {deployment.spacecraft_id} TC frame → serial"
+    )
     tc_count = 0
     while True:
         tc_transfer_frame, _ = tc_sock.recvfrom(4096)
@@ -316,10 +484,12 @@ def _forward_tc_serial(
                 f"[TC] Malformed TC frame from YAMCS ({len(tc_transfer_frame)} bytes): {exc}"
             )
             continue
-        ser.write(out_frame)
+        with write_lock:
+            ser.write(out_frame)
         tc_count += 1
         print(
-            f"[TC] #{tc_count}: YAMCS {len(tc_transfer_frame)}B → serial {len(out_frame)}B"
+            f"[TC] {deployment.name} #{tc_count}: YAMCS {len(tc_transfer_frame)}B "
+            f"→ serial {len(out_frame)}B"
         )
 
 
@@ -328,9 +498,14 @@ def _forward_tc_tcp(
     tcp_sock,
     auth_framer: AuthenticateFramer,
     sdlink_framer: SpaceDataLinkFramerDeframer,
+    deployment: YamcsDeployment,
+    write_lock: threading.Lock,
 ):
     """Receive TC datagrams from YAMCS, extract SpacePacket, auth-wrap, re-frame, send over TCP."""
-    print("[TC] UDP → extract SpacePacket → authenticate → TC frame → TCP")
+    print(
+        f"[TC] {deployment.name} UDP:{deployment.tc_port} → authenticate → "
+        f"SCID {deployment.spacecraft_id} TC frame → TCP"
+    )
     while True:
         tc_transfer_frame, _ = tc_sock.recvfrom(4096)
         try:
@@ -340,7 +515,26 @@ def _forward_tc_tcp(
                 f"[TC] Malformed TC frame from YAMCS ({len(tc_transfer_frame)} bytes): {exc}"
             )
             continue
-        tcp_sock.sendall(out_frame)
+        with write_lock:
+            tcp_sock.sendall(out_frame)
+
+
+def _bind_tc_socket(deployment: YamcsDeployment):
+    """Bind a UDP socket on the deployment's TC port."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", deployment.tc_port))
+    return sock
+
+
+def _sdlink_framer_for_deployment(
+    deployment: YamcsDeployment, frame_length: int
+) -> SpaceDataLinkFramerDeframer:
+    """Build a TC framer stamped with the deployment's SCID/VCID."""
+    return SpaceDataLinkFramerDeframer(
+        scid=deployment.spacecraft_id,
+        vcid=deployment.vc_id,
+        frame_size=frame_length,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +543,10 @@ def _forward_tc_tcp(
 
 
 def parse_args():
+    """Parse command-line arguments."""
+
     def _parse_scid_list(val: str) -> list[int]:
+        """Parse a comma-separated list of 10-bit spacecraft IDs."""
         scids = [int(x) for x in val.split(",") if x.strip()]
         if not scids:
             raise argparse.ArgumentTypeError(
@@ -388,6 +585,12 @@ def parse_args():
     # YAMCS UDP endpoints
     p.add_argument("--yamcs-host", default="127.0.0.1", help="YAMCS host")
     p.add_argument(
+        "--yamcs-deployments",
+        type=Path,
+        default=None,
+        help="YAML file listing one or more YAMCS deployments to route by SCID",
+    )
+    p.add_argument(
         "--yamcs-tm-port",
         type=int,
         default=50000,
@@ -398,6 +601,13 @@ def parse_args():
         type=int,
         default=50001,
         help="YAMCS TC UDP port (adapter receives TC from here)",
+    )
+
+    p.add_argument(
+        "--unknown-pkts-log",
+        type=Path,
+        default=DEFAULT_UNKNOWN_PKTS_LOG,
+        help="JSON-lines file where CRC-valid TM frames with unconfigured SCIDs are appended",
     )
 
     # Auth options
@@ -421,9 +631,10 @@ def parse_args():
         action="append",
         default=None,
         help=(
-            "Spacecraft ID(s) to accept on TM; comma-separated or repeatable "
-            "(e.g. --spacecraft-id 68,67 or --spacecraft-id 68 --spacecraft-id 67). "
-            "First entry is the primary used for TC framing. Default: 68."
+            "Spacecraft ID for the single-deployment fallback. Comma-separated "
+            "or repeatable values are accepted for backward compatibility, but "
+            "the first entry is used unless --yamcs-deployments is provided. "
+            "Default: 68."
         ),
     )
     p.add_argument(
@@ -443,7 +654,24 @@ def parse_args():
 
 
 def main():
+    """Run the adapter: route TM to YAMCS and auth-wrap TC back to the radio."""
     args = parse_args()
+    try:
+        deployments = resolve_yamcs_deployments(args)
+    except ValueError as exc:
+        print(
+            f"[adapter] Invalid YAMCS deployment configuration: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+
+    print("[adapter] YAMCS deployments:")
+    for deployment in deployments:
+        print(
+            f"  - {deployment.name}: SCID={deployment.spacecraft_id} "
+            f"VCID={deployment.vc_id} TM→{deployment.yamcs_host}:{deployment.tm_port} "
+            f"TC←:{deployment.tc_port}"
+        )
 
     # Resolve auth key
     auth_key = args.auth_key
@@ -453,18 +681,11 @@ def main():
 
     auth_framer = AuthenticateFramer(authentication_key=auth_key)
 
-    # SpaceDataLinkFramerDeframer builds the TC Transfer Frame that wraps
-    # auth(SpacePacket) for the FSW uplink pipeline (tcDeframer → authenticate).
-    sdlink_framer = SpaceDataLinkFramerDeframer(
-        scid=args.spacecraft_ids[0],
-        vcid=args.vc_id,
-        frame_size=args.frame_length,
-    )
-
     # Shared UDP sockets
     tm_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    tc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    tc_sock.bind(("0.0.0.0", args.yamcs_tc_port))
+    tc_sockets = {deployment: _bind_tc_socket(deployment) for deployment in deployments}
+    write_lock = threading.Lock()
+    threads: list[threading.Thread] = []
 
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
@@ -485,19 +706,27 @@ def main():
             args=(
                 ser,
                 tm_sock,
-                args.yamcs_host,
-                args.yamcs_tm_port,
+                deployments,
                 args.frame_length,
-                args.spacecraft_ids,
-                args.vc_id,
+                args.unknown_pkts_log,
             ),
             daemon=True,
         )
-        tc_thread = threading.Thread(
-            target=_forward_tc_serial,
-            args=(tc_sock, ser, auth_framer, sdlink_framer),
-            daemon=True,
-        )
+        threads.append(tm_thread)
+        for deployment, tc_sock in tc_sockets.items():
+            tc_thread = threading.Thread(
+                target=_forward_tc_serial,
+                args=(
+                    tc_sock,
+                    ser,
+                    auth_framer,
+                    _sdlink_framer_for_deployment(deployment, args.frame_length),
+                    deployment,
+                    write_lock,
+                ),
+                daemon=True,
+            )
+            threads.append(tc_thread)
 
     elif args.mode == "tcp":
         print(f"[tcp] Connecting to ground station at {args.tcp_host}:{args.tcp_port}")
@@ -510,31 +739,41 @@ def main():
             args=(
                 tcp_sock,
                 tm_sock,
-                args.yamcs_host,
-                args.yamcs_tm_port,
+                deployments,
                 args.frame_length,
+                args.unknown_pkts_log,
             ),
             daemon=True,
         )
-        tc_thread = threading.Thread(
-            target=_forward_tc_tcp,
-            args=(tc_sock, tcp_sock, auth_framer, sdlink_framer),
-            daemon=True,
-        )
+        threads.append(tm_thread)
+        for deployment, tc_sock in tc_sockets.items():
+            tc_thread = threading.Thread(
+                target=_forward_tc_tcp,
+                args=(
+                    tc_sock,
+                    tcp_sock,
+                    auth_framer,
+                    _sdlink_framer_for_deployment(deployment, args.frame_length),
+                    deployment,
+                    write_lock,
+                ),
+                daemon=True,
+            )
+            threads.append(tc_thread)
 
     print(
-        f"[adapter] Starting in '{args.mode}' mode. YAMCS at {args.yamcs_host} (TM→:{args.yamcs_tm_port}, TC←:{args.yamcs_tc_port})"
+        f"[adapter] Starting in '{args.mode}' mode with {len(deployments)} YAMCS deployment(s)"
     )
-    tm_thread.start()
-    tc_thread.start()
+    for thread in threads:
+        thread.start()
 
     try:
-        tm_thread.join()
-        tc_thread.join()
+        for thread in threads:
+            thread.join()
     except KeyboardInterrupt:
         print("\n[adapter] Interrupted. Shutting down.")
         sys.exit(0)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
