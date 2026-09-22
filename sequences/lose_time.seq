@@ -1,0 +1,8 @@
+; This test is to test the hardcoded startup sequence does not go if a sequence is running
+R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "0"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "1"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "2"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "3"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "4"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "5"
+R00:00:10 CdhCore.cmdDisp.CMD_NO_OP_STRING, "6"

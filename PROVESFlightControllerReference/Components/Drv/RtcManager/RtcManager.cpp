@@ -48,6 +48,14 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     U32 seconds_since_boot = static_cast<U32>(t / 1000);
     U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
 
+    // Use proc time directly when the timebase parameter selects it
+    Fw::ParamValid timeBaseValid;
+    const Rtc::TimeBase timeBase = this->paramGet_TIMEBASE(timeBaseValid);
+    if (timeBase == Rtc::TimeBase::TB_PROC_TIME) {
+        time.set(::TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
+        return;
+    }
+
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         this->log_CONSOLE_RtcNotReady();
@@ -89,14 +97,14 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // or a useconds wrap that overflows a full second would otherwise make the reported time appear
     // to go backward (seconds_real_time only advances once per real second at RTC hardware resolution).
     const Drv::RescaledTime rescaled = this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot);
-    time.set(TimeBase::TB_WORKSTATION_TIME, 0, seconds_real_time + rescaled.seconds_carry, rescaled.useconds);
+    time.set(TimeBase::TB_SC_TIME, 0, seconds_real_time + rescaled.seconds_carry, rescaled.useconds);
 }
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
+void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& t) {
     // Check device readiness
     if (!device_is_ready(this->m_dev)) {
         // Emit device not ready event
@@ -160,7 +168,29 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::Time
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Drv::TimeData t) {
+void RtcManager ::parameterUpdated(FwPrmIdType id) {
+    if (id != RtcManager::PARAMID_TIMEBASE) {
+        return;
+    }
+
+    Fw::ParamValid valid;
+    const Rtc::TimeBase timeBase = this->paramGet_TIMEBASE(valid);
+    if ((valid == Fw::ParamValid::INVALID) || (valid == Fw::ParamValid::UNINIT)) {
+        return;
+    }
+
+    // Cancel any running sequences, as the change in reported time may impact their behavior
+    for (FwIndexType i = 0; i < this->getNum_cancelSequences_OutputPorts(); i++) {
+        if (!this->isConnected_cancelSequences_OutputPort(i)) {
+            continue;
+        }
+        this->cancelSequences_out(i);
+    }
+
+    this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
+}
+
+void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& t) {
     // retrieve info about current alarm
 
     uint16_t mask = this->m_curr_mask;

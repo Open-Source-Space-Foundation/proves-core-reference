@@ -22,6 +22,11 @@ CONFIG_I2C_TCA954X=y
 CONFIG_I2C_TCA954X_ROOT_INIT_PRIO=70
 CONFIG_I2C_TCA954X_CHANNEL_INIT_PRIO=71
 
+# DW I2C SCL timing is derived from this assumed IC clock (MHz). RP2350
+# clocks I2C from CLK_SYS at 150 MHz; the default (32) yields ~520 kHz SCL
+# instead of the intended 100 kHz. (rpi_pico sets 125 for the same reason.)
+CONFIG_I2C_DW_CLOCK_SPEED=150
+
 # Sensors
 CONFIG_SENSOR=y
 CONFIG_LSM6DSO=y

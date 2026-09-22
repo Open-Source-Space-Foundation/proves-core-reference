@@ -8,10 +8,31 @@ module Components {
         output port runSequence: Svc.CmdSeqIn
 
         @ Port for receiving the status of the start-up sequence
-        sync input port completeSequence: Fw.CmdResponse
+        sync input port startupCompleteSequence: Fw.CmdResponse
 
         @ Port for receiving the indication that the start-up sequence has started
-        sync input port sequenceStarted: Svc.CmdSeqIn
+        sync input port startupsequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the status of the SafeMode Sequence
+        sync input port safeModeCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving the indication that the SafeMode sequence has started
+        sync input port safeModeSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the indication that the Payload sequence has started
+        sync input port payloadSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the status of the Payload Sequence
+        sync input port payloadCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving if Lora was ever on
+        sync input port loraFirstStart: Fw.Signal
+
+        @ Enable LoRa transmission
+        output port enableTransmit: Fw.Signal
+
+        @ Disable LoRa transmission
+        output port disableTransmit: Fw.Signal
 
         @ Command to wait for system quiescence before proceeding with start-up
         sync command WAIT_FOR_QUIESCENCE()
@@ -33,6 +54,10 @@ module Components {
         event BootCountUpdateFailure() severity warning low \
             format "Failed to update boot count file"
 
+        @ Event emitted when the boot count file holds an implausible value (torn or corrupt write)
+        event BootCountCorrupted(raw: I64) severity warning high \
+            format "Boot count file corrupt (raw value {}) - treating as unreadable"
+
         @ Event emitted when the quiescence file was not updated
         event QuiescenceFileInitFailure() severity warning low \
             format "Failed to initialize quiescence start time file"
@@ -44,6 +69,10 @@ module Components {
         @ Event emitted when the start-up sequence fails
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
             ) severity warning low format "Start-up sequence failed with response code {}"
+
+        @ Event emitted when the hardcoded startup sequence enables the radio
+        event HardcodedRadioEnable() severity activity high \
+            format "Hardcoded Startup Sequence has enabled the radio"
 
         @ Whether the start-up manager is armed to wait for quiescence
         param ARMED: bool default true
@@ -59,6 +88,9 @@ module Components {
 
         @ File to store the boot count
         param BOOT_COUNT_FILE: string default "/boot_count.bin"
+
+        @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

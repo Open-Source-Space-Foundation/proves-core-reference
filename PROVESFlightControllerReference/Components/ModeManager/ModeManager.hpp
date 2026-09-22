@@ -8,7 +8,9 @@
 #define Components_ModeManager_HPP
 
 #include <Os/File.hpp>
+#include <Os/Mutex.hpp>
 
+#include "Fw/Time/Time.hpp"
 #include "Fw/Types/String.hpp"
 #include "PROVESFlightControllerReference/Components/ModeManager/ModeManagerComponentAc.hpp"
 
@@ -27,10 +29,13 @@ class ModeManager : public ModeManagerComponentBase {
     //! Destroy ModeManager object
     ~ModeManager();
 
-    //! Initialize the component
-    void init(FwSizeType queueDepth,        //!< Queue depth for async ports
-              FwEnumStoreType instance = 0  //!< Instance ID
-    );
+    //! Restore persisted mode and bring the hardware in line with it
+    //!
+    //! Must be called from the topology after ports are connected and the GPIO
+    //! drivers are open. This does real I/O -- it drives the load switches --
+    //! so it cannot run from init(), which the topology calls before
+    //! connectComponents() and configureTopology().
+    void restorePersistentState();
 
   private:
     // ----------------------------------------------------------------------
@@ -72,6 +77,12 @@ class ModeManager : public ModeManagerComponentBase {
     //! Port called before intentional reboot to set clean shutdown flag
     void prepareForReboot_handler(FwIndexType portNum  //!< The port number
                                   ) override;
+
+    //! Handler implementation for packetRouted
+    //!
+    //! Resets the command loss timer when an authenticated packet is received
+    void packetRouted_handler(FwIndexType portNum  //!< The port number
+                              ) override;
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -132,6 +143,9 @@ class ModeManager : public ModeManagerComponentBase {
     //! \return Current voltage (only valid if valid parameter is set to true)
     F32 getCurrentVoltage(bool& valid);
 
+    //! Check for command loss and enter safe mode if timeout has expired
+    void commandLossCheck();
+
     // ----------------------------------------------------------------------
     // Private enums and types
     // ----------------------------------------------------------------------
@@ -157,6 +171,10 @@ class ModeManager : public ModeManagerComponentBase {
     Components::SafeModeReason m_safeModeReason;  //!< Current safe mode reason
     U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
     U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
+
+    Os::Mutex m_commandLossMutex;  //!< Protects command loss state against concurrent access
+    U32 m_commandLossCounter;      //!< Value of runCounter when last command was received
+    bool m_commandLossDebounce;    //!< Prevents re-triggering safe mode entry while command loss persists
 
     // ----------------------------------------------------------------------
     // Constants

@@ -538,6 +538,7 @@ We set the default `k` gain constant to $3.0 \ s$ in this reference deployment, 
     - `HysteresisAxisParam`.
     - `CooldownDurationParam`, `TorqueDurationParam`, and measured `TorqueDuration`.
     - `TimeBetweenMagneticFieldReadings`.
+  - `AngularVelocityMagnitude` (F64): Emits the magnitude of angular velocity used in the strategy selector for the operator awareness in the beacon.
   - Per-coil configuration telemetry for all coils (voltage, resistance, turns, geometry, shape).
 
 - **Events**

@@ -10,6 +10,16 @@ module Drv {
     }
 }
 
+@ Timebase parameter for the RtcManager component
+# Under RTC so that it does not shadow the TimeBase generated in the DRV module
+module Rtc {
+    @ Parameter for timebase
+    enum TimeBase: FwTimeBaseStoreType {
+        TB_PROC_TIME = 1 @< timebase is in proc time
+        TB_SC_TIME = 3   @< timebase is in RTC time
+    } default TB_SC_TIME
+}
+
 # Port definition
 module Drv {
     port TimeSet(t: TimeData)
@@ -23,6 +33,11 @@ module Drv {
     @ Manages the real time clock
     passive component RtcManager {
         import Svc.Time
+
+        ### PARAMETERS ###
+
+        @ Time base as a parameter
+        param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
 
         ### COMMANDS ###
 
@@ -54,6 +69,11 @@ module Drv {
             seconds: U32 @< Seconds since epoch
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
+
+        @ TimeBaseChanged event fires when the timebase parameter changes and indicates the new timebase
+        event TimeBaseChanged(
+            timeBase: Rtc.TimeBase @< The timebase now in use
+        ) severity activity high id 18 format "Timebase changed to: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
@@ -134,6 +154,13 @@ module Drv {
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
+
+        @ Port for getting parameters
+        param get port prmGetOut
+
+        @ Port for setting parameters
+        param set port prmSetOut
+
         @ Port for requesting the current time
         time get port timeCaller
 
