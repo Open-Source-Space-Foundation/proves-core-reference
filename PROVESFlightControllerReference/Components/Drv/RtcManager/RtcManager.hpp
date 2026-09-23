@@ -129,6 +129,14 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
 
+    //! Disarm the RTC alarm: unregister the callback (which also disables the
+    //! alarm interrupt), write the disabled alarm (mask 0), and clear a stale
+    //! alarm flag (AF) with rtc_alarm_is_pending(). Writing the disabled alarm
+    //! can set AF on the RV3028; disabling the interrupt first prevents a false
+    //! AlarmTriggered. Returns the first negative return code encountered, or
+    //! the non-negative result of rtc_alarm_is_pending() on success.
+    int disarmAlarm();
+
   private:
     // ----------------------------------------------------------------------
     // Private member variables
