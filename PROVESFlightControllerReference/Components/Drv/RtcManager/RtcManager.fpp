@@ -39,6 +39,11 @@ module Drv {
         @ Time base as a parameter
         param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
 
+        ### TELEMETRY ###
+
+        @ Last correction of the time offset in microseconds
+        telemetry TimeCorrectionUs: I64 id 0
+
         ### COMMANDS ###
 
         @ TIME_SET command to set the time on the RTC
@@ -142,6 +147,11 @@ module Drv {
             rc: I32 @< Return code from the RTC driver
         ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
 
+        @ TimeStepped event indicates that a correction of more than 100 ms was applied as a step
+        event TimeStepped(
+            correction_us: I64 @< The correction applied, in microseconds
+        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5
+
         ### PORTS ###
 
         @ Port for canceling running sequences when RTC time is set
@@ -163,6 +173,9 @@ module Drv {
 
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Port for sending command registrations
         command reg port cmdRegOut
