@@ -33,6 +33,7 @@ The RV3028 signals an alarm on its `~INT` pin. `~INT` is open-drain and active l
 
 The RV3028 keeps its alarm flag (`AF`) through a processor reset. If `AF` is stale, the next alarm triggers immediately when its callback is registered. The component clears `AF` with `rtc_alarm_is_pending()`:
 - In `configure()`, before any alarm callback is registered.
+- In `ALARM_SET`, before the alarm time is written. This also covers a failed clear in `configure()`.
 - In `ALARM_CANCEL`, as part of disarming the alarm.
 - After an alarm triggers, as part of disarming the alarm.
 
@@ -54,6 +55,7 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 3. On each command, the component:
     - Validates that the alarm is at a future date
     - Emits 'AlarmNotSet' if time is not valid or if an alarm is already present
+    - Clears a stale alarm flag with `rtc_alarm_is_pending()`. If this fails, emits `AlarmHardwareError` and responds `EXECUTION_ERROR`
     - Sets the time to the RTC alarm if validation passes
     - Emits a `AlarmSet` event with the previous time if the alarm is set successfully
     - Emits a `AlarmNotSet` event if the alarm is not set successfully
@@ -132,8 +134,8 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 | RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
 | RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
-| RtcManager-019 | A stale alarm flag is cleared at init and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (see [Manual Test: Stale Alarm Flag](#manual-test-stale-alarm-flag)) |
-| RtcManager-020 | `ALARM_CANCEL` and a triggered alarm do not emit `AlarmTriggered` | Integration test |
+| RtcManager-019 | A stale alarm flag is cleared at init, on `ALARM_SET`, and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (see [Manual Test: Stale Alarm Flag](#manual-test-stale-alarm-flag)) |
+| RtcManager-020 | `ALARM_CANCEL` does not emit `AlarmTriggered`. A triggered alarm emits `AlarmTriggered` one time | Integration test |
 
 
 ## Port Descriptions
@@ -398,6 +400,7 @@ sequenceDiagram
     Ground Station->>RTC Manager: Command ALARM_SET with Drv::TimeData struct
     RTC Manager->>RTC Manager: Validate alarm not present on system
     RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    RTC Manager->>Zephyr RTC API: Clear stale alarm flag via rtc_alarm_is_pending()
     RTC Manager->>Zephyr RTC API: Set alarm time via rtc_alarm_set_time()
     Zephyr RTC API->>RTC Sensor: Set rtc alarm time
     RTC Sensor-->>Zephyr RTC API: Return success
@@ -419,6 +422,7 @@ sequenceDiagram
     Ground Station->>RTC Manager: Command ALARM_SET with Drv::TimeData struct
     RTC Manager->>RTC Manager: Validate alarm not present on system
     RTC Manager->>RTC Manager: Validate time data (timeDataIsValid)
+    RTC Manager->>Zephyr RTC API: Clear stale alarm flag via rtc_alarm_is_pending()
     RTC Manager->>Zephyr RTC API: Set alarm time via rtc_alarm_set_time()
     Zephyr RTC API->>RTC Sensor: Set rtc alarm time
     RTC Sensor-->>Zephyr RTC API: Return failure
