@@ -178,6 +178,11 @@ telemetry packets ReferenceDeploymentPackets {
     detumbleManager.TimeBetweenMagneticFieldReadings
   }
 
+  # RTC time discipline correction, written once per second by the update callback
+  packet Timing id 23 group 5 {
+    rtcManager.TimeCorrectionUs
+  }
+
   packet DetumbleParams id 17 group 6 {
     detumbleManager.GainParam
     detumbleManager.BdotMaxThresholdParam
