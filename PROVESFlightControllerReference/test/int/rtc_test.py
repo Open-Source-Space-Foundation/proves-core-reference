@@ -18,7 +18,10 @@ from fprime_gds.common.logger.test_logger import TestLogger
 from fprime_gds.common.models.serialize.numerical_types import U32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from fprime_gds.common.testing_fw.predicates import event_predicate
+from fprime_gds.common.testing_fw.predicates import (
+    event_predicate,
+    greater_than_or_equal_to,
+)
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
 rtcManager = "ReferenceDeployment.rtcManager"
@@ -349,8 +352,17 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     )
 
     fp_time: TimeType = result.get_time()
-    event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
-    assert boundary <= event_time <= boundary + timedelta(seconds=1), (
+    event_time = datetime.fromtimestamp(
+        fp_time.seconds + fp_time.useconds / 1e6, tz=timezone.utc
+    )
+    # The alarm event is stamped before the update callback corrects the time
+    # offset for this edge, so it can be up to ~1 ms before the boundary (SDD
+    # "Limits"). Allow 10 ms.
+    assert (
+        boundary - timedelta(milliseconds=10)
+        <= event_time
+        <= boundary + timedelta(seconds=1)
+    ), (
         f"AlarmTriggered timestamp {event_time} should be within 1s of "
         f"alarm boundary {boundary}"
     )
@@ -523,15 +535,72 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by the timebase parameter"""
 
     try:
-        # Test that we can set timebase to proc time
+        # proves_send_and_assert_command clears histories before it sends, so
+        # TimeBaseChanged is in the history from index 0 when it returns. A
+        # time stamp cannot be used: the event is stamped in the new time base.
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
         )
-        # Assert that we receive a TimeBaseChanged event within 10 seconds
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        # Assert that we received a TimeBaseChanged event during the command
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
     finally:
         # Restore spacecraft time so subsequent tests see RTC-backed timestamps
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
         )
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
+
+
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that the RTC update callback disciplines the time offset each second
+
+    RtcManager-021: spacecraft time = uptime + time offset, corrected once per
+    second by the RTC update interrupt.
+    RtcManager-026: the correction is reported in TimeCorrectionUs telemetry
+    each second (sent in the Timing packet, id 23).
+
+    Once the boot seed's sub-second error has been removed by the first
+    correction (see SDD "Time Discipline" rule 10), steady-state RTC drift is
+    on the order of tens of microseconds per second -- well under the 100 ms
+    step threshold -- so no TimeStepped event should fire during a short
+    steady-state observation window.
+    """
+    # Re-sync the RTC first so we are not observing the boot-seed correction,
+    # which can be up to 1s to account for unknown sub-second boot error.
+    set_time(fprime_test_api)
+    fprime_test_api.clear_histories()
+
+    # Observe for a few RTC update-callback edges. All TlmPacketizer groups
+    # use ON_CHANGE_MIN with min=0 (see TlmPacketizerCfg.fpp) so the Timing
+    # packet downlinks on every change; a slightly-longer-than-3s window
+    # guards against two consecutive corrections coincidentally reporting the
+    # same microsecond value (which would otherwise be collapsed by
+    # ON_CHANGE_MIN and undercount the samples).
+    time.sleep(3.5)
+
+    results = fprime_test_api.assert_telemetry_count(
+        greater_than_or_equal_to(2),
+        channels=f"{rtcManager}.TimeCorrectionUs",
+        start=0,
+        timeout=5,
+    )
+
+    for result in results:
+        correction_us = result.get_val()
+        assert abs(correction_us) < 1000, (
+            f"TimeCorrectionUs {correction_us} should be < 1000 us in "
+            "steady-state (well under the 100 ms step threshold)"
+        )
+
+    # No TimeStepped event should occur in steady state once the boot seed
+    # has been corrected.
+    fprime_test_api.assert_event_count(
+        0, events=f"{rtcManager}.TimeStepped", start=0, timeout=0
+    )
