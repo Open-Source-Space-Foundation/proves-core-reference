@@ -473,8 +473,10 @@ def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
     fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
     fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
 
+    # Search only events after ALARM_LIST, so the earlier AlarmSet cannot match.
+    start = fprime_test_api.get_event_test_history().size()
     fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
-    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", start=start, timeout=10)
 
     # Clean up so no pending alarm leaks into later tests.
     fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
