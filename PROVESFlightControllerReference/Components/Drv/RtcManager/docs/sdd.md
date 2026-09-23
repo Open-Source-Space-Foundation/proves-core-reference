@@ -28,6 +28,26 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 
 The parameter uses `Rtc.TimeBase`, a component-local copy of the upstream F Prime `TimeBase` enum carrying only the bases this component can source (`TB_PROC_TIME` and `TB_SC_TIME`). It lives in its own `Rtc` module because a `Drv.TimeBase` would shadow the global `TimeBase` enum inside generated `Drv` code. The default is `TB_SC_TIME`.
 
+#### Alarm Interrupt Path
+The RV3028 signals an alarm on its `~INT` pin. `~INT` is open-drain and active low. An external 10 kΩ resistor (R5) pulls it up. The device tree declares the pin `GPIO_ACTIVE_LOW`. On the falling edge, the Zephyr driver reads the RTC status and calls the alarm callback.
+
+The RV3028 keeps its alarm flag (`AF`) through a processor reset. If `AF` is stale, the next alarm triggers immediately when its callback is registered. The component clears `AF` with `rtc_alarm_is_pending()`:
+- In `configure()`, before any alarm callback is registered.
+- In `ALARM_CANCEL`, as part of disarming the alarm.
+- After an alarm triggers, as part of disarming the alarm.
+
+The driver disables the alarm interrupt at init. Only the callback registration in `ALARM_SET` enables it. Thus a stale `AF` cannot hold `~INT` low before a callback exists.
+
+The component disarms the alarm on `ALARM_CANCEL` and after an alarm triggers. Disarming happens in this order:
+1. Unregister the callback with `rtc_alarm_set_callback(dev, 0, NULL, NULL)`. This also disables the alarm interrupt.
+2. Write the disabled alarm with `rtc_alarm_set_time()` and a mask of 0.
+3. Clear `AF` with `rtc_alarm_is_pending()`.
+
+This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3028. If the alarm interrupt is still enabled at that point, this raises a false `AlarmTriggered` event. Disabling the interrupt first, in step 1, prevents this.
+
+> [!NOTE]
+> The RV3028 alarm has minute resolution. An alarm set for a later second in the current minute triggers immediately (issue #521).
+
 #### `ALARM_SET` Command Usage
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `ALARM_SET` command with the desired time
@@ -44,6 +64,7 @@ The parameter uses `Rtc.TimeBase`, a component-local copy of the upstream F Prim
     - Validates that an alarm exists
     - Emits 'AlarmNotCanceled' if an alarm is already present
     - Cancels the present alarm if it is present on the system
+    - Disarms the alarm: unregisters the callback, writes the disabled alarm (mask 0), then clears a stale alarm flag with `rtc_alarm_is_pending()`. If any step fails, emits `AlarmHardwareError` and responds `EXECUTION_ERROR`
     - Emits a `AlarmCanceled` event with the previous time if the alarm is canceled successfully
     - Emits a `AlarmNotCanceled` event if the alarm is not canceled successfully
 
@@ -103,7 +124,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-008 | The sub-second microseconds field is always in the range [0, 999999] | Unit tests |
 | RtcManager-009 | Time is monotonic | Integration test |
 | RtcManager-010 | During a time set command, before the new time is set, RTC Manager informs a sequence cancellation port | Integration test |
-| RtcManager-011 | An alarm is set and then an event is emitted when the alarm triggers | Integration test |
+| RtcManager-011 | An alarm set for a future minute triggers through the RTC interrupt line and emits an event | Integration test |
 | RtcManager-012 | An alarm is set and then canceled, an event is emitted when the alarm is canceled | Integration test |
 | RtcManager-013 | An alarm cancel command is sent when no alarm is present and an event is emitted | Integration test |
 | RtcManager-014 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
@@ -111,6 +132,8 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 | RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
 | RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
+| RtcManager-019 | A stale alarm flag is cleared at init and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (see [Manual Test: Stale Alarm Flag](#manual-test-stale-alarm-flag)) |
+| RtcManager-020 | `ALARM_CANCEL` and a triggered alarm do not emit `AlarmTriggered` | Integration test |
 
 
 ## Port Descriptions
@@ -144,6 +167,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | AlarmTriggered | Emitted when an alarm fires |
 | AlarmCanceled | Emitted when an alarm is canceled |
 | AlarmNotCanceled | Emitted when an alarm cannot be canceled |
+| AlarmHardwareError | Emitted when the RTC driver returns an error for an alarm operation, including the stale alarm flag clear |
 | YearValidationFailed | Emitted when provided year is invalid (should be >= 1900) |
 | MonthValidationFailed | Emitted when provided month is invalid (should be [1-12]) |
 | DayValidationFailed | Emitted when provided day is invalid (should be [1-31]) |
@@ -419,10 +443,16 @@ sequenceDiagram
 
     Ground Station->>RTC Manager: Command ALARM_CANCEL with Uint16_t ID
     RTC Manager->>RTC Manager: Validate alarm is present on system
+    RTC Manager->>Zephyr RTC API: Unregister callback via rtc_alarm_set_callback(dev, 0, NULL, NULL)
+    Zephyr RTC API->>RTC Sensor: Disable alarm interrupt (AIE)
+    Zephyr RTC API-->>RTC Manager: Return success (status = 0)
     RTC Manager->>Zephyr RTC API: Set alarm mask to 0 via rtc_alarm_set_time()
     Zephyr RTC API->>RTC Sensor: Set rtc alarm time
     RTC Sensor-->>Zephyr RTC API: Return success
     Zephyr RTC API-->>RTC Manager: Return success (status = 0)
+    RTC Manager->>Zephyr RTC API: Clear stale alarm flag via rtc_alarm_is_pending()
+    Zephyr RTC API->>RTC Sensor: Read status, clear AF
+    Zephyr RTC API-->>RTC Manager: Return 0 or 1 (both are success)
     RTC Manager->>Event Log: Emit AlarmCanceled event (with ID)
     RTC Manager-->>Ground Station: Command response OK
 ```
@@ -439,12 +469,58 @@ sequenceDiagram
 
     Ground Station->>RTC Manager: Command ALARM_CANCEL with Uint16_t ID
     RTC Manager->>RTC Manager: Validate alarm is present on system
+    RTC Manager->>Zephyr RTC API: Unregister callback via rtc_alarm_set_callback(dev, 0, NULL, NULL)
+    Zephyr RTC API->>RTC Sensor: Disable alarm interrupt (AIE)
+    Zephyr RTC API-->>RTC Manager: Return success (status = 0)
     RTC Manager->>Zephyr RTC API: Set alarm mask to 0 via rtc_alarm_set_time()
     Zephyr RTC API->>RTC Sensor: Set rtc alarm time
     RTC Sensor-->>Zephyr RTC API: Return Failure
     Zephyr RTC API-->>RTC Manager: Return Failure (nonzero return code)
     RTC Manager->>Event Log: Emit AlarmNotCanceled event (with ID)
     RTC Manager-->>Ground Station: Command response Execution error
+```
+
+### Alarm Trigger
+
+The alarm triggers through the `~INT` falling edge. No command is in the path.
+
+```mermaid
+sequenceDiagram
+    participant RTC Sensor
+    participant Zephyr RTC Driver
+    participant RTC Manager
+    participant Event Log
+    participant Downstream Components
+
+    RTC Sensor->>RTC Sensor: Alarm time matches, set AF
+    RTC Sensor->>Zephyr RTC Driver: ~INT falling edge (GPIO interrupt)
+    Zephyr RTC Driver->>Zephyr RTC Driver: Submit work to system workqueue
+    Zephyr RTC Driver->>RTC Sensor: Read status, clear AF
+    Zephyr RTC Driver->>RTC Manager: alarm_callback_t(dev, id)
+    RTC Manager->>Event Log: Emit AlarmTriggered event (with ID)
+    RTC Manager->>Downstream Components: alarmTriggered port
+    RTC Manager->>Zephyr RTC Driver: Unregister callback via rtc_alarm_set_callback(dev, 0, NULL, NULL)
+    Zephyr RTC Driver->>RTC Sensor: Disable alarm interrupt (AIE)
+    RTC Manager->>Zephyr RTC Driver: Set alarm mask to 0 via rtc_alarm_set_time()
+    RTC Manager->>Zephyr RTC Driver: Clear stale alarm flag via rtc_alarm_is_pending()
+    Zephyr RTC Driver->>RTC Sensor: Read status, clear AF
+```
+
+### `configure()`
+
+```mermaid
+sequenceDiagram
+    participant Topology
+    participant RTC Manager
+    participant Zephyr RTC API
+    participant Event Log
+
+    Topology->>RTC Manager: configure(dev)
+    RTC Manager->>Zephyr RTC API: rtc_alarm_get_supported_fields()
+    RTC Manager->>Zephyr RTC API: Clear stale alarm flag via rtc_alarm_is_pending()
+    alt Return code < 0
+        RTC Manager->>Event Log: Emit AlarmHardwareError event
+    end
 ```
 
 ### `ALARM_LIST` Command
@@ -491,6 +567,17 @@ sequenceDiagram
     RTC Manager-->>Ground Station: Command response OK
 ```
 
+## Manual Test: Stale Alarm Flag
+
+This procedure verifies RtcManager-019. Do not remove power from the board during the procedure. The RV3028 must keep `AF`.
+
+1. Flash a build that has the faulty alarm interrupt path (for example `main` before this change).
+2. Send `ALARM_SET` for the next minute. Wait until that minute is past. `AF` is now set and was not serviced.
+3. Send `ALARM_CANCEL`. On the faulty build, this disables the alarm but does not clear `AF`.
+4. Flash the build under test. Do not remove power.
+5. Send `ALARM_SET` for the next minute.
+6. Pass: no `AlarmTriggered` event before the alarm minute. `AlarmTriggered` occurs within 1 s after the alarm minute starts.
+
 ## Change Log
 
 | Date | Description |
@@ -500,3 +587,5 @@ sequenceDiagram
 | 2025-12-26 | Ensured sub-second time is monotonic; added unit tests for sub-second time calculation; removed TEST_UNCONFIGURE_DEVICE |
 | 2026-04-02 | Added basic functionality for setting and canceling RTC alarms |
 | 2026-04-09 | Hardening for more consistent behavior |
+| 2026-09-22 | Fixed alarm interrupt polarity (`~INT` is active low). Clear stale alarm flag at init and on `ALARM_CANCEL`. Integration tests verify the interrupt path |
+| 2026-09-22 | Disarm the alarm in a fixed order (unregister callback, write mask 0, clear `AF`) on `ALARM_CANCEL` and after an alarm triggers, so writing the disabled alarm cannot raise a false `AlarmTriggered` |
