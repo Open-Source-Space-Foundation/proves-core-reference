@@ -37,6 +37,16 @@ void RtcManager ::configure(const struct device* dev) {
         // log failure
         this->log_WARNING_HI_AlarmHardwareError(0, rc);
     }
+
+    // Clear a stale alarm flag (AF) left over from a prior boot. AF survives a
+    // processor reset; if left set, registering the first alarm callback in
+    // ALARM_SET would trigger it immediately.
+    if (device_is_ready(this->m_dev)) {
+        rc = rtc_alarm_is_pending(this->m_dev, 0);
+        if (rc < 0) {
+            this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        }
+    }
 }
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -266,10 +276,9 @@ void RtcManager ::ALARM_CANCEL_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 I
     }
 
     if (mask != 0) {
-        // set mask to 0 to cancel alarm
-        mask = 0;
-        rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
-        if (rc != 0) {
+        // disarm: unregister callback, write disabled alarm, clear stale AF
+        rc = this->disarmAlarm();
+        if (rc < 0) {
             // log failure
             this->log_WARNING_HI_AlarmHardwareError(0, rc);
             this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
@@ -337,13 +346,33 @@ void RtcManager ::alarm_callback_t(const struct device* dev, uint16_t id) {
         this->alarmTriggered_out(i);
     }
 
-    // cancel the alarm, so it won't go off repeatedly.
-    uint16_t mask = 0;
-    int rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
-    if (rc != 0) {
+    // disarm the alarm, so it won't go off repeatedly.
+    int rc = this->disarmAlarm();
+    if (rc < 0) {
         // log failure
         this->log_WARNING_HI_AlarmHardwareError(0, rc);
     }
+}
+
+int RtcManager ::disarmAlarm() {
+    // Unregister the callback first. This also disables the alarm interrupt
+    // (AIE), so writing the disabled alarm below cannot raise a false
+    // AlarmTriggered even though it may set AF on the RV3028.
+    int rc = rtc_alarm_set_callback(this->m_dev, 0, nullptr, nullptr);
+    if (rc < 0) {
+        return rc;
+    }
+
+    // Write the disabled alarm (mask 0).
+    uint16_t mask = 0;
+    rc = rtc_alarm_set_time(this->m_dev, 0, mask, &this->m_alarm_time);
+    if (rc < 0) {
+        return rc;
+    }
+
+    // Clear a stale alarm flag (AF), now that the interrupt is disabled, so a
+    // future alarm registration does not trigger immediately.
+    return rtc_alarm_is_pending(this->m_dev, 0);
 }
 
 void RtcManager ::log_CONSOLE_RtcNotReady() {
