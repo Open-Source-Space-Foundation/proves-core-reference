@@ -236,6 +236,16 @@ void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Dr
         return;
     }
 
+    // clear a stale alarm flag (AF) before arming, so registering the callback
+    // below cannot trigger immediately. This also covers a failed clear in
+    // configure().
+    rc = rtc_alarm_is_pending(this->m_dev, 0);
+    if (rc < 0) {
+        this->log_WARNING_HI_AlarmHardwareError(0, rc);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+        return;
+    }
+
     // set the alarm
     rc = rtc_alarm_set_time(this->m_dev, 0, this->m_curr_mask, &this->m_alarm_time);
 
