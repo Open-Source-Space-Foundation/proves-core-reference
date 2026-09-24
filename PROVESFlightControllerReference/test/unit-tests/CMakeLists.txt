@@ -31,27 +31,27 @@ target_include_directories(detumble_manager_strategy_selector PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# TcSecurityDeframer Parser
-add_library(security_deframer_parser STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.cpp
+# TcSecurityDecryptor Parser
+add_library(security_decryptor_parser STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDecryptor/Parser.cpp
 )
-target_include_directories(security_deframer_parser PUBLIC
+target_include_directories(security_decryptor_parser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# TcSecurityDeframer Validator
-add_library(security_deframer_validator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.cpp
+# TcSecurityDecryptor Validator
+add_library(security_decryptor_validator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDecryptor/Validator.cpp
 )
-target_include_directories(security_deframer_validator PUBLIC
+target_include_directories(security_decryptor_validator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
-# TcSecurityDeframer Authenticator
-add_library(security_deframer_authenticator STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.cpp
+# TcSecurityDecryptor Authenticator
+add_library(security_decryptor_authenticator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/TcSecurityDecryptor/Authenticator.cpp
 )
-target_include_directories(security_deframer_authenticator PUBLIC
+target_include_directories(security_decryptor_authenticator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
     ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
@@ -84,8 +84,8 @@ if(NOT MBEDCRYPTO_LIB)
     message(FATAL_ERROR "mbedcrypto library not found; install mbedtls (brew install mbedtls) or provide library in LIBRARY_PATH")
 endif()
 
-target_include_directories(security_deframer_authenticator PUBLIC ${PSA_CRYPTO_H})
-target_link_libraries(security_deframer_authenticator PUBLIC ${MBEDCRYPTO_LIB})
+target_include_directories(security_decryptor_authenticator PUBLIC ${PSA_CRYPTO_H})
+target_link_libraries(security_decryptor_authenticator PUBLIC ${MBEDCRYPTO_LIB})
 
 # --- Auto-discover and build tests ---
 
@@ -100,9 +100,9 @@ foreach(test_src ${TEST_SOURCES})
         detumble_manager_bdot
         detumble_manager_magnetorquer
         detumble_manager_strategy_selector
-        security_deframer_parser
-        security_deframer_validator
-        security_deframer_authenticator
+        security_decryptor_parser
+        security_decryptor_validator
+        security_decryptor_authenticator
         rtc_manager_rtc_helper
         proves_router_bypasser
     )

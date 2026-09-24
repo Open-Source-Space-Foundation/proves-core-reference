@@ -78,7 +78,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--sync-deframer",
         choices=["uart", "lora"],
         default=None,
-        help="Which TcSecurityDeframer instance the sequence-number sync test "
+        help="Which TcSecurityDecryptor instance the sequence-number sync test "
         "queries. Defaults to lora when --with-radio is set, uart otherwise. "
         "The radio CI job's UART-side bootstrap passes --sync-deframer=lora "
         "because the traffic that follows is validated by the LoRa instance.",

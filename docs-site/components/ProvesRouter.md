@@ -10,13 +10,13 @@ The `Svc::ProvesRouter` component supports `Fw::ComPacketType::FW_PACKET_COMMAND
 
 ## Security Policy Enforcement
 
-`Svc::ProvesRouter` is the policy point of the uplink security design. Upstream, `Components::TcSecurityDeframer` verifies each frame (SPI, anti-replay sequence number, MAC) and records the result in the `ComCfg::FrameContext` `authenticated` flag without dropping anything. The router then enforces:
+`Svc::ProvesRouter` is the policy point of the uplink security design. Upstream, `Components::TcSecurityDecryptor` (a decryptor behind the upstream `Svc::Ccsds::CcsdsSdlsDeframer`) verifies each frame (security association index, anti-replay sequence number, MAC) and records the result in the `ComCfg::FrameContext` `authenticated` flag without dropping anything. The router then enforces:
 
 - Packets with `authenticated == true` are routed normally.
 - Unauthenticated packets are routed only if their opcode is on the hardcoded bypass allowlist (`Components::PacketBypasser::bypassPacket` in `Bypasser.cpp`), which permits public commands such as `CMD_NO_OP`, `GET_SEQ_NUM`, and `TELL_JOKE`.
 - All other unauthenticated packets are rejected: ownership is returned via `dataReturnOut` and the packet is not routed.
 
-Because bypassed packets never pass through the authenticated-accept path in TcSecurityDeframer, they cannot advance the anti-replay sequence number.
+Because bypassed packets never pass through the authenticated-accept path in TcSecurityDecryptor, they cannot advance the anti-replay sequence number.
 
 About memory management, all buffers sent by `Svc::ProvesRouter` on the `fileOut` and `unknownDataOut` ports are expected to be returned to the router through the `fileBufferReturnIn` port for deallocation.
 

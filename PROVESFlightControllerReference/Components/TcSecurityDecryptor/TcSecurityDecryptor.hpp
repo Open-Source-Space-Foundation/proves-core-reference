@@ -1,10 +1,10 @@
 // ======================================================================
-// \title  TcSecurityDeframer.hpp
-// \brief  hpp file for TcSecurityDeframer component implementation class
+// \title  TcSecurityDecryptor.hpp
+// \brief  hpp file for TcSecurityDecryptor component implementation class
 // ======================================================================
 
-#ifndef Components_TcSecurityDeframer
-#define Components_TcSecurityDeframer
+#ifndef Components_TcSecurityDecryptor
+#define Components_TcSecurityDecryptor
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Types/String.hpp>
@@ -13,50 +13,50 @@
 #include <atomic>
 #include <cassert>
 
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDecryptor/Authenticator.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDecryptor/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDecryptor/TcSecurityDecryptorComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDecryptor/Validator.hpp"
 
 namespace Components {
 
-class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
+class TcSecurityDecryptor final : public TcSecurityDecryptorComponentBase {
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
 
-    //! Construct TcSecurityDeframer object
-    TcSecurityDeframer(const char* const compName  //!< The component name
+    //! Construct TcSecurityDecryptor object
+    TcSecurityDecryptor(const char* const compName  //!< The component name
     );
 
-    //! Destroy TcSecurityDeframer object
-    ~TcSecurityDeframer();
+    //! Destroy TcSecurityDecryptor object
+    ~TcSecurityDecryptor();
 
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
 
-    //! Handler implementation for dataIn
+    //! Handler implementation for decryptIn
     //!
-    //! Receives [Security Header | Data Field | Security Trailer] from TcDeframer (which
-    //! has already stripped the TC Primary Header and FECF), verifies the Security Header
-    //! and MAC, records the result in the frame context authenticated flag, and forwards
-    //! the Data Field per CCSDS 355.0-B-2 §3.3.3.3. Structurally invalid frames are
-    //! returned upstream on dataReturnOut.
-    void dataIn_handler(FwIndexType portNum,                 //!< The port number
-                        Fw::Buffer& data,                    //!< The frame buffer
-                        const ComCfg::FrameContext& context  //!< The frame context
-                        ) override;
+    //! Receives the security association index and [SeqNum | Data | Security Trailer] from the
+    //! upstream Svc.Ccsds.CcsdsSdlsDeframer (which has already stripped the SA index out of the
+    //! buffer), verifies the anti-replay sequence number and MAC, records the result in the frame
+    //! context authenticated flag, and forwards the Data Field per CCSDS 355.0-B-2 §3.3.3.3.
+    void decryptIn_handler(FwIndexType portNum,                 //!< The port number
+                           U16 saIndex,                         //!< The security association index
+                           Fw::Buffer& data,                    //!< The frame buffer
+                           const ComCfg::FrameContext& context  //!< The frame context
+                           ) override;
 
-    //! Handler implementation for dataReturnIn
+    //! Handler implementation for decryptReturnIn
     //!
-    //! Returns ownership of buffers sent on dataOut back to the upstream component
-    void dataReturnIn_handler(FwIndexType portNum,                 //!< The port number
-                              Fw::Buffer& data,                    //!< The frame buffer
-                              const ComCfg::FrameContext& context  //!< The frame context
-                              ) override;
+    //! Returns ownership of buffers sent on decryptOut back to the upstream deframer
+    void decryptReturnIn_handler(FwIndexType portNum,                 //!< The port number
+                                 Fw::Buffer& data,                    //!< The frame buffer
+                                 const ComCfg::FrameContext& context  //!< The frame context
+                                 ) override;
 
   private:
     // ----------------------------------------------------------------------
@@ -114,4 +114,4 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
 
 }  // namespace Components
 
-#endif  // Components_TcSecurityDeframer
+#endif  // Components_TcSecurityDecryptor
