@@ -178,9 +178,12 @@ telemetry packets ReferenceDeploymentPackets {
     detumbleManager.TimeBetweenMagneticFieldReadings
   }
 
-  # RTC time discipline correction, written once per second by the update callback
+  # RTC time discipline correction, written once per second by the update callback,
+  # and discipline fault counters
   packet Timing id 23 group 5 {
     rtcManager.TimeCorrectionUs
+    rtcManager.DisciplineReadFaults
+    rtcManager.DisciplineRejects
   }
 
   packet DetumbleParams id 17 group 6 {
