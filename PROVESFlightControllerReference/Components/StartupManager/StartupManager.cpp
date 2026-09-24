@@ -9,7 +9,7 @@
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
-#include <zephyr/drivers/rtc.h>
+#include <zephyr/kernel.h>
 
 namespace Components {
 

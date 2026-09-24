@@ -224,6 +224,21 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
+NATIVE_UT_BUILD_DIR ?= native/build-fprime-automatic-native-ut
+
+.PHONY: generate-fprime-ut
+generate-fprime-ut: submodules fprime-venv generate-auth-key ## Generate the native F Prime UT build cache (needs host mbedTLS)
+	cd native && $(UV_RUN) fprime-util generate --ut --force
+
+.PHONY: generate-fprime-ut-if-needed
+generate-fprime-ut-if-needed:
+	@test -f $(NATIVE_UT_BUILD_DIR)/build.ninja || $(MAKE) generate-fprime-ut
+
+.PHONY: test-fprime-ut
+test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
+	cd native && $(UV_RUN) fprime-util build --ut --all
+	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
+
 FILTER ?= not sync_sequence_number and not format_filesystem
 
 .PHONY: test-integration

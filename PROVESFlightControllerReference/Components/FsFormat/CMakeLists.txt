@@ -14,13 +14,19 @@
 # root when not specifically overridden by the developer. i.e. The module defined by
 # `Ref/SignalGen/CMakeLists.txt` will be named `Ref_SignalGen`.
 
+# Implementation calls Zephyr APIs. On non-Zephyr platforms register autocode
+# only, so this module's ports/types stay resolvable to portable consumers
+# (see docs/adr/0002).
+set(IMPL_SOURCES)
+if(FPRIME_PLATFORM STREQUAL "Zephyr")
+    set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/FsFormat.cpp")
+endif()
+
 register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/FsFormat.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/FsFormat.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+        ${IMPL_SOURCES}
 )
 
 ### Unit Tests ###

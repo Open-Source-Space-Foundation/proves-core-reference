@@ -26,6 +26,7 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+!native/settings.ini
 Framing/uv.lock
 /sequences/*.bin
 /.cache/
