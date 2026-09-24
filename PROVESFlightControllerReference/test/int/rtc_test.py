@@ -569,8 +569,8 @@ def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start
     each second (sent in the Timing packet, id 23). Downlink rate depends on
     telemetryDelay, so this test sets its DIVIDER to 0 for the duration.
 
-    Once the boot seed's sub-second error has been removed by the first
-    correction (see SDD "Time Discipline" rule 10), steady-state RTC drift is
+    Once the boot seed's sub-second error has been removed by the first one
+    or two corrections (see SDD "Time Discipline" rule 10), steady-state RTC drift is
     on the order of a few hundred microseconds per second (bench, issue #522)
     -- well under the 100 ms step threshold -- so no TimeStepped event should
     fire during a short steady-state observation window.

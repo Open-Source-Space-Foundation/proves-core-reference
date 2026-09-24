@@ -22,16 +22,24 @@ class TimeDiscipline {
     //! Corrections with a magnitude greater than this many microseconds are steps
     static constexpr std::int64_t STEP_THRESHOLD_US = 100000;
 
-    //! Number of sequential backward corrections beyond STEP_THRESHOLD_US required before
-    //! a backward step is applied
-    static constexpr int BACKWARD_STEP_CONFIRMATIONS = 2;
+    //! Number of sequential, consistent corrections beyond STEP_THRESHOLD_US required before
+    //! a step is applied, in either direction. Two corrections are consistent if they differ
+    //! by STEP_THRESHOLD_US or less and the second has a larger rtc_s
+    static constexpr int STEP_CONFIRMATIONS = 2;
+
+    //! Earliest RTC seconds the RV3028 can represent: 2000-01-01T00:00:00Z
+    static constexpr std::int64_t RTC_MIN_S = 946684800;
+
+    //! Latest RTC seconds the RV3028 can represent: 2099-12-31T23:59:59Z
+    static constexpr std::int64_t RTC_MAX_S = 4102444799;
 
     //! Outcome of a call to correct()
     enum class Correction {
-        IGNORED,   //!< rtc_s did not increase since the last seed or correction
+        IGNORED,   //!< rtc_s did not increase since the last seed or applied correction
         APPLIED,   //!< Correction applied, magnitude <= STEP_THRESHOLD_US (or first seed)
-        REJECTED,  //!< Backward correction beyond STEP_THRESHOLD_US, not yet confirmed
-        STEPPED,   //!< Correction applied as a step, magnitude > STEP_THRESHOLD_US
+        REJECTED,  //!< Correction beyond STEP_THRESHOLD_US, not yet confirmed. No state change
+                   //!< except the pending step candidate
+        STEPPED,   //!< Confirmed correction applied as a step, magnitude > STEP_THRESHOLD_US
     };
 
     //! Result returned by correct()
@@ -43,6 +51,9 @@ class TimeDiscipline {
     // ----------------------------------------------------------------------
     // Public methods
     // ----------------------------------------------------------------------
+
+    //! Return true if rtc_s is in [RTC_MIN_S, RTC_MAX_S], the range the RV3028 can represent
+    static bool isPlausibleRtcSeconds(std::int64_t rtc_s);
 
     //! Seed the time offset from one RTC read
     void seed(std::int64_t rtc_s,       //!< RTC seconds
@@ -66,11 +77,13 @@ class TimeDiscipline {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    bool m_disciplined = false;           //!< True once a seed has occurred
-    std::int64_t m_offset_us = 0;         //!< RTC time minus uptime, in microseconds
-    std::int64_t m_last_reported_us = 0;  //!< Last reported time, in microseconds, for monotonicity
-    std::int64_t m_last_rtc_s = 0;        //!< Last RTC seconds seen by seed() or correct()
-    int m_backward_count = 0;             //!< Sequential backward corrections beyond STEP_THRESHOLD_US
+    bool m_disciplined = false;                //!< True once a seed has occurred
+    std::int64_t m_offset_us = 0;              //!< RTC time minus uptime, in microseconds
+    std::int64_t m_last_reported_us = 0;       //!< Last reported time, in microseconds, for monotonicity
+    std::int64_t m_last_rtc_s = 0;             //!< RTC seconds of the last seed or applied correction
+    int m_pending_count = 0;                   //!< Sequential consistent corrections beyond STEP_THRESHOLD_US
+    std::int64_t m_pending_correction_us = 0;  //!< Correction of the last pending step candidate
+    std::int64_t m_pending_rtc_s = 0;          //!< RTC seconds of the last pending step candidate
 };
 
 }  // namespace Drv

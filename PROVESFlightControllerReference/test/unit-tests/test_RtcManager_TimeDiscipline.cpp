@@ -102,14 +102,14 @@ TEST(TimeDisciplineTest, LargeBackwardCorrectionSteps) {
     std::int64_t mid = static_cast<std::int64_t>(seconds) * US_PER_S + useconds;
     EXPECT_GE(mid, before);
 
-    // Second sequential backward correction beyond threshold -> STEPPED.
-    // rtc2 must be the next integer above rtc1(1001) since offset (and thus the correction
-    // math) only depends on the unchanged seed offset, not on rtc1/uptime1.
+    // Second sequential backward correction beyond threshold, consistent with the first
+    // (within STEP_THRESHOLD_US) -> STEPPED. The correction math only depends on the unchanged
+    // seed offset, not on rtc1/uptime1.
     std::int64_t rtc2 = 1002;
-    std::int64_t uptime2 = 2100001;  // correction = 1002e6 - 2100001 - 1000000000 = -100001
+    std::int64_t uptime2 = 3050000;  // correction = 1002e6 - 3050000 - 1000000000 = -1050000
     auto r2 = td.correct(rtc2, uptime2);
     EXPECT_EQ(r2.kind, Correction::STEPPED);
-    EXPECT_EQ(r2.correction_us, -100001);
+    EXPECT_EQ(r2.correction_us, -1050000);
 
     ASSERT_TRUE(td.read(uptime2, seconds, useconds));
     std::int64_t after = static_cast<std::int64_t>(seconds) * US_PER_S + useconds;
@@ -130,9 +130,14 @@ TEST(TimeDisciplineTest, LargeForwardCorrectionSteps) {
     // rtc_s*1e6 - uptime = 1000600000 -> rtc_s*1e6 = 1000600000 + uptime
     // with uptime = 1e6 -> rtc_s*1e6 = 1001600000 -> not integer seconds; adjust uptime instead.
     uptime = 1000000 - 600000;  // 400000
-    auto result = td.correct(rtc_s, uptime);
-    EXPECT_EQ(result.kind, Correction::STEPPED);
-    EXPECT_EQ(result.correction_us, 600000);
+    auto first = td.correct(rtc_s, uptime);
+    EXPECT_EQ(first.kind, Correction::REJECTED);
+    EXPECT_EQ(first.correction_us, 600000);
+
+    // Second consistent forward correction one second later confirms the step
+    auto second = td.correct(rtc_s + 1, uptime + US_PER_S);
+    EXPECT_EQ(second.kind, Correction::STEPPED);
+    EXPECT_EQ(second.correction_us, 600000);
 }
 
 TEST(TimeDisciplineTest, StaleCallbackIsIgnored) {
@@ -293,9 +298,10 @@ TEST(TimeDisciplineTest, ThresholdBoundary) {
     {
         TimeDiscipline td;
         td.seed(1000, 0);
-        // correction = +100001: uptime = 1001e6 - 1000100001 = 899999
+        // correction = +100001: uptime = 1001e6 - 1000100001 = 899999. Out of band, so the
+        // first sample needs confirmation.
         auto r = td.correct(1001, 899999);
-        EXPECT_EQ(r.kind, Correction::STEPPED);
+        EXPECT_EQ(r.kind, Correction::REJECTED);
         EXPECT_EQ(r.correction_us, 100001);
     }
 }
@@ -400,4 +406,135 @@ TEST(TimeDisciplineTest, SeedResetsBackwardCount) {
     std::int64_t rtc_s2 = 2001;
     auto r2 = td.correct(rtc_s2, uptime2 + 150000);
     EXPECT_EQ(r2.kind, Correction::REJECTED);
+}
+
+namespace {
+std::int64_t reportedUs(TimeDiscipline& td, std::int64_t uptime_us) {
+    std::uint32_t seconds = 0;
+    std::uint32_t useconds = 0;
+    EXPECT_TRUE(td.read(uptime_us, seconds, useconds));
+    return static_cast<std::int64_t>(seconds) * US_PER_S + useconds;
+}
+}  // namespace
+
+TEST(TimeDisciplineTest, SingleBogusForwardSampleDoesNotStick) {
+    TimeDiscipline td;
+    const std::int64_t rtc0 = 1800000000;  // 2027-01-15
+    td.seed(rtc0, 0);
+
+    std::int64_t uptime = US_PER_S;
+    auto r0 = td.correct(rtc0 + 1, uptime);
+    EXPECT_EQ(r0.kind, Correction::APPLIED);
+
+    // One corrupted read far in the future (e.g. year 2099)
+    const std::int64_t bogus = 4070908800;  // 2099-01-01
+    uptime += US_PER_S;
+    auto bad = td.correct(bogus, uptime);
+    EXPECT_EQ(bad.kind, Correction::REJECTED);
+    EXPECT_GT(bad.correction_us, static_cast<std::int64_t>(TimeDiscipline::STEP_THRESHOLD_US));
+
+    // Time did not jump
+    EXPECT_LT(reportedUs(td, uptime), (rtc0 + 3) * US_PER_S);
+
+    // Later good samples are not ignored and keep time correct
+    for (int i = 3; i < 10; ++i) {
+        uptime += US_PER_S;
+        auto good = td.correct(rtc0 + i, uptime);
+        EXPECT_EQ(good.kind, Correction::APPLIED) << "i=" << i;
+        EXPECT_EQ(good.correction_us, 0) << "i=" << i;
+        EXPECT_EQ(reportedUs(td, uptime), (rtc0 + i) * US_PER_S);
+    }
+}
+
+TEST(TimeDisciplineTest, InconsistentForwardSamplesDoNotStep) {
+    TimeDiscipline td;
+    td.seed(1000, 0);
+
+    // Two out-of-band forward samples that disagree by more than STEP_THRESHOLD_US
+    auto r1 = td.correct(5000, US_PER_S);  // correction = +3999 s
+    EXPECT_EQ(r1.kind, Correction::REJECTED);
+    auto r2 = td.correct(9000, 2 * US_PER_S);  // correction = +7998 s
+    EXPECT_EQ(r2.kind, Correction::REJECTED);
+
+    EXPECT_EQ(reportedUs(td, 2 * US_PER_S), 1002 * US_PER_S);
+
+    // Good sample is applied
+    auto r3 = td.correct(1003, 3 * US_PER_S);
+    EXPECT_EQ(r3.kind, Correction::APPLIED);
+    EXPECT_EQ(r3.correction_us, 0);
+}
+
+TEST(TimeDisciplineTest, DuplicateOfPendingSampleDoesNotConfirm) {
+    TimeDiscipline td;
+    td.seed(1000, 0);
+
+    // Same out-of-band rtc_s seen twice a few ms apart must not confirm a step
+    auto r1 = td.correct(1001, 400000);  // +600 ms
+    EXPECT_EQ(r1.kind, Correction::REJECTED);
+    auto r2 = td.correct(1001, 402000);  // +598 ms, same rtc_s
+    EXPECT_NE(r2.kind, Correction::STEPPED);
+
+    // Next edge confirms
+    auto r3 = td.correct(1002, 1400000);
+    EXPECT_EQ(r3.kind, Correction::STEPPED);
+    EXPECT_EQ(r3.correction_us, 600000);
+}
+
+TEST(TimeDisciplineTest, BootSeedTruncationConverges) {
+    TimeDiscipline td;
+    // Boot at true time 1000.7 s: RTC reads 1000, so the seed is 0.7 s behind
+    const std::int64_t boot_uptime = 5 * US_PER_S;
+    td.seed(1000, boot_uptime);
+
+    // Driver-registration duplicate sample (same seconds) is ignored
+    auto dup = td.correct(1000, boot_uptime + 1000);
+    EXPECT_EQ(dup.kind, Correction::IGNORED);
+
+    // First real edge (1001 at true 1001.0, i.e. 0.3 s after boot): unconfirmed
+    std::int64_t uptime = boot_uptime + 300000;
+    auto e1 = td.correct(1001, uptime);
+    EXPECT_EQ(e1.kind, Correction::REJECTED);
+    EXPECT_EQ(e1.correction_us, 700000);
+
+    // Second edge confirms
+    uptime += US_PER_S;
+    auto e2 = td.correct(1002, uptime);
+    EXPECT_EQ(e2.kind, Correction::STEPPED);
+    EXPECT_EQ(e2.correction_us, 700000);
+    EXPECT_EQ(reportedUs(td, uptime), 1002 * US_PER_S);
+
+    // Steady state
+    uptime += US_PER_S;
+    auto e3 = td.correct(1003, uptime);
+    EXPECT_EQ(e3.kind, Correction::APPLIED);
+    EXPECT_EQ(e3.correction_us, 0);
+}
+
+TEST(TimeDisciplineTest, InconsistentBackwardSamplesDoNotStep) {
+    TimeDiscipline td;
+    td.seed(1000, 0);  // offset = 1000e6
+
+    // Late callback (-150 ms), then an unrelated large backward sample (-1.05 s)
+    auto r1 = td.correct(1001, 1150000);
+    EXPECT_EQ(r1.kind, Correction::REJECTED);
+    auto r2 = td.correct(1002, 3050000);
+    EXPECT_EQ(r2.kind, Correction::REJECTED);
+
+    // Next consistent sample confirms the -1.05 s step
+    auto r3 = td.correct(1003, 4050000);
+    EXPECT_EQ(r3.kind, Correction::STEPPED);
+    EXPECT_EQ(r3.correction_us, -1050000);
+}
+
+TEST(TimeDisciplineTest, PlausibleRtcSecondsRange) {
+    // RV3028 represents years 2000 to 2099
+    EXPECT_FALSE(TimeDiscipline::isPlausibleRtcSeconds(0));
+    EXPECT_FALSE(TimeDiscipline::isPlausibleRtcSeconds(-1));
+    EXPECT_FALSE(TimeDiscipline::isPlausibleRtcSeconds(946684799));  // 1999-12-31T23:59:59Z
+    EXPECT_TRUE(TimeDiscipline::isPlausibleRtcSeconds(946684800));   // 2000-01-01T00:00:00Z
+    EXPECT_TRUE(TimeDiscipline::isPlausibleRtcSeconds(1800000000));
+    EXPECT_TRUE(TimeDiscipline::isPlausibleRtcSeconds(4102444799));   // 2099-12-31T23:59:59Z
+    EXPECT_FALSE(TimeDiscipline::isPlausibleRtcSeconds(4102444800));  // 2100-01-01T00:00:00Z
+    EXPECT_EQ(static_cast<std::int64_t>(TimeDiscipline::RTC_MIN_S), 946684800);
+    EXPECT_EQ(static_cast<std::int64_t>(TimeDiscipline::RTC_MAX_S), 4102444799);
 }
