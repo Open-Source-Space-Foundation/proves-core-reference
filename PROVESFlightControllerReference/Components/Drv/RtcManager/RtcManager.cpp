@@ -47,14 +47,11 @@ void RtcManager ::configure(const struct device* dev) {
         }
     }
 
-    // Boot seed: one polled read. If it fails, the component starts undisciplined and the first
-    // successful update callback seeds it instead.
+    // Boot seed: one polled read. If it fails or is implausible, the component starts
+    // undisciplined and the first plausible update callback sample seeds it instead.
     std::int64_t rtc_s = 0;
     if (this->readRtcSeconds(rtc_s)) {
-        const std::int64_t uptime_us = RtcManager::uptimeUs();
-        k_spinlock_key_t key = k_spin_lock(&this->m_lock);
-        this->m_discipline.seed(rtc_s, uptime_us);
-        k_spin_unlock(&this->m_lock, key);
+        this->seedDiscipline(rtc_s);
     }
 
 #if defined(CONFIG_RTC_UPDATE)
@@ -170,15 +167,9 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv
     // Seed the time offset from the new time. The RV3028 resets its sub-second divider when the
     // seconds are written, so this seed has no sub-second error. Reported time can step backward
     // one time.
-    struct rtc_time time_rtc_mut = time_rtc;
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc_mut);
-    errno = 0;
-    const std::int64_t new_rtc_s = static_cast<std::int64_t>(timeutil_timegm(time_tm));
-    if (errno != ERANGE) {
-        const std::int64_t uptime_us = RtcManager::uptimeUs();
-        k_spinlock_key_t key = k_spin_lock(&this->m_lock);
-        this->m_discipline.seed(new_rtc_s, uptime_us);
-        k_spin_unlock(&this->m_lock, key);
+    std::int64_t new_rtc_s = 0;
+    if (RtcManager::rtcTimeToSeconds(time_rtc, new_rtc_s)) {
+        this->seedDiscipline(new_rtc_s);
     }
 
     // Emit time set event, include previous time for reference
@@ -412,7 +403,7 @@ void RtcManager ::update_callback_t() {
 
     std::int64_t rtc_s = 0;
     if (!this->readRtcSeconds(rtc_s)) {
-        // RTC read failed. Time offset does not change.
+        // RTC read failed or was implausible. Time offset does not change.
         return;
     }
 
@@ -449,15 +440,27 @@ bool RtcManager ::readRtcSeconds(std::int64_t& rtc_s) {
         return false;
     }
 
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
+    return RtcManager::rtcTimeToSeconds(time_rtc, rtc_s);
+}
+
+bool RtcManager ::rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s) {
+    struct rtc_time time_rtc_mut = time_rtc;
+    struct tm* time_tm = rtc_time_to_tm(&time_rtc_mut);
     errno = 0;
     const std::int64_t seconds = static_cast<std::int64_t>(timeutil_timegm(time_tm));
-    if (errno == ERANGE) {
+    if ((errno == ERANGE) || !TimeDiscipline::isPlausibleRtcSeconds(seconds)) {
         return false;
     }
 
     rtc_s = seconds;
     return true;
+}
+
+void RtcManager ::seedDiscipline(std::int64_t rtc_s) {
+    const std::int64_t uptime_us = RtcManager::uptimeUs();
+    k_spinlock_key_t key = k_spin_lock(&this->m_lock);
+    this->m_discipline.seed(rtc_s, uptime_us);
+    k_spin_unlock(&this->m_lock, key);
 }
 
 std::int64_t RtcManager ::uptimeUs() {

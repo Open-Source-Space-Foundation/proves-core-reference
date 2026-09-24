@@ -118,9 +118,17 @@ class RtcManager final : public RtcManagerComponentBase {
     //! May emit telemetry and events, but only after releasing the spinlock.
     void update_callback_t();
 
-    //! Read the RTC and convert to epoch seconds via timeutil_timegm(). Returns false on a
-    //! nonzero rtc_get_time() return code or an out-of-range (ERANGE) conversion.
+    //! Read the RTC and convert to epoch seconds with rtcTimeToSeconds(). Returns false if the
+    //! device is not ready, rtc_get_time() fails, or rtcTimeToSeconds() fails.
     bool readRtcSeconds(std::int64_t& rtc_s);
+
+    //! Convert an rtc_time to epoch seconds via timeutil_timegm(). Returns false on an
+    //! out-of-range (ERANGE) conversion or on seconds outside the RV3028 range (years 2000 to
+    //! 2099, see TimeDiscipline::isPlausibleRtcSeconds()).
+    static bool rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s);
+
+    //! Seed the time discipline from rtc_s at the current uptime, under the spinlock
+    void seedDiscipline(std::int64_t rtc_s);
 
     //! Current uptime in microseconds, from k_uptime_ticks()
     static std::int64_t uptimeUs();
