@@ -19,7 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/RtcManager.cpp"
-        "${CMAKE_CURRENT_LIST_DIR}/RtcHelper.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/TimeDiscipline.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )

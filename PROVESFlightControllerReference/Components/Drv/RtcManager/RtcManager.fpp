@@ -39,6 +39,17 @@ module Drv {
         @ Time base as a parameter
         param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
 
+        ### TELEMETRY ###
+
+        @ Last correction of the time offset in microseconds
+        telemetry TimeCorrectionUs: I64 id 0
+
+        @ Update callback RTC reads that failed or gave seconds outside years 2000 to 2099
+        telemetry DisciplineReadFaults: U32 id 1
+
+        @ Update callback samples rejected as an unconfirmed step (more than 100 ms)
+        telemetry DisciplineRejects: U32 id 2
+
         ### COMMANDS ###
 
         @ TIME_SET command to set the time on the RTC
@@ -142,6 +153,21 @@ module Drv {
             rc: I32 @< Return code from the RTC driver
         ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
 
+        @ TimeStepped event indicates that a correction of more than 100 ms was applied as a step
+        event TimeStepped(
+            correction_us: I64 @< The correction applied, in microseconds
+        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5
+
+        @ DisciplineReadFailed event indicates that an update callback RTC read failed. The time offset does not change
+        event DisciplineReadFailed(
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning low id 20 format "RTC read for time discipline failed, return code: {}" throttle 5 every {seconds = 60}
+
+        @ DisciplineSampleImplausible event indicates that an update callback RTC read gave seconds outside years 2000 to 2099. The time offset does not change
+        event DisciplineSampleImplausible(
+            rtc_s: I64 @< RTC seconds since epoch, or -1 if the conversion failed
+        ) severity warning low id 21 format "RTC seconds {} outside years 2000 to 2099, sample not used" throttle 5 every {seconds = 60}
+
         ### PORTS ###
 
         @ Port for canceling running sequences when RTC time is set
@@ -163,6 +189,9 @@ module Drv {
 
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Port for sending command registrations
         command reg port cmdRegOut
