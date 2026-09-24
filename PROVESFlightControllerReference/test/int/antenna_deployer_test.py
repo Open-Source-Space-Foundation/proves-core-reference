@@ -5,7 +5,7 @@ Integration tests for the Antenna Deployer component.
 """
 
 import pytest
-from common import proves_send_and_assert_command
+from common import exit_safe_mode, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -29,6 +29,10 @@ def configure_antenna_deployer(fprime_test_api: IntegrationTestAPI, start_gds):
         ("BURN_DURATION_SEC", 8),
         ("MAX_DEPLOY_ATTEMPTS", 3),
     ]
+
+    # Deployment is inhibited while FSW is in SAFE_MODE, which a bench with no
+    # power at the battery terminals auto-enters on a LOW_BATTERY reading.
+    exit_safe_mode(fprime_test_api)
 
     proves_send_and_assert_command(
         fprime_test_api, f"{antenna_deployer}.SET_DEPLOYMENT_STATE", [False]

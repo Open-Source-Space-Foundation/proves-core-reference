@@ -90,6 +90,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Override retry count for proves_send_and_assert_command (default: 3 UART, 5 radio).",
     )
     parser.addoption(
+        "--no-battery",
+        action="store_true",
+        default=False,
+        help="Bench is running on USB power with nothing at the battery terminals. "
+        "The power monitor then reads ~0 V, so modeManager auto-enters SAFE_MODE "
+        "with reason=LOW_BATTERY every SafeModeDebounceSeconds and its safe-mode "
+        "sequence switches the face load switches off; enough of those cycles "
+        "wedges the face I2C bus for the rest of the session. This option drops "
+        "SafeModeEntryVoltage to 0 before each test so the auto-entry never fires.",
+    )
+    parser.addoption(
         "--bare-flight-controler-board",
         action="store_true",
         default=False,
@@ -119,8 +130,11 @@ def start_gds(
     GDS is used to send commands and receive telemetry/events.
     """
     gds_working = False
+    attempts = 0
+    last_error: Exception | None = None
     timeout_time = time.time() + 30
     while time.time() < timeout_time:
+        attempts += 1
         try:
             if request.config.getoption("--with-radio"):
                 _enable_radio(fprime_test_api_session)
@@ -129,9 +143,16 @@ def start_gds(
             )
             gds_working = True
             break
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - retried until the 30s budget runs out
+            last_error = exc
             time.sleep(1)
-    assert gds_working
+    # This fixture gates every test in the directory, so a bare assert here reports
+    # as an unexplained setup error on all of them. Say what actually failed.
+    assert gds_working, (
+        f"No response to {cmdDispatch}.CMD_NO_OP after {attempts} attempts over 30s "
+        "- the GDS<->board link is not working, so no test in this directory can "
+        f"run. Last error: {last_error!r}"
+    )
 
     if request.config.getoption("--with-radio"):
         # Allow the boot-time event backlog to drain before any test commands
@@ -161,6 +182,30 @@ def _enable_radio(fprime_test_api: IntegrationTestAPI) -> None:
 
 
 @pytest.fixture(autouse=True)
+def suppress_low_battery_safe_mode(
+    request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI
+):
+    """With --no-battery, keep FSW out of LOW_BATTERY safe mode for each test.
+
+    Applied per test rather than once per session because SAFEMODEENTRYVOLTAGE is
+    set with PRM_SET (not PRM_SAVE), so it reverts to its 6.7 V default on every
+    reboot - and the reset_manager tests deliberately reboot mid-suite.
+
+    Fire-and-forget: this is bench scaffolding, and a failure to send it should
+    show up as the real test failing rather than as a setup error.
+    """
+    if not request.config.getoption("--no-battery", default=False):
+        return
+    try:
+        fprime_test_api.send_command(
+            "ReferenceDeployment.modeManager.SAFEMODEENTRYVOLTAGE_PRM_SET", [0.0]
+        )
+        fprime_test_api.send_command("ReferenceDeployment.modeManager.EXIT_SAFE_MODE")
+    except Exception:  # noqa: BLE001 - advisory only
+        pass
+
+
+@pytest.fixture(autouse=True)
 def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTestAPI):
     """Fixture to start the radio before tests"""
     if not request.config.getoption("--with-radio"):
@@ -178,7 +223,6 @@ def start_radio(request: pytest.FixtureRequest, fprime_test_api: IntegrationTest
 def recover_from_safe_mode(
     request: pytest.FixtureRequest,
     fprime_test_api: IntegrationTestAPI,
-    start_gds,
 ):
     """Best-effort: after each test, if FSW slipped into SAFE_MODE (e.g. low
     voltage brownout from a burnwire-heavy test, or a partial file upload

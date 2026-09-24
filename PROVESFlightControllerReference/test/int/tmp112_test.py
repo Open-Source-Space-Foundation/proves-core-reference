@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 
 import pytest
-from common import FIB_BACKOFF, proves_send_and_assert_command
+from common import FIB_BACKOFF, exit_safe_mode, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.models.serialize.numerical_types import F32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
@@ -23,6 +23,9 @@ tmp112Face0Manager = "ReferenceDeployment.tmp112Face0Manager"
 @pytest.fixture(autouse=True)
 def setup_test(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to turn on face 0 before each test"""
+    # Must precede TURN_ON: entering safe mode switches the face load switch
+    # back off, so powering the face first would just be undone.
+    exit_safe_mode(fprime_test_api)
     proves_send_and_assert_command(
         fprime_test_api,
         "ReferenceDeployment.face0LoadSwitch.TURN_ON",

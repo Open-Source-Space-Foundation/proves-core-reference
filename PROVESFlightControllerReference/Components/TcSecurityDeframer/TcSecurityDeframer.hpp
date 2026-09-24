@@ -13,6 +13,7 @@
 #include <atomic>
 #include <cassert>
 
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthKeyStoreArrayAc.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
@@ -74,6 +75,26 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                                 U32 seqNum            //!< The sequence number to set
                                 ) override;
 
+    //! Handler implementation for command PROVISION_KEY
+    void PROVISION_KEY_cmdHandler(FwOpcodeType opCode,         //!< The opcode
+                                  U32 cmdSeq,                  //!< The command sequence number
+                                  U16 spi,                     //!< The SPI to provision
+                                  const Fw::CmdStringArg& key  //!< The hex-encoded key to provision
+                                  ) override;
+
+    //! Handler implementation for command ADD_KEY
+    void ADD_KEY_cmdHandler(FwOpcodeType opCode,         //!< The opcode
+                            U32 cmdSeq,                  //!< The command sequence number
+                            U16 spi,                     //!< The SPI to add
+                            const Fw::CmdStringArg& key  //!< The hex-encoded key to add
+                            ) override;
+
+    //! Handler implementation for command REMOVE_KEY
+    void REMOVE_KEY_cmdHandler(FwOpcodeType opCode,  //!< The opcode
+                               U32 cmdSeq,           //!< The command sequence number
+                               U16 spi               //!< The SPI to remove
+                               ) override;
+
   public:
     // ----------------------------------------------------------------------
     // Public helper methods
@@ -81,7 +102,7 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
 
     //! Initialize component
     //!
-    //! Loads the sequence number from persistent storage
+    //! Loads the sequence number and key store from persistent storage
     void configure();
 
   private:
@@ -97,6 +118,43 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
     );
 
+    //! Loads the key store from the file system into m_keyStore and (re)imports every valid slot
+    //! into PSA, destroying any previously-imported keys first. Must be called with the key store
+    //! lock held. On a missing/unreadable file, m_keyStore is left with no valid slots (keyless state).
+    Os::File::Status loadKeyStore();
+
+    //! Determines what is actually known about the on-flash key store after a loadKeyStore()
+    //! attempt, by interrogating the filesystem rather than trusting the read status (which cannot
+    //! distinguish "missing" from "broken" on the Zephyr target). Feeds the pure
+    //! Components::KeyStore policy predicates. Must be called with the key store lock held.
+    void probeKeyStore(const Os::File::Status loadStatus,  //!< Status returned by loadKeyStore()
+                       KeyStore::MountProbe& mount,        //!< Set to whether /keys is demonstrably mounted
+                       KeyStore::StoreProbe& store         //!< Set to what is known about the store file
+    ) const;
+
+    //! Writes m_keyStore to the file system. Must be called with the key store lock held.
+    Os::File::Status writeKeyStore();
+
+    //! (Re)imports every valid slot in m_keyStore into PSA, destroying any previously-imported
+    //! keys first, and updates m_keyIds. Returns false if any valid slot failed to import, leaving
+    //! that slot's m_keyIds entry at 0. Must be called with the key store lock held.
+    bool importKeyStore();
+
+    //! Finds the PSA key id for the given SPI among currently-imported keys.
+    //! Must be called with the key store lock held.
+    bool findKeyIdForSpi(uint32_t spi, uint32_t& keyId) const;
+
+    //! Returns true if any valid slot already holds the given SPI.
+    //! Must be called with the key store lock held.
+    bool hasSpi(uint16_t spi) const;
+
+    //! Returns the number of valid slots in m_keyStore. Must be called with the key store lock held.
+    U8 activeKeyCount() const;
+
+    //! Projects m_keyStore's valid/spi fields into the plain-C++ ActiveSpiSlots type consumed by
+    //! the pure-C++ Validator. Must be called with the key store lock held.
+    ActiveSpiSlots activeSpiSlots() const;
+
   private:
     // ----------------------------------------------------------------------
     // Private member variables
@@ -109,7 +167,18 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     U32 m_sequenceNumber;                 //!< The current sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
-    uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
+    // Key store state is coupled between in-memory runtime state (m_keyStore/m_keyIds) and on-disk
+    // persistent storage; both are protected by keyStoreLock() in the .cpp. That mutex is
+    // deliberately NOT a member: the store file is shared across all TcSecurityDeframer instances
+    // (UART/LoRa/Sband), so a per-instance lock would let one instance rewrite the file while
+    // another is reading it. See keyStoreLock() for the full rationale.
+    Fw::String m_keyStoreFilePath;          //!< File path where the key store is stored
+    AuthKeyStore m_keyStore;                //!< The active key store, up to 2 slots
+    uint32_t m_keyIds[AuthKeyStore::SIZE];  //!< PSA key ids parallel to m_keyStore, valid iff the slot is valid
+    //! Value of keyStoreGeneration() when m_keyStore was last read from flash. Lets an unknown-SPI
+    //! frame tell "another instance rotated the store" from "this SPI is simply not ours" without
+    //! re-reading flash. Initialized to a sentinel no generation takes, so the first check reloads.
+    U32 m_keyStoreGeneration;
 };
 
 }  // namespace Components
