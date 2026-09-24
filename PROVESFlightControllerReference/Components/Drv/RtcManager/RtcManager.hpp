@@ -24,6 +24,13 @@ namespace Drv {
 
 class RtcManager final : public RtcManagerComponentBase {
   public:
+    //! Result of readRtcSeconds()
+    enum class RtcRead {
+        OK,           //!< rtc_s is valid
+        FAILED,       //!< Device not ready or rtc_get_time() failed
+        IMPLAUSIBLE,  //!< Conversion failed or seconds outside years 2000 to 2099
+    };
+
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
@@ -115,16 +122,20 @@ class RtcManager final : public RtcManagerComponentBase {
     static void static_update_callback_t(const struct device* dev, void* user_data);
 
     //! Actual RTC update callback. Runs on the system workqueue thread once per RTC second edge.
-    //! May emit telemetry and events, but only after releasing the spinlock.
+    //! May emit telemetry and events, but only after releasing the spinlock. A failed or
+    //! implausible read increments DisciplineReadFaults and emits a throttled warning. A
+    //! REJECTED sample increments DisciplineRejects.
     void update_callback_t();
 
-    //! Read the RTC and convert to epoch seconds with rtcTimeToSeconds(). Returns false if the
-    //! device is not ready, rtc_get_time() fails, or rtcTimeToSeconds() fails.
-    bool readRtcSeconds(std::int64_t& rtc_s);
+    //! Read the RTC and convert to epoch seconds with rtcTimeToSeconds(). Returns FAILED, with
+    //! the driver return code in rc, if the device is not ready or rtc_get_time() fails. Returns
+    //! IMPLAUSIBLE if rtcTimeToSeconds() fails; rtc_s is then the converted seconds, or -1.
+    RtcRead readRtcSeconds(std::int64_t& rtc_s, int& rc);
 
     //! Convert an rtc_time to epoch seconds via timeutil_timegm(). Returns false on an
-    //! out-of-range (ERANGE) conversion or on seconds outside the RV3028 range (years 2000 to
-    //! 2099, see TimeDiscipline::isPlausibleRtcSeconds()).
+    //! out-of-range (ERANGE) conversion, with rtc_s set to -1, or on seconds outside the RV3028
+    //! range (years 2000 to 2099, see TimeDiscipline::isPlausibleRtcSeconds()), with rtc_s set
+    //! to the converted seconds.
     static bool rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s);
 
     //! Seed the time discipline from rtc_s at the current uptime, under the spinlock
@@ -159,6 +170,8 @@ class RtcManager final : public RtcManagerComponentBase {
     struct k_spinlock m_lock;                       //!< Guards m_discipline
     TimeDiscipline m_discipline;                    //!< Disciplines uptime + time offset against the RTC
     std::atomic<bool> m_RtcNotDisciplinedThrottle;  //!< Throttle for RtcNotDisciplined
+    U32 m_disciplineReadFaults;                     //!< Update callback only: failed or implausible reads
+    U32 m_disciplineRejects;                        //!< Update callback only: REJECTED samples
 
     // rtc alarm members
     U16 m_curr_mask;               //!< The mask of the alarm present on hardware

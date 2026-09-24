@@ -16,7 +16,9 @@ RtcManager ::RtcManager(const char* const compName)
       m_dev(nullptr),
       m_lock({}),
       m_discipline(),
-      m_RtcNotDisciplinedThrottle(false) {
+      m_RtcNotDisciplinedThrottle(false),
+      m_disciplineReadFaults(0),
+      m_disciplineRejects(0) {
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
@@ -50,7 +52,8 @@ void RtcManager ::configure(const struct device* dev) {
     // Boot seed: one polled read. If it fails or is implausible, the component starts
     // undisciplined and the first plausible update callback sample seeds it instead.
     std::int64_t rtc_s = 0;
-    if (this->readRtcSeconds(rtc_s)) {
+    int read_rc = 0;
+    if (this->readRtcSeconds(rtc_s, read_rc) == RtcRead::OK) {
         this->seedDiscipline(rtc_s);
     }
 
@@ -402,8 +405,18 @@ void RtcManager ::update_callback_t() {
     const std::int64_t uptime_us = RtcManager::uptimeUs();
 
     std::int64_t rtc_s = 0;
-    if (!this->readRtcSeconds(rtc_s)) {
-        // RTC read failed or was implausible. Time offset does not change.
+    int rc = 0;
+    const RtcRead read = this->readRtcSeconds(rtc_s, rc);
+    if (read != RtcRead::OK) {
+        // RTC read failed or was implausible. Time offset does not change. Count it and warn
+        // (throttled), so a stale TimeCorrectionUs is not mistaken for a healthy one.
+        ++this->m_disciplineReadFaults;
+        this->tlmWrite_DisciplineReadFaults(this->m_disciplineReadFaults);
+        if (read == RtcRead::FAILED) {
+            this->log_WARNING_LO_DisciplineReadFailed(rc);
+        } else {
+            this->log_WARNING_LO_DisciplineSampleImplausible(rtc_s);
+        }
         return;
     }
 
@@ -421,26 +434,30 @@ void RtcManager ::update_callback_t() {
             this->tlmWrite_TimeCorrectionUs(result.correction_us);
             this->log_WARNING_LO_TimeStepped(result.correction_us);
             break;
-        case TimeDiscipline::Correction::IGNORED:
         case TimeDiscipline::Correction::REJECTED:
+            ++this->m_disciplineRejects;
+            this->tlmWrite_DisciplineRejects(this->m_disciplineRejects);
+            break;
+        case TimeDiscipline::Correction::IGNORED:
         default:
             // No telemetry, no event.
             break;
     }
 }
 
-bool RtcManager ::readRtcSeconds(std::int64_t& rtc_s) {
+RtcManager::RtcRead RtcManager ::readRtcSeconds(std::int64_t& rtc_s, int& rc) {
     if (!device_is_ready(this->m_dev)) {
-        return false;
+        rc = -ENODEV;
+        return RtcRead::FAILED;
     }
 
     struct rtc_time time_rtc = {};
-    const int rc = rtc_get_time(this->m_dev, &time_rtc);
+    rc = rtc_get_time(this->m_dev, &time_rtc);
     if (rc != 0) {
-        return false;
+        return RtcRead::FAILED;
     }
 
-    return RtcManager::rtcTimeToSeconds(time_rtc, rtc_s);
+    return RtcManager::rtcTimeToSeconds(time_rtc, rtc_s) ? RtcRead::OK : RtcRead::IMPLAUSIBLE;
 }
 
 bool RtcManager ::rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s) {
@@ -448,7 +465,12 @@ bool RtcManager ::rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t
     struct tm* time_tm = rtc_time_to_tm(&time_rtc_mut);
     errno = 0;
     const std::int64_t seconds = static_cast<std::int64_t>(timeutil_timegm(time_tm));
-    if ((errno == ERANGE) || !TimeDiscipline::isPlausibleRtcSeconds(seconds)) {
+    if (errno == ERANGE) {
+        rtc_s = -1;
+        return false;
+    }
+    if (!TimeDiscipline::isPlausibleRtcSeconds(seconds)) {
+        rtc_s = seconds;
         return false;
     }
 
