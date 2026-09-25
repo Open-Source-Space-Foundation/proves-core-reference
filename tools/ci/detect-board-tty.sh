@@ -4,9 +4,30 @@
 # runner. Prints the /dev/tty* path on stdout. Retries for ~20 s because the
 # node can take a few seconds to (re-)enumerate after a power cycle, then
 # exits 1 with diagnostics on stderr if the device never appears.
+#
+# Pass --once to probe a single time and return immediately. Callers that run
+# their own polling loop use that so the two retry budgets do not multiply and
+# tie up the hardware runner for far longer than they advertise.
 set -u
 
+attempts=10
+if [ "${1:-}" = "--once" ]; then
+    attempts=1
+fi
+
+find_tty_macos() {
+    ioreg -r -c IOUSBHostDevice -l -w0 | awk -F' = ' '
+        /"idVendor"/ { v = $2 }
+        /"idProduct"/ { p = $2 }
+        /"IOCalloutDevice"/ && v == 40 && p == 15 { gsub(/"/, "", $2); print $2; found = 1; exit }
+        END { exit !found }'
+}
+
 find_tty() {
+    if [ "$(uname)" = "Darwin" ]; then
+        find_tty_macos
+        return
+    fi
     local d v p path ifn tty
     for d in /sys/bus/usb/devices/*/idVendor; do
         v=$(cat "$d" 2>/dev/null)
@@ -26,12 +47,12 @@ find_tty() {
     return 1
 }
 
-for _attempt in $(seq 1 10); do
+for _attempt in $(seq 1 "$attempts"); do
     if tty_path=$(find_tty); then
         echo "$tty_path"
         exit 0
     fi
-    sleep 2
+    [ "$attempts" -gt 1 ] && sleep 2
 done
 
 echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs" >&2

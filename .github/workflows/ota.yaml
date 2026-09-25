@@ -1,0 +1,157 @@
+name: ota
+
+# The OTA test holds the bare-FCB runner for ~40 min, so it does not run on
+# every PR push. It runs:
+#   - on every push to main, to catch regressions after merge;
+#   - on a PR when a maintainer adds the `test-ota` label (only users with
+#     triage access or more can label). To test new commits, remove the label
+#     and add it again;
+#   - on demand from the Actions tab (workflow_dispatch).
+# It is not a required check, so it never blocks a merge.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ota-build:
+    if: github.event_name != 'pull_request' || github.event.label.name == 'test-ota'
+    runs-on: deathstar
+    outputs:
+      ota-build-id: ${{ steps.ota-build-id.outputs.id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Build Firmware
+        uses: ./.github/actions/build-firmware
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: artifacts
+          path: |
+            mcuboot.elf
+            bootable.uf2
+            bootable.signed.hex
+            build-artifacts/zephyr/fprime-zephyr-deployment
+          retention-days: 30
+
+      # Overwrites the build outputs, so keep after the artifact upload.
+      - name: Derive OTA build ID
+        id: ota-build-id
+        run: |
+          echo "id=${GITHUB_SHA::8}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build OTA Test Image
+        run: |
+          make ota-test-image OTA_BUILD_ID="${{ steps.ota-build-id.outputs.id }}"
+
+      - name: Upload OTA test image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ota-test-image
+          path: |
+            build-ota-test/ota-test-image.signed.bin
+          retention-days: 30
+
+  # OTA on a bare flight-controller board + debug probe (no PSU, no radio).
+  # Needs a self-hosted runner labelled `integration-fcb`. A host with several
+  # debug probes sets FCB_PROBE_SERIAL in ~/actions-runner/.env.
+  integration-ota-fcb:
+    runs-on:
+      - integration-fcb
+    needs:
+      - ota-build
+    concurrency:
+      group: integration-fcb-board
+      cancel-in-progress: false
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Download OTA test image
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: ota-test-image
+          path: ota-image
+
+      - name: Integration Setup
+        uses: ./.github/actions/integration-setup
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
+
+      - name: Flash Firmware (SWD)
+        uses: ./.github/actions/flash-firmware
+        with:
+          power-cycle: "false"
+          probe-serial: ${{ env.FCB_PROBE_SERIAL }}
+
+      - name: Bootstrap GDS
+        uses: ./.github/actions/bootstrap-gds
+        with:
+          power-cycle: "false"
+          probe-serial: ${{ env.FCB_PROBE_SERIAL }}
+          kill-all-python: "false"
+
+      # Cooldown 0.6 makes the uplink ~35 min; faster rates corrupt it until #457 is fixed.
+      - name: Run OTA Update Test (bare FCB, UART)
+        run: |
+          make test-integration TEST=ota_update_test.py FILTER="ota" \
+            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
+
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make test-integration FILTER=format_filesystem || true
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gds-log-ota-fcb
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 -f fprime_gds || true
+          pkill -9 -f fprime-gds || true
+          rm -f /tmp/fprime-server-* 2>/dev/null || true
+          fuser -k "$UART_DEVICE" 2>/dev/null || true
+
+      # A passing run confirms the OTA image, which only a reflash can undo.
+      - name: Restore original firmware
+        if: always()
+        uses: ./.github/actions/flash-firmware
+        with:
+          power-cycle: "false"
+          probe-serial: ${{ env.FCB_PROBE_SERIAL }}
+
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h

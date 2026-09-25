@@ -96,6 +96,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
     )
+    parser.addoption(
+        "--ota-image",
+        default=None,
+        help="Signed image (zephyr.signed.bin) uplinked by ota_update_test.py; "
+        "those tests skip when unset.",
+    )
+    parser.addoption(
+        "--ota-build-id",
+        default=None,
+        help="Marker expected in CdhCore.version.ProjectVersion while --ota-image is running.",
+    )
+    parser.addoption(
+        "--ota-required",
+        action="store_true",
+        default=False,
+        help="Fail instead of skipping when OTA configuration is unavailable.",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -274,3 +291,29 @@ def tlm_sampler(
     stop.set()
     t.join(timeout=3)
     fprime_test_api_session.remove_telemetry_subhistory(subhist)
+
+
+@pytest.fixture(scope="module")
+def ota_config(request: pytest.FixtureRequest):
+    """Return (--ota-image, --ota-build-id).
+
+    Skips when either is unset so local runs need no OTA setup; --ota-required
+    turns the skip into an error for the dedicated CI job, which exists only to
+    run these tests and must not pass without them.
+    """
+    image = request.config.getoption("--ota-image", default=None)
+    build_id = request.config.getoption("--ota-build-id", default=None)
+    required = request.config.getoption("--ota-required", default=False)
+    if not image or not build_id:
+        message = (
+            "OTA tests require --ota-image=<signed.bin> and --ota-build-id=<marker>"
+        )
+        if required:
+            raise pytest.UsageError(message)
+        pytest.skip(message)
+    if not os.path.isfile(image):
+        message = f"OTA image not found: {image}"
+        if required:
+            raise pytest.UsageError(message)
+        pytest.skip(message)
+    return image, build_id

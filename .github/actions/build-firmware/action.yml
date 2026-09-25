@@ -1,0 +1,80 @@
+name: Build Firmware
+description: Set up the toolchain and build the CI flight software and MCUBoot image.
+
+inputs:
+  auth-key:
+    description: Authentication key to compile into the firmware (composite actions cannot read secrets).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download bin tools
+      shell: bash
+      run: |
+        make download-bin
+
+    - name: Setup submodules
+      shell: bash
+      run: |
+        make submodules
+
+    - name: Create python venv
+      shell: bash
+      run: |
+        make fprime-venv
+
+    - name: Setup Zephyr
+      shell: bash
+      run: |
+        make zephyr-workspace
+
+    - name: Setup Zephyr SDK
+      shell: bash
+      run: |
+        make zephyr-sdk
+
+    - name: Setup Zephyr Export
+      shell: bash
+      run: |
+        make zephyr-export
+
+    - name: Install Zephyr Python Dependencies
+      shell: bash
+      run: |
+        make zephyr-python-deps
+
+    - name: Change to CI Spacecraft ID
+      shell: bash
+      run: |
+        make make-ci-spacecraft-id
+
+    - name: Generate
+      shell: bash
+      run: |
+        make generate
+
+    - name: Set Authentication Key
+      shell: bash
+      env:
+        AUTH_KEY: ${{ inputs.auth-key }}
+      run: |
+        echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+    - name: Build MCUBoot
+      shell: bash
+      run: |
+        make build-mcuboot
+
+    - name: Build Flight Software
+      shell: bash
+      run: |
+        make build
+
+    - name: Ensure console disabled
+      # The Zephyr console shares cdc_acm_uart0 with the F' downlink; if it is
+      # re-enabled, console text interleaves with the CCSDS TM frames and
+      # desyncs the GDS deframer. Fail the build so this cannot reach main.
+      shell: bash
+      run: |
+        make check-console-disabled
