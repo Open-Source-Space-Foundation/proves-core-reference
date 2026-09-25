@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  ota-build:
     if: github.event_name != 'pull_request' || github.event.label.name == 'test-ota'
     runs-on: deathstar
     outputs:
@@ -70,7 +70,7 @@ jobs:
     runs-on:
       - integration-fcb
     needs:
-      - build
+      - ota-build
     concurrency:
       group: integration-fcb-board
       cancel-in-progress: false
@@ -111,7 +111,7 @@ jobs:
       - name: Run OTA Update Test (bare FCB, UART)
         run: |
           make test-integration TEST=ota_update_test.py FILTER="ota" \
-            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
+            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
 
       - name: Format Filesystem
         if: always()
