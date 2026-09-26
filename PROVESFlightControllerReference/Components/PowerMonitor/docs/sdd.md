@@ -92,3 +92,4 @@ sequenceDiagram
 | Date | Description |
 |---|---|
 | 2025-11-03 | Initial Power Monitor component |
+| 2026-09-25 | Integrate total power consumption and generation over a shared time step (fixes #526) |
