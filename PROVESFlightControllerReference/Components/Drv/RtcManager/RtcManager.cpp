@@ -14,10 +14,11 @@ namespace Drv {
 RtcManager ::RtcManager(const char* const compName)
     : RtcManagerComponentBase(compName),
       m_dev(nullptr),
-      m_rtcHelper(),
-      m_RtcNotReadyThrottle(false),
-      m_RtcGetTimeFailedThrottle(false),
-      m_RtcInvalidTimeThrottle(false) {
+      m_lock({}),
+      m_discipline(),
+      m_RtcNotDisciplinedThrottle(false),
+      m_disciplineReadFaults(0),
+      m_disciplineRejects(0) {
     // alarm time initialization
     memset(&this->m_alarm_time, 0, sizeof(struct rtc_time));
 }
@@ -47,6 +48,27 @@ void RtcManager ::configure(const struct device* dev) {
             this->log_WARNING_HI_AlarmHardwareError(0, rc);
         }
     }
+
+    // Boot seed: one polled read. If it fails or is implausible, the component starts
+    // undisciplined and the first plausible update callback sample seeds it instead.
+    std::int64_t rtc_s = 0;
+    int read_rc = 0;
+    if (this->readRtcSeconds(rtc_s, read_rc) == RtcRead::OK) {
+        this->seedDiscipline(rtc_s);
+    }
+
+#if defined(CONFIG_RTC_UPDATE)
+    if (!device_is_ready(this->m_dev)) {
+        Fw::Logger::log("RTC not ready, update callback not armed. No corrections will be made.\n");
+        return;
+    }
+    rc = rtc_update_set_callback(this->m_dev, RtcManager::static_update_callback_t, this);
+    if (rc != 0) {
+        Fw::Logger::log("RTC update callback not armed, rc = %d. No corrections will be made.\n", rc);
+    }
+#else
+    Fw::Logger::log("RTC update callback not compiled in. No corrections will be made.\n");
+#endif
 }
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
@@ -54,9 +76,9 @@ void RtcManager ::configure(const struct device* dev) {
 
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Get system uptime
-    int64_t t = k_uptime_get();
-    U32 seconds_since_boot = static_cast<U32>(t / 1000);
-    U32 useconds_since_boot = static_cast<U32>((t % 1000) * 1000);
+    const std::int64_t uptime_us = RtcManager::uptimeUs();
+    U32 seconds_since_boot = static_cast<U32>(uptime_us / 1000000);
+    U32 useconds_since_boot = static_cast<U32>(uptime_us % 1000000);
 
     // Use proc time directly when the timebase parameter selects it
     Fw::ParamValid timeBaseValid;
@@ -66,46 +88,22 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         return;
     }
 
-    // Check device readiness
-    if (!device_is_ready(this->m_dev)) {
-        this->log_CONSOLE_RtcNotReady();
+    // Read the disciplined time. Does not access the RTC hardware; must not emit events or
+    // telemetry from this critical path.
+    std::uint32_t seconds = 0;
+    std::uint32_t useconds = 0;
+    k_spinlock_key_t key = k_spin_lock(&this->m_lock);
+    const bool seeded = this->m_discipline.read(uptime_us, seconds, useconds);
+    k_spin_unlock(&this->m_lock, key);
 
-        // Use uptime as fallback
+    if (!seeded) {
+        this->log_CONSOLE_RtcNotDisciplined();
         time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
         return;
     }
-    this->log_CONSOLE_RtcNotReady_ThrottleClear();
+    this->log_CONSOLE_RtcNotDisciplined_ThrottleClear();
 
-    // Get time from RTC
-    struct rtc_time time_rtc = {};
-    const int rc = rtc_get_time(this->m_dev, &time_rtc);
-    if (rc != 0) {
-        this->log_CONSOLE_RtcGetTimeFailed(rc);
-
-        // Use uptime as fallback
-        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
-        return;
-    }
-    this->log_CONSOLE_RtcGetTimeFailed_ThrottleClear();
-
-    // Convert to generic tm struct
-    struct tm* time_tm = rtc_time_to_tm(&time_rtc);
-
-    // Convert to time_t (seconds since epoch)
-    errno = 0;
-    U32 seconds_real_time = static_cast<U32>(timeutil_timegm(time_tm));
-    if (errno == ERANGE) {
-        this->log_CONSOLE_RtcInvalidTime();
-
-        // Use uptime as fallback
-        time.set(TimeBase::TB_PROC_TIME, 0, seconds_since_boot, useconds_since_boot);
-        return;
-    }
-    this->log_CONSOLE_RtcInvalidTime_ThrottleClear();
-
-    // Set FPrime time object
-    time.set(TimeBase::TB_SC_TIME, 0, seconds_real_time,
-             this->m_rtcHelper.rescaleUseconds(seconds_real_time, useconds_since_boot));
+    time.set(TimeBase::TB_SC_TIME, 0, seconds, useconds);
 }
 
 // ----------------------------------------------------------------------
@@ -167,6 +165,14 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv
         // Send command response
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
+    }
+
+    // Seed the time offset from the new time. The RV3028 resets its sub-second divider when the
+    // seconds are written, so this seed has no sub-second error. Reported time can step backward
+    // one time.
+    std::int64_t new_rtc_s = 0;
+    if (RtcManager::rtcTimeToSeconds(time_rtc, new_rtc_s)) {
+        this->seedDiscipline(new_rtc_s);
     }
 
     // Emit time set event, include previous time for reference
@@ -385,58 +391,120 @@ int RtcManager ::disarmAlarm() {
     return rtc_alarm_is_pending(this->m_dev, 0);
 }
 
-void RtcManager ::log_CONSOLE_RtcNotReady() {
+void RtcManager::static_update_callback_t(const struct device* dev, void* user_data) {
+    // Reconstruct the object pointer from user_data
+    RtcManager* instance = static_cast<RtcManager*>(user_data);
+    if (instance != nullptr) {
+        instance->update_callback_t();
+    }
+}
+
+void RtcManager ::update_callback_t() {
+    // Capture uptime as close to the RTC read as possible, before the (possibly slow) I2C
+    // transaction, to minimize the callback-delay error in the correction.
+    const std::int64_t uptime_us = RtcManager::uptimeUs();
+
+    std::int64_t rtc_s = 0;
+    int rc = 0;
+    const RtcRead read = this->readRtcSeconds(rtc_s, rc);
+    if (read != RtcRead::OK) {
+        // RTC read failed or was implausible. Time offset does not change. Count it and warn
+        // (throttled), so a stale TimeCorrectionUs is not mistaken for a healthy one.
+        ++this->m_disciplineReadFaults;
+        this->tlmWrite_DisciplineReadFaults(this->m_disciplineReadFaults);
+        if (read == RtcRead::FAILED) {
+            this->log_WARNING_LO_DisciplineReadFailed(rc);
+        } else {
+            this->log_WARNING_LO_DisciplineSampleImplausible(rtc_s);
+        }
+        return;
+    }
+
+    k_spinlock_key_t key = k_spin_lock(&this->m_lock);
+    const TimeDiscipline::CorrectionResult result = this->m_discipline.correct(rtc_s, uptime_us);
+    k_spin_unlock(&this->m_lock, key);
+
+    // Emit telemetry and events only after releasing the spinlock; this runs on the system
+    // workqueue thread, not the timeGetPort caller's thread, so it is safe to do so here.
+    switch (result.kind) {
+        case TimeDiscipline::Correction::APPLIED:
+            this->tlmWrite_TimeCorrectionUs(result.correction_us);
+            break;
+        case TimeDiscipline::Correction::STEPPED:
+            this->tlmWrite_TimeCorrectionUs(result.correction_us);
+            this->log_WARNING_LO_TimeStepped(result.correction_us);
+            break;
+        case TimeDiscipline::Correction::REJECTED:
+            ++this->m_disciplineRejects;
+            this->tlmWrite_DisciplineRejects(this->m_disciplineRejects);
+            break;
+        case TimeDiscipline::Correction::IGNORED:
+        default:
+            // No telemetry, no event.
+            break;
+    }
+}
+
+RtcManager::RtcRead RtcManager ::readRtcSeconds(std::int64_t& rtc_s, int& rc) {
+    if (!device_is_ready(this->m_dev)) {
+        rc = -ENODEV;
+        return RtcRead::FAILED;
+    }
+
+    struct rtc_time time_rtc = {};
+    rc = rtc_get_time(this->m_dev, &time_rtc);
+    if (rc != 0) {
+        return RtcRead::FAILED;
+    }
+
+    return RtcManager::rtcTimeToSeconds(time_rtc, rtc_s) ? RtcRead::OK : RtcRead::IMPLAUSIBLE;
+}
+
+bool RtcManager ::rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s) {
+    struct rtc_time time_rtc_mut = time_rtc;
+    struct tm* time_tm = rtc_time_to_tm(&time_rtc_mut);
+    errno = 0;
+    const std::int64_t seconds = static_cast<std::int64_t>(timeutil_timegm(time_tm));
+    if (errno == ERANGE) {
+        rtc_s = -1;
+        return false;
+    }
+    if (!TimeDiscipline::isPlausibleRtcSeconds(seconds)) {
+        rtc_s = seconds;
+        return false;
+    }
+
+    rtc_s = seconds;
+    return true;
+}
+
+void RtcManager ::seedDiscipline(std::int64_t rtc_s) {
+    const std::int64_t uptime_us = RtcManager::uptimeUs();
+    k_spinlock_key_t key = k_spin_lock(&this->m_lock);
+    this->m_discipline.seed(rtc_s, uptime_us);
+    k_spin_unlock(&this->m_lock, key);
+}
+
+std::int64_t RtcManager ::uptimeUs() {
+    return static_cast<std::int64_t>(k_ticks_to_us_floor64(k_uptime_ticks()));
+}
+
+void RtcManager ::log_CONSOLE_RtcNotDisciplined() {
     // Check throttle value
-    if (this->m_RtcNotReadyThrottle) {
+    if (this->m_RtcNotDisciplinedThrottle) {
         return;
     }
 
     // Set throttle
-    this->m_RtcNotReadyThrottle = true;
+    this->m_RtcNotDisciplinedThrottle = true;
 
     // Emit the log message
-    Fw::Logger::log("RTC not ready\n");
+    Fw::Logger::log("RTC not disciplined, falling back to uptime\n");
 }
 
-void RtcManager ::log_CONSOLE_RtcNotReady_ThrottleClear() {
+void RtcManager ::log_CONSOLE_RtcNotDisciplined_ThrottleClear() {
     // Reset throttle
-    this->m_RtcNotReadyThrottle = false;
-}
-
-void RtcManager ::log_CONSOLE_RtcGetTimeFailed(const int rc) {
-    // Check throttle value
-    if (this->m_RtcGetTimeFailedThrottle) {
-        return;
-    }
-
-    // Set throttle
-    this->m_RtcGetTimeFailedThrottle = true;
-
-    // Emit the log message
-    Fw::Logger::log("Failed to get time from RTC, rc = %d\n", rc);
-}
-
-void RtcManager ::log_CONSOLE_RtcGetTimeFailed_ThrottleClear() {
-    // Reset throttle
-    this->m_RtcGetTimeFailedThrottle = false;
-}
-
-void RtcManager ::log_CONSOLE_RtcInvalidTime() {
-    // Check throttle value
-    if (this->m_RtcInvalidTimeThrottle) {
-        return;
-    }
-
-    // Set throttle
-    this->m_RtcInvalidTimeThrottle = true;
-
-    // Emit the log message
-    Fw::Logger::log("RTC returned invalid time\n");
-}
-
-void RtcManager ::log_CONSOLE_RtcInvalidTime_ThrottleClear() {
-    // Reset throttle
-    this->m_RtcInvalidTimeThrottle = false;
+    this->m_RtcNotDisciplinedThrottle = false;
 }
 
 bool RtcManager ::timeDataIsValid(Drv::TimeData t) {

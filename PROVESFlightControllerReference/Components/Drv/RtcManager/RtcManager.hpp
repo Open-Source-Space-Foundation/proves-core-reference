@@ -10,12 +10,13 @@
 #include <atomic>
 #include <cerrno>
 
-#include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.hpp"
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/RtcManagerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/Drv/RtcManager/TimeDiscipline.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
+#include <zephyr/spinlock.h>
 #include <zephyr/sys/clock.h>
 #include <zephyr/sys/timeutil.h>
 
@@ -23,6 +24,13 @@ namespace Drv {
 
 class RtcManager final : public RtcManagerComponentBase {
   public:
+    //! Result of readRtcSeconds()
+    enum class RtcRead {
+        OK,           //!< rtc_s is valid
+        FAILED,       //!< Device not ready or rtc_get_time() failed
+        IMPLAUSIBLE,  //!< Conversion failed or seconds outside years 2000 to 2099
+    };
+
     // ----------------------------------------------------------------------
     // Component construction and destruction
     // ----------------------------------------------------------------------
@@ -51,8 +59,9 @@ class RtcManager final : public RtcManagerComponentBase {
     //!
     //! Port to retrieve time
     //!
-    //! WARNING: This method is in a critical path for FPrime to get time.
-    //! NOTE: Events require time therefore we only log to console in this method.
+    //! WARNING: This method is in a critical path for FPrime to get time. It must never call into
+    //! the eventing system: no event ports, commands, or telemetry. It does not access the RTC
+    //! hardware; it only uses uptime and the time offset held by TimeDiscipline.
     void timeGetPort_handler(FwIndexType portNum,  //!< The port number
                              Fw::Time& time        //!< Reference to Time object
                              ) override;
@@ -108,23 +117,38 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Actual alarm callback, for triggering events
     void alarm_callback_t(const struct device* dev, uint16_t id);
 
-    //! Log RTC not ready once until throttle is cleared
-    void log_CONSOLE_RtcNotReady();
+    //! RTC update callback kicker method. Must be static but cannot reference this in a static context.
+    //! Runs on the system workqueue thread, not the timeGetPort caller's thread.
+    static void static_update_callback_t(const struct device* dev, void* user_data);
 
-    //! Clear RTC not ready log throttle
-    void log_CONSOLE_RtcNotReady_ThrottleClear();
+    //! Actual RTC update callback. Runs on the system workqueue thread once per RTC second edge.
+    //! May emit telemetry and events, but only after releasing the spinlock. A failed or
+    //! implausible read increments DisciplineReadFaults and emits a throttled warning. A
+    //! REJECTED sample increments DisciplineRejects.
+    void update_callback_t();
 
-    //! Log RTC get time failure once until throttle is cleared
-    void log_CONSOLE_RtcGetTimeFailed(int rc);
+    //! Read the RTC and convert to epoch seconds with rtcTimeToSeconds(). Returns FAILED, with
+    //! the driver return code in rc, if the device is not ready or rtc_get_time() fails. Returns
+    //! IMPLAUSIBLE if rtcTimeToSeconds() fails; rtc_s is then the converted seconds, or -1.
+    RtcRead readRtcSeconds(std::int64_t& rtc_s, int& rc);
 
-    //! Clear RTC get time failure log throttle
-    void log_CONSOLE_RtcGetTimeFailed_ThrottleClear();
+    //! Convert an rtc_time to epoch seconds via timeutil_timegm(). Returns false on an
+    //! out-of-range (ERANGE) conversion, with rtc_s set to -1, or on seconds outside the RV3028
+    //! range (years 2000 to 2099, see TimeDiscipline::isPlausibleRtcSeconds()), with rtc_s set
+    //! to the converted seconds.
+    static bool rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s);
 
-    //! Log RTC invalid time once until throttle is cleared
-    void log_CONSOLE_RtcInvalidTime();
+    //! Seed the time discipline from rtc_s at the current uptime, under the spinlock
+    void seedDiscipline(std::int64_t rtc_s);
 
-    //! Clear RTC invalid time log throttle
-    void log_CONSOLE_RtcInvalidTime_ThrottleClear();
+    //! Current uptime in microseconds, from k_uptime_ticks()
+    static std::int64_t uptimeUs();
+
+    //! Log RTC not disciplined once until throttle is cleared
+    void log_CONSOLE_RtcNotDisciplined();
+
+    //! Clear RTC not disciplined log throttle
+    void log_CONSOLE_RtcNotDisciplined_ThrottleClear();
 
     //! Validate time data
     bool timeDataIsValid(Drv::TimeData t);
@@ -142,11 +166,12 @@ class RtcManager final : public RtcManagerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    const struct device* m_dev;                    //!< The initialized Zephyr RTC device
-    RtcHelper m_rtcHelper;                         //!< Helper for RTC operations
-    std::atomic<bool> m_RtcNotReadyThrottle;       //!< Throttle for RtcNotReady
-    std::atomic<bool> m_RtcGetTimeFailedThrottle;  //!< Throttle for RtcGetTimeFailed
-    std::atomic<bool> m_RtcInvalidTimeThrottle;    //!< Throttle for RtcInvalidTime
+    const struct device* m_dev;                     //!< The initialized Zephyr RTC device
+    struct k_spinlock m_lock;                       //!< Guards m_discipline
+    TimeDiscipline m_discipline;                    //!< Disciplines uptime + time offset against the RTC
+    std::atomic<bool> m_RtcNotDisciplinedThrottle;  //!< Throttle for RtcNotDisciplined
+    U32 m_disciplineReadFaults;                     //!< Update callback only: failed or implausible reads
+    U32 m_disciplineRejects;                        //!< Update callback only: REJECTED samples
 
     // rtc alarm members
     U16 m_curr_mask;               //!< The mask of the alarm present on hardware
