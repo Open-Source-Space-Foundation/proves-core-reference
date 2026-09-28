@@ -19,54 +19,67 @@ _SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
 SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
 
 
-def get_default_auth_key_from_header() -> str:
-    """
-    Read the authentication key from AuthDefaultKey.h file.
+# The flight side (Authenticator.cpp parseHexKey) accepts exactly a 128-bit key as 32 hex
+# characters. Anything else either blows up later in bytes.fromhex() during framing or produces
+# frames the board silently rejects, so both key sources are normalized and checked here instead.
+AUTH_KEY_HEX_LENGTH = 32
+
+
+def normalize_auth_key(key: str, source: str) -> str:
+    """Strip any 0x prefix and validate the key is exactly 128 bits of hex.
+
+    Args:
+        key: The key as supplied by the operator
+        source: Where it came from, for the error message
 
     Returns:
-        Default authentication key (without 0x prefix) from AuthDefaultKey.h
+        The key as 32 hex characters, without 0x prefix
 
     Raises:
-        FileNotFoundError: If AuthDefaultKey.h file is not found
-        ValueError: If AuthDefaultKey.h does not contain a valid key
-        IOError: If there is an error reading the file
+        ValueError: If the key is not exactly 32 hexadecimal characters
     """
-    path = (
-        "PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h"
-    )
+    normalized = key.strip()
+    if normalized[:2].lower() == "0x":
+        normalized = normalized[2:]
 
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"AuthDefaultKey.h not found at {path}. "
-            "Authentication plugin requires AuthDefaultKey.h to be present. "
-            "Ensure the file exists or run 'make generate-auth-key' to create it."
+    if len(normalized) != AUTH_KEY_HEX_LENGTH:
+        raise ValueError(
+            f"Authentication key from {source} is {len(normalized)} hex characters; "
+            f"expected exactly {AUTH_KEY_HEX_LENGTH} (a 128-bit key)."
         )
-
     try:
-        with open(path, "r") as f:
-            for line in f:
-                # Look for line like: #define AUTH_DEFAULT_KEY "4916d208d40612daad6edbc7333c4c13"
-                if "AUTH_DEFAULT_KEY" in line and '"' in line:
-                    # Extract key from between quotes
-                    start = line.find('"') + 1
-                    end = line.find('"', start)
-                    if start > 0 and end > start:
-                        key = line[start:end]
-                        # Remove 0x prefix if present (shouldn't be, but handle it)
-                        if key.startswith("0x") or key.startswith("0X"):
-                            key = key[2:]
-                        return key
-    except (IOError, OSError) as e:
-        raise IOError(
-            f"Error reading AuthDefaultKey.h from {path}: {e}. "
-            "Authentication plugin cannot proceed without a valid AuthDefaultKey.h file."
-        ) from e
+        bytes.fromhex(normalized)
+    except ValueError as exc:
+        raise ValueError(
+            f"Authentication key from {source} is not valid hexadecimal: {exc}"
+        ) from exc
 
-    # If we get here, file exists but contains no valid key
-    raise ValueError(
-        f"No valid key found in {path}. "
-        'AuthDefaultKey.h must contain a line with: #define AUTH_DEFAULT_KEY "<key>"'
-    )
+    return normalized
+
+
+def get_auth_key_from_env() -> str:
+    """
+    Read the authentication key from the PROVES_AUTH_KEY environment variable.
+
+    The key is never compiled into the flight image (see issue #220), so ground
+    tooling must be told the key out-of-band: via --authentication-key or this
+    environment variable.
+
+    Returns:
+        Authentication key as a hex string (without 0x prefix) from PROVES_AUTH_KEY
+
+    Raises:
+        ValueError: If PROVES_AUTH_KEY is unset or not a 128-bit hex key
+    """
+    key = os.environ.get("PROVES_AUTH_KEY")
+    if not key:
+        raise ValueError(
+            "No authentication key available: pass --authentication-key or set "
+            "the PROVES_AUTH_KEY environment variable. The key is provisioned "
+            "onto the satellite with the PROVISION_KEY command and is never "
+            "compiled into the flight image."
+        )
+    return normalize_auth_key(key, "the PROVES_AUTH_KEY environment variable")
 
 
 # pragma: no cover
@@ -87,7 +100,7 @@ class AuthenticateFramer(FramerDeframer):
             spi: Security Parameter Index (default: 0)
             window_size: Window size for authentication (default: 50)
             authentication_type: Type of authentication (default: "HMAC")
-            authentication_key: Authentication key as hex string without 0x prefix (default: reads from spi_dict.txt)
+            authentication_key: Authentication key as hex string without 0x prefix (default: reads from PROVES_AUTH_KEY env var)
             **kwargs: Additional keyword arguments (ignored for now)
         """
         super().__init__()
@@ -101,9 +114,15 @@ class AuthenticateFramer(FramerDeframer):
         self.spi = spi
         self.window_size = window_size
         self.authentication_type = authentication_type
-        # Use provided key or read from AuthDefaultKey.h
+        # Use provided key or read from the PROVES_AUTH_KEY environment variable. Either way the
+        # key is validated up front, so a malformed key fails at startup with a clear message
+        # rather than mid-run inside frame().
         if authentication_key is None:
-            authentication_key = get_default_auth_key_from_header()
+            authentication_key = get_auth_key_from_env()
+        else:
+            authentication_key = normalize_auth_key(
+                authentication_key, "--authentication-key"
+            )
         self.authentication_key = authentication_key
 
     def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
@@ -153,12 +172,9 @@ class AuthenticateFramer(FramerDeframer):
 
         # Security Trailer of 16 octets in length (TM Baseline)
         # the output MAC is 2*128 bits in total length. (32 bytes)
-        # Convert hex string to bytes (16 bytes)
-        # Keys are stored without 0x prefix, but handle it if present for backward compatibility
-        key_hex = self.authentication_key
-        if key_hex.startswith("0x") or key_hex.startswith("0X"):
-            key_hex = key_hex[2:]
-        key = bytes.fromhex(key_hex)
+        # Convert hex string to bytes (16 bytes). The key was normalized and validated in
+        # __init__, so this cannot fail here.
+        key = bytes.fromhex(self.authentication_key)
 
         hmac_object = hmac.new(key, data, hashlib.sha256)
 
@@ -177,11 +193,6 @@ class AuthenticateFramer(FramerDeframer):
     @classmethod
     def get_arguments(cls) -> dict:
         """Return CLI argument definitions for this plugin"""
-        # Get default key from AuthDefaultKey.h for help text
-        try:
-            default_key = get_default_auth_key_from_header()
-        except (FileNotFoundError, ValueError, IOError):
-            default_key = "<not found - run 'make generate-auth-key'>"
         return {
             ("--spi",): {
                 "type": int,
@@ -200,8 +211,8 @@ class AuthenticateFramer(FramerDeframer):
             },
             ("--authentication-key",): {
                 "type": str,
-                "help": f"Authentication key as hex string without 0x prefix (default: {default_key} from AuthDefaultKey.h)",
-                "default": None,  # Will be set to key from AuthDefaultKey.h in __init__
+                "help": "Authentication key as hex string without 0x prefix (default: reads from PROVES_AUTH_KEY env var)",
+                "default": None,  # Will be set from PROVES_AUTH_KEY in __init__
             },
         }
 

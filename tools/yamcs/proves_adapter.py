@@ -44,7 +44,7 @@ def _crc16_ccitt(data: bytes) -> int:
 
 from authenticate_plugin import (  # noqa: E402
     AuthenticateFramer,
-    get_default_auth_key_from_header,
+    get_auth_key_from_env,
 )
 from fprime_gds.common.communication.ccsds.space_data_link import (  # noqa: E402
     SpaceDataLinkFramerDeframer,
@@ -404,7 +404,7 @@ def parse_args():
     p.add_argument(
         "--auth-key",
         default=None,
-        help="HMAC key as hex string (no 0x prefix). Defaults to key from AuthDefaultKey.h.",
+        help="HMAC key as hex string (no 0x prefix). Defaults to the PROVES_AUTH_KEY env var.",
     )
 
     # Frame size and CCSDS identifiers
@@ -448,8 +448,8 @@ def main():
     # Resolve auth key
     auth_key = args.auth_key
     if auth_key is None:
-        auth_key = get_default_auth_key_from_header()
-        print("[auth] Loaded key from AuthDefaultKey.h")
+        auth_key = get_auth_key_from_env()
+        print("[auth] Loaded key from PROVES_AUTH_KEY env var")
 
     auth_framer = AuthenticateFramer(authentication_key=auth_key)
 
