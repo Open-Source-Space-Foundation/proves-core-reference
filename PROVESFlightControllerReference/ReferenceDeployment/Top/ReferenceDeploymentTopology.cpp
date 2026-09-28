@@ -10,7 +10,11 @@
 
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
+
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
+
+static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 // Allows easy reference to objects in FPP/autocoder required namespaces
 using namespace ReferenceDeployment;
@@ -28,7 +32,7 @@ constexpr FwSizeType getRateGroupPeriod(const FwSizeType hz) {
 // The reference topology divides the incoming clock signal (1Hz) into sub-signals: 1Hz, 1/2Hz, and 1/4Hz with 0 offset
 Svc::RateGroupDriver::DividerSet rateGroupDivisorsSet{{
     // Array of divider objects
-    {getRateGroupPeriod(1), 0},   // 1Hz
+    {getRateGroupPeriod(1), 0},  // 1Hz
 }};
 
 // Rate groups may supply a context token to each of the attached children whose purpose is set by the project. The
@@ -47,6 +51,8 @@ void configureTopology() {
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.
     rateGroup1Hz.configure(rateGroup1HzContext, FW_NUM_ARRAY_ELEMENTS(rateGroup1HzContext));
+
+    gpioWatchdog.open(ledGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
 }
 
 // Public functions for use in main program are namespaced with deployment name ReferenceDeployment
