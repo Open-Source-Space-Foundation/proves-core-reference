@@ -11,6 +11,17 @@ help: ## Display this help.
 submodules: ## Initialize and update git submodules
 	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
+	@echo "Applying fprime TlmPacketizer I16 packetOffset patch (upstream candidate)..."
+	@cd lib/fprime && \
+		if git apply --check ../../patches/fprime-tlmpacketizer-i16-offset.patch 2>/dev/null; then \
+			git apply ../../patches/fprime-tlmpacketizer-i16-offset.patch && \
+			echo "✓ Applied TlmPacketizer I16 packetOffset patch"; \
+		elif git apply --reverse --check ../../patches/fprime-tlmpacketizer-i16-offset.patch 2>/dev/null; then \
+			echo "⚠ Patch already applied"; \
+		else \
+			echo "❌ Error: Unable to apply TlmPacketizer I16 patch. Run 'cd lib/fprime && git status' to check."; \
+			exit 1; \
+		fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
