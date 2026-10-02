@@ -612,8 +612,6 @@ GitHub Issues on `open-source-space-foundation/proves-core-reference` (always pa
 
 ### Triage labels
 
-Before assigning triage or Wayfinding labels, run the missing-label provisioning block in `docs/agents/triage-labels.md` and verify that the required labels exist.
-
 Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
