@@ -6,6 +6,7 @@
 #ifndef Components_PowerMonitor_HPP
 #define Components_PowerMonitor_HPP
 
+#include "PROVESFlightControllerReference/Components/PowerMonitor/PowerIntegrator.hpp"
 #include "PROVESFlightControllerReference/Components/PowerMonitor/PowerMonitorComponentAc.hpp"
 
 namespace Components {
@@ -59,24 +60,12 @@ class PowerMonitor final : public PowerMonitorComponentBase {
     //! Get current time in seconds
     F64 getCurrentTimeSeconds();
 
-    //! Update power consumption with new power reading
-    void updatePower(F64 powerW);
-
-    //! Update solar power generation with new power reading
-    void updateGeneration(F64 powerW);
-
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
-    //! Accumulated power consumption in mWh
-    F32 m_totalPower_mWh;
-
-    //! Accumulated solar power generation in mWh
-    F32 m_totalGeneration_mWh;
-
-    //! Last update time in seconds
-    F64 m_lastUpdateTime_s;
+    //! Integrator for accumulated power consumption and solar power generation
+    PowerIntegrator m_integrator;
 };
 
 }  // namespace Components

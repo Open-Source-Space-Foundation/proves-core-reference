@@ -23,6 +23,13 @@ module FileHandlingConfig {
         constant fileManager   = 15
     }
 
+    module CpuAffinities {
+        constant fileUplink    = Os.TASK_DEFAULT
+        constant fileDownlink  = Os.TASK_DEFAULT
+        constant fileManager   = Os.TASK_DEFAULT
+        constant prmDb         = Os.TASK_DEFAULT
+    }
+
     # File downlink configuration constants
     module DownlinkConfig {
         constant timeout        = 5000         # File downlink timeout in ms

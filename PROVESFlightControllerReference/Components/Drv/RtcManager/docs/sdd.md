@@ -11,12 +11,22 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 1. The component is instantiated and initialized during system startup
 2. A ground station sends a `TIME_SET` command with the desired time
 3. On each command, the component:
+    - Cancels any running sequences
     - Validates the time data (year >= 1900, month [1-12], day [1-31], hour [0-23], minute [0-59], second [0-59])
     - Emits validation failure events if any field is invalid
     - Sets the time on the RTC if validation passes
     - Emits a `TimeSet` event with the previous time if the time is set successfully
     - Emits a `TimeNotSet` event if the time is not set successfully
     - Emits a `DeviceNotReady` event if the device is not ready
+
+#### `TIMEBASE` Parameter Usage
+1. A ground station sends `TIMEBASE_PRM_SET` with `TB_PROC_TIME` or `TB_SC_TIME`, and `TIMEBASE_PRM_SAVE` to persist the choice across boots
+2. When the parameter is updated the component:
+    - Cancels any running sequences, since the change in reported time may affect them
+    - Emits a `TimeBaseChanged` event with the timebase now in use
+3. On each `timeGetPort` call, if the parameter is `TB_PROC_TIME` the component returns uptime without touching the RTC
+
+The parameter uses `Rtc.TimeBase`, a component-local copy of the upstream F Prime `TimeBase` enum carrying only the bases this component can source (`TB_PROC_TIME` and `TB_SC_TIME`). It lives in its own `Rtc` module because a `Drv.TimeBase` would shadow the global `TimeBase` enum inside generated `Drv` code. The default is `TB_SC_TIME`.
 
 #### `ALARM_SET` Command Usage
 1. The component is instantiated and initialized during system startup
@@ -48,6 +58,7 @@ The RTC Manager component interfaces with the Real Time Clock (RTC) to provide t
 1. The component is instantiated and initialized during system startup
 2. In a deployment topology, a `time connection` relation is made to sync FPrime's internal clock
 3. On each call, the component:
+    - Returns uptime with the `TB_PROC_TIME` time base if the `TIMEBASE` parameter is `TB_PROC_TIME`
     - Checks if the RTC device is ready
     - If the RTC is ready:
         - Fetches time from the RTC hardware
@@ -99,6 +110,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 | RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
+| RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
 
 
 ## Port Descriptions
@@ -115,12 +127,18 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | ALARM_CANCEL | Cancels the current alarm |
 | ALARM_LIST | Responds with info about the current set alarm |
 
+## Parameters
+| Name | Description | Type | Default |
+|---|---|---|---|
+| TIMEBASE | Decides the timebase that timeGetPort reports | Rtc.TimeBase | TB_SC_TIME |
+
 ## Events
 | Name | Description |
 |---|---|
 | DeviceNotReady | Emitted when the RTC device is not ready during TIME_SET command |
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
 | TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
+| TimeBaseChanged | Emitted when the TimeBase param is updated to signal the current TimeBase |
 | AlarmSet | Emitted when alarm is successfully set |
 | AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
 | AlarmTriggered | Emitted when an alarm fires |
@@ -162,6 +180,8 @@ classDiagram
             - ALARM_CANCEL_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32, ID: U16) void
             - ALARM_LIST_cmdHandler(opCode: FwOpcodeType, cmdSeq: U32) void
 
+            - parameterUpdated(id: FwPrmIdType) void
+
             - static_alarm_callback_t(dev: const device*, id: uint16_t, user_data: void*) void$
             - alarm_callback_t(dev: const device*, id: uint16_t) void
             - log_CONSOLE_RtcNotReady() void
@@ -196,7 +216,7 @@ classDiagram
 
 ### `timeGetPort` port
 
-The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to uptime if the RTC is unavailable.
+The `timeGetPort` port is called from a `time connection` in a deployment topology to sync the RTC's time with FPrime's internal clock. The component automatically falls back to uptime if the RTC is unavailable. When the TimeBase parameter is TB_PROC_TIME it returns uptime without touching the RTC.
 
 #### Success (RTC Available)
 
@@ -240,6 +260,21 @@ sequenceDiagram
     Note over RTC Manager: Device not ready
     RTC Manager->>Console Log: Log "RTC not ready" (throttled)
     RTC Manager-->>Deployment Time Connection: Return Fw::Time with time base `TB_PROC_TIME`
+```
+
+
+### `parameterUpdated`
+
+```mermaid
+sequenceDiagram
+    participant Ground Station
+    participant RTC Manager
+
+    Ground Station->>RTC Manager: Command TIMEBASE_PRM_SET sent
+    RTC Manager->>RTC Manager: Validate the command
+    RTC Manager->>RTC Manager: Cancel running sequences
+    RTC Manager->>Ground Station: Command response ok
+    Note over RTC Manager: Command for saving the parameter to memory is TIMEBASE_PRM_SAVE which flows the same except it persists across boots.
 ```
 
 ### `TIME_SET` Command

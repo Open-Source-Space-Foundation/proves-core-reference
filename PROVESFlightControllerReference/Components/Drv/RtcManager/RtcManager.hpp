@@ -65,17 +65,17 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Handler implementation for command TIME_SET
     //!
     //! TIME_SET command to set the time on the RTC
-    void TIME_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                             U32 cmdSeq,           //!< The command sequence number
-                             Drv::TimeData t       //!< Set the time
+    void TIME_SET_cmdHandler(FwOpcodeType opCode,    //!< The opcode
+                             U32 cmdSeq,             //!< The command sequence number
+                             const Drv::TimeData& t  //!< Set the time
                              ) override;
 
     //! Handler implementation for command ALARM_SET
     //!
     //! ALARM_SET command to set an alarm on the RTC
-    void ALARM_SET_cmdHandler(FwOpcodeType opCode,  //!< The opcode
-                              U32 cmdSeq,           //!< The command sequence number
-                              Drv::TimeData t       //!< Time to set the alarm for
+    void ALARM_SET_cmdHandler(FwOpcodeType opCode,    //!< The opcode
+                              U32 cmdSeq,             //!< The command sequence number
+                              const Drv::TimeData& t  //!< Time to set the alarm for
                               ) override;
 
     //! Handler implementation for command ALARM_CANCEL
@@ -97,6 +97,10 @@ class RtcManager final : public RtcManagerComponentBase {
     // ----------------------------------------------------------------------
     // Private helper methods
     // ----------------------------------------------------------------------
+
+    //! Parameter update method. Runs when parameter for timebase is changed and cancels all running sequences to avoid
+    //! conflict
+    void parameterUpdated(FwPrmIdType id) override;
 
     //! Alarm callback kicker method. Must be static but cannot reference this in a static context
     static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
