@@ -173,6 +173,14 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
+  packet Update id 23 group 5 {
+    Update.deltaPatcher.State
+    Update.deltaPatcher.ChunksDone
+    Update.deltaPatcher.ChunksTotal
+    Update.deltaPatcher.BytesWritten
+    Update.deltaPatcher.LastStatus
+  }
+
   packet DetumblePerformance id 16 group 5 {
     detumbleManager.TorqueDuration
     detumbleManager.TimeBetweenMagneticFieldReadings
