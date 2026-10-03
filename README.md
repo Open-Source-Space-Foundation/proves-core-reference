@@ -241,6 +241,28 @@ to find the crc ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
 
 (either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
 
+### Delta (SPatch) updates
+
+Instead of uplinking the whole `zephyr.signed.bin`, a delta patch can be uplinked and applied on board by
+`Update.deltaPatcher` (from fprime-extras). The old image must be present as a file on the SD card (e.g. the
+`zephyr.signed.bin` from the previous update) and the patcher runs from the 1 Hz rate group.
+
+On the ground:
+
+```
+pip install ./lib/fprime-extras/python
+fprime-extras-spatch create old.signed.bin build-artifacts/zephyr.signed.bin update.spatch
+fprime-extras-spatch info update.spatch   # prints new_crc32
+```
+
+Then:
+
+1. file uplink `update.spatch`
+2. `Update.deltaPatcher.APPLY_PATCH(old_file, patch_file, new_file)` and wait for the `PatchComplete` event
+   (telemetry packet `Update` shows `ChunksDone`/`ChunksTotal`)
+3. prepare image / update from `new_file` with the CRC reported in `PatchComplete`
+4. configure_next_boot = test, then reboot
+
 Go to components/flashworker
 
 regionnumber = 1 try instead region number=2
