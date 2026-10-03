@@ -40,6 +40,32 @@ jobs:
         run: |
           make test-unit
 
+  fprime-ut:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download bin tools
+        run: |
+          make download-bin
+
+      - name: Setup submodules
+        run: |
+          make submodules
+
+      - name: Setup fprime venv
+        run: |
+          make fprime-venv
+
+      - name: Install lib dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
+
+      - name: Run F Prime Component UTs
+        run: |
+          make test-fprime-ut
+
   build:
     runs-on: deathstar
     steps:

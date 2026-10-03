@@ -28,7 +28,8 @@ ModeManager ::ModeManager(const char* const compName)
       m_safeModeVoltageCounter(0),
       m_recoveryVoltageCounter(0),
       m_commandLossCounter(0),
-      m_commandLossDebounce(false) {
+      m_commandLossDebounce(false),
+      m_stateFilePath(STATE_FILE_PATH) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -187,7 +188,7 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     // Save state with clean shutdown flag set
     // We directly write to file here to ensure the flag is persisted
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    Os::File::Status status = file.open(this->m_stateFilePath.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
 
     if (status != Os::File::OP_OK) {
         // Log failure - next boot will be misclassified as unintended reboot
@@ -266,7 +267,7 @@ void ModeManager ::GET_SAFE_MODE_REASON_cmdHandler(FwOpcodeType opCode, U32 cmdS
 
 void ModeManager ::loadState() {
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_READ);
+    Os::File::Status status = file.open(this->m_stateFilePath.toChar(), Os::File::OPEN_READ);
 
     bool unintendedReboot = false;
 
@@ -363,7 +364,7 @@ void ModeManager ::loadState() {
 
 void ModeManager ::saveState() {
     Os::File file;
-    Os::File::Status status = file.open(STATE_FILE_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    Os::File::Status status = file.open(this->m_stateFilePath.toChar(), Os::File::OPEN_CREATE, Os::File::OVERWRITE);
 
     if (status != Os::File::OP_OK) {
         // Log failure to open file, but allow component to continue

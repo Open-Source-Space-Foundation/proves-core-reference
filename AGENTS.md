@@ -109,6 +109,23 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
+**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `CONTEXT.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
+
+**F Prime Component UTs** (native host build, no hardware):
+
+```bash
+make test-fprime-ut    # generate native UT cache if needed, build + run all component UTs
+```
+
+The native build lives in `native/` (own `settings.ini`; fprime-zephyr's module registration is platform-guarded so it stays in `library_locations`). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
+
+To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
+
+1. Add a `register_fprime_ut` block to the component CMakeLists (copy Watchdog's), listing `test/ut/<Name>TestMain.cpp` + `test/ut/<Name>Tester.cpp` with `UT_AUTO_HELPERS`.
+2. `touch` those files as empty stubs (CMake configure needs them to exist), then from the component dir run `fprime-util impl --ut --build-cache <repo>/native/build-fprime-automatic-native-ut` and rename the emitted `*.template.*` files into place.
+3. Build/run: `make test-fprime-ut` (builds all UTs via `fprime-util build --ut --all` from `native/`, then runs `ctest` scoped to `PROVESFlightControllerReference_` — fprime-extras UTs are excluded; upstream's DropDetector test is seed-flaky). Single component: `ctest --test-dir native/build-fprime-automatic-native-ut -R <Name>`. Running fprime-util from the component dir works only with an explicit `--build-cache <abs path to native/build-fprime-automatic-native-ut>` (as in step 2 — the flag bypasses cache discovery); without it (e.g. plain `fprime-util check`/`build`), settings discovery finds the Zephyr-only root settings.ini and fails.
+4. Known autocoder quirk: for argument-less `Fw.Signal` from-ports only `ASSERT_from_<port>_SIZE(n)` compiles; the indexed `ASSERT_from_<port>(i)` macro references history types that are never generated.
+
 
 **Test Framework Details**:
 
@@ -282,6 +299,8 @@ make framer-plugin     # Build and install the CCSDS framing plugin
 make sequence SEQ=<name> # Compile a sequence file from sequences/ directory
 make sync-sequence-number # Synchronize GDS/flight sequence number
 make test-unit         # Run unit tests (CMake/CTest based)
+make test-fprime-ut    # Build + run F Prime component UTs (native host build; needs host mbedTLS)
+make generate-fprime-ut # (Re)generate the native F Prime UT build cache in native/ (force)
 make test-integration  # Run integration tests (requires connected board)
 make test-interactive  # Run interactive test selection (use ARGS= for CLI mode)
 make bootloader        # Trigger bootloader mode on RP2350
@@ -295,19 +314,21 @@ make minimize-uv-cache # Minimize UV cache (CI optimization)
 
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
-**Jobs**:
+**Jobs** (every pull request and push to main):
 
-1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Build**: Full build with caching
-   - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
-   - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
+1. **lint** (ubuntu-latest): runs `make fmt` (pre-commit checks)
+2. **unit-test** (ubuntu-latest): runs `make test-unit` — host gtest helper tests, no hardware
+3. **fprime-ut** (ubuntu-latest): runs `make test-fprime-ut` — native F Prime component UTs; needs `libmbedtls-dev`, no Zephyr SDK
+4. **build** (self-hosted `deathstar`): full Zephyr build — submodules/venv/Zephyr SDK setup, CI spacecraft-ID override (0x44 → 0x43), `make generate`, `make build-mcuboot`, `make build`, console-disabled guard; uploads firmware + GDS dictionary artifacts
+5. **integration-uart** (self-hosted `integration`): flashes a real board, runs the pytest integration suite over UART via GDS, then the YAMCS round-trip test
+6. **integration-radio** (self-hosted `integration`): runs the suite over the LoRa passthrough board with `--with-radio`
+7. **yamcs-build** (ubuntu-latest): YAMCS server boot smoke check against the generated MDB
 
 **Critical for CI Success**:
 
 - Always run `make fmt` before pushing
 - Ensure code builds with `make build` locally
-- Integration tests are NOT run in CI (require hardware)
+- Integration tests DO run in CI on self-hosted hardware runners (`integration-uart`, `integration-radio`)
 
 ## Common Issues & Workarounds
 
@@ -603,3 +624,17 @@ These instructions are comprehensive and validated. **Only search for additional
 - You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
+
+## Agent skills
+
+### Issue tracker
+
+Issues tracked in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
