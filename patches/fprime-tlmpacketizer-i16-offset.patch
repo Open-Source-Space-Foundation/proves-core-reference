@@ -1,10 +1,19 @@
 diff --git a/Svc/TlmPacketizer/TlmPacketizer.cpp b/Svc/TlmPacketizer/TlmPacketizer.cpp
-index 89af22e1d..ba1c68555 100644
+index a7d00b3..14974ed 100644
 --- a/Svc/TlmPacketizer/TlmPacketizer.cpp
 +++ b/Svc/TlmPacketizer/TlmPacketizer.cpp
-@@ -89,10 +89,10 @@ void TlmPacketizer::setPacketList(const TlmPacketizerPacketList& packetList,
+@@ -20,6 +20,8 @@ namespace Svc {
+ const TlmPacketizer_TelemetrySendPortMap TlmPacketizer::TELEMETRY_SEND_PORT_MAP = {};
+ 
+ static_assert(Svc::TelemetrySection::NUM_SECTIONS >= 1, "At least one telemetry section is required");
++static_assert(FW_COM_BUFFER_MAX_SIZE <= std::numeric_limits<I16>::max(),
++              "TlmEntry::packetOffset is I16; FW_COM_BUFFER_MAX_SIZE must fit");
+ 
+ // ----------------------------------------------------------------------
+ // Construction, initialization, and destruction
+@@ -100,10 +102,10 @@ void TlmPacketizer::setPacketList(const TlmPacketizerPacketList& packetList,
              entry.ignored = false;
-             entry.channelSize = packetList.list[pktEntry]->list[tlmEntry].size;
+             entry.channelSize = channelSize;
              // the offset into the buffer will be the current packet length
 -            // the offset must fit within FwSignedSizeType to allow for negative values
 -            FW_ASSERT(packetLen <= static_cast<FwSizeType>(std::numeric_limits<FwSignedSizeType>::max()),
@@ -17,12 +26,16 @@ index 89af22e1d..ba1c68555 100644
              packetLen += entry.channelSize;
  
 diff --git a/Svc/TlmPacketizer/TlmPacketizer.hpp b/Svc/TlmPacketizer/TlmPacketizer.hpp
-index 7f80d76d2..ffb58fc5d 100644
+index f5ed26d..5ffb8f5 100644
 --- a/Svc/TlmPacketizer/TlmPacketizer.hpp
 +++ b/Svc/TlmPacketizer/TlmPacketizer.hpp
-@@ -172,7 +172,7 @@ class TlmPacketizer final : public TlmPacketizerComponentBase, public Fw::ParamE
+@@ -170,9 +170,10 @@ class TlmPacketizer final : public TlmPacketizerComponentBase, public Fw::ParamE
+ 
+     struct TlmEntry {
          FwChanIdType id;  //!< telemetry id stored in slot
-         // Offsets into packet buffers.
+-        // Offsets into packet buffers.
++        // Offsets into packet buffers. Offsets are bounded by FW_COM_BUFFER_MAX_SIZE, so a
++        // 16-bit type suffices and keeps this channels x packets table small.
          // -1 means that channel is not in that packet
 -        FwSignedSizeType packetOffset[MAX_PACKETIZER_PACKETS];
 +        I16 packetOffset[MAX_PACKETIZER_PACKETS];
