@@ -45,7 +45,22 @@ module ComCcsdsUart {
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_UART + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
         stack size ComCcsdsConfig.StackSizes.aggregator \
-        priority ComCcsdsConfig.Priorities.aggregator
+        priority ComCcsdsConfig.Priorities.aggregator \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        static_assert(static_cast<FwSizeType>(ComCcsdsConfig::Aggregator::aggregationSize) <=
+                          static_cast<FwSizeType>(Svc::Ccsds::TmDataFieldSize),
+                      "ComCcsdsConfig.Aggregator.aggregationSize must fit the TM Transfer Frame Data Field");
+        // Allocation identifier is 0 as the MallocAllocator discards it
+        ComCcsdsUart::aggregator.configure(ComCcsdsConfig::Aggregator::aggregationSize,
+                                           ComCcsdsConfig::Aggregator::enablePacketSpanning,
+                                           0,
+                                           ComCcsds::Allocation::memAllocator);
+        """
+        phase Fpp.ToCpp.Phases.tearDownComponents """
+        ComCcsdsUart::aggregator.cleanup();
+        """
+    }
 
     # ----------------------------------------------------------------------
     # Passive Components

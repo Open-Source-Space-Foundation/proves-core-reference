@@ -305,6 +305,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsUart.tcSecurityDeframer.run
       rateGroup1Hz.RateGroupMemberOut[20] -> ComCcsdsLora.tcSecurityDeframer.run
       #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> Update.deltaPatcher.run
 
     }
 

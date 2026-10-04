@@ -13,6 +13,7 @@ module Update {
     module QueueSizes {
         constant updater = 5 # Updater should process quickly; small queue
         constant worker  = 1 # Worker only handles one item at a time
+        constant deltaPatcher = 4 # Delta patcher: >= DeltaPatcher::MAX_DISPATCH_PER_TICK; overflow answers BUSY
     }
 
     module StackSizes {
