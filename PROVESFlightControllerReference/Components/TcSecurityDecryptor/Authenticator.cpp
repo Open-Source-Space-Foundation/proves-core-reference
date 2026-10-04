@@ -97,23 +97,44 @@ PacketAuthenticator::KeyImportResult importHmacKey(const char* key, uint32_t& ke
     return {PacketAuthenticator::KeyImportStatus::Success, PSA_SUCCESS};
 }
 
-PacketAuthenticator::AuthenticationResult authenticatePacket(const uint8_t* dataBuffer,
-                                                             size_t dataSize,
-                                                             const Mac& hmac,
-                                                             uint32_t& keyId) {
+PacketAuthenticator::AuthenticationResult authenticateFrame(uint16_t saIndex,
+                                                            const uint8_t* dataBuffer,
+                                                            size_t dataSize,
+                                                            const Mac& hmac,
+                                                            uint32_t& keyId) {
     // Basic input validation: buffer present and at least trailer-sized
     if (!dataBuffer || dataSize < Ccsds355_0_B_2::kTCSecurityTrailer) {
         return {PacketAuthenticator::AuthenticationStatus::VerifyError, PSA_ERROR_INVALID_ARGUMENT};
     }
 
-    // Verify the HMAC on the packet data
+    // The MAC covers the SA index (stripped from the buffer by the upstream deframer) followed by
+    // the frame data, so it must be verified via the PSA multipart API rather than a single call.
     const size_t authenticatedDataSize = dataSize - Ccsds355_0_B_2::kTCSecurityTrailer;
-    const psa_status_t status =
-        psa_mac_verify(keyId, PSA_ALG_TRUNCATED_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256), Ccsds355_0_B_2::kTCSecurityTrailer),
-                       dataBuffer, authenticatedDataSize, hmac.data(), hmac.size());
+    const uint8_t saIndexBytes[2] = {static_cast<uint8_t>(saIndex >> 8), static_cast<uint8_t>(saIndex & 0xFF)};
+
+    psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
+    psa_status_t status = psa_mac_verify_setup(
+        &operation, keyId, PSA_ALG_TRUNCATED_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256), Ccsds355_0_B_2::kTCSecurityTrailer));
     if (status != PSA_SUCCESS) {
-        return PacketAuthenticator::AuthenticationResult{PacketAuthenticator::AuthenticationStatus::VerifyError,
-                                                         status};
+        return {PacketAuthenticator::AuthenticationStatus::VerifyError, status};
+    }
+
+    status = psa_mac_update(&operation, saIndexBytes, sizeof(saIndexBytes));
+    if (status != PSA_SUCCESS) {
+        psa_mac_abort(&operation);
+        return {PacketAuthenticator::AuthenticationStatus::VerifyError, status};
+    }
+
+    status = psa_mac_update(&operation, dataBuffer, authenticatedDataSize);
+    if (status != PSA_SUCCESS) {
+        psa_mac_abort(&operation);
+        return {PacketAuthenticator::AuthenticationStatus::VerifyError, status};
+    }
+
+    // psa_mac_verify_finish aborts the operation internally on both success and failure
+    status = psa_mac_verify_finish(&operation, hmac.data(), hmac.size());
+    if (status != PSA_SUCCESS) {
+        return {PacketAuthenticator::AuthenticationStatus::VerifyError, status};
     }
 
     return {PacketAuthenticator::AuthenticationStatus::Authenticated, PSA_SUCCESS};

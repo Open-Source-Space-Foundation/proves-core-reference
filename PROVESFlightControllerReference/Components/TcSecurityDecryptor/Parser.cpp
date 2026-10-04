@@ -19,30 +19,17 @@ struct FieldParseResult {
     T value;       //!< The parsed value
 };
 
-//! Parse the SPI field from the packet buffer
-FieldParseResult<uint32_t> parseSpi(const uint8_t* buffer, const size_t size) {
-    // Validate buffer size
-    if (!buffer || size < Ccsds355_0_B_2::kSpiSize) {
-        return {false, 0};
-    }
-
-    // Extract SPI
-    const uint32_t spi = (static_cast<uint32_t>(buffer[0]) << 8) | static_cast<uint32_t>(buffer[1]);
-
-    return {true, spi};
-}
-
 //! Parse the sequence number field from the packet buffer
 FieldParseResult<uint32_t> parseSequenceNumber(const uint8_t* buffer, const size_t size) {
     // Validate buffer size
-    if (!buffer || size < Ccsds355_0_B_2::kTCSecurityHeaderSize) {
+    if (!buffer || size < Ccsds355_0_B_2::kSequenceNumberSize) {
         return {false, 0};
     }
 
     // Extract sequence number
-    const uint32_t sequenceNumber = (static_cast<uint32_t>(buffer[2]) << 24) |
-                                    (static_cast<uint32_t>(buffer[3]) << 16) | (static_cast<uint32_t>(buffer[4]) << 8) |
-                                    static_cast<uint32_t>(buffer[5]);
+    const uint32_t sequenceNumber = (static_cast<uint32_t>(buffer[0]) << 24) |
+                                    (static_cast<uint32_t>(buffer[1]) << 16) | (static_cast<uint32_t>(buffer[2]) << 8) |
+                                    static_cast<uint32_t>(buffer[3]);
 
     return {true, sequenceNumber};
 }
@@ -66,12 +53,6 @@ FieldParseResult<Mac> parseMac(const uint8_t* buffer, const size_t size) {
 namespace Ccsds355_0_B_2 {
 
 TcTransferFrame::Parser::Result parse(const uint8_t* buffer, const size_t size) {
-    // Parse SPI
-    const FieldParseResult<uint32_t> spiResult = parseSpi(buffer, size);
-    if (!spiResult.success) {
-        return {Ccsds355_0_B_2::TcTransferFrame::Parser::Status::SpiParseError, {}};
-    }
-
     // Parse sequence number
     const FieldParseResult<uint32_t> sequenceNumberResult = parseSequenceNumber(buffer, size);
     if (!sequenceNumberResult.success) {
@@ -84,9 +65,9 @@ TcTransferFrame::Parser::Result parse(const uint8_t* buffer, const size_t size) 
         return {Ccsds355_0_B_2::TcTransferFrame::Parser::Status::MacParseError, {}};
     }
 
-    return {TcTransferFrame::Parser::Status::Ok, TCSecurityHeader{spiResult.value, sequenceNumberResult.value},
+    return {TcTransferFrame::Parser::Status::Ok, TCSecurityHeader{sequenceNumberResult.value},
             TCSecurityTrailer{macResult.value},
-            TCFrameData{buffer + kTCSecurityHeaderSize, size - kTCSecurityHeaderSize - kTCSecurityTrailer}};
+            TCFrameData{buffer + kSequenceNumberSize, size - kSequenceNumberSize - kTCSecurityTrailer}};
 }
 
 }  // namespace Ccsds355_0_B_2

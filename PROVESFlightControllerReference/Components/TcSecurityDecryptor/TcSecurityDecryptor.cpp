@@ -1,16 +1,16 @@
 // ======================================================================
-// \title  TcSecurityDeframer.cpp
-// \brief  cpp file for TcSecurityDeframer component implementation class
+// \title  TcSecurityDecryptor.cpp
+// \brief  cpp file for TcSecurityDecryptor component implementation class
 // ======================================================================
 
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframer.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDecryptor/TcSecurityDecryptor.hpp"
 
 #include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
 #include <Fw/Log/LogString.hpp>
 #include <utility>
 
 #include "Authenticator.hpp"
-#include "TcSecurityDeframer.hpp"
+#include "TcSecurityDecryptor.hpp"
 #include "Types.hpp"
 
 // Include generated header with default key (generated at build time)
@@ -22,33 +22,37 @@ namespace Components {
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
-    : TcSecurityDeframerComponentBase(compName),
+TcSecurityDecryptor ::TcSecurityDecryptor(const char* const compName)
+    : TcSecurityDecryptorComponentBase(compName),
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0) {}
 
-TcSecurityDeframer ::~TcSecurityDeframer() {}
+TcSecurityDecryptor ::~TcSecurityDecryptor() {}
 
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
 
-void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const ComCfg::FrameContext& context) {
+void TcSecurityDecryptor ::decryptIn_handler(FwIndexType portNum,
+                                             U16 saIndex,
+                                             Fw::Buffer& data,
+                                             const ComCfg::FrameContext& context) {
     ComCfg::FrameContext contextOut = context;
     contextOut.set_authenticated(false);
 
-    // TcDeframer has already stripped the TC Primary Header and FECF, so the buffer is:
-    //   [Security Header: SPI(2)+SeqNum(4)] [Data Field] [Security Trailer: MAC(16)]
+    // The upstream Svc.Ccsds.CcsdsSdlsDeframer has already stripped the security association
+    // index, so the buffer is: [SeqNum(4)] [Data Field] [Security Trailer: MAC(16)]
 
-    // --- Parse Security Header and Trailer ---
+    // --- Parse Security Trailer ---
     const Ccsds355_0_B_2::TcTransferFrame::Parser::Result parseResult =
         Ccsds355_0_B_2::parse(data.getData(), data.getSize());
     if (parseResult.status != Ccsds355_0_B_2::TcTransferFrame::Parser::Status::Ok) {
         // The frame is too short to contain the security fields, so it cannot be stripped
-        // for downstream deframing. Return buffer ownership upstream and drop the frame.
+        // for downstream deframing. Report a decryption failure so the upstream deframer
+        // drops the frame and returns the buffer for deallocation.
         this->log_WARNING_HI_ParsingFailed(static_cast<PacketParserStatus::T>(parseResult.status));
-        this->dataReturnOut_out(0, data, contextOut);
+        this->decryptOut_out(0, Svc::Ccsds::SdlsStatus::DECRYPTION_FAILURE, data, contextOut);
         return;
     }
     this->log_WARNING_HI_ParsingFailed_ThrottleClear();
@@ -56,12 +60,12 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
     {
         Os::ScopeLock lock(this->m_sequenceNumberLock);
 
-        // --- Validate SPI and anti-replay sequence number ---
-        const PacketValidator::Status validationStatus =
-            validatePacket(parseResult.securityHeader, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+        // --- Validate SA index and anti-replay sequence number ---
+        const PacketValidator::Status validationStatus = validateFrame(
+            saIndex, parseResult.securityHeader.sequenceNumber, this->m_sequenceNumber, this->m_sequenceNumberWindow);
 
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
-            this->log_WARNING_HI_SpiInvalid(parseResult.securityHeader.spi);
+            this->log_WARNING_HI_SpiInvalid(saIndex);
         } else if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
             this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber,
                                                        this->m_sequenceNumber, this->m_sequenceNumberWindow);
@@ -69,9 +73,9 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
             this->log_WARNING_HI_SpiInvalid_ThrottleClear();
             this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
 
-            // --- Authenticate: HMAC over Security Header + Data Field ---
-            const PacketAuthenticator::AuthenticationResult authResult =
-                authenticatePacket(data.getData(), data.getSize(), parseResult.securityTrailer.mac, this->m_hmacKeyId);
+            // --- Authenticate: HMAC over SA index + Data Field ---
+            const PacketAuthenticator::AuthenticationResult authResult = authenticateFrame(
+                saIndex, data.getData(), data.getSize(), parseResult.securityTrailer.mac, this->m_hmacKeyId);
 
             if (authResult.status != PacketAuthenticator::AuthenticationStatus::Authenticated) {
                 this->log_WARNING_HI_AuthenticationFailed(static_cast<PacketAuthenticatorStatus::T>(authResult.status),
@@ -91,32 +95,29 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
     }
 
     // Forward only the Data Field per CCSDS 355.0-B-2 §3.3.3.3:
-    //   start = first octet after Security Header
+    //   start = first octet after the sequence number
     //   end   = last octet of the Transfer Frame Data Field (excluding Security Trailer)
-    // Unverified frames are forwarded with authenticated=false; the router enforces
-    // the reject-or-bypass policy.
-    data.advance(Ccsds355_0_B_2::kTCSecurityHeaderSize);
+    // Unverified frames are forwarded with authenticated=false; the router enforces the
+    // reject-or-bypass policy. Every structurally parseable frame reports SUCCESS: an
+    // authentication-only SA has no notion of a decrypt failure short of a parse error, and
+    // upstream drops any non-SUCCESS frame, which would defeat the #426 bypass path.
+    data.advance(Ccsds355_0_B_2::kSequenceNumberSize);
     data.setSize(data.getSize() - Ccsds355_0_B_2::kTCSecurityTrailer);
 
-    this->dataOut_out(0, data, contextOut);
+    this->decryptOut_out(0, Svc::Ccsds::SdlsStatus::SUCCESS, data, contextOut);
 }
 
-void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
-                                               Fw::Buffer& data,
-                                               const ComCfg::FrameContext& context) {
-    // Restore the original buffer pointer and size stripped in dataIn_handler so the
-    // upstream BufferManager deallocates the exact allocation it originally handed out.
-    data.advance(-static_cast<FwSignedSizeType>(Ccsds355_0_B_2::kTCSecurityHeaderSize));
-    data.setSize(data.getSize() + Ccsds355_0_B_2::kTCSecurityTrailer);
-
-    this->dataReturnOut_out(0, data, context);
+void TcSecurityDecryptor ::decryptReturnIn_handler(FwIndexType portNum,
+                                                   Fw::Buffer& data,
+                                                   const ComCfg::FrameContext& context) {
+    this->bufferReturnOut_out(0, data, context);
 }
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void TcSecurityDecryptor ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
 
     // Log the successful sequence number get
@@ -126,7 +127,7 @@ void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
-void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
+void TcSecurityDecryptor ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
 
     // Write the sequence number to the file system
@@ -154,7 +155,7 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
 // Public helper methods
 // ----------------------------------------------------------------------
 
-void TcSecurityDeframer ::configure() {
+void TcSecurityDecryptor ::configure() {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
     Fw::ParamValid is_valid;
 
@@ -185,7 +186,7 @@ void TcSecurityDeframer ::configure() {
 // Private helper methods
 // ----------------------------------------------------------------------
 
-Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
+Os::File::Status TcSecurityDecryptor ::readSequenceNumber(U32& value) {
     // Read the sequence number from the file system
     Os::File::Status status = Utilities::FileHelper::readFromFile(this->m_sequenceNumberFilePath.toChar(), value);
     if (status != Os::File::OP_OK) {
@@ -204,7 +205,7 @@ Os::File::Status TcSecurityDeframer ::readSequenceNumber(U32& value) {
     return status;
 }
 
-Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
+Os::File::Status TcSecurityDecryptor ::writeSequenceNumber(const U32 value) {
     Os::File::Status status = Utilities::FileHelper::writeToFile(this->m_sequenceNumberFilePath.toChar(), value);
     if (status != Os::File::OP_OK) {
         // Log the failure to write the default sequence number

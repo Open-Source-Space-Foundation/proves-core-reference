@@ -31,9 +31,7 @@ def get_default_auth_key_from_header() -> str:
         ValueError: If AuthDefaultKey.h does not contain a valid key
         IOError: If there is an error reading the file
     """
-    path = (
-        "PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h"
-    )
+    path = "PROVESFlightControllerReference/Components/TcSecurityDecryptor/AuthDefaultKey.h"
 
     if not os.path.exists(path):
         raise FileNotFoundError(

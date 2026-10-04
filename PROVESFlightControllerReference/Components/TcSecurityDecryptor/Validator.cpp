@@ -8,10 +8,10 @@
 namespace Components {
 namespace {
 
-//! Validate the SPI field of the packet
-bool spiValid(uint32_t spi) {
-    // For now we only support SPI 0, which indicates no additional security processing beyond HMAC
-    return spi == 0;
+//! Validate the security association index
+bool spiValid(uint32_t saIndex) {
+    // For now we only support SA index 0, which indicates no additional security processing beyond HMAC
+    return saIndex == 0;
 }
 
 //! Validate packet sequence number must be greater than the last accepted sequence number and within the window
@@ -33,14 +33,15 @@ bool sequenceNumberValid(uint32_t packetSequenceNumber, uint32_t sequenceNumber,
 
 }  // namespace
 
-PacketValidator::Status validatePacket(const Ccsds355_0_B_2::TCSecurityHeader& secHeader,
-                                       uint32_t sequenceNumber,
-                                       uint32_t sequenceNumberWindow) {
-    if (!spiValid(secHeader.spi)) {
+PacketValidator::Status validateFrame(uint32_t saIndex,
+                                      uint32_t packetSequenceNumber,
+                                      uint32_t sequenceNumber,
+                                      uint32_t sequenceNumberWindow) {
+    if (!spiValid(saIndex)) {
         return PacketValidator::Status::SpiInvalid;
     }
 
-    if (!sequenceNumberValid(secHeader.sequenceNumber, sequenceNumber, sequenceNumberWindow)) {
+    if (!sequenceNumberValid(packetSequenceNumber, sequenceNumber, sequenceNumberWindow)) {
         return PacketValidator::Status::SequenceNumberInvalid;
     }
 
