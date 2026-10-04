@@ -13,8 +13,11 @@
 #include <atomic>
 #include <cassert>
 
+static_assert(ATOMIC_INT_LOCK_FREE == 2, "std::atomic<U32> must be lock-free on the target");
+
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
+#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Persistence.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
 
@@ -60,9 +63,10 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
 
     //! Handler implementation for run
     //!
-    //! Rate-group tick (1 Hz). Persists the in-memory sequence number to SEQ_NUM_FILE_PATH when it
-    //! differs from the last value known to be on disk. Runs on the rate-group thread without taking
-    //! m_sequenceNumberLock so the filesystem write never delays dataIn.
+    //! Rate-group tick (1 Hz in the reference deployment). Persists the in-memory sequence number to
+    //! SEQ_NUM_FILE_PATH when it differs from the last value known to be on disk. Runs on the
+    //! rate-group thread under m_persistLock only, never m_sequenceNumberLock, so the filesystem
+    //! write cannot delay dataIn.
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
@@ -111,18 +115,19 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    // The lock serializes validate-and-advance in dataIn against SET_SEQ_NUM. The counter itself is atomic
-    // so run_handler can snapshot it for persistence without the lock, keeping SD-card I/O off the
-    // frame-processing thread.
+    // m_sequenceNumberLock serializes validate-and-advance in dataIn against SET_SEQ_NUM, GET_SEQ_NUM and
+    // configure(). The counter itself is atomic so run_handler can read it without that lock, keeping
+    // SD-card I/O off the frame-processing thread.
     Os::Mutex m_sequenceNumberLock;       //!< Mutex serializing sequence number validate-and-advance
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
     std::atomic<U32> m_sequenceNumber;    //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
-    // Persistence bookkeeping. m_persistedSequenceNumber is owned by run_handler (and configure(), which runs
-    // before the rate group starts); other threads only clear m_persistedValid to force a re-persist.
-    U32 m_persistedSequenceNumber;       //!< Last sequence number known to be on disk
-    std::atomic<bool> m_persistedValid;  //!< True when m_persistedSequenceNumber reflects the file contents
+    // m_persistLock serializes the two filesystem writers (run_handler and SET_SEQ_NUM) and guards
+    // m_persistedSequenceNumber. dataIn never takes it. Lock order where both are held: m_sequenceNumberLock
+    // then m_persistLock (SET_SEQ_NUM); run_handler takes m_persistLock alone.
+    Os::Mutex m_persistLock;        //!< Mutex serializing sequence number file I/O
+    U32 m_persistedSequenceNumber;  //!< Last sequence number known to be on disk
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };

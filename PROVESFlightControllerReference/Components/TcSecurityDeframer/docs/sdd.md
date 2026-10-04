@@ -12,7 +12,7 @@ The component is a thin stateful shell over pure-function namespaces:
 - `Components::validatePacket` (Validator) — SPI validation and anti-replay sequence-number window validation
 - `Components::authenticatePacket` / `importHmacKey` (Authenticator) — HMAC-SHA-256 (truncated to 16 bytes) verification via PSA crypto
 
-The only component state is the last accepted sequence number (an atomic, serialized against `SET_SEQ_NUM` by a mutex, and persisted to file on a 1 Hz rate-group tick -- see [Sequence Number Persistence](#sequence-number-persistence)) and the imported HMAC key id.
+The component state is the last accepted sequence number (an atomic, advanced under a mutex), the persistence bookkeeping (last value known to be on disk, guarded by a second mutex) used to write that counter to file from a rate-group tick -- see [Sequence Number Persistence](#sequence-number-persistence) -- and the imported HMAC key id.
 
 Primary data path connections:
 
@@ -114,16 +114,28 @@ At startup, `configure()` loads the persisted sequence number and telemeters it 
 
 ## Sequence Number Persistence
 
-The last accepted sequence number must survive a reboot so replayed frames stay rejected. Earlier versions wrote the file on every accepted frame; on the SD-card-backed FatFs deployment each write (truncate, write, close) cost several SD block programs on the same 10 Hz thread that drains the UART, stalling reception during file uplink and racing other filesystem users (issues #461, #465, #471). Persistence is now decoupled from frame processing:
+The last accepted sequence number must survive a reboot so replayed frames stay rejected. Earlier versions wrote the file on every accepted frame; on the SD-card-backed FatFs deployment each write (truncate, write, close) cost several SD block programs on the 10 Hz thread that also drains the UART, and interleaved with the other filesystem users (issues #461, #465, #471). Persistence is now decoupled from frame processing. This is a write-behind design, chosen by the project lead over the write-ahead variant of PR #473 because it needs no ground resynchronization after an unplanned reboot; the trade-offs are recorded below.
 
-1. **Read on startup.** `configure()` reads the U32 from `SEQ_NUM_FILE_PATH` into the atomic counter. A missing file is a factory-fresh board: the default (0) is written and commanding proceeds. Any other read failure is evented (`SequenceNumberReadFailed`), the counter falls back to 0, and the first `run` tick rewrites a well-formed file.
-2. **Count and compare with an atomic.** `dataIn` validates against and advances `m_sequenceNumber`, a `std::atomic<U32>`, under `m_sequenceNumberLock` (which only serializes it against `SET_SEQ_NUM`). The handler never touches the filesystem.
-3. **Persist on the 1 Hz rate group.** `run_handler` snapshots the atomic without taking the lock and, if it differs from the last value known to be on disk (`m_persistedSequenceNumber`, valid when `m_persistedValid`), writes it with the existing `writeSequenceNumber`. An idle board therefore performs no writes; a continuous uplink performs at most one write per second instead of one per frame. A failed write is evented (`SequenceNumberWriteFailed`, throttled) and retried on the next tick while the in-memory counter keeps advancing. The port is `sync`, not `guarded`, so the write runs on the rate-group thread and cannot block `dataIn`.
-4. **`SET_SEQ_NUM` persists immediately** (unchanged), then stores the atomic and clears `m_persistedValid` so the next tick re-persists the commanded value, closing the window in which a concurrent `run_handler` write of an older value could land last.
+1. **Read on startup.** `configure()` reads the U32 from `SEQ_NUM_FILE_PATH` into the atomic counter. A missing file is a factory-fresh board: `SequenceNumberReadFailed(DOESNT_EXIST)` is logged, the default (0) is written, and commanding proceeds. Any other read failure is logged the same way, the counter falls back to 0, and the file is left untouched until the counter moves (so an unreadable file is not overwritten preemptively). The restored value becomes the on-disk baseline for step 3.
+2. **Count and compare with an atomic.** `dataIn` validates against and advances `m_sequenceNumber`, a `std::atomic<U32>`, under `m_sequenceNumberLock` (shared with `SET_SEQ_NUM`, `GET_SEQ_NUM` and `configure()`). The handler never touches the filesystem and never takes `m_persistLock`.
+3. **Persist on the rate-group tick.** `run` is driven by `rateGroup1Hz` in the reference deployment. `run_handler` takes `m_persistLock`, reads the atomic, and if it differs from the last value known to be on disk (`m_persistedSequenceNumber`) writes it with the existing `writeSequenceNumber` (`Components::SequencePersistence::needsWrite` / `afterWrite` hold the pure policy). An idle board performs no writes; a continuous uplink performs at most one write per second per instance instead of one per frame. A failed write is logged (`SequenceNumberWriteFailed`, throttled) and retried on the next tick while the in-memory counter keeps advancing. The port is `sync`, not `guarded`, so the write runs on the rate-group thread and cannot block `dataIn`.
+4. **`SET_SEQ_NUM` persists immediately** under both locks (counter lock, then `m_persistLock`), then stores the atomic and records the value as on disk. Because the two filesystem writers share `m_persistLock`, a tick cannot overwrite a commanded value with an older one, and the non-reentrant FatFs volume never sees two concurrent opens of the file from this component. As before this change, `dataIn` waits for the duration of the operator's `SET_SEQ_NUM` write.
 
-**Crash window.** After an unplanned reboot the restored counter may lag the true last accepted value by up to one tick (one second) of accepted frames. With ground strictly ahead, its next sequence number is accepted as long as the lag is smaller than `SEQ_NUM_WINDOW` (default 50000); the UART link bounds the lag to well under 100 frames per second, so no ground resynchronization is needed after a crash (`test_TcSecurityDeframer_Validator.cpp`, `StalePersistedCounterWithinDefaultWindow`). The trade-off is that frames accepted during that final second become replayable once after the reboot; this is accepted in exchange for never desynchronizing ground, and the window can be narrowed by driving `run` from a faster rate group. `make sync-sequence-number` continues to work unchanged because it reads the counter through `GET_SEQ_NUM`.
+**Crash window.** After an unplanned reboot the restored counter lags the true last accepted value by the frames accepted since the last successful tick write: at most one tick (one second at 1 Hz) while writes succeed. Ground's next sequence number is then strictly ahead and well inside `SEQ_NUM_WINDOW` (default 50000; the UART driver drains 64 bytes per 10 Hz tick, so the link carries fewer than 3 frames per second), so no ground resynchronization is needed (`test_TcSecurityDeframer_Validator.cpp`, `StaleCounterLag*` cases pin the bound). Trade-offs of write-behind, accepted by the project lead:
 
-Note that the UART, LoRa, and S-band instances keep independent counters but share the default `SEQ_NUM_FILE_PATH`; this is pre-existing and the last instance to persist wins on reboot.
+- Frames accepted during the final second before the reboot become replayable once after it.
+- A frame that itself causes a reboot (e.g. `COLD_RESET`, `WARM_RESET`, bootloader entry) is persisted only if a tick runs before the reboot takes effect; otherwise it remains replayable after every reboot. See "Known limitations".
+
+**Degraded paths and recovery.** The bound above holds only while the tick write succeeds. If the SD card fails persistently, `SequenceNumberWriteFailed` is logged (throttled after two occurrences) and the lag grows without bound; if the file is torn by a power loss during a write, it reads back as `BAD_SIZE` and the counter restarts at 0. In both cases ground may be outside the window after reboot and every frame is rejected with `SequenceNumberInvalid`. `GET_SEQ_NUM` is on the ProvesRouter bypass allowlist, so `make sync-sequence-number` (which reads the flight counter and moves ground to it) recovers commanding; `SET_SEQ_NUM` is not bypassable and cannot be used while desynchronized.
+
+**Thread budget.** `run` executes on the `rateGroup1Hz` thread next to the other 1 Hz members (filesystem monitors, file downlink, watchdog). A write costs one open/truncate/write/close on the SD card (milliseconds typical, occasionally a longer card pause) at most once per second per instance. With the card absent or failing, the retry runs every tick and pays the SD command timeouts; this is the same exposure the other filesystem users on that thread already have.
+
+**Known limitations (pre-existing unless noted).**
+
+- The UART, LoRa, and S-band instances keep independent counters but share the default `SEQ_NUM_FILE_PATH`; the last instance to persist wins on reboot.
+- The on-disk format is a bare U32 rewritten in place; a torn write is detected only as a short file.
+- Reboot-triggering frames are not flushed before the reboot (new with this design; see Crash window).
+- File uplink throughput remains bounded by the UART driver's 64-byte-per-tick drain; removing the per-frame write removes the SD-card cost and the filesystem interleaving from the frame path, not the driver bound.
 
 ## Parameters
 
@@ -140,7 +152,7 @@ Note that the UART, LoRa, and S-band instances keep independent counters but sha
 | dataReturnIn | Input (sync) | Svc.ComDataWithContext | Receives returned ownership for buffers previously sent through dataOut. |
 | dataOut | Output | Svc.ComDataWithContext | Forwards the stripped frame downstream with the authenticated flag set in the context. |
 | dataReturnOut | Output | Svc.ComDataWithContext | Returns ownership of structurally invalid frames (and relays dataReturnIn ownership upstream). |
-| run | Input (sync) | Svc.Sched | 1 Hz rate-group tick; persists the sequence number to SEQ_NUM_FILE_PATH when it changed since the last successful write. |
+| run | Input (sync) | Svc.Sched | Rate-group tick (1 Hz in the reference deployment); persists the sequence number to SEQ_NUM_FILE_PATH when it changed since the last successful write. |
 
 Standard AC ports are also present for command handling, events, telemetry, parameter access, and time.
 
@@ -148,7 +160,7 @@ Standard AC ports are also present for command handling, events, telemetry, para
 
 | Name | Type | Description |
 |---|---|---|
-| CurrentSequenceNumber | U32 | Current accepted sequence number tracked by the component. Emitted at startup and on each accepted packet (persisted to file on the 1 Hz tick, not per packet). |
+| CurrentSequenceNumber | U32 | Current accepted sequence number tracked by the component. Emitted at startup and on each accepted packet (persisted to file on the run tick, not per packet). |
 
 Routed/bypassed/rejected packet counts are telemetered by ProvesRouter, which owns the accept/reject policy.
 
@@ -159,7 +171,7 @@ Routed/bypassed/rejected packet counts are telemetered by ProvesRouter, which ow
 | SequenceNumberGet | Activity High | seq_num: U32 | Logged by GET_SEQ_NUM on successful read. Format: "Sequence number is {}" |
 | SequenceNumberReadFailed | Warning High (throttle 2) | status: Os.FileStatus | Logged when sequence-number read fails. Format: "Failed to read sequence number, error: {}" |
 | SequenceNumberSet | Activity High | seq_num: U32 | Logged by SET_SEQ_NUM on successful write. Format: "Sequence number set to {}" |
-| SequenceNumberWriteFailed | Warning High (throttle 2) | status: Os.FileStatus | Logged when a sequence-number write fails (1 Hz persist, SET_SEQ_NUM, or cold-provision default). The 1 Hz persist retries on the next tick. Format: "Failed to write sequence number, error: {}" |
+| SequenceNumberWriteFailed | Warning High (throttle 2) | status: Os.FileStatus | Logged when a sequence-number write fails (run-tick persist, SET_SEQ_NUM, or cold-provision default). The run-tick persist retries on the next tick. Format: "Failed to write sequence number, error: {}" |
 | SequenceNumberInvalid | Warning High (throttle 2) | packet_seq_num: U32, seq_num: U32, window: U32 | Logged when anti-replay validation fails. Format: "Sequence number less than last accepted or out of window: Received={}, LastAccepted={}, Window={}" |
 | AuthenticationFailed | Warning High (throttle 2) | auth_status: PacketAuthenticatorStatus, rc: I32 | Logged when MAC verification fails. Format: "Authentication failed: Status={}, PSA Return Code={}" |
 | ParsingFailed | Warning High (throttle 2) | parse_status: PacketParserStatus | Logged when frame parsing fails. Format: "Parsing failed: {}" |
@@ -179,7 +191,8 @@ TcSecurityDeframer helper functionality is covered by unit tests in PROVESFlight
 | Test File | Coverage |
 |---|---|
 | test_TcSecurityDeframer_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, and MAC size checks. |
-| test_TcSecurityDeframer_Validator.cpp | SPI validation, out-of-window and replayed sequence numbers, window boundary, wraparound handling, and acceptance after a one-tick-stale restored counter. |
+| test_TcSecurityDeframer_Validator.cpp | SPI validation, out-of-window and replayed sequence numbers, window boundary, wraparound handling, and the crash-window bound for a stale restored counter (lag below/at/past the window, across wrap, replay of unpersisted frames). |
+| test_TcSecurityDeframer_Persistence.cpp | Persist-on-change policy: idle tick writes nothing, changed counter writes, failed write retries next tick, counter advancing during a failed write. |
 | test_TcSecurityDeframer_Authenticator.cpp | Key import failures, successful MAC verification, and failed verification with corrupted MAC or data. |
 
 Run unit tests with:
@@ -217,7 +230,8 @@ The default authentication key header (AuthDefaultKey.h) is generated at build t
 | AUTH006 | For any parseable frame, the component shall remove the Security Header and Security Trailer and forward the remaining packet data with the verification result recorded in the frame context. | Inspection, Integration Test |
 | AUTH007 | The component shall provide a command and telemetry channel to report the current sequence number to enable ground station synchronization. | Inspection, Integration Test |
 | AUTH008 | The component shall not perform filesystem I/O while processing a frame on dataIn. | Inspection |
-| AUTH008-A | The component shall persist the stored sequence number on the run tick only when it differs from the last successfully persisted value, and shall retry on the next tick after a failed write. | Inspection |
+| AUTH008-A | The component shall persist the stored sequence number on the run tick only when it differs from the last successfully persisted value, and shall retry on the next tick after a failed write. | Unit Test, Inspection |
+| AUTH008-D | Filesystem writes of the sequence number from the run tick and from SET_SEQ_NUM shall be mutually exclusive. | Inspection |
 | AUTH008-B | The sequence number window shall accept ground's next sequence number after a reboot that restored a counter up to one tick stale. | Unit Test |
 | AUTH008-C | SET_SEQ_NUM shall persist the commanded sequence number before acknowledging the command. | Inspection |
 
@@ -229,4 +243,4 @@ Opcode-based bypass policy (formerly AUTH002) is owned by ProvesRouter; see its 
 | --- | --- |
 | 2025-11-26 | Initial design. |
 | 2026-07-17 | Renamed to TcSecurityDeframer, refactor to discrete responsibilities: Authenticator, Parser, Validator. Pass-through interface between TcDeframer and SpacePacketDeframer; verification result carried in frame context; policy enforcement moved to ProvesRouter. |
-| 2026-10-03 | Removed the per-frame sequence-number file write. The counter is an atomic persisted on a new 1 Hz `run` port when changed; `SET_SEQ_NUM` still persists immediately (issues #461, #465, #471). |
+| 2026-10-03 | Removed the per-frame sequence-number file write. The counter is an atomic persisted on a new `run` port (1 Hz in the reference deployment) when changed, with file I/O serialized by `m_persistLock`; `SET_SEQ_NUM` still persists immediately (issues #461, #465, #471; write-behind alternative to PR #473). |

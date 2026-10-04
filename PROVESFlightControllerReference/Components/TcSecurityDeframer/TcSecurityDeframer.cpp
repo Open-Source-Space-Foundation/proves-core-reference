@@ -28,7 +28,7 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0),
       m_persistedSequenceNumber(0),
-      m_persistedValid(false) {}
+      m_hmacKeyId(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -83,11 +83,8 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
                 this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
                 // --- Accept: advance the sequence number ---
-                // Only fully verified frames advance the counter, so bypass and replayed
-                // frames can never desync ground and spacecraft (issue #426). The counter is
-                // persisted by run_handler on the 1 Hz tick, not here: a per-frame SD-card write
-                // on this thread stalled UART reception and raced other filesystem users
-                // (issues #461, #465, #471).
+                // Only fully verified frames advance the counter (issue #426). No filesystem I/O
+                // here: run_handler persists the counter (see SDD, Sequence Number Persistence).
                 const U32 accepted = parseResult.securityHeader.sequenceNumber;
                 this->m_sequenceNumber.store(accepted);
                 this->tlmWrite_CurrentSequenceNumber(accepted);
@@ -119,19 +116,20 @@ void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
 }
 
 void TcSecurityDeframer ::run_handler(FwIndexType portNum, U32 context) {
-    // Snapshot the counter without the lock: it is atomic, and this handler must never make the
-    // frame-processing thread wait on filesystem I/O.
+    // Only m_persistLock is taken here, never m_sequenceNumberLock: the frame-processing thread must not
+    // wait on filesystem I/O. The counter is read under m_persistLock so a concurrent SET_SEQ_NUM (which
+    // updates counter and bookkeeping together) cannot be undone by a stale snapshot.
+    Os::ScopeLock lock(this->m_persistLock);
     const U32 current = this->m_sequenceNumber.load();
-    if (this->m_persistedValid.load() && (current == this->m_persistedSequenceNumber)) {
+    if (!SequencePersistence::needsWrite(this->m_persistedSequenceNumber, current)) {
         return;
     }
 
-    // Changed (or never confirmed on disk): write it. A failure is evented by writeSequenceNumber
-    // and retried on the next tick; the in-memory counter keeps advancing meanwhile.
-    if (this->writeSequenceNumber(current) == Os::File::OP_OK) {
-        this->m_persistedSequenceNumber = current;
-        this->m_persistedValid.store(true);
-    }
+    // A failure is evented by writeSequenceNumber; the bookkeeping is left unchanged so the next
+    // tick retries while the in-memory counter keeps advancing.
+    const bool written = (this->writeSequenceNumber(current) == Os::File::OP_OK);
+    this->m_persistedSequenceNumber =
+        SequencePersistence::afterWrite(this->m_persistedSequenceNumber, current, written);
 }
 
 // ----------------------------------------------------------------------
@@ -150,8 +148,9 @@ void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
 
 void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
+    Os::ScopeLock persistLock(this->m_persistLock);
 
-    // Write the sequence number to the file system
+    // Write the sequence number to the file system immediately
     Os::File::Status status = this->writeSequenceNumber(seq_num);
     if (status != Os::File::OP_OK) {
         // Return execution error response
@@ -159,12 +158,9 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
         return;
     }
 
-    // Set runtime sequence number to the new value
+    // Set runtime sequence number to the new value and record that it is on disk
     this->m_sequenceNumber.store(seq_num);
-
-    // The write above may have interleaved with a concurrent run_handler write of an older value, so
-    // invalidate the persistence bookkeeping: the next 1 Hz tick re-persists the current value.
-    this->m_persistedValid.store(false);
+    this->m_persistedSequenceNumber = seq_num;
 
     // Telemeter the updated sequence number
     this->tlmWrite_CurrentSequenceNumber(seq_num);
@@ -199,10 +195,10 @@ void TcSecurityDeframer ::configure() {
     const Os::File::Status status = this->readSequenceNumber(sequenceNumber);
     this->m_sequenceNumber.store(sequenceNumber);
 
-    // Seed the persistence bookkeeping used by run_handler. If the file could not be read (and was not
-    // freshly created), leave it unconfirmed so the first tick rewrites a well-formed record.
+    // The restored value is the on-disk baseline for run_handler: the file is rewritten only once the
+    // counter moves on, never preemptively (an unreadable file is left as-is until then).
+    static_cast<void>(status);
     this->m_persistedSequenceNumber = sequenceNumber;
-    this->m_persistedValid.store(status == Os::File::OP_OK);
 
     // Telemeter the current sequence number
     this->tlmWrite_CurrentSequenceNumber(sequenceNumber);

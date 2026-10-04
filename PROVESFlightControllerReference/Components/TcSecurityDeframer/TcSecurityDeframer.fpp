@@ -32,12 +32,12 @@ module Components {
         ### Telemetry ###
 
         @ Telemetry for the current sequence number, updated on each successfully authenticated packet.
-        @ The value is persisted to SEQ_NUM_FILE_PATH on the 1 Hz run tick, not per packet.
+        @ The value is persisted to SEQ_NUM_FILE_PATH on the run tick, not per packet.
         telemetry CurrentSequenceNumber : U32
 
         ### Events ###
 
-        @ SequenceNumberGet returns the current sequence number from the file system in response to a command
+        @ SequenceNumberGet returns the current in-memory sequence number in response to a command
         event SequenceNumberGet(seq_num: U32) severity activity high id 6 format "Sequence number is {}"
 
         @SequenceNumberReadFailed indicates that there was an error reading the sequence number from the file system
@@ -83,7 +83,7 @@ module Components {
         @ Port receiving back ownership of buffers sent on dataOut
         sync input port dataReturnIn: Svc.ComDataWithContext
 
-        @ Rate-group tick (1 Hz) that persists the in-memory sequence number to SEQ_NUM_FILE_PATH
+        @ Rate-group tick (1 Hz in the reference deployment) that persists the in-memory sequence number to SEQ_NUM_FILE_PATH
         @ when it has changed since the last successful write. Sync rather than guarded so the
         @ filesystem write never blocks frame processing on dataIn.
         sync input port run: Svc.Sched

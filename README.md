@@ -226,9 +226,7 @@ You can control the specific command lists of the satellite by writing a sequenc
 
 ## Conducting Over the Air Updates
 
-When you run the gds,
-
-``` fprime-gds --file-uplink-cooldown 0.8```
+Run the GDS with the project defaults (`make gds`); `fprime-gds.yml` no longer sets a `file-uplink-cooldown`, since the flight software no longer writes to the SD card for every uplinked frame.
 
 Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the file uplink file
 
