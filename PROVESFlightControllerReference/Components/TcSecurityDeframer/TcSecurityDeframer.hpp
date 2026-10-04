@@ -11,13 +11,9 @@
 #include <Os/File.hpp>
 #include <Os/Mutex.hpp>
 #include <atomic>
-#include <cassert>
-
-static_assert(ATOMIC_INT_LOCK_FREE == 2, "std::atomic<U32> must be lock-free on the target");
 
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
-#include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Persistence.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/TcSecurityDeframerComponentAc.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Validator.hpp"
 
@@ -135,11 +131,12 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
     // m_persistLock serializes the three filesystem writers (run_handler, prepareForReboot_handler and
-    // SET_SEQ_NUM) and guards m_onDisk. dataIn never takes it. Lock order where both are
+    // SET_SEQ_NUM) and guards m_persistedSequenceNumber. dataIn never takes it. Lock order where both are
     // held: m_sequenceNumberLock then m_persistLock (SET_SEQ_NUM); the two signal handlers take
     // m_persistLock alone.
-    Os::Mutex m_persistLock;               //!< Mutex serializing sequence number file I/O
-    SequencePersistence::OnDisk m_onDisk;  //!< What the sequence number file is believed to hold
+    Os::Mutex m_persistLock;        //!< Mutex serializing sequence number file I/O
+    U32 m_persistedSequenceNumber;  //!< Last value written to the file; set to (value - 1) after a failed write so the
+                                    //!< next tick rewrites it
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };

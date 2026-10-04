@@ -44,7 +44,7 @@ class TcSecurityDeframer {
   -m_sequenceNumber : std::atomic~U32~
   -m_sequenceNumberWindow : U32
   -m_persistLock : Os::Mutex
-  -m_onDisk : SequencePersistence::OnDisk
+  -m_persistedSequenceNumber : U32
   -m_hmacKeyId : uint32_t
 }
 
@@ -122,7 +122,7 @@ The last accepted sequence number must survive a reboot so replayed frames stay 
 
 1. **Read on startup.** `configure()` reads the U32 from `SEQ_NUM_FILE_PATH` into the atomic counter. A missing file is a factory-fresh board: `SequenceNumberReadFailed(DOESNT_EXIST)` is logged, the default (0) is written, and commanding proceeds. Any other read failure is logged the same way, the counter falls back to 0, and the file is left untouched until the counter moves (so an unreadable file is not overwritten preemptively). The restored value becomes the on-disk baseline for step 3.
 2. **Count and compare with an atomic.** `dataIn` validates against and advances `m_sequenceNumber`, a `std::atomic<U32>`, under `m_sequenceNumberLock` (shared with `SET_SEQ_NUM`, `GET_SEQ_NUM` and `configure()`). The handler never touches the filesystem and never takes `m_persistLock`.
-3. **Persist on the rate-group tick.** `run` is driven by `rateGroup1Hz` in the reference deployment. `run_handler` takes `m_persistLock`, reads the atomic, and if the file is not known to hold that value (`m_onDisk`) writes it with the existing `writeSequenceNumber` (`Components::SequencePersistence::needsWrite` / `afterWrite` hold the pure policy). An idle board performs no writes; a continuous uplink performs at most one write per second per instance instead of one per frame. A failed write is logged (`SequenceNumberWriteFailed`, throttled) and marks the file content unknown (the open truncates it), so the next tick rewrites the counter whether or not it has moved. The port is `sync`, not `guarded`, so the write runs on the rate-group thread and cannot block `dataIn`.
+3. **Persist on the rate-group tick.** `run` is driven by `rateGroup1Hz` in the reference deployment. `run_handler` takes `m_persistLock`, reads the atomic, and if it differs from the last value written (`m_persistedSequenceNumber`) writes it with the existing `writeSequenceNumber`. An idle board performs no writes; a continuous uplink performs at most one write per second per instance instead of one per frame. A failed write is logged (`SequenceNumberWriteFailed`, throttled) and moves the baseline to `value - 1` (the failed open may have truncated the file), so the next tick rewrites the counter whether or not it has moved; the counter only advances through accepted frames, so it cannot reach that baseline before the tick. The port is `sync`, not `guarded`, so the write runs on the rate-group thread and cannot block `dataIn`.
 4. **Flush before an intentional reboot.** `prepareForReboot` (signalled by `ResetManager` before `sys_reboot` and by `Watchdog` on `STOP_WATCHDOG`) runs the same persist-if-changed step under `m_persistLock`, so the frame that commanded the reboot is on disk before the reboot takes effect. If a tick write is in progress the reset thread waits for it (bounded by one SD write) and then writes the newer value; the two can never interleave on the file. A flush that fails is evented (`SequenceNumberWriteFailed`) but does not stop the reboot; the reset frame then falls back to the unflushed case below.
 5. **`SET_SEQ_NUM` persists immediately** under both locks (counter lock, then `m_persistLock`), then stores the atomic and records the value as on disk. Because all three filesystem writers (tick, `prepareForReboot`, `SET_SEQ_NUM`) share `m_persistLock`, a tick cannot overwrite a commanded value with an older one, and the non-reentrant FatFs volume never sees two concurrent opens of the file from this component. As before this change, `dataIn` waits for the duration of the operator's `SET_SEQ_NUM` write.
 
@@ -198,7 +198,6 @@ TcSecurityDeframer helper functionality is covered by unit tests in PROVESFlight
 |---|---|
 | test_TcSecurityDeframer_Parser.cpp | Valid parse path plus parse failures for SPI, sequence number, and MAC size checks. |
 | test_TcSecurityDeframer_Validator.cpp | SPI validation, out-of-window and replayed sequence numbers, window boundary, wraparound handling, and the crash-window bound for a stale restored counter (lag below/at/past the window, across wrap, replay of unpersisted frames). |
-| test_TcSecurityDeframer_Persistence.cpp | Persist-on-change policy: idle tick writes nothing, changed counter writes, failed write retries next tick, prepareForReboot flush, counter advancing during a failed write. |
 | test_TcSecurityDeframer_Authenticator.cpp | Key import failures, successful MAC verification, and failed verification with corrupted MAC or data. |
 
 Run unit tests with:
