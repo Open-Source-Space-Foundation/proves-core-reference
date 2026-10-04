@@ -12,7 +12,10 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
-pytestmark = [pytest.mark.requires_face]
+# requires_battery as well as requires_face: the assertion compares INA219 system
+# power before and during the magnetorquer pulse, and on an unpowered bench that
+# rail reads 0.0 W in both samples.
+pytestmark = [pytest.mark.requires_face, pytest.mark.requires_battery]
 
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
 ina219SysManager = "ReferenceDeployment.ina219SysManager"

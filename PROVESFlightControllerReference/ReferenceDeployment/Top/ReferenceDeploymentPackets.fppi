@@ -171,6 +171,10 @@ telemetry packets ReferenceDeploymentPackets {
 
     amateurRadio.count_names
 
+    #ComCcsdsSband.tcSecurityDeframer.ActiveKeyCount
+    ComCcsdsLora.tcSecurityDeframer.ActiveKeyCount
+    ComCcsdsUart.tcSecurityDeframer.ActiveKeyCount
+
   }
 
   packet DetumblePerformance id 16 group 5 {

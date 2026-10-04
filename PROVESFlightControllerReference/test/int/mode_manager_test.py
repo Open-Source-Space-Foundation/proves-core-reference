@@ -543,6 +543,10 @@ def test_safe_08_clean_reboot_no_safe_mode(
 
 @pytest.mark.slow
 @pytest.mark.uart_only(reason="Requires reboot and GDS reconnect")
+# The reboot half of this test is a hardware power cycle driven by the watchdog,
+# so with JP6 open the boot count never increments even though the command-loss
+# detection and SAFE_MODE entry it also asserts both work.
+@pytest.mark.requires_watchdog_jumper
 def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
