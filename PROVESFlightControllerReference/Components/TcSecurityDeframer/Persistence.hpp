@@ -11,20 +11,25 @@
 namespace Components {
 namespace SequencePersistence {
 
-//! Whether the on-disk value must be rewritten on this tick
-inline bool needsWrite(uint32_t persisted,  //!< Last value known to be on disk
-                       uint32_t current     //!< Current in-memory counter
+//! What the component believes the sequence number file holds
+struct OnDisk {
+    bool known;      //!< False after a failed write: the open truncates the file, so its content is unknown
+    uint32_t value;  //!< Value on disk when known
+};
+
+//! Whether the file must be rewritten on this tick: always after a failed write, otherwise only when
+//! the counter moved
+inline bool needsWrite(const OnDisk& onDisk,  //!< Current belief about the file
+                       uint32_t current       //!< Current in-memory counter
 ) {
-    return persisted != current;
+    return (!onDisk.known) || (onDisk.value != current);
 }
 
-//! The on-disk belief after a write attempt: a failed write leaves the previous belief standing so the
-//! next tick retries
-inline uint32_t afterWrite(uint32_t persisted,  //!< Last value known to be on disk before the attempt
-                           uint32_t written,    //!< Value that was written
-                           bool writeOk         //!< Whether the write succeeded
+//! The belief after a write attempt
+inline OnDisk afterWrite(uint32_t written,  //!< Value that was written
+                         bool writeOk       //!< Whether the write succeeded
 ) {
-    return writeOk ? written : persisted;
+    return OnDisk{writeOk, written};
 }
 
 }  // namespace SequencePersistence

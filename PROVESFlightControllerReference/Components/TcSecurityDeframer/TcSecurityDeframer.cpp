@@ -27,7 +27,7 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
       m_sequenceNumberWindow(0),
-      m_persistedSequenceNumber(0),
+      m_onDisk{true, 0},
       m_hmacKeyId(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
@@ -144,16 +144,18 @@ void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     Os::ScopeLock persistLock(this->m_persistLock);
 
     // Write the sequence number to the file system immediately
-    Os::File::Status status = this->writeSequenceNumber(seq_num);
-    if (status != Os::File::OP_OK) {
+    const bool written = (this->writeSequenceNumber(seq_num) == Os::File::OP_OK);
+    // A failed write may have truncated the file; recording the attempt makes the next tick rewrite the
+    // (unchanged) in-memory counter rather than trusting a value that is no longer there
+    this->m_onDisk = SequencePersistence::afterWrite(seq_num, written);
+    if (!written) {
         // Return execution error response
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
 
-    // Set runtime sequence number to the new value and record that it is on disk
+    // Set runtime sequence number to the new value; it is now on disk
     this->m_sequenceNumber.store(seq_num);
-    this->m_persistedSequenceNumber = seq_num;
 
     // Telemeter the updated sequence number
     this->tlmWrite_CurrentSequenceNumber(seq_num);
@@ -191,7 +193,7 @@ void TcSecurityDeframer ::configure() {
     // The restored value is the on-disk baseline for run_handler: the file is rewritten only once the
     // counter moves on, never preemptively (an unreadable file is left as-is until then).
     static_cast<void>(status);
-    this->m_persistedSequenceNumber = sequenceNumber;
+    this->m_onDisk = SequencePersistence::OnDisk{true, sequenceNumber};
 
     // Telemeter the current sequence number
     this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
@@ -244,15 +246,14 @@ void TcSecurityDeframer ::persistIfChanged() {
     // callers (run tick, prepareForReboot) cannot write the file concurrently.
     Os::ScopeLock lock(this->m_persistLock);
     const U32 current = this->m_sequenceNumber.load();
-    if (!SequencePersistence::needsWrite(this->m_persistedSequenceNumber, current)) {
+    if (!SequencePersistence::needsWrite(this->m_onDisk, current)) {
         return;
     }
 
-    // A failure is evented by writeSequenceNumber; the bookkeeping is left unchanged so the next
+    // A failure is evented by writeSequenceNumber and leaves the file content unknown, so the next
     // call retries while the in-memory counter keeps advancing.
     const bool written = (this->writeSequenceNumber(current) == Os::File::OP_OK);
-    this->m_persistedSequenceNumber =
-        SequencePersistence::afterWrite(this->m_persistedSequenceNumber, current, written);
+    this->m_onDisk = SequencePersistence::afterWrite(current, written);
 }
 
 }  // namespace Components

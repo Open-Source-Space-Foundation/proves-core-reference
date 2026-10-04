@@ -474,7 +474,8 @@ module ReferenceDeployment {
 
       # Clean shutdown notification from ResetManager and Watchdog: ModeManager records the
       # intentional reboot; the TcSecurityDeframer instances flush the anti-replay sequence number
-      # so the frame that commanded the reboot cannot be replayed after it.
+      # so the frame that commanded the reboot cannot be replayed after it. Enabling the S-band
+      # lines also requires widening both prepareForReboot output arrays from [3] to [4].
       resetManager.prepareForReboot[0] -> modeManager.prepareForReboot
       resetManager.prepareForReboot[1] -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
       resetManager.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot

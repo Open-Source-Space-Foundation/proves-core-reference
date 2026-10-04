@@ -134,11 +134,12 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     std::atomic<U32> m_sequenceNumber;    //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
 
-    // m_persistLock serializes the two filesystem writers (run_handler and SET_SEQ_NUM) and guards
-    // m_persistedSequenceNumber. dataIn never takes it. Lock order where both are held: m_sequenceNumberLock
-    // then m_persistLock (SET_SEQ_NUM); run_handler takes m_persistLock alone.
-    Os::Mutex m_persistLock;        //!< Mutex serializing sequence number file I/O
-    U32 m_persistedSequenceNumber;  //!< Last sequence number known to be on disk
+    // m_persistLock serializes the three filesystem writers (run_handler, prepareForReboot_handler and
+    // SET_SEQ_NUM) and guards m_onDisk. dataIn never takes it. Lock order where both are
+    // held: m_sequenceNumberLock then m_persistLock (SET_SEQ_NUM); the two signal handlers take
+    // m_persistLock alone.
+    Os::Mutex m_persistLock;               //!< Mutex serializing sequence number file I/O
+    SequencePersistence::OnDisk m_onDisk;  //!< What the sequence number file is believed to hold
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
