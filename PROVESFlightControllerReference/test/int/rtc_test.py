@@ -539,6 +539,7 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
         )
+        # start=0 searches history from the beginning; the event can arrive before this call
         fprime_test_api.assert_event(
             f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
         )
@@ -552,34 +553,44 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
         )
 
 
+MAX_CORRECTION_US = 2000
+TLM_DIVIDER_DEFAULT = 29
+
+
 @pytest.mark.uart_only(
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that TimeCorrectionUs is small and no TimeStepped event occurs after TIME_SET"""
     try:
+        # DIVIDER 0 downlinks the Timing packet every second
         proves_send_and_assert_command(
             fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [0]
         )
 
-        set_time(fprime_test_api)
-
-        # Skip the first correction after TIME_SET (SDD "Limits")
-        time.sleep(1.5)
-        fprime_test_api.clear_histories()
-        time.sleep(3.5)
+        set_dt = datetime.now(timezone.utc).replace(microsecond=0)
+        set_time(fprime_test_api, set_dt)
+        time.sleep(5)
 
         results = fprime_test_api.assert_telemetry_count(
-            greater_than_or_equal_to(2),
+            greater_than_or_equal_to(3),
             channels=f"{rtcManager}.TimeCorrectionUs",
             start=0,
             timeout=5,
         )
 
-        for result in results:
+        # Skip the first correction after TIME_SET (~-3 ms, SDD "Limits")
+        skip_until = set_dt.timestamp() + 1.5
+        steady = [
+            r
+            for r in results
+            if r.get_time().seconds + r.get_time().useconds / 1e6 > skip_until
+        ]
+        assert len(steady) >= 2, f"Only {len(steady)} steady-state samples"
+        for result in steady:
             correction_us = result.get_val()
-            assert abs(correction_us) < 2000, (
-                f"TimeCorrectionUs {correction_us} should be < 2000 us"
+            assert abs(correction_us) < MAX_CORRECTION_US, (
+                f"TimeCorrectionUs {correction_us} should be < {MAX_CORRECTION_US} us"
             )
 
         fprime_test_api.assert_event_count(
@@ -587,5 +598,7 @@ def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start
         )
     finally:
         proves_send_and_assert_command(
-            fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [29]
+            fprime_test_api,
+            "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET",
+            [TLM_DIVIDER_DEFAULT],
         )

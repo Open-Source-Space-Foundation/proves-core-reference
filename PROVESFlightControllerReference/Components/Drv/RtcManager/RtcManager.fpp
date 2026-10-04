@@ -156,7 +156,7 @@ module Drv {
         @ TimeStepped event indicates that a correction of more than 100 ms was applied as a step
         event TimeStepped(
             correction_us: I64 @< The correction applied, in microseconds
-        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5
+        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5 every {seconds = 60}
 
         @ DisciplineReadFailed event indicates that an update callback RTC read failed. The time offset does not change
         event DisciplineReadFailed(
