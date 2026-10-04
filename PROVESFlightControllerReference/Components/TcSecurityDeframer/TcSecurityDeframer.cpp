@@ -116,20 +116,13 @@ void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
 }
 
 void TcSecurityDeframer ::run_handler(FwIndexType portNum, U32 context) {
-    // Only m_persistLock is taken here, never m_sequenceNumberLock: the frame-processing thread must not
-    // wait on filesystem I/O. The counter is read under m_persistLock so a concurrent SET_SEQ_NUM (which
-    // updates counter and bookkeeping together) cannot be undone by a stale snapshot.
-    Os::ScopeLock lock(this->m_persistLock);
-    const U32 current = this->m_sequenceNumber.load();
-    if (!SequencePersistence::needsWrite(this->m_persistedSequenceNumber, current)) {
-        return;
-    }
+    this->persistIfChanged();
+}
 
-    // A failure is evented by writeSequenceNumber; the bookkeeping is left unchanged so the next
-    // tick retries while the in-memory counter keeps advancing.
-    const bool written = (this->writeSequenceNumber(current) == Os::File::OP_OK);
-    this->m_persistedSequenceNumber =
-        SequencePersistence::afterWrite(this->m_persistedSequenceNumber, current, written);
+void TcSecurityDeframer ::prepareForReboot_handler(FwIndexType portNum) {
+    // The frame that commanded this reboot advanced the counter microseconds ago; without this flush it
+    // would still be valid after the reboot. The write is serialized against a tick write in progress.
+    this->persistIfChanged();
 }
 
 // ----------------------------------------------------------------------
@@ -242,6 +235,24 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     }
 
     return status;
+}
+
+void TcSecurityDeframer ::persistIfChanged() {
+    // Only m_persistLock is taken here, never m_sequenceNumberLock: the frame-processing thread must not
+    // wait on filesystem I/O. The counter is read under m_persistLock so a concurrent SET_SEQ_NUM (which
+    // updates counter and bookkeeping together) cannot be undone by a stale snapshot, and the two
+    // callers (run tick, prepareForReboot) cannot write the file concurrently.
+    Os::ScopeLock lock(this->m_persistLock);
+    const U32 current = this->m_sequenceNumber.load();
+    if (!SequencePersistence::needsWrite(this->m_persistedSequenceNumber, current)) {
+        return;
+    }
+
+    // A failure is evented by writeSequenceNumber; the bookkeeping is left unchanged so the next
+    // call retries while the in-memory counter keeps advancing.
+    const bool written = (this->writeSequenceNumber(current) == Os::File::OP_OK);
+    this->m_persistedSequenceNumber =
+        SequencePersistence::afterWrite(this->m_persistedSequenceNumber, current, written);
 }
 
 }  // namespace Components

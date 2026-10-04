@@ -71,6 +71,13 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                      U32 context           //!< The call order
                      ) override;
 
+    //! Handler implementation for prepareForReboot
+    //!
+    //! Flushes the in-memory sequence number to SEQ_NUM_FILE_PATH before an intentional reboot, under
+    //! m_persistLock so it cannot interleave with a run tick or SET_SEQ_NUM write.
+    void prepareForReboot_handler(FwIndexType portNum  //!< The port number
+                                  ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -109,6 +116,10 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     //! Writes the sequence number to the specified file path
     Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
     );
+
+    //! Persists the in-memory sequence number if it differs from the value known to be on disk.
+    //! Takes m_persistLock only; never m_sequenceNumberLock.
+    void persistIfChanged();
 
   private:
     // ----------------------------------------------------------------------

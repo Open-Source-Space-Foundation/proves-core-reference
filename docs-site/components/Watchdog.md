@@ -36,6 +36,7 @@ Port Data Type | Name | Direction | Kind | Usage
 [`Svc::Sched`]| run | Input | Synchronous | Receive periodic calls from rate group
 [`Fw::Signal`]| start | Input | Synchronous | Receive start signal to start watchdog
 [`Fw::Signal`]| stop | Input | Synchronous | Receive stop signal to stop watchdog
+[`Fw::Signal`]| prepareForReboot | Output [3] | n/a | Signalled by STOP_WATCHDOG before the watchdog is allowed to expire so connected components persist state (ModeManager clean-shutdown flag, TcSecurityDeframer sequence number)
 [`Drv::GpioWrite`]| gpioSet | Output | n/a | Control GPIO state through driver
 
 #### 3.1.3 Commands

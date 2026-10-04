@@ -88,6 +88,10 @@ module Components {
         @ filesystem write never blocks frame processing on dataIn.
         sync input port run: Svc.Sched
 
+        @ Signalled by ResetManager/Watchdog before an intentional reboot. Flushes the in-memory sequence
+        @ number to SEQ_NUM_FILE_PATH so the frame that commanded the reboot is not replayable after it.
+        sync input port prepareForReboot: Fw.Signal
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################

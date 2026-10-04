@@ -56,11 +56,7 @@ void ResetManager ::handleColdReset() {
     // Log the cold reset event
     this->log_ACTIVITY_HI_INITIATE_COLD_RESET();
 
-    // Notify ModeManager to set clean shutdown flag before rebooting
-    // This allows ModeManager to detect unintended reboots on next startup
-    if (this->isConnected_prepareForReboot_OutputPort(0)) {
-        this->prepareForReboot_out(0);
-    }
+    this->notifyPrepareForReboot();
 
     sys_reboot(SYS_REBOOT_COLD);
 }
@@ -69,13 +65,19 @@ void ResetManager ::handleWarmReset() {
     // Log the warm reset event
     this->log_ACTIVITY_HI_INITIATE_WARM_RESET();
 
-    // Notify ModeManager to set clean shutdown flag before rebooting
-    // This allows ModeManager to detect unintended reboots on next startup
-    if (this->isConnected_prepareForReboot_OutputPort(0)) {
-        this->prepareForReboot_out(0);
-    }
+    this->notifyPrepareForReboot();
 
     sys_reboot(SYS_REBOOT_WARM);
+}
+
+void ResetManager ::notifyPrepareForReboot() {
+    // Let connected components persist state (ModeManager clean-shutdown flag, TcSecurityDeframer
+    // sequence number) before the reboot takes effect
+    for (FwIndexType port = 0; port < this->getNum_prepareForReboot_OutputPorts(); port++) {
+        if (this->isConnected_prepareForReboot_OutputPort(port)) {
+            this->prepareForReboot_out(port);
+        }
+    }
 }
 
 }  // namespace Components
