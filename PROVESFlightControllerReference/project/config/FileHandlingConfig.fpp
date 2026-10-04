@@ -3,7 +3,10 @@ module FileHandlingConfig {
     constant BASE_ID = 0x05000000
 
     module QueueSizes {
-        constant fileUplink    = 10
+        # issue #471: must hold the entire comms buffer pool (25 = commsBuffCount
+        # + commsFileBuffCount in ComCcsdsConfig); an SD stall queues every
+        # in-flight buffer here and queue-full is an FW_ASSERT (FATAL).
+        constant fileUplink    = 30
         constant fileDownlink  = 10
         constant fileManager   = 10
         constant prmDb         = 10
