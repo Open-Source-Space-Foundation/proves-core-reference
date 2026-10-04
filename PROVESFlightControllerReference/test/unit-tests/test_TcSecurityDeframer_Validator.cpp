@@ -62,3 +62,15 @@ TEST(PacketValidatorTest, SequenceNumberAtWindowBoundary) {
     auto res = validatePacket(h, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::Valid);
 }
+
+TEST(PacketValidatorTest, StalePersistedCounterWithinDefaultWindow) {
+    // The flight counter is persisted on a 1 Hz tick, so after an unplanned reboot the restored value
+    // may lag the last accepted sequence number by up to one second of uplink traffic. Ground's next
+    // sequence number must still be strictly ahead of the stale value and inside the default window.
+    const uint32_t stalePersisted = 1000u;
+    const uint32_t defaultWindow = 50000u;    // SEQ_NUM_WINDOW default in TcSecurityDeframer.fpp
+    const uint32_t maxFramesPerSecond = 60u;  // > 115200 baud / ~230-byte TC frames
+    Header h{0u, stalePersisted + maxFramesPerSecond + 1u};
+    auto res = validatePacket(h, stalePersisted, defaultWindow);
+    EXPECT_EQ(res, PacketValidator::Status::Valid);
+}

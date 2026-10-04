@@ -301,6 +301,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsUart.tcSecurityDeframer.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> ComCcsdsLora.tcSecurityDeframer.run
+      #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
 
     }
 

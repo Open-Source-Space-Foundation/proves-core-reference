@@ -58,6 +58,15 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                               const ComCfg::FrameContext& context  //!< The frame context
                               ) override;
 
+    //! Handler implementation for run
+    //!
+    //! Rate-group tick (1 Hz). Persists the in-memory sequence number to SEQ_NUM_FILE_PATH when it
+    //! differs from the last value known to be on disk. Runs on the rate-group thread without taking
+    //! m_sequenceNumberLock so the filesystem write never delays dataIn.
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -102,12 +111,18 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    // Sequence number state is coupled between in-memory runtime state and on-disk persistent storage
-    // they are protected by the same mutex to ensure atomicity of updates across both mediums
-    Os::Mutex m_sequenceNumberLock;       //!< Mutex protecting sequence number state atomicity
+    // The lock serializes validate-and-advance in dataIn against SET_SEQ_NUM. The counter itself is atomic
+    // so run_handler can snapshot it for persistence without the lock, keeping SD-card I/O off the
+    // frame-processing thread.
+    Os::Mutex m_sequenceNumberLock;       //!< Mutex serializing sequence number validate-and-advance
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
-    U32 m_sequenceNumber;                 //!< The current sequence number
+    std::atomic<U32> m_sequenceNumber;    //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
+
+    // Persistence bookkeeping. m_persistedSequenceNumber is owned by run_handler (and configure(), which runs
+    // before the rate group starts); other threads only clear m_persistedValid to force a re-persist.
+    U32 m_persistedSequenceNumber;       //!< Last sequence number known to be on disk
+    std::atomic<bool> m_persistedValid;  //!< True when m_persistedSequenceNumber reflects the file contents
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };
