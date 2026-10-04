@@ -8,13 +8,13 @@ module Components {
     passive component LoadSwitch {
 
         @ Command to turn the load switch on
-        sync command TURN_ON()
+        guarded command TURN_ON()
 
         @ Command to turn the load switch off
-        sync command TURN_OFF()
+        guarded command TURN_OFF()
 
         @ Command to get load switch state
-        sync command GET_IS_ON()
+        guarded command GET_IS_ON()
 
         @ Telemetry channel for load switch state
         telemetry IsOn: Fw.On
@@ -35,10 +35,10 @@ module Components {
         output port loadSwitchStateChanged: [3] loadSwitchStateChanged
 
         @ Input port to turn on the load switch (called by other components)
-        sync input port turnOn: Fw.Signal
+        guarded input port turnOn: Fw.Signal
 
         @ Input port to turn off the load switch (called by other components)
-        sync input port turnOff: Fw.Signal
+        guarded input port turnOff: Fw.Signal
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

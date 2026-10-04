@@ -1,32 +1,34 @@
 module Drv {
-    @ Watches an I2C bus for a target holding SDA/SCL low and recovers it by
-    @ resetting the TCA954x mux and clocking SCL (9 clocks + STOP)
+    @ Recovers an I2C bus that a target holds low. See docs/sdd.md.
     passive component I2cBusMonitor {
 
         #### Ports ####
-        @ Rate group tick: sample SDA/SCL and recover the bus if a line is stuck low
+        @ 1 Hz poll: recover the bus if a line reads low
         sync input port run: Svc.Sched
 
         #### Commands ####
-        @ Force a bus recovery (mux reset + 9 SCL clocks + STOP) even if the lines read idle
+        @ Recover the bus even if both lines read high
         sync command RECOVER_BUS()
 
         #### Telemetry ####
-        @ Number of recoveries that found a stuck bus and released it
+        @ Recoveries that left both lines high
         telemetry RecoveryCount: U32
 
-        @ Number of recovery attempts that left a line stuck low
+        @ Recoveries that left a line low
         telemetry RecoveryFailureCount: U32
 
         #### Events ####
-        @ A line was low while no transfer was in flight
+        @ A line was low with no transfer in progress
         event BusStuck(sda: U8, scl: U8) severity warning high format "I2C bus stuck (SDA={}, SCL={}), recovering" throttle 5
 
-        @ The bus was recovered
-        event BusRecovered(sda: U8, scl: U8) severity activity high format "I2C bus recovered (SDA={}, SCL={})"
+        @ Recovery left both lines high
+        event BusRecovered() severity activity high format "I2C bus recovered" throttle 5
 
-        @ The bus is still stuck after recovery
+        @ Recovery left a line low or returned an error
         event BusRecoveryFailed(ret: I32, sda: U8, scl: U8) severity warning high format "I2C bus recovery failed with return code {} (SDA={}, SCL={})" throttle 5
+
+        @ The 1 Hz poll limits the rate of automatic recovery
+        event AutoRecoveryBackOff(recoveries: U32, interval: U32) severity warning high format "{} I2C bus recoveries without a clean bus, auto recovery limited to one every {} s"
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

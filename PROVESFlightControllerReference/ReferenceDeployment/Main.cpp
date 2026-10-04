@@ -61,7 +61,7 @@ const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 const struct device* die_temp = DEVICE_DT_GET(DT_NODELABEL(die_temp));
 
-// I2C0 bus recovery: pins, mux reset and the controller's pinctrl (defined by the i2c_dw driver)
+// I2C0 pins, mux reset and controller pinctrl for I2cBusMonitor
 extern "C" {
 PINCTRL_DT_DEV_CONFIG_DECLARE(DT_NODELABEL(i2c0));
 }
