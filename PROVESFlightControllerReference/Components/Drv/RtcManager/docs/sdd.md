@@ -134,7 +134,7 @@ This logic applies both when using the RTC (`TB_SC_TIME`) and when in failover m
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
 | RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
 | RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
-| RtcManager-019 | A stale alarm flag is cleared at init, on `ALARM_SET`, and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (see [Manual Test: Stale Alarm Flag](#manual-test-stale-alarm-flag)) |
+| RtcManager-019 | A stale alarm flag is cleared at init, on `ALARM_SET`, and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (procedure in the PR #524 description) |
 | RtcManager-020 | `ALARM_CANCEL` does not emit `AlarmTriggered`. A triggered alarm emits `AlarmTriggered` one time | Integration test |
 
 
@@ -570,17 +570,6 @@ sequenceDiagram
     RTC Manager->>Event Log: Emit alarmNotSet event
     RTC Manager-->>Ground Station: Command response OK
 ```
-
-## Manual Test: Stale Alarm Flag
-
-This procedure verifies RtcManager-019. Do not remove power from the board during the procedure. The RV3028 must keep `AF`.
-
-1. Flash a build that has the faulty alarm interrupt path (for example `main` before this change).
-2. Send `ALARM_SET` for the next minute. Wait until that minute is past. `AF` is now set and was not serviced.
-3. Send `ALARM_CANCEL`. On the faulty build, this disables the alarm but does not clear `AF`.
-4. Flash the build under test. Do not remove power.
-5. Send `ALARM_SET` for the next minute.
-6. Pass: no `AlarmTriggered` event before the alarm minute. `AlarmTriggered` occurs within 1 s after the alarm minute starts.
 
 ## Change Log
 
