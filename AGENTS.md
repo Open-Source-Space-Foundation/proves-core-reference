@@ -603,3 +603,17 @@ These instructions are comprehensive and validated. **Only search for additional
 - You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `open-source-space-foundation/proves-core-reference` (always pass `-R`; this clone has several remotes). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root (created lazily). See `docs/agents/domain.md`.
