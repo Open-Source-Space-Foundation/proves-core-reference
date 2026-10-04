@@ -9,8 +9,13 @@ using Drv::TimeDiscipline;
 using Correction = Drv::TimeDiscipline::Correction;
 
 namespace {
-constexpr std::int64_t US_PER_S = 1000000;
+constexpr std::int64_t US_PER_S = TimeDiscipline::US_PER_S;
 constexpr std::int64_t STEP_US = TimeDiscipline::STEP_THRESHOLD_US;
+
+//! Uptime at the n-th edge after seed(rtc, 0) that gives correction c
+std::int64_t uptimeFor(std::int64_t n, std::int64_t c) {
+    return n * US_PER_S - c;
+}
 
 //! Reported time in microseconds at uptime_us; checks the microseconds field is below one million
 std::int64_t reportedUs(TimeDiscipline& td, std::int64_t uptime_us) {
@@ -45,15 +50,14 @@ TEST(TimeDisciplineTest, CorrectBeforeSeedSeeds) {
 }
 
 TEST(TimeDisciplineTest, ThresholdBoundary) {
-    // A correction c at rtc_s 1001 is made by calling correct() at uptime 1 s - c
     for (const std::int64_t c : {-STEP_US, -STEP_US - 1, STEP_US, STEP_US + 1}) {
         TimeDiscipline td;
         td.seed(1000, 0);
-        const std::int64_t before = reportedUs(td, US_PER_S - c);
-        auto r = td.correct(1001, US_PER_S - c);
+        const std::int64_t before = reportedUs(td, uptimeFor(1, c));
+        auto r = td.correct(1001, uptimeFor(1, c));
         EXPECT_EQ(r.kind, (c >= -STEP_US && c <= STEP_US) ? Correction::APPLIED : Correction::REJECTED) << c;
         EXPECT_EQ(r.correction_us, c);
-        EXPECT_GE(reportedUs(td, US_PER_S - c), before) << c;
+        EXPECT_GE(reportedUs(td, uptimeFor(1, c)), before) << c;
     }
 }
 
@@ -61,12 +65,12 @@ TEST(TimeDisciplineTest, TwoConsistentLargeCorrectionsStep) {
     for (const std::int64_t c : {600000, -1050000}) {
         TimeDiscipline td;
         td.seed(1000, 0);
-        EXPECT_EQ(td.correct(1001, US_PER_S - c).kind, Correction::REJECTED) << c;
-        const std::int64_t before = reportedUs(td, 2 * US_PER_S - c);
-        auto r = td.correct(1002, 2 * US_PER_S - c);
+        EXPECT_EQ(td.correct(1001, uptimeFor(1, c)).kind, Correction::REJECTED) << c;
+        const std::int64_t before = reportedUs(td, uptimeFor(2, c));
+        auto r = td.correct(1002, uptimeFor(2, c));
         EXPECT_EQ(r.kind, Correction::STEPPED) << c;
         EXPECT_EQ(r.correction_us, c);
-        EXPECT_EQ(reportedUs(td, 2 * US_PER_S - c) - before, c);
+        EXPECT_EQ(reportedUs(td, uptimeFor(2, c)) - before, c);
     }
 }
 
@@ -94,9 +98,9 @@ TEST(TimeDisciplineTest, StaleSampleIsIgnored) {
 TEST(TimeDisciplineTest, DuplicateOfPendingSampleDoesNotConfirm) {
     TimeDiscipline td;
     td.seed(1000, 0);
-    EXPECT_EQ(td.correct(1001, 400000).kind, Correction::REJECTED);
-    EXPECT_EQ(td.correct(1001, 402000).kind, Correction::REJECTED);
-    EXPECT_EQ(td.correct(1002, 1400000).kind, Correction::STEPPED);
+    EXPECT_EQ(td.correct(1001, 400000).kind, Correction::REJECTED);  // +600 ms
+    EXPECT_EQ(td.correct(1001, 402000).kind, Correction::REJECTED);  // +598 ms, same rtc_s
+    EXPECT_EQ(td.correct(1002, 1400000).kind, Correction::STEPPED);  // +600 ms
 }
 
 TEST(TimeDisciplineTest, SingleLateCallbackIsRejected) {
@@ -116,6 +120,7 @@ TEST(TimeDisciplineTest, SeedResetsPendingCount) {
     td.seed(1000, 0);
     EXPECT_EQ(td.correct(1001, US_PER_S + 150000).kind, Correction::REJECTED);
     td.seed(2000, US_PER_S);
+    // Would be STEPPED if seed() kept the pending count
     EXPECT_EQ(td.correct(2001, 2 * US_PER_S + 150000).kind, Correction::REJECTED);
 }
 
@@ -151,14 +156,14 @@ TEST(TimeDisciplineTest, MonotonicAndBoundedUnderRandomInterleaving) {
     td.seed(0, 0);
     std::mt19937 rng(42);
     std::uniform_int_distribution<std::int64_t> delay_dist(0, STEP_US);
-    std::uniform_int_distribution<std::int64_t> step_dist(0, 200000);
+    std::uniform_int_distribution<std::int64_t> read_gap_dist(0, 200000);
 
     std::int64_t uptime = 0;
     std::int64_t edge_s = 1;
     std::int64_t callback_us = US_PER_S + delay_dist(rng);
     std::int64_t last_reported = 0;
     for (int i = 0; i < 1000000; ++i) {
-        uptime += step_dist(rng);
+        uptime += read_gap_dist(rng);
         if (uptime >= callback_us) {
             ASSERT_NE(td.correct(edge_s, callback_us).kind, Correction::STEPPED);
             ++edge_s;

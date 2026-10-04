@@ -22,6 +22,9 @@ class TimeDiscipline {
     //! Sequential consistent corrections beyond STEP_THRESHOLD_US needed to apply a step
     static constexpr int STEP_CONFIRMATIONS = 2;
 
+    //! Microseconds per second
+    static constexpr std::int64_t US_PER_S = 1000000;
+
     //! Earliest RTC seconds the RV3028 can represent: 2000-01-01T00:00:00Z
     static constexpr std::int64_t RTC_MIN_S = 946684800;
 
@@ -54,8 +57,8 @@ class TimeDiscipline {
               std::int64_t uptime_us);  //!< Uptime in microseconds at the seed
 
     //! Apply an RTC second-edge correction. Seeds and returns {APPLIED, 0} if not yet seeded
-    CorrectionResult correct(std::int64_t rtc_s,               //!< RTC seconds read at the edge
-                             std::int64_t uptime_us_at_edge);  //!< Uptime in microseconds at the edge
+    CorrectionResult correct(std::int64_t rtc_s,       //!< RTC seconds read at the edge
+                             std::int64_t uptime_us);  //!< Uptime in microseconds sampled by the callback
 
     //! Read the current disciplined time. Returns false if not yet seeded
     bool read(std::int64_t uptime_us,    //!< Uptime in microseconds
@@ -67,7 +70,7 @@ class TimeDiscipline {
     // Private member variables
     // ----------------------------------------------------------------------
 
-    bool m_disciplined = false;                //!< True once a seed has occurred
+    bool m_seeded = false;                     //!< True once a seed has occurred
     std::int64_t m_offset_us = 0;              //!< RTC time minus uptime, in microseconds
     std::int64_t m_last_reported_us = 0;       //!< Last reported time, in microseconds, for monotonicity
     std::int64_t m_last_rtc_s = 0;             //!< RTC seconds of the last seed or applied correction

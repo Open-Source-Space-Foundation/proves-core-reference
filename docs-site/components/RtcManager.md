@@ -3,7 +3,7 @@
 The RTC Manager component supplies spacecraft time from the Real Time Clock (RTC). Spacecraft time is uptime plus a time offset. The RTC update interrupt corrects the time offset once per second. The `timeGetPort` does not access the RTC hardware. If the RTC was never read successfully, the component returns uptime.
 
 > [!IMPORTANT]
-> The code executed by the RTC Manager’s `timeGetPort` must never call into the eventing system. The timeGetPort is invoked frequently across F Prime and is used by the eventing system itself, any handler code must not use event ports, commands, or telemetry — doing so can cause deadlocks. Log any errors from the `timeGetPort` handler to the console with throttling to prevent flooding and do not allow those errors to cause the handler to fail. If the RTC is unavailable or an error occurs while retrieving time, the component must gracefully fall back to returning a monotonic uptime.
+> The code executed by the RTC Manager’s `timeGetPort` must never call into the eventing system. The timeGetPort is invoked frequently across F Prime and is used by the eventing system itself, any handler code must not use event ports, commands, or telemetry — doing so can cause deadlocks. Log any errors from the `timeGetPort` handler to the console with throttling to prevent flooding and do not allow those errors to cause the handler to fail. If the time offset was never seeded, the component must fall back to returning a monotonic uptime.
 >
 > The RTC update callback runs on the system workqueue thread, not on the time port, and may emit events and telemetry; it must not emit while holding the spinlock.
 
@@ -96,31 +96,35 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 #### Terms
 | Term | Meaning |
 |---|---|
+| Discipline | Keep a fine-grained clock (uptime) aligned to an accurate reference (the RTC) with small, regular corrections |
+| Second edge | The moment the RTC seconds count increments. The RV3028 raises its update interrupt here |
 | Uptime | Time since boot from `k_uptime_ticks()`, in microseconds. Uptime never decreases |
 | Time offset | RTC time minus uptime, in microseconds |
 | Seed | Set the time offset from one RTC read. Occurs at boot and on `TIME_SET` |
 | Correction | New time offset minus old time offset, at one RTC update interrupt |
 | Step | A correction with a magnitude of more than 100 ms |
+| Stale sample | An RTC read whose seconds did not increase since the last seed or applied correction |
 
 #### Rules
 1. Reported time = uptime + time offset. The microseconds field is reported time modulo 1 000 000.
-2. At each RTC second edge the update callback samples uptime, then reads the RTC. New time offset = RTC seconds × 1 000 000 − uptime.
-3. A sample whose RTC seconds did not increase since the last seed or applied correction is ignored. The driver gives one such sample when the callback is registered. A rejected sample does not change the last RTC seconds, so one bad far-future sample cannot cause good samples to be ignored.
+2. At each RTC second edge the update callback samples uptime, then reads the RTC. New time offset = RTC seconds × 1 000 000 − uptime. Uptime is sampled first because the edge has already happened; sampling it after the I²C read would add the read time to the offset. The RTC seconds do not change during the read.
+3. A stale sample is ignored. The driver gives one such sample when the callback is registered. A rejected sample does not change the last RTC seconds, so one bad far-future sample cannot cause good samples to be ignored.
 4. If no seed exists, the first correction seeds the time offset.
 5. A correction of 100 ms or less is applied. Reported time does not decrease: after a backward correction it holds at the last reported value until uptime + time offset passes it.
-6. A correction of more than 100 ms is rejected unless the previous sample was also rejected, the two corrections differ by 100 ms or less, and the RTC seconds increased. Then it is applied as a step and `TimeStepped` is emitted. A late callback gives a false backward correction and a bad RTC read (for example, year 2099) gives a false correction in either direction; neither repeats on the next edge. After a backward step, reported time can decrease one time.
+6. A correction of more than 100 ms is rejected, except when the previous correction of more than 100 ms differs from it by 100 ms or less, has smaller RTC seconds, and no correction was applied and no seed occurred since. Then it is applied as a step and `TimeStepped` is emitted. A late callback gives a false backward correction and a bad RTC read (for example, year 2099) gives a false correction in either direction; neither normally repeats on the next edge. After a backward step, reported time can decrease one time.
 7. If the RTC read fails, or the RTC seconds are outside the RV3028 range (years 2000 to 2099), the time offset does not change. The callback increments `DisciplineReadFaults` and emits `DisciplineReadFailed` or `DisciplineSampleImplausible`. The boot seed and `TIME_SET` use the same range check.
 8. `TIME_SET` seeds the time offset. The RV3028 resets its sub-second divider when the seconds are written, so this seed has no sub-second error.
 9. The boot seed has an error in [0, 1) s because the sub-second position at boot is not known. An error of 100 ms or less is removed by the first correction; a larger error is stepped forward at the second edge.
 
 #### Structure
 - `TimeDiscipline` holds the time offset, the last reported time, the last RTC seconds, and the pending step candidate. It is plain C++ with no Zephyr or F Prime includes, so the unit tests use it directly.
-- `RtcManager` protects `TimeDiscipline` with a `k_spinlock`. The `timeGetPort` holds it only for `read()`, the update callback only for `correct()`. The callback emits telemetry and events after it releases the lock.
+- `RtcManager` protects `TimeDiscipline` with a `k_spinlock`. The `timeGetPort` holds it only for `read()`, the update callback only for `correct()`. The callback emits telemetry and events after it releases the lock. A spinlock is used because the `timeGetPort` must never block and the locked section is a few integer operations.
 
 #### Limits
 - Reported time is late by the callback delay after the RTC second edge: approximately 3 ms, jitter ±0.35 ms (bench). The first correction after `TIME_SET` is therefore approximately −3 ms.
 - Processor uptime runs approximately 500 ppm slow against the RV3028 on the V5e (issue #522), absorbed by a forward correction of approximately 0.5 ms each second. The driver calls the alarm callback before the update callback for the same edge, so an alarm event can be stamped up to approximately 1 ms before its second.
 - The v5c, v5d, and v5e boards enable `CONFIG_RTC_UPDATE`. On other boards, or if `rtc_update_set_callback()` fails, the component logs this to the console and runs on the seed alone.
+- If the update callback is delayed by more than 100 ms on two edges in a row (for example, a busy system workqueue), the component applies a false backward step, and a forward step when the delay ends.
 - On orbit, setting `TIMEBASE` to `TB_PROC_TIME` bypasses the RTC and the time offset.
 
 ## Requirements
@@ -128,7 +132,7 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 |---|---|---|
 | RtcManager-001 | The RTC Manager has a command that sets the time on the RTC | Integration test |
 | RtcManager-002 | The `timeGetPort` returns spacecraft time (`TB_SC_TIME`) or uptime (`TB_PROC_TIME`) | Integration test |
-| RtcManager-003 | If the RTC was never read successfully, the `timeGetPort` returns uptime. A later RTC read failure does not change the time offset | Unit tests and code review |
+| RtcManager-003 | If the RTC was never read successfully, the `timeGetPort` returns uptime. A later RTC read failure does not change the time offset | Unit tests (`NotSeededReturnsFalse`) and code review |
 | RtcManager-004 | A time set event is emitted if the time is set successfully, including the previous time | Integration test |
 | RtcManager-005 | A time not set event is emitted if the time is not set successfully | Integration test |
 | RtcManager-006 | The RTC Manager validates time data and emits validation failure events for invalid fields | Integration test |
@@ -142,7 +146,7 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 | RtcManager-014 | Alarm list is tested before and after an alarm is set to ensure proper behavior | Integration test |
 | RtcManager-015 | Alarm is set with an impossible time and an event is emitted, the alarm is not set | Integration test |
 | RtcManager-016 | Alarm is set and then another alarm is set. An event is emitted and the second alarm is not set | Integration test |
-| RtcManager-017 | Errors occurring during timeGetPort calls are logged to the console with throttling to prevent flooding | Manual testing and code review |
+| RtcManager-017 | A `timeGetPort` call before the time offset is seeded is logged to the console with throttling to prevent flooding | Manual testing and code review |
 | RtcManager-018 | Spacecraft switches between RTC time and PROC time and listens for event emission | Integration test |
 | RtcManager-019 | A stale alarm flag is cleared at init, on `ALARM_SET`, and on `ALARM_CANCEL`. A new alarm does not trigger early | Manual testing (procedure in the PR #524 description) |
 | RtcManager-020 | `ALARM_CANCEL` does not emit `AlarmTriggered`. A triggered alarm emits `AlarmTriggered` one time | Integration test |
@@ -150,7 +154,7 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 | RtcManager-022 | Spacecraft time = uptime + time offset. The RTC update interrupt corrects the time offset once per second. If no seed exists, the first correction seeds the time offset | Unit tests and integration test |
 | RtcManager-023 | A correction whose RTC seconds did not increase since the last seed or applied correction is ignored. A rejected sample does not cause later samples to be ignored | Unit tests |
 | RtcManager-024 | A backward correction of 100 ms or less does not decrease reported time | Unit tests |
-| RtcManager-025 | A correction of more than 100 ms is applied as a step, and a throttled `TimeStepped` event is emitted. A step in either direction needs two sequential corrections of more than 100 ms that differ by 100 ms or less | Unit tests |
+| RtcManager-025 | A correction of more than 100 ms is applied as a step only after two sequential corrections of more than 100 ms that differ by 100 ms or less, in either direction. A throttled `TimeStepped` event is emitted | Unit tests |
 | RtcManager-026 | `TIME_SET` seeds the time offset. Reported time can step backward one time | Unit tests and integration test |
 | RtcManager-027 | The correction is written to telemetry each second | Integration test |
 | RtcManager-028 | One late update callback does not step reported time | Unit tests |
@@ -161,7 +165,7 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 ## Port Descriptions
 | Name | Description |
 |---|---|
-| timeGetPort | Time port for FPrime topology connection to get the time from the RTC |
+| timeGetPort | Time port for FPrime topology connection to get spacecraft time (uptime + time offset) |
 | alarmTriggered | Output port to keep track of when an alarm triggers |
 
 ## Commands
@@ -193,7 +197,7 @@ All three channels are sent in the `Timing` packet (id 23, group 5), whose downl
 | TimeSet | Emitted on successful time set, includes previous time (seconds and microseconds) |
 | TimeNotSet | Emitted on unsuccessful time set or if one exists when alarm list is run |
 | TimeBaseChanged | Emitted when the TimeBase param is updated to signal the current TimeBase |
-| TimeStepped | Emitted when a correction of more than 100 ms is applied as a step. Includes the correction in microseconds. Throttled to 5 |
+| TimeStepped | Emitted when a correction of more than 100 ms is applied as a step. Includes the correction in microseconds. Throttled to 5, throttle resets after 60 s |
 | DisciplineReadFailed | Emitted when an update callback RTC read fails. Includes the driver return code. Throttled to 5, throttle resets after 60 s |
 | DisciplineSampleImplausible | Emitted when an update callback RTC read gives seconds outside years 2000 to 2099. Includes the seconds, or −1 if the conversion failed. Throttled to 5, throttle resets after 60 s |
 | AlarmSet | Emitted when alarm is successfully set |

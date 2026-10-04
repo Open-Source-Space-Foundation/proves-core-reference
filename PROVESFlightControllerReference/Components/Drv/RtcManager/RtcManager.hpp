@@ -14,10 +14,8 @@
 #include "PROVESFlightControllerReference/Components/Drv/RtcManager/TimeDiscipline.hpp"
 #include <zephyr/device.h>
 #include <zephyr/drivers/rtc.h>
-#include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys/clock.h>
 #include <zephyr/sys/timeutil.h>
 
 namespace Drv {
@@ -116,7 +114,7 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Actual alarm callback, for triggering events
     void alarm_callback_t(const struct device* dev, uint16_t id);
 
-    //! RTC update callback kicker method. Must be static but cannot reference this in a static context.
+    //! Static C callback; forwards to update_callback_t() via user_data
     static void static_update_callback_t(const struct device* dev, void* user_data);
 
     //! Actual RTC update callback, corrects the time offset once per RTC second edge

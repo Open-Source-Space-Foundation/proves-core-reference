@@ -76,8 +76,8 @@ void RtcManager ::configure(const struct device* dev) {
 void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
     // Get system uptime
     const std::int64_t uptime_us = RtcManager::uptimeUs();
-    U32 seconds_since_boot = static_cast<U32>(uptime_us / 1000000);
-    U32 useconds_since_boot = static_cast<U32>(uptime_us % 1000000);
+    U32 seconds_since_boot = static_cast<U32>(uptime_us / TimeDiscipline::US_PER_S);
+    U32 useconds_since_boot = static_cast<U32>(uptime_us % TimeDiscipline::US_PER_S);
 
     // Use proc time directly when the timebase parameter selects it
     Fw::ParamValid timeBaseValid;
@@ -430,7 +430,7 @@ void RtcManager ::update_callback_t() {
             ++this->m_disciplineRejects;
             this->tlmWrite_DisciplineRejects(this->m_disciplineRejects);
             break;
-        default:
+        case TimeDiscipline::Correction::IGNORED:
             break;
     }
 }
