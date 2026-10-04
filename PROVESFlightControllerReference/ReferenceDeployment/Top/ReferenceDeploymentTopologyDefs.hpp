@@ -9,6 +9,8 @@
 #include <map>
 #include <string>
 
+#include "PROVESFlightControllerReference/Components/Drv/I2cBusMonitor/I2cBusMonitor.hpp"
+
 // Subtopology PingEntries includes
 #include "PROVESFlightControllerReference/ComCcsdsLora/PingEntries.hpp"
 // #include "PROVESFlightControllerReference/ComCcsdsSband/PingEntries.hpp"
@@ -167,6 +169,8 @@ struct TopologyState {
     const device* face5drv2605Device;
 
     const device* dieTempDevice;
+
+    Drv::I2cBusMonitorConfig i2c0BusConfig;  //!< I2C0 pins, mux reset and pinctrl for bus recovery
 };
 
 namespace PingEntries = ::PingEntries;

@@ -117,6 +117,7 @@ module ReferenceDeployment {
     instance dropDetector
 
     instance picoTempManager
+    instance i2c0BusMonitor
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -295,6 +296,7 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> i2c0BusMonitor.run
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run

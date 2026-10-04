@@ -23,3 +23,13 @@ config APP_WIPE_STORAGE
 	bool "Option to clear the flash area before mounting"
 	help
 	  Use this to force an existing file system to be created.
+
+config APP_I2C_BUS_RECOVERY
+	bool "I2C bus recovery support"
+	default y
+	depends on PINCTRL
+	select PINCTRL_NON_STATIC
+	help
+	  Exposes driver pin control configurations so the I2cBusMonitor
+	  component can re-apply the I2C pinmux after bit-banging a bus
+	  recovery (9 SCL clocks + STOP).
