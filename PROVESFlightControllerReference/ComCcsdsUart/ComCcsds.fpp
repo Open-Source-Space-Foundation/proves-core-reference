@@ -125,6 +125,8 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
+    instance comRetry: Svc.ComRetry base id ComCcsdsConfig.BASE_ID_UART + 0x0C000
+
     instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
     {
         phase Fpp.ToCpp.Phases.startTasks """
@@ -222,12 +224,16 @@ module ComCcsdsUart {
         import FramingSubtopology
 
         instance comStub
+        instance comRetry
 
         connections ComStub {
-            # Framer <-> ComStub (Downlink)
-            framer.dataOut -> comStub.dataIn
-            comStub.dataReturnOut   -> framer.dataReturnIn
-            comStub.comStatusOut    -> framer.comStatusIn
+            # Framer <-> ComRetry <-> ComStub (Downlink): ComRetry re-sends a frame the driver failed to send
+            framer.dataOut          -> comRetry.dataIn
+            comRetry.dataOut        -> comStub.dataIn
+            comStub.dataReturnOut   -> comRetry.dataReturnIn
+            comRetry.dataReturnOut  -> framer.dataReturnIn
+            comStub.comStatusOut    -> comRetry.comStatusIn
+            comRetry.comStatusOut   -> framer.comStatusIn
 
             # ComStub <-> FrameAccumulator (Uplink)
             comStub.dataOut -> frameAccumulator.dataIn
