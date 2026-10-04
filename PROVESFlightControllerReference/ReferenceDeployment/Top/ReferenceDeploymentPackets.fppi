@@ -145,6 +145,9 @@ telemetry packets ReferenceDeploymentPackets {
     rateGroup50Hz.RgCycleSlips
     rateGroup10Hz.RgCycleSlips
     rateGroup1Hz.RgCycleSlips
+    comDriver.RxOverrunCount
+    comDriver.RxBackpressureCount
+    comDriver.TxDropCount
   }
 
 
@@ -175,6 +178,14 @@ telemetry packets ReferenceDeploymentPackets {
 
     amateurRadio.count_names
 
+  }
+
+  packet Update id 23 group 5 {
+    Update.deltaPatcher.State
+    Update.deltaPatcher.ChunksDone
+    Update.deltaPatcher.ChunksTotal
+    Update.deltaPatcher.BytesWritten
+    Update.deltaPatcher.LastStatus
   }
 
   packet DetumblePerformance id 16 group 5 {
@@ -319,5 +330,16 @@ telemetry packets ReferenceDeploymentPackets {
   watchdog.WatchdogTransitions
 
   CdhCore.events.EventsDropped
+
+  # UART driver byte counters and the payload UART's counters are not useful in normal ops
+  comDriver.RxBytes
+  comDriver.TxBytes
+  comDriver.RxAllocFailCount
+  peripheralUartDriver.RxBytes
+  peripheralUartDriver.RxOverrunCount
+  peripheralUartDriver.RxBackpressureCount
+  peripheralUartDriver.RxAllocFailCount
+  peripheralUartDriver.TxBytes
+  peripheralUartDriver.TxDropCount
 
 }

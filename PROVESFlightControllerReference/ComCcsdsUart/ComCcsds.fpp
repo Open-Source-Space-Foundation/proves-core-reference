@@ -45,7 +45,22 @@ module ComCcsdsUart {
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_UART + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
         stack size ComCcsdsConfig.StackSizes.aggregator \
-        priority ComCcsdsConfig.Priorities.aggregator
+        priority ComCcsdsConfig.Priorities.aggregator \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        static_assert(static_cast<FwSizeType>(ComCcsdsConfig::Aggregator::aggregationSize) <=
+                          static_cast<FwSizeType>(Svc::Ccsds::TmDataFieldSize),
+                      "ComCcsdsConfig.Aggregator.aggregationSize must fit the TM Transfer Frame Data Field");
+        // Allocation identifier is 0 as the MallocAllocator discards it
+        ComCcsdsUart::aggregator.configure(ComCcsdsConfig::Aggregator::aggregationSize,
+                                           ComCcsdsConfig::Aggregator::enablePacketSpanning,
+                                           0,
+                                           ComCcsds::Allocation::memAllocator);
+        """
+        phase Fpp.ToCpp.Phases.tearDownComponents """
+        ComCcsdsUart::aggregator.cleanup();
+        """
+    }
 
     # ----------------------------------------------------------------------
     # Passive Components
@@ -109,6 +124,8 @@ module ComCcsdsUart {
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_UART + 0x09000
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
+
+    instance comRetry: Svc.ComRetry base id ComCcsdsConfig.BASE_ID_UART + 0x0C000
 
     instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
     {
@@ -207,12 +224,16 @@ module ComCcsdsUart {
         import FramingSubtopology
 
         instance comStub
+        instance comRetry
 
         connections ComStub {
-            # Framer <-> ComStub (Downlink)
-            framer.dataOut -> comStub.dataIn
-            comStub.dataReturnOut   -> framer.dataReturnIn
-            comStub.comStatusOut    -> framer.comStatusIn
+            # Framer <-> ComRetry <-> ComStub (Downlink): ComRetry re-sends a frame the driver failed to send
+            framer.dataOut          -> comRetry.dataIn
+            comRetry.dataOut        -> comStub.dataIn
+            comStub.dataReturnOut   -> comRetry.dataReturnIn
+            comRetry.dataReturnOut  -> framer.dataReturnIn
+            comStub.comStatusOut    -> comRetry.comStatusIn
+            comRetry.comStatusOut   -> framer.comStatusIn
 
             # ComStub <-> FrameAccumulator (Uplink)
             comStub.dataOut -> frameAccumulator.dataIn

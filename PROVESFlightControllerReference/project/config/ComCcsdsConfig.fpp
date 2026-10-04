@@ -25,6 +25,17 @@ module ComCcsdsConfig {
         constant comQueue   = Os.TASK_DEFAULT
     }
 
+    # Aggregator configuration constants
+    module Aggregator {
+        @ Size in bytes of every aggregate emitted by each aggregator instance: the TM Transfer Frame Data Field.
+        @ Svc.Ccsds.TmFramer asserts unless it receives exactly Svc.Ccsds.TmDataFieldSize. Without spanning this
+        @ must be at least Svc.ComAggregator.MIN_NON_SPANNING_AGGREGATION_SIZE (a full com buffer Space Packet
+        @ plus a minimum idle packet), which the 248 byte LoRa frame meets exactly; asserted by configure().
+        constant aggregationSize = Svc.Ccsds.TmDataFieldSize
+        @ Controls whether to span packets across transfer frames (see Svc.ComAggregator)
+        constant enablePacketSpanning = false
+    }
+
     # Queue configuration constants
     module QueueDepths {
         constant events      = 50
