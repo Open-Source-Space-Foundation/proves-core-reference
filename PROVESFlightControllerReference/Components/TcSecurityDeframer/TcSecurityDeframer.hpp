@@ -11,7 +11,6 @@
 #include <Os/File.hpp>
 #include <Os/Mutex.hpp>
 #include <atomic>
-#include <cassert>
 
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Authenticator.hpp"
 #include "PROVESFlightControllerReference/Components/TcSecurityDeframer/Parser.hpp"
@@ -58,6 +57,23 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
                               const ComCfg::FrameContext& context  //!< The frame context
                               ) override;
 
+    //! Handler implementation for run
+    //!
+    //! Rate-group tick (1 Hz in the reference deployment). Persists the in-memory sequence number to
+    //! SEQ_NUM_FILE_PATH when it differs from the last value known to be on disk. Runs on the
+    //! rate-group thread under m_persistLock only, never m_sequenceNumberLock, so the filesystem
+    //! write cannot delay dataIn.
+    void run_handler(FwIndexType portNum,  //!< The port number
+                     U32 context           //!< The call order
+                     ) override;
+
+    //! Handler implementation for prepareForReboot
+    //!
+    //! Flushes the in-memory sequence number to SEQ_NUM_FILE_PATH before an intentional reboot, under
+    //! m_persistLock so it cannot interleave with a run tick or SET_SEQ_NUM write.
+    void prepareForReboot_handler(FwIndexType portNum  //!< The port number
+                                  ) override;
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -97,17 +113,30 @@ class TcSecurityDeframer final : public TcSecurityDeframerComponentBase {
     Os::File::Status writeSequenceNumber(const U32 value  //!< The sequence number to write
     );
 
+    //! Persists the in-memory sequence number if it differs from the value known to be on disk.
+    //! Takes m_persistLock only; never m_sequenceNumberLock.
+    void persistIfChanged();
+
   private:
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
 
-    // Sequence number state is coupled between in-memory runtime state and on-disk persistent storage
-    // they are protected by the same mutex to ensure atomicity of updates across both mediums
-    Os::Mutex m_sequenceNumberLock;       //!< Mutex protecting sequence number state atomicity
+    // m_sequenceNumberLock serializes validate-and-advance in dataIn against SET_SEQ_NUM, GET_SEQ_NUM and
+    // configure(). The counter itself is atomic so run_handler can read it without that lock, keeping
+    // SD-card I/O off the frame-processing thread.
+    Os::Mutex m_sequenceNumberLock;       //!< Mutex serializing sequence number validate-and-advance
     Fw::String m_sequenceNumberFilePath;  //!< File path where sequence number is stored
-    U32 m_sequenceNumber;                 //!< The current sequence number
+    std::atomic<U32> m_sequenceNumber;    //!< The current (last accepted) sequence number
     U32 m_sequenceNumberWindow;           //!< The allowed window for sequence number validation
+
+    // m_persistLock serializes the three filesystem writers (run_handler, prepareForReboot_handler and
+    // SET_SEQ_NUM) and guards m_persistedSequenceNumber. dataIn never takes it. Lock order where both are
+    // held: m_sequenceNumberLock then m_persistLock (SET_SEQ_NUM); the two signal handlers take
+    // m_persistLock alone.
+    Os::Mutex m_persistLock;        //!< Mutex serializing sequence number file I/O
+    U32 m_persistedSequenceNumber;  //!< Last value written to the file; set to (value - 1) after a failed write so the
+                                    //!< next tick rewrites it
 
     uint32_t m_hmacKeyId;  //!< The HMAC key ID used for authentication
 };

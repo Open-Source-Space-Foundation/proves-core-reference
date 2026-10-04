@@ -301,6 +301,9 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsUart.tcSecurityDeframer.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> ComCcsdsLora.tcSecurityDeframer.run
+      #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
 
     }
 
@@ -469,10 +472,18 @@ module ReferenceDeployment {
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
 
-      # Connection for clean shutdown notification from ResetManager and Watchdog
-      # Allows ModeManager to detect unintended reboots
-      resetManager.prepareForReboot -> modeManager.prepareForReboot
-      watchdog.prepareForReboot -> modeManager.prepareForReboot
+      # Clean shutdown notification from ResetManager and Watchdog: ModeManager records the
+      # intentional reboot; the TcSecurityDeframer instances flush the anti-replay sequence number
+      # so the frame that commanded the reboot cannot be replayed after it. Enabling the S-band
+      # lines also requires widening both prepareForReboot output arrays from [3] to [4].
+      resetManager.prepareForReboot[0] -> modeManager.prepareForReboot
+      resetManager.prepareForReboot[1] -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      resetManager.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
+      #resetManager.prepareForReboot[3] -> ComCcsdsSband.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot[0] -> modeManager.prepareForReboot
+      watchdog.prepareForReboot[1] -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
+      #watchdog.prepareForReboot[3] -> ComCcsdsSband.tcSecurityDeframer.prepareForReboot
 
       # Signal from PROVES routers to reset the command loss timer in ModeManager
       ComCcsdsLora.provesRouter.packetRouted -> modeManager.packetRouted

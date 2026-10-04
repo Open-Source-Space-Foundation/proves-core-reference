@@ -62,3 +62,45 @@ TEST(PacketValidatorTest, SequenceNumberAtWindowBoundary) {
     auto res = validatePacket(h, 10u, 5u);
     EXPECT_EQ(res, PacketValidator::Status::Valid);
 }
+
+// The flight counter is persisted on a rate-group tick, so after an unplanned reboot the restored value
+// lags the last accepted sequence number by up to one tick of accepted frames. Ground's next sequence
+// number is accepted iff that lag is strictly inside SEQ_NUM_WINDOW; these cases pin the bound the SDD
+// relies on ("Crash window").
+namespace {
+constexpr uint32_t kDefaultWindow = 50000u;  // SEQ_NUM_WINDOW default in TcSecurityDeframer.fpp
+}  // namespace
+
+TEST(PacketValidatorTest, StaleCounterLagBelowWindowIsAccepted) {
+    const uint32_t stalePersisted = 1000u;
+    const uint32_t lag = 100u;  // frames accepted in one tick before the crash (UART bound is far lower)
+    Header h{0u, stalePersisted + lag + 1u};
+    EXPECT_EQ(validatePacket(h, stalePersisted, kDefaultWindow), PacketValidator::Status::Valid);
+}
+
+TEST(PacketValidatorTest, StaleCounterLagAtWindowBoundary) {
+    // lag + 1 == window is the last accepted ground value; one more frame of lag is rejected
+    const uint32_t stalePersisted = 1000u;
+    Header atEdge{0u, stalePersisted + kDefaultWindow};
+    Header pastEdge{0u, stalePersisted + kDefaultWindow + 1u};
+    EXPECT_EQ(validatePacket(atEdge, stalePersisted, kDefaultWindow), PacketValidator::Status::Valid);
+    EXPECT_EQ(validatePacket(pastEdge, stalePersisted, kDefaultWindow), PacketValidator::Status::SequenceNumberInvalid);
+}
+
+TEST(PacketValidatorTest, StaleCounterAcrossU32Wrap) {
+    const uint32_t stalePersisted = 0xFFFFFFF0u;
+    Header h{0u, 0x00000010u};  // 32 frames ahead across the wrap
+    EXPECT_EQ(validatePacket(h, stalePersisted, kDefaultWindow), PacketValidator::Status::Valid);
+}
+
+TEST(PacketValidatorTest, ReplayOfFrameAcceptedBeforeCrashIsRejectedOnlyIfPersisted) {
+    // Frames accepted after the last successful persist and before a crash are at or below the restored
+    // value only if they were persisted; a frame one ahead of the stale value re-validates. This is the
+    // documented write-behind trade-off.
+    const uint32_t stalePersisted = 1000u;
+    Header persisted{0u, stalePersisted};
+    Header unpersisted{0u, stalePersisted + 1u};
+    EXPECT_EQ(validatePacket(persisted, stalePersisted, kDefaultWindow),
+              PacketValidator::Status::SequenceNumberInvalid);
+    EXPECT_EQ(validatePacket(unpersisted, stalePersisted, kDefaultWindow), PacketValidator::Status::Valid);
+}
