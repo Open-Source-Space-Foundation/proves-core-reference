@@ -59,9 +59,8 @@ class RtcManager final : public RtcManagerComponentBase {
     //!
     //! Port to retrieve time
     //!
-    //! WARNING: This method is in a critical path for FPrime to get time. It must never call into
-    //! the eventing system: no event ports, commands, or telemetry. It does not access the RTC
-    //! hardware; it only uses uptime and the time offset held by TimeDiscipline.
+    //! WARNING: This method is in a critical path for FPrime to get time.
+    //! NOTE: Events require time therefore we only log to console in this method.
     void timeGetPort_handler(FwIndexType portNum,  //!< The port number
                              Fw::Time& time        //!< Reference to Time object
                              ) override;
@@ -118,24 +117,15 @@ class RtcManager final : public RtcManagerComponentBase {
     void alarm_callback_t(const struct device* dev, uint16_t id);
 
     //! RTC update callback kicker method. Must be static but cannot reference this in a static context.
-    //! Runs on the system workqueue thread, not the timeGetPort caller's thread.
     static void static_update_callback_t(const struct device* dev, void* user_data);
 
-    //! Actual RTC update callback. Runs on the system workqueue thread once per RTC second edge.
-    //! May emit telemetry and events, but only after releasing the spinlock. A failed or
-    //! implausible read increments DisciplineReadFaults and emits a throttled warning. A
-    //! REJECTED sample increments DisciplineRejects.
+    //! Actual RTC update callback, corrects the time offset once per RTC second edge
     void update_callback_t();
 
-    //! Read the RTC and convert to epoch seconds with rtcTimeToSeconds(). Returns FAILED, with
-    //! the driver return code in rc, if the device is not ready or rtc_get_time() fails. Returns
-    //! IMPLAUSIBLE if rtcTimeToSeconds() fails; rtc_s is then the converted seconds, or -1.
+    //! Read the RTC as epoch seconds. rc is the driver return code on FAILED
     RtcRead readRtcSeconds(std::int64_t& rtc_s, int& rc);
 
-    //! Convert an rtc_time to epoch seconds via timeutil_timegm(). Returns false on an
-    //! out-of-range (ERANGE) conversion, with rtc_s set to -1, or on seconds outside the RV3028
-    //! range (years 2000 to 2099, see TimeDiscipline::isPlausibleRtcSeconds()), with rtc_s set
-    //! to the converted seconds.
+    //! Convert an rtc_time to epoch seconds. Returns false if out of range, with rtc_s set to -1 on ERANGE
     static bool rtcTimeToSeconds(const struct rtc_time& time_rtc, std::int64_t& rtc_s);
 
     //! Seed the time discipline from rtc_s at the current uptime, under the spinlock

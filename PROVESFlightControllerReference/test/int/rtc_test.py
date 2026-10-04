@@ -355,9 +355,7 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     event_time = datetime.fromtimestamp(
         fp_time.seconds + fp_time.useconds / 1e6, tz=timezone.utc
     )
-    # The alarm event is stamped before the update callback corrects the time
-    # offset for this edge, so it can be up to ~1 ms before the boundary (SDD
-    # "Limits"). Allow 10 ms.
+    # The alarm event can be stamped up to ~1 ms before the boundary (SDD "Limits")
     assert (
         boundary - timedelta(milliseconds=10)
         <= event_time
@@ -537,13 +535,10 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test for events emitted by the timebase parameter"""
 
     try:
-        # proves_send_and_assert_command clears histories before it sends, so
-        # TimeBaseChanged is in the history from index 0 when it returns. A
-        # time stamp cannot be used: the event is stamped in the new time base.
+        # Test that we can set timebase to proc time
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
         )
-        # Assert that we received a TimeBaseChanged event during the command
         fprime_test_api.assert_event(
             f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
         )
@@ -561,47 +556,17 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
     reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
 )
 def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Test that the RTC update callback disciplines the time offset each second
-
-    RtcManager-022: spacecraft time = uptime + time offset, corrected once per
-    second by the RTC update interrupt.
-    RtcManager-027: the correction is written to TimeCorrectionUs telemetry
-    each second (sent in the Timing packet, id 23). Downlink rate depends on
-    telemetryDelay, so this test sets its DIVIDER to 0 for the duration.
-
-    Once the boot seed's sub-second error has been removed by the first one
-    or two corrections (see SDD "Time Discipline" rule 10), steady-state RTC drift is
-    on the order of a few hundred microseconds per second (bench, issue #522)
-    -- well under the 100 ms step threshold -- so no TimeStepped event should
-    fire during a short steady-state observation window.
-    """
-    # telemetryDelay (a Utilities.RateDelay on the 1 Hz group) gates downlink
-    # of the Timing packet; the default DIVIDER is 29, giving one downlink
-    # every 30s. Drop it to 0 so TimeCorrectionUs downlinks every cycle, and
-    # restore the default afterward.
+    """Test that TimeCorrectionUs is small and no TimeStepped event occurs after TIME_SET"""
     try:
         proves_send_and_assert_command(
             fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [0]
         )
 
-        # Re-sync the RTC first so we are not observing the boot-seed correction,
-        # which can be up to 1s to account for unknown sub-second boot error.
         set_time(fprime_test_api)
 
-        # TIME_SET seeds the offset right after the RTC write, but each update
-        # callback runs ~3ms after the RTC second edge (systematic callback
-        # lag, see SDD "Limits"). So the first correction after the seed is a
-        # real ~-2..-3ms backward correction, which would fail the steady-state
-        # |value| < 2000us check below. Let it land, then clear histories so we
-        # only observe steady-state corrections.
+        # Skip the first correction after TIME_SET (SDD "Limits")
         time.sleep(1.5)
         fprime_test_api.clear_histories()
-
-        # Observe for a few RTC update-callback edges. With telemetryDelay.DIVIDER
-        # set to 0 the Timing packet downlinks every cycle; a slightly-longer-
-        # than-3s window guards against two consecutive corrections coincidentally
-        # reporting the same microsecond value (which would otherwise be collapsed
-        # by ON_CHANGE_MIN and undercount the samples).
         time.sleep(3.5)
 
         results = fprime_test_api.assert_telemetry_count(
@@ -614,18 +579,13 @@ def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start
         for result in results:
             correction_us = result.get_val()
             assert abs(correction_us) < 2000, (
-                f"TimeCorrectionUs {correction_us} should be < 2000 us in "
-                "steady-state (well under the 100 ms step threshold; bench "
-                "measurement is a few hundred us/s, issue #522)"
+                f"TimeCorrectionUs {correction_us} should be < 2000 us"
             )
 
-        # No TimeStepped event should occur in steady state once the boot seed
-        # has been corrected.
         fprime_test_api.assert_event_count(
             0, events=f"{rtcManager}.TimeStepped", start=0, timeout=0
         )
     finally:
-        # Restore the default divider so later tests see the normal downlink rate.
         proves_send_and_assert_command(
             fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [29]
         )

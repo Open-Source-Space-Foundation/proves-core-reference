@@ -49,8 +49,7 @@ void RtcManager ::configure(const struct device* dev) {
         }
     }
 
-    // Boot seed: one polled read. If it fails or is implausible, the component starts
-    // undisciplined and the first plausible update callback sample seeds it instead.
+    // Seed the time offset from the RTC
     std::int64_t rtc_s = 0;
     int read_rc = 0;
     if (this->readRtcSeconds(rtc_s, read_rc) == RtcRead::OK) {
@@ -88,8 +87,7 @@ void RtcManager ::timeGetPort_handler(FwIndexType portNum, Fw::Time& time) {
         return;
     }
 
-    // Read the disciplined time. Does not access the RTC hardware; must not emit events or
-    // telemetry from this critical path.
+    // Read uptime plus time offset
     std::uint32_t seconds = 0;
     std::uint32_t useconds = 0;
     k_spinlock_key_t key = k_spin_lock(&this->m_lock);
@@ -167,9 +165,7 @@ void RtcManager ::TIME_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv
         return;
     }
 
-    // Seed the time offset from the new time. The RV3028 resets its sub-second divider when the
-    // seconds are written, so this seed has no sub-second error. Reported time can step backward
-    // one time.
+    // Seed the time offset from the new time
     std::int64_t new_rtc_s = 0;
     if (RtcManager::rtcTimeToSeconds(time_rtc, new_rtc_s)) {
         this->seedDiscipline(new_rtc_s);
@@ -400,16 +396,13 @@ void RtcManager::static_update_callback_t(const struct device* dev, void* user_d
 }
 
 void RtcManager ::update_callback_t() {
-    // Capture uptime as close to the RTC read as possible, before the (possibly slow) I2C
-    // transaction, to minimize the callback-delay error in the correction.
+    // Sample uptime before the RTC read
     const std::int64_t uptime_us = RtcManager::uptimeUs();
 
     std::int64_t rtc_s = 0;
     int rc = 0;
     const RtcRead read = this->readRtcSeconds(rtc_s, rc);
     if (read != RtcRead::OK) {
-        // RTC read failed or was implausible. Time offset does not change. Count it and warn
-        // (throttled), so a stale TimeCorrectionUs is not mistaken for a healthy one.
         ++this->m_disciplineReadFaults;
         this->tlmWrite_DisciplineReadFaults(this->m_disciplineReadFaults);
         if (read == RtcRead::FAILED) {
@@ -424,8 +417,7 @@ void RtcManager ::update_callback_t() {
     const TimeDiscipline::CorrectionResult result = this->m_discipline.correct(rtc_s, uptime_us);
     k_spin_unlock(&this->m_lock, key);
 
-    // Emit telemetry and events only after releasing the spinlock; this runs on the system
-    // workqueue thread, not the timeGetPort caller's thread, so it is safe to do so here.
+    // Report after releasing the spinlock
     switch (result.kind) {
         case TimeDiscipline::Correction::APPLIED:
             this->tlmWrite_TimeCorrectionUs(result.correction_us);
@@ -438,9 +430,7 @@ void RtcManager ::update_callback_t() {
             ++this->m_disciplineRejects;
             this->tlmWrite_DisciplineRejects(this->m_disciplineRejects);
             break;
-        case TimeDiscipline::Correction::IGNORED:
         default:
-            // No telemetry, no event.
             break;
     }
 }

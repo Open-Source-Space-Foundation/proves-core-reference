@@ -9,10 +9,7 @@
 
 namespace Drv {
 
-//! Disciplines spacecraft time (uptime + time offset) against RTC second-edge corrections.
-//!
-//! Plain C++ with no Zephyr or F Prime includes so it can be unit tested directly. The
-//! caller (RtcManager) is responsible for holding a lock around calls; this class has none.
+//! Spacecraft time as uptime plus a time offset, corrected at each RTC second edge. Not thread safe
 class TimeDiscipline {
   public:
     // ----------------------------------------------------------------------
@@ -22,9 +19,7 @@ class TimeDiscipline {
     //! Corrections with a magnitude greater than this many microseconds are steps
     static constexpr std::int64_t STEP_THRESHOLD_US = 100000;
 
-    //! Number of sequential, consistent corrections beyond STEP_THRESHOLD_US required before
-    //! a step is applied, in either direction. Two corrections are consistent if they differ
-    //! by STEP_THRESHOLD_US or less and the second has a larger rtc_s
+    //! Sequential consistent corrections beyond STEP_THRESHOLD_US needed to apply a step
     static constexpr int STEP_CONFIRMATIONS = 2;
 
     //! Earliest RTC seconds the RV3028 can represent: 2000-01-01T00:00:00Z
@@ -36,10 +31,9 @@ class TimeDiscipline {
     //! Outcome of a call to correct()
     enum class Correction {
         IGNORED,   //!< rtc_s did not increase since the last seed or applied correction
-        APPLIED,   //!< Correction applied, magnitude <= STEP_THRESHOLD_US (or first seed)
-        REJECTED,  //!< Correction beyond STEP_THRESHOLD_US, not yet confirmed. No state change
-                   //!< except the pending step candidate
-        STEPPED,   //!< Confirmed correction applied as a step, magnitude > STEP_THRESHOLD_US
+        APPLIED,   //!< Correction applied, magnitude <= STEP_THRESHOLD_US, or first seed
+        REJECTED,  //!< Correction beyond STEP_THRESHOLD_US, not yet confirmed
+        STEPPED,   //!< Confirmed correction beyond STEP_THRESHOLD_US applied
     };
 
     //! Result returned by correct()
@@ -59,11 +53,7 @@ class TimeDiscipline {
     void seed(std::int64_t rtc_s,       //!< RTC seconds
               std::int64_t uptime_us);  //!< Uptime in microseconds at the seed
 
-    //! Apply an RTC second-edge correction
-    //!
-    //! If this instance is not yet seeded, this call seeds it and returns {APPLIED, 0}
-    //! (this covers both "first correction ever" and, degenerately, a rtc_s that would
-    //! not otherwise have increased, since there is no prior last_rtc_s to compare against).
+    //! Apply an RTC second-edge correction. Seeds and returns {APPLIED, 0} if not yet seeded
     CorrectionResult correct(std::int64_t rtc_s,               //!< RTC seconds read at the edge
                              std::int64_t uptime_us_at_edge);  //!< Uptime in microseconds at the edge
 

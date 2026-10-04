@@ -28,15 +28,11 @@ void TimeDiscipline ::seed(std::int64_t rtc_s, std::int64_t uptime_us) {
 }
 
 TimeDiscipline::CorrectionResult TimeDiscipline ::correct(std::int64_t rtc_s, std::int64_t uptime_us_at_edge) {
-    // A never-seeded instance has no valid last_rtc_s to compare against, so the first
-    // correction always seeds regardless of rtc_s.
     if (!this->m_disciplined) {
         this->seed(rtc_s, uptime_us_at_edge);
         return {Correction::APPLIED, 0};
     }
 
-    // m_last_rtc_s changes only on a seed or an applied correction. A rejected sample does not
-    // change it, so one bogus far-future sample cannot cause later good samples to be ignored.
     if (rtc_s <= this->m_last_rtc_s) {
         return {Correction::IGNORED, 0};
     }
@@ -45,9 +41,7 @@ TimeDiscipline::CorrectionResult TimeDiscipline ::correct(std::int64_t rtc_s, st
     const std::int64_t correction_us = new_offset_us - this->m_offset_us;
 
     if ((correction_us > STEP_THRESHOLD_US) || (correction_us < -STEP_THRESHOLD_US)) {
-        // Out of band, in either direction. A step needs STEP_CONFIRMATIONS sequential samples
-        // whose corrections agree within STEP_THRESHOLD_US, each with a larger rtc_s than the
-        // one before. A late callback or one corrupted RTC read is thus never applied.
+        // Out of band: step only after STEP_CONFIRMATIONS sequential corrections within STEP_THRESHOLD_US
         const std::int64_t delta_us = correction_us - this->m_pending_correction_us;
         const bool consistent = (this->m_pending_count > 0) && (rtc_s > this->m_pending_rtc_s) &&
                                 (delta_us <= STEP_THRESHOLD_US) && (delta_us >= -STEP_THRESHOLD_US);
