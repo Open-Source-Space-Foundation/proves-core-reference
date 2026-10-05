@@ -1,0 +1,56 @@
+module NiclaDeployment {
+
+  # ----------------------------------------------------------------------
+  # Base ID Convention
+  # ----------------------------------------------------------------------
+  #
+  # All Base IDs follow the 8-digit hex format: 0xDSSCCxxx
+  #
+  # Where:
+  #   D   = Deployment digit (1 for this deployment)
+  #   SS  = Subtopology digits (00 for main topology, 01-05 for subtopologies)
+  #   CC  = Component digits (00, 01, 02, etc.)
+  #   xxx = Reserved for internal component items (events, commands, telemetry)
+  #
+
+  # ----------------------------------------------------------------------
+  # Defaults
+  # ----------------------------------------------------------------------
+
+  module Default {
+    constant QUEUE_SIZE = 10
+    constant STACK_SIZE = 4 * 1024 # Must match CONFIG_DYNAMIC_THREAD_STACK_SIZE in prj.conf
+  }
+
+  # ----------------------------------------------------------------------
+  # Active component instances
+  # ----------------------------------------------------------------------
+
+  instance rateGroup1Hz: Svc.ActiveRateGroup base id 0x10002000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 4
+
+
+  # ----------------------------------------------------------------------
+  # Queued component instances
+  # ----------------------------------------------------------------------
+
+
+  # ----------------------------------------------------------------------
+  # Passive component instances
+  # ----------------------------------------------------------------------
+
+  instance chronoTime: Svc.ChronoTime base id 0x10010000
+
+  instance rateGroupDriver: Svc.RateGroupDriver base id 0x10011000
+
+  instance timer: Zephyr.ZephyrRateDriver base id 0x10013000
+
+  instance comDriver: Zephyr.ZephyrUartDriver base id 0x10014000
+
+  # Wathcdog Components
+  instance gpioWatchdog: Zephyr.ZephyrGpioDriver base id 0x10015000
+  instance watchdog: Components.Watchdog base id 0x10016000
+
+}

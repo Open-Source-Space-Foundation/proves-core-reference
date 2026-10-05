@@ -1,0 +1,107 @@
+module NiclaDeployment {
+
+  # ----------------------------------------------------------------------
+  # Symbolic constants for port numbers
+  # ----------------------------------------------------------------------
+
+  enum Ports_RateGroups {
+    rateGroup1Hz
+  }
+
+  topology NiclaDeployment {
+
+  # ----------------------------------------------------------------------
+  # Subtopology imports
+  # ----------------------------------------------------------------------
+    import CdhCore.Subtopology
+    import ComCcsds.Subtopology
+
+  # ----------------------------------------------------------------------
+  # Instances used in the topology
+  # ----------------------------------------------------------------------
+    instance chronoTime
+    instance rateGroup1Hz
+    instance rateGroupDriver
+    instance timer
+    instance comDriver
+
+    instance gpioWatchdog
+    instance watchdog
+
+  # ----------------------------------------------------------------------
+  # Pattern graph specifiers
+  # ----------------------------------------------------------------------
+
+    command connections instance CdhCore.cmdDisp
+    event connections instance CdhCore.events
+    text event connections instance CdhCore.textLogger
+    health connections instance CdhCore.$health
+    time connections instance chronoTime
+    telemetry connections instance CdhCore.tlmSend
+
+  # ----------------------------------------------------------------------
+  # Telemetry packets (only used when TlmPacketizer is used)
+  # ----------------------------------------------------------------------
+
+  include "NiclaDeploymentPackets.fppi"
+
+  # ----------------------------------------------------------------------
+  # Direct graph specifiers
+  # ----------------------------------------------------------------------
+
+    connections ComCcsds_CdhCore {
+      # Core events and telemetry to communication queue
+      CdhCore.events.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
+      CdhCore.tlmSend.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+
+      # Router to Command Dispatcher
+      ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
+
+    }
+
+    connections Communications {
+      # ComDriver buffer allocations
+      comDriver.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
+      comDriver.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
+
+      # ComDriver <-> ComStub (Uplink)
+      comDriver.$recv                     -> ComCcsds.comStub.drvReceiveIn
+      ComCcsds.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+
+      # ComStub <-> ComDriver (Downlink)
+      ComCcsds.comStub.drvSendOut      -> comDriver.$send
+      comDriver.ready         -> ComCcsds.comStub.drvConnected
+    }
+
+    connections RateGroups {
+      # timer to drive rate group
+      timer.CycleOut -> rateGroupDriver.CycleIn
+
+      # All rate group activity is now on the 1Hz group
+      rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
+      rateGroup1Hz.RateGroupMemberOut[6] -> comDriver.schedIn
+      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
+      rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
+      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
+      rateGroup1Hz.RateGroupMemberOut[4] -> ComCcsds.aggregator.timeout
+      rateGroup1Hz.RateGroupMemberOut[5] -> watchdog.run
+    }
+
+    connections Watchdog {
+      watchdog.gpioSet -> gpioWatchdog.gpioWrite
+    }
+
+    connections NiclaDeployment {
+
+    }
+
+    connections FatalHandler {
+      CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
+
+    }
+
+  }
+
+}
