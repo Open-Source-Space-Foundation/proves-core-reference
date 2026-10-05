@@ -18,7 +18,10 @@ from fprime_gds.common.logger.test_logger import TestLogger
 from fprime_gds.common.models.serialize.numerical_types import U32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from fprime_gds.common.testing_fw.predicates import event_predicate
+from fprime_gds.common.testing_fw.predicates import (
+    event_predicate,
+    greater_than_or_equal_to,
+)
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
 rtcManager = "ReferenceDeployment.rtcManager"
@@ -349,8 +352,15 @@ def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start
     )
 
     fp_time: TimeType = result.get_time()
-    event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
-    assert boundary <= event_time <= boundary + timedelta(seconds=1), (
+    event_time = datetime.fromtimestamp(
+        fp_time.seconds + fp_time.useconds / 1e6, tz=timezone.utc
+    )
+    # The alarm event can be stamped up to ~1 ms before the boundary (SDD "Limits")
+    assert (
+        boundary - timedelta(milliseconds=10)
+        <= event_time
+        <= boundary + timedelta(seconds=1)
+    ), (
         f"AlarmTriggered timestamp {event_time} should be within 1s of "
         f"alarm boundary {boundary}"
     )
@@ -529,11 +539,66 @@ def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
         )
-        # Assert that we receive a TimeBaseChanged event within 10 seconds
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        # start=0 searches history from the beginning; the event can arrive before this call
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
     finally:
         # Restore spacecraft time so subsequent tests see RTC-backed timestamps
         proves_send_and_assert_command(
             fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
         )
-        fprime_test_api.await_event(f"{rtcManager}.TimeBaseChanged", timeout=10)
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
+
+
+MAX_CORRECTION_US = 2000
+TLM_DIVIDER_DEFAULT = 29
+
+
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that TimeCorrectionUs is small and no TimeStepped event occurs after TIME_SET"""
+    try:
+        # DIVIDER 0 downlinks the Timing packet every second
+        proves_send_and_assert_command(
+            fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [0]
+        )
+
+        set_dt = datetime.now(timezone.utc).replace(microsecond=0)
+        set_time(fprime_test_api, set_dt)
+        time.sleep(5)
+
+        results = fprime_test_api.assert_telemetry_count(
+            greater_than_or_equal_to(3),
+            channels=f"{rtcManager}.TimeCorrectionUs",
+            start=0,
+            timeout=5,
+        )
+
+        # Skip the first correction after TIME_SET (~-3 ms, SDD "Limits")
+        skip_until = set_dt.timestamp() + 1.5
+        steady = [
+            r
+            for r in results
+            if r.get_time().seconds + r.get_time().useconds / 1e6 > skip_until
+        ]
+        assert len(steady) >= 2, f"Only {len(steady)} steady-state samples"
+        for result in steady:
+            correction_us = result.get_val()
+            assert abs(correction_us) < MAX_CORRECTION_US, (
+                f"TimeCorrectionUs {correction_us} should be < {MAX_CORRECTION_US} us"
+            )
+
+        fprime_test_api.assert_event_count(
+            0, events=f"{rtcManager}.TimeStepped", start=0, timeout=0
+        )
+    finally:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET",
+            [TLM_DIVIDER_DEFAULT],
+        )
