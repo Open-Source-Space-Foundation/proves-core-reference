@@ -65,8 +65,6 @@ The component logs the `StatusChanged` event whenever the switch transitions due
 | turnOff | input (sync) | Fw.Signal | Turns off the load switch. |
 | loadSwitchStateChanged | output | loadSwitchStateChanged | Notifies connected components when the load switch state changes |
 
-On ON, the component sets the GPIO high and then calls `loadSwitchStateChanged`. On OFF, it calls `loadSwitchStateChanged` first and sets the GPIO low after all calls return. The downstream managers use guarded ports, so an OFF waits for an in-flight I2C transfer on that face to finish before power is removed. This prevents a power cut mid-transfer, which can hold I2C0 SDA low (issue #540).
-
 ## Requirements
 
 | Name | Description | Validation |
@@ -85,4 +83,3 @@ On ON, the component sets the GPIO high and then calls `loadSwitchStateChanged`.
 | 10-22-2025 | Sarah, Kevin, and MoMata's first commit                                                                                |
 | 11-07-2025 | Updated SDD to match implementation in `LoadSwitch.cpp/.hpp/.fpp` (commands, telemetry, event, ports, reset behavior). |
 | 11-30-2025 | Removed Reset capability. Added `loadSwitchStateChanged` output port for state notifications. |
-| 10-04-2026 | On OFF, notify downstream components before the GPIO is set low. |

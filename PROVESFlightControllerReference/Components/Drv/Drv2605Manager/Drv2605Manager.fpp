@@ -12,20 +12,20 @@ module Drv {
 
         #### Ports ####
         @ Port to start the magnetorquer
-        guarded input port start: StartMagnetorquer
+        sync input port start: StartMagnetorquer
 
         @ Port to stop the magnetorquer
-        guarded input port stop: StopMagnetorquer
+        sync input port stop: StopMagnetorquer
 
         @ Port to initialize and deinitialize the device on load switch state change
-        guarded input port loadSwitchStateChanged: Components.loadSwitchStateChanged
+        sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         #### Commands ####
         @ Command to start the magnetorquer
-        guarded command START(val: I8)
+        sync command START(val: I8)
 
         @ Command to stop the magnetorquer
-        guarded command STOP()
+        sync command STOP()
 
         #### Events ####
         @ Event for reporting not ready error

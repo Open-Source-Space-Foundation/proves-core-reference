@@ -8,14 +8,14 @@ module Drv {
 
         #### Ports ####
         @ Port to read the temperature in degrees Celsius
-        guarded input port temperatureGet: temperatureGet
+        sync input port temperatureGet: temperatureGet
 
         @ Port to initialize and deinitialize the device on load switch state change
-        guarded input port loadSwitchStateChanged: Components.loadSwitchStateChanged
+        sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         #### Commands ####
         @ Command to get the temperature in degrees Celsius
-        guarded command GetTemperature()
+        sync command GetTemperature()
 
         #### Telemetry ####
         @ Telemetry channel for temperature in degrees Celsius

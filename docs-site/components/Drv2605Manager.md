@@ -62,17 +62,15 @@ classDiagram
 
 | Name                 | Type                            | Direction  | Description                                                                                                  |
 | -------------------- | ------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
-| start                | Drv.StartMagnetorquer           | guarded input | Starts output on the DRV2605 with a signed value [-127, 127]. Internally initializes and configures device. |
-| stop                 | Drv.StopMagnetorquer            | guarded input | Stops output by issuing a zero-value RTP update through `start_handler`.                                     |
-| loadSwitchStateChanged | Components.loadSwitchStateChanged | guarded input | Notifies the component when the power-domain load switch changes state, driving (de)initialization timing.  |
+| start                | Drv.StartMagnetorquer           | sync input | Starts output on the DRV2605 with a signed value [-127, 127]. Internally initializes and configures device. |
+| stop                 | Drv.StopMagnetorquer            | sync input | Stops output by issuing a zero-value RTP update through `start_handler`.                                     |
+| loadSwitchStateChanged | Components.loadSwitchStateChanged | sync input | Notifies the component when the power-domain load switch changes state, driving (de)initialization timing.  |
 | timeCaller           | time get                        | time get   | Provides current time used to implement the load-switch stabilization timeout.                              |
 | cmdRegOut            | command reg                     | output     | Registers the `START` and `STOP` commands.                                                                  |
 | cmdIn                | command recv                    | input      | Receives ground commands, including `START` and `STOP`.                                                     |
 | cmdResponseOut       | command resp                    | output     | Sends command responses (OK or EXECUTION_ERROR).                                                            |
 | logTextOut           | text event                      | output     | Sends textual event representations.                                                                        |
 | logOut               | event                           | output     | Sends binary events for downlink.                                                                           |
-
-The `start`, `stop` and `loadSwitchStateChanged` ports and the `START` and `STOP` commands share the component mutex. A load switch OFF notification thus waits for an in-flight I2C transfer to finish, and no new transfer starts after it. This prevents a face power cut mid-transfer (issue #540).
 
 ## Component Behavior and States
 
@@ -230,4 +228,3 @@ All warning events are throttled to reduce log spam; `_ThrottleClear` calls in t
 | ---------- | ------------------------------------------------ |
 | 2025-12-01 | Initial implementation and documentation draft. |
 | 2025-12-20 | Use RTP mode to drive magnetorquers.            |
-| 2026-10-04 | Made I2C ports and commands guarded to serialise with load switch OFF. |

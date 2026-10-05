@@ -32,7 +32,7 @@ Each automatic recovery takes less than 1 ms, but a bus that stays stuck makes e
 - **Controller not disabled.** `i2c_dw` has no public API to disable the controller under `bus_sem`. The controller is idle while the pins are GPIOs, and the next transfer disables and enables it in `i2c_dw_setup()`.
 - **Pinctrl access.** `APP_I2C_BUS_RECOVERY` (promptless, default y) selects `PINCTRL_NON_STATIC`, so `Main.cpp` can get the `i2c0` pinctrl configuration.
 - **Thread safety.** `m_lock` serializes the rate group and command paths. The callback writes the line levels before `bus_sem` is released.
-- **Power cuts.** The face managers use guarded ports, and `LoadSwitch` notifies them before it removes power. Thus an OFF waits for an in-flight transfer on that face, which prevents most stuck buses. This component recovers from the rest.
+- **Power cuts.** A face power cut during a transfer on that face is the known cause of a stuck bus (#540). This component recovers the bus after the cut. Preventing a power cut during a transfer is handled separately.
 
 ## Interface
 
