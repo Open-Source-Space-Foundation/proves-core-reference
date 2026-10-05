@@ -493,7 +493,7 @@ zephyr_udc0: &usbd {
 	rtc0: rtc0@52 {
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
-		int-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+		int-gpios = <&gpio0 27 GPIO_ACTIVE_LOW>;
 		backup-switch-mode = "direct";
 		alarms-count = <1>;
 		label = "RV3028";
