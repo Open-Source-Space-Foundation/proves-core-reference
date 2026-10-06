@@ -277,9 +277,13 @@ void ModeManager ::loadState() {
         status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
 
         if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
-            // Validate state data before restoring (valid range: 1-2 for SAFE, NORMAL)
-            if (state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
-                state.mode <= static_cast<U8>(SystemMode::NORMAL)) {
+            // Validate state data before restoring (valid range: 1-2 for SAFE, NORMAL). The reason byte must be
+            // checked too: assigning an out-of-range SafeModeReason asserts, and a torn write would then repeat
+            // that assert on every boot (#547).
+            const bool modeValid = state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
+                                   state.mode <= static_cast<U8>(SystemMode::NORMAL);
+            const bool reasonValid = Components::SafeModeReason::isValid(state.safeModeReason);
+            if (modeValid && reasonValid) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
@@ -309,9 +313,10 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state (invalid mode value) - use defaults
+                // Corrupted state (invalid mode or reason value) - use defaults. Log the offending byte.
                 Fw::LogStringArg opStr("load-corrupt");
-                this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
+                this->log_WARNING_LO_StatePersistenceFailure(
+                    opStr, static_cast<I32>(modeValid ? state.safeModeReason : state.mode));
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_safeModeReason = Components::SafeModeReason::NONE;
