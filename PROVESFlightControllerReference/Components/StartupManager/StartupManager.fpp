@@ -62,6 +62,10 @@ module Components {
         event QuiescenceFileInitFailure() severity warning low \
             format "Failed to initialize quiescence start time file"
 
+        @ Event emitted when the quiescence start file fails to deserialize (torn or corrupt write) and is replaced
+        event QuiescenceFileCorrupted() severity warning high \
+            format "Quiescence start file corrupt - discarding and reinitializing"
+
         @ Event emitted when the start-up sequence succeeds
         event StartupSequenceFinished() severity activity low \
             format "Start-up sequence finished successfully"
