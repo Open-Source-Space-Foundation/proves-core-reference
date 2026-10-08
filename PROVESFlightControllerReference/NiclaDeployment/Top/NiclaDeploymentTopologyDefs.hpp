@@ -7,18 +7,14 @@
 #define NICLADEPLOYMENT_NICLADEPLOYMENTTOPOLOGYDEFS_HPP
 
 // Subtopology PingEntries includes
-#include "Svc/Subtopologies/CdhCore/PingEntries.hpp"
-#include "Svc/Subtopologies/ComCcsds/PingEntries.hpp"
-#include "Svc/Subtopologies/DataProducts/PingEntries.hpp"
-#include "Svc/Subtopologies/FileHandling/PingEntries.hpp"
+#include "PROVESFlightControllerReference/ComCcsdsNicla/PingEntries.hpp"
 
 // SubtopologyTopologyDefs includes
-#include "Svc/Subtopologies/CdhCore/SubtopologyTopologyDefs.hpp"
-#include "Svc/Subtopologies/ComCcsds/SubtopologyTopologyDefs.hpp"
+#include "PROVESFlightControllerReference/ComCcsdsNicla/SubtopologyTopologyDefs.hpp"
 
-// ComCcsds Enum Includes
-#include "Svc/Subtopologies/ComCcsds/Ports_ComBufferQueueEnumAc.hpp"
-#include "Svc/Subtopologies/ComCcsds/Ports_ComPacketQueueEnumAc.hpp"
+// ComCcsdsNicla Enum Includes
+#include "PROVESFlightControllerReference/ComCcsdsNicla/Ports_ComBufferQueueEnumAc.hpp"
+#include "PROVESFlightControllerReference/ComCcsdsNicla/Ports_ComPacketQueueEnumAc.hpp"
 
 // Include autocoded FPP constants
 #include "PROVESFlightControllerReference/NiclaDeployment/Top/FppConstantsAc.hpp"
@@ -50,6 +46,15 @@ enum { WARN = 3, FATAL = 5 };
 namespace NiclaDeployment_rateGroup1Hz {
 enum { WARN = 3, FATAL = 5 };
 }
+namespace NiclaDeployment_cmdDisp {
+enum { WARN = 3, FATAL = 5 };
+}
+namespace NiclaDeployment_events {
+enum { WARN = 3, FATAL = 5 };
+}
+namespace NiclaDeployment_tlmSend {
+enum { WARN = 3, FATAL = 5 };
+}
 }  // namespace PingEntries
 
 // Definitions are placed within a namespace named after the deployment
@@ -63,10 +68,9 @@ namespace NiclaDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;             //!< UART device path for communication
-    U32 baudRate;                         //!< Baud rate for UART communication
-    CdhCore::SubtopologyState cdhCore;    //!< Subtopology state for CdhCore
-    ComCcsds::SubtopologyState comCcsds;  //!< Subtopology state for ComCcsds
+    const device* uartDevice;                       //!< UART device path for communication
+    U32 baudRate;                                   //!< Baud rate for UART communication
+    ComCcsdsNicla::SubtopologyState comCcsdsNicla;  //!< Subtopology state for ComCcsdsNicla
 };
 
 namespace PingEntries = ::PingEntries;

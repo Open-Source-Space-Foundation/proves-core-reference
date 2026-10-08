@@ -2,6 +2,9 @@
 logs/
 cmake-build-*
 build-artifacts/
+build-nicla/
+build-nicla-artifacts/
+build-fc/
 build-gtest/
 build-fprime-*
 *-template

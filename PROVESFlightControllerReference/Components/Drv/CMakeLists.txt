@@ -1,6 +1,9 @@
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Drv2605Manager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Ina219Manager/")
-add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/RtcManager")
+# RTC alarm API is enabled on the flight-controller board. The Nicla deployment does not use it.
+if(BOARD MATCHES "proves_flight_control_board")
+    add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/RtcManager")
+endif()
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Tmp112Manager/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Types/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Veml6031Manager/")

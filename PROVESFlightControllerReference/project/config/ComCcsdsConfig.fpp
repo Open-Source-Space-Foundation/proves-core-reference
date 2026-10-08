@@ -4,6 +4,7 @@ module ComCcsdsConfig {
     constant BASE_ID_UART = 0x21000000
     constant BASE_ID_LORA = 0x22000000
     constant BASE_ID_SBAND = 0x23000000
+    constant BASE_ID_NICLA = 0xF2000000
 
     module QueueSizes {
         constant comQueue            = 20

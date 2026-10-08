@@ -142,7 +142,7 @@ generate-if-needed:
 
 .PHONY: build
 BUILD_YAMCS_MDB ?= 1
-build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr Proves Core Reference
+build: submodules zephyr fprime-venv generate-if-needed ## Build the flight controller into build-artifacts
 	@$(UV_RUN) fprime-util build
 	@if [ -f ./build-artifacts/zephyr.signed.bin ]; then \
 		./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2; \
@@ -151,6 +151,17 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 		echo "No signed image; skipping bootable UF2."; \
 	fi
 	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
+
+NICLA_BOARD := arduino_nicla_vision/stm32h747xx/m7
+NICLA_BUILD_DIR := $(shell pwd)/build-nicla
+NICLA_ARTIFACT_DIR := $(shell pwd)/build-nicla-artifacts
+
+.PHONY: build-nicla
+build-nicla: submodules zephyr fprime-venv ## Build the Nicla into build-nicla
+	@$(UV_RUN) fprime-util generate --build-cache "$(NICLA_BUILD_DIR)" \
+		-DBOARD="$(NICLA_BOARD)" \
+		-DFPRIME_INSTALL_DEST="$(NICLA_ARTIFACT_DIR)"
+	@$(UV_RUN) fprime-util build --build-cache "$(NICLA_BUILD_DIR)"
 
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
@@ -162,8 +173,8 @@ check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it cor
 # Default -r dfu-util = USB only (Arduino bootloader after double-tap RST). Override RUNNER if you use SWD.
 .PHONY: flash
 flash: fprime-venv ## USB DFU (install dfu-util; bee in bootloader mode first!!!!!!!!!)
-	@test -d "$(BUILD_DIR)" || { echo "No build at $(BUILD_DIR). Run make build first."; exit 1; }
-	@$(WEST) flash -d "$(BUILD_DIR)" -r $(if $(RUNNER),$(RUNNER),dfu-util)
+	@test -d "$(NICLA_BUILD_DIR)" || { echo "No Nicla build at $(NICLA_BUILD_DIR). Run make build-nicla first."; exit 1; }
+	@$(WEST) flash -d "$(NICLA_BUILD_DIR)" -r $(if $(RUNNER),$(RUNNER),dfu-util)
 
 ##@ Authentication Keys
 

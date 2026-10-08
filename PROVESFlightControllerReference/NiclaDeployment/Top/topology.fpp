@@ -8,13 +8,12 @@ module NiclaDeployment {
     rateGroup1Hz
   }
 
-  topology NiclaDeployment {
+  deployment topology NiclaDeployment {
 
   # ----------------------------------------------------------------------
   # Subtopology imports
   # ----------------------------------------------------------------------
-    import CdhCore.Subtopology
-    import ComCcsds.Subtopology
+    import ComCcsdsNicla.Subtopology
 
   # ----------------------------------------------------------------------
   # Instances used in the topology
@@ -25,6 +24,15 @@ module NiclaDeployment {
     instance timer
     instance comDriver
 
+    instance cmdDisp
+    instance events
+    instance $health
+    instance tlmSend
+    instance version
+    instance textLogger
+    instance fatalAdapter
+    instance fatalHandler
+
     instance gpioWatchdog
     instance watchdog
 
@@ -32,12 +40,12 @@ module NiclaDeployment {
   # Pattern graph specifiers
   # ----------------------------------------------------------------------
 
-    command connections instance CdhCore.cmdDisp
-    event connections instance CdhCore.events
-    text event connections instance CdhCore.textLogger
-    health connections instance CdhCore.$health
+    command connections instance cmdDisp
+    event connections instance events
+    text event connections instance textLogger
+    health connections instance $health
     time connections instance chronoTime
-    telemetry connections instance CdhCore.tlmSend
+    telemetry connections instance tlmSend
 
   # ----------------------------------------------------------------------
   # Telemetry packets (only used when TlmPacketizer is used)
@@ -51,27 +59,27 @@ module NiclaDeployment {
 
     connections ComCcsds_CdhCore {
       # Core events and telemetry to communication queue
-      CdhCore.events.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.EVENTS]
-      CdhCore.tlmSend.PktSend -> ComCcsds.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
+      events.PktSend -> ComCcsdsNicla.comQueue.comPacketQueueIn[ComCcsdsNicla.Ports_ComPacketQueue.EVENTS]
+      tlmSend.PktSend -> ComCcsdsNicla.comQueue.comPacketQueueIn[ComCcsdsNicla.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
-      ComCcsds.fprimeRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> ComCcsds.fprimeRouter.cmdResponseIn
+      ComCcsdsNicla.fprimeRouter.commandOut -> cmdDisp.seqCmdBuff
+      cmdDisp.seqCmdStatus -> ComCcsdsNicla.fprimeRouter.cmdResponseIn
 
     }
 
     connections Communications {
       # ComDriver buffer allocations
-      comDriver.allocate      -> ComCcsds.commsBufferManager.bufferGetCallee
-      comDriver.deallocate    -> ComCcsds.commsBufferManager.bufferSendIn
+      comDriver.allocate      -> ComCcsdsNicla.commsBufferManager.bufferGetCallee
+      comDriver.deallocate    -> ComCcsdsNicla.commsBufferManager.bufferSendIn
 
       # ComDriver <-> ComStub (Uplink)
-      comDriver.$recv                     -> ComCcsds.comStub.drvReceiveIn
-      ComCcsds.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
+      comDriver.$recv                     -> ComCcsdsNicla.comStub.drvReceiveIn
+      ComCcsdsNicla.comStub.drvReceiveReturnOut -> comDriver.recvReturnIn
 
       # ComStub <-> ComDriver (Downlink)
-      ComCcsds.comStub.drvSendOut      -> comDriver.$send
-      comDriver.ready         -> ComCcsds.comStub.drvConnected
+      ComCcsdsNicla.comStub.drvSendOut      -> comDriver.$send
+      comDriver.ready         -> ComCcsdsNicla.comStub.drvConnected
     }
 
     connections RateGroups {
@@ -81,11 +89,11 @@ module NiclaDeployment {
       # All rate group activity is now on the 1Hz group
       rateGroupDriver.CycleOut[Ports_RateGroups.rateGroup1Hz] -> rateGroup1Hz.CycleIn
       rateGroup1Hz.RateGroupMemberOut[6] -> comDriver.schedIn
-      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsds.comQueue.run
-      rateGroup1Hz.RateGroupMemberOut[1] -> CdhCore.$health.Run
-      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsds.commsBufferManager.schedIn
-      rateGroup1Hz.RateGroupMemberOut[3] -> CdhCore.tlmSend.Run
-      rateGroup1Hz.RateGroupMemberOut[4] -> ComCcsds.aggregator.timeout
+      rateGroup1Hz.RateGroupMemberOut[0] -> ComCcsdsNicla.comQueue.run
+      rateGroup1Hz.RateGroupMemberOut[1] -> $health.Run
+      rateGroup1Hz.RateGroupMemberOut[2] -> ComCcsdsNicla.commsBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[3] -> tlmSend.Run
+      rateGroup1Hz.RateGroupMemberOut[4] -> ComCcsdsNicla.aggregator.timeout
       rateGroup1Hz.RateGroupMemberOut[5] -> watchdog.run
     }
 
@@ -98,7 +106,8 @@ module NiclaDeployment {
     }
 
     connections FatalHandler {
-      CdhCore.fatalHandler.stopWatchdog -> watchdog.stop
+      events.FatalAnnounce -> fatalHandler.FatalReceive
+      fatalHandler.stopWatchdog -> watchdog.stop
 
     }
 

@@ -1,56 +1,58 @@
 telemetry packets NiclaDeploymentPackets {
 
   packet Health id 1 group 1 {
-    CdhCore.cmdDisp.CommandsDispatched
-    CdhCore.cmdDisp.CommandsDropped
-    ComCcsds.comQueue.comQueueDepth
-    ComCcsds.commsBufferManager.HiBuffs
-    NiclaDeployment.rateGroup1Hz.RgMaxTime
-    NiclaDeployment.watchdog.WatchdogTransitions
+cmdDisp.CommandsDispatched
+cmdDisp.CommandsDropped
+    ComCcsdsNicla.comQueue.comQueueDepth
+    ComCcsdsNicla.commsBufferManager.HiBuffs
+rateGroup1Hz.RgMaxTime
+watchdog.WatchdogTransitions
   }
 
   packet HealthWarnings id 2 group 1 {
-    CdhCore.$health.PingLateWarnings
-    ComCcsds.commsBufferManager.NoBuffs
-    ComCcsds.commsBufferManager.EmptyBuffs
-    NiclaDeployment.rateGroup1Hz.RgCycleSlips
+$health.PingLateWarnings
+    ComCcsdsNicla.commsBufferManager.NoBuffs
+    ComCcsdsNicla.commsBufferManager.EmptyBuffs
+rateGroup1Hz.RgCycleSlips
   }
 
 
   packet HealthAuxillary id 3 group 2 {
-    ComCcsds.commsBufferManager.TotalBuffs
-    ComCcsds.commsBufferManager.CurrBuffs
-    ComCcsds.comQueue.buffQueueDepth
-    CdhCore.tlmSend.SendLevel
+    ComCcsdsNicla.commsBufferManager.TotalBuffs
+    ComCcsdsNicla.commsBufferManager.CurrBuffs
+    ComCcsdsNicla.comQueue.buffQueueDepth
+tlmSend.SectionEnabled
   }
 
   packet Version id 4 group 3 {
-    CdhCore.version.FrameworkVersion
-    CdhCore.version.ProjectVersion
-    CdhCore.version.LibraryVersion01
+version.FrameworkVersion
+version.ProjectVersion
+version.LibraryVersion01
   }
 
 
 } omit {
-  CdhCore.cmdDisp.CommandErrors
+  tlmSend.GroupConfigs
+cmdDisp.CommandErrors
   # Only has one library, no custom versions
-  CdhCore.version.LibraryVersion02
-  CdhCore.version.LibraryVersion03
-  CdhCore.version.LibraryVersion04
-  CdhCore.version.LibraryVersion05
-  CdhCore.version.LibraryVersion06
-  CdhCore.version.LibraryVersion07
-  CdhCore.version.LibraryVersion08
-  CdhCore.version.LibraryVersion09
-  CdhCore.version.LibraryVersion10
-  CdhCore.version.CustomVersion01
-  CdhCore.version.CustomVersion02
-  CdhCore.version.CustomVersion03
-  CdhCore.version.CustomVersion04
-  CdhCore.version.CustomVersion05
-  CdhCore.version.CustomVersion06
-  CdhCore.version.CustomVersion07
-  CdhCore.version.CustomVersion08
-  CdhCore.version.CustomVersion09
-  CdhCore.version.CustomVersion10
+version.LibraryVersion02
+version.LibraryVersion03
+version.LibraryVersion04
+version.LibraryVersion05
+version.LibraryVersion06
+version.LibraryVersion07
+version.LibraryVersion08
+version.LibraryVersion09
+version.LibraryVersion10
+version.CustomVersion01
+version.CustomVersion02
+version.CustomVersion03
+version.CustomVersion04
+version.CustomVersion05
+version.CustomVersion06
+version.CustomVersion07
+version.CustomVersion08
+version.CustomVersion09
+version.CustomVersion10
+  events.EventsDropped
 }

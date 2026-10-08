@@ -5,14 +5,11 @@
 // ======================================================================
 // Provides access to autocoded functions
 #include <PROVESFlightControllerReference/NiclaDeployment/Top/NiclaDeploymentTopologyAc.hpp>
-// Note: Uncomment when using Svc:TlmPacketizer
-// #include <PROVESFlightControllerReference/NiclaDeployment/Top/NiclaDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/sys/printk.h>
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
@@ -58,30 +55,19 @@ void configureTopology() {
 // Public functions for use in main program are namespaced with deployment name NiclaDeployment
 namespace NiclaDeployment {
 void setupTopology(const TopologyState& state) {
-    printk("[SETUP] initComponents\n");
     initComponents(state);
-    printk("[SETUP] setBaseIds\n");
     setBaseIds();
-    printk("[SETUP] connectComponents\n");
     connectComponents();
-    printk("[SETUP] regCommands\n");
     regCommands();
-    printk("[SETUP] configComponents\n");
     configComponents(state);
-    printk("[SETUP] configureTopology\n");
     configureTopology();
-    printk("[SETUP] loadParameters\n");
     loadParameters();
-    printk("[SETUP] startTasks\n");
     startTasks(state);
-    printk("[SETUP] comDriver.configure\n");
     comDriver.configure(state.uartDevice, state.baudRate);
-    printk("[SETUP] complete\n");
 }
 
 void startRateGroups() {
     timer.configure(BASE_RATEGROUP_PERIOD_MS);
-    printk("\n=== Rate groups starting (period=%u ms) ===\n", static_cast<unsigned int>(BASE_RATEGROUP_PERIOD_MS));
     timer.start();
     while (1) {
         timer.cycle();
