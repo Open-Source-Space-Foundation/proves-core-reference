@@ -68,10 +68,10 @@
             "externalConsole": false
         },
         {
-            "name": "Debug test_RtcManager_RtcHelper",
+            "name": "Debug test_RtcManager_TimeDiscipline",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-gtest/test_RtcManager_RtcHelper",
+            "program": "${workspaceFolder}/build-gtest/test_RtcManager_TimeDiscipline",
             "cwd": "${workspaceFolder}",
             "MIMode": "lldb",
             "preLaunchTask": "build unit tests",
