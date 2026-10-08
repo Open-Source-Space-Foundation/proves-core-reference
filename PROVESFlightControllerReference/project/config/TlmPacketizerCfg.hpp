@@ -16,10 +16,10 @@
 #include <Fw/FPrimeBasicTypes.hpp>
 
 namespace Svc {
-static const FwChanIdType MAX_PACKETIZER_PACKETS = 22;
+static const FwChanIdType MAX_PACKETIZER_PACKETS = 23;
 
 static const FwChanIdType MAX_PACKETIZER_CHANNELS =
-    211;  // !< Must be >= number of non-omitted telemetry channels in system
+    214;  // !< Must be >= number of non-omitted telemetry channels in system
 
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks
