@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -18,24 +18,40 @@ from fprime_gds.common.logger.test_logger import TestLogger
 from fprime_gds.common.models.serialize.numerical_types import U32Type
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
-from fprime_gds.common.testing_fw.predicates import event_predicate
+from fprime_gds.common.testing_fw.predicates import (
+    event_predicate,
+    greater_than_or_equal_to,
+)
 from fprime_gds.common.tools.seqgen import SeqGenException, generateSequence
 
-resetManager = "ReferenceDeployment.resetManager"
 rtcManager = "ReferenceDeployment.rtcManager"
-ina219SysManager = "ReferenceDeployment.ina219SysManager"
 cmdSeq = "ReferenceDeployment.cmdSeq"
 payloadSeq = "ReferenceDeployment.payloadSeq"
-safeModeSeq = "ReferenceDeployment.safeModeSeq"
 fileManager = "FileHandling.fileManager"
+modeManager = "ReferenceDeployment.modeManager"
+watchdog = "ReferenceDeployment.watchdog"
 
 
 @pytest.fixture(autouse=True)
 def set_now_time(fprime_test_api: IntegrationTestAPI, start_gds):
     """Fixture to set the time to test runner's time after each test"""
     yield
-    # fprime_test_api.send_command(f"{resetManager}.WARM_RESET")
+    # Set the time back to current time
     set_time(fprime_test_api)
+
+    # Set mode back to normal after each test in case we entered safe mode by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{modeManager}.EXIT_SAFE_MODE",
+    )
+
+    # Re-enable the watchdog in case it was stopped by command loss
+    proves_send_and_assert_command(
+        fprime_test_api,
+        f"{watchdog}.START_WATCHDOG",
+    )
+
+    # Clear event history
     fprime_test_api.clear_histories()
 
 
@@ -96,8 +112,16 @@ def uplink_sequence_and_await_completion(
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that we can set the time"""
+
+    # Sync the RTC to the test runner's clock first so the "previous time"
+    # reported by the next TIME_SET is known (a fresh boot starts at 2000-01-01)
+    set_time(fprime_test_api)
+    fprime_test_api.clear_histories()
 
     # Set time to Curiosity landing on Mars (7 minutes of terror! https://youtu.be/Ki_Af_o9Q9s)
     curiosity_landing = datetime(2012, 8, 6, 5, 17, 57, tzinfo=timezone.utc)
@@ -114,7 +138,7 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
 
     # Ensure microseconds are included in event
     microseconds_arg: U32Type = result.args[1]
-    assert 0 <= microseconds_arg.val < 100_000_000, (
+    assert 0 <= microseconds_arg.val < 1_000_000, (
         "Microseconds arg should be >= 0 and < 1 million"
     )
 
@@ -123,18 +147,19 @@ def test_01_time_set(fprime_test_api: IntegrationTestAPI, start_gds):
     event_time = datetime.fromtimestamp(fp_time.seconds, tz=timezone.utc)
 
     # Assert previously set time is within 30 seconds of now
-    pytest.approx(previously_set_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(previously_set_time - datetime.now(timezone.utc)) <= timedelta(
+        seconds=30
+    ), f"Previous time {previously_set_time} should be within 30s of now"
 
     # Assert event time is within 30 seconds of curiosity landing
-    pytest.approx(event_time, abs=30) == curiosity_landing
-
-    # Fetch event data
-    result: EventData = fprime_test_api.assert_event(f"{rtcManager}.TimeSet", timeout=2)
-
-    # Assert time is within 30 seconds of now
-    pytest.approx(event_time, abs=30) == datetime.now(timezone.utc)
+    assert abs(event_time - curiosity_landing) <= timedelta(seconds=30), (
+        f"Event time {event_time} should be within 30s of {curiosity_landing}"
+    )
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that time increments over time"""
 
@@ -175,6 +200,9 @@ def test_02_time_incrementing(fprime_test_api: IntegrationTestAPI, start_gds):
     }, Updated: {updated_time}"
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     """Test that a TimeNotSet event is emitted when setting time with invalid data"""
 
@@ -209,6 +237,9 @@ def test_03_time_not_set_event(fprime_test_api: IntegrationTestAPI, start_gds):
     )
 
 
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
 def test_04_sequence_cancellation_on_time_set(
     fprime_test_api: IntegrationTestAPI, start_gds
 ):
@@ -248,3 +279,326 @@ def test_04_sequence_cancellation_on_time_set(
         fprime_test_api.get_event_pred(f"{payloadSeq}.CS_SequenceCanceled"),
         start=start,
     )
+
+
+# tests for the rtc alarm subsystem
+
+
+def set_time_and_build_next_minute_alarm(fprime_test_api: IntegrationTestAPI):
+    """Set the board time to :50 and build the ``TimeData`` JSON for an alarm at
+    the next minute boundary, ~10s away.
+
+    Returns a tuple of (start, boundary, alarm_time_data_str). ``start`` is the
+    history index 0: callers clear histories first, so later event assertions
+    search every event since then. The board clock is set away from the host
+    clock, so a host-time ``TimeType`` cannot be used as ``start``.
+    ``boundary`` is the alarm's target datetime.
+    """
+    start = 0
+
+    now = datetime.now(timezone.utc).replace(second=50, microsecond=0)
+    set_time(fprime_test_api, now)
+
+    boundary = (now + timedelta(seconds=10)).replace(second=0, microsecond=0)
+    alarm_time_data = dict(
+        Year=boundary.year,
+        Month=boundary.month,
+        Day=boundary.day,
+        Hour=boundary.hour,
+        Minute=boundary.minute,
+        Second=boundary.second,
+    )
+    alarm_time_data_str = json.dumps(alarm_time_data)
+    return start, boundary, alarm_time_data_str
+
+
+# set and trigger test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_05_rtc_alarm_set_and_trigger(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Verify RtcManager-011: an alarm set for a future minute triggers through the
+    RTC interrupt line (the ``~INT`` falling edge), not merely eventually.
+
+    The board time is set to second=50, and the alarm is set for the very next
+    minute boundary (second=0), ~10s away. No command is in the alarm-trigger
+    path (see SDD "Alarm Trigger"), so this only passes if the ``~INT`` GPIO
+    edge actually reaches the alarm callback. We assert no ``AlarmTriggered``
+    fires in the first 5s (ruling out a stale-AF immediate trigger, see
+    RtcManager-019) and that it does fire within the following window,
+    stamped at the alarm minute.
+    """
+    # Clear histories
+    fprime_test_api.clear_histories()
+
+    # Set the board time to :50 so the next minute boundary is ~10s away and
+    # can only be reached via the RTC interrupt line, not a stale flag.
+    start, boundary, alarm_time_data_str = set_time_and_build_next_minute_alarm(
+        fprime_test_api
+    )
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+
+    # No AlarmTriggered should arrive in the first 5s - the alarm minute is
+    # still ~10s away.
+    early = fprime_test_api.await_event(
+        f"{rtcManager}.AlarmTriggered", start=start, timeout=5
+    )
+    assert early is None, f"AlarmTriggered fired early: {early}"
+
+    # The alarm should trigger via the interrupt line shortly after the
+    # minute boundary.
+    result: EventData = fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmTriggered", start=start, timeout=15
+    )
+
+    fp_time: TimeType = result.get_time()
+    event_time = datetime.fromtimestamp(
+        fp_time.seconds + fp_time.useconds / 1e6, tz=timezone.utc
+    )
+    # The alarm event can be stamped up to ~1 ms before the boundary (SDD "Limits")
+    assert (
+        boundary - timedelta(milliseconds=10)
+        <= event_time
+        <= boundary + timedelta(seconds=1)
+    ), (
+        f"AlarmTriggered timestamp {event_time} should be within 1s of "
+        f"alarm boundary {boundary}"
+    )
+
+    # The disarm sequence run after a trigger can raise a second, spurious
+    # AlarmTriggered a few ms later if it is not ordered correctly. Wait past
+    # that window and assert we saw exactly one trigger.
+    time.sleep(2)
+    fprime_test_api.assert_event_count(
+        1, events=f"{rtcManager}.AlarmTriggered", start=start, timeout=0
+    )
+
+    # make sure the alarm is gone
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+# cancellation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_06_rtc_alarm_cancellation(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Verify RtcManager-012 / RtcManager-019: canceling an alarm before its
+    minute boundary prevents it from ever triggering, and clears the alarm
+    flag (AF) so a stale flag cannot fire a later alarm early.
+
+    Previously this test asserted AlarmTriggered fired *after* ALARM_CANCEL,
+    which only passed because of the stale-AF bug (canceling did not clear
+    AF, so the next alarm registration triggered immediately). With the fix,
+    canceling must result in zero AlarmTriggered events.
+    """
+    # Clear histories
+    fprime_test_api.clear_histories()
+
+    # Set the board time to :50 so the next minute boundary is ~10s away.
+    start, boundary, alarm_time_data_str = set_time_and_build_next_minute_alarm(
+        fprime_test_api
+    )
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+
+    # Cancel the alarm well before the minute boundary. ALARM_CANCEL requires
+    # an ID argument.
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
+    fprime_test_api.assert_event(
+        f"{rtcManager}.AlarmCanceled",
+        start=start,
+        timeout=5,
+    )
+
+    # No AlarmTriggered should appear anywhere in this window, counting from
+    # before the cancel: a trigger racing in between AlarmSet and
+    # AlarmCanceled must fail this test just as much as one occurring later.
+    early_or_racing = fprime_test_api.await_event(
+        f"{rtcManager}.AlarmTriggered", start=start, timeout=0
+    )
+    assert early_or_racing is None, (
+        f"Unexpected AlarmTriggered around cancel: {early_or_racing}"
+    )
+
+    # Wait past the would-be alarm boundary and assert it never triggers.
+    time.sleep(13)
+    triggered = fprime_test_api.await_event(
+        f"{rtcManager}.AlarmTriggered", start=start, timeout=0
+    )
+    assert triggered is None, f"Unexpected AlarmTriggered after cancel: {triggered}"
+
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+# validation test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_07_rtc_alarm_cancel_no_alarm_set(
+    fprime_test_api: IntegrationTestAPI, start_gds
+):
+    """Test alarm cancellation when no alarm is set"""
+
+    # Clear histories
+    fprime_test_api.clear_histories()
+
+    # validate that cancel doesn't work without an alarm being present
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotCanceled", timeout=10)
+
+
+# list test
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_08_rtc_alarm_list(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that we can list RTC alarms and that the information is correct"""
+
+    # Clear histories
+    fprime_test_api.clear_histories()
+
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+    # Set an alarm for the next minute boundary (~10s away, board time
+    # pinned to :50) so the alarm is still pending when ALARM_LIST runs.
+    # A "now + 5s" alarm in the same minute would fire immediately (RV3028
+    # minute resolution, issue #521) before we get to list it.
+    _start, _boundary, alarm_time_data_str = set_time_and_build_next_minute_alarm(
+        fprime_test_api
+    )
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
+
+    # Search only events after ALARM_LIST, so the earlier AlarmSet cannot match.
+    start = fprime_test_api.get_event_test_history().size()
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_LIST")
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", start=start, timeout=10)
+
+    # Clean up so no pending alarm leaks into later tests.
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmCanceled", timeout=10)
+
+
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_09_set_alarm_in_past(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that setting an alarm in the past results in an error and does not set the alarm"""
+    # Set an alarm for 5 seconds in the past
+    alarm_time = datetime.now(timezone.utc) - timedelta(seconds=5)
+    alarm_time_data = dict(
+        Year=alarm_time.year,
+        Month=alarm_time.month,
+        Day=alarm_time.day,
+        Hour=alarm_time.hour,
+        Minute=alarm_time.minute,
+        Second=alarm_time.second,
+    )
+    alarm_time_data_str = json.dumps(alarm_time_data)
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+
+    # Assert that we receive an AlarmNotSet event within 10 seconds
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_10_double_set_test(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Ensure that double setting an alarm will result in a rejection from the system"""
+    # Set an alarm for the next minute boundary (~10s away, board time
+    # pinned to :50) so the first alarm is still pending when the second
+    # ALARM_SET is sent. A "now + 5s" alarm in the same minute would fire
+    # (and self-cancel) immediately (RV3028 minute resolution, issue #521),
+    # defeating the double-set check.
+    _start, _boundary, alarm_time_data_str = set_time_and_build_next_minute_alarm(
+        fprime_test_api
+    )
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    # Assert that we receive an AlarmSet event within 10 seconds
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmSet", timeout=10)
+
+    # Double set the alarm
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_SET", [alarm_time_data_str])
+    # Assert that we receive an AlarmNotSet event within 10 seconds
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmNotSet", timeout=10)
+
+    # Clean up so no pending alarm leaks into later tests.
+    fprime_test_api.send_command(f"{rtcManager}.ALARM_CANCEL", [0])
+    fprime_test_api.assert_event(f"{rtcManager}.AlarmCanceled", timeout=10)
+
+
+@pytest.mark.uart_only(reason="Test functionality of the timebase parameter")
+def test_11_proc_toggle(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test for events emitted by the timebase parameter"""
+
+    try:
+        # Test that we can set timebase to proc time
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_PROC_TIME"]
+        )
+        # start=0 searches history from the beginning; the event can arrive before this call
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
+    finally:
+        # Restore spacecraft time so subsequent tests see RTC-backed timestamps
+        proves_send_and_assert_command(
+            fprime_test_api, f"{rtcManager}.TIMEBASE_PRM_SET", ["TB_SC_TIME"]
+        )
+        fprime_test_api.assert_event(
+            f"{rtcManager}.TimeBaseChanged", start=0, timeout=10
+        )
+
+
+MAX_CORRECTION_US = 2000
+TLM_DIVIDER_DEFAULT = 29
+
+
+@pytest.mark.uart_only(
+    reason="This test sets the RTC time which triggers the #402 / #404 bugs on PROVES Core Reference"
+)
+def test_12_time_correction_telemetry(fprime_test_api: IntegrationTestAPI, start_gds):
+    """Test that TimeCorrectionUs is small and no TimeStepped event occurs after TIME_SET"""
+    try:
+        # DIVIDER 0 downlinks the Timing packet every second
+        proves_send_and_assert_command(
+            fprime_test_api, "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET", [0]
+        )
+
+        set_dt = datetime.now(timezone.utc).replace(microsecond=0)
+        set_time(fprime_test_api, set_dt)
+        time.sleep(5)
+
+        results = fprime_test_api.assert_telemetry_count(
+            greater_than_or_equal_to(3),
+            channels=f"{rtcManager}.TimeCorrectionUs",
+            start=0,
+            timeout=5,
+        )
+
+        # Skip the first correction after TIME_SET (~-3 ms, SDD "Limits")
+        skip_until = set_dt.timestamp() + 1.5
+        steady = [
+            r
+            for r in results
+            if r.get_time().seconds + r.get_time().useconds / 1e6 > skip_until
+        ]
+        assert len(steady) >= 2, f"Only {len(steady)} steady-state samples"
+        for result in steady:
+            correction_us = result.get_val()
+            assert abs(correction_us) < MAX_CORRECTION_US, (
+                f"TimeCorrectionUs {correction_us} should be < {MAX_CORRECTION_US} us"
+            )
+
+        fprime_test_api.assert_event_count(
+            0, events=f"{rtcManager}.TimeStepped", start=0, timeout=0
+        )
+    finally:
+        proves_send_and_assert_command(
+            fprime_test_api,
+            "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET",
+            [TLM_DIVIDER_DEFAULT],
+        )

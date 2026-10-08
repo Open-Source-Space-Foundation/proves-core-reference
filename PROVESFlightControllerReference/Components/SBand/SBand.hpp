@@ -81,7 +81,7 @@ class SBand final : public SBandComponentBase {
     //! Handler implementation for command TRANSMIT
     //!
     //! Start/stop transmission on the S-Band module
-    void TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, SBandTransmitState enabled) override;
+    void TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const SBandTransmitState& enabled) override;
 
   private:
     //! Enable receive mode

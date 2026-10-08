@@ -308,7 +308,7 @@ SBand::Status SBand ::configureRadio() {
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, SBandTransmitState enabled) {
+void SBand ::TRANSMIT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const SBandTransmitState& enabled) {
     // Invoke internal port to handle state change asynchronously
     // This prevents concurrent access issues with m_transmit_enabled
     this->deferredTransmitCmd_internalInterfaceInvoke(enabled);

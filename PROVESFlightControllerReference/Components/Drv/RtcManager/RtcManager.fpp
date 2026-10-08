@@ -10,10 +10,23 @@ module Drv {
     }
 }
 
+@ Timebase parameter for the RtcManager component
+# Under RTC so that it does not shadow the TimeBase generated in the DRV module
+module Rtc {
+    @ Parameter for timebase
+    enum TimeBase: FwTimeBaseStoreType {
+        TB_PROC_TIME = 1 @< timebase is in proc time
+        TB_SC_TIME = 3   @< timebase is in RTC time
+    } default TB_SC_TIME
+}
+
 # Port definition
 module Drv {
     port TimeSet(t: TimeData)
     port TimeGet -> U32
+    port AlarmSet(t: Fw.TimeValue) -> U32
+    port AlarmCancel(ID: U16) -> U32
+    port AlarmTriggered()
 }
 
 module Drv {
@@ -21,14 +34,43 @@ module Drv {
     passive component RtcManager {
         import Svc.Time
 
+        ### PARAMETERS ###
+
+        @ Time base as a parameter
+        param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
+
+        ### TELEMETRY ###
+
+        @ Last correction of the time offset in microseconds
+        telemetry TimeCorrectionUs: I64 id 0
+
+        @ Update callback RTC reads that failed or gave seconds outside years 2000 to 2099
+        telemetry DisciplineReadFaults: U32 id 1
+
+        @ Update callback samples rejected as an unconfirmed step (more than 100 ms)
+        telemetry DisciplineRejects: U32 id 2
+
+        ### COMMANDS ###
+
         @ TIME_SET command to set the time on the RTC
         sync command TIME_SET(
             t: Drv.TimeData @< Set the time
-        ) opcode 0
+        )
 
-        ##############################################################################
-        #### Uncomment the following examples to start customizing your component ####
-        ##############################################################################
+        @ ALARM_SET command to set an alarm on the RTC
+        sync command ALARM_SET(
+            t: Drv.TimeData @< Time to set the alarm for
+        )
+
+        @ ALARM_CANCEL command to cancel any set alarms on the RTC
+        sync command ALARM_CANCEL(
+            ID: U16 @< ID of the alarm to cancel
+        )
+
+        @ ALARM_LIST command to list all set alarms on the RTC
+        sync command ALARM_LIST()
+
+        ### EVENTS ###
 
         @ DeviceNotReady event indicates that the RTC is not ready
         event DeviceNotReady() severity warning high id 0 format "RTC not ready" throttle 1
@@ -39,8 +81,13 @@ module Drv {
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
 
+        @ TimeBaseChanged event fires when the timebase parameter changes and indicates the new timebase
+        event TimeBaseChanged(
+            timeBase: Rtc.TimeBase @< The timebase now in use
+        ) severity activity high id 18 format "Timebase changed to: {}"
+
         @ TimeNotSet event indicates that the time was not set successfully
-        event TimeNotSet() severity warning high id 4 format "Time not set on RTC"
+        event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
 
         @ YearValidationFailed event indicates that the provided year is invalid
         event YearValidationFailed(
@@ -72,18 +119,79 @@ module Drv {
             second: U32 @< The invalid second
         ) severity warning high id 10 format "Provided second is invalid should be in [0, 59]: {}"
 
-        ###############################################################################
-        # Port for canceling sequences on time change                                 #
-        ###############################################################################
+        @ AlarmSet event indicates that the alarm was set successfully
+        event AlarmSet(
+            ID: U16 @< ID of the set alarm
+            t: Drv.TimeData @< Time for the set alarm
+        ) severity activity high id 11 format "Alarm set on RTC with ID {}, time: {}"
+
+        @ AlarmNotSet event indicates that the alarm was not set successfully
+        event AlarmNotSet(
+            t: Drv.TimeData @< Time for the alarm that was not set
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning high id 12 format "Alarm not set on RTC for time: {}, return code: {}"
+
+        @ AlarmTriggered event indicates that an alarm was triggered
+        event AlarmTriggered(
+            ID: U16 @< ID of the triggered alarm
+        ) severity activity high id 13 format "Alarm with ID {} triggered"
+
+        @ AlarmCanceled event indicates that an alarm was canceled successfully
+        event AlarmCanceled(
+            ID: U16 @< ID of the canceled alarm
+        ) severity activity high id 14 format "Alarm with ID {} canceled"
+
+        @ AlarmNotCanceled event indicates that an alarm was not canceled successfully
+        event AlarmNotCanceled(
+            ID: U16 @< ID of the alarm that was not canceled
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning high id 15 format "Alarm with ID {} not canceled, return code: {}"
+
+        @ AlarmHardwareError event indicates hardware issues with the RTC
+        event AlarmHardwareError(
+            ID: U16 @< ID of the alarm that had a hardware error
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
+
+        @ TimeStepped event indicates that a correction of more than 100 ms was applied as a step
+        event TimeStepped(
+            correction_us: I64 @< The correction applied, in microseconds
+        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5 every {seconds = 60}
+
+        @ DisciplineReadFailed event indicates that an update callback RTC read failed. The time offset does not change
+        event DisciplineReadFailed(
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning low id 20 format "RTC read for time discipline failed, return code: {}" throttle 5 every {seconds = 60}
+
+        @ DisciplineSampleImplausible event indicates that an update callback RTC read gave seconds outside years 2000 to 2099. The time offset does not change
+        event DisciplineSampleImplausible(
+            rtc_s: I64 @< RTC seconds since epoch, or -1 if the conversion failed
+        ) severity warning low id 21 format "RTC seconds {} outside years 2000 to 2099, sample not used" throttle 5 every {seconds = 60}
+
+        ### PORTS ###
+
         @ Port for canceling running sequences when RTC time is set
         @ Connected to seqCancelIn ports of Command, Payload, and SafeMode sequencers
         output port cancelSequences: [3] Svc.CmdSeqCancel
 
+        @ Port to indicate an alarm was triggered
+        output port alarmTriggered: [1] Drv.AlarmTriggered
+
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
+
+        @ Port for getting parameters
+        param get port prmGetOut
+
+        @ Port for setting parameters
+        param set port prmSetOut
+
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Port for sending command registrations
         command reg port cmdRegOut

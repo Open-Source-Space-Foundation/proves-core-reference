@@ -60,7 +60,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Command to set the operating mode
     void SET_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                              U32 cmdSeq,           //!< The command sequence number
-                             Components::DetumbleMode mode) override;
+                             const Components::DetumbleMode& mode) override;
 
   public:
     // ----------------------------------------------------------------------

@@ -14,6 +14,7 @@ The Data Budget Tool (`data_budget.py`) analyzes F Prime telemetry definitions t
 - **Group Summary**: Aggregates packet sizes by telemetry group
 - **Compact Output**: By default shows only summary and group totals; use verbose mode for full details
 - **Unresolved Channel Tracking**: Reports channels that couldn't be resolved (e.g., from F Prime framework components)
+- **Mermaid Wire Diagrams**: Generates Mermaid `packet-beta` diagrams showing the full byte layout of each packet on the wire, rendered natively on GitHub, GitLab, and most modern Markdown viewers
 
 ### Usage
 
@@ -38,6 +39,20 @@ This displays the full report including:
 - Telemetry packet sizes
 - Detailed packet composition
 
+#### Mermaid Packet Wire Diagrams
+
+```bash
+# Print Markdown with embedded Mermaid diagrams to stdout
+make data-diagram
+
+# Save to a Markdown file
+make data-diagram OUTPUT=docs-site/telemetry-wire-diagrams.md
+```
+
+Each packet in the output gets:
+1. A **Mermaid `packet-beta` diagram** showing the full wire layout — CCSDS TM framing headers followed by every telemetry field at its exact byte offset. The diagram renders as a protocol-style bit/byte box layout (like RFC diagrams) in any Mermaid-aware renderer.
+2. A **companion Markdown table** listing each field's byte offset, F Prime type, size, and the full F Prime channel path — useful for copy-paste or programmatic processing.
+
 #### Direct Script Usage
 
 ```bash
@@ -47,9 +62,45 @@ python3 tools/data_budget.py
 # Detailed output
 python3 tools/data_budget.py --verbose
 
+# Mermaid packet diagrams (printed to stdout)
+python3 tools/data_budget.py --diagram
+
+# Mermaid packet diagrams saved to a file
+python3 tools/data_budget.py --diagram --output telemetry-wire-diagrams.md
+
 # Specify project root
 python3 tools/data_budget.py --project-root /path/to/project
 ```
+
+### Diagram Output Format
+
+The Mermaid `packet-beta` diagram uses **bit-based indices** (the Mermaid standard) with 32 bits (4 bytes) displayed per row. Each row therefore represents 4 bytes of wire data, making it easy to visualise byte alignment.
+
+**Framing overhead prepended to every packet:**
+
+| Field | Size |
+|---|---|
+| CCSDS TM Frame Header | 6 B |
+| CCSDS Space Packet Header | 6 B |
+| F Prime Packet Descriptor (U32) | 4 B |
+| F Prime Packet ID (U16) | 2 B |
+| **Total overhead** | **18 B** |
+
+**Example diagram block (truncated):**
+
+````markdown
+```mermaid
+packet-beta
+title Beacon — ID 1, Group 1 (Beacon)
+0-47: "TM Frame Header (6B)"
+48-95: "Space Packet Header (6B)"
+96-127: "FPrime Descriptor (4B)"
+128-143: "Pkt ID (2B)"
+144-207: "BootCount (8B)"
+208-215: "CurrentMode (1B)"
+...
+```
+````
 
 ### Understanding the Output
 
@@ -176,13 +227,15 @@ Packet: Beacon (ID: 1, Group: 1)
 
 **Missing instances**: If packet channels show "UNKNOWN", the instance might be defined in a subtopology or external file. Check that all relevant `.fpp` files are in the search path.
 
+**Diagram fields showing `(?)`**: A channel reference in a `.fppi` packet file couldn't be resolved to a known channel. The field is omitted from the Mermaid diagram but still appears in the companion table so the gap is visible.
+
 ### Use Cases
 
 1. **Quick Budget Check**: Use default mode to get a fast overview of total bytes per telemetry group
 2. **Downlink Budget Planning**: Calculate maximum downlink data size for mission planning
 3. **Bandwidth Analysis**: Identify which groups and packets consume the most bandwidth
 4. **Optimization**: Find opportunities to reduce telemetry data size
-5. **Documentation**: Generate telemetry data specifications for mission documentation
+5. **Documentation**: Generate telemetry data specifications and wire-format diagrams for mission documentation
 
 ### Implementation Details
 
@@ -195,6 +248,7 @@ The tool:
 6. Calculates sizes based on F Prime serialization rules
 7. Groups packets by telemetry group and calculates group totals
 8. Generates summary or detailed reports based on verbose flag
+9. Optionally generates Mermaid `packet-beta` wire diagrams with companion tables
 
 ### Future Enhancements
 

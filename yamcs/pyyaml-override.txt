@@ -1,0 +1,3 @@
+# Override fprime's PyYAML==6.0.2 pin to satisfy fprime-yamcs>=0.1.0 (requires PyYAML>=6.0.3).
+# PyYAML 6.0.x is API-stable; the patch bump does not affect fprime-gds behaviour.
+PyYAML>=6.0.3

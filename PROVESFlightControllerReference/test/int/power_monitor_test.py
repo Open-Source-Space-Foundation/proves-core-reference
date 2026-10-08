@@ -4,9 +4,12 @@ power_monitor_test.py:
 Integration tests for the Power Monitor component.
 """
 
+import pytest
 from common import proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
+
+pytestmark = [pytest.mark.requires_battery]
 
 ina219SysManager = "ReferenceDeployment.ina219SysManager"
 ina219SolManager = "ReferenceDeployment.ina219SolManager"

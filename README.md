@@ -83,6 +83,12 @@ cp bootable.uf2 [path-to-your-board]
 ```
 Run ```make build``` and reflash bootable.uf2 onto the board anytime you change code.
 
+## Ground Station: F Prime GDS or YAMCS
+
+You can use either the F Prime GDS or YAMCS as your mission control ground station.
+
+### Option A: F Prime GDS (Traditional)
+
 If this is your first time running the gds, you must create the authentication plug:
 ```shell
 make framer-plugin
@@ -93,6 +99,52 @@ Finally, run the fprime-gds.
 make gds
 ```
 
+### Option B: YAMCS (Alternative Mission Control System)
+
+[YAMCS](https://www.yamcs.org/) (Yet Another Mission Control System) is an alternative ground station interface that provides a web-based mission control system with real-time telemetry visualization, commanding, and parameter trending.
+
+#### Setup and First Run
+
+Before running YAMCS for the first time, generate the F Prime dictionary and set up the Python environment:
+
+```shell
+make fprime-venv
+```
+
+This creates the YAMCS configuration and applies necessary patches (packet preprocessor configuration, TM stream root container, and CPU fixes for the event processor).
+
+Then start YAMCS with:
+
+```shell
+UART_DEVICE=/dev/ttyXXX make yamcs
+```
+
+YAMCS starts the following components:
+1. **YAMCS Server** – web interface and mission control backbone (available at `http://localhost:8090`)
+2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)
+3. **Events Bridge** – loads 655+ F Prime event definitions and streams events in real-time
+
+#### Web Interface
+
+Once YAMCS is running, open your browser to **`http://localhost:8090`** to see YAMCS running.
+
+#### Stopping YAMCS
+
+To cleanly shut down YAMCS and all its components:
+
+```shell
+make yamcs-stop
+```
+
+This kills the adapter, event bridge, and JVM, ensuring clean startup on the next `make yamcs` run.
+
+#### Troubleshooting YAMCS
+
+- **No parameters appearing:** Verify the `rootContainer` in `yamcs-data/mdb/fprime.xtce.xml` matches your deployment (e.g., `ReferenceDeployment`)
+- **Port 8090 in use:** Run `make yamcs-stop` to ensure previous YAMCS processes are cleaned up
+- **TM frame misalignment:** Caused by FSW console text on the serial UART. The adapter's rolling buffer and CRC validation handle this automatically
+- **UnsupportedPacketVersionException warnings:** Cosmetic — idle fill bytes have invalid CCSDS version but valid packets are processed correctly
+
 #### Ensuring your authentication/signing is correct
 
 The Makefile will ensure the authentication is correct if you run the code on the same computer you flash on. However, if you switch from a computer that compiled the code you will likely have issues with authentication. Here are some things you may encounter
@@ -101,7 +153,7 @@ MCUBoot only boots images that are **signed with the same key** the bootloader i
 
 If you regenerate/replace the bootloader (or switch computers and flash a bootloader built elsewhere), make sure you also update `keys/proves.pem` to the matching signing key, or your built images will not boot.
 
-You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h matches.
+You also want to make sure the authentication key the gds runs with is the same as the authentication key on the board. For that, you want to make sure the authentication key in PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h matches.
 
 ## Running Integration Tests
 

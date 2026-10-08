@@ -12,6 +12,8 @@ from common import proves_send_and_assert_command
 from fprime_gds.common.models.serialize.time_type import TimeType
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
+pytestmark = [pytest.mark.requires_face]
+
 drv2605Manager = "ReferenceDeployment.drv2605Face0Manager"
 ina219SysManager = "ReferenceDeployment.ina219SysManager"
 

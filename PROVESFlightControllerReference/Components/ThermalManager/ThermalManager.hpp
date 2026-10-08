@@ -24,6 +24,13 @@ class ThermalManager final : public ThermalManagerComponentBase {
     ~ThermalManager();
 
   private:
+    static constexpr F64 DEBOUNCE_ERROR = 3.0;  //!< Debounce error value for temperature threshold events
+
+    bool faceAboveTemperatureThrottleActive[getNum_faceTempGet_OutputPorts()] = {false};
+    bool faceBelowTemperatureThrottleActive[getNum_faceTempGet_OutputPorts()] = {false};
+    bool battCellAboveTemperatureThrottleActive[getNum_battCellTempGet_OutputPorts()] = {false};
+    bool battCellBelowTemperatureThrottleActive[getNum_battCellTempGet_OutputPorts()] = {false};
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
@@ -34,6 +41,19 @@ class ThermalManager final : public ThermalManagerComponentBase {
     void run_handler(FwIndexType portNum,  //!< The port number
                      U32 context           //!< The call order
                      ) override;
+
+    // ----------------------------------------------------------------------
+    // Private helper methods
+    // ----------------------------------------------------------------------
+
+    //! Helper function to log temperature threshold events
+    void evaluateTemperatureThreshold(
+        U32 idx,                    //!< The sensor index
+        F64 temperature,            //!< The temperature reading
+        bool& aboveThrottleActive,  //!< Whether the above threshold event throttle is currently active
+        bool& belowThrottleActive,  //!< Whether the below threshold event throttle is currently active
+        Components::ThermalManager_TempSensorType sensorType  //!< The type of the temperature sensor
+    );
 };
 
 }  // namespace Components

@@ -80,7 +80,7 @@ module ComCcsdsSband {
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_SBAND + 0x03500
+    instance provesRouter: Svc.ProvesRouter base id ComCcsdsConfig.BASE_ID_SBAND + 0x03500
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_SBAND + 0x04000
 
@@ -98,7 +98,14 @@ module ComCcsdsSband {
 
     instance apidManager: Svc.Ccsds.ApidManager base id ComCcsdsConfig.BASE_ID_SBAND + 0x09000
 
-    instance authenticatesband: Components.Authenticate base id ComCcsdsConfig.BASE_ID_SBAND + 0x0B000
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_SBAND + 0x0B000 \
+    {
+        phase Fpp.ToCpp.Phases.startTasks """
+        // configure() reads parameters, so it must run after loadParameters();
+        // the startTasks phase is the first phase after parameters are loaded.
+        ComCcsdsSband::tcSecurityDeframer.configure();
+        """
+    }
 
     topology Subtopology {
         # Usage Note:
@@ -121,14 +128,14 @@ module ComCcsdsSband {
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance authenticationRouter
+        instance provesRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticatesband
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -160,20 +167,20 @@ module ComCcsdsSband {
             # FrameAccumulator <-> TcDeframer
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
-            # Authenticate <-> SpacePacketDeframer
-            authenticatesband.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticatesband.dataReturnIn
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticatesband.dataIn
-            authenticatesband.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
+            # TcDeframer <-> TcSecurityDeframer
+            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
+            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
-            # SpacePacketDeframer <-> AuthenticationRouter (routes both commands and files)
-            spacePacketDeframer.dataOut -> authenticationRouter.dataIn
-            authenticationRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
-            # AuthenticationRouter buffer allocations
-            authenticationRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
-            authenticationRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
+            # SpacePacketDeframer <-> ProvesRouter (routes both commands and files)
+            spacePacketDeframer.dataOut -> provesRouter.dataIn
+            provesRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+            # ProvesRouter buffer allocations
+            provesRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
+            provesRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
         }
     } # end Subtopology
 
