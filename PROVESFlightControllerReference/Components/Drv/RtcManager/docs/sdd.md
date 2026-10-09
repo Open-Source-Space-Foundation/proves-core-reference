@@ -113,8 +113,9 @@ This order matters. Writing the disabled alarm in step 2 can set `AF` on the RV3
 5. A correction of 100 ms or less is applied. Reported time does not decrease: after a backward correction it holds at the last reported value until uptime + time offset passes it.
 6. A correction of more than 100 ms is rejected, except when the previous correction of more than 100 ms differs from it by 100 ms or less, has smaller RTC seconds, and no correction was applied and no seed occurred since. Then it is applied as a step and `TimeStepped` is emitted. A late callback gives a false backward correction and a bad RTC read (for example, year 2099) gives a false correction in either direction; neither normally repeats on the next edge. After a backward step, reported time can decrease one time.
 7. If the RTC read fails, or the RTC seconds are outside the RV3028 range (years 2000 to 2099), the time offset does not change. The callback increments `DisciplineReadFaults` and emits `DisciplineReadFailed` or `DisciplineSampleImplausible`. The boot seed and `TIME_SET` use the same range check.
-8. `TIME_SET` seeds the time offset. The RV3028 resets its sub-second divider when the seconds are written, so this seed has no sub-second error.
-9. The boot seed has an error in [0, 1) s because the sub-second position at boot is not known. An error of 100 ms or less is removed by the first correction; a larger error is stepped forward at the second edge.
+8. If the RTC lost power, it has no time until `TIME_SET`, and the driver returns `-ENODATA`. This is not a read fault. The callback skips the sample without counting it and emits `RtcTimeNotSet` once. The next good read re-arms the event.
+9. `TIME_SET` seeds the time offset. The RV3028 resets its sub-second divider when the seconds are written, so this seed has no sub-second error.
+10. The boot seed has an error in [0, 1) s because the sub-second position at boot is not known. An error of 100 ms or less is removed by the first correction; a larger error is stepped forward at the second edge.
 
 #### Structure
 - `TimeDiscipline` holds the time offset, the last reported time, the last RTC seconds, and the pending step candidate. It is plain C++ with no Zephyr or F Prime includes, so the unit tests use it directly.
@@ -187,8 +188,8 @@ All three channels are sent in the `Timing` packet (id 23, group 5), whose downl
 | Name | Type | Description |
 |---|---|---|
 | TimeCorrectionUs | I64 | Last applied or stepped correction of the time offset, in microseconds. Positive moves reported time forward. Not written for ignored or rejected samples or failed reads, so check `DisciplineReadFaults` and `DisciplineRejects` |
-| DisciplineReadFaults | U32 | Count of update callback RTC reads that failed or gave seconds outside years 2000 to 2099 |
-| DisciplineRejects | U32 | Count of update callback samples rejected as an unconfirmed step. One at boot is normal (rule 9) |
+| DisciplineReadFaults | U32 | Count of update callback RTC reads that failed or gave seconds outside years 2000 to 2099. Reads of an RTC with no time (`-ENODATA`) are not counted |
+| DisciplineRejects | U32 | Count of update callback samples rejected as an unconfirmed step. One at boot is normal (rule 10) |
 
 ## Events
 | Name | Description |
@@ -200,6 +201,7 @@ All three channels are sent in the `Timing` packet (id 23, group 5), whose downl
 | TimeStepped | Emitted when a correction of more than 100 ms is applied as a step. Includes the correction in microseconds. Throttled to 5, throttle resets after 60 s |
 | DisciplineReadFailed | Emitted when an update callback RTC read fails. Includes the driver return code. Throttled to 5, throttle resets after 60 s |
 | DisciplineSampleImplausible | Emitted when an update callback RTC read gives seconds outside years 2000 to 2099. Includes the seconds, or −1 if the conversion failed. Throttled to 5, throttle resets after 60 s |
+| RtcTimeNotSet | Emitted when an update callback RTC read finds no time because the RTC lost power (`-ENODATA`). Time discipline waits for `TIME_SET`. Throttled to 1, throttle resets on the next good read |
 | AlarmSet | Emitted when alarm is successfully set |
 | AlarmNotSet | Emitted when alarm cannot be set or if it is not set when alarm list is run |
 | AlarmTriggered | Emitted when an alarm fires |
@@ -364,11 +366,15 @@ sequenceDiagram
     Zephyr RTC Driver->>RTC Manager: update_callback_t()
     RTC Manager->>RTC Manager: uptime_us = uptimeUs()
     RTC Manager->>RTC Sensor: readRtcSeconds() — rtc_get_time() + timeutil_timegm()
-    alt Read fails, or RTC seconds outside years 2000 to 2099
+    alt RTC has no time since power loss (-ENODATA)
+        RTC Manager->>Event Log: RtcTimeNotSet (throttle 1)
+        Note over RTC Manager: Return. Not counted as a fault
+    else Read fails, or RTC seconds outside years 2000 to 2099
         RTC Manager->>Telemetry: tlmWrite_DisciplineReadFaults(count)
         RTC Manager->>Event Log: DisciplineReadFailed(rc) or DisciplineSampleImplausible(rtc_s)
         Note over RTC Manager: Return. Time offset does not change
     else Read succeeds
+        RTC Manager->>Event Log: RtcTimeNotSet_ThrottleClear()
         RTC Manager->>RTC Manager: Lock spinlock
         RTC Manager->>Time Discipline: correct(rtc_s, uptime_us)
         Time Discipline-->>RTC Manager: CorrectionResult
