@@ -9,7 +9,7 @@ import os
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from common import cmdDispatch, proves_send_and_assert_command
@@ -89,21 +89,25 @@ def create_directory(
     history = fprime_test_api.get_event_test_history()
     start = history.size()
     fprime_test_api.send_command(f"{fileManager}.CreateDirectory", [directory])
-    exists = satisfies_any(
+    done = satisfies_any(
         [
             fprime_test_api.get_event_pred(
                 f"{fileManager}.CreateDirectorySucceeded", [directory]
             ),
             fprime_test_api.get_event_pred(
-                f"{fileManager}.DirectoryCreateError",
-                [directory, FS_STATUS_ALREADY_EXISTS],
+                f"{fileManager}.DirectoryCreateError", [directory, None]
             ),
         ]
     )
-    result = fprime_test_api.find_history_item(exists, history, start, timeout)
+    result = fprime_test_api.find_history_item(done, history, start, timeout)
     assert result is not None, (
-        f"Directory {directory} was not created within {timeout}s"
+        f"CreateDirectory {directory} did not complete within {timeout}s"
     )
+    if result.template.get_name() == "DirectoryCreateError":
+        status = result.get_args()[1].val
+        assert status == FS_STATUS_ALREADY_EXISTS, (
+            f"CreateDirectory {directory} failed with status {status}"
+        )
 
 
 def uplink_sequence_and_await_completion(
@@ -135,7 +139,7 @@ def uplink_sequence_and_await_completion(
             msg = f"Failed to generate sequence binary from {sequence_path}: {exc}"
             fprime_test_api.__log(msg, TestLogger.RED)
             raise
-        create_directory(fprime_test_api, str(Path(destination).parent))
+        create_directory(fprime_test_api, str(PurePosixPath(destination).parent))
         fprime_test_api.uplink_file(temp_bin_path, destination)
     fprime_test_api.await_event("FileReceived", timeout=timeout)
 
