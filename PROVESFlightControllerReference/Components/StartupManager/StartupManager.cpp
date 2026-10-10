@@ -6,6 +6,8 @@
 
 #include "PROVESFlightControllerReference/Components/StartupManager/StartupManager.hpp"
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
+
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
@@ -24,46 +26,6 @@ StartupManager ::~StartupManager() {}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
-
-//! \brief Template function to read a type T from a file at file_path
-//!
-//! This will read a type T with size 'size' from the file located at file_path. It will return SUCCESS if
-//! the read and deserialization were successful, and FAILURE otherwise.
-//!
-//! The file will be opened and closed within this function. value will not be modified by this function unless
-//! the read operation is successful.
-//!
-//! \warning this function is only safe to use for types T with size `size` that fit well in stack memory.
-//!
-//! \param file_path: path to the file to read from
-//! \param value: reference to the variable to read into
-//! \return Status of the read operation
-template <typename T, FwSizeType BUFFER_SIZE>
-StartupManager::Status read(const Fw::StringBase& file_path, T& value) {
-    // Create the necessary file and deserializer objects for reading a type from a file
-    StartupManager::Status return_status = StartupManager::FAILURE;
-    Os::File file;
-    U8 data_buffer[BUFFER_SIZE];
-    Fw::ExternalSerializeBuffer deserializer(data_buffer, sizeof(data_buffer));
-
-    // Open the file for reading, and continue only if successful
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
-    if (status == Os::File::OP_OK) {
-        FwSizeType size = sizeof(data_buffer);
-        status = file.read(data_buffer, size);
-        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
-            // When the read is successful, and the size is correct then the buffer must absolutely contain the
-            // serialized data and thus it is safe to assert on the deserialization status
-            deserializer.setBuffLen(size);
-            Fw::SerializeStatus serialize_status = deserializer.deserializeTo(value);
-            FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK,
-                      static_cast<FwAssertArgType>(serialize_status));
-            return_status = StartupManager::SUCCESS;
-        }
-    }
-    (void)file.close();
-    return return_status;
-}
 
 //! \brief Template function to write a type T to a file at file_path
 //!
@@ -106,6 +68,27 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     return return_status;
 }
 
+//! \brief Template function to durably write a type T to file_path via write-to-temp + rename
+//!
+//! The new value is fully written and flushed to `<file_path>.tmp` before it replaces the old file, so a reset
+//! cannot tear the value mid-write. The flight FS is FAT (ELM FatFs), whose rename is not guaranteed power-cut
+//! atomic; the residual worst case is a missing file, which reads as a failed read rather than silent garbage.
+//!
+//! \param file_path: path to the file to replace
+//! \param value: reference to the variable to write
+//! \return Status of the write operation
+template <typename T, FwSizeType BUFFER_SIZE>
+StartupManager::Status write_atomic(const Fw::StringBase& file_path, const T& value) {
+    Fw::String temp_path(file_path);
+    temp_path += ".tmp";
+    StartupManager::Status status = write<T, BUFFER_SIZE>(temp_path, value);
+    if (status == StartupManager::SUCCESS &&
+        Os::FileSystem::rename(temp_path.toChar(), file_path.toChar()) != Os::FileSystem::OP_OK) {
+        status = StartupManager::FAILURE;
+    }
+    return status;
+}
+
 // Boot counts beyond this are treated as file corruption rather than real history: a hard reset
 // (e.g. the watchdog power cycle used for command-loss recovery) can tear the flash write and leave
 // a well-formed file full of junk, which would otherwise be incremented and persisted forever.
@@ -119,9 +102,9 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     // Read the current count ensuring a minimum of 1 after increment in the case of read failure.
-    // Since read will retain the `0` initial value on read failure, we can ignore the error status.
-    (void)read<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
-    if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
+    if (Utilities::FileHelper::readFromFile(boot_count_file.toChar(), boot_count) != Os::File::OP_OK) {
+        boot_count = 0;
+    } else if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
         this->log_WARNING_HI_BootCountCorrupted(static_cast<I64>(boot_count));
         boot_count = 0;
     }
@@ -142,19 +125,7 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
 }
 
 StartupManager::Status StartupManager ::persist_boot_count(const Fw::StringBase& file_path, FwSizeType value) {
-    // Write to a temp file, then rename over the target. The flight FS is FAT (ELM FatFs), whose
-    // rename is not guaranteed power-cut atomic - but the new data is fully written and flushed
-    // before it replaces the old file, so a reset can no longer tear the value mid-write (the
-    // observed failure). Worst case during the rename window is a missing file, which reads as a
-    // failed read and re-initializes the count - detectable, unlike silent garbage.
-    Fw::String temp_path(file_path);
-    temp_path += ".tmp";
-    StartupManager::Status status = write<FwSizeType, sizeof(FwSizeType)>(temp_path, value);
-    if (status == StartupManager::SUCCESS &&
-        Os::FileSystem::rename(temp_path.toChar(), file_path.toChar()) != Os::FileSystem::OP_OK) {
-        status = StartupManager::FAILURE;
-    }
-    return status;
+    return write_atomic<FwSizeType, sizeof(FwSizeType)>(file_path, value);
 }
 
 Fw::Time StartupManager ::update_quiescence_start() {
@@ -162,21 +133,19 @@ Fw::Time StartupManager ::update_quiescence_start() {
     auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    Fw::Time time = this->getTime();
-    // Open the quiescence start time file and read the current time. On read failure, return the current time.
-    StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
-    // Reject a corrupt file (e.g. partial flash write leaving 0xFF bytes) whose useconds field is outside
-    // the [0, 999999] contract Fw::Time::set asserts on. Without this, downstream Fw::Time::add panics
-    // in a boot-loop because the bad value persists across reflashes.
-    if (status == StartupManager::SUCCESS && time.getUSeconds() >= 1000000) {
-        time = this->getTime();
-        status = StartupManager::FAILURE;
+    Fw::Time time;
+    Os::File::Status read_status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
+    // A corrupt file (e.g. a torn flash write leaving 0xFF bytes) fails Fw::Time deserialization, which rejects
+    // out-of-range fields such as useconds >= 1000000. It persists across reboots, so discard it and start over
+    // rather than boot-loop on it (#399, #547).
+    if (read_status == Os::File::OTHER_ERROR) {
+        this->log_WARNING_HI_QuiescenceFileCorrupted();
     }
     // On read failure, write the current time to the file for future reads. This only happens on read failure because
     // there is a singular quiescence start time for the whole mission.
-    if (status != StartupManager::SUCCESS) {
-        status = write<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
-        if (status != StartupManager::SUCCESS) {
+    if (read_status != Os::File::OP_OK) {
+        time = this->getTime();
+        if (write_atomic<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time) != StartupManager::SUCCESS) {
             this->log_WARNING_LO_QuiescenceFileInitFailure();
         }
     }
