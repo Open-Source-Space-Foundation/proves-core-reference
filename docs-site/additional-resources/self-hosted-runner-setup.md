@@ -155,3 +155,30 @@ reboot
 ```
 
 Ensure that you set our computer to not sleep or hibernate, as this will stop the runner. Also ensure that the runner is restarted if the machine reboots.
+
+### Selecting the bench power supply
+
+The integration jobs switch the satellite's power through `tools/ci/psu <on|off|cycle>`. The script reads its settings from the runner's `~/actions-runner/.env`, which the jobs load before the first power cycle. A runner with no supply variables uses the Korad supply on `/dev/ttyPWR`, so existing runners need no changes.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PSU_TYPE` | `korad` | Supply driver: `korad` or `dps150`. Any other value fails the job. |
+| `PSU_PORT` | `/dev/ttyPWR` | Serial port of the supply. |
+| `PSU_CMD` | Korad: `~/korad_control/.venv/bin/python ~/korad_control/korad_control.py`. DPS-150: `dps150` | Command that controls the supply. The script appends `-d $PSU_PORT --output 0` or `--output 1`. |
+| `PSU_LEASE_S` | none | DPS-150 only, and required. Seconds the output stays on before the supply turns itself off. Every `on` and `cycle` renews it. Use `1200`. |
+| `PSU_VOLTAGE`, `PSU_CURRENT` | none | DPS-150 only. Output setpoints. The `dps150` command reads them directly. |
+| `PSU_MAX_V`, `PSU_MAX_I` | none | DPS-150 only. Bench limits. The `dps150` command reads them directly. |
+
+Example `.env` for a DPS-150 bench (the voltage and current values are placeholders; use your bench's values):
+
+```sh
+PSU_TYPE=dps150
+PSU_PORT=/dev/ttyPWR
+PSU_LEASE_S=1200
+PSU_VOLTAGE=<setpoint V>
+PSU_CURRENT=<setpoint A>
+PSU_MAX_V=<limit V>
+PSU_MAX_I=<limit A>
+```
+
+To test the supply from a shell on the runner, export the same variables and run `./tools/ci/psu cycle` from the repository root.
