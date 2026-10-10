@@ -61,20 +61,24 @@ download-libraries: uv ## Download CircuitPython libraries needed for passthroug
 
 CIRCUIT_PYTHON ?= ./firmware.uf2
 BOARD ?=
+CIRCUIT_PYTHON_SOURCE_BOARD = $(if $(filter v5e,$(BOARD)),v5d,$(BOARD))
 
 .PHONY: circuit-python
-circuit-python: ## Download Circuit Python firmware. Usage: make circuit-python BOARD={v5a|v5b|v5c|v5d}
+circuit-python: ## Download CircuitPython firmware. Usage: make circuit-python BOARD={v5a|v5b|v5c|v5d|v5e}
 	@if [ -z "$(BOARD)" ]; then \
 		echo "Error: BOARD is not set"; \
-		echo "Usage: make circuit-python BOARD={v5a|v5b|v5c|v5d}"; \
+		echo "Usage: make circuit-python BOARD={v5a|v5b|v5c|v5d|v5e}"; \
 		exit 1; \
 	fi
 	@case "$(BOARD)" in \
-		v5a|v5b|v5c|v5d) ;; \
-		*) echo "Error: Invalid board '$(BOARD)'. Must be one of: v5a, v5b, v5c, v5d"; exit 1;; \
+		v5a|v5b|v5c|v5d|v5e) ;; \
+		*) echo "Error: Invalid board '$(BOARD)'. Must be one of: v5a, v5b, v5c, v5d, v5e"; exit 1;; \
 	esac
-	@echo "Downloading Circuit Python firmware for board $(BOARD)..."
-	@curl -o $(CIRCUIT_PYTHON) -fsSL https://raw.githubusercontent.com/proveskit/flight_controller_board/main/Firmware/FC_FIRM_$(BOARD)_V1.uf2
+	@if [ "$(BOARD)" = "v5e" ]; then \
+		echo "Board v5e currently uses the compatible v5d CircuitPython firmware."; \
+	fi
+	@echo "Downloading CircuitPython firmware for board $(BOARD)..."
+	@curl -o "$(CIRCUIT_PYTHON)" -fsSL https://raw.githubusercontent.com/proveskit/flight_controller_board/main/Firmware/FC_FIRM_$(CIRCUIT_PYTHON_SOURCE_BOARD)_V1.uf2
 	@echo "Firmware downloaded successfully to $(CIRCUIT_PYTHON)"
 
 .PHONY: clean
