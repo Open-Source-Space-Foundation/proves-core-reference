@@ -19,8 +19,8 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/StartupManager.cpp"
-#   DEPENDS
-#       MyPackage_MyOtherModule
+    DEPENDS
+        FprimeExtras_Utilities_FileHelper
 )
 
 ### Unit Tests ###

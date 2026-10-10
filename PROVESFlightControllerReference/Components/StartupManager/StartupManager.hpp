@@ -18,7 +18,6 @@ class StartupManager final : public StartupManagerComponentBase {
     enum Status {
         SUCCESS,
         FAILURE,
-        CORRUPT,  //!< File read in full but its contents failed to deserialize
     };
     // ----------------------------------------------------------------------
     // Component construction and destruction

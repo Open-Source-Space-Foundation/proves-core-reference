@@ -313,10 +313,15 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state (invalid mode or reason value) - use defaults. Log the offending byte.
-                Fw::LogStringArg opStr("load-corrupt");
-                this->log_WARNING_LO_StatePersistenceFailure(
-                    opStr, static_cast<I32>(modeValid ? state.safeModeReason : state.mode));
+                // Corrupted state (invalid mode or reason value) - use defaults. The op string names the bad
+                // field so the logged byte is unambiguous on the ground.
+                if (!modeValid) {
+                    Fw::LogStringArg opStr("load-corrupt-mode");
+                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
+                } else {
+                    Fw::LogStringArg opStr("load-corrupt-reason");
+                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.safeModeReason));
+                }
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_safeModeReason = Components::SafeModeReason::NONE;

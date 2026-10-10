@@ -6,6 +6,8 @@
 
 #include "PROVESFlightControllerReference/Components/StartupManager/StartupManager.hpp"
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
+
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
@@ -24,51 +26,6 @@ StartupManager ::~StartupManager() {}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
-
-//! \brief Template function to read a type T from a file at file_path
-//!
-//! This will read a type T with size 'size' from the file located at file_path. It will return SUCCESS if
-//! the read and deserialization were successful, CORRUPT if a full-size read succeeded but the contents failed to
-//! deserialize (e.g. a torn flash write), and FAILURE otherwise (missing file, short read).
-//!
-//! The file will be opened and closed within this function. value will not be modified by this function unless
-//! the read operation is successful.
-//!
-//! \warning this function is only safe to use for types T with size `size` that fit well in stack memory.
-//!
-//! \param file_path: path to the file to read from
-//! \param value: reference to the variable to read into
-//! \return Status of the read operation
-template <typename T, FwSizeType BUFFER_SIZE>
-StartupManager::Status read(const Fw::StringBase& file_path, T& value) {
-    // Create the necessary file and deserializer objects for reading a type from a file
-    StartupManager::Status return_status = StartupManager::FAILURE;
-    Os::File file;
-    U8 data_buffer[BUFFER_SIZE];
-    Fw::ExternalSerializeBuffer deserializer(data_buffer, sizeof(data_buffer));
-
-    // Open the file for reading, and continue only if successful
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
-    if (status == Os::File::OP_OK) {
-        FwSizeType size = sizeof(data_buffer);
-        status = file.read(data_buffer, size);
-        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
-            // A full-size read does not imply valid contents: a reset mid-write can leave junk that fails
-            // deserialization validation (e.g. Fw::Time rejects useconds >= 1000000). That is persisted state,
-            // so asserting here would repeat on every boot; report it to the caller instead.
-            deserializer.setBuffLen(size);
-            T decoded;
-            if (deserializer.deserializeTo(decoded) == Fw::SerializeStatus::FW_SERIALIZE_OK) {
-                value = decoded;
-                return_status = StartupManager::SUCCESS;
-            } else {
-                return_status = StartupManager::CORRUPT;
-            }
-        }
-    }
-    (void)file.close();
-    return return_status;
-}
 
 //! \brief Template function to write a type T to a file at file_path
 //!
@@ -145,9 +102,9 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     // Read the current count ensuring a minimum of 1 after increment in the case of read failure.
-    // Since read will retain the `0` initial value on read failure, we can ignore the error status.
-    (void)read<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
-    if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
+    if (Utilities::FileHelper::readFromFile(boot_count_file.toChar(), boot_count) != Os::File::OP_OK) {
+        boot_count = 0;
+    } else if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
         this->log_WARNING_HI_BootCountCorrupted(static_cast<I64>(boot_count));
         boot_count = 0;
     }
@@ -176,20 +133,19 @@ Fw::Time StartupManager ::update_quiescence_start() {
     auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
-    Fw::Time time = this->getTime();
-    // Open the quiescence start time file and read the current time. On read failure, return the current time.
-    StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
+    Fw::Time time;
+    Os::File::Status read_status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
     // A corrupt file (e.g. a torn flash write leaving 0xFF bytes) fails Fw::Time deserialization, which rejects
     // out-of-range fields such as useconds >= 1000000. It persists across reboots, so discard it and start over
     // rather than boot-loop on it (#399, #547).
-    if (status == StartupManager::CORRUPT) {
+    if (read_status == Os::File::OTHER_ERROR) {
         this->log_WARNING_HI_QuiescenceFileCorrupted();
     }
     // On read failure, write the current time to the file for future reads. This only happens on read failure because
     // there is a singular quiescence start time for the whole mission.
-    if (status != StartupManager::SUCCESS) {
-        status = write_atomic<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
-        if (status != StartupManager::SUCCESS) {
+    if (read_status != Os::File::OP_OK) {
+        time = this->getTime();
+        if (write_atomic<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time) != StartupManager::SUCCESS) {
             this->log_WARNING_LO_QuiescenceFileInitFailure();
         }
     }
