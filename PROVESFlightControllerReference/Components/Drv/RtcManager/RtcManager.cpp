@@ -402,6 +402,11 @@ void RtcManager ::update_callback_t() {
     std::int64_t rtc_s = 0;
     int rc = 0;
     const RtcRead read = this->readRtcSeconds(rtc_s, rc);
+    // An RTC that lost power has no time until TIME_SET. That is not a read fault.
+    if (read == RtcRead::NOT_SET) {
+        this->log_WARNING_LO_RtcTimeNotSet();
+        return;
+    }
     if (read != RtcRead::OK) {
         ++this->m_disciplineReadFaults;
         this->tlmWrite_DisciplineReadFaults(this->m_disciplineReadFaults);
@@ -412,6 +417,7 @@ void RtcManager ::update_callback_t() {
         }
         return;
     }
+    this->log_WARNING_LO_RtcTimeNotSet_ThrottleClear();
 
     k_spinlock_key_t key = k_spin_lock(&this->m_lock);
     const TimeDiscipline::CorrectionResult result = this->m_discipline.correct(rtc_s, uptime_us);
@@ -443,6 +449,9 @@ RtcManager::RtcRead RtcManager ::readRtcSeconds(std::int64_t& rtc_s, int& rc) {
 
     struct rtc_time time_rtc = {};
     rc = rtc_get_time(this->m_dev, &time_rtc);
+    if (rc == -ENODATA) {
+        return RtcRead::NOT_SET;
+    }
     if (rc != 0) {
         return RtcRead::FAILED;
     }
