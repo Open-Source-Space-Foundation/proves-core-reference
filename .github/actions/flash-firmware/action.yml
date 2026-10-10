@@ -7,10 +7,7 @@ runs:
     - name: Reboot Integration Cube (before flash)
       shell: bash
       run: |
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-        sleep 3
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-        sleep 3
+        ./tools/ci/psu cycle
 
     - name: Install MCUBoot
       shell: bash
@@ -27,7 +24,4 @@ runs:
     - name: Reboot Integration Cube (after flash)
       shell: bash
       run: |
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-        sleep 3
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-        sleep 3
+        ./tools/ci/psu cycle
