@@ -25,6 +25,7 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Result of readRtcSeconds()
     enum class RtcRead {
         OK,           //!< rtc_s is valid
+        NOT_SET,      //!< RTC time not set since its last power loss (rtc_get_time() returned -ENODATA)
         FAILED,       //!< Device not ready or rtc_get_time() failed
         IMPLAUSIBLE,  //!< Conversion failed or seconds outside years 2000 to 2099
     };

@@ -168,6 +168,9 @@ module Drv {
             rtc_s: I64 @< RTC seconds since epoch, or -1 if the conversion failed
         ) severity warning low id 21 format "RTC seconds {} outside years 2000 to 2099, sample not used" throttle 5 every {seconds = 60}
 
+        @ RtcTimeNotSet event indicates that the RTC has no time since its last power loss. Time discipline waits for TIME_SET. Emitted once until a good RTC read
+        event RtcTimeNotSet() severity warning low id 22 format "RTC time not set since power loss, time discipline waits for TIME_SET" throttle 1
+
         ### PORTS ###
 
         @ Port for canceling running sequences when RTC time is set
