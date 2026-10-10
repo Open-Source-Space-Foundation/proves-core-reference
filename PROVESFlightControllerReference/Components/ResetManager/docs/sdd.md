@@ -48,6 +48,7 @@ classDiagram
 |---|---|---|
 | coldReset | sync input | Triggers a cold reset of the system |
 | warmReset | sync input | Triggers a warm reset of the system |
+| prepareForReboot | output [3] | Signalled to every connected component before `sys_reboot` so it can persist state: ModeManager sets its clean-shutdown flag; the TcSecurityDeframer instances flush the anti-replay sequence number so the frame that commanded the reboot is not replayable after it. Unconnected indices are skipped. |
 
 ## Sequence Diagrams
 

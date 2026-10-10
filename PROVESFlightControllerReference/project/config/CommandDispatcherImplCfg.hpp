@@ -13,7 +13,7 @@
 // Define configuration values for dispatcher
 
 enum {
-    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 350,  // !< The size of the table holding opcodes to dispatch
+    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 351,  // !< The size of the table holding opcodes to dispatch
     CMD_DISPATCHER_SEQUENCER_TABLE_SIZE = 10,  // !< The size of the table holding commands in progress
 };
 
@@ -27,6 +27,10 @@ constexpr bool IncludeCommandOpcodesInEvents = true;
 constexpr FwOpcodeType getEventOpcode(const FwOpcodeType opcode) {
     return IncludeCommandOpcodesInEvents ? opcode : std::numeric_limits<FwOpcodeType>::max();
 }
+
+//! Default for whether a sequence command is dispatched when the sequence tracker table is full.
+//! Per-instance override: CommandDispatcherImpl::configure(bool).
+constexpr bool EXECUTE_WHEN_SEQUENCE_TABLE_FULL_DEFAULT = false;
 
 }  // namespace CmdDispatcherCfg
 }  // namespace Svc

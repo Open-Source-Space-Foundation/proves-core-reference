@@ -70,6 +70,9 @@ class ResetManager final : public ResetManagerComponentBase {
 
     //! Handler for warm reset
     void handleWarmReset();
+
+    //! Signal every connected prepareForReboot port so components can persist state before the reboot
+    void notifyPrepareForReboot();
 };
 
 }  // namespace Components
