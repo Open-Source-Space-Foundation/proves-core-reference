@@ -90,6 +90,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Override retry count for proves_send_and_assert_command (default: 3 UART, 5 radio).",
     )
     parser.addoption(
+        "--ota-image",
+        default="build-artifacts/zephyr.signed.bin",
+        help="Signed MCUboot image the OTA test uplinks and swaps to. Defaults to "
+        "the artifact produced by 'make build'.",
+    )
+    parser.addoption(
+        "--ota-expect-version",
+        default=None,
+        help="Project version string the board must report after the OTA swap. "
+        "Defaults to the project_version in build-fprime-automatic-zephyr/versions/"
+        "version.json, which is only right when --ota-image came from that build.",
+    )
+    parser.addoption(
         "--bare-flight-controler-board",
         action="store_true",
         default=False,

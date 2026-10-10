@@ -1,0 +1,215 @@
+name: ota
+
+# The hardware over-the-air update test lives in its own workflow because it
+# monopolises the single integration cube for the better part of an hour (a
+# 1.4 MB uplink at the default cooldown is ~48 min on its own), erases a flash
+# slot, and reboots the board twice. Running it alongside every PR would starve
+# the normal integration jobs, so it runs on a nightly schedule and on demand.
+on:
+  schedule:
+    # 10:00 UTC daily. GitHub only runs schedules from the default branch, so
+    # edits here take effect once they land on main.
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+    inputs:
+      ota_uplink_cooldown:
+        description: "Seconds between file-uplink chunks during the OTA test (repo default is 0.400)"
+        type: string
+        default: "0.400"
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+    with:
+      build_ota_image: true
+    secrets: inherit
+
+  integration-ota:
+    runs-on:
+      - integration
+    needs: build
+    # Uplink alone is ~48 min at the default cooldown; on top of that the suite
+    # writes the staging slot twice (once for the revert path, once for the
+    # confirm path) and reboots the board four times.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: artifacts
+          path: .
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: ota-image
+          path: ota-image
+
+      - name: Power On Satellite
+        run: |
+          # Every other integration job's first hardware action is the
+          # flash-firmware composite, which powers the cube up before it talks
+          # to OpenOCD. This job reaches for OpenOCD first, and every job on
+          # this runner ends with "Power Off Satellite", so without this the
+          # erase below would run against an unpowered board and fail to
+          # attach.
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Erase the MCUboot staging slot
+        run: |
+          # slot1_partition is 0x200000..0x300000 within the 4 MB QSPI flash
+          # mapped at 0x10000000 (see
+          # boards/bronco_space/proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi).
+          #
+          # A previous run can leave a staged image plus swap flags in slot1. If
+          # those survive, MCUboot may swap it in on the first boot after we
+          # flash the primary slot below, and the job would silently test the
+          # wrong firmware. Erasing first makes the starting state unambiguous.
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "init; halt; flash erase_address 0x10200000 0x100000; reset run; exit"
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Load .env file
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < ~/actions-runner/.env
+
+      - name: Set up dependencies
+        run: |
+          make submodules fprime-venv
+
+      - name: Apply CI spacecraft ID overrides
+        run: |
+          make make-ci-spacecraft-id
+
+      - name: Set Authentication Key
+        env:
+          AUTH_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+      - name: Install Framer Plugin
+        run: |
+          make framer-plugin
+
+      - name: Record the staged image version
+        env:
+          # Quoted through the environment rather than interpolated into the
+          # shell, so a workflow input cannot inject a command. The scheduled
+          # run has no inputs, so it falls through to the repo default.
+          UPLINK_COOLDOWN: ${{ inputs.ota_uplink_cooldown || '0.400' }}
+        run: |
+          OTA_VERSION=$(./fprime-venv/bin/python -c \
+            'import json; print(json.load(open("ota-image/version.json"))["project_version"])')
+          echo "Board will be flashed with the default build; OTA will uplink: $OTA_VERSION"
+          echo "OTA_VERSION=$OTA_VERSION" >> $GITHUB_ENV
+          echo "GDS_EXTRA_ARGS=--file-uplink-cooldown $UPLINK_COOLDOWN" >> $GITHUB_ENV
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Kill all python processes
+        run: |
+          pkill -9 python || true
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" GDS_EXTRA_ARGS="$GDS_EXTRA_ARGS" > gds-bootstrap.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Format Filesystem
+        run: |
+          # The uplinked image is ~1.4 MB and lands in /update. Starting from a
+          # formatted filesystem keeps a previous run's copy from filling it.
+          make test-integration FILTER=format_filesystem
+
+      - name: Power-Cycle Satellite
+        run: |
+          # /seq, /antenna and friends are only recreated at boot, so the format
+          # above has to be followed by a reboot before anything else runs.
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          sleep 3
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          sleep 3
+
+      - name: Detect Board TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Start GDS
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" GDS_EXTRA_ARGS="$GDS_EXTRA_ARGS" > gds.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Sync Sequence Number
+        run: |
+          make test-integration FILTER=sync_sequence_number
+
+      - name: Run OTA Integration Test
+        run: |
+          make test-integration TEST=ota_test.py FILTER=ota \
+            PYTEST_ARGS="--ota-image=ota-image/zephyr.signed.bin --ota-expect-version=$OTA_VERSION"
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gds-log-ota
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          pkill -9 python || true
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
+          sleep 2
+
+      - name: Restore the board
+        if: always()
+        run: |
+          # The board is left running the OTA staging image, and slot1 holds
+          # whatever the swap displaced. Put both slots back to a known state so
+          # the next job on this runner starts from the artifact build, not from
+          # a leftover OTA image.
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "init; halt; flash erase_address 0x10200000 0x100000; reset run; exit" || true
+          ~/openocd/src/openocd -s ~/openocd/tcl \
+            -f ~/openocd/tcl/interface/cmsis-dap.cfg \
+            -f ~/openocd/tcl/target/rp2350.cfg \
+            -c "adapter speed 5000" \
+            -c "program bootable.signed.hex verify reset exit" || true
+
+      - name: Power Off Satellite
+        if: always()
+        run: |
+          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
