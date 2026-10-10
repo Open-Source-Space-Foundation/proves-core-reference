@@ -33,6 +33,7 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     // Handler implementations
     // ----------------------------------------------------------------------
     void schedIn_handler(FwIndexType portNum, U32 context) override;
+    bool deploymentStateGet_handler(FwIndexType portNum) override;
 
     // ----------------------------------------------------------------------
     // Command handlers
