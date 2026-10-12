@@ -9,8 +9,8 @@ add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ComCcsdsNicla/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ComCcsdsSband/")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/ComCcsdsLora/")
 
-# One deployment per board. The flight controller is the topology from main.
-# The Nicla Vision keeps its own deployment and ID range.
+# One deployment per board. Shared project config stays one copy.
+# Default flight-controller board is proves_flight_control_board_v5e.
 if(BOARD MATCHES "arduino_nicla_vision")
     add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/NiclaDeployment/")
 elseif(BOARD MATCHES "proves_flight_control_board")

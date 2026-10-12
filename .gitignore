@@ -2,14 +2,16 @@
 logs/
 cmake-build-*
 build-artifacts/
-build-nicla/
-build-nicla-artifacts/
-build-fc/
 build-gtest/
 build-fprime-*
 *-template
 *.template.cpp
 *.template.hpp
+
+# Nicla Vision (second deployment) generated output
+build-nicla/
+build-nicla-artifacts/
+build-fc/
 
 # Zephyr workspace
 lib/zephyr-workspace/*

@@ -17,6 +17,12 @@ endif()
 
 # When running tests, avoid pulling in Zephyr (no BOARD etc. needed)
 if (NOT BUILD_TESTING)
+    # Board overlays in boards/<board>.conf. Must be set before find_package(Zephyr).
+    if(BOARD MATCHES "arduino_nicla_vision")
+        list(APPEND EXTRA_CONF_FILE "${CMAKE_CURRENT_LIST_DIR}/boards/arduino_nicla_vision.conf")
+    elseif(BOARD MATCHES "proves_flight_control_board")
+        list(APPEND EXTRA_CONF_FILE "${CMAKE_CURRENT_LIST_DIR}/boards/proves_flight_control_board.conf")
+    endif()
     find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
 endif()
 

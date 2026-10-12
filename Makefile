@@ -3,7 +3,7 @@ all: submodules fprime-venv zephyr generate-if-needed build
 
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Dependencies
 
@@ -131,50 +131,93 @@ docs-serve: uv ## Serve MkDocs documentation site locally
 docs-build: uv ## Build MkDocs documentation site
 	@$(UVX) --from mkdocs-material mkdocs build
 
-.PHONY: generate
-generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
-	@$(UV_RUN) fprime-util generate --force
+PROVES_BOARD ?= proves_flight_control_board_v5e/rp2350a/m33
+NICLA_BOARD ?= arduino_nicla_vision/stm32h747xx/m7
+PROVES_BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
+NICLA_BUILD_DIR ?= $(shell pwd)/build-nicla
+PROVES_ARTIFACT_DIR ?= $(shell pwd)/build-artifacts/proves
+NICLA_ARTIFACT_DIR ?= $(shell pwd)/build-artifacts/nicla
+PROVES_DEPLOYMENT ?= $(PROVES_ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment
+BUILD_DIR ?= $(PROVES_BUILD_DIR)
+
+.PHONY: generate generate-proves
+generate: generate-proves generate-nicla ## Generate both board caches
+generate-proves: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate the flight-controller build cache
+	@echo "Generating flight controller ($(PROVES_BOARD)) -> $(PROVES_ARTIFACT_DIR)"
+	@$(UV_RUN) fprime-util generate --force --build-cache "$(PROVES_BUILD_DIR)" \
+		-DBOARD="$(PROVES_BOARD)"
+
+.PHONY: generate-nicla
+generate-nicla: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate the Nicla build cache
+	@echo "Generating Nicla ($(NICLA_BOARD)) -> $(NICLA_ARTIFACT_DIR)"
+	@$(UV_RUN) fprime-util generate --force --build-cache "$(NICLA_BUILD_DIR)" \
+		-DBOARD="$(NICLA_BOARD)"
 
 .PHONY: generate-if-needed
-BUILD_DIR ?= $(shell pwd)/build-fprime-automatic-zephyr
 generate-if-needed:
-	@test -d $(BUILD_DIR) || $(MAKE) generate
+	@if [ ! -d "$(PROVES_BUILD_DIR)" ] || ! grep -F "FPRIME_INSTALL_DEST:UNINITIALIZED=$(PROVES_ARTIFACT_DIR)" "$(PROVES_BUILD_DIR)/CMakeCache.txt" >/dev/null 2>&1; then \
+		$(MAKE) generate-proves; \
+	fi
 
-.PHONY: build
+.PHONY: generate-nicla-if-needed
+generate-nicla-if-needed:
+	@if [ ! -d "$(NICLA_BUILD_DIR)" ] || ! grep -F "BOARD:STRING=$(NICLA_BOARD)" "$(NICLA_BUILD_DIR)/CMakeCache.txt" >/dev/null 2>&1; then \
+		$(MAKE) generate-nicla; \
+	fi
+
+.PHONY: build-proves
 BUILD_YAMCS_MDB ?= 1
-build: submodules zephyr fprime-venv generate-if-needed ## Build the flight controller into build-artifacts
-	@$(UV_RUN) fprime-util build
-	@if [ -f ./build-artifacts/zephyr.signed.bin ]; then \
-		./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2; \
-		mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex; \
+build-proves: submodules zephyr fprime-venv generate-if-needed ## Build the flight controller into build-artifacts/proves
+	@$(UV_RUN) fprime-util build --build-cache "$(PROVES_BUILD_DIR)"
+	@if [ -f "$(PROVES_ARTIFACT_DIR)/zephyr.signed.bin" ]; then \
+		./tools/bin/make-loadable-image "$(PROVES_ARTIFACT_DIR)/zephyr.signed.bin" bootable.uf2; \
+		mv "$(PROVES_ARTIFACT_DIR)/zephyr.signed.hex" bootable.signed.hex; \
 	else \
 		echo "No signed image; skipping bootable UF2."; \
 	fi
 	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
 
-NICLA_BOARD := arduino_nicla_vision/stm32h747xx/m7
-NICLA_BUILD_DIR := $(shell pwd)/build-nicla
-NICLA_ARTIFACT_DIR := $(shell pwd)/build-nicla-artifacts
-
 .PHONY: build-nicla
-build-nicla: submodules zephyr fprime-venv ## Build the Nicla into build-nicla
-	@$(UV_RUN) fprime-util generate --build-cache "$(NICLA_BUILD_DIR)" \
-		-DBOARD="$(NICLA_BOARD)" \
-		-DFPRIME_INSTALL_DEST="$(NICLA_ARTIFACT_DIR)"
-	@$(UV_RUN) fprime-util build --build-cache "$(NICLA_BUILD_DIR)"
+build-nicla: submodules zephyr fprime-venv generate-nicla-if-needed ## Build the Nicla into build-artifacts/nicla
+	@DESTDIR="$(NICLA_ARTIFACT_DIR)" $(UV_RUN) fprime-util build --build-cache "$(NICLA_BUILD_DIR)"
+
+.PHONY: build
+build: build-proves build-nicla ## Build both boards into build-artifacts/proves and build-artifacts/nicla
 
 .PHONY: check-console-disabled
-ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
-check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
+ZEPHYR_CONFIG ?= $(PROVES_BUILD_DIR)/zephyr/.config
+check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build-proves'
 	@$(UV_RUN) python3 scripts/check_console_disabled.py "$(ZEPHYR_CONFIG)"
 
 ##@ Flash
 
-# Default -r dfu-util = USB only (Arduino bootloader after double-tap RST). Override RUNNER if you use SWD.
+.PHONY: flash-proves
+flash-proves: ## Flash the flight controller (UF2 copy if DEST= is set, else OpenOCD)
+	@test -f "$(PROVES_ARTIFACT_DIR)/zephyr.uf2" || { echo "No flight-controller image at $(PROVES_ARTIFACT_DIR). Run make build-proves first."; exit 1; }
+	@if [ -n "$(DEST)" ]; then \
+		UF2="$(PROVES_ARTIFACT_DIR)/zephyr.uf2"; \
+		if [ -f bootable.uf2 ]; then UF2="bootable.uf2"; fi; \
+		cp "$$UF2" "$(DEST)/"; \
+		echo "Copied $$UF2 to $(DEST)/"; \
+	elif [ -x "$(OPENOCD_BIN)" ]; then \
+		HEX="$(PROVES_ARTIFACT_DIR)/zephyr.signed.hex"; \
+		if [ -f bootable.signed.hex ]; then HEX="bootable.signed.hex"; \
+		elif [ ! -f "$$HEX" ]; then HEX="$(PROVES_ARTIFACT_DIR)/zephyr.hex"; fi; \
+		"$(OPENOCD_BIN)" $(OPENOCD_COMMON_FLAGS) -c "program $$HEX verify reset exit"; \
+	else \
+		echo "Copy $(PROVES_ARTIFACT_DIR)/zephyr.uf2 (or bootable.uf2) to the board volume, set DEST=/Volumes/RP2350, or build OpenOCD (make debug)."; \
+		exit 1; \
+	fi
+
+.PHONY: flash-nicla
+flash-nicla: fprime-venv ## USB DFU the Nicla (install dfu-util; double-tap RST first). Override RUNNER for SWD.
+	@test -f "$(NICLA_ARTIFACT_DIR)/zephyr.hex" || { echo "No Nicla image at $(NICLA_ARTIFACT_DIR). Run make build-nicla first."; exit 1; }
+	@$(WEST) flash -d "$(NICLA_BUILD_DIR)" --hex-file "$(NICLA_ARTIFACT_DIR)/zephyr.hex" -r $(if $(RUNNER),$(RUNNER),dfu-util)
+
 .PHONY: flash
-flash: fprime-venv ## USB DFU (install dfu-util; bee in bootloader mode first!!!!!!!!!)
-	@test -d "$(NICLA_BUILD_DIR)" || { echo "No Nicla build at $(NICLA_BUILD_DIR). Run make build-nicla first."; exit 1; }
-	@$(WEST) flash -d "$(NICLA_BUILD_DIR)" -r $(if $(RUNNER),$(RUNNER),dfu-util)
+flash: ## Flash a board: use make flash-proves or make flash-nicla
+	@echo "Use make flash-proves (flight controller) or make flash-nicla (Nicla Vision)."; \
+	exit 1
 
 ##@ Authentication Keys
 
@@ -251,7 +294,7 @@ FILTER ?= not sync_sequence_number and not format_filesystem
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
-	@DEPLOY="build-artifacts/zephyr/fprime-zephyr-deployment"; \
+	@DEPLOY="$(PROVES_DEPLOYMENT)"; \
 	TARGETS=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
@@ -279,7 +322,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 .PHONY: sync-sequence-number
 sync-sequence-number: uv ## Synchronize GDS/flight sequence number
 	@echo "Synchronizing sequence number"
-	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment $(PROVES_DEPLOYMENT)
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
@@ -292,10 +335,10 @@ clean: ## Remove all gitignored files
 ##@ YAMCS
 
 .PHONY: yamcs-dict
-yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires build-artifacts; run 'make build' first)
+yamcs-dict: fprime-venv ## Generate XTCE dictionary for YAMCS (requires flight-controller artifacts; run 'make build-proves' first)
 	@mkdir -p yamcs/yamcs-data/mdb
-	@DICT=$$(find build-artifacts -name "*TopologyDictionary.json" | head -1); \
-	  if [ -z "$$DICT" ]; then echo "Error: run 'make build' first"; exit 1; fi; \
+	@DICT=$$(find "$(PROVES_ARTIFACT_DIR)" -name "*TopologyDictionary.json" | head -1); \
+	  if [ -z "$$DICT" ]; then echo "Error: run 'make build-proves' first"; exit 1; fi; \
 	  echo "Generating XTCE from $$DICT"; \
 	  $(UV_RUN) fprime-to-xtce "$$DICT" -o yamcs/yamcs-data/mdb/fprime.xtce.xml
 	@echo "XTCE dictionary at yamcs/yamcs-data/mdb/fprime.xtce.xml"
@@ -339,7 +382,7 @@ yamcs-build-check: ## Validate YAMCS server boots via docker compose with the cu
 .PHONY: test-yamcs
 test-yamcs: fprime-venv ## Run YAMCS round-trip tests (assumes 'make yamcs UART_DEVICE=...' is running)
 	$(UV_RUN) pytest PROVESFlightControllerReference/test/yamcs \
-	  --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	  --deployment $(PROVES_DEPLOYMENT)
 
 .PHONY: yamcs-stop
 yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, adapter)
@@ -397,7 +440,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
 	FPRIME_GDS_CONFIG_PATH=$(shell pwd)/yamcs/fprime-gds.yml \
 	$(UV_RUN) fprime-yamcs \
-	    -d $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment \
+	    -d $(PROVES_DEPLOYMENT) \
 	    --no-app \
 	    --communication-selection none \
 	    --yamcs-config-dir $(shell pwd)/yamcs/yamcs-data \
@@ -410,7 +453,7 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	done; \
 	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
-	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
+	$(UV_RUN) fprime-yamcs-events --dictionary $(PROVES_DEPLOYMENT)/dict/ReferenceDeploymentTopologyDictionary.json &
 	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
@@ -434,7 +477,7 @@ yamcs-adapter-tcp: fprime-venv ## Start TCP adapter for bent-pipe (GS_HOST=, GS_
 
 GDS_COMMAND ?= $(UV_RUN) fprime-gds
 
-ARTIFACT_DIR ?= $(shell pwd)/build-artifacts
+ARTIFACT_DIR ?= $(PROVES_ARTIFACT_DIR)
 
 .PHONY: sequence
 sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=startup)
@@ -443,7 +486,7 @@ sequence: fprime-venv ## Compile a sequence file (usage: make sequence SEQ=start
 		exit 1; \
 	fi
 	@echo "Compiling sequence: $(SEQ).seq"
-	@$(UV_RUN) fprime-seqgen sequences/$(SEQ).seq -d $(ARTIFACT_DIR)/zephyr/fprime-zephyr-deployment
+	@$(UV_RUN) fprime-seqgen sequences/$(SEQ).seq -d $(PROVES_DEPLOYMENT)
 
 .PHONY: gds
 gds: ## Run FPrime GDS
@@ -468,7 +511,7 @@ gds-integration: framer-plugin
 DOL_SERIAL_PORT ?= /dev/ttyACM0
 DoL_test: ## Run the day-in-the-life tests (DOL_SERIAL_PORT=/dev/ttyXXX)
 	@echo "make sure passthrough GDS is running"
-	@DOL_SERIAL_PORT="$(DOL_SERIAL_PORT)" $(UV_RUN) pytest PROVESFlightControllerReference/test/day-in-the-life/test_day_in_the_life.py PROVESFlightControllerReference/test/day-in-the-life/test_edge_cases_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@DOL_SERIAL_PORT="$(DOL_SERIAL_PORT)" $(UV_RUN) pytest PROVESFlightControllerReference/test/day-in-the-life/test_day_in_the_life.py PROVESFlightControllerReference/test/day-in-the-life/test_edge_cases_day_in_the_life.py --deployment $(PROVES_DEPLOYMENT)
 
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin

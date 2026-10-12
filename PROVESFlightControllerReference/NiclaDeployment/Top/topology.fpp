@@ -35,6 +35,7 @@ module NiclaDeployment {
 
     instance gpioWatchdog
     instance watchdog
+    instance nullPrmDb
 
   # ----------------------------------------------------------------------
   # Pattern graph specifiers
@@ -46,6 +47,7 @@ module NiclaDeployment {
     health connections instance $health
     time connections instance chronoTime
     telemetry connections instance tlmSend
+    param connections instance nullPrmDb
 
   # ----------------------------------------------------------------------
   # Telemetry packets (only used when TlmPacketizer is used)

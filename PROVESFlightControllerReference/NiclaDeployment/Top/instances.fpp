@@ -110,4 +110,8 @@ module NiclaDeployment {
   instance gpioWatchdog: Zephyr.ZephyrGpioDriver base id 0xF00D1000
   instance watchdog: Components.Watchdog base id 0xF00D2000
 
+  # F' 4.3 TlmPacketizer loads parameters at boot and asserts if paramGetOut
+  # is unwired. This stub returns INVALID so the packetizer uses defaults.
+  instance nullPrmDb: Components.NullPrmDb base id 0xF00D3000
+
 }

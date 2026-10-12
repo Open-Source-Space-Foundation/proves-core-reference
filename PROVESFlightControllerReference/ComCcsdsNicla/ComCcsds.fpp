@@ -27,8 +27,11 @@ module ComCcsdsNicla {
         configurationTable.entries[Ports_ComPacketQueue::EVENTS].depth = ComCcsdsConfig::QueueDepths::events;
         configurationTable.entries[Ports_ComPacketQueue::EVENTS].priority = ComCcsdsConfig::QueuePriorities::events;
 
-        // Telemetry
-        configurationTable.entries[Ports_ComPacketQueue::TELEMETRY].depth = 1; // working Nicla image; flight controller uses ComCcsdsConfig::QueueDepths::tlm
+        // Telemetry. F' 4.3 TlmPacketizer emits every updated packet in one Run
+        // (4 Nicla packets) before ComQueue can get a send-status back, so a
+        // depth of 1 overflows immediately. The old working image used depth 1
+        // with the pre-4.3 packetizer. Flight controller uses QueueDepths::tlm (50).
+        configurationTable.entries[Ports_ComPacketQueue::TELEMETRY].depth = 10;
         configurationTable.entries[Ports_ComPacketQueue::TELEMETRY].priority = ComCcsdsConfig::QueuePriorities::tlm;
 
         // File Downlink Queue (buffer queue using NUM_CONSTANTS offset)

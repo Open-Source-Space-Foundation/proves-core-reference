@@ -37,7 +37,7 @@ FieldParseResult<uint32_t> parseOpCode(const uint8_t* buffer, const size_t size)
 
 //! OpCodes that are allowed to bypass authentication
 //! To determine the OpCode value for a command, search for the command in
-//! build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+//! build-artifacts/proves/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
 //! then convert the opcode field value from decimal to hexadecimal
 static constexpr uint32_t kBypassOpCodes[] = {
     0x01000000,  //!< CdhCore.cmdDisp.CMD_NO_OP

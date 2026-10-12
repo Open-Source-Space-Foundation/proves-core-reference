@@ -64,24 +64,56 @@ The bootloader build outputs `mcuboot.uf2` at the repo root Put the board into U
 cp mcuboot.uf2 [path-to-your-board]
 ```
 
+## Two deployments
+
+This repository builds two F Prime deployments from one project. You do not edit `settings.ini` to switch boards; the make target passes `BOARD`.
+
+| Board | Deployment | Make targets | Build cache | Artifacts |
+| --- | --- | --- | --- | --- |
+| PROVES flight controller (v5e, default) | `ReferenceDeployment` | `make generate-proves`, `make build-proves`, `make flash-proves` | `build-fprime-automatic-zephyr/` | `build-artifacts/proves/` |
+| Arduino Nicla Vision (M7) | `NiclaDeployment` | `make generate-nicla`, `make build-nicla`, `make flash-nicla` | `build-nicla/` | `build-artifacts/nicla/` |
+
+`make generate` generates both boards. `make build` builds both boards. Use `generate-proves` / `generate-nicla` or `build-proves` / `build-nicla` for one board.
+
 ## Running the code
 
-Run generate from the `proves-core-reference` directory. This generates the build cache for FPrime. You only need to do generate if something in the core FPrime package has changed
+Generate both caches if the F Prime package, CMake files, or `.fpp` files changed:
+
 ```shell
 make generate
 ```
 
-Then, and every time you change code, run
+Build only the board you are working on, or both:
 
 ```shell
+make build-proves
+make build-nicla
 make build
 ```
 
-Now you want to install the firmware onto the board. To do so, put the board into bootloader mode, then run
+### Flash the flight controller
+
+Put the board in UF2 bootloader mode, then either copy the image or let Make copy it:
+
 ```shell
 cp bootable.uf2 [path-to-your-board]
 ```
-Run ```make build``` and reflash bootable.uf2 onto the board anytime you change code.
+
+OR
+
+```
+make flash-proves DEST=/Volumes/RP2350
+```
+
+If OpenOCD is built (`make debug`), `make flash-proves` programs `bootable.signed.hex` over SWD. Rebuild and reflash after code changes.
+
+### Flash the Nicla Vision
+
+Install [dfu-util](https://dfu-util.sourceforge.net/), double-tap RST so the board is in the Arduino bootloader, then:
+
+```shell
+make flash-nicla
+```
 
 ## Ground Station: F Prime GDS or YAMCS
 
@@ -238,7 +270,7 @@ Now to fileuplink and update other parts. Upload Zephyr.signed.bin using the fil
 2. update from (pass in the path)
 3. configure_next_boot = test
 
-to find the crc ./tools/bin/calculate-crc.py build-artifacts/zephyr.signed.bin
+to find the crc ./tools/bin/calculate-crc.py build-artifacts/proves/zephyr.signed.bin
 
 (either power cycle or run the reboot command, should reboot and come into that old version of software, check the version telemetry)
 
