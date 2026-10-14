@@ -18,10 +18,7 @@ runs:
       if: inputs.power-cycle == 'true'
       shell: bash
       run: |
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-        sleep 3
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-        sleep 3
+        ./tools/ci/psu cycle
 
     - name: Install MCUBoot and Flight Software
       shell: bash
@@ -29,6 +26,8 @@ runs:
         POWER_CYCLE: ${{ inputs.power-cycle }}
         PROBE_SERIAL: ${{ inputs.probe-serial }}
       run: |
+        # OPENOCD_ADAPTER_SERIAL (runner .env) pins the probe when the input is unset.
+        PROBE_SERIAL=${PROBE_SERIAL:-${OPENOCD_ADAPTER_SERIAL:-}}
         OPENOCD=(~/openocd/src/openocd -s ~/openocd/tcl -f interface/cmsis-dap.cfg)
         if [ -n "$PROBE_SERIAL" ]; then
           OPENOCD+=(-c "adapter serial $PROBE_SERIAL")
@@ -50,10 +49,7 @@ runs:
       if: inputs.power-cycle == 'true'
       shell: bash
       run: |
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-        sleep 3
-        ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-        sleep 3
+        ./tools/ci/psu cycle
 
     - name: Wait for board USB CDC ACM to enumerate
       if: inputs.power-cycle != 'true'

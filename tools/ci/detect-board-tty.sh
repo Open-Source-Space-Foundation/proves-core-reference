@@ -23,6 +23,21 @@ find_tty_macos() {
         END { exit !found }'
 }
 
+# If BOARD_TTY is set (e.g. in the runner's ~/actions-runner/.env), that path
+# is used instead of the sysfs search. Set it on hosts with more than one
+# 0028:000f board attached, where the first sysfs match may not be the CI board.
+if [ -n "${BOARD_TTY:-}" ]; then
+    for _attempt in $(seq 1 "$attempts"); do
+        if [ -e "$BOARD_TTY" ]; then
+            echo "$BOARD_TTY"
+            exit 0
+        fi
+        [ "$attempts" -gt 1 ] && sleep 2
+    done
+    echo "ERROR: BOARD_TTY=$BOARD_TTY does not exist" >&2
+    exit 1
+fi
+
 find_tty() {
     if [ "$(uname)" = "Darwin" ]; then
         find_tty_macos

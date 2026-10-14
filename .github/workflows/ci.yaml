@@ -71,6 +71,7 @@ jobs:
     runs-on:
       - integration
     needs: build
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
@@ -79,13 +80,13 @@ jobs:
           name: artifacts
           path: .
 
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
-
       - name: Integration Setup
         uses: ./.github/actions/integration-setup
         with:
           auth-key: ${{ secrets.AUTH_KEY }}
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
 
       - name: Bootstrap GDS
         uses: ./.github/actions/bootstrap-gds
@@ -119,7 +120,7 @@ jobs:
           ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           [ -f server.pid ] && kill $(cat server.pid) || true
           # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
-          pkill -9 python || true
+          ./tools/ci/kill-ci-processes.sh
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
           echo "=== python procs AFTER kill ==="
@@ -137,9 +138,9 @@ jobs:
           # cycle clears all board-side latent state so the YAMCS phase
           # starts from a known-good boot, mirroring manual bench testing
           # where YAMCS-first-after-boot always round-trips.
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ./tools/ci/psu off
           sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
+          ./tools/ci/psu on
           # Wait for the CDC ACM device to re-enumerate as /dev/ttyBOARD.
           for i in $(seq 1 30); do
             [ -e /dev/ttyBOARD ] && { echo "/dev/ttyBOARD back after ${i}s"; break; }
@@ -260,7 +261,7 @@ jobs:
       - name: Power Off Satellite
         if: always()
         run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ./tools/ci/psu off
 
       # Self-hosted runners keep the workspace between runs, so the generated
       # header would otherwise leave the signing key on disk for whatever job
@@ -275,6 +276,7 @@ jobs:
       - integration
     needs:
       - build
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
@@ -283,14 +285,14 @@ jobs:
           name: artifacts
           path: .
 
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
-
       - name: Integration Setup
         uses: ./.github/actions/integration-setup
         with:
           auth-key: ${{ secrets.AUTH_KEY }}
           ci-spacecraft-id: "false"
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
 
       - name: Detect Zephyr UART TTY
         run: |
@@ -310,7 +312,7 @@ jobs:
           # the framer plugin, then the LoRa GDS that follows can authenticate.
           # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
           # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
-          pkill -9 python || true
+          ./tools/ci/kill-ci-processes.sh
           nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
@@ -325,11 +327,8 @@ jobs:
 
       - name: Power-Cycle Satellite
         run: |
-          pkill -9 python || true
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
-          sleep 3
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 1
-          sleep 3
+          ./tools/ci/kill-ci-processes.sh
+          ./tools/ci/psu cycle
 
       - name: Detect Zephyr UART TTY
         run: |
@@ -386,9 +385,9 @@ jobs:
           echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
           echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
 
-      - name: Kill all python processes
+      - name: Kill CI processes
         run: |
-          pkill -9 python || true
+          ./tools/ci/kill-ci-processes.sh
 
       - name: Start GDS on LoRa Passthrough
         run: |
@@ -450,7 +449,7 @@ jobs:
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ./tools/ci/psu off
 
       # Self-hosted runners keep the workspace between runs, so the generated
       # header would otherwise leave the signing key on disk for whatever job
