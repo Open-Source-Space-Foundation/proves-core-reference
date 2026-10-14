@@ -69,6 +69,14 @@ jobs:
             build-ota-test/ota-test-image.signed.bin
           retention-days: 30
 
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
   # OTA on a bare flight-controller board + debug probe (no PSU, no radio).
   # Needs a self-hosted runner labelled `integration-fcb`. A host with several
   # debug probes sets FCB_PROBE_SERIAL in ~/actions-runner/.env.

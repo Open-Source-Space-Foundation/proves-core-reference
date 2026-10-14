@@ -67,6 +67,14 @@ jobs:
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
   integration-uart:
     runs-on:
       - integration
