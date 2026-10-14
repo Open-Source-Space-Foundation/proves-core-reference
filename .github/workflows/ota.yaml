@@ -4,8 +4,10 @@ name: ota
 # every PR push. It runs:
 #   - on every push to main, to catch regressions after merge;
 #   - on a PR when a maintainer adds the `test-ota` label (only users with
-#     triage access or more can label). To test new commits, remove the label
-#     and add it again;
+#     triage access or more can label). The run is pinned to the commit that
+#     was labeled, and ota-unlabel.yaml removes the label when the PR head
+#     moves, so a push after review is never run unseen. To test new commits,
+#     add the label again;
 #   - on demand from the Actions tab (workflow_dispatch).
 # It is not a required check, so it never blocks a merge.
 on:
@@ -28,6 +30,10 @@ jobs:
       ota-build-id: ${{ steps.ota-build-id.outputs.id }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # Pin to the labeled head SHA, not the merge ref, so both jobs run
+          # exactly the commit the maintainer labeled. Empty off-PR events.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Build Firmware
         uses: ./.github/actions/build-firmware
@@ -77,6 +83,10 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # Pin to the labeled head SHA, not the merge ref, so both jobs run
+          # exactly the commit the maintainer labeled. Empty off-PR events.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
