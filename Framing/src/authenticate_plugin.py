@@ -10,6 +10,9 @@ from fprime_gds.common.communication.ccsds.space_data_link import (
     SpaceDataLinkFramerDeframer,
 )
 from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramerDeframer
+from fprime_gds.common.communication.ccsds.space_packet_splitter import (
+    SpacePacketSplitterFramerDeframer,
+)
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
@@ -217,6 +220,7 @@ class AuthenticateCompFramer(ChainedFramerDeframer):
         return [
             SpacePacketFramerDeframer,
             AuthenticateFramer,
+            SpacePacketSplitterFramerDeframer,
             SpaceDataLinkFramerDeframer,
         ]
 
