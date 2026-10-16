@@ -10,6 +10,7 @@ help: ## Display this help.
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
 	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
+	@git submodule sync --recursive
 	@git submodule update --init --recursive
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
