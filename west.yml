@@ -95,10 +95,10 @@ manifest:
       revision: 0bf3e208124d43c55fcb7f91bae6a9ac9812ee71
       path: lib/zephyr-workspace/modules/lib/usp_zephyr
 
-    # USP core library (LBM + RAL), used by usp_zephyr. Upstream v1.0.0.
+    # USP core library (LBM + RAL), used by usp_zephyr. OSSF fork (A/B only).
     - name: usp
-      url: https://github.com/Lora-net/usp
-      revision: v1.0.0
+      url: https://github.com/Open-Source-Space-Foundation/usp
+      revision: 8a60e4a16092f1bfa030b18494da267d8ca6a3ba
       path: lib/zephyr-workspace/modules/lib/usp
 
   self:

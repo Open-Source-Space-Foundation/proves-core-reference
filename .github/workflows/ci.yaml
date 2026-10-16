@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - scratch/v5e-upstream-pins-588
+      - scratch/588-ab-forks-restored
 
 # The integration jobs only read the repository; artifact up/download uses the
 # per-run artifact scope, not contents: write.
