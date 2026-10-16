@@ -119,6 +119,9 @@ class ModeManager : public ModeManagerComponentBase {
     //! Save persistent state to file
     void saveState();
 
+    //! Fall back to the default state (NORMAL, count 0, reason NONE) when persisted state is missing or unusable
+    void useDefaultState();
+
     //! Enter safe mode with specified reason
     void enterSafeMode(Components::SafeModeReason reason);
 

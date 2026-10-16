@@ -277,9 +277,11 @@ void ModeManager ::loadState() {
         status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
 
         if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
-            // Validate state data before restoring (valid range: 1-2 for SAFE, NORMAL)
-            if (state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
-                state.mode <= static_cast<U8>(SystemMode::NORMAL)) {
+            // Validate state data before restoring. The reason byte must be checked too: assigning an out-of-range
+            // SafeModeReason asserts, and a torn write would then repeat that assert on every boot (#547).
+            const bool modeValid = Components::SystemMode::isValid(state.mode);
+            const bool reasonValid = Components::SafeModeReason::isValid(state.safeModeReason);
+            if (modeValid && reasonValid) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
@@ -309,31 +311,27 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state (invalid mode value) - use defaults
-                Fw::LogStringArg opStr("load-corrupt");
-                this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
-                this->m_mode = SystemMode::NORMAL;
-                this->m_safeModeEntryCount = 0;
-                this->m_safeModeReason = Components::SafeModeReason::NONE;
-                this->turnOnComponents();
+                // Corrupted state (invalid mode or reason value) - use defaults. The op string names the bad
+                // field so the logged byte is unambiguous on the ground.
+                if (!modeValid) {
+                    Fw::LogStringArg opStr("load-corrupt-mode");
+                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
+                } else {
+                    Fw::LogStringArg opStr("load-corrupt-reason");
+                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.safeModeReason));
+                }
+                this->useDefaultState();
             }
         } else {
             // Read failed or file truncated - use defaults
             Fw::LogStringArg opStr("load-read");
             this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
-            this->m_mode = SystemMode::NORMAL;
-            this->m_safeModeEntryCount = 0;
-            this->m_safeModeReason = Components::SafeModeReason::NONE;
-            this->turnOnComponents();
+            this->useDefaultState();
         }
 
         file.close();
     } else {
-        // Initialize to default state
-        this->m_mode = SystemMode::NORMAL;
-        this->m_safeModeEntryCount = 0;
-        this->m_safeModeReason = Components::SafeModeReason::NONE;
-        this->turnOnComponents();
+        this->useDefaultState();
 
         // Only log warning for unexpected errors, not for expected "file not found" on first boot
         if (status != Os::File::DOESNT_EXIST) {
@@ -359,6 +357,13 @@ void ModeManager ::loadState() {
     // This ensures that if the system crashes before the next intentional reboot,
     // we'll detect it as an unintended reboot
     this->saveState();
+}
+
+void ModeManager ::useDefaultState() {
+    this->m_mode = SystemMode::NORMAL;
+    this->m_safeModeEntryCount = 0;
+    this->m_safeModeReason = Components::SafeModeReason::NONE;
+    this->turnOnComponents();
 }
 
 void ModeManager ::saveState() {

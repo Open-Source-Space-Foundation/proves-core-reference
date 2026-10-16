@@ -62,6 +62,11 @@ module Components {
         event QuiescenceFileInitFailure() severity warning low \
             format "Failed to initialize quiescence start time file"
 
+        @ Event emitted when the quiescence start file exists but cannot be read or decoded (e.g. a torn write or a
+        @ file-system error), carrying the Os::File status. The file is replaced with the current time.
+        event QuiescenceFileUnreadable(status: I32) severity warning high \
+            format "Quiescence start file unreadable (Os::File status {}) - reinitializing"
+
         @ Event emitted when the start-up sequence succeeds
         event StartupSequenceFinished() severity activity low \
             format "Start-up sequence finished successfully"
