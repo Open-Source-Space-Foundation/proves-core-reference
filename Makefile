@@ -58,11 +58,11 @@ zephyr-setup: fprime-venv ## Set up Zephyr environment
 
 .PHONY: pre-commit-install
 pre-commit-install: uv ## Install pre-commit hooks
-	@$(UVX) pre-commit install > /dev/null
+	@$(UVX_PINNED) pre-commit install > /dev/null
 
 .PHONY: fmt
 fmt: pre-commit-install ## Lint and format files
-	@$(UVX) pre-commit run --all-files
+	@$(UVX_PINNED) pre-commit run --all-files
 
 .PHONY: data-budget
 data-budget: fprime-venv ## Analyze telemetry data budget (use VERBOSE=1 for detailed output)
