@@ -43,8 +43,10 @@ classDiagram
 ## Port Descriptions
 | Name | Type | Description |
 |---|---|---|
-| temperatureGet | sync input | Reads the temperature in degrees Celsius. |
-| loadSwitchStateChanged | sync input | Initializes and deinitializes the TMP112 device on load switch state change. |
+| temperatureGet | guarded input | Reads the temperature in degrees Celsius. |
+| loadSwitchStateChanged | guarded input | Initializes and deinitializes the TMP112 device on load switch state change. |
+
+The `temperatureGet` and `loadSwitchStateChanged` ports and the `GetTemperature` command share the component mutex. A load switch OFF notification thus waits for an in-flight I2C transfer to finish, and no new transfer starts after it. This prevents a face power cut mid-transfer (issue #540).
 
 ## Sequence Diagrams
 
@@ -101,3 +103,4 @@ sequenceDiagram
 | Date | Description |
 |---|---|
 | 2025-12-04 | Initial TMP112 Manager component SDD |
+| 2026-10-04 | Made I2C ports and command guarded to serialise with load switch OFF |
