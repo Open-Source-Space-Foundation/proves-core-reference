@@ -61,7 +61,7 @@ The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM 
 
 The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is read on the first `run` tick of each boot. Because it is persisted state, any failure to decode it repeats on every boot, so it must never be fatal:
 
-1. **Corrupt file is discarded, not asserted on**: a full-size read whose bytes fail `Fw::Time` deserialization (e.g. an erased-flash `0xFF` tail, or `useconds >= 1000000`, which F Prime 4.3 rejects inside `Fw::Time::deserializeFrom`) emits `QuiescenceFileCorrupted` and is treated like a missing file: the current time is persisted and the boot continues. Before #547 this path hit `FW_ASSERT` and caused a ~44 s watchdog reboot loop.
+1. **Unreadable file is replaced, not asserted on**: a read that fails for any reason other than a missing file emits `QuiescenceFileUnreadable` with the `Os::File` status and is then treated like a missing file: the current time is persisted and the boot continues. This covers bytes that fail `Fw::Time` deserialization (e.g. an erased-flash `0xFF` tail, or `useconds >= 1000000`, which F Prime 4.3 rejects inside `Fw::Time::deserializeFrom`), a short file, and file-system errors. The status is logged rather than a "corrupt" verdict because `OTHER_ERROR` means both a decode failure and a generic OS error. A missing file is the expected first boot and is silent. Before #547 a corrupt file hit `FW_ASSERT` and caused a ~44 s watchdog reboot loop.
 2. **Write-then-rename persist**: the file is (re)written via `<QUIESCENCE_START_FILE>.tmp` + rename, the same scheme as the boot count.
 
 
@@ -115,7 +115,7 @@ The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is r
 | `CurrentBootCount` | ACTIVITY_LO | `i: I64` | Emitted by `GET_BOOT_COUNT` with the current boot count |
 | `BootCountUpdateFailure` | WARNING_LO | None | Emitted once per failure streak when the boot count file cannot be updated. The increment is retried on each subsequent `run` tick until it persists |
 | `BootCountCorrupted` | WARNING_HI | `raw: I64` | Emitted when the boot count file holds an implausible value (> 1,000,000), indicating a torn or corrupt write. The value is treated as unreadable |
-| `QuiescenceFileCorrupted` | WARNING_HI | None | Emitted when the quiescence start file fails to deserialize (torn or corrupt write). The file is discarded and reinitialized with the current time |
+| `QuiescenceFileUnreadable` | WARNING_HI | `status: I32` | Emitted when the quiescence start file exists but cannot be read or decoded (torn write, short file, or file-system error), with the `Os::File` status. The file is reinitialized with the current time |
 | `QuiescenceFileInitFailure` | WARNING_LO | None | Emitted when the quiescence start time file cannot be initialized. System will use current time but cannot persist it |
 | `StartupSequenceFinished` | ACTIVITY_LO | None | Emitted when the startup sequence completes successfully |
 | `StartupSequenceFailed` | WARNING_LO | `response: Fw.CmdResponse` | Emitted when the startup sequence fails, includes the failure response code |
@@ -143,4 +143,4 @@ The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is r
 | REQ-SM-009 | When `DEFAULT_STARTUP_VALUE == 0`, StartupManager shall not assert `enableTransmit` from the hard-coded countdown | Verification: Build with gate disabled and confirm no `HardcodedRadioEnable` / automatic TX after boot |
 | REQ-SM-010 | StartupManager shall not propagate an implausible boot count read from a corrupt file | Verification: Write junk to `BOOT_COUNT_FILE`, reboot, confirm `BootCountCorrupted` and a re-initialized count |
 | REQ-SM-011 | StartupManager shall persist the boot count atomically and retry a failed increment until it is durably stored | Verification: HWIL `test_safe_09` asserts boot count == initial+1 across a watchdog hard reset |
-| REQ-SM-012 | StartupManager shall boot normally from a corrupt `QUIESCENCE_START_FILE`, replacing it atomically | Verification: Write junk to `QUIESCENCE_START_FILE`, reboot, confirm `QuiescenceFileCorrupted`, no `AF_ASSERT`, and a clean subsequent boot |
+| REQ-SM-012 | StartupManager shall boot normally from a corrupt `QUIESCENCE_START_FILE`, replacing it atomically | Verification: Write junk to `QUIESCENCE_START_FILE`, reboot, confirm `QuiescenceFileUnreadable`, no `AF_ASSERT`, and a clean subsequent boot (HWIL `startup_manager_test.py::test_01`) |

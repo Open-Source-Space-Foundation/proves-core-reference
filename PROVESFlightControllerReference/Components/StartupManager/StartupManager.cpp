@@ -135,15 +135,15 @@ Fw::Time StartupManager ::update_quiescence_start() {
 
     Fw::Time time;
     Os::File::Status read_status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
-    // A corrupt file (e.g. a torn flash write leaving 0xFF bytes) fails Fw::Time deserialization, which rejects
-    // out-of-range fields such as useconds >= 1000000. It persists across reboots, so discard it and start over
-    // rather than boot-loop on it (#399, #547).
-    if (read_status == Os::File::OTHER_ERROR) {
-        this->log_WARNING_HI_QuiescenceFileCorrupted();
-    }
     // On read failure, write the current time to the file for future reads. This only happens on read failure because
-    // there is a singular quiescence start time for the whole mission.
+    // there is a singular quiescence start time for the whole mission. A corrupt file (e.g. a torn flash write leaving
+    // 0xFF bytes) fails Fw::Time deserialization and persists across reboots, so it is replaced rather than
+    // boot-looped on (#399, #547). A missing file is the expected first boot; anything else is reported with its
+    // status, since OTHER_ERROR covers both a decode failure and a generic file-system error.
     if (read_status != Os::File::OP_OK) {
+        if (read_status != Os::File::DOESNT_EXIST) {
+            this->log_WARNING_HI_QuiescenceFileUnreadable(static_cast<I32>(read_status));
+        }
         time = this->getTime();
         if (write_atomic<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time) != StartupManager::SUCCESS) {
             this->log_WARNING_LO_QuiescenceFileInitFailure();
