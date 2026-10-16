@@ -86,6 +86,11 @@ void AntennaDeployer ::schedIn_handler(FwIndexType portNum, U32 context) {
     }
 }
 
+bool AntennaDeployer ::deploymentStateGet_handler(FwIndexType portNum) {
+    (void)portNum;
+    return this->readDeploymentState();
+}
+
 // ----------------------------------------------------------------------
 // Command handler implementations
 // ----------------------------------------------------------------------
