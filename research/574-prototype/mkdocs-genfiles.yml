@@ -1,0 +1,123 @@
+site_name: PROVES Core Reference - Software Design Documents
+site_url: https://open-source-space-foundation.github.io/proves-core-reference/
+site_description: Software Design Documents for PROVES Core Reference components
+site_author: Open Source Space Foundation
+repo_name: Open-Source-Space-Foundation/proves-core-reference
+repo_url: https://github.com/Open-Source-Space-Foundation/proves-core-reference
+
+docs_dir: /tmp/mkres/docs-site-nocomponents
+edit_uri: edit/main/docs-site/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - content.action.edit
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: indigo
+      accent: indigo
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+      primary: indigo
+      accent: indigo
+
+plugins:
+  - search
+  - tags
+  - gen-files:
+      scripts:
+        - gen_components.py
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.mark
+  - attr_list
+  - tables
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Initial Setup: getting-started/initial-setup.md
+      - Build, Flash, and Run: getting-started/build-flash-run.md
+  - Component SDDs:
+      - Core Components:
+          - ADCS: components/ADCS/sdd.md
+          - Mode Manager: components/ModeManager/sdd.md
+          - Safe Mode FSM: components/ModeManager/safe-mode-fsm.md
+          - Startup Manager: components/StartupManager/sdd.md
+          - Reset Manager: components/ResetManager/sdd.md
+          - Watchdog: components/Watchdog/sdd.md
+          - Bootloader Trigger: components/BootloaderTrigger/sdd.md
+          - Detumble Manager: components/DetumbleManager/sdd.md
+      - Communication Components:
+          - Amateur Radio: components/AmateurRadio/sdd.md
+          - S-Band: components/SBand/sdd.md
+          - Com CCSDS UART: components/ComCcsdsUart/sdd.md
+          - Com CCSDS S-Band: components/ComCcsdsSband/sdd.md
+          - Com CCSDS LoRa: components/ComCcsdsLora/sdd.md
+          - Payload Com: components/PayloadCom/sdd.md
+          - Com Delay: components/ComDelay/sdd.md
+      - Hardware Components:
+          - Antenna Deployer: components/AntennaDeployer/sdd.md
+          - Burnwire: components/Burnwire/sdd.md
+          - Camera Handler: components/CameraHandler/sdd.md
+          - Load Switch: components/LoadSwitch/sdd.md
+      - Sensor Components:
+          - IMU Manager: components/ImuManager/sdd.md
+          - Power Monitor: components/PowerMonitor/sdd.md
+          - Thermal Manager: components/ThermalManager/sdd.md
+      - Driver Components:
+          - Drv2605 Manager: components/Drv2605Manager/sdd.md
+          - Ina219 Manager: components/Ina219Manager/sdd.md
+          - RTC Manager: components/RtcManager/sdd.md
+          - Tmp112 Manager: components/Tmp112Manager/sdd.md
+          - Veml6031 Manager: components/Veml6031Manager/sdd.md
+          - Pico Temp Manager: components/PicoTempManager/sdd.md
+      - Storage Components:
+          - Flash Worker: components/FlashWorker/sdd.md
+          - Fs Format: components/FsFormat/sdd.md
+          - Fs Space: components/FsSpace/sdd.md
+          - Null Prm Db: components/NullPrmDb/sdd.md
+      - Security Components:
+          - Tc Security Deframer: components/TcSecurityDeframer/sdd.md
+          - PROVES Router: components/ProvesRouter/sdd.md
+  - Additional Resources:
+      - Troubleshooting: additional-resources/troubleshooting.md
+      - WSL Notes: additional-resources/wsl-notes.md
+      - Self-Hosted Runner Setup: additional-resources/self-hosted-runner-setup.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Open-Source-Space-Foundation
+
+watch:
+  - ../../PROVESFlightControllerReference
