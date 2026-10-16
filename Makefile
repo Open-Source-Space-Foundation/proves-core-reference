@@ -106,6 +106,7 @@ docs-sync: ## Sync SDD files from components to docs-site
 	@cp PROVESFlightControllerReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
 	@# Copy Driver Components
 	@cp PROVESFlightControllerReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
+	@cp PROVESFlightControllerReference/Components/Drv/I2cBusMonitor/docs/sdd.md docs-site/components/I2cBusMonitor.md
 	@cp PROVESFlightControllerReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
 	@cp PROVESFlightControllerReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
 	@cp PROVESFlightControllerReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md

@@ -11,6 +11,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/haptics.h>
 #include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/fs/fs.h>
 #include <zephyr/kernel.h>
@@ -59,6 +60,18 @@ const struct device* face2_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face2_drv2605));
 const struct device* face3_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face3_drv2605));
 const struct device* face5_drv2605 = DEVICE_DT_GET(DT_NODELABEL(face5_drv2605));
 const struct device* die_temp = DEVICE_DT_GET(DT_NODELABEL(die_temp));
+
+// I2C0 pins, mux reset and controller pinctrl for I2cBusMonitor
+extern "C" {
+PINCTRL_DT_DEV_CONFIG_DECLARE(DT_NODELABEL(i2c0));
+}
+const Drv::I2cBusMonitorConfig i2c0_bus_config = {
+    .bus = DEVICE_DT_GET(DT_NODELABEL(i2c0)),
+    .scl = GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), i2c0_scl_gpios),
+    .sda = GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), i2c0_sda_gpios),
+    .muxReset = GPIO_DT_SPEC_GET_OR(DT_NODELABEL(tca9548a), reset_gpios, {0}),
+    .pinctrl = PINCTRL_DT_DEV_CONFIG_GET(DT_NODELABEL(i2c0)),
+};
 const int storage_partition_id = PARTITION_ID(storage_partition);
 
 int main(int argc, char* argv[]) {
@@ -105,6 +118,7 @@ int main(int argc, char* argv[]) {
     inputs.battCell4TempDevice = batt_cell4_temp_sens;
     // Pico temperature sensor device
     inputs.dieTempDevice = die_temp;
+    inputs.i2c0BusConfig = i2c0_bus_config;
     // Light sensor devices
     inputs.face0LightDevice = face0_light_sens;
     inputs.face1LightDevice = face1_light_sens;

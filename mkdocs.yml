@@ -91,6 +91,7 @@ nav:
           - Thermal Manager: components/ThermalManager.md
       - Driver Components:
           - Drv2605 Manager: components/Drv2605Manager.md
+          - I2C Bus Monitor: components/I2cBusMonitor.md
           - Ina219 Manager: components/Ina219Manager.md
           - RTC Manager: components/RtcManager.md
           - Tmp112 Manager: components/Tmp112Manager.md
