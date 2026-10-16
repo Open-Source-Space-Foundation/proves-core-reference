@@ -49,6 +49,9 @@ telemetry packets ReferenceDeploymentPackets {
     lora.LastRssi
     lora.LastSnr
     lora.BytesSent
+    lora.ChannelRssi
+    lora.TransmitsDeferred
+    lora.TransmitsForced
 #    sband.LastRssi
 #    sband.LastSnr
   }
