@@ -29,7 +29,9 @@ telemetry packets ReferenceDeploymentPackets {
     ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber
     ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber
 
-    lora.BytesReceived
+    # Radio bytes received: per-board instance name.
+    # Radio BytesReceived channel. Selected by Top/CMakeLists.txt per board.
+    include "RadioPacketsBytesReceived.fppi"
 
   }
 
@@ -45,13 +47,8 @@ telemetry packets ReferenceDeploymentPackets {
     imuManager.MagnetometerSamplingFrequency
   }
 
-  packet Radio id 8 group 2 {
-    lora.LastRssi
-    lora.LastSnr
-    lora.BytesSent
-#    sband.LastRssi
-#    sband.LastSnr
-  }
+  # Radio packet. Selected by Top/CMakeLists.txt per board.
+  include "RadioPacketsRadio.fppi"
 
   packet PowerMonitor id 11 group 2 {
     ina219SysManager.Current

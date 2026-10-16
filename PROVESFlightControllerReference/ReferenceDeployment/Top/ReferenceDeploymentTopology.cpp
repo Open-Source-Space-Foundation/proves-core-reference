@@ -9,10 +9,19 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
+#include <Fw/Logger/Logger.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
+
+#ifdef CONFIG_LORA_BASICS_MODEM_DRIVERS
+#include "fprime-zephyr/Drv/UspRadio/RalSessionImpl.hpp"
+#include "fprime-zephyr/Drv/UspRadio/UspRadio.hpp"
+
+// USP radio session: carrier frequency in Hz, TX power in dBm.
+static Zephyr::RalSessionImpl s_ralSession(437400000U, 10);
+#endif  // CONFIG_LORA_BASICS_MODEM_DRIVERS
 
 static const struct gpio_dt_spec ledGpio = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 static const struct gpio_dt_spec burnwire0Gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(burnwire0), gpios);
@@ -124,9 +133,17 @@ void setupTopology(const TopologyState& state) {
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
 
-    // We have a pipeline for both the LoRa and UART drive to allow for ground harness debugging an
-    // for over-the-air communications.
+    // The radio instance (uspRadio or lora) is selected by Top/CMakeLists.txt per board.
+    // Both radios boot with TX disabled; the startup sequence enables TX later.
+#ifdef CONFIG_LORA_BASICS_MODEM_DRIVERS
+    // startRadio() initialises the injected session, applies the boot profile and starts RX.
+    uspRadio.configure(s_ralSession);
+    if (!uspRadio.startRadio(Zephyr::UspTransmitState::DISABLED)) {
+        Fw::Logger::log("[Topology] UspRadio startRadio() failed -- radio inactive\n");
+    }
+#else
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
+#endif
     comDriver.configure(state.uartDevice, state.baudRate);
 
     // static struct spi_cs_control cs_ctrl = {

@@ -21,7 +21,10 @@
 const struct device* ina219Sys = DEVICE_DT_GET(DT_NODELABEL(ina219_0));
 const struct device* ina219Sol = DEVICE_DT_GET(DT_NODELABEL(ina219_1));
 const struct device* serial = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
+// The USP build (v5e) has no Zephyr lora device node; the radio is opened by RalSessionImpl.
+#ifndef CONFIG_LORA_BASICS_MODEM_DRIVERS
 const struct device* lora = DEVICE_DT_GET(DT_NODELABEL(lora0));
+#endif
 // const struct device* spi0 = DEVICE_DT_GET(DT_NODELABEL(spi0));
 const struct device* peripheral_uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 const struct device* peripheral_uart1 = DEVICE_DT_GET(DT_NODELABEL(uart1));
@@ -76,7 +79,9 @@ int main(int argc, char* argv[]) {
     // Flight Control Board device bindings
     inputs.ina219SysDevice = ina219Sys;
     inputs.ina219SolDevice = ina219Sol;
+#ifndef CONFIG_LORA_BASICS_MODEM_DRIVERS
     inputs.loraDevice = lora;
+#endif
     inputs.uartDevice = serial;
     inputs.lsm6dsoDevice = lsm6dso;
     inputs.lis2mdlDevice = lis2mdl;

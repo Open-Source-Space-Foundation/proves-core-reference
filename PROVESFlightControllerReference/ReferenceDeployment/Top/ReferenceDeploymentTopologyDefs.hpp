@@ -111,9 +111,11 @@ namespace ReferenceDeployment {
  * autocoder. The contents are entirely up to the definition of the project. This deployment uses subtopologies.
  */
 struct TopologyState {
-    const device* uartDevice;                     //!< UART device path for communication
-    const device* spi0Device;                     //!< Spi device path for s-band LoRa module
-    const device* loraDevice;                     //!< LoRa device path for communication
+    const device* uartDevice;  //!< UART device path for communication
+    const device* spi0Device;  //!< Spi device path for s-band LoRa module
+#ifndef CONFIG_LORA_BASICS_MODEM_DRIVERS
+    const device* loraDevice;  //!< LoRa device path for communication (not present on the USP build)
+#endif
     ComCcsdsLora::SubtopologyState comCcsdsLora;  //!< Subtopology state for ComCcsdsLora
     // ComCcsdsSband::SubtopologyState comCcsdsSband;  //!< Subtopology state for ComCcsdsSband
     U32 baudRate;                       //!< Baud rate for UART communication

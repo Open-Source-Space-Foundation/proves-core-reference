@@ -3,7 +3,11 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
+      # patches/*.patch must byte-match upstream, including trailing
+      # whitespace, so whitespace hooks must not touch them.
+      exclude: ^patches/
     - id: end-of-file-fixer
+      exclude: ^patches/
     - id: check-yaml
       exclude: ^mkdocs\.yml$
     - id: check-json
