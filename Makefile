@@ -224,7 +224,7 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
-FILTER ?= not sync_sequence_number and not format_filesystem
+FILTER ?= not sync_sequence_number and not format_filesystem and not ota
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -479,6 +479,26 @@ make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also re
 	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
 	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
 	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
+
+##@ OTA Test Image
+
+# Same source as `make build`, but OTA_BUILD_ID shows up in ProjectVersion: F'
+# derives it from `git describe`, so tag HEAD for the duration of the build.
+# Overwrites the `make build` outputs with this image -- copy those out first.
+OTA_IMAGE ?= $(shell pwd)/build-ota-test/ota-test-image.signed.bin
+OTA_VERSION_FILES = $(BUILD_DIR)/versions/version.cpp $(BUILD_DIR)/versions/version.hpp $(BUILD_DIR)/versions/version.json
+
+.PHONY: ota-test-image
+ota-test-image: submodules zephyr fprime-venv generate-if-needed ## Build a version-marked signed image for the OTA test (OTA_BUILD_ID=<id>)
+	@[ -n "$(OTA_BUILD_ID)" ] || { echo "Usage: make ota-test-image OTA_BUILD_ID=<id>"; exit 1; }
+	@TAG="ota-test-$(OTA_BUILD_ID)"; \
+	  git tag -f "$$TAG" >/dev/null || exit 1; \
+	  trap 'git tag -d "'"$$TAG"'" >/dev/null; rm -f $(OTA_VERSION_FILES)' EXIT INT TERM; \
+	  rm -f $(OTA_VERSION_FILES); \
+	  $(UV_RUN) fprime-util build || exit 1; \
+	  mkdir -p "$(dir $(OTA_IMAGE))"; \
+	  cp build-artifacts/zephyr.signed.bin "$(OTA_IMAGE)"
+	@echo "OTA test image: $(OTA_IMAGE)"
 
 include makelib/build-tools.mk
 include makelib/ci.mk

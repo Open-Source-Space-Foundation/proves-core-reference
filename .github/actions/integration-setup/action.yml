@@ -1,0 +1,51 @@
+name: Integration Setup
+description: Prepare an integration runner checkout (runner .env, dependencies, spacecraft ID, authentication key, framer plugin).
+
+inputs:
+  auth-key:
+    description: Authentication key the firmware was built with (composite actions cannot read secrets).
+    required: true
+  ci-spacecraft-id:
+    description: Re-apply the CI spacecraft ID override the build job compiled into the firmware.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Load .env file
+      shell: bash
+      run: |
+        while IFS= read -r line || [ -n "$line" ]; do
+          # Skip comments and empty lines
+          [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+          echo "$line" >> $GITHUB_ENV
+        done < ~/actions-runner/.env
+
+    - name: Set up dependencies
+      shell: bash
+      run: |
+        make submodules fprime-venv
+
+    - name: Apply CI spacecraft ID overrides
+      if: inputs.ci-spacecraft-id == 'true'
+      shell: bash
+      run: |
+        # The build job ran `make-ci-spacecraft-id` before compiling the
+        # FSW, so the hex flashed onto the board emits TM frames with
+        # SCID 67. The integration runner's working tree is a fresh
+        # checkout (default SCID 68) so we re-apply the same override
+        # here to keep the YAMCS instance config / adapter in sync.
+        make make-ci-spacecraft-id
+
+    - name: Set Authentication Key
+      shell: bash
+      env:
+        AUTH_KEY: ${{ inputs.auth-key }}
+      run: |
+        echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
+
+    - name: Install Framer Plugin
+      shell: bash
+      run: |
+        make framer-plugin

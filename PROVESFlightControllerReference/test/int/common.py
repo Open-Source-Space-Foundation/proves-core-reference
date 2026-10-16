@@ -53,6 +53,32 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     _radio_recover_fn = fn
 
 
+def resync_sequence_number(
+    fprime_test_api: IntegrationTestAPI,
+    deframer: str = "ComCcsdsUart.tcSecurityDeframer",
+) -> None:
+    """Fast-forward the framer plugin's sequence file if the board's counter is ahead.
+
+    After a reboot the board can expect a higher sequence number than ground
+    holds and rejects every authenticated command until ground catches up.
+    """
+    fprime_test_api.clear_histories()
+    fprime_test_api.send_command(f"{deframer}.GET_SEQ_NUM")
+    evt = fprime_test_api.await_event(f"{deframer}.SequenceNumberGet", timeout=5)
+    if evt is None:
+        raise AssertionError(f"no {deframer}.SequenceNumberGet event within 5 seconds")
+    board_seq = int(evt.args[0].val)
+    seq_file = "./Framing/src/sequence_number.bin"
+    try:
+        with open(seq_file, "r", encoding="utf-8") as f:
+            ground_seq = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        ground_seq = -1
+    if board_seq > ground_seq:
+        with open(seq_file, "w", encoding="utf-8") as f:
+            f.write(str(board_seq))
+
+
 def proves_send_and_assert_command(
     fprime_test_api: IntegrationTestAPI,
     command: str,
