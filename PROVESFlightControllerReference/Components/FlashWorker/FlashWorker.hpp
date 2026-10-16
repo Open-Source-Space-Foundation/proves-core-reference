@@ -8,12 +8,24 @@
 #define Update_FlashWorker_HPP
 #include "Os/File.hpp"
 #include "PROVESFlightControllerReference/Components/FlashWorker/FlashWorkerComponentAc.hpp"
+#include <zephyr/devicetree.h>
 #include <zephyr/dfu/flash_img.h>
+#include <zephyr/storage/flash_map.h>
 namespace Components {
 
 class FlashWorker final : public FlashWorkerComponentBase {
   public:
-    constexpr static U8 REGION_NUMBER = 2;  // 0: bootloader, 1: slot0, **2: slot1**
+    //! MCUboot secondary slot: where an uploaded image is staged before the bootloader swaps it in.
+    //!
+    //! Resolved from the devicetree label, never hardcoded. Zephyr hands out flash-area IDs in
+    //! devicetree dependency-ordinal order, so adding a partition anywhere in the DT renumbers every
+    //! area. A hardcoded ID silently starts pointing at a different partition -- and erasing the
+    //! wrong one here wipes the running firmware.
+    constexpr static U8 REGION_NUMBER = PARTITION_ID(slot1_partition);
+
+    //! Guard the failure above: the staging region must never be the slot we are executing from.
+    static_assert(PARTITION_OFFSET(slot1_partition) != DT_REG_ADDR(DT_CHOSEN(zephyr_code_partition)),
+                  "FlashWorker update region overlaps the running code partition");
     enum Step { IDLE, PREPARE, UPDATE };
     // ----------------------------------------------------------------------
     // Component construction and destruction
