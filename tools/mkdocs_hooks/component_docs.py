@@ -260,15 +260,18 @@ def build_menu(
 
 def fill_menu(nav: list | None, menu: list[dict]) -> list | None:
     """Replace the value of the top-level `Component SDDs` nav entry with `menu`."""
-    if nav is None:
-        return None
-    filled = [
-        {MENU_TITLE: menu} if isinstance(item, dict) and MENU_TITLE in item else item
-        for item in nav
-    ]
-    if filled == nav:
+    index = next(
+        (
+            i
+            for i, item in enumerate(nav or [])
+            if isinstance(item, dict) and MENU_TITLE in item
+        ),
+        None,
+    )
+    if index is None:
         log.warning(f"mkdocs.yml nav has no '{MENU_TITLE}' entry for the hook to fill")
-    return filled
+        return nav
+    return [*nav[:index], {MENU_TITLE: menu}, *nav[index + 1 :]]
 
 
 def rewrite_link(

@@ -427,3 +427,23 @@ def test_submodule_sources_lists_only_sources_that_are_submodules(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.split() == ["lib/extras"]
+
+
+def test_fill_menu_warns_when_there_is_no_entry_to_fill(caplog):
+    """No nav, or a nav without the entry, warns and leaves nav as it was."""
+    menu = [{"Core": [{"Foo": "components/Foo/sdd.md"}]}]
+    nav = [{"Home": "index.md"}, {"Component SDDs": []}, {"More": "more.md"}]
+    assert component_docs.fill_menu(nav, menu) == [
+        {"Home": "index.md"},
+        {"Component SDDs": menu},
+        {"More": "more.md"},
+    ]
+    assert caplog.records == []
+    assert component_docs.fill_menu(None, menu) is None
+    assert component_docs.fill_menu([{"Home": "index.md"}], menu) == [
+        {"Home": "index.md"}
+    ]
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert [r.getMessage() for r in warnings] == [
+        "mkdocs.yml nav has no 'Component SDDs' entry for the hook to fill"
+    ] * 2
