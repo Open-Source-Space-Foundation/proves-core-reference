@@ -307,7 +307,7 @@ def test_source_paths_are_watched_by_serve(tmp_path):
 
 def _source(root: Path) -> "component_docs.Source":
     """A Source rooted at `root`."""
-    return component_docs.Source(path=root, edit_uri="https://e/", declared="src")
+    return component_docs.Source(path=root, edit_uri="https://e/")
 
 
 def _touch(root: Path, *paths: str):
@@ -328,7 +328,7 @@ def test_discovery_names_components_by_folder_and_skips_docs_and_dot_folders(
         "Components/.cache/Hidden/docs/sdd.md",
         "Top/docs/sdd.md",
     )
-    components, errors = component_docs.discover(_source(tmp_path))
+    components, errors = component_docs.discover(_source(tmp_path), tmp_path)
     assert errors == []
     assert sorted(c.name for c in components) == ["Ina219Manager", "Top"]
     ina = next(c for c in components if c.name == "Ina219Manager")
