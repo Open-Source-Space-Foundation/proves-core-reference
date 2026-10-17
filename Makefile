@@ -81,13 +81,8 @@ DOCS_PYTHON := $(DOCS_VENV)/bin/python
 docs-deps: uv ## Install docs dependencies and init component sources that are git submodules
 	@$(UV) venv $(DOCS_VENV) --allow-existing --quiet
 	@$(UV) pip install --quiet --python $(DOCS_PYTHON) --requirement requirements-docs.txt
-	@sources=$$($(DOCS_PYTHON) tools/mkdocs_hooks/component_docs.py --source-paths mkdocs.yml) || exit 1; \
-	submodules=$$(git config --file .gitmodules --get-regexp '\.path$$' | awk '{print $$2}'); \
-	for path in $$sources; do \
-		if printf '%s\n' $$submodules | grep -qxF "$$path"; then \
-			git submodule update --init "$$path"; \
-		fi; \
-	done
+	@paths=$$($(DOCS_PYTHON) tools/mkdocs_hooks/component_docs.py --submodule-sources mkdocs.yml) || exit 1; \
+	[ -z "$$paths" ] || git submodule update --init $$paths
 
 .PHONY: docs-serve
 docs-serve: docs-deps ## Serve MkDocs documentation site locally

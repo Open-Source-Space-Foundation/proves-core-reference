@@ -6,9 +6,10 @@ discovers components, adds their files to the site, fills the empty
 component docs folders, and gives each generated page an edit link into its
 source repository.
 
-Run directly to list the declared source paths (used by `make docs-deps`):
+Run directly to list the declared sources that are git submodules (used by
+`make docs-deps`):
 
-    python tools/mkdocs_hooks/component_docs.py --source-paths mkdocs.yml
+    python tools/mkdocs_hooks/component_docs.py --submodule-sources mkdocs.yml
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from mkdocs.exceptions import PluginError
 from mkdocs.structure.files import File, Files
 from mkdocs.structure.pages import Page as SitePage
 from mkdocs.utils import is_markdown_file, meta
+from mkdocs.utils.yaml import yaml_load
 
 log = logging.getLogger("mkdocs.hooks.component_docs")
 
@@ -91,14 +93,15 @@ class Component:
 Registry = Mapping[str, Component]
 
 
-def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]]:
-    """Parse extra.component_sources into sources, plus an error per bad entry."""
+def parse_entries(raw: object) -> tuple[list[tuple[str, str]], list[str]]:
+    """The (path, edit_uri) of each extra.component_sources entry, plus an error
+    per malformed one."""
     if not isinstance(raw, list) or not raw:
         return [], [
             "extra.component_sources is missing or empty in mkdocs.yml; "
             "add at least one entry with 'path' and 'edit_uri'"
         ]
-    sources: list[Source] = []
+    entries: list[tuple[str, str]] = []
     errors: list[str] = []
     for entry in raw:
         if (
@@ -110,17 +113,27 @@ def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]
                 f"extra.component_sources entry {entry!r} needs both 'path' and 'edit_uri'"
             )
             continue
-        declared = str(entry["path"]).rstrip("/")
-        path = repo_root / declared
-        if not path.is_dir():
+        edit_uri = str(entry["edit_uri"])
+        entries.append(
+            (
+                str(entry["path"]).rstrip("/"),
+                edit_uri if edit_uri.endswith("/") else edit_uri + "/",
+            )
+        )
+    return entries, errors
+
+
+def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]]:
+    """Parse extra.component_sources into sources, plus an error per bad entry."""
+    entries, errors = parse_entries(raw)
+    sources: list[Source] = []
+    for declared, edit_uri in entries:
+        if (repo_root / declared).is_dir():
+            sources.append(Source(repo_root / declared, edit_uri))
+        else:
             errors.append(
                 f"component source path '{declared}' does not exist or is not a directory"
             )
-            continue
-        edit_uri = str(entry["edit_uri"])
-        sources.append(
-            Source(path, edit_uri if edit_uri.endswith("/") else edit_uri + "/")
-        )
     return sources, errors
 
 
@@ -419,20 +432,19 @@ def on_page_markdown(
     return markdown
 
 
-def declared_paths(mkdocs_yml: Path) -> list[str]:
-    """The `path` of every extra.component_sources entry in `mkdocs_yml`."""
-    from mkdocs.utils.yaml import yaml_load
-
+def submodule_sources(mkdocs_yml: Path) -> list[str]:
+    """The extra.component_sources paths in `mkdocs_yml` that are git submodules
+    listed in the .gitmodules beside it."""
     with mkdocs_yml.open(encoding="utf-8") as stream:
         extra = yaml_load(stream).get("extra") or {}
-    return [
-        str(entry["path"]).rstrip("/")
-        for entry in extra.get("component_sources") or []
-        if isinstance(entry, dict) and entry.get("path")
-    ]
+    gitmodules = mkdocs_yml.parent / ".gitmodules"
+    text = gitmodules.read_text(encoding="utf-8") if gitmodules.is_file() else ""
+    submodules = set(re.findall(r"^\s*path\s*=\s*(.+?)\s*$", text, re.MULTILINE))
+    entries, _ = parse_entries(extra.get("component_sources"))
+    return [path for path, _ in entries if path in submodules]
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] != "--source-paths":
-        sys.exit("usage: component_docs.py --source-paths <mkdocs.yml>")
-    print("\n".join(declared_paths(Path(sys.argv[2]))))
+    if len(sys.argv) != 3 or sys.argv[1] != "--submodule-sources":
+        sys.exit("usage: component_docs.py --submodule-sources <mkdocs.yml>")
+    print("\n".join(submodule_sources(Path(sys.argv[2]))))

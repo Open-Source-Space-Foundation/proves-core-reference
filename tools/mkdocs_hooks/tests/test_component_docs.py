@@ -404,3 +404,26 @@ def test_page_title_falls_back_to_default_then_heading_then_file_name(tmp_path):
     assert title("headed.md", "Foo") == "Foo"
     assert title("headed.md") == "Heading"
     assert title("bare.md") == "bare"
+
+
+def test_submodule_sources_lists_only_sources_that_are_submodules(tmp_path):
+    """The docs-deps CLI prints declared sources found in .gitmodules, nothing else."""
+    lib = {"path": "lib/extras/", "edit_uri": "https://example.com/lib/edit/main/"}
+    config = {"extra": {"component_sources": [SOURCE, lib, {"path": "lib/fprime"}]}}
+    (tmp_path / "mkdocs.yml").write_text(yaml.safe_dump(config))
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "lib/extras"]\n\tpath = lib/extras\n\turl = https://e/x.git\n'
+        '[submodule "lib/fprime"]\n\tpath = lib/fprime\n\turl = https://e/f.git\n'
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(HOOK),
+            "--submodule-sources",
+            str(tmp_path / "mkdocs.yml"),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split() == ["lib/extras"]
