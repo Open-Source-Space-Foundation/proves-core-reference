@@ -71,6 +71,8 @@ nav:
   # Filled from component sdd.md front matter by tools/mkdocs_hooks/component_docs.py.
   - Component SDDs: []
   - Additional Resources:
+      - Board List: additional-resources/board-list.md
+      - Specifying Board Configuration: additional-resources/specifying-board-configuration.md
       - Troubleshooting: additional-resources/troubleshooting.md
       - WSL Notes: additional-resources/wsl-notes.md
       - Self-Hosted Runner Setup: additional-resources/self-hosted-runner-setup.md
