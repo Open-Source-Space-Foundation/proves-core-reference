@@ -429,6 +429,8 @@ def on_pre_page(page: SitePage, config: MkDocsConfig, files: Files) -> SitePage:
 def on_page_markdown(
     markdown: str, page: SitePage, config: MkDocsConfig, files: Files
 ) -> str:
+    """Record the component page about to render for `_LinkRewriter`, which
+    runs inside Markdown and cannot reach the Page."""
     assert _docs is not None
     found = _docs.by_src_uri.get(page.file.src_uri)
     _docs.current = (found[1], page.file.src_uri) if found else None
