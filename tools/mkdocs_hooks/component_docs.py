@@ -28,7 +28,7 @@ from markdown.treeprocessors import Treeprocessor
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.exceptions import PluginError
 from mkdocs.structure.files import File, Files
-from mkdocs.structure.pages import Page
+from mkdocs.structure.pages import Page as SitePage
 from mkdocs.utils import is_markdown_file, meta
 
 log = logging.getLogger("mkdocs.hooks.component_docs")
@@ -53,20 +53,29 @@ class Source:
 
 
 @dataclass(frozen=True)
+class Page:
+    """A Markdown file to publish and its menu title."""
+
+    path: Path
+    title: str
+
+
+@dataclass(frozen=True)
 class Component:
     """One folder with a docs/ child, and the files it publishes."""
 
     name: str
     source: Source
     docs_dir: Path
-    sdd: Path
-    pages: tuple[Path, ...]
+    sdd: Page
+    category: object
+    pages: tuple[Page, ...]
     assets: tuple[Path, ...]
 
     @property
     def files(self) -> tuple[Path, ...]:
         """Every file to publish: the SDD, then other pages, then assets."""
-        return (self.sdd, *self.pages, *self.assets)
+        return (self.sdd.path, *(p.path for p in self.pages), *self.assets)
 
     def src_uri(self, path: Path) -> str:
         """Site path for `path`: components/<Name>/<path inside docs/>."""
@@ -119,6 +128,21 @@ def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]
     return sources, errors
 
 
+_H1 = re.compile(r"^#\s+(.+?)\s*#*\s*$", re.MULTILINE)
+
+
+def read_page(path: Path, title: str | None = None) -> tuple[Page, dict]:
+    """`path` and its front matter. The title is front matter `title:`, else
+    `title`, else the first `# ` heading, else the file name."""
+    markdown, data = meta.get_data(path.read_text(encoding="utf-8"))
+    if data.get("title"):
+        title = str(data["title"])
+    elif title is None:
+        heading = _H1.search(markdown)
+        title = heading.group(1) if heading else path.stem
+    return Page(path, title), data
+
+
 def discover(source: Source) -> tuple[list[Component], list[str]]:
     """Find every folder below `source` that has a docs/ child."""
     components: list[Component] = []
@@ -135,17 +159,22 @@ def discover(source: Source) -> tuple[list[Component], list[str]]:
         folders_with_docs += 1
         docs_dir = folder / "docs"
         files = sorted(p for p in docs_dir.rglob("*") if p.is_file())
-        sdd = docs_dir / SDD
-        if sdd not in files:
+        if docs_dir / SDD not in files:
             errors.append(f"{source.show(docs_dir)} has no {SDD}")
             continue
+        sdd, data = read_page(docs_dir / SDD, folder.name)
         components.append(
             Component(
                 name=folder.name,
                 source=source,
                 docs_dir=docs_dir,
                 sdd=sdd,
-                pages=tuple(p for p in files if p != sdd and is_markdown_file(p.name)),
+                category=data.get("category"),
+                pages=tuple(
+                    read_page(p)[0]
+                    for p in files
+                    if p != sdd.path and is_markdown_file(p.name)
+                ),
                 assets=tuple(p for p in files if not is_markdown_file(p.name)),
             )
         )
@@ -179,33 +208,18 @@ def build_registry(sources: list[Source]) -> tuple[dict[str, Component], list[st
     return registry, errors
 
 
-def front_matter(path: Path) -> dict:
-    """The YAML front matter of a Markdown file."""
-    return meta.get_data(path.read_text(encoding="utf-8"))[1]
-
-
-_H1 = re.compile(r"^#\s+(.+?)\s*#*\s*$", re.MULTILINE)
-
-
-def page_title(path: Path) -> str:
-    """Front matter `title:`, then the first `# ` heading, then the file name."""
-    markdown, data = meta.get_data(path.read_text(encoding="utf-8"))
-    if data.get("title"):
-        return str(data["title"])
-    heading = _H1.search(markdown)
-    return heading.group(1) if heading else path.stem
-
-
-def _menu_entry(component: Component, title: str) -> dict:
+def _menu_entry(component: Component) -> dict:
     """A single nav entry, or a section headed by the SDD when there are more pages."""
-    sdd = component.src_uri(component.sdd)
+    sdd = component.src_uri(component.sdd.path)
     if not component.pages:
-        return {title: sdd}
-    extra = sorted(
-        ((page_title(p), component.src_uri(p)) for p in component.pages),
-        key=lambda item: item[0].casefold(),
-    )
-    return {title: [sdd, *({t: uri} for t, uri in extra)]}
+        return {component.sdd.title: sdd}
+    pages = sorted(component.pages, key=lambda p: p.title.casefold())
+    return {
+        component.sdd.title: [
+            sdd,
+            *({p.title: component.src_uri(p.path)} for p in pages),
+        ]
+    }
 
 
 def build_menu(
@@ -216,16 +230,14 @@ def build_menu(
     groups[OTHER] = []
     notes: list[str] = []
     for component in registry.values():
-        data = front_matter(component.sdd)
-        title = str(data.get("title") or component.name)
-        category = data.get("category")
+        category = component.category
         if not isinstance(category, str) or category not in categories:
             notes.append(
                 f"{component.name}: category {category!r} is not one of "
                 f"{', '.join(categories)}; listing it under {OTHER}"
             )
             category = OTHER
-        groups[category].append((title, _menu_entry(component, title)))
+        groups[category].append((component.sdd.title, _menu_entry(component)))
     menu = [
         {name: [entry for _, entry in sorted(entries, key=lambda e: e[0].casefold())]}
         for name, entries in groups.items()
@@ -376,7 +388,7 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
             file = File.generated(
                 config, component.src_uri(path), abs_src_path=str(path)
             )
-            if path == component.sdd:
+            if path == component.sdd.path:
                 # sdd.md keeps its name so links to it resolve, but serves as
                 # the folder index, which navigation.indexes also requires.
                 file.dest_uri = posixpath.join(SITE_DIR, component.name, "index.html")
@@ -397,7 +409,7 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
     return files
 
 
-def on_pre_page(page: Page, config: MkDocsConfig, files: Files) -> Page:
+def on_pre_page(page: SitePage, config: MkDocsConfig, files: Files) -> SitePage:
     """Point a component page's edit link at its source file."""
     assert _docs is not None
     found = _docs.by_src_uri.get(page.file.src_uri)
@@ -408,7 +420,7 @@ def on_pre_page(page: Page, config: MkDocsConfig, files: Files) -> Page:
 
 
 def on_page_markdown(
-    markdown: str, page: Page, config: MkDocsConfig, files: Files
+    markdown: str, page: SitePage, config: MkDocsConfig, files: Files
 ) -> str:
     assert _docs is not None
     found = _docs.by_src_uri.get(page.file.src_uri)

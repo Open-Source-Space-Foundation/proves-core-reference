@@ -333,7 +333,9 @@ def test_discovery_names_components_by_folder_and_skips_docs_and_dot_folders(
     assert sorted(c.name for c in components) == ["Ina219Manager", "Top"]
     ina = next(c for c in components if c.name == "Ina219Manager")
     assert ina.pages == (
-        tmp_path / "Components/Drv/Ina219Manager/docs/sub/docs/sdd.md",
+        component_docs.Page(
+            tmp_path / "Components/Drv/Ina219Manager/docs/sub/docs/sdd.md", "X"
+        ),
     )
 
 
@@ -341,16 +343,16 @@ def test_menu_orders_categories_then_titles_with_other_last(tmp_path):
     """Categories keep config order, titles sort, Other comes last."""
 
     def component(name, title, category, pages=()):
-        """A Component on disk with an sdd.md and optional extra pages."""
+        """A Component with an sdd.md and optional (file, title) extra pages."""
         docs = tmp_path / name / "docs"
-        docs.mkdir(parents=True)
-        (docs / "sdd.md").write_text(sdd(title=title, category=category))
-        paths = []
-        for file, heading in pages:
-            (docs / file).write_text(f"# {heading}\n")
-            paths.append(docs / file)
         return component_docs.Component(
-            name, _source(tmp_path), docs, docs / "sdd.md", tuple(paths), ()
+            name,
+            _source(tmp_path),
+            docs,
+            component_docs.Page(docs / "sdd.md", title),
+            category,
+            tuple(component_docs.Page(docs / f, t) for f, t in pages),
+            (),
         )
 
     registry = {
@@ -382,3 +384,23 @@ def test_menu_orders_categories_then_titles_with_other_last(tmp_path):
     assert notes == [
         "Zed: category 'Typo' is not one of Core, Driver, Unused; listing it under Other"
     ]
+
+
+def test_page_title_falls_back_to_default_then_heading_then_file_name(tmp_path):
+    """Front matter wins; an SDD falls back to its component name, a page to its H1."""
+    files = {
+        "titled.md": "---\ntitle: Front\n---\n# Heading\n",
+        "headed.md": "# Heading ##\n",
+        "bare.md": "text\n",
+    }
+    for name, text in files.items():
+        (tmp_path / name).write_text(text)
+
+    def title(name, default=None):
+        """The title read_page gives the file `name`."""
+        return component_docs.read_page(tmp_path / name, default)[0].title
+
+    assert title("titled.md", "Foo") == "Front"
+    assert title("headed.md", "Foo") == "Foo"
+    assert title("headed.md") == "Heading"
+    assert title("bare.md") == "bare"
