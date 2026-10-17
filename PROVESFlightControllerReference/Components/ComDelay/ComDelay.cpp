@@ -6,6 +6,8 @@
 
 #include "PROVESFlightControllerReference/Components/ComDelay/ComDelay.hpp"
 
+#include <type_traits>
+
 #include "PROVESFlightControllerReference/Components/ComDelay/FppConstantsAc.hpp"
 
 namespace Components {
@@ -47,7 +49,9 @@ void ComDelay ::run_handler(FwIndexType portNum, U32 context) {
     // Unless there is corruption, the parameter should always be valid via its default value; however, in the interest
     // of failing-safe and continuing some sort of communication we default the current_divisor to the default value.
     Fw::ParamValid is_valid;
-    U16 current_divisor = this->paramGet_DIVIDER(is_valid);
+    auto current_divisor = this->paramGet_DIVIDER(is_valid);
+    static_assert(std::is_same<decltype(current_divisor), TickDivider::Count>::value,
+                  "TickDivider must count in the DIVIDER parameter's type");
     if ((is_valid == Fw::ParamValid::INVALID) || (is_valid == Fw::ParamValid::UNINIT)) {
         current_divisor = Components::DEFAULT_DIVIDER;
     }
