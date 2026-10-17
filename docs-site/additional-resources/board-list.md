@@ -78,6 +78,9 @@ In the steps below, the drive path is `/Volumes/RP2350/` (macOS) or `/media/$USE
 
 Do this for a new board, or for a board that last ran CircuitPython.
 
+!!! warning
+    Before [#605](https://github.com/Open-Source-Space-Foundation/proves-core-reference/pull/605), `make build-mcuboot` put a Zephyr sample app into `mcuboot.uf2` instead of MCUboot. A board set up with that file still boots F Prime, but it has no bootloader. Signature checks, OTA updates, and rollback do not work on it. If you set up a board with a `mcuboot.uf2` built before that fix, build a new one and flash it again.
+
 1. Build MCUboot.
 
     ```sh
