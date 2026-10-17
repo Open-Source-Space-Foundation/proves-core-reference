@@ -19,4 +19,4 @@ category: Communication
 
 | Name    | Description |
 |---------|-----------------------------------------------------------|
-| DIVIDER | Number of rate group ticks received before sending status |
+| DIVIDER | Status is sent every DIVIDER + 1 rate group ticks |
