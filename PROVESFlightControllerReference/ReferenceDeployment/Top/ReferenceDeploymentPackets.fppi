@@ -183,7 +183,7 @@ telemetry packets ReferenceDeploymentPackets {
 
   }
 
-  packet Update id 23 group 5 {
+  packet Update id 24 group 5 {
     Update.deltaPatcher.State
     Update.deltaPatcher.ChunksDone
     Update.deltaPatcher.ChunksTotal
