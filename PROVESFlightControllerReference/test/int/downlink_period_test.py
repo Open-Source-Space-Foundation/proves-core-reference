@@ -10,6 +10,7 @@ import itertools
 import time
 
 import pytest
+from fprime_gds.common.handlers import DataHandler
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 downlinkDelay = "ReferenceDeployment.downlinkDelay"
@@ -19,12 +20,12 @@ RATE_GROUP_HZ = 10
 EXPECTED_PERIOD_S = (DEFAULT_DIVIDER + 1) / RATE_GROUP_HZ
 TOLERANCE_S = 0.2
 FRAME_GAP_S = 5.0
-FRAMES_NEEDED = 3
+FRAMES_NEEDED = 4
 DEADLINE_S = EXPECTED_PERIOD_S * (FRAMES_NEEDED + 1)
 CI_DIVIDER = 20
 
 
-class ArrivalClock:
+class ArrivalClock(DataHandler):
     """Telemetry consumer that records the ground arrival time of every packet."""
 
     def __init__(self):
@@ -48,9 +49,11 @@ def test_default_divider_paces_lora_every_30_seconds(
 
     coders = fprime_test_api.pipeline.coders
     clock = ArrivalClock()
-    fprime_test_api.send_command(f"{downlinkDelay}.DIVIDER_PRM_SET", [DEFAULT_DIVIDER])
     coders.register_channel_consumer(clock)
     try:
+        fprime_test_api.send_command(
+            f"{downlinkDelay}.DIVIDER_PRM_SET", [DEFAULT_DIVIDER]
+        )
         deadline = time.monotonic() + DEADLINE_S
         while (
             time.monotonic() < deadline
@@ -61,7 +64,8 @@ def test_default_divider_paces_lora_every_30_seconds(
         coders.remove_channel_consumer(clock)
         fprime_test_api.send_command(f"{downlinkDelay}.DIVIDER_PRM_SET", [CI_DIVIDER])
 
-    starts = frame_starts(clock.arrivals)
+    # The first group also holds frames sent on the CI divider before the change.
+    starts = frame_starts(clock.arrivals)[1:]
     gaps = [b - a for a, b in itertools.pairwise(starts)]
     periods = [gap / max(1, round(gap / EXPECTED_PERIOD_S)) for gap in gaps]
     print(
