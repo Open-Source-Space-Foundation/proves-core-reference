@@ -19,17 +19,15 @@ v5e is the default because [`settings.ini`][settings-ini] sets `BOARD=proves_fli
 - `proves_flight_control_board_v5.dtsi` and `proves_flight_control_board_v5-pinctrl.dtsi`. Each variant `.dts` includes the dtsi.
 - `Kconfig.defconfig`. Each variant `Kconfig.*` file sources it.
 
-The base sets the flash partition layout used by MCUboot:
+The base defines the flash partitions. MCUboot runs in swap-using-offset mode (`bootloader/sysbuild.conf`), so it swaps between two slots: `slot0_partition` and `slot1_partition`.
 
-| Partition | Label | Offset |
-| --------- | ----- | ------ |
-| `boot_partition` | `mcuboot` | `0x000000` |
-| `slot0_partition` | `current` | `0x100000` |
-| `slot1_partition` | `golden` | `0x200000` |
-| `slot2_partition` | `test` | `0x300000` |
-| `storage_partition` | `storage_partition` | `0x400000` |
-
-The application runs from `slot0_partition` (`zephyr,code-partition`).
+| Partition | Label | Offset | Use |
+| --------- | ----- | ------ | --- |
+| `boot_partition` | `mcuboot` | `0x000000` | MCUboot |
+| `slot0_partition` | `current` | `0x100000` | Primary slot. The application runs from here (`zephyr,code-partition`). |
+| `slot1_partition` | `golden` | `0x200000` | Secondary slot. `FlashWorker` writes uploaded images here and MCUboot swaps them in. After a swap it holds the previous image, so it is not a fixed golden image. |
+| `slot2_partition` | `test` | `0x300000` | Defined but unused. |
+| `storage_partition` | `storage_partition` | `0x400000` | Application file system |
 
 ## What differs between variants
 
