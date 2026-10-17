@@ -25,6 +25,7 @@ from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 pytestmark = [pytest.mark.uart_only, pytest.mark.slow]
 
 UPLINK_CHUNK_SIZE = 204  # from fprime-gds.yml: file-uplink-chunk-size
+UPLINK_COOLDOWN_S = 0.02  # from fprime-gds.yml: file-uplink-cooldown; the test API uplinker defaults to 0
 
 FILE_MANAGER = "FileHandling.fileManager"
 BUFFER_MANAGER = "ComCcsdsUart.commsBufferManager"
@@ -70,6 +71,7 @@ def _uplink_and_verify_crc(
     expected_crc = _local_crc(data)
 
     uplinker = fprime_test_api.pipeline.files.uplinker
+    uplinker.cooldown = max(uplinker.cooldown, UPLINK_COOLDOWN_S)
     fprime_test_api.clear_histories()
     uplinker.enqueue(str(local_path), dest_path)
 
