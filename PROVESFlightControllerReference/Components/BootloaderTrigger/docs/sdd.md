@@ -1,3 +1,8 @@
+---
+title: Bootloader Trigger
+category: Core
+---
+
 # Components::BootloaderTrigger
 
 The BootloaderTrigger component provides a command interface to reset the board into bootloader mode for firmware installation during integration testing. **WARNING: This component should NOT be used in production or flight configurations.**

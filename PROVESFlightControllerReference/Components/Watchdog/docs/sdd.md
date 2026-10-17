@@ -1,3 +1,8 @@
+---
+title: Watchdog
+category: Core
+---
+
 # Components::Watchdog Component
 
 ## 1. Introduction

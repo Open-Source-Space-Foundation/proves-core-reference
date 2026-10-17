@@ -1,3 +1,8 @@
+---
+title: Drv2605 Manager
+category: Driver
+---
+
 # Drv::Drv2605Manager
 
 Component for F Prime FSW framework.

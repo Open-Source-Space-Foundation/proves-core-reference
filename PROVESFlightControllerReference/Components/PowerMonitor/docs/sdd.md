@@ -1,3 +1,8 @@
+---
+title: Power Monitor
+category: Sensor
+---
+
 # Components::PowerMonitor
 
 The Power Monitor component reads power data from two power monitors. It also keeps two energy totals:

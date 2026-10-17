@@ -1,3 +1,8 @@
+---
+title: Thermal Manager
+category: Sensor
+---
+
 # Components::ThermalManager
 
 The Thermal Manager component is responsible for orchestrating temperature sensor readings from multiple TMP112 sensors distributed across the spacecraft. It specifically manages sensors for the spacecraft faces and battery cells.

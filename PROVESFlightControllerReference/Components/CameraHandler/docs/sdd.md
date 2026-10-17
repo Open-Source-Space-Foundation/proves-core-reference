@@ -1,3 +1,8 @@
+---
+title: Camera Handler
+category: Hardware
+---
+
 # Components::CameraHandler
 
 Passive component that handles camera specific payload capabilities.

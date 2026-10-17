@@ -1,3 +1,8 @@
+---
+title: Tc Security Deframer
+category: Security
+---
+
 # Components::TcSecurityDeframer
 
 The TcSecurityDeframer component implements the TC ProcessSecurity flow of CCSDS 355.0-B-2 in the uplink path. It sits between TcDeframer and SpacePacketDeframer: it parses the Security Header and Trailer, validates the SPI and anti-replay sequence number, verifies the HMAC, then strips the security envelope and forwards the frame with the verification result recorded in the frame context (`authenticated` flag).
