@@ -93,15 +93,14 @@ class Component:
 Registry = Mapping[str, Component]
 
 
-def parse_entries(raw: object) -> tuple[list[tuple[str, str]], list[str]]:
-    """The (path, edit_uri) of each extra.component_sources entry, plus an error
-    per malformed one."""
+def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]]:
+    """Parse extra.component_sources into sources, plus an error per malformed entry."""
     if not isinstance(raw, list) or not raw:
         return [], [
             "extra.component_sources is missing or empty in mkdocs.yml; "
             "add at least one entry with 'path' and 'edit_uri'"
         ]
-    entries: list[tuple[str, str]] = []
+    sources: list[Source] = []
     errors: list[str] = []
     for entry in raw:
         if (
@@ -114,26 +113,12 @@ def parse_entries(raw: object) -> tuple[list[tuple[str, str]], list[str]]:
             )
             continue
         edit_uri = str(entry["edit_uri"])
-        entries.append(
-            (
-                str(entry["path"]).rstrip("/"),
+        sources.append(
+            Source(
+                repo_root / str(entry["path"]).rstrip("/"),
                 edit_uri if edit_uri.endswith("/") else edit_uri + "/",
             )
         )
-    return entries, errors
-
-
-def parse_sources(raw: object, repo_root: Path) -> tuple[list[Source], list[str]]:
-    """Parse extra.component_sources into sources, plus an error per bad entry."""
-    entries, errors = parse_entries(raw)
-    sources: list[Source] = []
-    for declared, edit_uri in entries:
-        if (repo_root / declared).is_dir():
-            sources.append(Source(repo_root / declared, edit_uri))
-        else:
-            errors.append(
-                f"component source path '{declared}' does not exist or is not a directory"
-            )
     return sources, errors
 
 
@@ -154,6 +139,11 @@ def read_page(path: Path, title: str | None = None) -> tuple[Page, dict]:
 
 def discover(source: Source, repo_root: Path) -> tuple[list[Component], list[str]]:
     """Find every folder below `source` that has a docs/ child."""
+    declared = rel(source.path, repo_root)
+    if not source.path.is_dir():
+        return [], [
+            f"component source path '{declared}' does not exist or is not a directory"
+        ]
     components: list[Component] = []
     errors: list[str] = []
     folders_with_docs = 0
@@ -188,7 +178,6 @@ def discover(source: Source, repo_root: Path) -> tuple[list[Component], list[str
             )
         )
     if folders_with_docs == 0:
-        declared = rel(source.path, repo_root)
         errors.append(
             f"component source '{declared}' has no components (no folder with a "
             f"docs/ child); if it is a git submodule, run: "
@@ -223,15 +212,9 @@ def build_registry(
 def _menu_entry(component: Component) -> dict:
     """A single nav entry, or a section headed by the SDD when there are more pages."""
     sdd = component.src_uri(component.sdd.path)
-    if not component.pages:
-        return {component.sdd.title: sdd}
     pages = sorted(component.pages, key=lambda p: p.title.casefold())
-    return {
-        component.sdd.title: [
-            sdd,
-            *({p.title: component.src_uri(p.path)} for p in pages),
-        ]
-    }
+    section = [sdd, *({p.title: component.src_uri(p.path)} for p in pages)]
+    return {component.sdd.title: section if pages else sdd}
 
 
 def build_menu(
@@ -260,18 +243,11 @@ def build_menu(
 
 def fill_menu(nav: list | None, menu: list[dict]) -> list | None:
     """Replace the value of the top-level `Component SDDs` nav entry with `menu`."""
-    index = next(
-        (
-            i
-            for i, item in enumerate(nav or [])
-            if isinstance(item, dict) and MENU_TITLE in item
-        ),
-        None,
-    )
-    if index is None:
-        log.warning(f"mkdocs.yml nav has no '{MENU_TITLE}' entry for the hook to fill")
-        return nav
-    return [*nav[:index], {MENU_TITLE: menu}, *nav[index + 1 :]]
+    for i, item in enumerate(nav or []):
+        if isinstance(item, dict) and MENU_TITLE in item:
+            return [*nav[:i], {MENU_TITLE: menu}, *nav[i + 1 :]]
+    log.warning(f"mkdocs.yml nav has no '{MENU_TITLE}' entry for the hook to fill")
+    return nav
 
 
 def rewrite_link(
@@ -355,12 +331,6 @@ class _ComponentDocs:
 _docs: _ComponentDocs | None = None
 
 
-def _fail(errors: list[str]) -> PluginError:
-    """One PluginError listing every problem found in the build."""
-    lines = "\n".join(f"  - {e}" for e in errors)
-    return PluginError(f"component docs: {len(errors)} problem(s):\n{lines}")
-
-
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
     """Validate sources, discover components, watch sources, and fill the menu.
 
@@ -412,7 +382,8 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
             by_dest[file.dest_uri] = file
             _docs.by_src_uri[file.src_uri] = (component, path)
     if errors:
-        raise _fail(errors)
+        lines = "\n".join(f"  - {e}" for e in errors)
+        raise PluginError(f"component docs: {len(errors)} problem(s):\n{lines}")
     return files
 
 
@@ -445,8 +416,9 @@ def submodule_sources(mkdocs_yml: Path) -> list[str]:
     gitmodules = mkdocs_yml.parent / ".gitmodules"
     text = gitmodules.read_text(encoding="utf-8") if gitmodules.is_file() else ""
     submodules = set(re.findall(r"^\s*path\s*=\s*(.+?)\s*$", text, re.MULTILINE))
-    entries, _ = parse_entries(extra.get("component_sources"))
-    return [path for path, _ in entries if path in submodules]
+    sources, _ = parse_sources(extra.get("component_sources"), mkdocs_yml.parent)
+    declared = [rel(s.path, mkdocs_yml.parent) for s in sources]
+    return [path for path in declared if path in submodules]
 
 
 if __name__ == "__main__":
