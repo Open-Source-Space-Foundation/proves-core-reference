@@ -31,7 +31,7 @@ The supported boards are RP2350 flight controllers. You flash them by copying a 
     cp mcuboot.uf2 [path-to-your-board]
     ```
 
-2. Build the signed application image and copy it to the board.
+2. Build the signed application image, put the board back into UF2 mode (see the [board list][board-list]), and copy the image to the board.
 
     ```sh
     # In proves-core-reference
