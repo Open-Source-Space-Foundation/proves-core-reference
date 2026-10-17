@@ -161,7 +161,7 @@ def test_generated_page_colliding_with_hand_written_page_fails(tmp_path):
 
 
 def test_two_failures_are_reported_in_one_error(tmp_path):
-    """Every problem found in a phase is raised together."""
+    """Every problem found while configuring is raised together."""
     build = build_site(
         tmp_path,
         {
@@ -175,6 +175,25 @@ def test_two_failures_are_reported_in_one_error(tmp_path):
         "component docs: 2 problem(s)",
         "src/Bar/docs has no sdd.md",
         "two components are named 'Foo'",
+    )
+
+
+def test_missing_sdd_and_hand_written_collision_are_reported_together(tmp_path):
+    """Failures found while configuring and while adding files share one error."""
+    build = build_site(
+        tmp_path,
+        {
+            "src/Foo/docs/sdd.md": sdd(),
+            "src/Bar/docs/notes.md": "# Notes\n",
+            "docs-site/components/Foo.md": "# Old copy\n",
+        },
+    )
+    assert_aborted_with(
+        build,
+        "component docs: 2 problem(s)",
+        "src/Bar/docs has no sdd.md",
+        "src/Foo/docs/sdd.md would be published as components/Foo/index.html, "
+        "which collides with docs-site/components/Foo.md",
     )
 
 

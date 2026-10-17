@@ -316,11 +316,12 @@ class _LinkExtension(Extension):
 
 
 class _ComponentDocs:
-    """State for one build: the registry and the page being rendered."""
+    """State for one build: the registry, its errors, and the page being rendered."""
 
-    def __init__(self, registry: Registry, repo_root: Path) -> None:
+    def __init__(self, registry: Registry, repo_root: Path, errors: list[str]) -> None:
         self.registry = registry
         self.repo_root = repo_root
+        self.errors = errors
         self.by_docs_dir = {c.docs_dir: c for c in registry.values()}
         self.by_src_uri: dict[str, tuple[Component, Path]] = {}
         self.current: tuple[Component, Path, str] | None = None
@@ -330,21 +331,21 @@ _docs: _ComponentDocs | None = None
 
 
 def _fail(errors: list[str]) -> PluginError:
-    """One PluginError listing every problem found in a phase."""
+    """One PluginError listing every problem found in the build."""
     lines = "\n".join(f"  - {e}" for e in errors)
     return PluginError(f"component docs: {len(errors)} problem(s):\n{lines}")
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
-    """Validate sources, discover components, watch sources, and fill the menu."""
+    """Validate sources, discover components, watch sources, and fill the menu.
+
+    Errors are kept for on_files, which raises them with any collisions.
+    """
     global _docs
     repo_root = Path(config.config_file_path).parent
     sources, errors = parse_sources(config.extra.get("component_sources"), repo_root)
     registry, found = build_registry(sources)
     errors += found
-    if errors:
-        raise _fail(errors)
-
     config.watch.extend(str(s.path) for s in sources)
     menu, notes = build_menu(
         registry, list(config.extra.get("component_categories") or [])
@@ -353,7 +354,7 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         log.info(note)
     config.nav = fill_menu(config.nav, menu)
 
-    _docs = _ComponentDocs(registry, repo_root)
+    _docs = _ComponentDocs(registry, repo_root, errors)
     config.markdown_extensions.append(_LinkExtension(_docs))
     return config
 
@@ -366,10 +367,10 @@ def _describe(file: File, repo_root: Path) -> str:
 
 
 def on_files(files: Files, config: MkDocsConfig) -> Files:
-    """Add every component file to the site, failing on collisions."""
+    """Add every component file to the site, then raise every error found."""
     assert _docs is not None
     by_dest = {f.dest_uri: f for f in files}
-    errors: list[str] = []
+    errors = _docs.errors
     for component in _docs.registry.values():
         for path in component.files:
             file = File.generated(
