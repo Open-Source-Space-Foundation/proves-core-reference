@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - scratch/v5e-upstream-pins-588
+      - scratch/596-upstream-pins-pi500
 
 # The integration jobs only read the repository; artifact up/download uses the
 # per-run artifact scope, not contents: write.
@@ -283,6 +284,7 @@ jobs:
   integration-radio:
     runs-on:
       - integration
+      - ARM64
     needs:
       - build
     timeout-minutes: 30
