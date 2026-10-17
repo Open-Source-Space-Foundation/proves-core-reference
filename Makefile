@@ -74,14 +74,34 @@ data-diagram: fprime-venv ## Generate Mermaid packet wire diagrams as Markdown (
 
 ##@ Documentation
 
+DOCS_VENV ?= $(shell pwd)/docs-venv
+DOCS_PYTHON := $(DOCS_VENV)/bin/python
+
+.PHONY: docs-deps
+docs-deps: uv ## Install docs dependencies and init component sources that are git submodules
+	@$(UV) venv $(DOCS_VENV) --allow-existing --quiet
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) --requirement requirements-docs.txt
+	@sources=$$($(DOCS_PYTHON) tools/mkdocs_hooks/component_docs.py --source-paths mkdocs.yml) || exit 1; \
+	submodules=$$(git config --file .gitmodules --get-regexp '\.path$$' | awk '{print $$2}'); \
+	for path in $$sources; do \
+		if printf '%s\n' $$submodules | grep -qxF "$$path"; then \
+			git submodule update --init "$$path"; \
+		fi; \
+	done
+
 .PHONY: docs-serve
-docs-serve: uv ## Serve MkDocs documentation site locally
+docs-serve: docs-deps ## Serve MkDocs documentation site locally
 	@echo "Starting MkDocs server at http://127.0.0.1:8000"
-	@$(UVX) --from mkdocs-material mkdocs serve
+	@$(DOCS_VENV)/bin/mkdocs serve
 
 .PHONY: docs-build
-docs-build: uv ## Build MkDocs documentation site
-	@$(UVX) --from mkdocs-material mkdocs build
+docs-build: docs-deps ## Build MkDocs documentation site (strict, as in CI)
+	@$(DOCS_VENV)/bin/mkdocs build --strict
+
+.PHONY: docs-test
+docs-test: docs-deps ## Run the docs hook tests
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) pytest
+	@$(DOCS_PYTHON) -m pytest tools/mkdocs_hooks
 
 .PHONY: generate
 generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
