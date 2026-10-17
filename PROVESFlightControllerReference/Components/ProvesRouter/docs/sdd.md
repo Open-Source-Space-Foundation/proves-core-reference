@@ -1,3 +1,8 @@
+---
+title: PROVES Router
+category: Security
+---
+
 # Svc::ProvesRouter
 
 The `Svc::ProvesRouter` component routes F´ packets (such as command or file packets) to other components. It is based on the FPrime Router, explained and linked later in the sdd, with one distinction:

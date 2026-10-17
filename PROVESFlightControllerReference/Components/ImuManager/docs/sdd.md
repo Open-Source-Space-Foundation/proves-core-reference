@@ -1,3 +1,8 @@
+---
+title: IMU Manager
+category: Sensor
+---
+
 # Components::ImuManager
 
 The IMU Manager (Inertial Measurement Unit) component provides sensor data related to motion and orientation of the craft. It interfaces with the LIS2MDL and LSM6DSO sensors via Zephyr drivers to provide acceleration, angular velocity, and magnetic field measurements. It also supports configuration of sampling frequencies and axis orientation.

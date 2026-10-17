@@ -1,3 +1,8 @@
+---
+title: Detumble Manager
+category: Core
+---
+
 # Components::DetumbleManager
 
 The Detumble Manager component implements a B-dot style detumbling controller. It coordinates angular-velocity measurements, dipole moment commands, and magnetorquer actuation to reduce the spacecraft rotation rate. The component operates as a scheduled passive component and drives a set of configured magnetorquer coils.

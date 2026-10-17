@@ -19,6 +19,7 @@ lib/zephyr-workspace/*
 /venv/
 /keys/
 /fprime-venv/
+/docs-venv/
 /.idea/
 /.vscode/*
 !/.vscode/launch.json

@@ -1,3 +1,8 @@
+---
+title: Fs Format
+category: Storage
+---
+
 # Components::FsFormat
 
 The FsFormat component provides a simple command interface for formatting a Zephyr file system partition. It wraps the Zephyr `fs_mkfs` API and exposes a single F Prime command that callers can use to erase and re‑initialize a storage partition with a FAT file system.

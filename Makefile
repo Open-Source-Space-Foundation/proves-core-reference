@@ -74,62 +74,29 @@ data-diagram: fprime-venv ## Generate Mermaid packet wire diagrams as Markdown (
 
 ##@ Documentation
 
-.PHONY: docs-sync
-docs-sync: ## Sync SDD files from components to docs-site
-	@echo "Syncing SDD files to docs-site/components..."
-	@mkdir -p docs-site/components/img
-	@# Copy ADCS
-	@cp PROVESFlightControllerReference/Components/ADCS/docs/sdd.md docs-site/components/ADCS.md
-	@# Copy Communication Components
-	@cp PROVESFlightControllerReference/Components/AmateurRadio/docs/sdd.md docs-site/components/AmateurRadio.md
-	@cp PROVESFlightControllerReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
-	@cp PROVESFlightControllerReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
-	@cp PROVESFlightControllerReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
-	@cp PROVESFlightControllerReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
-	@cp PROVESFlightControllerReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
-	@cp PROVESFlightControllerReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
-	@# Copy Core Components
-	@cp PROVESFlightControllerReference/Components/ModeManager/docs/sdd.md docs-site/components/ModeManager.md
-	@cp PROVESFlightControllerReference/Components/StartupManager/docs/sdd.md docs-site/components/StartupManager.md
-	@cp PROVESFlightControllerReference/Components/ResetManager/docs/sdd.md docs-site/components/ResetManager.md
-	@cp PROVESFlightControllerReference/Components/Watchdog/docs/sdd.md docs-site/components/Watchdog.md
-	@cp PROVESFlightControllerReference/Components/BootloaderTrigger/docs/sdd.md docs-site/components/BootloaderTrigger.md
-	@cp PROVESFlightControllerReference/Components/DetumbleManager/docs/sdd.md docs-site/components/DetumbleManager.md
-	@# Copy Hardware Components
-	@cp PROVESFlightControllerReference/Components/AntennaDeployer/docs/sdd.md docs-site/components/AntennaDeployer.md
-	@cp PROVESFlightControllerReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
-	@cp PROVESFlightControllerReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
-	@cp PROVESFlightControllerReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
-	@# Copy Sensor Components
-	@cp PROVESFlightControllerReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
-	@cp PROVESFlightControllerReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
-	@cp PROVESFlightControllerReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
-	@# Copy Driver Components
-	@cp PROVESFlightControllerReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Veml6031Manager/docs/sdd.md docs-site/components/Veml6031Manager.md
-	@# Copy Storage Components
-	@cp PROVESFlightControllerReference/Components/FlashWorker/docs/sdd.md docs-site/components/FlashWorker.md
-	@cp PROVESFlightControllerReference/Components/FsFormat/docs/sdd.md docs-site/components/FsFormat.md
-	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
-	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
-	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/TcSecurityDeframer/docs/sdd.md docs-site/components/TcSecurityDeframer.md
-	@cp PROVESFlightControllerReference/Components/ProvesRouter/docs/sdd.md docs-site/components/ProvesRouter.md
-	@# Copy images
-	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
-	@echo "✓ Synced 32 component SDDs and images"
+DOCS_VENV ?= $(shell pwd)/docs-venv
+DOCS_PYTHON := $(DOCS_VENV)/bin/python
+
+.PHONY: docs-deps
+docs-deps: uv ## Install docs dependencies and init component sources that are git submodules
+	@$(UV) venv $(DOCS_VENV) --allow-existing --quiet
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) --requirement requirements-docs.txt
+	@paths=$$($(DOCS_PYTHON) tools/mkdocs_hooks/component_docs.py --submodule-sources mkdocs.yml) || exit 1; \
+	[ -z "$$paths" ] || git submodule update --init $$paths
 
 .PHONY: docs-serve
-docs-serve: uv ## Serve MkDocs documentation site locally
+docs-serve: docs-deps ## Serve MkDocs documentation site locally
 	@echo "Starting MkDocs server at http://127.0.0.1:8000"
-	@$(UVX) --from mkdocs-material mkdocs serve
+	@$(DOCS_VENV)/bin/mkdocs serve
 
 .PHONY: docs-build
-docs-build: uv ## Build MkDocs documentation site
-	@$(UVX) --from mkdocs-material mkdocs build
+docs-build: docs-deps ## Build MkDocs documentation site (strict, as in CI)
+	@$(DOCS_VENV)/bin/mkdocs build --strict
+
+.PHONY: docs-test
+docs-test: docs-deps ## Run the docs hook tests
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) pytest
+	@$(DOCS_PYTHON) -m pytest tools/mkdocs_hooks
 
 .PHONY: generate
 generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
