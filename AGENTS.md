@@ -213,12 +213,30 @@ Framing/              # F Prime framing/deframing plugin (pip installable)
 sequences/            # F Prime command sequences (.seq files)
 scripts/              # Utility scripts (key generation, etc.)
 tools/                # Development and analysis tools (see tools/README.md)
-docs-site/
-├── getting-started/     # Setup and build documentation
-├── additional-resources/  # Board-specific guides, troubleshooting
-├── uploading/           # Board-specific firmware upload instructions
-└── components/          # Component SDD documentation
+docs-site/               # Hand-written MkDocs pages (component SDDs are not here)
+├── index.md
+├── getting-started/     # Setup, build, and flashing documentation
+└── additional-resources/  # Board list, board configuration, troubleshooting
 ```
+
+### Component Documentation
+
+Each component's docs live next to its code, in `<Component>/docs/`. There is no copy step. The MkDocs hook `tools/mkdocs_hooks/component_docs.py` publishes every folder with a `docs/` child under the `extra.component_sources` paths in `mkdocs.yml`:
+
+- `docs/sdd.md` is served at `/components/<Name>/`. Other files keep their names: `docs/USAGE.md` → `/components/<Name>/USAGE/`, `docs/img/x.svg` → `/components/<Name>/img/x.svg`.
+- `<Name>` is the component folder name. It must be unique across all sources.
+- Every `docs/` folder needs an `sdd.md` with front matter. `title:` is the menu name. `category:` is one of the `extra.component_categories` in `mkdocs.yml` (Core, Communication, Hardware, Sensor, Driver, Storage, Security). A missing or unknown category lands in **Other**.
+
+  ```yaml
+  ---
+  title: PROVES Router
+  category: Security
+  ---
+  ```
+
+- The hook builds the **Component SDDs** menu. Do not add component pages to `nav:` by hand.
+- Link to another component's docs with a normal relative path (`../../LoadSwitch/docs/sdd.md`). Link to code, tests, or FPP with a full `https://github.com/Open-Source-Space-Foundation/proves-core-reference/blob/main/<path>` URL. A relative link to a non-docs file fails the strict build.
+- Check docs changes with `make docs-build` (strict, as in CI). Hook tests: `make docs-test`.
 
 ### Key Architecture Points
 
@@ -273,9 +291,10 @@ make build-mcuboot     # Build firmware with MCUBoot bootloader signing
 make generate-auth-key # Generate AuthDefaultKey.h with a random HMAC key
 make fmt               # Run linters and formatters (pre-commit)
 make data-budget       # Analyze telemetry data budget (use VERBOSE=1 for details)
-make docs-sync         # Sync component SDD files to docs-site/components/
-make docs-serve        # Serve MkDocs documentation site locally (http://127.0.0.1:8000)
-make docs-build        # Build MkDocs documentation site
+make docs-deps         # Install docs dependencies into docs-venv/ and init component-source submodules
+make docs-serve        # Serve MkDocs documentation site locally with live reload (http://127.0.0.1:8000)
+make docs-build        # Build MkDocs documentation site (strict, as in CI)
+make docs-test         # Run the docs hook tests
 make gds               # Start F Prime Ground Data System
 make gds-integration   # Start GDS without GUI (for CI)
 make framer-plugin     # Build and install the CCSDS framing plugin
@@ -298,7 +317,8 @@ make minimize-uv-cache # Minimize UV cache (CI optimization)
 **Jobs**:
 
 1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Build**: Full build with caching
+2. **Docs**: Runs `make docs-deps`, `mkdocs build --strict`, and `make docs-test`
+3. **Build**: Full build with caching
    - Caches: bin tools, submodules, Python venv, Zephyr workspace
    - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
    - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
@@ -600,7 +620,7 @@ These instructions are comprehensive and validated. **Only search for additional
 
 - Instructions are incomplete for your specific task
 - You encounter errors not covered in "Common Issues"
-- You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
+- You need board-specific flashing instructions (see docs-site/additional-resources/board-list.md and docs-site/getting-started/build-flash-run.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
 
