@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 
 from gate import Criterion
@@ -81,18 +82,45 @@ def run_d1a(rig: Rig) -> dict:
     return {"confirmed": confirmed}
 
 
+REJECTED = ("VALIDATION_ERROR", "rejected by policy")
+
+
+def set_rx_verdict(rig: Rig, revert_s: int) -> str | None:
+    """SET_RX_PROFILE P1 with this revert_s: 'completed', the OpCodeError
+    response, or 'rejected by policy'.
+
+    #590 may reject a bad revert_s either by OpCodeError or by completing
+    without switching and emitting a warning, so a completed command whose
+    RxProfile did not move and which drew a radio warning counts as rejected."""
+    mark = rig.event_mark("flight")
+    rig.settle(("flight",))
+    before = rig.channel("flight", "RxProfile")
+    sent = rig.command("flight", "SET_RX_PROFILE", "P1_LORA_SF10", revert_s)
+    result = rig.outcome(sent)
+    if result != "completed":
+        return result
+    rig.settle(("flight",))
+    radio = rig.dicts["flight"].radio_instance()
+    warned = any(
+        f".{radio}." in e.name and "WARNING" in e.severity
+        for e in rig.events_since("flight", mark)
+    )
+    if warned and rig.channel("flight", "RxProfile") == before:
+        return "rejected by policy"
+    return result
+
+
 def run_d1b(rig: Rig) -> dict:
     """revert_s bounds: 0 and 901 rejected; 900 accepted and reverts by 945 s."""
     quiesce(rig)
     out = {}
     for revert_s in (0, 901):
-        sent = rig.command("flight", "SET_RX_PROFILE", "P1_LORA_SF10", revert_s)
-        out[f"revert_s={revert_s}"] = rig.outcome(sent)
+        out[f"revert_s={revert_s}"] = set_rx_verdict(rig, revert_s)
     reverted0 = rig.count_events("flight", "ProfileReverted") or 0
     sent = rig.command("flight", "SET_RX_PROFILE", "P1_LORA_SF10", GUARD_S)
     out[f"revert_s={GUARD_S}"] = rig.outcome(sent)
     start = rig.now()
-    if rig.wait_for(
+    if out[f"revert_s={GUARD_S}"] == "completed" and rig.wait_for(
         lambda: (rig.count_events("flight", "ProfileReverted") or 0) > reverted0,
         GUARD_S + 45,
         every=15,
@@ -115,11 +143,40 @@ def run_d1c(rig: Rig) -> dict:
     return {"applied": applied, "minutes_observed": minutes, "reverts": reverts}
 
 
+CW_MS = re.compile(r"(?i)(^|_)ms$|millis")
+# Out-of-range values first: if the bounds are broken, a short carrier is the
+# worst case. Rejection counts only as VALIDATION_ERROR, not BUSY.
+CW_CASES = (
+    (0, "VALIDATION_ERROR"),
+    (10001, "VALIDATION_ERROR"),
+    (1, "completed"),
+    (10000, "completed"),
+)
+
+
+def cw_argument(rig: Rig) -> str | None:
+    """The CONTINUOUS_WAVE argument list, as 'name: type', from the dictionary."""
+    d = rig.dicts["flight"]
+    full = d.find(d.commands, "CONTINUOUS_WAVE")
+    if full is None:
+        return None
+    return ", ".join(f"{p['name']}: {p['type']['name']}" for p in d.params[full])
+
+
 def run_d1d(rig: Rig) -> dict:
-    """CONTINUOUS_WAVE(duration_ms): 1 and 10000 accepted, 0 and 10001 rejected."""
+    """CONTINUOUS_WAVE(duration_ms): 1 and 10000 accepted, 0 and 10001 rejected.
+
+    Refuses to key the carrier unless the dictionary says the one argument is
+    milliseconds: legacy builds take seconds, and 10000 s blocks the radio."""
+    arg = cw_argument(rig)
+    out: dict = {"cw argument": arg}
+    if arg is None or "," in arg or not CW_MS.search(arg.split(":")[0]):
+        rig.log(
+            f"REFUSED: CONTINUOUS_WAVE takes ({arg}), not one milliseconds argument"
+        )
+        return out
     quiesce(rig)
-    out = {}
-    for ms in (1, 10000, 0, 10001):
+    for ms, _ in CW_CASES:
         sent = rig.command("flight", "CONTINUOUS_WAVE", ms)
         out[f"cw {ms} ms"] = rig.outcome(sent, wait=30)
     return out
@@ -166,10 +223,16 @@ DRILLS = [
                 lambda v: v <= GUARD_S + 45,
             ),
             Criterion(
-                "revert_s=0 rejected", "revert_s=0", "error", lambda v: v == "error"
+                "revert_s=0 rejected",
+                "revert_s=0",
+                " or ".join(REJECTED),
+                lambda v: v in REJECTED,
             ),
             Criterion(
-                "revert_s=901 rejected", "revert_s=901", "error", lambda v: v == "error"
+                "revert_s=901 rejected",
+                "revert_s=901",
+                " or ".join(REJECTED),
+                lambda v: v in REJECTED,
             ),
         ),
     ),
@@ -196,16 +259,19 @@ DRILLS = [
         "CW bounds",
         BOTH,
         run_d1d,
-        tuple(
+        (
+            Criterion(
+                "CW argument is milliseconds",
+                "cw argument",
+                "one *_ms argument",
+                lambda v: "," not in v and bool(CW_MS.search(v.split(":")[0])),
+            ),
+        )
+        + tuple(
             Criterion(
                 f"cw {ms} ms {want}", f"cw {ms} ms", want, lambda v, w=want: v == w
             )
-            for ms, want in (
-                (1, "completed"),
-                (10000, "completed"),
-                (0, "error"),
-                (10001, "error"),
-            )
+            for ms, want in CW_CASES
         ),
     ),
     Drill(
