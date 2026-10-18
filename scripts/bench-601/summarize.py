@@ -60,13 +60,12 @@ def main(path):
             if m:
                 print("cpu:", m.group(1))
         for l in blk:
-            m = re.search(r"switch trace captured (.*)", l)
+            m = re.search(r"gap: prio-11 probe woke (\d+) us late; (\d+) us since its previous wake, of which (\d+) us non-idle", l)
             if m:
-                print("switch trace", m.group(1))
-        for l in blk:
-            m = re.search(r"switch\[(\d+)\] (\S+) prio (-?\d+) in at T-(-?\d+) us, ran (\d+) us", l)
+                print(f"gap capture: woke {int(m.group(1))/1000:.1f} ms late, {int(m.group(2))/1000:.1f} ms since previous wake, {int(m.group(3))/1000:.1f} ms non-idle")
+            m = re.search(r"gap\[(\d+)\] (\S+) prio (-?\d+) used (\d+) us", l)
             if m:
-                print(f"  switch[{int(m.group(1)):3d}] T-{int(m.group(4)):>8} us  {name_of(m.group(2)):<28} prio {m.group(3):>3}  ran {m.group(5):>7} us")
+                print(f"  gap[{m.group(1)}] {name_of(m.group(2)):<28} prio {m.group(3):>3}  {int(m.group(4))/1000:7.1f} ms")
     print("\n--- channels ---")
     for l in text.splitlines():
         m = re.match(r"(\S+) = (.*?) \(first seen (.*?) at .*", l)

@@ -1,0 +1,155 @@
+condition=idle duration_s=300 cmd_period_s=0.5 start=2026-10-17T20:39:40
+
+== boot-phase REPORT at 2026-10-17T20:39:42 ==
+condition ran 300.0 s; commands ok=0 fail=0
+
+== end-of-condition REPORT at 2026-10-17T20:44:44 ==
+
+-- schedProbe events --
+TB_PROC_TIME: 35.359700s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 3 period 4000 us: 7999 wakes, max late 121983 us, >1ms 17, >5ms 3, >20ms 1
+TB_PROC_TIME: 35.403500s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 5 period 4000 us: 8000 wakes, max late 143313 us, >1ms 80, >5ms 3, >20ms 2
+TB_PROC_TIME: 35.447100s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 7 period 4000 us: 7982 wakes, max late 144554 us, >1ms 91, >5ms 17, >20ms 2
+TB_PROC_TIME: 35.490900s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 9 period 4000 us: 7918 wakes, max late 195205 us, >1ms 73, >5ms 42, >20ms 4
+TB_PROC_TIME: 35.535600s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 11 period 4000 us: 7925 wakes, max late 195684 us, >1ms 76, >5ms 42, >20ms 3
+TB_PROC_TIME: 35.579100s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.run(rg1Hz): max 20148 us over 33 calls
+TB_PROC_TIME: 35.622700s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.forceSafe: max 0 us over 0 calls
+TB_PROC_TIME: 35.666300s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.cmd(cmdDisp): max 0 us over 0 calls
+TB_PROC_TIME: 35.709700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_reporter prio 14: peak run 533 us, avg run 38 us, total 13 ms, 0 permille cpu
+TB_PROC_TIME: 35.753500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p11 prio 11: peak run 128 us, avg run 14 us, total 118 ms, 3 permille cpu
+TB_PROC_TIME: 35.797800s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p9 prio 9: peak run 82 us, avg run 16 us, total 133 ms, 3 permille cpu
+TB_PROC_TIME: 35.841500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p7 prio 7: peak run 154 us, avg run 18 us, total 152 ms, 4 permille cpu
+TB_PROC_TIME: 35.888000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p5 prio 5: peak run 126 us, avg run 20 us, total 167 ms, 4 permille cpu
+TB_PROC_TIME: 35.931700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p3 prio 3: peak run 162 us, avg run 18 us, total 154 ms, 4 permille cpu
+TB_PROC_TIME: 35.976300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_21 prio 14: peak run 71 us, avg run 47 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.022100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_20 prio 11: peak run 29 us, avg run 29 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.066000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_19 prio 11: peak run 32 us, avg run 32 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.109700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_18 prio 13: peak run 402 us, avg run 106 us, total 57 ms, 1 permille cpu
+TB_PROC_TIME: 36.153500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_17 prio 1: peak run 665 us, avg run 415 us, total 702 ms, 19 permille cpu
+TB_PROC_TIME: 36.197900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_16 prio 3: peak run 964 us, avg run 206 us, total 544 ms, 15 permille cpu
+TB_PROC_TIME: 36.241700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_15 prio 2: peak run 919 us, avg run 241 us, total 265 ms, 7 permille cpu
+TB_PROC_TIME: 36.285600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_14 prio 13: peak run 331 us, avg run 123 us, total 55 ms, 1 permille cpu
+TB_PROC_TIME: 36.335400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_13 prio 13: peak run 26 us, avg run 26 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.379100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_12 prio 4: peak run 25 us, avg run 25 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.423100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_11 prio 12: peak run 787 us, avg run 171 us, total 83 ms, 2 permille cpu
+TB_PROC_TIME: 36.468600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_10 prio 10: peak run 192 us, avg run 111 us, total 4 ms, 0 permille cpu
+TB_PROC_TIME: 36.522700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_9 prio 9: peak run 204 us, avg run 111 us, total 6 ms, 0 permille cpu
+TB_PROC_TIME: 36.566600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_8 prio 14: peak run 274 us, avg run 80 us, total 37 ms, 1 permille cpu
+TB_PROC_TIME: 36.610300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_7 prio 9: peak run 430 us, avg run 172 us, total 16 ms, 0 permille cpu
+TB_PROC_TIME: 36.654000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_6 prio 8: peak run 1225 us, avg run 295 us, total 67 ms, 1 permille cpu
+TB_PROC_TIME: 36.698600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_5 prio 7: peak run 949 us, avg run 193 us, total 145 ms, 4 permille cpu
+TB_PROC_TIME: 36.742300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_4 prio 8: peak run 1289 us, avg run 184 us, total 34 ms, 0 permille cpu
+TB_PROC_TIME: 36.786100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_3 prio 7: peak run 150 us, avg run 131 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 36.829900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_2 prio 6: peak run 785 us, avg run 209 us, total 13 ms, 0 permille cpu
+TB_PROC_TIME: 36.873900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_1 prio 6: peak run 2171 us, avg run 230 us, total 36 ms, 1 permille cpu
+TB_PROC_TIME: 36.922400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_0 prio 4: peak run 920 us, avg run 240 us, total 16 ms, 0 permille cpu
+TB_PROC_TIME: 36.966100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread lbm_main_thread_id prio 2: peak run 546 us, avg run 168 us, total 1 ms, 0 permille cpu
+TB_PROC_TIME: 37.010000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread usbd prio -8: peak run 803 us, avg run 163 us, total 23 ms, 0 permille cpu
+TB_PROC_TIME: 37.053800s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread usbd@50110000 prio -8: peak run 207 us, avg run 71 us, total 19 ms, 0 permille cpu
+TB_PROC_TIME: 37.098400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread sysworkq prio -1: peak run 642 us, avg run 106 us, total 42 ms, 1 permille cpu
+TB_PROC_TIME: 37.142100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread idle prio 15: peak run 2561783 us, avg run 445 us, total 31713 ms, 867 permille cpu
+TB_PROC_TIME: 37.186100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread main prio 0: peak run 77869 us, avg run 51 us, total 1781 ms, 48 permille cpu
+TB_PROC_TIME: 37.229900s, context=0 ReferenceDeployment.schedProbe.CpuReport cpu: uptime 37229 ms, non-idle 4870 ms, probe threads 760 ms
+TB_PROC_TIME: 37.273600s, context=0 ReferenceDeployment.schedProbe.ReportDone report complete
+TB_PROC_TIME: 337.359800s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 3 period 4000 us: 74980 wakes, max late 12545 us, >1ms 161, >5ms 1, >20ms 0
+TB_PROC_TIME: 337.403300s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 5 period 4000 us: 74989 wakes, max late 20692 us, >1ms 197, >5ms 2, >20ms 1
+TB_PROC_TIME: 337.446900s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 7 period 4000 us: 74904 wakes, max late 22423 us, >1ms 493, >5ms 6, >20ms 1
+TB_PROC_TIME: 337.490700s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 9 period 4000 us: 74417 wakes, max late 39286 us, >1ms 557, >5ms 274, >20ms 10
+TB_PROC_TIME: 337.534300s, context=0 ReferenceDeployment.schedProbe.ProbeReport probe prio 11 period 4000 us: 74337 wakes, max late 40056 us, >1ms 875, >5ms 303, >20ms 11
+TB_PROC_TIME: 337.578800s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.run(rg1Hz): max 20186 us over 301 calls
+TB_PROC_TIME: 337.624300s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.forceSafe: max 0 us over 0 calls
+TB_PROC_TIME: 337.667900s, context=0 ReferenceDeployment.schedProbe.HandlerReport handler mm.cmd(cmdDisp): max 0 us over 0 calls
+TB_PROC_TIME: 337.711400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_reporter prio 14: peak run 611 us, avg run 33 us, total 119 ms, 0 permille cpu
+TB_PROC_TIME: 337.754900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p11 prio 11: peak run 148 us, avg run 16 us, total 1361 ms, 4 permille cpu
+TB_PROC_TIME: 337.799800s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p9 prio 9: peak run 153 us, avg run 17 us, total 1446 ms, 4 permille cpu
+TB_PROC_TIME: 337.843700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p7 prio 7: peak run 162 us, avg run 19 us, total 1633 ms, 4 permille cpu
+TB_PROC_TIME: 337.887600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p5 prio 5: peak run 132 us, avg run 17 us, total 1458 ms, 4 permille cpu
+TB_PROC_TIME: 337.931300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread probe_p3 prio 3: peak run 162 us, avg run 16 us, total 1407 ms, 4 permille cpu
+TB_PROC_TIME: 337.975100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_21 prio 14: peak run 71 us, avg run 47 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.025500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_20 prio 11: peak run 29 us, avg run 29 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.069400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_19 prio 11: peak run 32 us, avg run 32 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.112900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_18 prio 13: peak run 402 us, avg run 97 us, total 573 ms, 1 permille cpu
+TB_PROC_TIME: 338.156700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_17 prio 1: peak run 665 us, avg run 404 us, total 6946 ms, 20 permille cpu
+TB_PROC_TIME: 338.201100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_16 prio 3: peak run 1009 us, avg run 195 us, total 4268 ms, 12 permille cpu
+TB_PROC_TIME: 338.244900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_15 prio 2: peak run 931 us, avg run 313 us, total 2481 ms, 7 permille cpu
+TB_PROC_TIME: 338.288800s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_14 prio 13: peak run 375 us, avg run 118 us, total 517 ms, 1 permille cpu
+TB_PROC_TIME: 338.336300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_13 prio 13: peak run 26 us, avg run 26 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.380900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_12 prio 4: peak run 25 us, avg run 25 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.425500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_11 prio 12: peak run 787 us, avg run 176 us, total 751 ms, 2 permille cpu
+TB_PROC_TIME: 338.471500s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_10 prio 10: peak run 198 us, avg run 116 us, total 53 ms, 0 permille cpu
+TB_PROC_TIME: 338.516700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_9 prio 9: peak run 362 us, avg run 146 us, total 74 ms, 0 permille cpu
+TB_PROC_TIME: 338.568400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_8 prio 14: peak run 274 us, avg run 85 us, total 381 ms, 1 permille cpu
+TB_PROC_TIME: 338.612100s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_7 prio 9: peak run 509 us, avg run 183 us, total 184 ms, 0 permille cpu
+TB_PROC_TIME: 338.655700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_6 prio 8: peak run 1225 us, avg run 284 us, total 176 ms, 0 permille cpu
+TB_PROC_TIME: 338.700400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_5 prio 7: peak run 949 us, avg run 173 us, total 746 ms, 2 permille cpu
+TB_PROC_TIME: 338.744000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_4 prio 8: peak run 1289 us, avg run 177 us, total 259 ms, 0 permille cpu
+TB_PROC_TIME: 338.787800s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_3 prio 7: peak run 150 us, avg run 131 us, total 0 ms, 0 permille cpu
+TB_PROC_TIME: 338.831700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_2 prio 6: peak run 928 us, avg run 166 us, total 104 ms, 0 permille cpu
+TB_PROC_TIME: 338.875400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_1 prio 6: peak run 2171 us, avg run 191 us, total 103 ms, 0 permille cpu
+TB_PROC_TIME: 338.925700s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread ActComp_0 prio 4: peak run 920 us, avg run 208 us, total 112 ms, 0 permille cpu
+TB_PROC_TIME: 338.969600s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread lbm_main_thread_id prio 2: peak run 546 us, avg run 127 us, total 1 ms, 0 permille cpu
+TB_PROC_TIME: 339.013300s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread usbd prio -8: peak run 803 us, avg run 168 us, total 59 ms, 0 permille cpu
+TB_PROC_TIME: 339.056900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread usbd@50110000 prio -8: peak run 258 us, avg run 77 us, total 53 ms, 0 permille cpu
+TB_PROC_TIME: 339.101400s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread sysworkq prio -1: peak run 642 us, avg run 95 us, total 223 ms, 0 permille cpu
+TB_PROC_TIME: 339.145000s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread idle prio 15: peak run 2561783 us, avg run 399 us, total 292019 ms, 875 permille cpu
+TB_PROC_TIME: 339.188900s, context=0 ReferenceDeployment.schedProbe.ThreadReport thread main prio 0: peak run 77869 us, avg run 47 us, total 15919 ms, 47 permille cpu
+TB_PROC_TIME: 339.232600s, context=0 ReferenceDeployment.schedProbe.CpuReport cpu: uptime 339232 ms, non-idle 41593 ms, probe threads 7340 ms
+TB_PROC_TIME: 339.276100s, context=0 ReferenceDeployment.schedProbe.ReportDone report complete
+
+-- other events (count by name) --
+     1 CdhCore.cmdDisp.NoOpReceived
+     4 CdhCore.cmdDisp.OpCodeCompleted
+     4 CdhCore.cmdDisp.OpCodeDispatched
+     2 ComCcsdsLora.comQueue.QueueOverflow
+
+-- last channel values --
+ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000 (first seen 3000 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000 (first seen 12000 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000 (first seen 299000 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+ReferenceDeployment.rateGroup50Hz.RgCycleSlips = <not received>
+ReferenceDeployment.rateGroup10Hz.RgCycleSlips = <not received>
+ReferenceDeployment.rateGroup1Hz.RgCycleSlips = <not received>
+ReferenceDeployment.startupManager.BootCount = 12 (first seen 12 at TB_PROC_TIME: 63.323900s, context=0, last at TB_PROC_TIME: 333.324800s, context=0)
+ReferenceDeployment.startupManager.QuiescenceEndTime = {'timeBase': 'TB_PROC_TIME', 'timeContext': 0, 'seconds': 2703, 'useconds': 461800} (first seen {'timeBase': 'TB_PROC_TIME', 'timeContext': 0, 'seconds': 2703, 'useconds': 461800} at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+ReferenceDeployment.modeManager.CurrentMode = 1 (first seen 1 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.324800s, context=0)
+ReferenceDeployment.uspRadio.RxProfile = <not received>
+ReferenceDeployment.uspRadio.TxProfile = <not received>
+ReferenceDeployment.uspRadio.BytesReceived = 0 (first seen 0 at TB_PROC_TIME: 63.323900s, context=0, last at TB_PROC_TIME: 333.324800s, context=0)
+ReferenceDeployment.uspRadio.RxDropped = <not received>
+CdhCore.cmdDisp.CommandsDispatched = 0 (first seen 0 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+CdhCore.cmdDisp.CommandsDropped = 0 (first seen 0 at TB_PROC_TIME: 63.320500s, context=0, last at TB_PROC_TIME: 333.322400s, context=0)
+CdhCore.version.ProjectVersion = <not received>
+ReferenceDeployment.fsSpace.FreeSpace = 253624320 (first seen 253624320 at TB_PROC_TIME: 63.323400s, context=0, last at TB_PROC_TIME: 333.324500s, context=0)
+ReferenceDeployment.fsSpace.TotalSpace = 253673472 (first seen 253673472 at TB_PROC_TIME: 63.323400s, context=0, last at TB_PROC_TIME: 333.324500s, context=0)
+ComCcsdsUart.comQueue.comQueueDepth = <not received>
+
+-- RgMaxTime history --
+TB_PROC_TIME: 63.320500s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 63.320500s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 63.320500s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 93.320500s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 93.320500s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 93.320500s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 123.320400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 123.320400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 123.320400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 153.321000s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 153.321000s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 153.321000s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 183.320400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 183.320400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 183.320400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 213.320400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 213.320400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 213.320400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 243.321000s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 243.321000s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 243.321000s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 273.322400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 273.322400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 273.322400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 303.321400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 303.321400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 303.321400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
+TB_PROC_TIME: 333.322400s, context=0 ReferenceDeployment.rateGroup50Hz.RgMaxTime = 3000
+TB_PROC_TIME: 333.322400s, context=0 ReferenceDeployment.rateGroup10Hz.RgMaxTime = 12000
+TB_PROC_TIME: 333.322400s, context=0 ReferenceDeployment.rateGroup1Hz.RgMaxTime = 299000
