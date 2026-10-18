@@ -105,7 +105,7 @@ def set_rx_verdict(rig: Rig, revert_s: int) -> str | None:
         f".{radio}." in e.name and "WARNING" in e.severity
         for e in rig.events_since("flight", mark)
     )
-    if warned and rig.channel("flight", "RxProfile") == before:
+    if warned and before is not None and rig.channel("flight", "RxProfile") == before:
         return "rejected by policy"
     return result
 
