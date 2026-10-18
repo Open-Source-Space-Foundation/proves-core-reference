@@ -1,0 +1,14 @@
+
+BENCH,bench-spi-sweep,mode=irq,pclk=150000000,n=1000,payload=252
+CAL,idle_ticks_per_ms=29961,cal_ns=500069613,timing_hz=150000000
+IDENT,reset_busy_us=5,status=0x22,chipmode=2,cmdstatus=1,reg0740=0x14,reg0741=0x24,spi_ret=0
+CSVHDR,mode,pass,wr_hz,rd_hz,actual_hz,n,rd_min_us,rd_med_us,rd_p99_us,rd_max_us,cpu_med_us,cpu_p99_us,busy_med_us,busy_max_us,bad_xfers,bad_bytes,spi_errs,busy_timeouts
+CSV,irq,same,125000,125000,146484,1000,16763,16764,16764,16775,128,129,0,3,0,0,0,0
+CSV,irq,same,1000000,1000000,1000000,1000,2464,2465,2465,2473,146,147,0,3,0,0,0,0
+MISMATCH same rd=4000000 iter=0 bytes=227 first=[d7 74 7f 69] want=[d7 74 7f 69]
+MISMATCH same rd=4000000 iter=1 bytes=251 first=[a5 a5 a5 a5] want=[da a6 19 de]
+MISMATCH same rd=4000000 iter=2 bytes=252 first=[a5 a5 a5 a5] want=[f2 f0 3d 9c]
+CSV,irq,same,4000000,4000000,3947368,1000,265,200072,200074,200075,0,0,0,3,1000,250959,1999,0
+MISMATCH same rd=8000000 iter=0 bytes=252 first=[a5 a5 a5 a5] want=[24 cd 34 e1]
+MISMATCH same rd=8000000 iter=1 bytes=251 first=[a5 a5 a5 a5] want=[79 f3 e2 33]
+MISMATCH same rd=8000000 iter=2 bytes=249 first=[a5 a5 a5 a5] want=[ef a5 3f ce]
