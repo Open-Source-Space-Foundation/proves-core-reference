@@ -47,29 +47,42 @@ K_THREAD_STACK_ARRAY_DEFINE(s_probeStacks, NUM_PROBES, 1024);
 K_THREAD_STACK_DEFINE(s_reporterStack, 2048);
 ::k_thread s_reporterThread;
 
-// Thread-switch ring filled by the CONFIG_TRACING_USER hook. The prio-11 probe copies it on its first wake later
-// than SWITCH_CAPTURE_US so REPORT can name the threads that held the CPU during that gap.
-constexpr unsigned SWITCH_RING = 64;
+// Gap attribution without kernel tracing: every wake of the prio-11 probe snapshots total_cycles of each
+// thread with priority <= WATCH_MAX_PRIO (collected once at start()). On a wake later than GAP_CAPTURE_US the
+// per-thread deltas across that gap are stored; REPORT prints them. CPU a thread used inside the gap is CPU
+// it took from a priority-11 uspRadio.
+constexpr unsigned WATCH_MAX = 24;
+constexpr int WATCH_MAX_PRIO = 10;
 constexpr unsigned NUM_CAPTURES = 3;
-constexpr U32 SWITCH_CAPTURE_US = 8000;
-struct SwitchRec { k_tid_t thread; U32 cycles; };
-SwitchRec s_ring[SWITCH_RING];
-volatile unsigned s_ringHead = 0;
-struct Capture { SwitchRec rec[SWITCH_RING]; U32 wakeCycles; U32 lateUs; };
+constexpr U32 GAP_CAPTURE_US = 8000;
+struct Capture { U32 lateUs; U32 gapUs; U32 cpuUs[WATCH_MAX]; U32 totalBusyUs; };
+k_tid_t s_watch[WATCH_MAX];
+unsigned s_numWatch = 0;
+U64 s_prevCycles[WATCH_MAX];
+U64 s_prevAllBusy = 0;
+U32 s_prevWakeCycles = 0;
 Capture s_capture[NUM_CAPTURES];
 volatile unsigned s_captured = 0;
 
-extern "C" void sys_trace_thread_switched_in_user(void) {
-    unsigned h = s_ringHead;
-    s_ring[h % SWITCH_RING] = {k_current_get(), k_cycle_get_32()};
-    s_ringHead = h + 1;
+void collectWatch(const ::k_thread* thread, void*) {
+    k_tid_t tid = const_cast<k_tid_t>(thread);
+    if (s_numWatch < WATCH_MAX && k_thread_priority_get(tid) <= WATCH_MAX_PRIO && tid != k_current_get()) {
+        s_watch[s_numWatch++] = tid;
+    }
 }
-extern "C" void sys_trace_thread_switched_out_user(void) {}
-extern "C" void sys_trace_isr_enter_user(void) {}
-extern "C" void sys_trace_isr_exit_user(void) {}
-extern "C" void sys_trace_isr_exit_to_scheduler_user(void) {}
-extern "C" void sys_trace_idle_user(void) {}
-extern "C" void sys_trace_idle_exit_user(void) {}
+
+void snapshotWatch(U64* out, U64* allBusy) {
+    for (unsigned i = 0; i < s_numWatch; i++) {
+        k_thread_runtime_stats_t st;
+        std::memset(&st, 0, sizeof(st));
+        k_thread_runtime_stats_get(s_watch[i], &st);
+        out[i] = st.total_cycles;
+    }
+    k_thread_runtime_stats_t all;
+    std::memset(&all, 0, sizeof(all));
+    k_thread_runtime_stats_all_get(&all);
+    *allBusy = all.total_cycles;
+}
 
 void probeEntry(void* arg, void*, void*) {
     ProbeStat* st = static_cast<ProbeStat*>(arg);
@@ -91,17 +104,24 @@ void probeEntry(void* arg, void*, void*) {
         if (late_us > 20000) {
             st->over_20ms++;
         }
-        if (st->prio == 11 && late_us > SWITCH_CAPTURE_US && s_captured < NUM_CAPTURES) {
-            unsigned key = irq_lock();
-            Capture& cap = s_capture[s_captured];
-            unsigned h = s_ringHead;
-            for (unsigned i = 0; i < SWITCH_RING; i++) {
-                cap.rec[i] = s_ring[(h + i) % SWITCH_RING];
+        if (st->prio == 11) {
+            U64 now[WATCH_MAX];
+            U64 allBusy = 0;
+            snapshotWatch(now, &allBusy);
+            const U32 nowCycles = k_cycle_get_32();
+            if (late_us > GAP_CAPTURE_US && s_captured < NUM_CAPTURES) {
+                Capture& cap = s_capture[s_captured];
+                cap.lateUs = late_us;
+                cap.gapUs = (nowCycles - s_prevWakeCycles) / CYC_PER_US;
+                for (unsigned i = 0; i < s_numWatch; i++) {
+                    cap.cpuUs[i] = static_cast<U32>((now[i] - s_prevCycles[i]) / CYC_PER_US);
+                }
+                cap.totalBusyUs = static_cast<U32>((allBusy - s_prevAllBusy) / CYC_PER_US);
+                s_captured++;
             }
-            cap.wakeCycles = k_cycle_get_32();
-            cap.lateUs = late_us;
-            s_captured++;
-            irq_unlock(key);
+            std::memcpy(s_prevCycles, now, sizeof(s_prevCycles));
+            s_prevAllBusy = allBusy;
+            s_prevWakeCycles = nowCycles;
         }
         // A wake later than one period would make the next deadline already past; restart the schedule.
         if (late_us > PROBE_PERIOD_US) {
@@ -133,6 +153,7 @@ SchedProbe::SchedProbe(const char* const compName) : SchedProbeComponentBase(com
 SchedProbe::~SchedProbe() {}
 
 void SchedProbe::start() {
+    k_thread_foreach(collectWatch, nullptr);
     for (unsigned i = 0; i < NUM_PROBES; i++) {
         k_tid_t tid = k_thread_create(&s_probeThreads[i], s_probeStacks[i], K_THREAD_STACK_SIZEOF(s_probeStacks[i]), probeEntry,
                                       &s_probes[i], nullptr, nullptr, s_probes[i].prio, 0, K_NO_WAIT);
@@ -198,22 +219,14 @@ void SchedProbe::report() {
     k_thread_foreach_unlocked(threadCb, this);
     for (unsigned c = 0; c < s_captured; c++) {
         const Capture& cap = s_capture[c];
-        this->log_ACTIVITY_HI_SwitchCaptureHeader(cap.lateUs, SWITCH_RING);
+        this->log_ACTIVITY_HI_GapCaptureHeader(cap.lateUs, cap.gapUs, cap.totalBusyUs);
         k_sleep(K_MSEC(REPORT_PACING_MS));
-        for (unsigned i = 0; i < SWITCH_RING; i++) {
-            const SwitchRec& r = cap.rec[i];
-            if (r.thread == nullptr) {
+        for (unsigned i = 0; i < s_numWatch; i++) {
+            if (cap.cpuUs[i] < 100) {
                 continue;
             }
-            const U32 endCycles = (i + 1 < SWITCH_RING) ? cap.rec[i + 1].cycles : cap.wakeCycles;
-            const I32 beforeWakeUs = static_cast<I32>(cap.wakeCycles - r.cycles) / static_cast<I32>(CYC_PER_US);
-            const U32 ranUs = (endCycles - r.cycles) / CYC_PER_US;
-            if (ranUs < 20) {
-                continue;  // sub-20 us hops (the 1 kHz main tick, probe wakes) only add noise to the event stream
-            }
-            const char* rawName = k_thread_name_get(r.thread);
-            this->log_ACTIVITY_HI_SwitchRec(i, Fw::String(rawName != nullptr ? rawName : "?"), static_cast<I8>(k_thread_priority_get(r.thread)),
-                                            beforeWakeUs, ranUs);
+            const char* rawName = k_thread_name_get(s_watch[i]);
+            this->log_ACTIVITY_HI_GapThread(c, Fw::String(rawName != nullptr ? rawName : "?"), static_cast<I8>(k_thread_priority_get(s_watch[i])), cap.cpuUs[i]);
             k_sleep(K_MSEC(REPORT_PACING_MS));
         }
     }
