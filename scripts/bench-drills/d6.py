@@ -33,24 +33,26 @@ def run(rig: Rig) -> dict:
         ),
         None,
     )
-    noop = rig.dicts["flight"].find(rig.dicts["flight"].commands, "CMD_NO_OP")
     dispatched = 0
     # Other drills leave the GRC transmitter off; the legacy GRC then queues
     # the uplink until its uplinkComQueue overflows.
     transmit(rig, "legacy", True)
-    if noop:
-        opcode = rig.dicts["flight"].commands[noop]
-        for _ in range(COMMANDS):
-            base = rig.opcode_events("flight", "OpCodeDispatched", opcode)
-            sent = rig.command(
-                "rf",
-                "CMD_NO_OP",
-                effect=lambda b=base: (
-                    rig.opcode_events("flight", "OpCodeDispatched", opcode) > b
-                ),
-                timeout=60,
+    # Each NO_OP carries its own token, so a command the GRC queued earlier
+    # cannot confirm this one.
+    run_id = int(rig.now())
+    for i in range(COMMANDS):
+        token = f"d6-{run_id}-{i}"
+        sent = rig.command(
+            "rf",
+            "CMD_NO_OP_STRING",
+            token,
+            effect=lambda t=token: (
+                rig.count_events("flight", "NoOpStringReceived", t) or 0
             )
-            dispatched += sent.confirmed
+            > 0,
+            timeout=60,
+        )
+        dispatched += sent.confirmed
     transmit(rig, "flight", True)
     uart0, rf0 = (
         rig.channel_updates("flight", BEACON),
