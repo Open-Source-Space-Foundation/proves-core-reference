@@ -8,9 +8,7 @@ through the legacy GRC's data CDC, i.e. over the air).
 
 from __future__ import annotations
 
-import re
 import sys
-from pathlib import Path
 
 from gate import Criterion
 from ops import transmit
@@ -18,27 +16,15 @@ from rig import Drill, Rig, main
 
 COMMANDS = 10
 BEACON_WINDOW_S = 120
-FRAMING_ERROR = re.compile(
-    r"(?i)(defram|framing|checksum|crc).*(error|fail|invalid)|(error|fail|invalid).*(defram|framing)"
-)
-GDS_DATA_LOGS = {"channel.log", "event.log", "command.log"}
-
-
-def framing_errors(log_dir: str) -> int:
-    """Framing complaints in the rf GDS's own logs (not the decoded data logs)."""
-    hits = 0
-    for path in Path(log_dir).glob("*.log"):
-        if path.name not in GDS_DATA_LOGS:
-            hits += sum(
-                1
-                for line in path.read_text(errors="replace").splitlines()
-                if FRAMING_ERROR.search(line)
-            )
-    return hits
+BEACON = "startupManager.BootCount"
 
 
 def run(rig: Rig) -> dict:
-    """(a) legacy GRC -> flight NO_OPs dispatched; (b) flight Beacons decoded via legacy GRC."""
+    """(a) legacy GRC -> flight NO_OPs dispatched; (b) flight Beacons decoded via legacy GRC.
+
+    (b) counts Beacons (BootCount samples) on the rf GDS against the flight
+    UART GDS over the same TX-enabled window. The UART sees every Beacon, so
+    it is the denominator."""
     flag = next(
         (
             v
@@ -62,18 +48,21 @@ def run(rig: Rig) -> dict:
                 timeout=60,
             )
             dispatched += sent.confirmed
-    framing0 = framing_errors(rig.bench.get("rf", "GDS_LOGS"))
-    beacons0 = rig.channel_updates("rf", "startupManager.BootCount")
     transmit(rig, "flight", True)
+    uart0, rf0 = (
+        rig.channel_updates("flight", BEACON),
+        rig.channel_updates("rf", BEACON),
+    )
     rig.sleep(BEACON_WINDOW_S)
+    uart = rig.channel_updates("flight", BEACON) - uart0
     transmit(rig, "flight", False)
     rig.sleep(10)
+    rf = rig.channel_updates("rf", BEACON) - rf0
+    rig.log(f"Beacons: rf {rf}, flight UART {uart} in {BEACON_WINDOW_S} s")
     return {
         "radiohead_header": flag,
         "noop_dispatched": f"{dispatched}/{COMMANDS}",
-        "beacons_decoded": rig.channel_updates("rf", "startupManager.BootCount")
-        - beacons0,
-        "framing_errors": framing_errors(rig.bench.get("rf", "GDS_LOGS")) - framing0,
+        "beacons_rf_vs_uart": (rf, uart),
     }
 
 
@@ -96,13 +85,13 @@ DRILLS = [
                 f"{COMMANDS}/{COMMANDS}",
                 lambda v: v == f"{COMMANDS}/{COMMANDS}",
             ),
+            # One Beacon can straddle the window edge on either GDS.
             Criterion(
-                "(b) Beacons decoded by legacy GDS",
-                "beacons_decoded",
-                ">= 1",
-                lambda v: v >= 1,
+                "(b) legacy GDS decodes the flight Beacons",
+                "beacons_rf_vs_uart",
+                "(rf, uart): uart >= 2 and rf >= uart - 1",
+                lambda v: v[1] >= 2 and v[0] >= v[1] - 1,
             ),
-            Criterion("(b) no framing errors", "framing_errors", "0", lambda v: v == 0),
         ),
         same_pins=False,
     )
