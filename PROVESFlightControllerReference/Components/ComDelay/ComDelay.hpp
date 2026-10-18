@@ -30,6 +30,12 @@ class ComDelay final : public ComDelayComponentBase {
     void parameterUpdated(FwPrmIdType id  //!< The parameter ID
                           ) override;
 
+    //! Parameter load hook (fpp >= 3.4): the generated default forwards every parameter loaded at
+    //! startup to parameterUpdated, which would announce all parameters on boot. Load is silent.
+    void parameterLoaded(FwPrmIdType id,       //!< The parameter ID
+                         Fw::ParamValid valid  //!< The parameter validity status
+                         ) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------
