@@ -155,6 +155,9 @@ module ReferenceDeployment {
   }
   instance fsSpace: Components.FsSpace base id 0x1002E000
 
+  # Research instrumentation for #601 (throwaway branch)
+  instance schedProbe: Components.SchedProbe base id 0x10073000
+
   instance face4LoadSwitch: Components.LoadSwitch base id 0x1002F000
 
   instance face0LoadSwitch: Components.LoadSwitch base id 0x10030000

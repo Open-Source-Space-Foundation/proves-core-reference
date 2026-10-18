@@ -132,6 +132,7 @@ void setupTopology(const TopologyState& state) {
     loadParameters();
     // Autocoded task kick-off (active components). Function provided by autocoder.
     startTasks(state);
+    schedProbe.start();  // #601 research probes, after the F' threads exist
 
     // The radio instance (uspRadio or lora) is selected by Top/CMakeLists.txt per board.
     // Both radios boot with TX disabled; the startup sequence enables TX later.

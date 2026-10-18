@@ -73,6 +73,7 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsFormat
     instance fsSpace
+    instance schedProbe
     instance payload
     instance cameraHandler
     instance peripheralUartDriver

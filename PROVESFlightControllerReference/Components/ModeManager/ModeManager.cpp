@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "PROVESFlightControllerReference/Components/ModeManager/ModeManager.hpp"
+#include "PROVESFlightControllerReference/Components/SchedProbe/MaxHold.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -47,6 +48,7 @@ void ModeManager ::restorePersistentState() {
 // ----------------------------------------------------------------------
 
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
+    ScopedMaxHold timing(g_modeManagerRun);
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
     {
@@ -124,6 +126,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 }
 
 void ModeManager ::forceSafeMode_handler(FwIndexType portNum, const Components::SafeModeReason& reason) {
+    ScopedMaxHold timing(g_modeManagerForceSafe);
     // Force entry into safe mode (called by other components)
     // Only allowed from NORMAL (sequential +1/-1 transitions)
     if (this->m_mode == SystemMode::NORMAL) {
@@ -227,6 +230,7 @@ void ModeManager ::packetRouted_handler(FwIndexType portNum) {
 // ----------------------------------------------------------------------
 
 void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    ScopedMaxHold timing(g_modeManagerCmd);
     // Force entry into safe mode
 
     // Already in safe mode - idempotent success
@@ -244,6 +248,7 @@ void ModeManager ::FORCE_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void ModeManager ::EXIT_SAFE_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    ScopedMaxHold timing(g_modeManagerCmd);
     // Manual command to exit safe mode
     this->exitSafeMode();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
