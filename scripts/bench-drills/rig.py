@@ -218,6 +218,9 @@ class Bench:
             "--logs",
             g("GDS_LOGS"),
             "--log-directly",
+            # With --log-directly, this app's log subdirectory makes a restart
+            # into the same GDS_LOGS fail with "File exists" (fprime-gds 4.3).
+            "--disable-custom-data-handlers-app",
             "--zmq-transport",
             g("ZMQ_IN"),
             g("ZMQ_OUT"),
