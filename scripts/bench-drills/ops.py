@@ -221,10 +221,13 @@ def cpu_share(
     interval spans a full uint32 wrap. Writes the per-thread totals to
     cpu-<label>.txt."""
     steps = max(1, math.ceil(gap / SAMPLE_EVERY_S))
+    start = rig.now()
     prev = thread_cycles(rig, f"{label}-0")
     totals: dict[tuple[str, str], int] = {}
     for i in range(1, steps + 1):
-        rig.sleep(gap / steps)
+        # Deadlines from the start, so the 4 s shell read does not stretch
+        # an interval past SAMPLE_EVERY_S.
+        rig.sleep(max(0.0, start + i * gap / steps - rig.now()))
         cur = thread_cycles(rig, f"{label}-{i}")
         for k, v in cur.items():
             if k in prev:

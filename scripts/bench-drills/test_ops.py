@@ -39,6 +39,10 @@ class FakeShellRig:
         """Keep the artifact."""
         self.saved[name] = text
 
+    def now(self):
+        """No clock."""
+        return 0.0
+
     def sleep(self, seconds):
         """No clock."""
 
