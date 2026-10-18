@@ -31,6 +31,7 @@ manifest:
           - mcuboot    # Bootloader support
           - fatfs      # FatFS (file system) support
           - hal_st     # Required for certain sensors
+          - segger     # SEGGER RTT (bench drills only; inert without CONFIG_USE_SEGGER_RTT)
 
     - name: loramac-node
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
@@ -86,6 +87,13 @@ manifest:
     - name: fatfs
       revision: 4f60a12c58c3de4246857ad87c40239ecd93349b
       path: lib/zephyr-workspace/modules/fatfs
+
+    # SEGGER RTT, used only by scripts/bench-drills/observability.conf
+    - name: segger
+      revision: 50892fdbcf2f570e67baa72b8894a66b16946f72
+      path: lib/zephyr-workspace/modules/debug/segger
+      groups:
+        - debug
 
   self:
     path: .
