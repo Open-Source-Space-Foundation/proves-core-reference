@@ -81,7 +81,7 @@ python3 d5.py --param hours=6
 
 Add `--dry-run` to run the drill logic offline against a fake bench on a
 virtual clock. A dry run touches no device and is not evidence. Run the gate
-tests with `python3 -m unittest test_gate`.
+tests with `python3 -m unittest test_gate test_rig test_ops test_d1`.
 
 Exit status is 0 when every drill passes, 1 when one fails, and 2 when the
 bench file cannot run it.
