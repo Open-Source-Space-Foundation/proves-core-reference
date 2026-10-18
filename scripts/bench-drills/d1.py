@@ -10,6 +10,7 @@ from gate import Criterion
 from ops import (
     GUARD_S,
     PEER,
+    delta,
     parity_cell,
     profile_events,
     quiesce,
@@ -134,11 +135,12 @@ def run_d1c(rig: Rig) -> dict:
     """SET_RX_PROFILE_UNGUARDED never reverts."""
     minutes = rig.param("minutes", 20)
     quiesce(rig)
-    reverted0 = rig.count_events("flight", "ProfileReverted") or 0
+    reverted0 = rig.count_events("flight", "ProfileReverted")
     applied = set_profile(rig, "flight", "RX", "P1_LORA_SF10", revert_s=None)
     rig.sleep(minutes * 60)
     rig.settle(("flight",))
-    reverts = (rig.count_events("flight", "ProfileReverted") or 0) - reverted0
+    # None when ProfileReverted is not in the dictionary: no event, no evidence.
+    reverts = delta(reverted0, rig.count_events("flight", "ProfileReverted"))
     restore_boot_profiles(rig)
     return {"applied": applied, "minutes_observed": minutes, "reverts": reverts}
 
