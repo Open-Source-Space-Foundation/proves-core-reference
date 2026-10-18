@@ -20,7 +20,7 @@ def run(rig: Rig) -> dict:
     out = {}
     for profile in IDLE_PROFILES:
         set_profile(rig, "flight", "RX", profile, revert_s=None)
-        out[profile] = cpu_share(rig, gap=rig.param("gap_s", 60))
+        out[profile] = cpu_share(rig, profile, gap=rig.param("gap_s", 60))
         rig.log(f"uspRadio share on {profile}: {out[profile]} %")
     restore_boot_profiles(rig)
     return out

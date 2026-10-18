@@ -35,10 +35,10 @@ def revert_drill(rig: Rig) -> bool:
     )
 
 
-def cycle(rig: Rig, idle_s: float) -> dict:
+def cycle(rig: Rig, idle_s: float, n: int) -> dict:
     """Idle RX (D4 sampled), 10 switches per end, r5 flood, revert drill, quiesce."""
     quiesce(rig)
-    share = cpu_share(rig, gap=60)
+    share = cpu_share(rig, f"cycle{n}", gap=60)
     rig.sleep(max(0, idle_s - 60))
     for i in range(SWITCHES):
         profile = ("P3_GFSK_38K", "P1_LORA_SF10")[i % 2]
@@ -59,7 +59,7 @@ def run(rig: Rig) -> dict:
     rig.start_rtt_shell()
     start, cycles = rig.now(), []
     while rig.now() - start < hours * 3600:
-        cycles.append(cycle(rig, idle_s))
+        cycles.append(cycle(rig, idle_s, len(cycles) + 1))
         rig.log(f"cycle {len(cycles)}: {cycles[-1]}")
     shares = [c["cpu_share"] for c in cycles]
     return {

@@ -7,6 +7,7 @@ cpu_share     D4: uspRadio execution cycles over the RTT shell
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 
@@ -154,25 +155,26 @@ def saturation(rig: Rig, profile: str, window: float = 120, warmup: float = 15) 
             timeout=180,
         )
         rig.sleep(warmup)
-        rx0, d0, t0 = (
-            rig.channel_int("flight", "BytesReceived"),
+        s0, d0, t0 = (
+            rig.channel_sample("flight", "BytesReceived"),
             rig.channel_int("flight", "RxDropped"),
             rig.now(),
         )
-        rig.log(f"window start {profile}: flight rx={rx0} drops={d0}")
-        while rig.now() - t0 < window:
+        rig.log(f"window start {profile}: flight rx={s0} drops={d0}")
+        s1 = s0
+        while rig.now() - t0 < 2 * window and (
+            s0 is None or s1 is None or s1[0] - s0[0] < window
+        ):
             rig.sleep(15)
-            rig.log(
-                f"  rx={rig.channel_int('flight', 'BytesReceived')} grc tx={rig.channel_int('grc', 'BytesSent')}"
-            )
-        rx1, d1, dt = (
-            rig.channel_int("flight", "BytesReceived"),
-            rig.channel_int("flight", "RxDropped"),
-            rig.now() - t0,
-        )
+            s1 = rig.channel_sample("flight", "BytesReceived")
+            rig.log(f"  rx={s1} grc tx={rig.channel_int('grc', 'BytesSent')}")
+        d1 = rig.channel_int("flight", "RxDropped")
     transmit(rig, "grc", False)
     restore_boot_profiles(rig)
-    rx = delta(rx0, rx1)
+    # Flight counters ride the Beacon, ~30 s stale on arrival: rate them by
+    # the board time each sample was taken, not by the drill clock.
+    rx = None if s0 is None or s1 is None else s1[1] - s0[1]
+    dt = 0 if s0 is None or s1 is None else s1[0] - s0[0]
     kbps = None if rx is None or dt <= 0 else round(rx * 8 / dt / 1000, 2)
     rig.log(
         f"{profile}: window {dt:.0f} s rx {rx} B goodput {kbps} kbps drops {delta(d0, d1)} flood {flood['written']} B"
@@ -183,12 +185,19 @@ def saturation(rig: Rig, profile: str, window: float = 120, warmup: float = 15) 
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 THREAD = re.compile(r"^\s*\*?\s*(0x[0-9a-fA-F]+)\s+(\S.*?)\s*$")
 CYCLES = re.compile(r"Total execution cycles:\s*(\d+)")
-# The shell prints execution_cycles cast to uint32_t, so deltas are mod 2^32.
+# The shell prints execution_cycles cast to uint32_t. At 150 MHz that wraps
+# every 28.6 s, so samples are at most 20 s apart and deltas are mod 2^32.
 CYCLE_WRAP = 1 << 32
+SAMPLE_EVERY_S = 20
+# The USP radio's threads: the uspRadio component thread, plus driver
+# threads such as lbm_main_thread_id in builds before the option-2 rework.
+RADIO_THREADS = re.compile(r"(?i)usp|lbm|^rp_")
 
 
-def thread_cycles(rig: Rig) -> dict[tuple[str, str], int]:
-    """execution_cycles per (address, name) from `kernel thread list`."""
+def thread_cycles(rig: Rig, label: str) -> dict[tuple[str, str], int]:
+    """execution_cycles per (address, name) from `kernel thread list`.
+
+    The raw listing goes to the run directory as threads-<label>.txt."""
     for line in ("kernel thread list", "kernel threads"):
         text = ANSI.sub("", rig.shell("flight", line, wait=4))
         cycles, key = {}, None
@@ -197,20 +206,40 @@ def thread_cycles(rig: Rig) -> dict[tuple[str, str], int]:
                 key = (m.group(1), m.group(2))
             elif (m := CYCLES.search(row)) and key:
                 cycles[key] = int(m.group(1))
+        rig.save(f"threads-{label}.txt", text)
         if cycles:
             return cycles
     return {}
 
 
-def cpu_share(rig: Rig, thread: str = "uspRadio", gap: float = 60) -> float | None:
-    """Percent of all execution cycles spent in `thread` over `gap` seconds."""
-    a = thread_cycles(rig)
-    rig.sleep(gap)
-    b = thread_cycles(rig)
-    deltas = {k: (v - a.get(k, 0)) % CYCLE_WRAP for k, v in b.items()}
-    mine = [d for (_, name), d in deltas.items() if thread in name]
-    total = sum(deltas.values())
-    if not mine or total == 0:
-        rig.log(f"cpu_share: no {thread} thread or no cycles in the shell output")
+def cpu_share(
+    rig: Rig, label: str, threads: re.Pattern = RADIO_THREADS, gap: float = 60
+) -> float | None:
+    """Percent of all execution cycles spent in `threads` over `gap` seconds.
+
+    Sums per-interval deltas over samples SAMPLE_EVERY_S apart, so no
+    interval spans a full uint32 wrap. Writes the per-thread totals to
+    cpu-<label>.txt."""
+    steps = max(1, math.ceil(gap / SAMPLE_EVERY_S))
+    prev = thread_cycles(rig, f"{label}-0")
+    totals: dict[tuple[str, str], int] = {}
+    for i in range(1, steps + 1):
+        rig.sleep(gap / steps)
+        cur = thread_cycles(rig, f"{label}-{i}")
+        for k, v in cur.items():
+            if k in prev:
+                totals[k] = totals.get(k, 0) + (v - prev[k]) % CYCLE_WRAP
+        prev = cur
+    total = sum(totals.values())
+    mine = sum(d for (_, name), d in totals.items() if threads.search(name))
+    rig.save(
+        f"cpu-{label}.txt",
+        "".join(
+            f"{name} {addr} {d} {100 * d / total if total else 0:.2f}%\n"
+            for (addr, name), d in sorted(totals.items(), key=lambda kv: -kv[1])
+        ),
+    )
+    if not any(threads.search(name) for _, name in totals) or total == 0:
+        rig.log(f"cpu_share: no thread matching {threads.pattern} or no cycles")
         return None
-    return round(100 * sum(mine) / total, 2)
+    return round(100 * mine / total, 2)
