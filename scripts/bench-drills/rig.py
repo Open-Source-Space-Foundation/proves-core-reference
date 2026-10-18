@@ -201,7 +201,6 @@ class Bench:
         return [
             f"{g('VENV')}/bin/fprime-gds",
             "--gui=html",
-            "--skip-browser-open",
             "--gui-port",
             g("GUI_PORT"),
             "--uart-device",
@@ -358,13 +357,16 @@ def module_pins(repo: str) -> str:
 # GDS logs
 
 
-class GdsLog:
-    """Incremental reader of one GDS log directory (channel.log, event.log).
+# fprime_gds DataLogger, verbose csv:
+#   channel: time,raw_time,name,id,value
+#   event:   time,raw_time,name,id,severity,text
+# `time` can hold a comma ("TB_PROC_TIME: 183.317400s, context=0" before the
+# board has wall-clock time), so fields are anchored on raw_time, "(1(0)-183:317400)".
+GDS_LINE = re.compile(r",\(\d+\(\d+\)-\d+:\d+\),([^,]+),\d+,(.*)$")
 
-    Line formats (fprime_gds DataLogger, verbose csv):
-      channel: time,raw_time,name,id,value
-      event:   time,raw_time,name,id,severity,text
-    """
+
+class GdsLog:
+    """Incremental reader of one GDS log directory (channel.log, event.log)."""
 
     def __init__(self, log_dir: str):
         self.dir = Path(log_dir)
@@ -389,12 +391,15 @@ class GdsLog:
             complete = chunk[: chunk.rfind(b"\n") + 1]
             self._offsets[fname] += len(complete)
             for line in complete.decode(errors="replace").splitlines():
-                parts = line.split(",")
-                if fname == "channel.log" and len(parts) >= 5:
-                    self.latest[parts[2]] = ",".join(parts[4:])
-                    self.updates[parts[2]] = self.updates.get(parts[2], 0) + 1
-                elif fname == "event.log" and len(parts) >= 6:
-                    self.events.append((parts[2], ",".join(parts[5:])))
+                m = GDS_LINE.search(line)
+                if not m:
+                    continue
+                name, rest = m.groups()
+                if fname == "channel.log":
+                    self.latest[name] = rest
+                    self.updates[name] = self.updates.get(name, 0) + 1
+                elif "," in rest:
+                    self.events.append((name, rest.split(",", 1)[1]))
 
     def archive(self, dest: Path, prefix: str) -> None:
         """Copy the lines appended during the drill into the run directory."""
