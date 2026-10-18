@@ -14,8 +14,11 @@ from typing import Callable
 class EndCounters:
     """Counters read from one end of the link at one instant.
 
-    None means the value could not be read (channel never emitted, event not
-    in the dictionary, no openocd log). The gate treats None as a failure.
+    None means the value could not be read (channel never emitted or went
+    stale, event not in the dictionary or past its throttle, openocd not
+    answering). The gate treats None as a failure; `why` holds the reason.
+    traffic: (BytesSent, BytesReceived) on a probe-less board with no
+    BootCount. A counter that goes down means the board rebooted.
     """
 
     config_failed: int | None
@@ -24,6 +27,8 @@ class EndCounters:
     halted: int | None
     boot_count: int | None = None
     has_probe: bool = True
+    why: dict[str, str] = field(default_factory=dict)
+    traffic: tuple[int | None, int | None] | None = None
 
 
 @dataclass(frozen=True)
@@ -78,13 +83,36 @@ COUNTER_LABELS = {
 
 
 def _delta_check(
-    end: str, counter: str, before: int | None, after: int | None
+    end: str, counter: str, b: EndCounters, a: EndCounters | None
 ) -> Check:
     name = f"{end} {COUNTER_LABELS[counter]} delta = 0"
+    before = getattr(b, counter)
+    after = getattr(a, counter) if a else None
     if before is None or after is None:
-        return Check(name, False, f"unreadable (before={before}, after={after})")
+        reasons = [
+            f"{when}: {s.why[counter]}"
+            for when, s in (("before", b), ("after", a))
+            if s and counter in s.why
+        ]
+        detail = f"unreadable (before={before}, after={after})"
+        return Check(name, False, "; ".join([detail, *reasons]))
     delta = after - before
     return Check(name, delta == 0, f"{before} -> {after} (delta {delta})")
+
+
+def _reboot_check(
+    end: str,
+    before: tuple[int | None, int | None],
+    after: tuple[int | None, int | None] | None,
+) -> Check:
+    name = f"{end} BytesSent/BytesReceived never decrease (reboot detector)"
+    if after is None or None in before or None in after:
+        return Check(name, False, f"unreadable (before={before}, after={after})")
+    return Check(
+        name,
+        all(x1 >= x0 for x0, x1 in zip(before, after)),
+        f"{before} -> {after}",
+    )
 
 
 def universal_gate(
@@ -101,8 +129,9 @@ def universal_gate(
                 name = f"{end} {COUNTER_LABELS[counter]} delta = 0"
                 checks.append(Check(name, False, "no debug probe on this end", na=True))
                 continue
-            a_value = getattr(a, counter) if a else None
-            checks.append(_delta_check(end, counter, getattr(b, counter), a_value))
+            checks.append(_delta_check(end, counter, b, a))
+        if b.traffic is not None:
+            checks.append(_reboot_check(end, b.traffic, a.traffic if a else None))
     confirmed = sum(1 for _, _, ok in tally.sent if ok)
     total = len(tally.sent) + len(tally.missing)
     unconfirmed = [f"{e}:{c}" for e, c, ok in tally.sent if not ok]

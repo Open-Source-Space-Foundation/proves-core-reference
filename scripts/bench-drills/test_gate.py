@@ -67,6 +67,15 @@ class UniversalGateTest(unittest.TestCase):
         text = render_evidence("D1", "t", [], before, before, checks, [], "/tmp/x")
         self.assertIn("| grc openocd halted delta = 0 | N/A |", text)
 
+    def test_probeless_board_byte_counter_drop_fails(self):
+        """A GRC whose BytesSent goes down rebooted, even with no probe or BootCount."""
+        b = EndCounters(0, 0, 0, None, has_probe=False, traffic=(900, 400))
+        a = EndCounters(0, 0, 0, None, has_probe=False, traffic=(120, 410))
+        checks = universal_gate(Snapshot({"grc": b}), Snapshot({"grc": a}), tally())
+        row = next(c for c in checks if "reboot detector" in c.name)
+        self.assertFalse(row.passed)
+        self.assertFalse(verdict(checks))
+
     def test_unconfirmed_or_missing_command_fails(self):
         before = Snapshot({"grc": QUIET_GRC})
         t = tally(confirmed=3)

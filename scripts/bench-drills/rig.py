@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from gate import (
+    COUNTER_LABELS,
     Check,
     CommandTally,
     Criterion,
@@ -60,6 +61,10 @@ BOOT_PROFILE = "P0_LORA_SF8"
 # uspRadio: the USP Radio Path. lora: flight's legacy instance (as the #594
 # fixture falls back). uhf: GRC main's legacy instance.
 RADIO_INSTANCES = ("uspRadio", "lora", "uhf")
+COUNTER_KEYS = tuple(COUNTER_LABELS)
+CMD_RESPONSE = re.compile(
+    r"VALIDATION_ERROR|FORMAT_ERROR|EXECUTION_ERROR|INVALID_OPCODE|BUSY"
+)
 
 
 @dataclass(frozen=True)
@@ -204,7 +209,8 @@ class Bench:
             "--gui-port",
             g("GUI_PORT"),
             "--uart-device",
-            g("TTY"),
+            # fprime-gds 4.2 rejects a /dev/serial/by-id link as "not valid".
+            os.path.realpath(g("TTY")),
             "--uart-baud",
             self.values.get(f"{end.upper()}_BAUD", "115200"),
             "--dictionary",
@@ -251,8 +257,15 @@ class Dictionary:
     def __init__(self, data: dict):
         self.metadata = data.get("metadata", {})
         self.commands = {c["name"]: c["opcode"] for c in data.get("commands", [])}
+        self.params = {
+            c["name"]: c.get("formalParams", []) for c in data.get("commands", [])
+        }
         self.channels = {c["name"] for c in data.get("telemetryChannels", [])}
         self.events = {e["name"] for e in data.get("events", [])}
+        self.throttles = {
+            e["name"]: (e.get("throttle") or {}).get("count")
+            for e in data.get("events", [])
+        }
         self.constants = {
             c.get("qualifiedName", c.get("name")): c.get("value")
             for c in data.get("constants", [])
@@ -271,6 +284,13 @@ class Dictionary:
             hits = sorted(n for n in names if n.endswith(suffix))
             if hits:
                 return hits[0]
+        return None
+
+    def radio_instance(self) -> str | None:
+        """The radio instance the short-name resolver lands on."""
+        for i in RADIO_INSTANCES:
+            if any(f".{i}." in n for n in self.commands):
+                return i
         return None
 
     def library_sha(self, lib: str) -> str:
@@ -362,17 +382,31 @@ def module_pins(repo: str) -> str:
 #   event:   time,raw_time,name,id,severity,text
 # `time` can hold a comma ("TB_PROC_TIME: 183.317400s, context=0" before the
 # board has wall-clock time), so fields are anchored on raw_time, "(1(0)-183:317400)".
-GDS_LINE = re.compile(r",\(\d+\(\d+\)-\d+:\d+\),([^,]+),\d+,(.*)$")
+GDS_LINE = re.compile(r",\(\d+\(\d+\)-(\d+):(\d+)\),([^,]+),\d+,(.*)$")
+
+
+@dataclass(frozen=True)
+class GdsEvent:
+    """One decoded event line."""
+
+    name: str
+    severity: str
+    text: str
 
 
 class GdsLog:
-    """Incremental reader of one GDS log directory (channel.log, event.log)."""
+    """Incremental reader of one GDS log directory (channel.log, event.log).
+
+    latest: newest value per channel. stamp: the board time (s) of that
+    sample, from raw_time, so rates use when the board sampled, not when the
+    Beacon carrying the sample arrived."""
 
     def __init__(self, log_dir: str):
         self.dir = Path(log_dir)
         self.latest: dict[str, str] = {}
+        self.stamp: dict[str, float] = {}
         self.updates: dict[str, int] = {}
-        self.events: list[tuple[str, str]] = []
+        self.events: list[GdsEvent] = []
         self._offsets = {"channel.log": 0, "event.log": 0}
         self.start_offsets: dict[str, int] = {}
         self.poll()
@@ -394,12 +428,13 @@ class GdsLog:
                 m = GDS_LINE.search(line)
                 if not m:
                     continue
-                name, rest = m.groups()
+                secs, usecs, name, rest = m.groups()
                 if fname == "channel.log":
                     self.latest[name] = rest
+                    self.stamp[name] = int(secs) + int(usecs) / 1e6
                     self.updates[name] = self.updates.get(name, 0) + 1
                 elif "," in rest:
-                    self.events.append((name, rest.split(",", 1)[1]))
+                    self.events.append(GdsEvent(name, *rest.split(",", 1)))
 
     def archive(self, dest: Path, prefix: str) -> None:
         """Copy the lines appended during the drill into the run directory."""
@@ -499,6 +534,29 @@ class Rig:
             int(self.bench.get(end, "OPENOCD_TELNET")), line + "\n", wait
         )
 
+    def openocd_alive(self, end: str) -> bool:
+        """This end's openocd answers `targets` and sees the RP2350."""
+        try:
+            return "rp2350" in self.openocd(end, "targets", wait=1.5)
+        except OSError:
+            return False
+
+    def rtt_control_block(self, end: str = "flight") -> tuple[int | None, int | None]:
+        """(address of _SEGGER_RTT in the ELF, address openocd found on the target).
+
+        Equal addresses tie the running image to the ELF under test."""
+        try:
+            want = elf_symbol(self.bench.get(end, "ELF"), "_SEGGER_RTT")
+        except OSError as e:
+            raise DrillAbort(f"cannot read the {end} ELF: {e}") from e
+        if want is None:
+            return None, None
+        self.openocd(end, "rtt stop")
+        self.openocd(end, f'rtt setup {want:#x} 1024 "SEGGER RTT"')
+        reply = self.openocd(end, "rtt start", wait=3)
+        m = re.search(r"Control block found at (0x[0-9a-fA-F]+)", reply)
+        return want, int(m.group(1), 16) if m else None
+
     def shell(self, end: str, line: str, wait: float = 3.0) -> str:
         """Run one Zephyr shell command over the RTT shell channel."""
         return self._tcp_exchange(
@@ -507,19 +565,19 @@ class Rig:
 
     def start_rtt_shell(self) -> None:
         """Point the flight openocd at the RTT control block and serve the shell channel."""
-        try:
-            addr = elf_symbol(self.bench.get("flight", "ELF"), "_SEGGER_RTT")
-        except OSError as e:
-            raise DrillAbort(f"cannot read the flight ELF: {e}") from e
-        if addr is None:
+        want, found = self.rtt_control_block("flight")
+        if want is None:
             raise DrillAbort(
                 "flight ELF has no _SEGGER_RTT symbol: build it with observability.conf"
             )
+        if found != want:
+            raise DrillAbort(
+                f"RTT control block not found at {want:#x} (found {found})"
+            )
         port = self.bench.get("flight", "RTT_SHELL_PORT")
         for line in (
-            f'rtt setup {addr:#x} 1024 "SEGGER RTT"',
             "rtt polling_interval 10",
-            "rtt start",
+            f"rtt server stop {port}",
             f"rtt server start {port} {RTT_SHELL_CHANNEL}",
         ):
             self.log(
@@ -631,6 +689,10 @@ class Rig:
         self._transcript.write(line + "\n")
         self._transcript.flush()
 
+    def save(self, name: str, text: str) -> None:
+        """Write a raw artifact (e.g. a shell listing) into the run directory."""
+        (self.run_dir / name).write_text(text)
+
     def param(self, key: str, default: float) -> float:
         """A numeric drill parameter (--param key=value)."""
         return float(self.params.get(key, default))
@@ -649,6 +711,12 @@ class Rig:
         except ValueError:
             return None
 
+    def channel_sample(self, end: str, short: str) -> tuple[float, int] | None:
+        """(board time of the sample, value) of a channel's newest sample."""
+        v = self.channel_int(end, short)
+        full = self.dicts[end].find(self.dicts[end].channels, short)
+        return None if v is None else (self.logs[end].stamp[full], v)
+
     def channel_updates(self, end: str, short: str) -> int:
         """How many samples of a channel have arrived since the drill began."""
         self.logs[end].poll()
@@ -662,20 +730,32 @@ class Rig:
         if full is None:
             return None
         return sum(
-            1 for n, text in self.logs[end].events if n == full and contains in text
+            1 for e in self.logs[end].events if e.name == full and contains in e.text
         )
+
+    def event_mark(self, end: str) -> int:
+        """Position in this end's event stream, for events_since()."""
+        self.logs[end].poll()
+        return len(self.logs[end].events)
+
+    def events_since(self, end: str, mark: int) -> list[GdsEvent]:
+        """Events this end logged after event_mark() returned `mark`."""
+        self.logs[end].poll()
+        return self.logs[end].events[mark:]
 
     def opcode_events(self, end: str, event: str, opcode: int) -> int:
         """cmdDisp events (OpCodeDispatched/Completed/Error) naming this opcode."""
+        return len(self._opcode_texts(end, event, opcode))
+
+    def _opcode_texts(self, end: str, event: str, opcode: int) -> list[str]:
         self.logs[end].poll()
         full = self.dicts[end].find(self.dicts[end].events, event)
-        hits = 0
-        for n, text in self.logs[end].events:
-            if n == full and any(
-                int(h, 16) == opcode for h in re.findall(r"0x[0-9a-fA-F]+", text)
-            ):
-                hits += 1
-        return hits
+        return [
+            e.text
+            for e in self.logs[end].events
+            if e.name == full
+            and any(int(h, 16) == opcode for h in re.findall(r"0x[0-9a-fA-F]+", e.text))
+        ]
 
     def command(
         self,
@@ -726,16 +806,16 @@ class Rig:
         return sent
 
     def outcome(self, sent: Sent, wait: float = 15) -> str | None:
-        """'completed' or 'error' for a sent command, waiting up to `wait` s."""
+        """'completed', or the command response of an OpCodeError (e.g.
+        VALIDATION_ERROR, BUSY), for a sent command, waiting up to `wait` s."""
         if sent.opcode is None:
             return None
         deadline = self.now() + wait
         while True:
-            if (
-                self.opcode_events(sent.end, "OpCodeError", sent.opcode)
-                > sent.error_base
-            ):
-                return "error"
+            errors = self._opcode_texts(sent.end, "OpCodeError", sent.opcode)
+            if len(errors) > sent.error_base:
+                m = CMD_RESPONSE.search(errors[sent.error_base])
+                return m.group(0) if m else "error"
             if (
                 self.opcode_events(sent.end, "OpCodeCompleted", sent.opcode)
                 > sent.completed_base
@@ -773,24 +853,85 @@ class Rig:
         """Wait long enough for each end's counters to be current."""
         self.sleep(max(ENDS[e].settle_s for e in (ends or self.ends)))
 
-    def snapshot(self) -> Snapshot:
-        """Counters for the universal gate (call after settle())."""
+    def update_marks(self) -> dict[str, dict[str, int]]:
+        """Per-end channel update counts, so snapshot() can demand fresh samples."""
+        for log in self.logs.values():
+            log.poll()
+        return {e: dict(log.updates) for e, log in self.logs.items()}
+
+    def snapshot(self, marks: dict[str, dict[str, int]]) -> Snapshot:
+        """Counters for the universal gate. Take `marks` before settle(): a
+        channel with no sample since then reads as None, so a dead GDS cannot
+        pass as delta 0."""
         out = {}
         for end in self.ends:
-            if not ENDS[end].is_board:
-                continue
-            probe = self.bench.has_probe(end)
-            out[end] = EndCounters(
-                config_failed=self.count_events(end, "ConfigurationFailed"),
-                rx_overrun=self.count_events(end, "RxOverrun"),
-                rx_dropped=self.channel_int(end, "RxDropped"),
-                halted=self.halted(end) if probe else None,
-                has_probe=probe,
-                boot_count=self.channel_int(end, "startupManager.BootCount")
-                if ENDS[end].has_boot_count
-                else None,
-            )
+            if ENDS[end].is_board:
+                out[end] = self._end_counters(end, marks[end])
         return Snapshot(out)
+
+    def _end_counters(self, end: str, mark: dict[str, int]) -> EndCounters:
+        log, d, why = self.logs[end], self.dicts[end], {}
+        log.poll()
+        if log.updates == mark:
+            silent = "GDS logged no telemetry during the settle"
+            return EndCounters(
+                None,
+                None,
+                None,
+                None,
+                None,
+                self.bench.has_probe(end),
+                {k: silent for k in COUNTER_KEYS},
+                (None, None),
+            )
+
+        def fresh(key: str, short: str) -> int | None:
+            full = d.find(d.channels, short)
+            if full is None:
+                why[key] = f"{short} is not in the dictionary"
+            elif log.updates.get(full, 0) == mark.get(full, 0):
+                why[key] = f"{full} sent no sample during the settle"
+            else:
+                return self.channel_int(end, short)
+            return None
+
+        def unthrottled(key: str, short: str) -> int | None:
+            count = self.count_events(end, short)
+            full = d.find(d.events, short)
+            limit = d.throttles.get(full) if full else None
+            if count is None:
+                why[key] = f"{short} is not in the dictionary"
+            elif limit and count >= limit:
+                why[key] = (
+                    f"{full} hit its throttle ({limit}); later events are dropped"
+                )
+                return None
+            return count
+
+        probe = self.bench.has_probe(end)
+        halted = None
+        if probe and self.openocd_alive(end):
+            halted = self.halted(end)
+        elif probe:
+            why["halted"] = "openocd does not answer `targets`"
+        boot = ENDS[end].has_boot_count
+        return EndCounters(
+            config_failed=unthrottled("config_failed", "ConfigurationFailed"),
+            rx_overrun=unthrottled("rx_overrun", "RxOverrun"),
+            rx_dropped=fresh("rx_dropped", "RxDropped"),
+            halted=halted,
+            boot_count=fresh("boot_count", "startupManager.BootCount")
+            if boot
+            else None,
+            has_probe=probe,
+            why=why,
+            traffic=None
+            if boot or probe
+            else (
+                self.channel_int(end, "BytesSent"),
+                self.channel_int(end, "BytesReceived"),
+            ),
+        )
 
     def provenance(self) -> tuple[list[tuple[str, str]], list[Check]]:
         """Evidence fields, plus checks that both ends run what the bench says."""
@@ -887,11 +1028,17 @@ DRY_DICTIONARY = {
                 "SET_TX_PROFILE",
                 "SET_RX_PROFILE",
                 "SET_RX_PROFILE_UNGUARDED",
-                "CONTINUOUS_WAVE",
             )
         )
     ]
-    + [{"name": "CdhCore.cmdDisp.CMD_NO_OP", "opcode": 0x01000000}],
+    + [
+        {
+            "name": "ReferenceDeployment.uspRadio.CONTINUOUS_WAVE",
+            "opcode": 0x10017004,
+            "formalParams": [{"name": "duration_ms", "type": {"name": "U16"}}],
+        },
+        {"name": "CdhCore.cmdDisp.CMD_NO_OP", "opcode": 0x01000000},
+    ],
     "telemetryChannels": [
         {"name": f"ReferenceDeployment.uspRadio.{c}"}
         for c in (
@@ -906,13 +1053,18 @@ DRY_DICTIONARY = {
     + [{"name": "ReferenceDeployment.startupManager.BootCount"}],
     "events": [
         {"name": f"ReferenceDeployment.uspRadio.{e}"}
-        for e in (
-            "ProfileChanged",
-            "ProfileConfirmed",
-            "ProfileReverted",
-            "ConfigurationFailed",
-            "RxOverrun",
-        )
+        for e in ("ProfileChanged", "ProfileConfirmed", "ProfileReverted")
+    ]
+    + [
+        # UspRadio declares these throttles.
+        {
+            "name": "ReferenceDeployment.uspRadio.ConfigurationFailed",
+            "throttle": {"count": 2, "every": None},
+        },
+        {
+            "name": "ReferenceDeployment.uspRadio.RxOverrun",
+            "throttle": {"count": 5, "every": None},
+        },
     ]
     + [
         {"name": f"CdhCore.cmdDisp.{e}"}
@@ -933,15 +1085,20 @@ class FakeLog:
             "ReferenceDeployment.uspRadio.BytesSent": "0",
         }
         self.updates: dict[str, int] = {}
-        self.events: list[tuple[str, str]] = []
+        self.stamp: dict[str, float] = {}
+        self.events: list[GdsEvent] = []
+        self.live = True
 
     def poll(self) -> None:
-        """Nothing to read."""
+        """While live, every channel emits a fresh sample on each poll."""
+        for name in self.latest if self.live else ():
+            self.updates[name] = self.updates.get(name, 0) + 1
+            self.stamp[name] = float(self.updates[name])
 
     def archive(self, dest: Path, prefix: str) -> None:
         """Write the fake event stream so the run directory looks like a real one."""
         (dest / f"{prefix}-event.log").write_text(
-            "\n".join(f"{n},{t}" for n, t in self.events) + "\n"
+            "\n".join(f"{e.name},{e.text}" for e in self.events) + "\n"
         )
 
 
@@ -972,7 +1129,11 @@ class DryRig(Rig):
     def _send_once(self, end: str, full: str, args: tuple[str, ...]) -> None:
         log, op = self.logs[end], self.dicts[end].commands[full]
         log.events.append(
-            ("CdhCore.cmdDisp.OpCodeDispatched", f"Opcode {op:#x} dispatched to port 1")
+            GdsEvent(
+                "CdhCore.cmdDisp.OpCodeDispatched",
+                "COMMAND",
+                f"Opcode {op:#x} dispatched to port 1",
+            )
         )
         short = full.rsplit(".", 1)[1]
         bad = (short == "SET_RX_PROFILE" and not 1 <= int(args[1]) <= 900) or (
@@ -980,8 +1141,9 @@ class DryRig(Rig):
         )
         if bad:
             log.events.append(
-                (
+                GdsEvent(
                     "CdhCore.cmdDisp.OpCodeError",
+                    "COMMAND",
                     f"Opcode {op:#x} completed with error VALIDATION_ERROR",
                 )
             )
@@ -992,13 +1154,18 @@ class DryRig(Rig):
                 args[0]
             )
             log.events.append(
-                (
+                GdsEvent(
                     "ReferenceDeployment.uspRadio.ProfileChanged",
+                    "ACTIVITY_HI",
                     f"{direction} profile changed to {args[0]}",
                 )
             )
         log.events.append(
-            ("CdhCore.cmdDisp.OpCodeCompleted", f"Opcode {op:#x} completed")
+            GdsEvent(
+                "CdhCore.cmdDisp.OpCodeCompleted",
+                "COMMAND",
+                f"Opcode {op:#x} completed",
+            )
         )
 
     def halted(self, end: str) -> int | None:
@@ -1059,9 +1226,29 @@ class Drill:
     keys: tuple[str, ...] = ()
 
 
+# The radio instance each end must resolve to. Dictionary.find falls back to
+# the legacy instances, so a USP drill on a legacy build reads `lora`/`uhf`
+# counters unless this check fails it.
+EXPECTED_RADIO = {"flight": "uspRadio", "grc": "uspRadio", "legacy": "uhf"}
+
+
 def preflight_checks(rig: Rig, drill: Drill) -> list[Check]:
-    """Build and pin checks that make a run comparable across the suite."""
+    """Build, image, radio and pin checks that make a run comparable across the suite."""
     checks = []
+    for end in drill.ends:
+        if end in EXPECTED_RADIO:
+            got, want = rig.dicts[end].radio_instance(), EXPECTED_RADIO[end]
+            checks.append(
+                Check(f"{end} radio instance is {want}", got == want, f"resolved {got}")
+            )
+        if rig.bench.has_probe(end):
+            checks.append(
+                Check(
+                    f"{end} openocd answers",
+                    rig.openocd_alive(end),
+                    "`targets` lists the RP2350",
+                )
+            )
     if "flight" in drill.ends and drill.build in ("overlay", "plain"):
         has = elf_has_overlay(rig.bench.values.get("FLIGHT_ELF", ""))
         want = drill.build == "overlay"
@@ -1072,6 +1259,19 @@ def preflight_checks(rig: Rig, drill: Drill) -> list[Check]:
                 f"ELF has SEGGER RTT: {has}",
             )
         )
+        if want and rig.bench.has_probe("flight"):
+            try:
+                elf_addr, found = rig.rtt_control_block("flight")
+            except (DrillAbort, OSError) as e:
+                elf_addr, found = None, f"{e}"
+            checks.append(
+                Check(
+                    "running image is the flight ELF",
+                    elf_addr is not None and found == elf_addr,
+                    f"ELF _SEGGER_RTT {elf_addr if elf_addr is None else hex(elf_addr)},"
+                    f" openocd found {found if not isinstance(found, int) else hex(found)}",
+                )
+            )
     if drill.same_pins and {"flight", "grc"} <= set(drill.ends):
         fz = {e: rig.dicts[e].library_sha("fprime-zephyr") for e in ("flight", "grc")}
         checks.append(
@@ -1112,16 +1312,19 @@ def run_drill(
     rig.log(f"=== {drill.id}: {drill.title} (bench {bench.path}, logs {run_dir})")
     provenance, checks = rig.provenance()
     checks += preflight_checks(rig, drill)
+    marks = rig.update_marks()
     rig.settle()
-    before = rig.snapshot()
+    before = rig.snapshot(marks)
     measurements: dict = {}
     try:
         measurements = drill.run(rig)
-    except DrillAbort as e:
-        rig.notes.append(f"ABORT: {e}")
-        rig.log(f"ABORT: {e}")
+    except (DrillAbort, OSError, subprocess.SubprocessError, termios.error) as e:
+        rig.notes.append(f"ABORT: {type(e).__name__}: {e}")
+        rig.log(f"ABORT: {type(e).__name__}: {e}")
+        checks.append(Check("drill ran to the end", False, f"{type(e).__name__}: {e}"))
+    marks = rig.update_marks()
     rig.settle()
-    after = rig.snapshot()
+    after = rig.snapshot(marks)
     checks += universal_gate(before, after, rig.tally) + evaluate(
         drill.criteria, measurements
     )
@@ -1196,14 +1399,22 @@ def main(drills: list[Drill], argv: list[str] | None = None) -> int:
         )
         log_root = args.log_root or default_root
         params = dict(kv.split("=", 1) for kv in args.param)
-        results = [
-            (d.id, run_drill(d, bench, log_root, params, args.dry_run))
-            for d in selected
-        ]
     except BenchError as e:
         print(f"BENCH ERROR: {e}", file=sys.stderr)
         return 2
+    results = []
+    for d in selected:
+        try:
+            ok = run_drill(d, bench, log_root, params, args.dry_run)
+        except BenchError as e:
+            print(f"BENCH ERROR: {e}", file=sys.stderr)
+            ok = None
+        results.append((d.id, ok))
     print("| Drill | Verdict |\n|---|---|")
     for drill_id, ok in results:
-        print(f"| {drill_id} | {'PASS' if ok else 'FAIL'} |")
+        print(
+            f"| {drill_id} | {'BENCH ERROR' if ok is None else 'PASS' if ok else 'FAIL'} |"
+        )
+    if any(ok is None for _, ok in results):
+        return 2
     return 0 if args.dry_run or all(ok for _, ok in results) else 1
