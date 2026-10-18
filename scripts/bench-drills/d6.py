@@ -35,6 +35,9 @@ def run(rig: Rig) -> dict:
     )
     noop = rig.dicts["flight"].find(rig.dicts["flight"].commands, "CMD_NO_OP")
     dispatched = 0
+    # Other drills leave the GRC transmitter off; the legacy GRC then queues
+    # the uplink until its uplinkComQueue overflows.
+    transmit(rig, "legacy", True)
     if noop:
         opcode = rig.dicts["flight"].commands[noop]
         for _ in range(COMMANDS):
