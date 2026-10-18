@@ -4,7 +4,7 @@ module CdhCoreConfig {
 
     module QueueSizes {
         constant cmdDisp     = 10
-        constant events      = 25
+        constant events      = 64  # boot burst: version + prmDb + fpp 3.4 parameter-updated events (~50) must fit before the EventManager task starts
         constant tlmSend     = 5
         constant $health     = 20
     }
