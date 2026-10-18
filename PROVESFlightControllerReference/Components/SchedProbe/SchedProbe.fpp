@@ -25,6 +25,14 @@ module Components {
             severity activity high \
             format "cpu: uptime {} ms, non-idle {} ms, probe threads {} ms"
 
+        event SwitchCaptureHeader(late_us: U32, entries: U32) \
+            severity activity high \
+            format "switch trace captured at a prio-11 wake {} us late; {} entries follow, oldest first"
+
+        event SwitchRec(index: U32, name: string size 32, prio: I8, before_wake_us: I32, ran_us: U32) \
+            severity activity high \
+            format "switch[{}] {} prio {} in at T-{} us, ran {} us"
+
         event ReportDone() severity activity high format "report complete"
 
         time get port timeCaller

@@ -39,13 +39,37 @@ struct ProbeStat {
     volatile U32 over_20ms;
 };
 
-ProbeStat s_probes[] = {{3, 0, 0, 0, 0, 0}, {5, 0, 0, 0, 0, 0}, {7, 0, 0, 0, 0, 0}, {9, 0, 0, 0, 0, 0}, {11, 0, 0, 0, 0, 0}};
+ProbeStat s_probes[] = {{3, 0, 0, 0, 0, 0}, {5, 0, 0, 0, 0, 0}, {7, 0, 0, 0, 0, 0}, {8, 0, 0, 0, 0, 0}, {9, 0, 0, 0, 0, 0}, {10, 0, 0, 0, 0, 0}, {11, 0, 0, 0, 0, 0}};
 constexpr unsigned NUM_PROBES = sizeof(s_probes) / sizeof(s_probes[0]);
 
 K_THREAD_STACK_ARRAY_DEFINE(s_probeStacks, NUM_PROBES, 1024);
 ::k_thread s_probeThreads[NUM_PROBES];
 K_THREAD_STACK_DEFINE(s_reporterStack, 2048);
 ::k_thread s_reporterThread;
+
+// Thread-switch ring filled by the CONFIG_TRACING_USER hook. The prio-11 probe copies it on its first wake later
+// than SWITCH_CAPTURE_US so REPORT can name the threads that held the CPU during that gap.
+constexpr unsigned SWITCH_RING = 64;
+constexpr unsigned NUM_CAPTURES = 3;
+constexpr U32 SWITCH_CAPTURE_US = 8000;
+struct SwitchRec { k_tid_t thread; U32 cycles; };
+SwitchRec s_ring[SWITCH_RING];
+volatile unsigned s_ringHead = 0;
+struct Capture { SwitchRec rec[SWITCH_RING]; U32 wakeCycles; U32 lateUs; };
+Capture s_capture[NUM_CAPTURES];
+volatile unsigned s_captured = 0;
+
+extern "C" void sys_trace_thread_switched_in_user(void) {
+    unsigned h = s_ringHead;
+    s_ring[h % SWITCH_RING] = {k_current_get(), k_cycle_get_32()};
+    s_ringHead = h + 1;
+}
+extern "C" void sys_trace_thread_switched_out_user(void) {}
+extern "C" void sys_trace_isr_enter_user(void) {}
+extern "C" void sys_trace_isr_exit_user(void) {}
+extern "C" void sys_trace_isr_exit_to_scheduler_user(void) {}
+extern "C" void sys_trace_idle_user(void) {}
+extern "C" void sys_trace_idle_exit_user(void) {}
 
 void probeEntry(void* arg, void*, void*) {
     ProbeStat* st = static_cast<ProbeStat*>(arg);
@@ -67,6 +91,18 @@ void probeEntry(void* arg, void*, void*) {
         if (late_us > 20000) {
             st->over_20ms++;
         }
+        if (st->prio == 11 && late_us > SWITCH_CAPTURE_US && s_captured < NUM_CAPTURES) {
+            unsigned key = irq_lock();
+            Capture& cap = s_capture[s_captured];
+            unsigned h = s_ringHead;
+            for (unsigned i = 0; i < SWITCH_RING; i++) {
+                cap.rec[i] = s_ring[(h + i) % SWITCH_RING];
+            }
+            cap.wakeCycles = k_cycle_get_32();
+            cap.lateUs = late_us;
+            s_captured++;
+            irq_unlock(key);
+        }
         // A wake later than one period would make the next deadline already past; restart the schedule.
         if (late_us > PROBE_PERIOD_US) {
             next = k_uptime_ticks();
@@ -87,6 +123,7 @@ void resetProbes() {
         h->max_us = 0;
         h->count = 0;
     }
+    s_captured = 0;
 }
 
 }  // namespace
@@ -159,6 +196,27 @@ void SchedProbe::report() {
         k_sleep(K_MSEC(REPORT_PACING_MS));
     }
     k_thread_foreach_unlocked(threadCb, this);
+    for (unsigned c = 0; c < s_captured; c++) {
+        const Capture& cap = s_capture[c];
+        this->log_ACTIVITY_HI_SwitchCaptureHeader(cap.lateUs, SWITCH_RING);
+        k_sleep(K_MSEC(REPORT_PACING_MS));
+        for (unsigned i = 0; i < SWITCH_RING; i++) {
+            const SwitchRec& r = cap.rec[i];
+            if (r.thread == nullptr) {
+                continue;
+            }
+            const U32 endCycles = (i + 1 < SWITCH_RING) ? cap.rec[i + 1].cycles : cap.wakeCycles;
+            const I32 beforeWakeUs = static_cast<I32>(cap.wakeCycles - r.cycles) / static_cast<I32>(CYC_PER_US);
+            const U32 ranUs = (endCycles - r.cycles) / CYC_PER_US;
+            if (ranUs < 20) {
+                continue;  // sub-20 us hops (the 1 kHz main tick, probe wakes) only add noise to the event stream
+            }
+            const char* rawName = k_thread_name_get(r.thread);
+            this->log_ACTIVITY_HI_SwitchRec(i, Fw::String(rawName != nullptr ? rawName : "?"), static_cast<I8>(k_thread_priority_get(r.thread)),
+                                            beforeWakeUs, ranUs);
+            k_sleep(K_MSEC(REPORT_PACING_MS));
+        }
+    }
     k_thread_runtime_stats_t all;
     std::memset(&all, 0, sizeof(all));
     k_thread_runtime_stats_all_get(&all);

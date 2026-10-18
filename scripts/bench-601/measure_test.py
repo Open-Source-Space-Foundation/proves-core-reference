@@ -13,31 +13,33 @@ OUT = os.environ.get("BENCH_OUT", f"/tmp/bench601-{CONDITION}.txt")
 CMD_PERIOD_S = float(os.environ.get("BENCH_CMD_PERIOD_S", "0.5"))
 
 CHANNELS = [
-    "rateGroup50Hz.RgMaxTime", "rateGroup10Hz.RgMaxTime", "rateGroup1Hz.RgMaxTime",
-    "rateGroup50Hz.RgCycleSlips", "rateGroup10Hz.RgCycleSlips", "rateGroup1Hz.RgCycleSlips",
-    "startupManager.BootCount", "startupManager.QuiescenceEndTime", "modeManager.CurrentMode",
-    "uspRadio.RxProfile", "uspRadio.TxProfile", "uspRadio.BytesReceived", "uspRadio.RxDropped",
+    "ReferenceDeployment.rateGroup50Hz.RgMaxTime", "ReferenceDeployment.rateGroup10Hz.RgMaxTime", "ReferenceDeployment.rateGroup1Hz.RgMaxTime",
+    "ReferenceDeployment.rateGroup50Hz.RgCycleSlips", "ReferenceDeployment.rateGroup10Hz.RgCycleSlips", "ReferenceDeployment.rateGroup1Hz.RgCycleSlips",
+    "ReferenceDeployment.startupManager.BootCount", "ReferenceDeployment.startupManager.QuiescenceEndTime", "ReferenceDeployment.modeManager.CurrentMode",
+    "ReferenceDeployment.uspRadio.RxProfile", "ReferenceDeployment.uspRadio.TxProfile", "ReferenceDeployment.uspRadio.BytesReceived", "ReferenceDeployment.uspRadio.RxDropped",
     "CdhCore.cmdDisp.CommandsDispatched", "CdhCore.cmdDisp.CommandsDropped",
-    "CdhCore.version.ProjectVersion", "fsSpace.FreeSpace", "fsSpace.TotalSpace",
+    "CdhCore.version.ProjectVersion", "ReferenceDeployment.fsSpace.FreeSpace", "ReferenceDeployment.fsSpace.TotalSpace",
     "ComCcsdsUart.comQueue.comQueueDepth",
 ]
 
 # Rotating command mix: commanding, telemetry/event bursts, sensor reads, file system work.
 LOAD_COMMANDS = [
     ("CdhCore.cmdDisp.CMD_NO_OP", []),
-    ("CdhCore.cmdDisp.CMD_NO_OP_STRING", ["bench-601 synthetic load string argument 0123456789"]),
-    ("modeManager.GET_CURRENT_MODE", []),
-    ("imuManager.GET_ACCELERATION", []),
-    ("imuManager.GET_MAGNETIC_FIELD", []),
-    ("powerMonitor.GET_TOTAL_POWER", []),
-    ("CdhCore.tlmSend.SEND_PKT", [2]),
+    ("CdhCore.cmdDisp.CMD_NO_OP_STRING", ["bench-601 synthetic load 0123456789"]),
+    ("ReferenceDeployment.modeManager.GET_CURRENT_MODE", []),
+    ("ReferenceDeployment.imuManager.GET_ACCELERATION", []),
+    ("ReferenceDeployment.imuManager.GET_MAGNETIC_FIELD", []),
+    ("ReferenceDeployment.powerMonitor.GET_TOTAL_POWER", []),
+    ("CdhCore.tlmSend.SEND_PKT", [2, "REALTIME"]),
     ("CdhCore.events.DUMP_FILTER_STATE", []),
-    ("FileHandling.fileManager.FileSize", ["/prmDb.dat"]),
+    ("FileHandling.fileManager.ListDirectory", ["/"]),
+    ("FileHandling.fileManager.FileSize", ["/boot_count.bin"]),
+    ("FileHandling.fileManager.CalculateCrc", ["/boot_count.bin"]),
     ("FileHandling.fileManager.CreateDirectory", ["/bench601"]),
     ("FileHandling.fileManager.RemoveDirectory", ["/bench601"]),
-    ("FileHandling.fileDownlink.SendFile", ["/prmDb.dat", "prmDb.dat"]),
+    ("FileHandling.fileDownlink.SendFile", ["/boot_count.bin", "boot_count.bin"]),
     ("CdhCore.version.VERSION", ["ALL"]),
-    ("startupManager.GET_BOOT_COUNT", []),
+    ("ReferenceDeployment.startupManager.GET_BOOT_COUNT", []),
 ]
 MODE_TOGGLE_PERIOD_S = 60.0
 MODE_SAFE_HOLD_S = 15.0
@@ -60,10 +62,10 @@ def run_load(api, duration_s, stats):
     while time.time() < t_end:
         now = time.time()
         if in_safe_since is None and now >= next_mode:
-            _send(api, "modeManager.FORCE_SAFE_MODE", [], stats, timeout=15)
+            _send(api, "ReferenceDeployment.modeManager.FORCE_SAFE_MODE", [], stats, timeout=15)
             in_safe_since = now
         elif in_safe_since is not None and now - in_safe_since >= MODE_SAFE_HOLD_S:
-            _send(api, "modeManager.EXIT_SAFE_MODE", [], stats, timeout=15)
+            _send(api, "ReferenceDeployment.modeManager.EXIT_SAFE_MODE", [], stats, timeout=15)
             in_safe_since = None
             next_mode = now + MODE_TOGGLE_PERIOD_S
         name, args = LOAD_COMMANDS[i % len(LOAD_COMMANDS)]
@@ -71,12 +73,12 @@ def run_load(api, duration_s, stats):
         _send(api, name, args, stats)
         time.sleep(CMD_PERIOD_S)
     if in_safe_since is not None:
-        _send(api, "modeManager.EXIT_SAFE_MODE", [], stats, timeout=15)
+        _send(api, "ReferenceDeployment.modeManager.EXIT_SAFE_MODE", [], stats, timeout=15)
 
 
 def report(api, out, label):
-    api.send_and_assert_command("schedProbe.REPORT", timeout=10)
-    api.await_event("schedProbe.ReportDone", timeout=60)
+    api.send_and_assert_command("ReferenceDeployment.schedProbe.REPORT", timeout=10)
+    api.await_event("ReferenceDeployment.schedProbe.ReportDone", timeout=60)
     out.write(f"\n== {label} REPORT at {time.strftime('%Y-%m-%dT%H:%M:%S')} ==\n")
 
 
@@ -84,13 +86,13 @@ def dump(api, out):
     out.write("\n-- schedProbe events --\n")
     for ev in api.get_event_test_history().retrieve():
         name = ev.template.get_full_name()
-        if name.startswith("schedProbe."):
+        if name.startswith("ReferenceDeployment.schedProbe."):
             out.write(f"{ev.time.to_readable()} {name} {ev.get_display_text()}\n")
     out.write("\n-- other events (count by name) --\n")
     counts = {}
     for ev in api.get_event_test_history().retrieve():
         name = ev.template.get_full_name()
-        if not name.startswith("schedProbe."):
+        if not name.startswith("ReferenceDeployment.schedProbe."):
             counts[name] = counts.get(name, 0) + 1
     for name in sorted(counts):
         out.write(f"{counts[name]:6d} {name}\n")
@@ -120,7 +122,7 @@ def test_bench_601(fprime_test_api):
         out.write(f"condition={CONDITION} duration_s={DURATION} cmd_period_s={CMD_PERIOD_S} start={time.strftime('%Y-%m-%dT%H:%M:%S')}\n")
         api.send_and_assert_command("CdhCore.cmdDisp.CMD_NO_OP", timeout=10)
         report(api, out, "boot-phase")
-        api.send_and_assert_command("schedProbe.RESET_PROBES", timeout=10)
+        api.send_and_assert_command("ReferenceDeployment.schedProbe.RESET_PROBES", timeout=10)
         t0 = time.time()
         if CONDITION == "load":
             run_load(api, DURATION, stats)
