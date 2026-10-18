@@ -1,3 +1,8 @@
+---
+title: Mode Manager
+category: Core
+---
+
 # Components::ModeManager
 
 The ModeManager component manages system operational modes and orchestrates transitions between NORMAL and SAFE_MODE. It evaluates voltage conditions and detects unintended reboots to make mode decisions, controls power to non-critical subsystems during transitions, and maintains/persists mode state across reboots.

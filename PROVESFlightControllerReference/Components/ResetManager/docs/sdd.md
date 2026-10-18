@@ -1,3 +1,8 @@
+---
+title: Reset Manager
+category: Core
+---
+
 # Components::ResetManager
 
 The ResetManager component provides system reset functionality, allowing the satellite to perform both cold and warm resets through commands or direct port calls.
