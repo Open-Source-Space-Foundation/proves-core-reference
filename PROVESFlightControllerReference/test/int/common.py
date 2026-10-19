@@ -53,6 +53,12 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     _radio_recover_fn = fn
 
 
+# Ground restarts this far past the board's last accepted number. Well inside the
+# deframer's SEQ_NUM_WINDOW (50000), and large enough that a framer still holding a
+# stale cached number cannot replay one the board already accepted.
+SEQUENCE_NUMBER_SYNC_MARGIN = 100
+
+
 def resync_sequence_number(
     fprime_test_api: IntegrationTestAPI,
     deframer: str = "ComCcsdsUart.tcSecurityDeframer",
@@ -74,9 +80,9 @@ def resync_sequence_number(
             ground_seq = int(f.read().strip() or 0)
     except (OSError, ValueError):
         ground_seq = -1
-    if board_seq > ground_seq:
+    if board_seq >= ground_seq:
         with open(seq_file, "w", encoding="utf-8") as f:
-            f.write(str(board_seq))
+            f.write(str(board_seq + SEQUENCE_NUMBER_SYNC_MARGIN))
 
 
 def proves_send_and_assert_command(

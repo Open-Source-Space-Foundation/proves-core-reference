@@ -7,7 +7,7 @@ and writing it to a file used by the plugin.
 """
 
 import pytest
-from common import proves_send_and_assert_command
+from common import SEQUENCE_NUMBER_SYNC_MARGIN, proves_send_and_assert_command
 from fprime_gds.common.data_types.event_data import EventData
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
@@ -40,4 +40,4 @@ def test_sync_sequence_number(
     seq_num = evt.args[0].val
 
     with open("./Framing/src/sequence_number.bin", "w", encoding="utf-8") as f:
-        f.write(str(seq_num))
+        f.write(str(seq_num + SEQUENCE_NUMBER_SYNC_MARGIN))
