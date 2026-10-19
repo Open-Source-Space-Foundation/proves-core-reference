@@ -12,6 +12,7 @@
 
 #include "Fw/Time/Time.hpp"
 #include "Fw/Types/String.hpp"
+#include "PROVESFlightControllerReference/Components/ModeManager/CommandLossTimer.hpp"
 #include "PROVESFlightControllerReference/Components/ModeManager/ModeManagerComponentAc.hpp"
 
 namespace Components {
@@ -78,11 +79,11 @@ class ModeManager : public ModeManagerComponentBase {
     void prepareForReboot_handler(FwIndexType portNum  //!< The port number
                                   ) override;
 
-    //! Handler implementation for packetRouted
+    //! Handler implementation for authenticatedPacketRouted
     //!
     //! Resets the command loss timer when an authenticated packet is received
-    void packetRouted_handler(FwIndexType portNum  //!< The port number
-                              ) override;
+    void authenticatedPacketRouted_handler(FwIndexType portNum  //!< The port number
+                                           ) override;
 
     // ----------------------------------------------------------------------
     // Handler implementations for commands
@@ -143,8 +144,14 @@ class ModeManager : public ModeManagerComponentBase {
     //! \return Current voltage (only valid if valid parameter is set to true)
     F32 getCurrentVoltage(bool& valid);
 
-    //! Check for command loss and enter safe mode if timeout has expired
-    void commandLossCheck();
+    //! Advance the command loss timer, persist it when due, and enter safe mode on expiry
+    void commandLossTick();
+
+    //! Restore the command loss elapsed time from COMMAND_LOSS_FILE_PATH
+    void loadCommandLoss();
+
+    //! Write the command loss elapsed time to COMMAND_LOSS_FILE_PATH
+    void saveCommandLoss(U32 elapsedSeconds);
 
     // ----------------------------------------------------------------------
     // Private enums and types
@@ -172,15 +179,15 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
     U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
 
-    Os::Mutex m_commandLossMutex;  //!< Protects command loss state against concurrent access
-    U32 m_commandLossCounter;      //!< Value of runCounter when last command was received
-    bool m_commandLossDebounce;    //!< Prevents re-triggering safe mode entry while command loss persists
+    Os::Mutex m_commandLossMutex;    //!< Protects m_commandLoss against concurrent access
+    CommandLossTimer m_commandLoss;  //!< Seconds since the last authenticated packet
 
     // ----------------------------------------------------------------------
     // Constants
     // ----------------------------------------------------------------------
 
-    static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
+    static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";                //!< State file path
+    static constexpr const char* COMMAND_LOSS_FILE_PATH = "/comm_loss_elapsed.bin";  //!< Command loss elapsed time
 };
 
 }  // namespace Components

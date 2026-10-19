@@ -20,7 +20,8 @@ The ModeManager component manages system operational modes and orchestrates tran
 | MM0008 | The ModeManager shall detect unintended reboots and enter safe mode with reason SYSTEM_FAULT | Integration Testing |
 | MM0009 | The ModeManager shall automatically enter safe mode when voltage drops below configurable threshold | Integration Testing |
 | MM0010 | The ModeManager shall automatically exit safe mode (LOW_BATTERY only) when voltage recovers above configurable threshold | Integration Testing |
-| MM0011 | The ModeManager shall enter safe mode with reason COMMAND_LOSS if no authenticated packet is received within COMM_LOSS_TIME after the first packet | Integration Testing |
+| MM0011 | The ModeManager shall enter safe mode with reason COMMAND_LOSS if no authenticated packet is received within COMM_LOSS_TIME; packets that only bypass authentication do not reset the timer | Integration Testing, Unit Testing |
+| MM0012 | The ModeManager shall persist command loss elapsed time at least every 60 s and resume it after a reboot | Unit Testing |
 
 ## Class Diagram
 
@@ -33,13 +34,13 @@ classDiagram
         - m_safeModeReason: SafeModeReason
         - m_safeModeVoltageCounter: U32
         - m_recoveryVoltageCounter: U32
-        - m_lastPacketRoutedTime: Fw::Time
+        - m_commandLoss: CommandLossTimer
         + init(queueDepth, instance)
         - run_handler()
         - forceSafeMode_handler(reason)
         - getMode_handler(): SystemMode
         - prepareForReboot_handler()
-        - packetRouted_handler()
+        - authenticatedPacketRouted_handler()
         - enterSafeMode(reason)
         - exitSafeMode()
         - exitSafeModeAutomatic(voltage)
@@ -71,7 +72,7 @@ classDiagram
 | forceSafeMode | ForceSafeModeWithReason | async | Safe mode requests from external components |
 | getMode | GetSystemMode | sync | Query current system mode |
 | prepareForReboot | Fw.Signal | sync | Set clean shutdown flag before intentional reboot |
-| packetRouted | Fw.Signal | sync | Resets the command loss timer when an authenticated packet is received from ProvesRouter |
+| authenticatedPacketRouted | Fw.Signal | sync | Resets the command loss timer when ProvesRouter routes an authenticated packet (bypassed packets do not fire it) |
 
 ### Output Ports
 | Name | Type | Description |
@@ -134,6 +135,8 @@ State is persisted to `/mode_state.bin`:
 - Safe mode reason (U8)
 - Clean shutdown flag (U8)
 
+Command loss elapsed time is persisted separately to `/comm_loss_elapsed.bin` (8 bytes: U32 seconds little-endian, then its bitwise complement). See [Command Loss Detection](#command-loss-detection).
+
 ## Safe Mode Reason Logic
 
 | Reason | Trigger | Auto-Recovery |
@@ -162,17 +165,33 @@ sequenceDiagram
     participant ModeManager
     participant RateGroup
 
-    AuthRouter->>ModeManager: packetRouted() [on each authenticated packet]
-    Note over ModeManager: Resets m_commandLossStartTime to now
+    participant Flash as /comm_loss_elapsed.bin
 
-    loop Every 1Hz (no packets received)
+    Flash-->>ModeManager: restorePersistentState(): resume elapsed seconds
+    AuthRouter->>ModeManager: authenticatedPacketRouted() [authenticated packets only]
+    Note over ModeManager: elapsed = 0 in RAM (no file write here)
+
+    loop Every 1Hz
         RateGroup->>ModeManager: run()
-        ModeManager->>ModeManager: Check if now > start + COMM_LOSS_TIME
+        ModeManager->>ModeManager: elapsed += 1
+        opt First tick after a reset, or 60 s since the last write
+            ModeManager->>Flash: write elapsed
+        end
+        ModeManager->>ModeManager: elapsed >= COMM_LOSS_TIME?
     end
     Note over ModeManager: Timeout exceeded
     ModeManager->>ModeManager: log CommandLossDetected event
     ModeManager->>ModeManager: enterSafeMode(COMMAND_LOSS)
+    ModeManager->>ModeManager: restart elapsed at 0, latch until next authenticated packet
+    ModeManager->>RateGroup: stopWatchdog (hardware power cycle)
 ```
+
+The dead-man counts uptime seconds, not RTC time, so an RTC reset or time jump does not move it. `CommandLossTimer` (pure C++, unit tested in `test/unit-tests/test_ModeManager_CommandLossTimer.cpp`) owns counting, the write cadence, and resume; ModeManager only does the file I/O.
+
+- **Resume:** on boot the stored value is loaded and counting continues from it, so a reboot loop cannot hold off command loss. A reboot loses at most the 60 s since the last write. A reboot loop shorter than 60 s never reaches a write and so does not advance the stored value.
+- **Writes:** one write every 60 s without contact (1,440 per day), plus one write of 0 on the tick after the first authenticated packet. Further packets while the stored value is 0 cost nothing. Packets never write directly.
+- **Missing or corrupt file:** start at 0 and emit `StatePersistenceFailure` (`cmdloss-load-open` or `cmdloss-load-corrupt`). A failed write emits `cmdloss-save-open` or `cmdloss-save-write`; the RAM timer keeps running.
+- **After expiry:** the count restarts at 0 so the boot after the watchdog power cycle waits a full COMM_LOSS_TIME again instead of re-tripping.
 
 ### Safe Mode Entry (Low Voltage)
 ```mermaid
@@ -213,5 +232,5 @@ sequenceDiagram
 - **Debounce**: Configurable consecutive samples prevent spurious transitions
 - **Reason tracking**: Only LOW_BATTERY allows auto-recovery; other reasons require manual EXIT_SAFE_MODE
 - **Mode query**: Both pull (getMode) and push (modeChanged) patterns supported
-- **Command loss ownership**: ProvesRouter signals `packetRouted` on each routed packet; ModeManager owns the timer and the mode transition, keeping routing and mode management as separate concerns
-- **Command loss thread safety**: `m_commandLossStartTime` is protected by `m_commandLossMutex` since `packetRouted_handler` (called from the radio thread) and `run_handler` (called from the rate group thread) may run concurrently
+- **Command loss ownership**: ProvesRouter signals `authenticatedPacketRouted` on each routed authenticated packet; ModeManager owns the timer and the mode transition, keeping routing and mode management as separate concerns
+- **Command loss thread safety**: `m_commandLoss` is protected by `m_commandLossMutex` since `authenticatedPacketRouted_handler` (called from the radio thread) and `run_handler` (called from the rate group thread) may run concurrently. The file write happens outside the lock

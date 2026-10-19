@@ -26,9 +26,7 @@ ModeManager ::ModeManager(const char* const compName)
       m_runCounter(0),
       m_safeModeReason(Components::SafeModeReason::NONE),
       m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0),
-      m_commandLossCounter(0),
-      m_commandLossDebounce(false) {
+      m_recoveryVoltageCounter(0) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
@@ -40,6 +38,7 @@ ModeManager ::~ModeManager() {}
 
 void ModeManager ::restorePersistentState() {
     this->loadState();
+    this->loadCommandLoss();
 }
 
 // ----------------------------------------------------------------------
@@ -49,10 +48,6 @@ void ModeManager ::restorePersistentState() {
 void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     // Increment run counter (1Hz tick counter)
     this->m_runCounter++;
-    {
-        Os::ScopeLock lock(m_commandLossMutex);
-        this->m_commandLossCounter++;  // keep track of seconds since last packet
-    }
 
     // Get current voltage (used by mode-specific voltage monitoring)
     bool valid = false;
@@ -114,8 +109,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
         this->m_safeModeVoltageCounter = 0;
     }
 
-    // Check for command loss and trigger safe mode if timeout has expired
-    commandLossCheck();
+    this->commandLossTick();
 
     // Update telemetry
     this->tlmWrite_CurrentMode(static_cast<U8>(this->m_mode));
@@ -216,10 +210,9 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
     file.close();
 }
 
-void ModeManager ::packetRouted_handler(FwIndexType portNum) {
+void ModeManager ::authenticatedPacketRouted_handler(FwIndexType portNum) {
     Os::ScopeLock lock(m_commandLossMutex);
-    this->m_commandLossCounter = 0;
-    this->m_commandLossDebounce = false;
+    this->m_commandLoss.reset();
 }
 
 // ----------------------------------------------------------------------
@@ -529,30 +522,76 @@ F32 ModeManager ::getCurrentVoltage(bool& valid) {
     return 0.0f;
 }
 
-void ModeManager::commandLossCheck() {
-    // Protect against concurrent access to command loss state
-    Os::ScopeLock lock(this->m_commandLossMutex);
-
-    // Get command loss period from parameter
+void ModeManager ::commandLossTick() {
     Fw::ParamValid paramValid;
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
-    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() && !this->m_commandLossDebounce) {
-        // Debounce so we don't repeatedly re-trigger command loss behavior
-        this->m_commandLossDebounce = true;
+    CommandLossTimer::TickResult result;
+    {
+        Os::ScopeLock lock(this->m_commandLossMutex);
+        result = this->m_commandLoss.tick(commLossPeriod.get_seconds());
+    }
 
-        // Telemeter the command loss duration
-        U32 commandLossDuration = this->m_commandLossCounter;
-        this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
+    if (result.persist) {
+        this->saveCommandLoss(result.persistValue);
+    }
 
-        // Trigger safe mode entry due to command loss
+    if (result.expired) {
+        this->log_WARNING_HI_CommandLossDetected(result.lossSeconds);
+
         this->runSafeModeSequence();
         this->enterSafeMode(Components::SafeModeReason::COMMAND_LOSS);
 
         // Stop the watchdog to trigger a hardware power cycle as a last resort for recovery
         this->stopWatchdog_out(0);
     }
+}
+
+void ModeManager ::loadCommandLoss() {
+    U8 record[CommandLossTimer::RECORD_SIZE];
+    FwSizeType bytesRead = 0;
+
+    Os::File file;
+    Os::File::Status status = file.open(COMMAND_LOSS_FILE_PATH, Os::File::OPEN_READ);
+    if (status == Os::File::OP_OK) {
+        bytesRead = sizeof(record);
+        status = file.read(record, bytesRead, Os::File::WaitType::WAIT);
+        file.close();
+    }
+
+    U32 storedSeconds = 0;
+    if (status != Os::File::OP_OK) {
+        Fw::LogStringArg opStr("cmdloss-load-open");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+    } else if (!CommandLossTimer::decode(record, static_cast<std::size_t>(bytesRead), storedSeconds)) {
+        Fw::LogStringArg opStr("cmdloss-load-corrupt");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(bytesRead));
+    }
+
+    Os::ScopeLock lock(this->m_commandLossMutex);
+    this->m_commandLoss.resume(storedSeconds);
+}
+
+void ModeManager ::saveCommandLoss(U32 elapsedSeconds) {
+    U8 record[CommandLossTimer::RECORD_SIZE];
+    CommandLossTimer::encode(elapsedSeconds, record);
+
+    Os::File file;
+    Os::File::Status status = file.open(COMMAND_LOSS_FILE_PATH, Os::File::OPEN_CREATE, Os::File::OVERWRITE);
+    if (status != Os::File::OP_OK) {
+        Fw::LogStringArg opStr("cmdloss-save-open");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+        return;
+    }
+
+    FwSizeType bytesWritten = sizeof(record);
+    status = file.write(record, bytesWritten, Os::File::WaitType::WAIT);
+    if (status != Os::File::OP_OK || bytesWritten != sizeof(record)) {
+        Fw::LogStringArg opStr("cmdloss-save-write");
+        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+    }
+    file.close();
 }
 
 }  // namespace Components

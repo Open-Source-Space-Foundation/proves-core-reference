@@ -14,6 +14,7 @@
 #include "Fw/Com/ComPacket.hpp"
 #include "Fw/FPrimeBasicTypes.hpp"
 #include "Fw/Logger/Logger.hpp"
+#include "RoutingPolicy.hpp"
 #include "config/ApidEnumAc.hpp"
 
 namespace Svc {
@@ -52,24 +53,35 @@ void ProvesRouter ::dataIn_handler(FwIndexType portNum, Fw::Buffer& packetBuffer
     }
 
     // Route based on packet type
+    bool routed = false;
     Fw::ComPacketType packetType = context.get_apid();
     switch (packetType) {
         case Fw::ComPacketType::FW_PACKET_COMMAND:
-            this->handleCommandPacket(packetBuffer);
+            routed = this->handleCommandPacket(packetBuffer);
             break;
         case Fw::ComPacketType::FW_PACKET_FILE:
-            this->handleFilePacket(packetBuffer);
+            routed = this->handleFilePacket(packetBuffer);
             break;
         default:
-            this->handleUnknownPacket(packetBuffer, context);
+            routed = this->handleUnknownPacket(packetBuffer, context);
             break;
+    }
+
+    if (routed) {
+        this->m_routedPackets += 1;
+        this->tlmWrite_RoutedPackets(this->m_routedPackets);
+    }
+
+    if (Components::RoutingPolicy::resetsCommandLoss(context.get_authenticated(), routed) &&
+        this->isConnected_authenticatedPacketRouted_OutputPort(0)) {
+        this->authenticatedPacketRouted_out(0);
     }
 
     // Return frame buffer ownership
     this->dataReturnOut_out(0, packetBuffer, context);
 }
 
-void ProvesRouter::handleCommandPacket(Fw::Buffer& packetBuffer) {
+bool ProvesRouter::handleCommandPacket(Fw::Buffer& packetBuffer) {
     // Allocate a com buffer on the stack
     Fw::ComBuffer com;
 
@@ -78,59 +90,48 @@ void ProvesRouter::handleCommandPacket(Fw::Buffer& packetBuffer) {
     if (status != Fw::FW_SERIALIZE_OK) {
         // Telemeter the error
         this->log_WARNING_HI_SerializationError(status);
-        return;
+        return false;
     }
 
     // Send the com buffer to connected components
     this->commandOut_out(0, com, 0);
-
-    // Notify connected components that a packet was routed
-    this->notifyPacketRouted();
+    return true;
 }
 
-void ProvesRouter::handleFilePacket(Fw::Buffer& packetBuffer) {
+bool ProvesRouter::handleFilePacket(Fw::Buffer& packetBuffer) {
     // Exit early if no components are connected
     if (!this->isConnected_fileOut_OutputPort(0)) {
-        return;
+        return false;
     }
 
     // Copy buffer into a new allocated buffer. This lets us return the original buffer with dataReturnOut,
     // and ProvesRouter can handle the deallocation of the unknown buffer when it returns on bufferReturnIn
     Fw::Buffer copy = this->allocateCopy(packetBuffer, ProvesRouter_AllocationReason::FILE_UPLINK);
-    if (copy.isValid()) {
-        // Send the copied buffer to connected components
-        this->fileOut_out(0, copy);
-
-        // Notify connected components that a packet was routed
-        this->notifyPacketRouted();
+    if (!copy.isValid()) {
+        return false;
     }
+
+    // Send the copied buffer to connected components
+    this->fileOut_out(0, copy);
+    return true;
 }
 
-void ProvesRouter::handleUnknownPacket(Fw::Buffer& packetBuffer, const ComCfg::FrameContext& context) {
+bool ProvesRouter::handleUnknownPacket(Fw::Buffer& packetBuffer, const ComCfg::FrameContext& context) {
     // Exit early if no components are connected
     if (!this->isConnected_unknownDataOut_OutputPort(0)) {
-        return;
+        return false;
     }
 
     // Copy buffer into a new allocated buffer. This lets us return the original buffer with dataReturnOut,
     // and ProvesRouter can handle the deallocation of the unknown buffer when it returns on bufferReturnIn
     Fw::Buffer copy = this->allocateCopy(packetBuffer, ProvesRouter_AllocationReason::USER_BUFFER);
-    if (copy.isValid()) {
-        // Send the copied buffer to connected components
-        this->unknownDataOut_out(0, copy, context);
-
-        // Notify connected components that a packet was routed
-        this->notifyPacketRouted();
-    }
-}
-
-void ProvesRouter ::notifyPacketRouted() {
-    if (this->isConnected_packetRouted_OutputPort(0)) {
-        this->packetRouted_out(0);
+    if (!copy.isValid()) {
+        return false;
     }
 
-    this->m_routedPackets += 1;
-    this->tlmWrite_RoutedPackets(this->m_routedPackets);
+    // Send the copied buffer to connected components
+    this->unknownDataOut_out(0, copy, context);
+    return true;
 }
 
 Fw::Buffer ProvesRouter ::allocateCopy(Fw::Buffer& src, ProvesRouter_AllocationReason reason) {

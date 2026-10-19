@@ -7,7 +7,7 @@ category: Security
 
 The `Svc::ProvesRouter` component routes F´ packets (such as command or file packets) to other components. It is based on the FPrime Router, explained and linked later in the sdd, with one distinction:
 
-This component reads the packet type from the `ComCfg::FrameContext` APID field (via `context.get_apid()`) rather than deserializing the type from the packet buffer header. After routing each packet, the component emits a `packetRouted` signal so that any interested components (such as `ModeManager`) can react to uplink activity.
+This component reads the packet type from the `ComCfg::FrameContext` APID field (via `context.get_apid()`) rather than deserializing the type from the packet buffer header. After routing an authenticated packet, the component emits an `authenticatedPacketRouted` signal so that `ModeManager` can reset its command-loss timer. Packets let through by the authentication bypass are routed but do not emit it, since anyone can send them.
 
 The `Svc::ProvesRouter` component receives F´ packets (as Fw::Buffer objects) and routes them to other components through synchronous port calls. The input port of type `Svc.ComDataWithContext` passes this Fw.Buffer object along with optional context data which can help for routing. The current F Prime protocol does not use this context data, but is nevertheless present in the interface for compatibility with other protocols which may for example pass APIDs in the frame headers.
 
@@ -50,7 +50,7 @@ In the canonical uplink communications stack, `Svc::FprimeRouter` is connected t
 | `output` | `unknownDataOut` | `Svc.ComDataWithContext` | Port forwarding unknown data (useful for adding custom routing rules with a project-defined router) |
 | `output` | `bufferAllocate` | `Fw.BufferGet` | Port for allocating buffers, allowing copy of received data |
 | `output` | `bufferDeallocate` | `Fw.BufferSend` | Port for deallocating buffers |
-| `output` | `packetRouted` | `Fw.Signal` | Emitted after each received packet is processed; used to reset command loss timer in ModeManager |
+| `output` | `authenticatedPacketRouted` | `Fw.Signal` | Emitted after an authenticated packet is routed (not for bypassed packets); resets the command loss timer in ModeManager |
 
 ## Requirements
 
@@ -64,7 +64,7 @@ SVC-ROUTER-005 | `Svc::ProvesRouter` shall emit a `SerializationError` warning e
 SVC-ROUTER-006 | `Svc::ProvesRouter` shall emit an `AllocationError` warning event and skip forwarding if buffer allocation fails for a file or unknown packet | Memory management safety | Unit test |
 SVC-ROUTER-007 | `Svc::ProvesRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` or unknown packet type before forwarding, so that the original buffer can be returned immediately via `dataReturnOut` | Memory management | Unit test |
 SVC-ROUTER-008 | `Svc::ProvesRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
-SVC-ROUTER-009 | `Svc::ProvesRouter` shall emit the `packetRouted` signal after processing each received packet | Allows interested components (e.g., `ModeManager`) to track uplink activity | Unit test |
+SVC-ROUTER-009 | `Svc::ProvesRouter` shall emit the `authenticatedPacketRouted` signal after routing an authenticated packet, and shall not emit it for packets that only bypassed authentication | Lets `ModeManager` track authenticated uplink without unauthenticated traffic holding off command loss | Unit test (`test_ProvesRouter_RoutingPolicy.cpp`) |
 SVC-ROUTER-010 | `Svc::ProvesRouter` shall reject packets whose frame context is not marked authenticated unless their opcode is on the bypass allowlist | Enforces uplink security policy at the routing edge | Integration test |
 SVC-ROUTER-011 | `Svc::ProvesRouter` shall telemeter counts of routed, bypassed, and rejected packets | Operator visibility into uplink security decisions | Inspection |
 
