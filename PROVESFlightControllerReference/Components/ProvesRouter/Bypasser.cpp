@@ -61,7 +61,12 @@ bool opCodeBypassAllowed(uint32_t opCode) {
 
 }  // namespace
 
-bool bypassPacket(const uint8_t* buffer, const size_t size) {
+bool bypassPacket(const uint16_t apid, const uint8_t* buffer, const size_t size) {
+    // Only command packets carry an OpCode at bytes [2, 6)
+    if (apid != kCommandApid) {
+        return false;
+    }
+
     // Parse the OpCode from the packet
     const FieldParseResult<uint32_t> parseResult = parseOpCode(buffer, size);
     if (!parseResult.success) {
