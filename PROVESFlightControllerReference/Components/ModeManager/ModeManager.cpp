@@ -569,8 +569,12 @@ void ModeManager ::loadCommandLoss() {
         this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(bytesRead));
     }
 
-    Os::ScopeLock lock(this->m_commandLossMutex);
-    this->m_commandLoss.resume(storedSeconds);
+    U32 resumedSeconds = 0;
+    {
+        Os::ScopeLock lock(this->m_commandLossMutex);
+        resumedSeconds = this->m_commandLoss.resume(storedSeconds);
+    }
+    this->saveCommandLoss(resumedSeconds);
 }
 
 void ModeManager ::saveCommandLoss(U32 elapsedSeconds) {

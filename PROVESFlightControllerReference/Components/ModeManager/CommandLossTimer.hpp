@@ -13,8 +13,10 @@ namespace Components {
 //! Seconds without an authenticated packet, counted on the 1 Hz tick.
 //!
 //! The count is uptime based, so it does not depend on the RTC. The caller
-//! persists it whenever tick() asks, and feeds the stored value back through
-//! resume() on boot, so a reboot loses at most PERSIST_PERIOD_S of progress.
+//! persists it whenever tick() asks, and on boot feeds the stored value to
+//! resume() and persists what it returns. resume() credits one full period for
+//! the unrecorded tail of the previous boot, so every boot advances the stored
+//! value and a reboot loop of any length trips.
 //! reset() only touches RAM; the write that records a reset happens on the
 //! next tick, which keeps flash writes off the packet path.
 class CommandLossTimer {
@@ -30,7 +32,9 @@ class CommandLossTimer {
     };
 
     //! Continue counting from a value restored from storage
-    void resume(std::uint32_t storedSeconds);
+    //!
+    //! \return the elapsed seconds the caller must persist now
+    std::uint32_t resume(std::uint32_t storedSeconds);
 
     //! An authenticated packet arrived
     void reset();

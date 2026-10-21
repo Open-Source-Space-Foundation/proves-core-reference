@@ -21,7 +21,7 @@ The ModeManager component manages system operational modes and orchestrates tran
 | MM0009 | The ModeManager shall automatically enter safe mode when voltage drops below configurable threshold | Integration Testing |
 | MM0010 | The ModeManager shall automatically exit safe mode (LOW_BATTERY only) when voltage recovers above configurable threshold | Integration Testing |
 | MM0011 | The ModeManager shall enter safe mode with reason COMMAND_LOSS if no authenticated packet is received within COMM_LOSS_TIME; packets that only bypass authentication do not reset the timer | Integration Testing, Unit Testing |
-| MM0012 | The ModeManager shall persist command loss elapsed time at least every 60 s and resume it after a reboot | Unit Testing |
+| MM0012 | The ModeManager shall persist command loss elapsed time once at boot and at least every 60 s, and resume it after a reboot | Unit Testing |
 
 ## Class Diagram
 
@@ -168,6 +168,7 @@ sequenceDiagram
     participant Flash as /comm_loss_elapsed.bin
 
     Flash-->>ModeManager: restorePersistentState(): resume elapsed seconds
+    ModeManager->>Flash: write stored + 60 s
     AuthRouter->>ModeManager: authenticatedPacketRouted() [authenticated packets only]
     Note over ModeManager: elapsed = 0 in RAM (no file write here)
 
@@ -188,10 +189,10 @@ sequenceDiagram
 
 The dead-man counts uptime seconds, not RTC time, so an RTC reset or time jump does not move it. `CommandLossTimer` (pure C++, unit tested in `test/unit-tests/test_ModeManager_CommandLossTimer.cpp`) owns counting, the write cadence, and resume; ModeManager only does the file I/O.
 
-- **Resume:** on boot the stored value is loaded and counting continues from it, so a reboot loop cannot hold off command loss. A reboot loses at most the 60 s since the last write. A reboot loop shorter than 60 s never reaches a write and so does not advance the stored value.
-- **Writes:** one write every 60 s without contact (1,440 per day), plus one write of 0 on the tick after the first authenticated packet. Further packets while the stored value is 0 cost nothing. Packets never write directly.
-- **Missing or corrupt file:** start at 0 and emit `StatePersistenceFailure` (`cmdloss-load-open` or `cmdloss-load-corrupt`). A failed write emits `cmdloss-save-open` or `cmdloss-save-write`; the RAM timer keeps running.
-- **After expiry:** the count restarts at 0 so the boot after the watchdog power cycle waits a full COMM_LOSS_TIME again instead of re-tripping.
+- **Resume:** on boot the stored value is loaded, 60 s is added for the unrecorded end of the previous boot, and the result is written at once. Counting continues from it. Each reboot moves the trip between 1 s and 60 s earlier, and a reboot loop of any length advances the stored value by at least 60 s per boot, so it cannot hold off command loss.
+- **Writes:** one write per boot, one write every 60 s without contact (1,440 per day), plus one write of 0 on the tick after the first authenticated packet. Further packets while the stored value is 0 cost nothing. Packets never write directly.
+- **Missing or corrupt file:** start at 60 s (0 plus the boot credit) and emit `StatePersistenceFailure` (`cmdloss-load-open` or `cmdloss-load-corrupt`). A failed write emits `cmdloss-save-open` or `cmdloss-save-write`; the RAM timer keeps running.
+- **After expiry:** the count restarts at 0 so the boot after the watchdog power cycle waits COMM_LOSS_TIME less the 60 s boot credit instead of re-tripping.
 
 ### Safe Mode Entry (Low Voltage)
 ```mermaid

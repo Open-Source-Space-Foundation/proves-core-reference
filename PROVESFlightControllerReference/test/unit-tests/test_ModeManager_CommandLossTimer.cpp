@@ -11,9 +11,11 @@ namespace {
 
 constexpr std::uint32_t kThreeDays = 3 * 24 * 60 * 60;
 const std::uint64_t kPeriod = CommandLossTimer::PERSIST_PERIOD_S;
+// Each boot credits one period, so a single boot trips one period before the limit.
+const std::uint64_t kTrip = kThreeDays - kPeriod;
 
-// ModeManager's glue around the timer: a file that survives reboots, written
-// only when tick() asks, and read back through decode() on boot.
+// ModeManager's glue around the timer: a file that survives reboots, read back
+// through decode() on boot, written once on boot and then whenever tick() asks.
 struct Board {
     std::vector<std::uint8_t> file;  // empty == file missing
     CommandLossTimer timer;
@@ -29,18 +31,22 @@ struct Board {
         if (!CommandLossTimer::decode(file.data(), file.size(), stored)) {
             stored = 0;
         }
-        timer.resume(stored);
+        write(timer.resume(stored));
+    }
+
+    void write(std::uint32_t value) {
+        std::uint8_t record[CommandLossTimer::RECORD_SIZE];
+        CommandLossTimer::encode(value, record);
+        file.assign(record, record + sizeof(record));
+        writeTimes.push_back(uptime);
+        writeValues.push_back(value);
     }
 
     void tick() {
         uptime++;
         CommandLossTimer::TickResult r = timer.tick(limit);
         if (r.persist) {
-            std::uint8_t record[CommandLossTimer::RECORD_SIZE];
-            CommandLossTimer::encode(r.persistValue, record);
-            file.assign(record, record + sizeof(record));
-            writeTimes.push_back(uptime);
-            writeValues.push_back(r.persistValue);
+            write(r.persistValue);
         }
         if (r.expired) {
             expiryTimes.push_back(uptime);
@@ -61,7 +67,7 @@ TEST(CommandLossTimerTest, TripsAtLimitWithoutReboot) {
     b.boot();
     b.run(kThreeDays);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    EXPECT_EQ(b.expiryTimes[0], kThreeDays);
+    EXPECT_EQ(b.expiryTimes[0], kTrip);
 }
 
 TEST(CommandLossTimerTest, ResumeAfterRebootTripsAtTotalElapsedTime) {
@@ -73,18 +79,18 @@ TEST(CommandLossTimerTest, ResumeAfterRebootTripsAtTotalElapsedTime) {
     b.boot();
     b.run(kThreeDays);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    EXPECT_EQ(b.expiryTimes[0], kThreeDays);
+    EXPECT_EQ(b.expiryTimes[0], kTrip - kPeriod);
 }
 
-TEST(CommandLossTimerTest, RebootMidPeriodLosesAtMostOnePersistPeriod) {
+TEST(CommandLossTimerTest, RebootMidPeriodErrsByAtMostOnePersistPeriod) {
     Board b;
     b.boot();
     b.run(36 * 60 * 60 + 59);  // 59 s of progress not yet persisted
     b.boot();
     b.run(kThreeDays);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    EXPECT_GT(b.expiryTimes[0], kThreeDays);
-    EXPECT_LE(b.expiryTimes[0], kThreeDays + kPeriod);
+    EXPECT_GE(b.expiryTimes[0], kTrip - kPeriod);
+    EXPECT_LT(b.expiryTimes[0], kTrip);
 }
 
 TEST(CommandLossTimerTest, RebootLoopStillTrips) {
@@ -96,8 +102,19 @@ TEST(CommandLossTimerTest, RebootLoopStillTrips) {
         b.boot();
     }
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    // Each 600 s boot keeps 540 s: progress up to the last 60 s persist survives
-    EXPECT_LE(b.expiryTimes[0], static_cast<std::uint64_t>(kThreeDays) * 600 / 540 + 600);
+    EXPECT_LE(b.expiryTimes[0], static_cast<std::uint64_t>(kThreeDays));
+}
+
+TEST(CommandLossTimerTest, SubPeriodRebootLoopStillTrips) {
+    // Reboot every 30 s, so no boot ever reaches a periodic write.
+    Board b;
+    b.boot();
+    while (b.expiryTimes.empty() && b.uptime < 2ull * kThreeDays) {
+        b.run(30);
+        b.boot();
+    }
+    ASSERT_EQ(b.expiryTimes.size(), 1u);
+    EXPECT_LE(b.expiryTimes[0], static_cast<std::uint64_t>(kThreeDays));
 }
 
 TEST(CommandLossTimerTest, ResetPersistsZeroOnNextTickNotFromThePacket) {
@@ -123,20 +140,20 @@ TEST(CommandLossTimerTest, ResetPersistsZeroOnNextTickNotFromThePacket) {
     EXPECT_EQ(b.writeTimes.size(), writesBefore + 1);
 }
 
-TEST(CommandLossTimerTest, PacketBeforeFirstPersistCostsNoWrite) {
+TEST(CommandLossTimerTest, BootWritesOnce) {
     Board b;
     b.boot();
-    b.run(30);
-    b.timer.reset();
-    b.run(30);
-    EXPECT_TRUE(b.writeTimes.empty());
+    ASSERT_EQ(b.writeTimes.size(), 1u);
+    EXPECT_EQ(b.writeValues[0], kPeriod);
+    b.run(kPeriod - 1);
+    EXPECT_EQ(b.writeTimes.size(), 1u);
 }
 
 TEST(CommandLossTimerTest, SilenceWritesExactlyOncePerPeriod) {
     Board b;
     b.boot();
     b.run(24 * 60 * 60);
-    ASSERT_EQ(b.writeTimes.size(), 24u * 60u);
+    ASSERT_EQ(b.writeTimes.size(), 1u + 24u * 60u) << "boot write plus one per period";
     for (std::size_t i = 1; i < b.writeTimes.size(); i++) {
         ASSERT_EQ(b.writeTimes[i] - b.writeTimes[i - 1], kPeriod);
     }
@@ -164,10 +181,10 @@ TEST(CommandLossTimerTest, FrequentPacketsDoNotRaiseTheWriteRate) {
     }
 }
 
-TEST(CommandLossTimerTest, MissingFileStartsAtZero) {
+TEST(CommandLossTimerTest, MissingFileStartsAtOnePeriod) {
     Board b;
     b.boot();
-    EXPECT_EQ(b.timer.elapsed(), 0u);
+    EXPECT_EQ(b.timer.elapsed(), kPeriod);
 }
 
 TEST(CommandLossTimerTest, ShortOrCorruptRecordIsRejected) {
@@ -197,17 +214,17 @@ TEST(CommandLossTimerTest, ShortOrCorruptRecordIsRejected) {
     EXPECT_FALSE(CommandLossTimer::decode(zeroed, sizeof(zeroed), value));
 }
 
-TEST(CommandLossTimerTest, CorruptFileOnBootStartsAtZero) {
+TEST(CommandLossTimerTest, CorruptFileOnBootStartsAtOnePeriod) {
     Board b;
     b.boot();
     b.run(kThreeDays - 120);
     ASSERT_EQ(b.file.size(), sizeof(std::uint8_t[CommandLossTimer::RECORD_SIZE]));
     b.file[2] ^= 0x01;
     b.boot();
-    EXPECT_EQ(b.timer.elapsed(), 0u);
+    EXPECT_EQ(b.timer.elapsed(), kPeriod);
     b.run(kThreeDays);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    EXPECT_EQ(b.expiryTimes[0], (kThreeDays - 120) + kThreeDays);
+    EXPECT_EQ(b.expiryTimes[0], (kThreeDays - 120) + kTrip);
 }
 
 TEST(CommandLossTimerTest, ExpiryLatchesUntilAuthenticatedPacket) {
@@ -216,23 +233,23 @@ TEST(CommandLossTimerTest, ExpiryLatchesUntilAuthenticatedPacket) {
     b.boot();
     b.run(3000);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
-    EXPECT_EQ(b.expiryTimes[0], 300u);
+    EXPECT_EQ(b.expiryTimes[0], 300u - kPeriod);
 
     b.timer.reset();
     b.run(300);
     ASSERT_EQ(b.expiryTimes.size(), 2u);
 }
 
-TEST(CommandLossTimerTest, RebootAfterExpiryWaitsAFullLimitAgain) {
+TEST(CommandLossTimerTest, RebootAfterExpiryWaitsAFullLimitLessTheBootCredit) {
     // The expiry stops the watchdog to power cycle; the next boot must not trip immediately.
     Board b;
     b.limit = 600;
     b.boot();
-    b.run(600);
+    b.run(600 - kPeriod);
     ASSERT_EQ(b.expiryTimes.size(), 1u);
     b.run(30);  // watchdog power cycle lands
     b.boot();
-    b.run(599);
+    b.run(600 - kPeriod - 1);
     EXPECT_EQ(b.expiryTimes.size(), 1u);
     b.run(1);
     EXPECT_EQ(b.expiryTimes.size(), 2u);

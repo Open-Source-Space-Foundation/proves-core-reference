@@ -9,10 +9,12 @@
 
 namespace Components {
 
-void CommandLossTimer::resume(std::uint32_t storedSeconds) {
-    m_elapsed = storedSeconds;
-    m_persisted = storedSeconds;
+std::uint32_t CommandLossTimer::resume(std::uint32_t storedSeconds) {
+    const std::uint32_t headroom = std::numeric_limits<std::uint32_t>::max() - storedSeconds;
+    m_elapsed = storedSeconds + (headroom < PERSIST_PERIOD_S ? headroom : PERSIST_PERIOD_S);
+    m_persisted = m_elapsed;
     m_resetPending = false;
+    return m_elapsed;
 }
 
 void CommandLossTimer::reset() {
