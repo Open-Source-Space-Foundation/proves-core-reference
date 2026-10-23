@@ -34,6 +34,10 @@ void ComDelay ::parameterUpdated(FwPrmIdType id) {
     }
 }
 
+void ComDelay ::parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) {
+    // Intentionally empty: parameters loaded at startup are not announced (pre-fpp-3.4 behaviour)
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
