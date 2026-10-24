@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   # Classifies the change so the build/test jobs can skip documentation-only
-  # PRs. Lint and docs always run. Pushes to main always run everything.
+  # PRs. Docs always runs; lint lives in lint.yaml. Pushes to main always run everything.
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -52,15 +52,6 @@ jobs:
           else
             echo "docs-only=true" >> "$GITHUB_OUTPUT"
           fi
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Lint
-        run: |
-          make fmt
 
   docs:
     runs-on: ubuntu-latest
