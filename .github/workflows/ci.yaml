@@ -11,11 +11,10 @@ on:
 permissions:
   contents: read
 
-# A new push to a PR cancels that PR's still-running jobs. Pushes to main get a
-# unique group per commit, so main runs are never cancelled.
+# A new push to a PR, or to main, cancels that ref's still-running jobs.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
