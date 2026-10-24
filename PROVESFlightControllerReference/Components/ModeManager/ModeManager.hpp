@@ -17,6 +17,10 @@
 namespace Components {
 
 class ModeManager : public ModeManagerComponentBase {
+    //! Grant the unit-test harness access to STATE_FILE_PATH and the
+    //! PersistentState layout for seeding/inspecting state files
+    friend class ModeManagerTester;
+
   public:
     // ----------------------------------------------------------------------
     // Component construction and destruction
@@ -180,7 +184,14 @@ class ModeManager : public ModeManagerComponentBase {
     // Constants
     // ----------------------------------------------------------------------
 
+#ifdef BUILD_UT
+    // Unit tests run on the host, where "/" may not be writable; a relative
+    // path lands in the working directory. A compile-time switch rather than
+    // a settable member keeps the flight binary unchanged.
+    static constexpr const char* STATE_FILE_PATH = "ModeManagerTester_state.bin";  //!< State file path
+#else
     static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
+#endif
 };
 
 }  // namespace Components
