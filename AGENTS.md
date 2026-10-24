@@ -312,22 +312,29 @@ make pre-commit-install # Install pre-commit hooks
 make minimize-uv-cache # Minimize UV cache (CI optimization)
 ```
 
-### CI/CD Pipeline (`.github/workflows/ci.yaml`)
+### CI/CD Pipeline (`.github/workflows/`)
 
-**Jobs**:
+Each workflow is standalone and starts on every PR and push to `main`, so
+jobs spread across the available runners in parallel.
 
-1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Docs**: Runs `make docs-deps`, `mkdocs build --strict`, and `make docs-test`
-3. **Build**: Full build with caching
-   - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
-   - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
+| Workflow | Required check | Notes |
+| --- | --- | --- |
+| `lint.yaml` | `lint` | `make fmt` (pre-commit); always runs |
+| `docs.yaml` | `docs` | strict MkDocs build and hook tests; always runs |
+| `unit-test.yaml` | `unit-test` | `make test-unit` |
+| `integration-uart.yaml` | `integration-uart` | builds, flashes, UART tests, YAMCS round-trip (hardware) |
+| `integration-radio.yaml` | `integration-radio` | builds, flashes, LoRa radio tests (hardware) |
+| `yamcs-build.yaml` | | builds, then checks the YAMCS server boots with the MDB |
+
+- `build.yaml` is a reusable workflow (`workflow_call`) that the integration
+  workflows call, so each run has its own firmware artifacts.
+- On PRs that only change markdown or `docs/`/`docs-site/` files, everything
+  except `lint` and `docs` is skipped (the `docs-only` action decides).
 
 **Critical for CI Success**:
 
 - Always run `make fmt` before pushing
 - Ensure code builds with `make build` locally
-- Integration tests are NOT run in CI (require hardware)
 
 ## Common Issues & Workarounds
 

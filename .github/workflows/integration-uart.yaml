@@ -1,19 +1,50 @@
 name: integration-uart
 
 # UART integration and YAMCS round-trip on the integration hardware.
-# Called from ci.yaml (not run on its own) so it can download the artifacts
-# the build job uploaded in the same workflow run.
+# Standalone pipeline: it builds its own firmware (build.yaml) so it can run on
+# any free machine in parallel with the other workflows. The `integration-uart` job
+# is the required status check.
 on:
-  workflow_call:
-    secrets:
-      AUTH_KEY:
-        required: true
+  pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: integration-uart-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs-only: ${{ steps.docs-only.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions
+
+      - id: docs-only
+        uses: ./.github/actions/docs-only
+        with:
+          github-token: ${{ github.token }}
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+
   integration-uart:
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on:
       - integration
     timeout-minutes: 30

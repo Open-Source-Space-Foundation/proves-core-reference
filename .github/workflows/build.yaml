@@ -1,7 +1,7 @@
 name: build
 
-# Called from ci.yaml (not run on its own) so the artifacts it uploads belong
-# to the same workflow run as the integration jobs that download them.
+# Called by the integration workflows (not run on its own) so the artifacts it
+# uploads belong to the same workflow run as the job that downloads them.
 on:
   workflow_call:
     secrets:

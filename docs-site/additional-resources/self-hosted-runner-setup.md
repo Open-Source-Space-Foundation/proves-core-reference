@@ -29,7 +29,7 @@ GitHub Actions is a CI/CD platform that allows us to automate our software devel
 
 **Key concepts:**
 
-- **Workflow**: A automated process defined in a YAML file (like `.github/workflows/ci.yaml`)
+- **Workflow**: A automated process defined in a YAML file (like `.github/workflows/lint.yaml`)
 - **Job**: A set of steps that run on the same machine (like `build`, `lint`, `integration`)
 - **Step**: An individual task within a job (like "checkout code" or "run tests")
 - **Runner**: The machine that executes the workflow (GitHub-hosted or self-hosted)

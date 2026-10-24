@@ -1,7 +1,7 @@
 name: lint
 
-# Kept out of ci.yaml so it runs on every PR and push to main, including
-# docs-only changes that ci.yaml skips. The job name `lint` is a required
+# Runs on every PR and push to main, including docs-only changes that the
+# build and test workflows skip. The job name `lint` is a required
 # status check; do not rename it.
 on:
   pull_request:

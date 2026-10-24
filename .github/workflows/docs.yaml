@@ -1,7 +1,7 @@
 name: docs
 
-# Own workflow so it runs on every PR and push to main, including the
-# docs-only changes that ci.yaml skips.
+# Runs on every PR and push to main, including docs-only changes that the
+# build and test workflows skip.
 on:
   pull_request:
   push:
