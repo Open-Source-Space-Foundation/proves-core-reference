@@ -115,6 +115,14 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 	mv ./build-artifacts/zephyr.signed.hex bootable.signed.hex
 	@if [ "$(BUILD_YAMCS_MDB)" = "1" ]; then $(MAKE) yamcs-mdb; else echo "Skipping yamcs-mdb (BUILD_YAMCS_MDB=$(BUILD_YAMCS_MDB))"; fi
 
+.PHONY: sim-setup
+sim-setup: submodules fprime-venv zephyr-workspace zephyr-export zephyr-python-deps generate-auth-key keys/proves.pem framer-plugin ## Set up the native_sim SITL build (no Zephyr SDK needed)
+
+.PHONY: sim-build
+sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
+	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util generate --force --build-cache build-fprime-native_sim -DBOARD=native_sim
+	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util build -j$$(nproc) --build-cache build-fprime-native_sim
+
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
 check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'

@@ -1,0 +1,5 @@
+description: Null LoRa radio for native_sim. Sends are dropped and nothing is received.
+
+compatible: "proves,lora-sim"
+
+include: base.yaml
