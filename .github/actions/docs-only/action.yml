@@ -25,6 +25,13 @@ runs:
           echo "docs-only=false" >> "$GITHUB_OUTPUT"
           exit 0
         fi
+        # The files endpoint lists at most 3000 files, so a larger PR could hide
+        # a code file behind 3000 docs paths. Fail closed: run everything.
+        changed=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.changed_files')
+        if [ "$changed" -ge 3000 ]; then
+          echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         # Include previous_filename so renaming code into a docs path still
         # counts as touching code. `shell: bash` runs with -eo pipefail, so a
         # failed API call fails the job rather than guessing.
