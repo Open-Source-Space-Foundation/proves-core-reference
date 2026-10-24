@@ -314,20 +314,34 @@ make minimize-uv-cache # Minimize UV cache (CI optimization)
 
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
-**Jobs**:
+One workflow runs on every PR and push to `main`. Jobs without a `needs:` link
+run in parallel, each on its own runner. The firmware is built once, and every
+downstream job downloads the same artifacts.
 
-1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Docs**: Runs `make docs-deps`, `mkdocs build --strict`, and `make docs-test`
-3. **Build**: Full build with caching
-   - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
-   - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
+| Job | Required check | Needs | Notes |
+| --- | --- | --- | --- |
+| `changes` | | | decides docs-only (the `docs-only` action) |
+| `lint` | `lint` | | `make fmt` (pre-commit); always runs |
+| `docs` | | | strict MkDocs build and hook tests; always runs |
+| `unit-test` | `unit-test` | `changes` | `make test-unit` |
+| `build` | `build` | `changes` | builds firmware on `deathstar`, uploads artifacts |
+| `integration-uart` | `integration-uart` | `build` | flashes, UART tests, YAMCS round-trip (`integration` runner) |
+| `integration-radio` | `integration-radio` | `build` | flashes, LoRa radio tests (`integration` runner) |
+| `yamcs-build` | | `build` | checks the YAMCS server boots with the MDB |
+
+- `integration-uart` and `integration-radio` start together once `build`
+  finishes and land on separate `integration` machines when two are free.
+- On PRs that only change markdown or `docs/`/`docs-site/` files, everything
+  except `lint` and `docs` is skipped.
+- A job skipped because a job it needs failed counts as passing for a required
+  check. `build` is a required check, so a failed build still blocks the merge.
+  `build` and the hardware jobs use `!cancelled()` so a failed `changes` job
+  runs them as for a non-docs PR instead of skipping them.
 
 **Critical for CI Success**:
 
 - Always run `make fmt` before pushing
 - Ensure code builds with `make build` locally
-- Integration tests are NOT run in CI (require hardware)
 
 ## Common Issues & Workarounds
 

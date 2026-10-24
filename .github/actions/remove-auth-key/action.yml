@@ -1,0 +1,13 @@
+name: Remove Authentication Key
+description: "Delete the generated authentication key header from the workspace. Use with if: always()."
+
+runs:
+  using: composite
+  steps:
+    # Self-hosted runners keep the workspace between runs, so the generated
+    # header would otherwise leave the signing key on disk for whatever job
+    # (or branch) lands on this runner next.
+    - name: Remove authentication key
+      shell: bash
+      run: |
+        rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
