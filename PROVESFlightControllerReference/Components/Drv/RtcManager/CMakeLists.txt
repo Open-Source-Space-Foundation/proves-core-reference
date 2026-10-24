@@ -16,7 +16,7 @@
 
 # RtcManager.cpp calls Zephyr APIs; on non-Zephyr platforms register autocode
 # only for it, so this module's ports/types stay resolvable to portable
-# consumers (see docs/adr/0002). RtcHelper.cpp is portable (no Zephyr
+# consumers (see docs/adr/0002). TimeDiscipline.cpp is portable (no Zephyr
 # includes) and builds on every platform.
 set(IMPL_SOURCES)
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
@@ -27,8 +27,10 @@ register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/RtcHelper.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/TimeDiscipline.cpp"
         ${IMPL_SOURCES}
+#   DEPENDS
+#       MyPackage_MyOtherModule
 )
 
 ### Unit Tests ###

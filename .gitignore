@@ -4,6 +4,7 @@ cmake-build-*
 build-artifacts/
 build-gtest/
 build-fprime-*
+build-ota-test/
 *-template
 *.template.cpp
 *.template.hpp
@@ -18,6 +19,7 @@ lib/zephyr-workspace/*
 /venv/
 /keys/
 /fprime-venv/
+/docs-venv/
 /.idea/
 /.vscode/*
 !/.vscode/launch.json

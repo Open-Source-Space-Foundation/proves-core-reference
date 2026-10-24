@@ -56,11 +56,11 @@ target_include_directories(security_deframer_authenticator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
 
-# RtcManager RtcHelper
-add_library(rtc_manager_rtc_helper STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.cpp
+# RtcManager TimeDiscipline
+add_library(rtc_manager_time_discipline STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/Drv/RtcManager/TimeDiscipline.cpp
 )
-target_include_directories(rtc_manager_rtc_helper PUBLIC
+target_include_directories(rtc_manager_time_discipline PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
@@ -69,6 +69,14 @@ add_library(proves_router_bypasser STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/ProvesRouter/Bypasser.cpp
 )
 target_include_directories(proves_router_bypasser PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
+# PowerMonitor PowerIntegrator
+add_library(power_monitor_power_integrator STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PowerMonitor/PowerIntegrator.cpp
+)
+target_include_directories(power_monitor_power_integrator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
@@ -103,8 +111,9 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_parser
         security_deframer_validator
         security_deframer_authenticator
-        rtc_manager_rtc_helper
+        rtc_manager_time_discipline
         proves_router_bypasser
+        power_monitor_power_integrator
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})

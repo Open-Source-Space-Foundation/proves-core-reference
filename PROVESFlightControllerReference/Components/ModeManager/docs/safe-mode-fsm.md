@@ -1,3 +1,7 @@
+---
+title: Safe Mode FSM
+---
+
 # ModeManager Safe Mode Finite State Machine
 
 This document describes the finite state machine (FSM) for the ModeManager component's Safe Mode transitions. The ModeManager controls system operational modes and orchestrates transitions between NORMAL and SAFE_MODE based on various triggers.
@@ -241,6 +245,5 @@ The Safe Mode FSM is validated through integration tests in `safe_mode_test.py`:
 
 ## References
 
-- [ModeManager Component Documentation](../../../docs-site/components/ModeManager.md)
 - [ModeManager Software Design Document](./sdd.md)
-- [Safe Mode Integration Tests](../../../test/int/safe_mode_test.py)
+- [Safe Mode Integration Tests](https://github.com/Open-Source-Space-Foundation/proves-core-reference/blob/main/PROVESFlightControllerReference/test/int/mode_manager_test.py)

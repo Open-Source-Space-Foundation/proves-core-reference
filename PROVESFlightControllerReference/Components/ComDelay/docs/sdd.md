@@ -1,3 +1,8 @@
+---
+title: Com Delay
+category: Communication
+---
+
 # Components::ComDelay
 
 `Components::ComDelay` is a parameterized rate group schedule divider. On the initial run invocation and on each multiple of the divider thereafter any received com status is sent out. This effectively delays the com status until the next (divided) run call.

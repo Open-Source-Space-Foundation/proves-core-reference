@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Switch the integration bench supply: psu <on|off|cycle>.
+# The runner's ~/actions-runner/.env selects the supply (see
+# docs-site/additional-resources/self-hosted-runner-setup.md):
+#   PSU_TYPE     korad (default) | dps150
+#   PSU_PORT     serial port, default /dev/ttyPWR
+#   PSU_CMD      control command, default per PSU_TYPE
+#   PSU_LEASE_S  dps150 only: seconds the output may stay on without renewal
+set -euo pipefail
+
+die() {
+    echo "psu: $*" >&2
+    exit 2
+}
+
+PSU_TYPE=${PSU_TYPE:-korad}
+PSU_PORT=${PSU_PORT:-/dev/ttyPWR}
+
+case "$PSU_TYPE" in
+    korad) default_cmd="$HOME/korad_control/.venv/bin/python $HOME/korad_control/korad_control.py" ;;
+    dps150) default_cmd="dps150" ;;
+    *) die "unknown PSU_TYPE '$PSU_TYPE' (expected korad or dps150)" ;;
+esac
+read -ra cmd <<<"${PSU_CMD:-$default_cmd}"
+# .env values reach the job unexpanded, so honour a leading ~ here.
+cmd=("${cmd[@]/#\~/$HOME}")
+
+action=${1:-}
+case "$action" in
+    on | off | cycle) ;;
+    *) die "usage: psu <on|off|cycle>" ;;
+esac
+
+on_args=()
+if [ "$PSU_TYPE" = dps150 ] && [ "$action" != off ]; then
+    [ -n "${PSU_LEASE_S:-}" ] || die "PSU_LEASE_S must be set for PSU_TYPE=dps150"
+    on_args=(--lease "$PSU_LEASE_S")
+fi
+
+output() {
+    if [ "$1" = 1 ]; then
+        "${cmd[@]}" -d "$PSU_PORT" --output 1 ${on_args[@]+"${on_args[@]}"}
+    else
+        "${cmd[@]}" -d "$PSU_PORT" --output 0
+    fi
+}
+
+case "$action" in
+    on) output 1 ;;
+    off) output 0 ;;
+    cycle)
+        output 0
+        sleep 3
+        output 1
+        sleep 3
+        ;;
+esac

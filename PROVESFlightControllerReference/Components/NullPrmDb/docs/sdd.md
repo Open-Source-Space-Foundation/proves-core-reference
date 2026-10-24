@@ -1,3 +1,8 @@
+---
+title: Null Prm Db
+category: Storage
+---
+
 # Components::NullPrmDb
 
 Null parameter database.  Returns error status on any call.

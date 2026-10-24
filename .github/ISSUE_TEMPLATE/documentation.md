@@ -14,8 +14,7 @@ Thanks for helping improve our documentation! Please provide details about what 
 <!-- - README.md -->
 <!-- - Setup/Installation Guide (docs-site/getting-started/) -->
 <!-- - Board-Specific Documentation (docs-site/additional-resources/) -->
-<!-- - Uploading Firmware Guide (docs-site/uploading/) -->
-<!-- - Component Documentation (SDDs in docs-site/components/) -->
+<!-- - Component Documentation (SDDs in <Component>/docs/) -->
 <!-- - Build/Integration Guide -->
 <!-- - Testing Documentation -->
 <!-- - Code Comments -->

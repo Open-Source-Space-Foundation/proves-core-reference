@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/PowerMonitor.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/PowerMonitor.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/PowerIntegrator.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
