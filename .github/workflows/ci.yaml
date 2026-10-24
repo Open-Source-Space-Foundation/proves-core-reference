@@ -17,6 +17,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Classifies the change so the build/test jobs can skip documentation-only
+  # PRs. Lint and docs always run. Pushes to main always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      docs-only: ${{ steps.classify.outputs.docs-only }}
+    steps:
+      - name: Classify changed files
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Include previous_filename so renaming code into a docs path still
+          # counts as touching code. GitHub's default bash runs with -e, so a failed
+          # API call fails this job (and the PR check) rather than guessing.
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          if [ -z "$files" ]; then
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Docs-only = every path is markdown or lives under a docs/ or
+          # docs-site/ directory.
+          if printf '%s\n' "$files" | grep -qvE '(\.md$|^docs-site/|(^|/)docs/)'; then
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs-only=true" >> "$GITHUB_OUTPUT"
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +82,8 @@ jobs:
           make docs-test
 
   unit-test:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -70,6 +108,8 @@ jobs:
           make test-unit
 
   build:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: deathstar
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -102,7 +142,8 @@ jobs:
   integration-uart:
     runs-on:
       - integration
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -306,8 +347,8 @@ jobs:
   integration-radio:
     runs-on:
       - integration
-    needs:
-      - build
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -493,7 +534,8 @@ jobs:
 
   yamcs-build:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
