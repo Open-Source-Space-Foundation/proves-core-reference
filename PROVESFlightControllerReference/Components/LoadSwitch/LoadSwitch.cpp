@@ -6,8 +6,6 @@
 
 #include "PROVESFlightControllerReference/Components/LoadSwitch/LoadSwitch.hpp"
 
-#include <zephyr/drivers/gpio.h>
-
 namespace Components {
 
 // ----------------------------------------------------------------------

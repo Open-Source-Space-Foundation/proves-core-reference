@@ -43,6 +43,12 @@ runs:
       env:
         AUTH_KEY: ${{ inputs.auth-key }}
       run: |
+        # Fork PRs get no secrets, so the key arrives empty. Fail here rather
+        # than 30s later when the GDS rejects the empty key.
+        if [ -z "$AUTH_KEY" ]; then
+          echo "::error::auth-key is empty; secrets.AUTH_KEY is unavailable (fork PR?)"
+          exit 1
+        fi
         echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
     - name: Install Framer Plugin
