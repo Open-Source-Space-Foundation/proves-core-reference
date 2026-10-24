@@ -5,6 +5,7 @@ This module provides a functions and constants shared by
 integration tests for PROVES microcontroller hardware.
 """
 
+import os
 import random
 import time
 from collections.abc import Callable
@@ -53,16 +54,21 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     _radio_recover_fn = fn
 
 
-# Ground restarts this far past the board's last accepted number. The framer sends
-# its cached number before it reads the file, so its cache runs one frame behind the
-# file: 1 is the minimum that avoids a replay. 2 also covers a radio retry of
-# GET_SEQ_NUM whose late event reports the board's number one frame low.
-SEQUENCE_NUMBER_SYNC_MARGIN = 2
+# The framer plugin's file holds the next sequence number it sends, and the plugin
+# reads it on every frame (Framing/src/authenticate_plugin.py).
+SEQUENCE_NUMBER_FILE = "./Framing/src/sequence_number.bin"
 
 
-def ground_sequence_number_after_sync(board_seq: int) -> int:
-    """Return the number ground writes after a sync, wrapped to the U32 sequence field."""
-    return (board_seq + SEQUENCE_NUMBER_SYNC_MARGIN) % 2**32
+def write_next_sequence_number(board_seq: int) -> None:
+    """Make ground's next frame carry the number after the board's last accepted one.
+
+    Wrapped to the U32 sequence field. Written to a sibling file and renamed
+    over the original, so the framer never reads a truncated file.
+    """
+    temporary = f"{SEQUENCE_NUMBER_FILE}.tmp"
+    with open(temporary, "w", encoding="utf-8") as f:
+        f.write(str((board_seq + 1) % 2**32))
+    os.replace(temporary, SEQUENCE_NUMBER_FILE)
 
 
 def resync_sequence_number(
@@ -80,15 +86,14 @@ def resync_sequence_number(
     if evt is None:
         raise AssertionError(f"no {deframer}.SequenceNumberGet event within 5 seconds")
     board_seq = int(evt.args[0].val)
-    seq_file = "./Framing/src/sequence_number.bin"
     try:
-        with open(seq_file, "r", encoding="utf-8") as f:
-            ground_seq = int(f.read().strip() or 0)
+        with open(SEQUENCE_NUMBER_FILE, "r", encoding="utf-8") as f:
+            ground_next = int(f.read().strip() or 0)
     except (OSError, ValueError):
-        ground_seq = -1
-    if board_seq >= ground_seq:
-        with open(seq_file, "w", encoding="utf-8") as f:
-            f.write(str(ground_sequence_number_after_sync(board_seq)))
+        ground_next = -1
+    # Ground's next number is a replay unless it is past the board's last accepted.
+    if board_seq >= ground_next:
+        write_next_sequence_number(board_seq)
 
 
 def proves_send_and_assert_command(
