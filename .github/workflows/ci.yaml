@@ -1,5 +1,9 @@
 name: ci
 
+# One workflow so the firmware is built once and every job downloads the same
+# artifacts. Jobs without a `needs:` link run in parallel, each on its own
+# runner: `integration-uart` and `integration-radio` both wait only on `build`
+# and land on separate `integration` machines when two are free.
 on:
   pull_request:
   push:
@@ -17,6 +21,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Classifies the change so the build and test jobs can skip docs-only PRs.
+  # `lint` and `docs` always run; pushes to main always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs-only: ${{ steps.docs-only.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions
+
+      - id: docs-only
+        uses: ./.github/actions/docs-only
+        with:
+          github-token: ${{ github.token }}
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -45,18 +69,20 @@ jobs:
         run: |
           make docs-test
 
+  # `always()` so a failed `changes` runs the tests (empty output is not
+  # 'true') instead of skipping them, since a skipped required check passes.
   unit-test:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
-        if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
           make download-bin
 
       - name: Setup submodules
-        if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
 
@@ -70,6 +96,8 @@ jobs:
           make test-unit
 
   build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs-only != 'true' }}
     runs-on: deathstar
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -91,34 +119,22 @@ jobs:
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
-      # Self-hosted runners keep the workspace between runs, so the generated
-      # header would otherwise leave the signing key on disk for whatever job
-      # (or branch) lands on this runner next.
-      - name: Remove authentication key
+      - uses: ./.github/actions/remove-auth-key
         if: always()
-        run: |
-          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
   integration-uart:
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
-    needs: build
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
-        with:
-          name: artifacts
-          path: .
-
-      - name: Integration Setup
-        uses: ./.github/actions/integration-setup
+      - name: Prepare integration runner
+        uses: ./.github/actions/integration-prepare
         with:
           auth-key: ${{ secrets.AUTH_KEY }}
-
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
 
       - name: Bootstrap GDS
         uses: ./.github/actions/bootstrap-gds
@@ -295,44 +311,26 @@ jobs:
         run: |
           ./tools/ci/psu off
 
-      # Self-hosted runners keep the workspace between runs, so the generated
-      # header would otherwise leave the signing key on disk for whatever job
-      # (or branch) lands on this runner next.
-      - name: Remove authentication key
+      - uses: ./.github/actions/remove-auth-key
         if: always()
-        run: |
-          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
   integration-radio:
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
-    needs:
-      - build
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
-        with:
-          name: artifacts
-          path: .
-
-      - name: Integration Setup
-        uses: ./.github/actions/integration-setup
+      - name: Prepare integration runner
+        uses: ./.github/actions/integration-prepare
         with:
           auth-key: ${{ secrets.AUTH_KEY }}
           ci-spacecraft-id: "false"
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
-
 
       - name: Detect Zephyr UART TTY
-        run: |
-          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
-          # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
-          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+        uses: ./.github/actions/detect-board-tty
 
       - name: Bootstrap Sequence Number over UART
         run: |
@@ -363,10 +361,7 @@ jobs:
           ./tools/ci/psu cycle
 
       - name: Detect Zephyr UART TTY
-        run: |
-          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
-          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+        uses: ./.github/actions/detect-board-tty
 
       - name: Sync Sequence Number over UART
         run: |
@@ -483,19 +478,17 @@ jobs:
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
           ./tools/ci/psu off
 
-      # Self-hosted runners keep the workspace between runs, so the generated
-      # header would otherwise leave the signing key on disk for whatever job
-      # (or branch) lands on this runner next.
-      - name: Remove authentication key
+      - uses: ./.github/actions/remove-auth-key
         if: always()
-        run: |
-          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
   yamcs-build:
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
