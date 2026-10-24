@@ -64,11 +64,9 @@ jobs:
         run: |
           make test-unit
 
-  # Report-only until the SITL suite is stable. Uses no secrets: the build
-  # generates a throwaway authentication key.
+  # Uses no secrets: the build generates a throwaway authentication key.
   sitl:
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 30
     env:
       ZEPHYR_TOOLCHAIN_VARIANT: host
@@ -113,7 +111,9 @@ jobs:
         run: |
           sim/smoke.sh "$RUNNER_TEMP/sitl-smoke"
 
+      # Report-only until the SITL suite is stable. The build and the smoke run still gate the job.
       - name: SITL integration tests
+        continue-on-error: true
         run: |
           sim/run-sil.sh "$RUNNER_TEMP/sitl" 7200
           make test-integration PYTEST_ARGS="--bare-flight-controler-board -rA"
