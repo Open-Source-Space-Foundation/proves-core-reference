@@ -80,6 +80,14 @@ target_include_directories(power_monitor_power_integrator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# CameraHandler ImageProtocolParser
+add_library(camera_handler_image_protocol_parser STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/CameraHandler/ImageProtocolParser.cpp
+)
+target_include_directories(camera_handler_image_protocol_parser PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h)
 find_library(MBEDCRYPTO_LIB mbedcrypto)
@@ -114,6 +122,7 @@ foreach(test_src ${TEST_SOURCES})
         rtc_manager_time_discipline
         proves_router_bypasser
         power_monitor_power_integrator
+        camera_handler_image_protocol_parser
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
