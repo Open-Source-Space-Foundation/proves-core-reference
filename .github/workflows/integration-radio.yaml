@@ -1,0 +1,199 @@
+name: integration-radio
+
+# LoRa radio integration on the integration hardware.
+# Called from ci.yaml (not run on its own) so it can download the artifacts
+# the build job uploaded in the same workflow run.
+on:
+  workflow_call:
+    secrets:
+      AUTH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration-radio:
+    runs-on:
+      - integration
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Integration Setup
+        uses: ./.github/actions/integration-setup
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
+          ci-spacecraft-id: "false"
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+          # /dev/serial/by-id does not list this device on the integration runner.
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Bootstrap Sequence Number over UART
+        run: |
+          # DIVIDER_PRM_SET and lora.TRANSMIT both pass through the authentication
+          # router and require the GDS-side sequence number to match FSW. On a
+          # fresh boot the seq number is unsynced, so the LoRa bootstrap commands
+          # would silently fail auth and never enable the radio. Run the sync
+          # test over UART first to align the local sequence_number.bin used by
+          # the framer plugin, then the LoRa GDS that follows can authenticate.
+          # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
+          # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
+          ./tools/ci/kill-ci-processes.sh
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          sleep 5
+          # Sync against the LoRa deframer instance: the radio traffic that
+          # follows is validated by it, not by the UART instance this
+          # bootstrap link talks through.
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
+          make test-integration FILTER=format_filesystem
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Power-Cycle Satellite
+        run: |
+          ./tools/ci/kill-ci-processes.sh
+          ./tools/ci/psu cycle
+
+      - name: Detect Zephyr UART TTY
+        run: |
+          ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+
+      - name: Sync Sequence Number over UART
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-sync.log 2>&1 &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          sleep 5
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Detect LoRa Passthrough TTY
+        run: |
+          # Find the non-Zephyr USB device's CDC data interface (CircuitPython
+          # passthrough board, v5d hardware reused as ground-side LoRa receiver
+          # — not the v5e flight board). Heuristic: skip the Zephyr VID:PID and
+          # prefer interfaces whose iInterface descriptor contains "cdc2" or "data"
+          # (CircuitPython names the data CDC "CircuitPython CDC2 *"). Falls
+          # back to the last seen non-Zephyr CDC ACM tty when no name matches;
+          # the smoke test asserts binary traffic to catch a wrong pick.
+          PASSTHROUGH_TTY=""
+          FALLBACK_TTY=""
+          echo "=== USB CDC ACM candidates (non-Zephyr) ==="
+          for d in /sys/bus/usb/devices/*/idVendor; do
+            v=$(cat "$d" 2>/dev/null)
+            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
+            [ "$v" = "0028" ] && [ "$p" = "000f" ] && continue
+            path=${d%/idVendor}
+            prod=$(cat "$path/product" 2>/dev/null || echo "?")
+            for ifn in "$path"/*:*; do
+              [ "$(cat "$ifn/bInterfaceClass" 2>/dev/null)" = "02" ] || continue
+              iname=$(cat "$ifn/interface" 2>/dev/null || echo "")
+              tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
+              [ -z "$tty" ] && continue
+              echo "  $v:$p [$prod] $(basename "$ifn") '$iname' /dev/$tty"
+              case "$(echo "$iname" | tr '[:upper:]' '[:lower:]')" in
+                *cdc2*|*data*) PASSTHROUGH_TTY="/dev/$tty";;
+              esac
+              FALLBACK_TTY="/dev/$tty"
+            done
+          done
+          [ -z "$PASSTHROUGH_TTY" ] && PASSTHROUGH_TTY="$FALLBACK_TTY"
+          if [ -z "$PASSTHROUGH_TTY" ]; then
+            echo "ERROR: LoRa passthrough tty not found; cannot run radio integration tests"
+            lsusb || true
+            exit 1
+          fi
+          echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
+          echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
+
+      - name: Kill CI processes
+        run: |
+          ./tools/ci/kill-ci-processes.sh
+
+      - name: Start GDS on LoRa Passthrough
+        run: |
+          # Capture GDS's own stdout/stderr for the whole session (not just what
+          # pytest captures on failure) so a crash mid-run has a full record of
+          # every EVR/telemetry line GDS saw, uploaded as the gds-console-log artifact.
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds-rf.log 2>&1 &
+          GDS_RF_PID=$!
+          echo $GDS_RF_PID > server-rf.pid
+          for i in $(seq 1 15); do
+            sleep 1
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds-rf.log for details."; exit 1; }
+          done
+
+      - name: Sync Sequence Number
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_sync.csv
+        run: |
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--with-radio
+
+      - name: Run Radio Integration Tests
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_radio.csv
+        run: |
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+
+      - name: Format Filesystem
+        if: always()
+        env:
+          TLM_SAMPLE_LOG: tlm_sample_format.csv
+        run: |
+          make test-integration FILTER=format_filesystem PYTEST_ARGS=--with-radio
+
+      - name: Upload telemetry sample logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: radio-tlm-samples
+          path: tlm_sample_*.csv
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gds-log-radio
+          path: |
+            gds-bootstrap.log
+            gds-sync.log
+            gds-rf.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS & Power Off Satellite
+        if: always()
+        run: |
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
+          ./tools/ci/psu off
+
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h

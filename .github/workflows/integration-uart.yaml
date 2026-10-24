@@ -1,0 +1,217 @@
+name: integration-uart
+
+# UART integration and YAMCS round-trip on the integration hardware.
+# Called from ci.yaml (not run on its own) so it can download the artifacts
+# the build job uploaded in the same workflow run.
+on:
+  workflow_call:
+    secrets:
+      AUTH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration-uart:
+    runs-on:
+      - integration
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: artifacts
+          path: .
+
+      - name: Integration Setup
+        uses: ./.github/actions/integration-setup
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
+
+      - name: Flash Firmware
+        uses: ./.github/actions/flash-firmware
+
+      - name: Bootstrap GDS
+        uses: ./.github/actions/bootstrap-gds
+
+      - name: Run UART Integration Tests
+        run: |
+          make test-integration
+
+      - name: Format Filesystem
+        if: always()
+        run: |
+          make test-integration FILTER=format_filesystem
+
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gds-log-uart
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Kill GDS
+        if: always()
+        run: |
+          echo "=== python procs BEFORE kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
+          [ -f server.pid ] && kill $(cat server.pid) || true
+          # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
+          ./tools/ci/kill-ci-processes.sh
+          fuser -k /dev/ttyBOARD 2>/dev/null || true
+          sleep 2
+          echo "=== python procs AFTER kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
+          echo "Holders of /dev/ttyBOARD after kill (should be empty):"
+          lsof /dev/ttyBOARD || true
+
+      - name: Power-Cycle Satellite Before YAMCS
+        if: always()
+        run: |
+          # The GDS phase can leave the board's uplink deframer holding a
+          # partial TC frame (killing the GDS mid-write leaves the
+          # FrameAccumulator waiting for bytes that never arrive, and the
+          # detector consumes subsequent YAMCS commands silently). A power
+          # cycle clears all board-side latent state so the YAMCS phase
+          # starts from a known-good boot, mirroring manual bench testing
+          # where YAMCS-first-after-boot always round-trips.
+          ./tools/ci/psu off
+          sleep 3
+          ./tools/ci/psu on
+          # Wait for the CDC ACM device to re-enumerate as /dev/ttyBOARD.
+          for i in $(seq 1 30); do
+            [ -e /dev/ttyBOARD ] && { echo "/dev/ttyBOARD back after ${i}s"; break; }
+            sleep 1
+          done
+          [ -e /dev/ttyBOARD ] || { echo "ERROR: /dev/ttyBOARD did not re-enumerate"; exit 1; }
+          # Give the FSW a moment to finish booting before the adapter opens the port.
+          sleep 5
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Set up Java 17 for YAMCS
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Start YAMCS Stack
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          # SPACECRAFT_ID=67 matches the override applied by `make
+          # make-ci-spacecraft-id` in the build job so the adapter syncs on
+          # the same TM frame header the FSW is emitting.
+          #
+          # setsid puts `make yamcs` in its own process group so teardown
+          # can signal the whole group (JVM, fprime-yamcs-events,
+          # proves_adapter.py) -- killing the wrapper PID alone would orphan
+          # the long-lived children and leak /dev/ttyBOARD between jobs.
+          setsid bash -c 'PYTHONUNBUFFERED=1 exec make yamcs UART_DEVICE=/dev/ttyBOARD SPACECRAFT_ID=67' > yamcs.log 2>&1 &
+          pgid=$!
+          echo "$pgid" > yamcs.pid
+
+      - name: Wait for YAMCS HTTP API
+        run: |
+          for i in $(seq 1 180); do
+            if curl -fsS http://localhost:8090/api/instances >/dev/null 2>&1; then
+              echo "YAMCS up after ${i}s"
+              break
+            fi
+            sleep 1
+            if [ $i -eq 180 ]; then
+              echo "ERROR: YAMCS did not respond on :8090 within 180s"
+              tail -200 yamcs.log || true
+              exit 1
+            fi
+          done
+
+      - name: Wait for fprime-yamcs-events bridge subscribe
+        run: |
+          # Fuzzy match -- readiness signal is emitted by fprime-yamcs-events
+          # at startup; pattern is loose so capitalization / punctuation
+          # tweaks upstream don't silently fail this gate.
+          for i in $(seq 1 60); do
+            if grep -iqE 'subscrib.*tm_realtime' yamcs.log 2>/dev/null; then
+              echo "Events bridge subscribed after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: fprime-yamcs-events bridge did not subscribe within 60s"
+          tail -200 yamcs.log || true
+          exit 1
+
+      - name: Run YAMCS Round-Trip Test
+        run: |
+          make test-yamcs
+
+      - name: Dump YAMCS log on failure
+        if: failure()
+        run: |
+          echo "===== yamcs.log (tail 1500) ====="
+          tail -1500 yamcs.log || true
+          echo "===== lsof /dev/ttyBOARD ====="
+          lsof /dev/ttyBOARD || true
+
+      - name: Dump YAMCS archive diagnostics on failure
+        if: failure()
+        run: |
+          # Discriminate uplink-dead vs downlink/decode-dead:
+          # if CommandsDispatched grew during the test, the board received and
+          # executed the NO_OPs and the fault is in the TM/event path; if it
+          # never updated, the uplink died before the command dispatcher.
+          echo "===== packets received by YAMCS (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/packets?limit=50&order=desc" || true
+          echo ""
+          echo "===== CommandsDispatched parameter samples ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/parameters/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CommandsDispatched/samples" || true
+          echo ""
+          echo "===== data link stats ====="
+          curl -fsS "http://localhost:8090/api/links/fprime-project" || true
+          echo ""
+          echo "===== YAMCS events (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/events?limit=50&order=desc" || true
+
+      - name: Stop YAMCS Stack
+        if: always()
+        run: |
+          # yamcs.pid contains the process-group leader PID from `setsid`,
+          # so kill the whole group to take JVM/events/adapter children with it.
+          pgid=$(cat yamcs.pid 2>/dev/null || true)
+          if [ -n "$pgid" ]; then
+            kill -TERM -- "-$pgid" 2>/dev/null || true
+            sleep 2
+            kill -KILL -- "-$pgid" 2>/dev/null || true
+          fi
+          make yamcs-stop || true
+
+      - name: Upload YAMCS log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: yamcs-log
+          path: yamcs.log
+          retention-days: 7
+
+      - name: Power Off Satellite
+        if: always()
+        run: |
+          ./tools/ci/psu off
+
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
