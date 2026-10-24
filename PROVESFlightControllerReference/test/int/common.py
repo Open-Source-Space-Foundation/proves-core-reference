@@ -53,10 +53,16 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     _radio_recover_fn = fn
 
 
-# Ground restarts this far past the board's last accepted number. Well inside the
-# deframer's SEQ_NUM_WINDOW (50000), and large enough that a framer still holding a
-# stale cached number cannot replay one the board already accepted.
-SEQUENCE_NUMBER_SYNC_MARGIN = 100
+# Ground restarts this far past the board's last accepted number. The framer sends
+# its cached number before it reads the file, so its cache runs one frame behind the
+# file: 1 is the minimum that avoids a replay. 2 also covers a radio retry of
+# GET_SEQ_NUM whose late event reports the board's number one frame low.
+SEQUENCE_NUMBER_SYNC_MARGIN = 2
+
+
+def ground_sequence_number_after_sync(board_seq: int) -> int:
+    """Return the number ground writes after a sync, wrapped to the U32 sequence field."""
+    return (board_seq + SEQUENCE_NUMBER_SYNC_MARGIN) % 2**32
 
 
 def resync_sequence_number(
@@ -82,7 +88,7 @@ def resync_sequence_number(
         ground_seq = -1
     if board_seq >= ground_seq:
         with open(seq_file, "w", encoding="utf-8") as f:
-            f.write(str(board_seq + SEQUENCE_NUMBER_SYNC_MARGIN))
+            f.write(str(ground_sequence_number_after_sync(board_seq)))
 
 
 def proves_send_and_assert_command(
