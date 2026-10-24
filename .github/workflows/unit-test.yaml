@@ -34,20 +34,20 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
+  # `always()` so a failed `changes` runs the tests (empty output is not
+  # 'true') instead of skipping them, since a skipped required check passes.
   unit-test:
     needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
+    if: always() && needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
-        if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
           make download-bin
 
       - name: Setup submodules
-        if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
 

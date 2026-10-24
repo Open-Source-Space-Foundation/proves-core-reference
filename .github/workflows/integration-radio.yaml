@@ -2,8 +2,8 @@ name: integration-radio
 
 # LoRa radio integration on the integration hardware.
 # Standalone pipeline: it builds its own firmware (build.yaml) so it can run on
-# any free machine in parallel with the other workflows. The `integration-radio` job
-# is the required status check.
+# any free machine in parallel with the other workflows. The `integration-radio`
+# gate job is the required status check.
 on:
   pull_request:
   push:
@@ -40,9 +40,24 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs-only != 'true'
     uses: ./.github/workflows/build.yaml
-    secrets: inherit
+    secrets:
+      AUTH_KEY: ${{ secrets.AUTH_KEY }}
 
+  # Required status check. A job skipped because a job it needs failed still
+  # counts as passing, so the hardware job can't be the required check on its
+  # own: a failed `changes` or `build` would let the PR merge. This gate always
+  # runs and fails if anything it needs failed or was cancelled. On docs-only
+  # PRs everything after `changes` is skipped and the gate passes.
   integration-radio:
+    if: always()
+    needs: [changes, build, radio-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a needed job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+
+  radio-test:
     needs: [changes, build]
     if: needs.changes.outputs.docs-only != 'true'
     runs-on:

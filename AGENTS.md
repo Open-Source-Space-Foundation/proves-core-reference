@@ -320,16 +320,19 @@ jobs spread across the available runners in parallel.
 | Workflow | Required check | Notes |
 | --- | --- | --- |
 | `lint.yaml` | `lint` | `make fmt` (pre-commit); always runs |
-| `docs.yaml` | `docs` | strict MkDocs build and hook tests; always runs |
+| `docs.yaml` | | strict MkDocs build and hook tests; always runs |
 | `unit-test.yaml` | `unit-test` | `make test-unit` |
-| `integration-uart.yaml` | `integration-uart` | builds, flashes, UART tests, YAMCS round-trip (hardware) |
+| `integration-uart.yaml` | `integration-uart` | builds, flashes, UART tests, YAMCS round-trip (hardware); `yamcs-build` checks the YAMCS server boots with the MDB |
 | `integration-radio.yaml` | `integration-radio` | builds, flashes, LoRa radio tests (hardware) |
-| `yamcs-build.yaml` | | builds, then checks the YAMCS server boots with the MDB |
 
 - `build.yaml` is a reusable workflow (`workflow_call`) that the integration
-  workflows call, so each run has its own firmware artifacts.
+  workflows call, so each run has its own firmware artifacts. The firmware is
+  built twice per PR.
 - On PRs that only change markdown or `docs/`/`docs-site/` files, everything
   except `lint` and `docs` is skipped (the `docs-only` action decides).
+- `integration-uart` and `integration-radio` are gate jobs that fail if
+  `changes`, `build` or the hardware job failed. Without them a failed build
+  would skip the hardware job, and a skipped required check passes.
 
 **Critical for CI Success**:
 

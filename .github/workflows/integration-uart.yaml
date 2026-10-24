@@ -1,9 +1,10 @@
 name: integration-uart
 
-# UART integration and YAMCS round-trip on the integration hardware.
+# UART integration and YAMCS round-trip on the integration hardware, plus the
+# YAMCS MDB boot check, which reuses this workflow's build.
 # Standalone pipeline: it builds its own firmware (build.yaml) so it can run on
-# any free machine in parallel with the other workflows. The `integration-uart` job
-# is the required status check.
+# any free machine in parallel with the other workflows. The `integration-uart`
+# gate job is the required status check.
 on:
   pull_request:
   push:
@@ -40,9 +41,60 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs-only != 'true'
     uses: ./.github/workflows/build.yaml
-    secrets: inherit
+    secrets:
+      AUTH_KEY: ${{ secrets.AUTH_KEY }}
 
+  # Required status check. A job skipped because a job it needs failed still
+  # counts as passing, so the hardware job can't be the required check on its
+  # own: a failed `changes` or `build` would let the PR merge. This gate always
+  # runs and fails if anything it needs failed or was cancelled. On docs-only
+  # PRs everything after `changes` is skipped and the gate passes.
   integration-uart:
+    if: always()
+    needs: [changes, build, uart-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a needed job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+
+  yamcs-build:
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: artifacts
+
+      - name: Restore MDB to expected path
+        run: ./tools/ci/restore-yamcs-mdb.sh
+
+      - name: Validate YAMCS server boots with current MDB
+        run: |
+          make yamcs-build-check
+
+      - name: Capture compose state on failure
+        if: failure()
+        run: |
+          docker compose -f yamcs/docker-compose.yml ps > yamcs-compose-ps.txt 2>&1 || true
+          docker compose -f yamcs/docker-compose.yml logs --tail=500 > yamcs-compose-logs.txt 2>&1 || true
+
+      - name: Upload compose state on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: yamcs-build-compose-state
+          path: |
+            yamcs-compose-ps.txt
+            yamcs-compose-logs.txt
+          retention-days: 7
+
+  uart-test:
     needs: [changes, build]
     if: needs.changes.outputs.docs-only != 'true'
     runs-on:

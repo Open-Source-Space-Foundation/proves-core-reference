@@ -26,8 +26,8 @@ runs:
           exit 0
         fi
         # Include previous_filename so renaming code into a docs path still
-        # counts as touching code. The default bash runs with -e, so a failed
-        # API call fails the job (and the PR check) rather than guessing.
+        # counts as touching code. `shell: bash` runs with -eo pipefail, so a
+        # failed API call fails the job rather than guessing.
         files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
           --jq '.[] | .filename, (.previous_filename // empty)')
         if [ -z "$files" ]; then
@@ -35,8 +35,9 @@ runs:
           exit 0
         fi
         # Docs-only = every path is markdown or lives under a docs/ or
-        # docs-site/ directory.
-        if printf '%s\n' "$files" | grep -qvE '(\.md$|^docs-site/|(^|/)docs/)'; then
+        # docs-site/ directory. A here-string, not a pipe: with pipefail, grep -q
+        # exiting early can SIGPIPE the writer and flip the result to docs-only.
+        if grep -qvE '(\.md$|^docs-site/|(^|/)docs/)' <<< "$files"; then
           echo "docs-only=false" >> "$GITHUB_OUTPUT"
         else
           echo "docs-only=true" >> "$GITHUB_OUTPUT"
