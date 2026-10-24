@@ -1,0 +1,43 @@
+name: build
+
+# Called from ci.yaml (not run on its own) so the artifacts it uploads belong
+# to the same workflow run as the integration jobs that download them.
+on:
+  workflow_call:
+    secrets:
+      AUTH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: deathstar
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Build Firmware
+        uses: ./.github/actions/build-firmware
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: artifacts
+          path: |
+            mcuboot.elf
+            bootable.uf2
+            bootable.signed.hex
+            build-artifacts/zephyr/fprime-zephyr-deployment
+            yamcs/yamcs-data/mdb/fprime.xtce.xml
+          retention-days: 30
+
+      # Self-hosted runners keep the workspace between runs, so the generated
+      # header would otherwise leave the signing key on disk for whatever job
+      # (or branch) lands on this runner next.
+      - name: Remove authentication key
+        if: always()
+        run: |
+          rm -f PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
