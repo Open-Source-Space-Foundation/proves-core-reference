@@ -27,8 +27,8 @@ register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/RtcManager.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/TimeDiscipline.cpp"
         ${IMPL_SOURCES}
+        "${CMAKE_CURRENT_LIST_DIR}/TimeDiscipline.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
