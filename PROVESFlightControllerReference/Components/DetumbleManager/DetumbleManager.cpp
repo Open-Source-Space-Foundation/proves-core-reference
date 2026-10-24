@@ -495,6 +495,12 @@ void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
     }
 }
 
+void DetumbleManager ::parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) {
+    // F Prime 4.4 calls parameterUpdated for every parameter at load by default; keep the pre-4.4 behaviour.
+    (void)id;
+    (void)valid;
+}
+
 void DetumbleManager ::stateCooldownActions() {
     Fw::ParamValid isValid;
 

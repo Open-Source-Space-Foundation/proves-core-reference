@@ -89,6 +89,9 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     void parameterUpdated(FwPrmIdType id  //!< The parameter ID
                           ) override;
 
+    //! Ignore parameter loads; parameterUpdated reports changes, and loading at boot is not a change
+    void parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) override;
+
     //! Actions to perform in the COOLDOWN state
     void stateCooldownActions();
 

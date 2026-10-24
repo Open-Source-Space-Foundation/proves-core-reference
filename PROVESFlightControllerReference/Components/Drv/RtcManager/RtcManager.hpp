@@ -109,6 +109,9 @@ class RtcManager final : public RtcManagerComponentBase {
     //! conflict
     void parameterUpdated(FwPrmIdType id) override;
 
+    //! Ignore parameter loads. Loading TIMEBASE at boot is not a time base change, so it must not cancel sequences
+    void parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) override;
+
     //! Alarm callback kicker method. Must be static but cannot reference this in a static context
     static void static_alarm_callback_t(const struct device* dev, uint16_t id, void* user_data);
 

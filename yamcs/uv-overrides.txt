@@ -1,0 +1,11 @@
+# uv overrides for `make fprime-venv`. Each line replaces every other requirement on that package.
+
+# Override fprime's PyYAML==6.0.2 pin to satisfy fprime-yamcs>=0.1.0 (requires PyYAML>=6.0.3).
+# PyYAML 6.0.x is API-stable; the patch bump does not affect fprime-gds behaviour.
+PyYAML>=6.0.3
+
+# Hold the YAMCS bridge at the version our patches target. F Prime v4.4 pins fprime-yamcs 0.2.4, a rewrite
+# that the fixes applied by `make fprime-venv` (patches/, tools/apply-*.py) and yamcs/yamcs-data/ have not
+# been ported to. fprime-xtce and yamcs-client follow F Prime's pins: fprime-xtce 0.1.5 sizes string length
+# prefixes from the dictionary's FwSizeStoreType, which 0.1.2 hardcoded to 16 bits.
+fprime-yamcs==0.1.3
