@@ -95,6 +95,44 @@ jobs:
         run: |
           make test-unit
 
+  fprime-ut:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Download bin tools
+        run: |
+          make download-bin
+
+      - name: Setup submodules
+        run: |
+          make submodules
+
+      # Cache uv's download cache, not the venv: `make fprime-venv` still
+      # runs and applies its patches, but installs from local wheels.
+      - name: Cache uv downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('requirements.txt', 'yamcs/pyyaml-override.txt') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Setup fprime venv
+        run: |
+          make fprime-venv
+
+      - name: Install lib dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
+
+      - name: Run F Prime Component UTs
+        run: |
+          make test-fprime-ut
+
   build:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs-only != 'true' }}
