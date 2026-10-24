@@ -15,13 +15,7 @@ runs:
   using: composite
   steps:
     - name: Detect Board TTY
-      shell: bash
-      run: |
-        # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
-        # /dev/serial/by-id does not list this device on the integration runner.
-        ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
-        echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-        echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+      uses: ./.github/actions/detect-board-tty
 
     - name: Kill stale GDS processes
       shell: bash
@@ -70,11 +64,7 @@ runs:
         fi
 
     - name: Detect Board TTY (after reboot)
-      shell: bash
-      run: |
-        ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
-        echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-        echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+      uses: ./.github/actions/detect-board-tty
 
     - name: Start GDS (after reboot)
       shell: bash
