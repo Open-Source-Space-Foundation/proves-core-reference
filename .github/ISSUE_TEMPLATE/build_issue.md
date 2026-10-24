@@ -29,7 +29,7 @@ Use this template for issues related to building, compiling, linking, or integra
 - CMake version: 3.28.0 (from `cmake --version`)
 - GCC/ARM toolchain: (from `arm-none-eabi-gcc --version` or Zephyr SDK version)
 - UV version: 0.8.13 (from `uv --version`)
-- F Prime version: v4.0.0a1 (from lib/fprime/ git tag)
+- F Prime version: v4.4.1 (from lib/fprime/ git tag)
 - Zephyr version: v4.2.0 (from west.yml)
 - Make version: (from `make --version`)
 -->

@@ -30,6 +30,12 @@ module FileHandlingConfig {
         constant prmDb         = Os.TASK_DEFAULT
     }
 
+    # File paths used by the subtopology
+    module Paths {
+        constant prmDbFile = "/prmDb.dat"      # Parameter database storage file
+        constant sandboxDir = "/"              # File-access sandbox for fileUplink, fileDownlink, fileManager, prmDb ("/" = unrestricted)
+    }
+
     # File downlink configuration constants
     module DownlinkConfig {
         constant timeout        = 5000         # File downlink timeout in ms

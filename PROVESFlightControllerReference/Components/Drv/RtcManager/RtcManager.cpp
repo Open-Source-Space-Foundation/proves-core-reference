@@ -200,6 +200,12 @@ void RtcManager ::parameterUpdated(FwPrmIdType id) {
     this->log_ACTIVITY_HI_TimeBaseChanged(timeBase);
 }
 
+void RtcManager ::parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) {
+    // F Prime 4.4 calls parameterUpdated for every parameter at load by default; keep the pre-4.4 behaviour.
+    (void)id;
+    (void)valid;
+}
+
 void RtcManager ::ALARM_SET_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Drv::TimeData& t) {
     // retrieve info about current alarm
 

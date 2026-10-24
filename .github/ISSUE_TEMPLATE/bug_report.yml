@@ -62,6 +62,6 @@ body:
     attributes:
       value: |
         ## Additional information
-        - F Prime version: v4.0.0a1
+        - F Prime version: v4.4.1
         - Zephyr version: v4.2.0
         - Python: see .python-version

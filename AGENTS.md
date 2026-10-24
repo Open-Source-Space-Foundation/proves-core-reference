@@ -6,7 +6,7 @@ This is a reference software implementation for the [Proves Kit](https://docs.pr
 
 **Repository Size**: ~450MB (primarily from Zephyr workspace and F Prime submodules)
 **Languages**: C++ (F Prime components), C (Zephyr integration), Python (testing), FPP (F Prime modeling language), CMake
-**Frameworks**: F Prime v4.0.0a1, Zephyr RTOS v4.2.0
+**Frameworks**: F Prime v4.4.1, Zephyr RTOS v4.4.2
 **Target Runtime**: Bare metal embedded systems (ARM Cortex-M33/M7)
 
 ## Critical Build Prerequisites
