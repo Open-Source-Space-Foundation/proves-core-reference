@@ -109,6 +109,23 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
+**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `GLOSSARY.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
+
+**F Prime Component UTs** (native host build, no hardware):
+
+```bash
+make test-fprime-ut    # generate native UT cache if needed, build + run all component UTs
+```
+
+The native build lives in `native/` (own `settings.ini`; fprime-zephyr's module registration is platform-guarded so it stays in `library_locations`). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
+
+To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
+
+1. Add a `register_fprime_ut` block to the component CMakeLists (copy Watchdog's), listing `test/ut/<Name>TestMain.cpp` + `test/ut/<Name>Tester.cpp` with `UT_AUTO_HELPERS`.
+2. `touch` those files as empty stubs (CMake configure needs them to exist), then from the component dir run `fprime-util impl --ut --build-cache <repo>/native/build-fprime-automatic-native-ut` and rename the emitted `*.template.*` files into place.
+3. Build/run: `make test-fprime-ut` (builds all UTs via `fprime-util build --ut --all` from `native/`, then runs `ctest` scoped to `PROVESFlightControllerReference_` — fprime-extras UTs are excluded; upstream's DropDetector test is seed-flaky). Single component: `ctest --test-dir native/build-fprime-automatic-native-ut -R <Name>`. Running fprime-util from the component dir works only with an explicit `--build-cache <abs path to native/build-fprime-automatic-native-ut>` (as in step 2 — the flag bypasses cache discovery); without it (e.g. plain `fprime-util check`/`build`), settings discovery finds the Zephyr-only root settings.ini and fails.
+4. Known autocoder quirk: for argument-less `Fw.Signal` from-ports only `ASSERT_from_<port>_SIZE(n)` compiles; the indexed `ASSERT_from_<port>(i)` macro references history types that are never generated.
+
 
 **Test Framework Details**:
 
@@ -301,6 +318,8 @@ make framer-plugin     # Build and install the CCSDS framing plugin
 make sequence SEQ=<name> # Compile a sequence file from sequences/ directory
 make sync-sequence-number # Synchronize GDS/flight sequence number
 make test-unit         # Run unit tests (CMake/CTest based)
+make test-fprime-ut    # Build + run F Prime component UTs (native host build; needs host mbedTLS)
+make generate-fprime-ut # (Re)generate the native F Prime UT build cache in native/ (force)
 make test-integration  # Run integration tests (requires connected board)
 make test-interactive  # Run interactive test selection (use ARGS= for CLI mode)
 make bootloader        # Trigger bootloader mode on RP2350
@@ -324,6 +343,7 @@ downstream job downloads the same artifacts.
 | `lint` | `lint` | | `make fmt` (pre-commit); always runs |
 | `docs` | | | strict MkDocs build and hook tests; always runs |
 | `unit-test` | `unit-test` | `changes` | `make test-unit` |
+| `fprime-ut` | | `changes` | `make test-fprime-ut`: native component UTs; host mbedTLS, no Zephyr SDK |
 | `build` | `build` | `changes` | builds firmware on `deathstar`, uploads artifacts |
 | `integration-uart` | `integration-uart` | `build` | flashes, UART tests, YAMCS round-trip (`integration` runner) |
 | `integration-radio` | `integration-radio` | `build` | flashes, LoRa radio tests (`integration` runner) |
