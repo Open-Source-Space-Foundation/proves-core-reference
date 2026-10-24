@@ -31,10 +31,11 @@ done
 [ -L "$RUN/fprime.pty" ] || { echo "sim did not open its F' pty, see $RUN/sil.log" >&2; exit 1; }
 
 # fprime-gds reads fprime-gds.yml from the repo root. setsid gives the GDS and its
-# children one process group, so stop-sil.sh can stop them together.
+# children one process group, so stop-sil.sh can stop them together. Unbuffered
+# output lets the readiness check below see "F prime is now running" in gds.log.
 cd "$ROOT"
 GDS_LOG_START=$(($(wc -l < "$RUN/gds.log") + 1))
-setsid "$ROOT/fprime-venv/bin/fprime-gds" --gui=none --uart-device "$RUN/fprime.pty" --uart-skip-port-check \
+PYTHONUNBUFFERED=1 setsid "$ROOT/fprime-venv/bin/fprime-gds" --gui=none --uart-device "$RUN/fprime.pty" --uart-skip-port-check \
     >> "$RUN/gds.log" 2>&1 &
 echo $! > "$RUN/gds.pid"
 for _ in $(seq 600); do
