@@ -7,7 +7,11 @@ and writing it to a file used by the plugin.
 """
 
 import pytest
-from common import proves_send_and_assert_command, write_next_sequence_number
+from common import (
+    latest_sequence_number,
+    proves_send_and_assert_command,
+    write_next_sequence_number,
+)
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
@@ -38,9 +42,9 @@ def test_sync_sequence_number(
 
     # A radio retry of GET_SEQ_NUM can leave an earlier attempt's event in the
     # history, reporting a number lower than the board's last accepted one.
-    # The highest reported number is the board's current one.
+    # The latest reported number (wrap-aware) is the board's current one.
     is_sequence_number_get = fprime_test_api.get_event_pred(event)
-    board_seq = max(
+    board_seq = latest_sequence_number(
         int(evt.args[0].val)
         for evt in fprime_test_api.get_event_test_history().retrieve()
         if is_sequence_number_get(evt)
