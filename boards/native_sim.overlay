@@ -4,7 +4,6 @@
  * emulated buses and sim devices. The face mux is the flight board's own dtsi.
  */
 #include <zephyr/dt-bindings/gpio/gpio.h>
-#include <zephyr/dt-bindings/adc/adc.h>
 
 /delete-node/ &flashcontroller0;
 
@@ -83,10 +82,11 @@
 		current-speed = <0>;
 	};
 
-	/* Placeholder for the label only. The flight die sensor needs the Pico HAL, and this one fails to read. */
+	/* The RP2350 die sensor, at room temperature. */
 	die_temp: die_temp {
-		compatible = "lm35";
-		io-channels = <&adc0 0>;
+		compatible = "proves,sensor-sim";
+		sim-file = "die_temp.txt";
+		die-temp = <25000000>;
 	};
 
 	sim_leds {
@@ -125,29 +125,25 @@ rtc0: &rtc {
 	alarms-count = <1>;
 };
 
-&adc0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	channel@0 {
-		reg = <0>;
-		zephyr,gain = "ADC_GAIN_1";
-		zephyr,reference = "ADC_REF_INTERNAL";
-		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-		zephyr,resolution = <12>;
-	};
-};
-
 &i2c0 {
 	clock-frequency = <100000>;
 
+	/* At rest on a desk: 1 g on Z and a gyro bias of about 0.1 deg/s, as a real part has. */
 	lsm6dso0: lsm6dso0@6b {
-		compatible = "st,lsm6dso";
+		compatible = "proves,sensor-sim";
 		reg = <0x6b>;
+		sim-file = "lsm6dso.txt";
+		accel = <0 0 9806650>;
+		gyro = <1745 873 524>;
+		die-temp = <25000000>;
 	};
 
+	/* Roughly the Earth's field at mid latitude. */
 	lis2mdl0: lis2mdl0@1e {
-		compatible = "st,lis2mdl";
+		compatible = "proves,sensor-sim";
 		reg = <0x1e>;
+		sim-file = "lis2mdl.txt";
+		magn = <200000 0 400000>;
 	};
 
 	ina219_0: ina219_0@40 {

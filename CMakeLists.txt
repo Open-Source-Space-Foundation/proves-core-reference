@@ -33,6 +33,7 @@ if (BOARD MATCHES "^native_sim")
         "${CMAKE_CURRENT_LIST_DIR}/sim/rtc_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/ina219_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/gpio_latch_sim.c"
+        "${CMAKE_CURRENT_LIST_DIR}/sim/sensor_sim.c"
     )
     # rtc_sim.c is a copy of Zephyr's rtc_emul.c and uses that directory's private headers
     target_include_directories(app PRIVATE "${ZEPHYR_BASE}/drivers/rtc")

@@ -6,7 +6,7 @@ What the board is made of:
 
 - `boards/native_sim.overlay` gives every node label that `Main.cpp` and the topology use. Sensors sit on Zephyr's emulated I2C bus, GPIOs on `gpio-emul`, and the flash on a 16 MiB `sim-flash` file with the flight partition map. The SD card is a FAT flash disk on the storage partition.
 - `boards/native_sim.conf` sets 10000 ticks per second like the flight boards. With native_sim's default of 100, every rate group runs 10 times too slow.
-- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `ina219_sim.c` serves the two power monitors, and `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
+- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `ina219_sim.c` serves the two power monitors. `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL) and the RP2350 die temperature sensor, and `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
 
 Devices with no emulator or fake report "device not ready", and the flight software handles that.
 
@@ -56,11 +56,20 @@ echo 6000 50 > /tmp/sitl/ina219_sys.txt   # ModeManager enters LOW_BATTERY safe 
 echo 8500 > /tmp/sitl/ina219_sys.txt      # and leaves it once the voltage recovers
 ```
 
+## Script the IMU and die temperature
+
+The LSM6DSO reads 1 g on Z, a gyro bias of about 0.1 °/s and 25 °C by default. The LIS2MDL reads 0.2 G on X and 0.4 G on Z, and the die sensor reads 25 °C. To change a reading while the sim runs, write one `<quantity> <value>...` line per quantity, in SI units, to `lsm6dso.txt`, `lis2mdl.txt` or `die_temp.txt` in the run directory. The quantities are `accel` and `gyro` (X Y Z), `magn` (X Y Z, in gauss) and `die-temp`. A quantity that the file leaves out reads its default.
+
+```sh
+printf 'gyro 0.5 0 0\n' > /tmp/sitl/lsm6dso.txt   # tumbling at 0.5 rad/s about X
+```
+
 ## Known differences from flight
 
 - The telemetry packetizer's divider sends most channels about every 5 minutes. Tests that wait for telemetry set `telemetryDelay.DIVIDER_PRM_SET 1` first.
 - The solar INA219 reads 0 V and 0 A by default, because the sim has no sun.
-- The IMU (LSM6DSO and LIS2MDL), the die temperature sensor, and the sensors behind the TCA9548A mux have no emulator, so they report "device not ready" or fail to read.
+- The IMU and die temperature fakes return the values above, not sensor noise. They accept any sampling rate and ignore it.
+- The sensors behind the TCA9548A mux have no emulator, so they report "device not ready" or fail to read.
 - The LoRa radio drops everything it sends and never receives.
 - No bootloader runs, so an OTA image written by `FlashWorker` is never swapped in, and `TRIGGER_BOOTLOADER` does nothing and never responds.
 - When the sim exits at `-stop_at`, static destructors run and `CameraHandler`'s destructor crashes the process with exit code 139. Reboots and `kill` are not affected.
