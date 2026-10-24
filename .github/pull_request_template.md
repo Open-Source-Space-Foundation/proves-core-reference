@@ -12,7 +12,7 @@
 
 <!-- Describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration. -->
 
-<!-- Tier definitions live in CONTEXT.md; rollout status in docs/plans/testing-roadmap.md -->
+<!-- Tier definitions live in GLOSSARY.md; rollout status in docs/plans/testing-roadmap.md -->
 
 - [ ] Helper tests (`make test-unit`)
 - [ ] Component UTs (`make test-fprime-ut`)

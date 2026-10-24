@@ -1,6 +1,6 @@
 # Testing Roadmap: F Prime Unit Testing + Software-in-the-Loop
 
-Status: agreed 2026-08-29. Vocabulary: `CONTEXT.md`. Decisions: `docs/adr/0001`, `docs/adr/0002`.
+Status: agreed 2026-08-29. Vocabulary: `GLOSSARY.md`. Decisions: `docs/adr/0001`, `docs/adr/0002`.
 
 ## Goal
 

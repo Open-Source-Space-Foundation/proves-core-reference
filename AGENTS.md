@@ -109,7 +109,7 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
-**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `CONTEXT.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
+**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `GLOSSARY.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
 
 **F Prime Component UTs** (native host build, no hardware):
 
