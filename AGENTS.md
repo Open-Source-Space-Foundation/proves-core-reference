@@ -312,24 +312,29 @@ make pre-commit-install # Install pre-commit hooks
 make minimize-uv-cache # Minimize UV cache (CI optimization)
 ```
 
-### CI/CD Pipeline (`.github/workflows/`)
+### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
-Each workflow is standalone and starts on every PR and push to `main`, so
-jobs spread across the available runners in parallel.
+One workflow runs on every PR and push to `main`. Jobs without a `needs:` link
+run in parallel, each on its own runner. The firmware is built once, and every
+downstream job downloads the same artifacts.
 
-| Workflow | Required check | Notes |
-| --- | --- | --- |
-| `lint.yaml` | `lint` | `make fmt` (pre-commit); always runs |
-| `docs.yaml` | | strict MkDocs build and hook tests; always runs |
-| `unit-test.yaml` | `unit-test` | `make test-unit` |
-| `integration-uart.yaml` | `integration-uart` | builds, flashes, UART tests, YAMCS round-trip (hardware); `yamcs-build` checks the YAMCS server boots with the MDB |
-| `integration-radio.yaml` | `integration-radio` | builds, flashes, LoRa radio tests (hardware) |
+| Job | Required check | Needs | Notes |
+| --- | --- | --- | --- |
+| `changes` | | | decides docs-only (the `docs-only` action) |
+| `lint` | `lint` | | `make fmt` (pre-commit); always runs |
+| `docs` | | | strict MkDocs build and hook tests; always runs |
+| `unit-test` | `unit-test` | `changes` | `make test-unit` |
+| `build` | `build` | `changes` | builds firmware on `deathstar`, uploads artifacts |
+| `uart-test` | | `build` | flashes, UART tests, YAMCS round-trip (`integration` runner) |
+| `radio-test` | | `build` | flashes, LoRa radio tests (`integration` runner) |
+| `yamcs-build` | | `build` | checks the YAMCS server boots with the MDB |
+| `integration-uart` | `integration-uart` | `uart-test` | gate |
+| `integration-radio` | `integration-radio` | `radio-test` | gate |
 
-- `build.yaml` is a reusable workflow (`workflow_call`) that the integration
-  workflows call, so each run has its own firmware artifacts. The firmware is
-  built twice per PR.
+- `uart-test` and `radio-test` start together once `build` finishes and land on
+  separate `integration` machines when two are free.
 - On PRs that only change markdown or `docs/`/`docs-site/` files, everything
-  except `lint` and `docs` is skipped (the `docs-only` action decides).
+  except `lint` and `docs` is skipped.
 - `integration-uart` and `integration-radio` are gate jobs that fail if
   `changes`, `build` or the hardware job failed. Without them a failed build
   would skip the hardware job, and a skipped required check passes.
