@@ -2,8 +2,8 @@ name: ci
 
 # One workflow so the firmware is built once and every job downloads the same
 # artifacts. Jobs without a `needs:` link run in parallel, each on its own
-# runner: `uart-test` and `radio-test` both wait only on `build` and land on
-# separate `integration` machines when two are free.
+# runner: `integration-uart` and `integration-radio` both wait only on `build`
+# and land on separate `integration` machines when two are free.
 on:
   pull_request:
   push:
@@ -97,7 +97,7 @@ jobs:
 
   build:
     needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
+    if: ${{ !cancelled() && needs.changes.outputs.docs-only != 'true' }}
     runs-on: deathstar
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -122,32 +122,9 @@ jobs:
       - uses: ./.github/actions/remove-auth-key
         if: always()
 
-  # Required status checks. A job skipped because a job it needs failed still
-  # counts as passing, so the hardware jobs can't be the required checks on
-  # their own: a failed `changes` or `build` would let the PR merge. These
-  # gates always run and fail if anything they need failed or was cancelled.
-  # On docs-only PRs everything after `changes` is skipped and the gates pass.
   integration-uart:
-    if: always()
-    needs: [changes, build, uart-test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail if a needed job failed or was cancelled
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-        run: exit 1
-
-  integration-radio:
-    if: always()
-    needs: [changes, build, radio-test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail if a needed job failed or was cancelled
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-        run: exit 1
-
-  uart-test:
     needs: [changes, build]
-    if: needs.changes.outputs.docs-only != 'true'
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
     timeout-minutes: 30
@@ -337,9 +314,9 @@ jobs:
       - uses: ./.github/actions/remove-auth-key
         if: always()
 
-  radio-test:
+  integration-radio:
     needs: [changes, build]
-    if: needs.changes.outputs.docs-only != 'true'
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
     timeout-minutes: 30
