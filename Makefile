@@ -207,6 +207,8 @@ test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-n
 	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
 FILTER ?= not sync_sequence_number and not format_filesystem and not ota
+# Set RETRY_FAILED=1 to rerun failed tests once after the suite (CI uses this).
+PYTEST_RETRY = $(if $(RETRY_FAILED),tools/ci/pytest-retry-failed.sh)
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -229,7 +231,7 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 		TARGETS="PROVESFlightControllerReference/test/int"; \
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
-	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
+	$(PYTEST_RETRY) $(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:
