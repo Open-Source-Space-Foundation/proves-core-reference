@@ -23,6 +23,8 @@ read -ra SIM_ARGV <<< "${SIM_ARGS:-}"
 (cd "$RUN" && exec ./pcr-native_sim.exe -flash=pcr-flash.bin -stop_at="$STOP_AT" \
     -uart_2_attach_uart_cmd="ln -sfn %s fprime.pty" "${SIM_ARGV[@]}" >> sil.log 2>&1) &
 echo $! > "$RUN/sil.pid"
+# On a failed start, stop what this run started.
+trap '"$ROOT/sim/stop-sil.sh" "$RUN"' EXIT
 
 for _ in $(seq 50); do
     [ -L "$RUN/fprime.pty" ] && break
@@ -38,10 +40,11 @@ GDS_LOG_START=$(($(wc -l < "$RUN/gds.log") + 1))
 PYTHONUNBUFFERED=1 setsid "$ROOT/fprime-venv/bin/fprime-gds" --gui=none --uart-device "$RUN/fprime.pty" --uart-skip-port-check \
     >> "$RUN/gds.log" 2>&1 &
 echo $! > "$RUN/gds.pid"
+gds_up() { awk -v start="$GDS_LOG_START" 'NR >= start && /F prime is now running/ { up = 1; exit } END { exit !up }' "$RUN/gds.log"; }
 for _ in $(seq 600); do
-    tail -n "+$GDS_LOG_START" "$RUN/gds.log" | grep -q "F prime is now running" && break
+    gds_up && break
     sleep 0.1
 done
-tail -n "+$GDS_LOG_START" "$RUN/gds.log" | grep -q "F prime is now running" ||
-    { echo "GDS did not start, see $RUN/gds.log" >&2; exit 1; }
+gds_up || { echo "GDS did not start, see $RUN/gds.log" >&2; exit 1; }
+trap - EXIT
 echo "sim pid $(cat "$RUN/sil.pid"), F' UART on $(readlink "$RUN/fprime.pty"), gds pid $(cat "$RUN/gds.pid")"

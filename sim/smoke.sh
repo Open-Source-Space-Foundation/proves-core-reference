@@ -6,6 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUN="$(realpath -m "$1")"
 cd "$ROOT"
+# Delete only an empty directory or one that run-sil.sh wrote.
+if [ -n "$(ls -A "$RUN" 2> /dev/null)" ] && [ ! -f "$RUN/sil.log" ]; then
+    echo "$RUN is not a SITL run directory, refusing to delete it" >&2
+    exit 1
+fi
 rm -rf "$RUN"
 trap 'sim/stop-sil.sh "$RUN"' EXIT
 
