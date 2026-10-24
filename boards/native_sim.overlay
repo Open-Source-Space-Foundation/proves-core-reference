@@ -111,6 +111,14 @@
 		ngpios = <16>;
 	};
 
+	/* The external watchdog behind JP6, on the pin the Watchdog component toggles (led0). The
+	 * timeout is the ~30 s that watchdog_test::test_03 expects; it is not measured on hardware. */
+	ext_watchdog: ext_watchdog {
+		compatible = "proves,watchdog-sim";
+		wdi-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		timeout-ms = <30000>;
+	};
+
 	lora0: lora_sim {
 		compatible = "proves,lora-sim";
 	};
