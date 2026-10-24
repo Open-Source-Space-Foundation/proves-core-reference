@@ -20,7 +20,18 @@ static const char* const ANTENNA_DIR_PATH = "//antenna";
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {}
+AntennaDeployer ::AntennaDeployer(const char* const compName) : AntennaDeployerComponentBase(compName) {
+    // The sequencer keeps its own copy of the enum so it can build without F Prime
+    static_assert(static_cast<U8>(DeploymentSequencer::Result::SUCCESS) ==
+                      static_cast<U8>(Components::DeployResult::DEPLOY_RESULT_SUCCESS),
+                  "DeploymentSequencer SUCCESS value must match FPP enum");
+    static_assert(static_cast<U8>(DeploymentSequencer::Result::ABORT) ==
+                      static_cast<U8>(Components::DeployResult::DEPLOY_RESULT_ABORT),
+                  "DeploymentSequencer ABORT value must match FPP enum");
+    static_assert(static_cast<U8>(DeploymentSequencer::Result::FAILED) ==
+                      static_cast<U8>(Components::DeployResult::DEPLOY_RESULT_FAILED),
+                  "DeploymentSequencer FAILED value must match FPP enum");
+}
 
 AntennaDeployer ::~AntennaDeployer() {}
 
@@ -73,17 +84,16 @@ void AntennaDeployer ::schedIn_handler(FwIndexType portNum, U32 context) {
     (void)portNum;
     (void)context;
 
-    switch (this->m_state) {
-        case DeploymentState::IDLE:
-            // Nothing to do
-            break;
-        case DeploymentState::BURNING:
-            this->handleBurningTick();
-            break;
-        case DeploymentState::RETRY_WAIT:
-            this->handleRetryWaitTick();
-            break;
+    if (!this->m_sequencer.isBusy()) {
+        return;
     }
+
+    Fw::ParamValid valid;
+    DeploymentSequencer::Params params;
+    params.burnDurationSec = this->paramGet_BURN_DURATION_SEC(valid);
+    params.retryDelaySec = this->paramGet_RETRY_DELAY_SEC(valid);
+    params.maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(valid);
+    this->applyStep(this->m_sequencer.tick(params));
 }
 
 // ----------------------------------------------------------------------
@@ -99,27 +109,20 @@ void AntennaDeployer ::DEPLOY_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
         return;
     }
 
-    if (this->m_state != DeploymentState::IDLE) {
+    if (this->m_sequencer.isBusy()) {
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
         return;
     }
 
-    this->resetDeploymentState();
-    this->m_ticksInState = 0;
-    this->m_stopRequested = false;
-    this->startNextAttempt();
+    this->applyStep(this->m_sequencer.start());
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
 
 void AntennaDeployer ::DEPLOY_STOP_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (this->m_state == DeploymentState::IDLE) {
-        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-        return;
-    }
-
-    this->m_stopRequested = true;
+    // Stopping while idle does nothing, the sequencer returns no effects
+    const DeploymentSequencer::Step step = this->m_sequencer.stop();
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
-    this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
+    this->applyStep(step);
 }
 
 void AntennaDeployer ::RESET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
@@ -138,117 +141,42 @@ void AntennaDeployer ::SET_DEPLOYMENT_STATE_cmdHandler(FwOpcodeType opCode, U32 
 // Internal helpers
 // ----------------------------------------------------------------------
 
-void AntennaDeployer ::startNextAttempt() {
-    this->m_currentAttempt++;
+void AntennaDeployer ::applyStep(const DeploymentSequencer::Step& step) {
+    for (std::size_t i = 0; i < step.size(); i++) {
+        const DeploymentSequencer::Effect& effect = step[i];
+        switch (effect.kind) {
+            case DeploymentSequencer::EffectKind::BURN_START:
+                if (this->isConnected_burnStart_OutputPort(0)) {
+                    this->burnStart_out(0);
+                }
+                break;
+            case DeploymentSequencer::EffectKind::BURN_STOP:
+                this->ensureBurnwireStopped();
+                break;
+            case DeploymentSequencer::EffectKind::ATTEMPT_STARTED:
+                this->log_ACTIVITY_HI_DeployAttempt(effect.attempt);
+                this->tlmWrite_DeployAttemptCount(effect.attemptCount);
+                break;
+            case DeploymentSequencer::EffectKind::BURN_SIGNAL_COUNT:
+                this->log_ACTIVITY_LO_AntennaBurnSignalCount(effect.burnTicks);
+                break;
+            case DeploymentSequencer::EffectKind::MARK_DEPLOYED:
+                this->log_ACTIVITY_HI_DeploySuccess(effect.attempt);
 
-    this->m_ticksInState = 0;
-
-    this->log_ACTIVITY_HI_DeployAttempt(this->m_currentAttempt);
-
-    this->tlmWrite_DeployAttemptCount(this->m_totalAttempts);
-    this->m_totalAttempts++;
-
-    this->m_burnTicksThisAttempt = 0;
-
-    if (this->isConnected_burnStart_OutputPort(0)) {
-        this->burnStart_out(0);
-    }
-
-    this->m_state = DeploymentState::BURNING;
-}
-
-void AntennaDeployer ::handleBurningTick() {
-    this->m_ticksInState++;
-    this->m_burnTicksThisAttempt = this->m_ticksInState;
-
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
-
-    if (this->m_state != DeploymentState::BURNING) {
-        return;
-    }
-
-    Fw::ParamValid valid;
-    const U32 burnDuration = this->paramGet_BURN_DURATION_SEC(valid);
-    if (this->m_ticksInState >= burnDuration) {
-        this->ensureBurnwireStopped();
-        this->logBurnSignalCount();
-
-        Fw::ParamValid attemptsValid;
-        const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
-        if (this->m_currentAttempt >= maxAttempts) {
-            this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_FAILED);
-            return;
+                // Mark antenna as deployed by writing state file
+                this->writeDeploymentState(true);
+                break;
+            case DeploymentSequencer::EffectKind::FINISHED:
+                this->log_ACTIVITY_HI_DeployFinish(static_cast<Components::DeployResult::T>(effect.result),
+                                                   effect.attempt);
+                break;
         }
-
-        this->m_state = DeploymentState::RETRY_WAIT;
-        this->m_ticksInState = 0;
     }
-}
-
-void AntennaDeployer ::handleRetryWaitTick() {
-    this->m_ticksInState++;
-
-    if (this->m_stopRequested) {
-        this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_ABORT);
-        return;
-    }
-
-    Fw::ParamValid valid;
-    const U32 retryDelay = this->paramGet_RETRY_DELAY_SEC(valid);
-    if (retryDelay == 0U || this->m_ticksInState >= retryDelay) {
-        Fw::ParamValid attemptsValid;
-        const U32 maxAttempts = this->paramGet_MAX_DEPLOY_ATTEMPTS(attemptsValid);
-        if (this->m_currentAttempt >= maxAttempts) {
-            this->finishDeployment(Components::DeployResult::DEPLOY_RESULT_FAILED);
-            return;
-        }
-
-        this->startNextAttempt();
-    }
-}
-
-void AntennaDeployer ::finishDeployment(Components::DeployResult result) {
-    if (this->m_state == DeploymentState::IDLE) {
-        return;
-    }
-
-    this->ensureBurnwireStopped();
-    this->logBurnSignalCount();
-
-    if (result == Components::DeployResult::DEPLOY_RESULT_SUCCESS ||
-        result == Components::DeployResult::DEPLOY_RESULT_FAILED) {
-        this->log_ACTIVITY_HI_DeploySuccess(this->m_currentAttempt);
-
-        // Mark antenna as deployed by writing state file
-        this->writeDeploymentState(true);
-    }
-
-    this->log_ACTIVITY_HI_DeployFinish(result, this->m_currentAttempt);
-
-    this->resetDeploymentState();
-}
-
-void AntennaDeployer ::resetDeploymentState() {
-    this->m_state = DeploymentState::IDLE;
-    this->m_currentAttempt = 0;
-    this->m_ticksInState = 0;
-    this->m_stopRequested = false;
-    this->m_burnTicksThisAttempt = 0;
 }
 
 void AntennaDeployer ::ensureBurnwireStopped() {
     if (this->isConnected_burnStop_OutputPort(0)) {
         this->burnStop_out(0);
-    }
-}
-
-void AntennaDeployer ::logBurnSignalCount() {
-    if (this->m_burnTicksThisAttempt > 0U) {
-        this->log_ACTIVITY_LO_AntennaBurnSignalCount(this->m_burnTicksThisAttempt);
-        this->m_burnTicksThisAttempt = 0;
     }
 }
 

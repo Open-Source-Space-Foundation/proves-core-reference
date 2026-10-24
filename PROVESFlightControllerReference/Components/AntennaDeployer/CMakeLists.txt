@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/AntennaDeployer.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/AntennaDeployer.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/DeploymentSequencer.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
