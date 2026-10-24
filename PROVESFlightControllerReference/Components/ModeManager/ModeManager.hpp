@@ -17,8 +17,8 @@
 namespace Components {
 
 class ModeManager : public ModeManagerComponentBase {
-    //! Grant the unit-test harness access to override m_stateFilePath (and to
-    //! the PersistentState layout for seeding/inspecting state files)
+    //! Grant the unit-test harness access to STATE_FILE_PATH and the
+    //! PersistentState layout for seeding/inspecting state files
     friend class ModeManagerTester;
 
   public:
@@ -180,15 +180,18 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_commandLossCounter;      //!< Value of runCounter when last command was received
     bool m_commandLossDebounce;    //!< Prevents re-triggering safe mode entry while command loss persists
 
-    //! Path of the persisted state file. Defaults to STATE_FILE_PATH (the
-    //! flight value); unit tests override it to a writable per-test path.
-    Fw::String m_stateFilePath;
-
     // ----------------------------------------------------------------------
     // Constants
     // ----------------------------------------------------------------------
 
-    static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< Default (flight) state file path
+#ifdef BUILD_UT
+    // Unit tests run on the host, where "/" may not be writable; a relative
+    // path lands in the working directory. A compile-time switch rather than
+    // a settable member keeps the flight binary unchanged.
+    static constexpr const char* STATE_FILE_PATH = "ModeManagerTester_state.bin";  //!< State file path
+#else
+    static constexpr const char* STATE_FILE_PATH = "/mode_state.bin";  //!< State file path
+#endif
 };
 
 }  // namespace Components

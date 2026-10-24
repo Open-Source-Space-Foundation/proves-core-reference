@@ -23,11 +23,9 @@ ModeManagerTester ::ModeManagerTester(bool deferBoot)
     : ModeManagerGTestBase("ModeManagerTester", ModeManagerTester::MAX_HISTORY_SIZE), component("ModeManager") {
     this->initComponents();
     this->connectPorts();
-    // Hermetic persistence: point the component's state file at a per-test
-    // path under the current working directory instead of the flight default
-    // /mode_state.bin (whose writability depends on the host environment),
-    // and start every test from a clean slate
-    this->component.m_stateFilePath = TEST_STATE_FILE;
+    // Hermetic persistence: UT builds put the state file in the current
+    // working directory (see ModeManager::STATE_FILE_PATH); start every test
+    // from a clean slate
     (void)Os::FileSystem::removeFile(TEST_STATE_FILE);
     if (!deferBoot) {
         // Parameter valid flags start UNINIT; both commandLossCheck() and

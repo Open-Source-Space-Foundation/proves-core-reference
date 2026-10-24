@@ -29,9 +29,9 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     // Queue depth supplied to the component instance under test
     static const FwSizeType TEST_INSTANCE_QUEUE_DEPTH = 10;
 
-    // Per-test state file path (relative, so it lands in the current working
-    // directory) overriding the flight default /mode_state.bin
-    static constexpr const char* TEST_STATE_FILE = "ModeManagerTester_state.bin";
+    // State file the component uses in UT builds (relative, so it lands in
+    // the current working directory; see ModeManager::STATE_FILE_PATH)
+    static constexpr const char* TEST_STATE_FILE = ModeManager::STATE_FILE_PATH;
 
   public:
     // ----------------------------------------------------------------------
