@@ -1,0 +1,20 @@
+description: |
+  Fake INA219 for native_sim. Serves SENSOR_CHAN_VOLTAGE, _CURRENT
+  and _POWER. Each sample reads sim-file (host path, relative to the sim's
+  working directory) as "<millivolts> [<milliamps>]"; when the file is absent
+  or unparsable it reports the defaults.
+
+compatible: "proves,ina219-sim"
+
+include: i2c-device.yaml
+
+properties:
+  sim-file:
+    type: string
+    required: true
+  default-millivolts:
+    type: int
+    required: true
+  default-milliamps:
+    type: int
+    required: true

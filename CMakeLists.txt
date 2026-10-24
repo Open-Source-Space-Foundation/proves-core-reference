@@ -15,12 +15,31 @@ if (BOARD STREQUAL "rpi_pico" OR FPRIME_ZEPHYR_USE_STD_ATOMIC_FIX)
     include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/lib/fprime-zephyr/fprime-zephyr/Os/StdAtomic")
 endif()
 
+if (BOARD MATCHES "^native_sim")
+    list(APPEND DTS_ROOT "${CMAKE_CURRENT_LIST_DIR}/sim")
+    include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/sim/include")
+endif()
+
 # When running tests, avoid pulling in Zephyr (no BOARD etc. needed)
 if (NOT BUILD_TESTING)
     find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
 endif()
 
 project(fprime-zephyr-reference C CXX)
+
+if (BOARD MATCHES "^native_sim")
+    target_sources(app PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/sim/lora_sim.c"
+        "${CMAKE_CURRENT_LIST_DIR}/sim/rtc_sim.c"
+        "${CMAKE_CURRENT_LIST_DIR}/sim/ina219_sim.c"
+        "${CMAKE_CURRENT_LIST_DIR}/sim/gpio_latch_sim.c"
+    )
+    # rtc_sim.c is a copy of Zephyr's rtc_emul.c and uses that directory's private headers
+    target_include_directories(app PRIVATE "${ZEPHYR_BASE}/drivers/rtc")
+    # native_sim links in one stage, but fprime-zephyr's deployment target waits on zephyr_final
+    add_custom_target(zephyr_final)
+    add_dependencies(zephyr_final native_runner_executable)
+endif()
 
 # Enable Zephyr Pico hardware_adc library
 zephyr_include_directories(

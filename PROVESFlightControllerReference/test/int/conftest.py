@@ -97,6 +97,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
     )
     parser.addoption(
+        "--expect-boot-count",
+        type=int,
+        default=None,
+        help="Boot count that boot_count_test.py expects; the test skips when unset.",
+    )
+    parser.addoption(
         "--ota-image",
         default=None,
         help="Signed image (zephyr.signed.bin) uplinked by ota_update_test.py; "
