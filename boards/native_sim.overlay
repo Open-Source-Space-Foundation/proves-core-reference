@@ -112,11 +112,13 @@
 	};
 
 	/* The external watchdog behind JP6, on the pin the Watchdog component toggles (led0). The
-	 * timeout is the ~30 s that watchdog_test::test_03 expects; it is not measured on hardware. */
+	 * timeout is the v5e bench measurement: 43 to 45 s from STOP_WATCHDOG to the board booting
+	 * again, over 5 CI runs. The schematic's nominal values (R35 4.7M, C22 + C23 20 uF) predict
+	 * about 220 s; DC-bias derating of the 0603 X5R timing capacitors accounts for some of the gap. */
 	ext_watchdog: ext_watchdog {
 		compatible = "proves,watchdog-sim";
 		wdi-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
-		timeout-ms = <30000>;
+		timeout-ms = <44000>;
 	};
 
 	lora0: lora_sim {
