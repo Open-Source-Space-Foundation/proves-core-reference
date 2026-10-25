@@ -54,16 +54,20 @@ static void sensor_sim_parse_line(char* line, struct sensor_sim_data* data) {
             continue;
         }
         char* p = line + len;
+        int64_t parsed[3];
         for (int a = 0; a < sensor_sim_quantities[q].axes; a++) {
             char* end;
             double v = strtod(p, &end);
 
-            if (end == p) {
+            /* Also rejects NaN and infinity, and keeps the micro-unit value inside int64. */
+            if (end == p || !(v > -1e9 && v < 1e9)) {
                 return;
             }
-            data->values[q][a] = (int64_t)(v * 1000000.0);
+            parsed[a] = (int64_t)(v * 1000000.0);
             p = end;
         }
+        /* A short or bad line changes nothing, so no reading mixes old and new axes. */
+        memcpy(data->values[q], parsed, sensor_sim_quantities[q].axes * sizeof(parsed[0]));
         return;
     }
 }

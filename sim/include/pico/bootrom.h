@@ -1,4 +1,4 @@
-// native_sim has no RP2350 boot ROM: TRIGGER_BOOTLOADER succeeds and does nothing.
+// native_sim has no RP2350 boot ROM: TRIGGER_BOOTLOADER does nothing and the command never gets a response.
 #pragma once
 #include <stdint.h>
 

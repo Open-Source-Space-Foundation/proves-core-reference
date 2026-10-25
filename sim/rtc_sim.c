@@ -344,6 +344,7 @@ static int rtc_emul_alarm_set_time(const struct device* dev,
 
     K_SPINLOCK(&data->lock) {
         data->alarms[id].mask = mask;
+        data->alarms[id].fire = false;
 
         if (timeptr != NULL) {
             data->alarms[id].datetime = *timeptr;
@@ -398,6 +399,7 @@ static int rtc_emul_alarm_set_callback(const struct device* dev,
     K_SPINLOCK(&data->lock) {
         data->alarms[id].callback = callback;
         data->alarms[id].user_data = user_data;
+        data->alarms[id].fire = false;
     }
 
     return 0;
