@@ -118,9 +118,12 @@ build: submodules zephyr fprime-venv generate-if-needed ## Build FPrime-Zephyr P
 .PHONY: sim-setup
 sim-setup: submodules fprime-venv zephyr-workspace zephyr-export zephyr-python-deps generate-auth-key keys/proves.pem framer-plugin ## Set up the native_sim SITL build (no Zephyr SDK needed)
 
+# native_sim is a 32-bit build, which needs an x86 host. Other hosts (arm64 Linux, such as a VM on Apple Silicon) build the 64-bit variant.
+SIM_BOARD ?= $(if $(filter x86_64,$(shell uname -m)),native_sim,native_sim/native/64)
+
 .PHONY: sim-build
 sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
-	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util generate --force --build-cache build-fprime-native_sim -DBOARD=native_sim
+	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util generate --force --build-cache build-fprime-native_sim -DBOARD=$(SIM_BOARD)
 	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util build -j$$(nproc) --build-cache build-fprime-native_sim
 
 .PHONY: check-console-disabled
