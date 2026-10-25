@@ -6,6 +6,11 @@ inputs:
     description: Authentication key to compile into the firmware (composite actions cannot read secrets).
     required: true
 
+  ci-spacecraft-id-value:
+    description: Decimal spacecraft ID that `make make-ci-spacecraft-id` bakes in.
+    required: false
+    default: "67"
+
 runs:
   using: composite
   steps:
@@ -47,7 +52,7 @@ runs:
     - name: Change to CI Spacecraft ID
       shell: bash
       run: |
-        make make-ci-spacecraft-id
+        make make-ci-spacecraft-id CI_SPACECRAFT_ID=${{ inputs.ci-spacecraft-id-value }}
 
     - name: Generate
       shell: bash
