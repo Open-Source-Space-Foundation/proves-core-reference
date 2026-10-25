@@ -12,12 +12,33 @@ Devices with no emulator or fake report "device not ready", and the flight softw
 
 ## Set up
 
-You need a Linux x86-64 host with the 32-bit toolchain. You do not need the Zephyr SDK, because native_sim builds with the host `gcc`.
+You need a Linux host. You do not need the Zephyr SDK, because native_sim builds with the host `gcc`.
+
+On x86-64, `make sim-build` builds the 32-bit `native_sim`, which needs the 32-bit toolchain:
 
 ```sh
 sudo apt-get install -y gcc-multilib g++-multilib
 make sim-setup
 ```
+
+On any other host, such as arm64 Linux, `make sim-build` builds `native_sim/native/64`, because only x86 can run 32-bit host code. `boards/native_sim_native_64.*` link to the `native_sim` files, and `PROVESFlightControllerReference/project/config/CMakeLists.txt` doubles every F Prime OS handle size when `CONFIG_64BIT` is set, because 64-bit pointers overflow the sizes trimmed for the RP2350. Flight builds use `PlatformCfg.fpp` unchanged. Set `SIM_BOARD` to pick the board yourself.
+
+The 64-bit build differs from flight in one more way than the 32-bit build. `long` and pointers are 8 bytes, so it cannot catch code that assumes 4. Command, event, and telemetry formats are fixed-width and do not change. CI runs the 32-bit build.
+
+### Apple Silicon
+
+Run the SITL in an arm64 Ubuntu VM with [Lima](https://lima-vm.io). It needs no `sudo` on the Mac.
+
+```sh
+brew install lima
+limactl start --name=pcr-sim sim/lima.yaml
+limactl shell pcr-sim
+# in the VM
+git clone https://github.com/Open-Source-Space-Foundation/proves-core-reference.git && cd proves-core-reference
+make sim-setup
+```
+
+Then build and run in the VM as below. `limactl stop pcr-sim` stops the VM.
 
 ## Build
 

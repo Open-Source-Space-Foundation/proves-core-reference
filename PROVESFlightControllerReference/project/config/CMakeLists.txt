@@ -25,6 +25,20 @@ set(PROJECT_CONFIG_OVERRIDES
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
     list(APPEND PROJECT_CONFIG_OVERRIDES "${CMAKE_CURRENT_LIST_DIR}/LoRaCfg.hpp")
 endif()
+# 64-bit hosts (native_sim/native/64) need bigger OS handles than the 32-bit flight
+# boards, so build from a copy of PlatformCfg.fpp with every handle size doubled.
+if(CONFIG_64BIT)
+    file(READ "${CMAKE_CURRENT_LIST_DIR}/PlatformCfg.fpp" PLATFORM_CFG)
+    string(REGEX MATCHALL "FW_[A-Z_]+_HANDLE_MAX_SIZE = [0-9]+" HANDLE_SIZES "${PLATFORM_CFG}")
+    foreach(HANDLE_SIZE IN LISTS HANDLE_SIZES)
+        string(REGEX REPLACE " = .*" "" NAME "${HANDLE_SIZE}")
+        string(REGEX REPLACE ".* = " "" SIZE "${HANDLE_SIZE}")
+        math(EXPR SIZE "${SIZE} * 2")
+        string(REPLACE "${HANDLE_SIZE}" "${NAME} = ${SIZE}" PLATFORM_CFG "${PLATFORM_CFG}")
+    endforeach()
+    file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/PlatformCfg.fpp" CONTENT "${PLATFORM_CFG}" @ONLY)
+    list(TRANSFORM PROJECT_CONFIG_OVERRIDES REPLACE "^${CMAKE_CURRENT_LIST_DIR}/PlatformCfg.fpp$" "${CMAKE_CURRENT_BINARY_DIR}/PlatformCfg.fpp")
+endif()
 register_fprime_config(
     CONFIGURATION_OVERRIDES
         ${PROJECT_CONFIG_OVERRIDES}
