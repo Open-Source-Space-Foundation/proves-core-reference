@@ -147,7 +147,7 @@ jobs:
         continue-on-error: true
         run: |
           sim/run-sil.sh "$RUNNER_TEMP/sitl" 7200
-          make test-integration PYTEST_ARGS="--bare-flight-controler-board -rA"
+          make test-integration PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper -rA"
 
       - name: Stop sim and GDS
         if: always()

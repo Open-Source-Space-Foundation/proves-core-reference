@@ -6,7 +6,7 @@ What the board is made of:
 
 - `boards/native_sim.overlay` gives every node label that `Main.cpp` and the topology use. Sensors sit on Zephyr's emulated I2C bus, GPIOs on `gpio-emul`, and the flash on a 16 MiB `sim-flash` file with the flight partition map. The SD card is a FAT flash disk on the storage partition.
 - `boards/native_sim.conf` sets 10000 ticks per second like the flight boards. With native_sim's default of 100, every rate group runs 10 times too slow.
-- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `ina219_sim.c` serves the two power monitors. `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL) and the RP2350 die temperature sensor, and `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
+- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `ina219_sim.c` serves the two power monitors. `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL) and the RP2350 die temperature sensor. `watchdog_sim.c` stands in for the external watchdog behind the JP6 jumper: it cold-reboots the sim when the Watchdog component stops toggling its pin for 44 s. `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
 
 Devices with no emulator or fake report "device not ready", and the flight software handles that.
 
@@ -60,7 +60,7 @@ To run the sim yourself, start it with a GDS attached, run tests, then stop it:
 
 ```sh
 sim/run-sil.sh /tmp/sitl
-make test-integration PYTEST_ARGS=--bare-flight-controler-board
+make test-integration PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper"
 sim/stop-sil.sh /tmp/sitl
 ```
 
@@ -92,5 +92,6 @@ printf 'gyro 0.5 0 0\n' > /tmp/sitl/lsm6dso.txt   # tumbling at 0.5 rad/s about 
 - The IMU and die temperature fakes return the values above, not sensor noise. They accept any sampling rate and ignore it.
 - The sensors behind the TCA9548A mux have no emulator, so they report "device not ready" or fail to read.
 - The LoRa radio drops everything it sends and never receives.
+- The external watchdog is always fitted, as if JP6 were bridged. It reboots the sim 44 s after the toggling stops, the time measured on a v5e bench board.
 - No bootloader runs, so an OTA image written by `FlashWorker` is never swapped in, and `TRIGGER_BOOTLOADER` does nothing and never responds.
 - When the sim exits at `-stop_at`, static destructors run and `CameraHandler`'s destructor crashes the process with exit code 139. Reboots and `kill` are not affected.
