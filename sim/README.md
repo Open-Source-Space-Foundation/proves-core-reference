@@ -47,7 +47,7 @@ Then build and run in the VM as below. `limactl stop pcr-sim` stops the VM.
 make sim-build
 ```
 
-The build goes to `build-fprime-native_sim` and installs to `build-artifacts-sim`, so it never overwrites the flight build in `build-artifacts`. Later runs of `make sim-build` reuse the build directory. Delete it to regenerate. Rebuild with `make sim-build`, because `fprime-util build` rejects a build cache whose install path differs from `settings.ini`.
+The build goes to `build-fprime-native_sim` and installs to `build-artifacts-sim`, so it never overwrites the flight build in `build-artifacts`. Later runs of `make sim-build` reuse the build directory, and regenerate it when `SIM_BOARD` names a different board. Delete it to regenerate by hand. Rebuild with `make sim-build`, because `fprime-util build` rejects a build cache whose install path differs from `settings.ini`.
 
 ## Run
 

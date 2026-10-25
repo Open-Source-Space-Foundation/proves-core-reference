@@ -125,9 +125,9 @@ SIM_BOARD ?= $(if $(filter x86_64,$(shell uname -m)),native_sim,native_sim/nativ
 # Installs to build-artifacts-sim, so a sim build never replaces the flight build's dictionary.
 # fprime-util always takes the install path from settings.ini, so the recipe re-points the cache with
 # cmake after generating and builds with cmake; `fprime-util build` rejects this cache.
-# Generates only when the build cache is missing; delete build-fprime-native_sim to regenerate.
+# Generates only when the build cache is missing or was made for another SIM_BOARD; delete build-fprime-native_sim to regenerate.
 sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
-	@[ -f build-fprime-native_sim/build.ninja ] || { \
+	@{ [ -f build-fprime-native_sim/build.ninja ] && grep -qx 'CACHED_BOARD:STRING=$(SIM_BOARD)' build-fprime-native_sim/CMakeCache.txt; } || { \
 		ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) fprime-util generate --force --build-cache build-fprime-native_sim -DBOARD=$(SIM_BOARD) && \
 		$(UV_RUN) cmake -DFPRIME_INSTALL_DEST=$(CURDIR)/build-artifacts-sim build-fprime-native_sim; }
 	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) cmake --build build-fprime-native_sim -j$$(nproc)
@@ -135,7 +135,7 @@ sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
 SIM_RUN ?= /tmp/sitl
 .PHONY: sim-test
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
-	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment
 
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
@@ -230,10 +230,10 @@ test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-n
 
 FILTER ?= not sync_sequence_number and not format_filesystem and not ota
 
-DEPLOYMENT ?= build-artifacts/zephyr/fprime-zephyr-deployment
+TEST_DEPLOYMENT ?= build-artifacts/zephyr/fprime-zephyr-deployment
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
-	@DEPLOY="$(DEPLOYMENT)"; \
+	@DEPLOY="$(TEST_DEPLOYMENT)"; \
 	TARGETS=""; \
 	if [ -n "$(TEST)" ]; then \
 		case "$(TEST)" in \
