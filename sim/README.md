@@ -7,6 +7,7 @@ What the board is made of:
 - `boards/native_sim.overlay` gives every node label that `Main.cpp` and the topology use. Sensors sit on Zephyr's emulated I2C bus, GPIOs on `gpio-emul`, and the flash on a 16 MiB `sim-flash` file with the flight partition map. The SD card is a FAT flash disk on the storage partition.
 - `boards/native_sim.conf` sets 10000 ticks per second like the flight boards. With native_sim's default of 100, every rate group runs 10 times too slow.
 - `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL), the RP2350 die temperature sensor and the two INA219 power monitors. `watchdog_sim.c` stands in for the external watchdog behind the JP6 jumper: it cold-reboots the sim when the Watchdog component stops toggling its pin for 44 s. `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
+- `sim/` is a Zephyr module, which the root `CMakeLists.txt` adds only for native_sim boards. Each fake has a Kconfig symbol in `sim/Kconfig` that turns on when the overlay has a node with its compatible, and a source line in `sim/CMakeLists.txt`.
 
 Devices with no emulator or fake report "device not ready", and the flight software handles that.
 
