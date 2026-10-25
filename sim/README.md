@@ -6,7 +6,7 @@ What the board is made of:
 
 - `boards/native_sim.overlay` gives every node label that `Main.cpp` and the topology use. Sensors sit on Zephyr's emulated I2C bus, GPIOs on `gpio-emul`, and the flash on a 16 MiB `sim-flash` file with the flight partition map. The SD card is a FAT flash disk on the storage partition.
 - `boards/native_sim.conf` sets 10000 ticks per second like the flight boards. With native_sim's default of 100, every rate group runs 10 times too slow.
-- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `ina219_sim.c` serves the two power monitors. `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL) and the RP2350 die temperature sensor. `watchdog_sim.c` stands in for the external watchdog behind the JP6 jumper: it cold-reboots the sim when the Watchdog component stops toggling its pin for 44 s. `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
+- `sim/` holds the fake devices and their bindings. `lora_sim.c` is a null radio. `rtc_sim.c` is Zephyr's `rtc_emul.c` changed to behave like the flight RV3028 (see its header). `sensor_sim.c` serves the IMU (LSM6DSO and LIS2MDL), the RP2350 die temperature sensor and the two INA219 power monitors. `watchdog_sim.c` stands in for the external watchdog behind the JP6 jumper: it cold-reboots the sim when the Watchdog component stops toggling its pin for 44 s. `gpio_latch_sim.c` stands in for the MCP23017 that switches the face and payload power.
 
 Devices with no emulator or fake report "device not ready", and the flight software handles that.
 
@@ -68,30 +68,33 @@ sim/stop-sil.sh /tmp/sitl
 
 `SIM_ARGS` passes options to the executable. `-rt-ratio=N` runs N times faster than real time, and `-no-rt` runs as fast as the host allows. Run `build-fprime-native_sim/zephyr/zephyr.exe --help` for the full list. Run the integration tests at real time, because their timeouts are in wall-clock time. At `-rt-ratio=10`, `rtc_test.py::test_05` sees its alarm fire early.
 
-## Script the power monitors
+## Script the sensors
 
-The system INA219 reads 8.2 V and 0.3 A by default, and the solar INA219 reads 0 V and 0 A. To change a reading while the sim runs, write `<millivolts> [<milliamps>]` to `ina219_sys.txt` or `ina219_sol.txt` in the run directory. The fake reads the file on every sample, and keeps its last reading if the file is empty. Delete the file to go back to the default.
+Every fake sensor reads a file in the run directory on each sample, so you can change a reading while the sim runs. Write one `<quantity> <value>...` line per quantity, in SI units.
+
+| File | Quantities | Default |
+| --- | --- | --- |
+| `ina219_sys.txt` | `voltage` (V), `current` (A) | 8.2 V, 0.3 A |
+| `ina219_sol.txt` | `voltage` (V), `current` (A) | 0 V, 0 A |
+| `lsm6dso.txt` | `accel` (m/s², X Y Z), `gyro` (rad/s, X Y Z), `die-temp` (°C) | 1 g on Z, about 0.1 °/s gyro bias, 25 °C |
+| `lis2mdl.txt` | `magn` (gauss, X Y Z) | 0.2 G on X, 0.4 G on Z |
+| `die_temp.txt` | `die-temp` (°C) | 25 °C |
+
+The INA219s report power as voltage times current. A quantity that the file leaves out reads its default, and deleting the file returns every quantity to its default. An empty file keeps the last reading. A line with a missing, non-numeric or out-of-range value leaves that quantity at its default, never half updated.
 
 ```sh
-echo 6000 50 > /tmp/sitl/ina219_sys.txt   # ModeManager enters LOW_BATTERY safe mode about 10 s later
-echo 8500 > /tmp/sitl/ina219_sys.txt      # and leaves it once the voltage recovers
-```
-
-## Script the IMU and die temperature
-
-The LSM6DSO reads 1 g on Z, a gyro bias of about 0.1 °/s and 25 °C by default. The LIS2MDL reads 0.2 G on X and 0.4 G on Z, and the die sensor reads 25 °C. To change a reading while the sim runs, write one `<quantity> <value>...` line per quantity, in SI units, to `lsm6dso.txt`, `lis2mdl.txt` or `die_temp.txt` in the run directory. The quantities are `accel` and `gyro` (X Y Z), `magn` (X Y Z, in gauss) and `die-temp`. A quantity that the file leaves out reads its default. A line with a missing, non-numeric or out-of-range value leaves that quantity at its default, never half updated.
-
-A shell redirect truncates the file before it writes, so a sample can land in between. To change several quantities at once without that window, write a temporary file and rename it over the real one, as in `printf 'gyro 0.5 0 0\n' > /tmp/sitl/.lsm6dso && mv /tmp/sitl/.lsm6dso /tmp/sitl/lsm6dso.txt`.
-
-```sh
+echo 'voltage 6.0' > /tmp/sitl/ina219_sys.txt    # ModeManager enters LOW_BATTERY safe mode about 10 s later
+echo 'voltage 8.5' > /tmp/sitl/ina219_sys.txt    # and leaves it once the voltage recovers
 printf 'gyro 0.5 0 0\n' > /tmp/sitl/lsm6dso.txt   # tumbling at 0.5 rad/s about X
 ```
+
+A shell redirect truncates the file before it writes, so a sample can land in between. To change several quantities at once without that window, write a temporary file and rename it over the real one, as in `printf 'voltage 6.0\ncurrent 0.05\n' > /tmp/sitl/.ina219_sys && mv /tmp/sitl/.ina219_sys /tmp/sitl/ina219_sys.txt`.
 
 ## Known differences from flight
 
 - The telemetry packetizer's divider sends most channels about every 5 minutes. Tests that wait for telemetry set `telemetryDelay.DIVIDER_PRM_SET 1` first.
 - The solar INA219 reads 0 V and 0 A by default, because the sim has no sun.
-- The IMU and die temperature fakes return the values above, not sensor noise. They accept any sampling rate and ignore it.
+- The sensor fakes return the values above, not sensor noise. They accept any sampling rate and ignore it.
 - The sensors behind the TCA9548A mux have no emulator, so they report "device not ready" or fail to read.
 - The LoRa radio drops everything it sends and never receives.
 - The external watchdog is always fitted, as if JP6 were bridged. It reboots the sim 44 s after the toggling stops, the time measured on a v5e bench board.

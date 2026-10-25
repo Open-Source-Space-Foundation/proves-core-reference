@@ -31,7 +31,6 @@ if (BOARD MATCHES "^native_sim")
     target_sources(app PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}/sim/lora_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/rtc_sim.c"
-        "${CMAKE_CURRENT_LIST_DIR}/sim/ina219_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/gpio_latch_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/sensor_sim.c"
         "${CMAKE_CURRENT_LIST_DIR}/sim/watchdog_sim.c"

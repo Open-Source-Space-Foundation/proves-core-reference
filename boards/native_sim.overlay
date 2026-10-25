@@ -157,19 +157,20 @@ rtc0: &rtc {
 	};
 
 	ina219_0: ina219_0@40 {
-		compatible = "proves,ina219-sim";
+		compatible = "proves,sensor-sim";
 		reg = <0x40>;
 		sim-file = "ina219_sys.txt";
-		default-millivolts = <8200>;
-		default-milliamps = <300>;
+		voltage = <8200000>;
+		current = <300000>;
 	};
 
+	/* No sun in the sim. */
 	ina219_1: ina219_1@41 {
-		compatible = "proves,ina219-sim";
+		compatible = "proves,sensor-sim";
 		reg = <0x41>;
 		sim-file = "ina219_sol.txt";
-		default-millivolts = <0>;
-		default-milliamps = <0>;
+		voltage = <0>;
+		current = <0>;
 	};
 
 	#include "bronco_space/proves_flight_control_board_v5/proves_face_mux.dtsi"
