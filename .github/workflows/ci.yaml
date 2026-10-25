@@ -97,6 +97,8 @@ jobs:
 
   # Uses no secrets: the build generates a throwaway authentication key.
   sitl:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -142,12 +144,10 @@ jobs:
         run: |
           sim/smoke.sh "$RUNNER_TEMP/sitl-smoke"
 
-      # Report-only until the SITL suite is stable. The build and the smoke run still gate the job.
       - name: SITL integration tests
-        continue-on-error: true
         run: |
           sim/run-sil.sh "$RUNNER_TEMP/sitl" 7200
-          make test-integration PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper -rA"
+          make sim-test SIM_RUN="$RUNNER_TEMP/sitl" PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper -rA"
 
       - name: Stop sim and GDS
         if: always()

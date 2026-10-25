@@ -13,10 +13,13 @@ from fprime_gds.common.communication.ccsds.space_packet import SpacePacketFramer
 from fprime_gds.common.communication.framing import FramerDeframer
 from fprime_gds.plugin.definitions import gds_plugin
 
-# Get absolute path to sequence number file relative to this file's location
+# Sequence number file next to this plugin, unless PROVES_SEQUENCE_NUMBER_FILE names
+# another one (the native_sim keeps its own so it never resets the board's counter).
 _SEQUENCE_NUMBER_FILENAME = "sequence_number.bin"
 _SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
-SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
+SEQUENCE_NUMBER_FILE = os.environ.get("PROVES_SEQUENCE_NUMBER_FILE") or os.path.join(
+    _SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME
+)
 # The security header's sequence number field is a U32.
 _SEQUENCE_NUMBER_MODULUS = 2**32
 

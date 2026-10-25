@@ -6,17 +6,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUN="$(realpath -m "$1")"
 cd "$ROOT"
-# Delete only an empty directory or one that run-sil.sh wrote.
-if [ -n "$(ls -A "$RUN" 2> /dev/null)" ] && [ ! -f "$RUN/sil.log" ]; then
-    echo "$RUN is not a SITL run directory, refusing to delete it" >&2
-    exit 1
-fi
-rm -rf "$RUN"
+# Stop any run still using this directory, then remove only the files run-sil.sh and
+# the sim write, so a mistyped path loses nothing else.
+sim/stop-sil.sh "$RUN"
+rm -f "$RUN"/{pcr-flash.bin,pcr-native_sim.exe,fprime.pty,sil.log,gds.log,sequence_number.bin} \
+    "$RUN"/{die_temp,lsm6dso,lis2mdl,ina219_sys,ina219_sol}.txt
 trap 'sim/stop-sil.sh "$RUN"' EXIT
 
 expect_boot() {
     echo "== boot $1"
-    make test-integration TEST=boot_count_test PYTEST_ARGS="--expect-boot-count=$1"
+    make sim-test SIM_RUN="$RUN" TEST=boot_count_test PYTEST_ARGS="--expect-boot-count=$1"
 }
 
 sim/run-sil.sh "$RUN"
@@ -27,6 +26,6 @@ sim/stop-sil.sh "$RUN"
 sim/run-sil.sh "$RUN"
 expect_boot 2
 
-make test-integration TEST=reset_manager_test PYTEST_ARGS="-k warm_reset"
+make sim-test SIM_RUN="$RUN" TEST=reset_manager_test PYTEST_ARGS="-k warm_reset"
 expect_boot 3
 echo "SITL smoke passed, logs in $RUN"

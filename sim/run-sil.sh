@@ -4,13 +4,18 @@
 # Returns once the GDS is up. Stop both with sim/stop-sil.sh <run-dir>.
 # <run-dir>/pcr-flash.bin persists across runs.
 set -euo pipefail
+# The sim binary embeds the authentication key, so keep the run directory's files private.
+umask 077
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$1"
 RUN="$(cd "$1" && pwd)"
 STOP_AT="${2:-3600}"
 
+# The sim's GDS keeps its uplink sequence number in the run directory, so it never
+# moves the board's Framing/src/sequence_number.bin. `make sim-test` reads the same file.
+export PROVES_SEQUENCE_NUMBER_FILE="$RUN/sequence_number.bin"
 # A fresh flash image starts the flight software's uplink sequence number at 0.
-[ -f "$RUN/pcr-flash.bin" ] || echo 0 > "$ROOT/Framing/src/sequence_number.bin"
+[ -f "$RUN/pcr-flash.bin" ] || echo 0 > "$PROVES_SEQUENCE_NUMBER_FILE"
 
 # sys_reboot() re-execs this path, so run a copy that a rebuild cannot replace mid-run.
 cp "$ROOT/build-fprime-native_sim/zephyr/zephyr.exe" "$RUN/pcr-native_sim.exe"
@@ -38,6 +43,7 @@ done
 cd "$ROOT"
 GDS_LOG_START=$(($(wc -l < "$RUN/gds.log") + 1))
 PYTHONUNBUFFERED=1 setsid "$ROOT/fprime-venv/bin/fprime-gds" --gui=none --uart-device "$RUN/fprime.pty" --uart-skip-port-check \
+    --dictionary "$ROOT/build-artifacts-sim/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json" \
     >> "$RUN/gds.log" 2>&1 &
 echo $! > "$RUN/gds.pid"
 gds_up() { awk -v start="$GDS_LOG_START" 'NR >= start && /F prime is now running/ { up = 1; exit } END { exit !up }' "$RUN/gds.log"; }
