@@ -104,7 +104,7 @@ make sync-sequence-number
 ```
 Useful information for make sync-sequence-number:
 
-- Sends GET_SEQ_NUM to the deframer and writes the value to the file the framing plugin reads
+- Sends GET_SEQ_NUM to the deframer and writes the next number to send (the board's last accepted number plus one) to the file the framing plugin reads on every frame
 - GDS must already be running and connected because the target uses the integration-test start_gds fixture, which connects to an existing GDS
 - Run again after a reflash, after switching ground computers, or whenever commands start being rejected
 

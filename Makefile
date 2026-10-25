@@ -462,14 +462,19 @@ copy-secrets:
 	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
 
+# Decimal SCID that `make-ci-spacecraft-id` bakes in. The OTA bench board sits
+# next to the CI board on the same channel and key, so its builds use 69.
+CI_SPACECRAFT_ID ?= 67
+CI_SPACECRAFT_ID_HEX = $(shell printf '0x%04X' $(CI_SPACECRAFT_ID))
+
 .PHONY: make-ci-spacecraft-id
 make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
-	@echo "Generating unique spacecraft ID for CI build..."
-	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
+	@echo "Generating unique spacecraft ID $(CI_SPACECRAFT_ID) for CI build..."
+	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = $(CI_SPACECRAFT_ID_HEX)/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
-	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
-	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
-	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
+	@grep -q 'SpacecraftId = $(CI_SPACECRAFT_ID_HEX)' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+	@echo "Patching YAMCS instance config spacecraftId 68 -> $(CI_SPACECRAFT_ID)..."
+	sed -i.bak 's/spacecraftId: 68/spacecraftId: $(CI_SPACECRAFT_ID)/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
 	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
 	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 
