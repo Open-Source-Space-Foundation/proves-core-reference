@@ -46,7 +46,7 @@ Then build and run in the VM as below. `limactl stop pcr-sim` stops the VM.
 make sim-build
 ```
 
-The build goes to `build-fprime-native_sim` and installs to `build-artifacts`, like the flight build. Whichever you built last is the one `make test-integration` and the GDS use.
+The build goes to `build-fprime-native_sim` and installs to `build-artifacts-sim`, so it never overwrites the flight build in `build-artifacts`. Later runs of `make sim-build` reuse the build directory. Delete it to regenerate. Rebuild with `make sim-build`, because `fprime-util build` rejects a build cache whose install path differs from `settings.ini`.
 
 ## Run
 
@@ -60,11 +60,11 @@ To run the sim yourself, start it with a GDS attached, run tests, then stop it:
 
 ```sh
 sim/run-sil.sh /tmp/sitl
-make test-integration PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper"
+make sim-test SIM_RUN=/tmp/sitl PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper"
 sim/stop-sil.sh /tmp/sitl
 ```
 
-`run-sil.sh` appends the sim's console to `sil.log` and the GDS output to `gds.log` in the run directory. The flash image `pcr-flash.bin` stays there between runs, so state persists like it does on a board. Delete it for a fresh filesystem. On a fresh image, `run-sil.sh` writes `0` to `Framing/src/sequence_number.bin` so the GDS starts at the flight software's sequence number.
+`run-sil.sh` appends the sim's console to `sil.log` and the GDS output to `gds.log` in the run directory. The flash image `pcr-flash.bin` stays there between runs, so state persists like it does on a board. Delete it for a fresh filesystem. The run directory also holds the sim's own `sequence_number.bin`, so the sim never touches the board's `Framing/src/sequence_number.bin`. On a fresh image, `run-sil.sh` writes `0` to it so the GDS starts at the flight software's sequence number. `make sim-test` points the tests at the same file. `stop-sil.sh` exits 1 if the sim or the GDS is still running after it stops them.
 
 `SIM_ARGS` passes options to the executable. `-rt-ratio=N` runs N times faster than real time, and `-no-rt` runs as fast as the host allows. Run `build-fprime-native_sim/zephyr/zephyr.exe --help` for the full list. Run the integration tests at real time, because their timeouts are in wall-clock time. At `-rt-ratio=10`, `rtc_test.py::test_05` sees its alarm fire early.
 
@@ -79,7 +79,9 @@ echo 8500 > /tmp/sitl/ina219_sys.txt      # and leaves it once the voltage recov
 
 ## Script the IMU and die temperature
 
-The LSM6DSO reads 1 g on Z, a gyro bias of about 0.1 °/s and 25 °C by default. The LIS2MDL reads 0.2 G on X and 0.4 G on Z, and the die sensor reads 25 °C. To change a reading while the sim runs, write one `<quantity> <value>...` line per quantity, in SI units, to `lsm6dso.txt`, `lis2mdl.txt` or `die_temp.txt` in the run directory. The quantities are `accel` and `gyro` (X Y Z), `magn` (X Y Z, in gauss) and `die-temp`. A quantity that the file leaves out reads its default.
+The LSM6DSO reads 1 g on Z, a gyro bias of about 0.1 °/s and 25 °C by default. The LIS2MDL reads 0.2 G on X and 0.4 G on Z, and the die sensor reads 25 °C. To change a reading while the sim runs, write one `<quantity> <value>...` line per quantity, in SI units, to `lsm6dso.txt`, `lis2mdl.txt` or `die_temp.txt` in the run directory. The quantities are `accel` and `gyro` (X Y Z), `magn` (X Y Z, in gauss) and `die-temp`. A quantity that the file leaves out reads its default. A line with a missing, non-numeric or out-of-range value leaves that quantity at its default, never half updated.
+
+A shell redirect truncates the file before it writes, so a sample can land in between. To change several quantities at once without that window, write a temporary file and rename it over the real one, as in `printf 'gyro 0.5 0 0\n' > /tmp/sitl/.lsm6dso && mv /tmp/sitl/.lsm6dso /tmp/sitl/lsm6dso.txt`.
 
 ```sh
 printf 'gyro 0.5 0 0\n' > /tmp/sitl/lsm6dso.txt   # tumbling at 0.5 rad/s about X
