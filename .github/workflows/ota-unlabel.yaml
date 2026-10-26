@@ -1,0 +1,26 @@
+name: ota-unlabel
+
+# The `test-ota` label authorises ota.yaml to run one commit on the hardware
+# runners. When the PR head moves, that authorisation no longer covers the new
+# code, so drop the label; a maintainer re-labels after reviewing the push.
+# Runs on GitHub-hosted runners and checks out nothing: it only calls the API.
+on:
+  pull_request:
+    types:
+      - synchronize
+
+permissions:
+  pull-requests: write
+
+jobs:
+  remove-label:
+    if: contains(github.event.pull_request.labels.*.name, 'test-ota')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remove test-ota label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --remove-label test-ota

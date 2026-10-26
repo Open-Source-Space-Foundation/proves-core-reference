@@ -109,6 +109,23 @@ make test-unit
 
 Uses CMake/CTest. Unit tests are in `PROVESFlightControllerReference/test/unit-tests/`.
 
+**Testing tiers**: the project's tier model (Helper Test, Component UT, Ztest Lane, SIL, SITL, HWIL) is defined in `GLOSSARY.md`; rollout plan in `docs/plans/testing-roadmap.md`; decisions in `docs/adr/`.
+
+**F Prime Component UTs** (native host build, no hardware):
+
+```bash
+make test-fprime-ut    # generate native UT cache if needed, build + run all component UTs
+```
+
+The native build lives in `native/` (own `settings.ini`; fprime-zephyr's module registration is platform-guarded so it stays in `library_locations`). Requires host mbedTLS (`brew install mbedtls` / `apt install libmbedtls-dev`). Zephyr-header-bound components register autocode-only natively (see `docs/adr/0002`) and cannot have Component UTs — use helper extraction for those.
+
+To add a UT to a portable component (exemplar: `Components/Watchdog/test/ut/`):
+
+1. Add a `register_fprime_ut` block to the component CMakeLists (copy Watchdog's), listing `test/ut/<Name>TestMain.cpp` + `test/ut/<Name>Tester.cpp` with `UT_AUTO_HELPERS`.
+2. `touch` those files as empty stubs (CMake configure needs them to exist), then from the component dir run `fprime-util impl --ut --build-cache <repo>/native/build-fprime-automatic-native-ut` and rename the emitted `*.template.*` files into place.
+3. Build/run: `make test-fprime-ut` (builds all UTs via `fprime-util build --ut --all` from `native/`, then runs `ctest` scoped to `PROVESFlightControllerReference_` — fprime-extras UTs are excluded; upstream's DropDetector test is seed-flaky). Single component: `ctest --test-dir native/build-fprime-automatic-native-ut -R <Name>`. Running fprime-util from the component dir works only with an explicit `--build-cache <abs path to native/build-fprime-automatic-native-ut>` (as in step 2 — the flag bypasses cache discovery); without it (e.g. plain `fprime-util check`/`build`), settings discovery finds the Zephyr-only root settings.ini and fails.
+4. Known autocoder quirk: for argument-less `Fw.Signal` from-ports only `ASSERT_from_<port>_SIZE(n)` compiles; the indexed `ASSERT_from_<port>(i)` macro references history types that are never generated.
+
 
 **Test Framework Details**:
 
@@ -213,12 +230,30 @@ Framing/              # F Prime framing/deframing plugin (pip installable)
 sequences/            # F Prime command sequences (.seq files)
 scripts/              # Utility scripts (key generation, etc.)
 tools/                # Development and analysis tools (see tools/README.md)
-docs-site/
-├── getting-started/     # Setup and build documentation
-├── additional-resources/  # Board-specific guides, troubleshooting
-├── uploading/           # Board-specific firmware upload instructions
-└── components/          # Component SDD documentation
+docs-site/               # Hand-written MkDocs pages (component SDDs are not here)
+├── index.md
+├── getting-started/     # Setup, build, and flashing documentation
+└── additional-resources/  # Board list, board configuration, troubleshooting
 ```
+
+### Component Documentation
+
+Each component's docs live next to its code, in `<Component>/docs/`. There is no copy step. The MkDocs hook `tools/mkdocs_hooks/component_docs.py` publishes every folder with a `docs/` child under the `extra.component_sources` paths in `mkdocs.yml`:
+
+- `docs/sdd.md` is served at `/components/<Name>/`. Other files keep their names: `docs/USAGE.md` → `/components/<Name>/USAGE/`, `docs/img/x.svg` → `/components/<Name>/img/x.svg`.
+- `<Name>` is the component folder name. It must be unique across all sources.
+- Every `docs/` folder needs an `sdd.md` with front matter. `title:` is the menu name. `category:` is one of the `extra.component_categories` in `mkdocs.yml` (Core, Communication, Hardware, Sensor, Driver, Storage, Security). A missing or unknown category lands in **Other**.
+
+  ```yaml
+  ---
+  title: PROVES Router
+  category: Security
+  ---
+  ```
+
+- The hook builds the **Component SDDs** menu. Do not add component pages to `nav:` by hand.
+- Link to another component's docs with a normal relative path (`../../LoadSwitch/docs/sdd.md`). Link to code, tests, or FPP with a full `https://github.com/Open-Source-Space-Foundation/proves-core-reference/blob/main/<path>` URL. A relative link to a non-docs file fails the strict build.
+- Check docs changes with `make docs-build` (strict, as in CI). Hook tests: `make docs-test`.
 
 ### Key Architecture Points
 
@@ -273,15 +308,18 @@ make build-mcuboot     # Build firmware with MCUBoot bootloader signing
 make generate-auth-key # Generate AuthDefaultKey.h with a random HMAC key
 make fmt               # Run linters and formatters (pre-commit)
 make data-budget       # Analyze telemetry data budget (use VERBOSE=1 for details)
-make docs-sync         # Sync component SDD files to docs-site/components/
-make docs-serve        # Serve MkDocs documentation site locally (http://127.0.0.1:8000)
-make docs-build        # Build MkDocs documentation site
+make docs-deps         # Install docs dependencies into docs-venv/ and init component-source submodules
+make docs-serve        # Serve MkDocs documentation site locally with live reload (http://127.0.0.1:8000)
+make docs-build        # Build MkDocs documentation site (strict, as in CI)
+make docs-test         # Run the docs hook tests
 make gds               # Start F Prime Ground Data System
 make gds-integration   # Start GDS without GUI (for CI)
 make framer-plugin     # Build and install the CCSDS framing plugin
 make sequence SEQ=<name> # Compile a sequence file from sequences/ directory
 make sync-sequence-number # Synchronize GDS/flight sequence number
 make test-unit         # Run unit tests (CMake/CTest based)
+make test-fprime-ut    # Build + run F Prime component UTs (native host build; needs host mbedTLS)
+make generate-fprime-ut # (Re)generate the native F Prime UT build cache in native/ (force)
 make test-integration  # Run integration tests (requires connected board)
 make test-interactive  # Run interactive test selection (use ARGS= for CLI mode)
 make bootloader        # Trigger bootloader mode on RP2350
@@ -295,19 +333,35 @@ make minimize-uv-cache # Minimize UV cache (CI optimization)
 
 ### CI/CD Pipeline (`.github/workflows/ci.yaml`)
 
-**Jobs**:
+One workflow runs on every PR and push to `main`. Jobs without a `needs:` link
+run in parallel, each on its own runner. The firmware is built once, and every
+downstream job downloads the same artifacts.
 
-1. **Lint**: Runs `make fmt` (pre-commit checks)
-2. **Build**: Full build with caching
-   - Caches: bin tools, submodules, Python venv, Zephyr workspace
-   - Runs: `make submodules`, `make fprime-venv`, `make zephyr`, `make generate-ci build-ci`
-   - Uploads: `build-artifacts/zephyr.uf2` and dictionary JSON
+| Job | Required check | Needs | Notes |
+| --- | --- | --- | --- |
+| `changes` | | | decides docs-only (the `docs-only` action) |
+| `lint` | `lint` | | `make fmt` (pre-commit); always runs |
+| `docs` | | | strict MkDocs build and hook tests; always runs |
+| `unit-test` | `unit-test` | `changes` | `make test-unit` |
+| `fprime-ut` | | `changes` | `make test-fprime-ut`: native component UTs; host mbedTLS, no Zephyr SDK |
+| `build` | `build` | `changes` | builds firmware on `deathstar`, uploads artifacts |
+| `integration-uart` | `integration-uart` | `build` | flashes, UART tests, YAMCS round-trip (`integration` runner) |
+| `integration-radio` | `integration-radio` | `build` | flashes, LoRa radio tests (`integration` runner) |
+| `yamcs-build` | | `build` | checks the YAMCS server boots with the MDB |
+
+- `integration-uart` and `integration-radio` start together once `build`
+  finishes and land on separate `integration` machines when two are free.
+- On PRs that only change markdown or `docs/`/`docs-site/` files, everything
+  except `lint` and `docs` is skipped.
+- A job skipped because a job it needs failed counts as passing for a required
+  check. `build` is a required check, so a failed build still blocks the merge.
+  `build` and the hardware jobs use `!cancelled()` so a failed `changes` job
+  runs them as for a non-docs PR instead of skipping them.
 
 **Critical for CI Success**:
 
 - Always run `make fmt` before pushing
 - Ensure code builds with `make build` locally
-- Integration tests are NOT run in CI (require hardware)
 
 ## Common Issues & Workarounds
 
@@ -600,7 +654,7 @@ These instructions are comprehensive and validated. **Only search for additional
 
 - Instructions are incomplete for your specific task
 - You encounter errors not covered in "Common Issues"
-- You need board-specific flashing instructions (see docs-site/uploading/ and docs-site/additional-resources/board-list.md)
+- You need board-specific flashing instructions (see docs-site/additional-resources/board-list.md and docs-site/getting-started/build-flash-run.md)
 
 For standard build/test/lint workflows, **trust and follow these instructions exactly** to minimize exploration time and command failures.
 
@@ -616,4 +670,4 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root (created lazily). See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root (created lazily). See `docs/agents/domain.md`.

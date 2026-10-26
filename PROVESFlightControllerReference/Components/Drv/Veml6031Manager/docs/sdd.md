@@ -1,3 +1,8 @@
+---
+title: Veml6031 Manager
+category: Driver
+---
+
 # Drv::Veml6031Manager
 
 The VEML6031 Manager component interfaces with the VEML6031 sensor to provide visible light measurements.

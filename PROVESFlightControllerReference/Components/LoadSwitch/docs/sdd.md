@@ -1,3 +1,8 @@
+---
+title: Load Switch
+category: Hardware
+---
+
 # Components::LoadSwitch
 
 ## Overview

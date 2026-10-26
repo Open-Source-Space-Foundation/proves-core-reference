@@ -1,3 +1,8 @@
+---
+title: Tmp112 Manager
+category: Driver
+---
+
 # Drv::Tmp112Manager
 
 The TMP112 Manager component interfaces with the TMP112 sensor to provide ambient temperature measurements.

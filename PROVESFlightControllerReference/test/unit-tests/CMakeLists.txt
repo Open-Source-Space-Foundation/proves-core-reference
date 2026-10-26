@@ -56,11 +56,11 @@ target_include_directories(security_deframer_authenticator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR} # for AuthDefaultKey.h
 )
 
-# RtcManager RtcHelper
-add_library(rtc_manager_rtc_helper STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/Drv/RtcManager/RtcHelper.cpp
+# RtcManager TimeDiscipline
+add_library(rtc_manager_time_discipline STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/Drv/RtcManager/TimeDiscipline.cpp
 )
-target_include_directories(rtc_manager_rtc_helper PUBLIC
+target_include_directories(rtc_manager_time_discipline PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
@@ -81,8 +81,8 @@ target_include_directories(power_monitor_power_integrator PUBLIC
 )
 
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
-find_path(PSA_CRYPTO_H psa/crypto.h)
-find_library(MBEDCRYPTO_LIB mbedcrypto)
+find_path(PSA_CRYPTO_H psa/crypto.h PATHS /opt/homebrew/include /usr/local/include /usr/include)
+find_library(MBEDCRYPTO_LIB mbedcrypto PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
 
 if(NOT PSA_CRYPTO_H)
     message(FATAL_ERROR "psa/crypto.h not found; install Mbed TLS PSA provider headers or set CMAKE_INCLUDE_PATH to the directory containing psa/crypto.h")
@@ -111,7 +111,7 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_parser
         security_deframer_validator
         security_deframer_authenticator
-        rtc_manager_rtc_helper
+        rtc_manager_time_discipline
         proves_router_bypasser
         power_monitor_power_integrator
     )
