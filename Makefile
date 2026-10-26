@@ -145,7 +145,7 @@ build-mcuboot: submodules zephyr fprime-venv
 	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
 
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
-	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
+	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
 ##@ Debugging / OpenOCD
@@ -190,6 +190,21 @@ test-unit: ## Run unit tests
 	cmake -S PROVESFlightControllerReference/test/unit-tests -B build-gtest -DBUILD_TESTING=ON
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
+
+NATIVE_UT_BUILD_DIR ?= native/build-fprime-automatic-native-ut
+
+.PHONY: generate-fprime-ut
+generate-fprime-ut: submodules fprime-venv generate-auth-key ## Generate the native F Prime UT build cache (needs host mbedTLS)
+	cd native && $(UV_RUN) fprime-util generate --ut --force
+
+.PHONY: generate-fprime-ut-if-needed
+generate-fprime-ut-if-needed:
+	@test -f $(NATIVE_UT_BUILD_DIR)/build.ninja || $(MAKE) generate-fprime-ut
+
+.PHONY: test-fprime-ut
+test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
+	cd native && $(UV_RUN) fprime-util build --ut --all
+	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
 FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow
 
@@ -436,14 +451,19 @@ copy-secrets:
 	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
 
+# Decimal SCID that `make-ci-spacecraft-id` bakes in. The OTA bench board sits
+# next to the CI board on the same channel and key, so its builds use 69.
+CI_SPACECRAFT_ID ?= 67
+CI_SPACECRAFT_ID_HEX = $(shell printf '0x%04X' $(CI_SPACECRAFT_ID))
+
 .PHONY: make-ci-spacecraft-id
 make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
-	@echo "Generating unique spacecraft ID for CI build..."
-	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
+	@echo "Generating unique spacecraft ID $(CI_SPACECRAFT_ID) for CI build..."
+	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = $(CI_SPACECRAFT_ID_HEX)/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
-	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
-	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
-	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
+	@grep -q 'SpacecraftId = $(CI_SPACECRAFT_ID_HEX)' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+	@echo "Patching YAMCS instance config spacecraftId 68 -> $(CI_SPACECRAFT_ID)..."
+	sed -i.bak 's/spacecraftId: 68/spacecraftId: $(CI_SPACECRAFT_ID)/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
 	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
 	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
 

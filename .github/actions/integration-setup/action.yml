@@ -10,6 +10,11 @@ inputs:
     required: false
     default: "true"
 
+  ci-spacecraft-id-value:
+    description: Decimal spacecraft ID that `make make-ci-spacecraft-id` bakes in.
+    required: false
+    default: "67"
+
 runs:
   using: composite
   steps:
@@ -36,13 +41,19 @@ runs:
         # SCID 67. The integration runner's working tree is a fresh
         # checkout (default SCID 68) so we re-apply the same override
         # here to keep the YAMCS instance config / adapter in sync.
-        make make-ci-spacecraft-id
+        make make-ci-spacecraft-id CI_SPACECRAFT_ID=${{ inputs.ci-spacecraft-id-value }}
 
     - name: Set Authentication Key
       shell: bash
       env:
         AUTH_KEY: ${{ inputs.auth-key }}
       run: |
+        # Fork PRs get no secrets, so the key arrives empty. Fail here rather
+        # than 30s later when the GDS rejects the empty key.
+        if [ -z "$AUTH_KEY" ]; then
+          echo "::error::auth-key is empty; secrets.AUTH_KEY is unavailable (fork PR?)"
+          exit 1
+        fi
         echo "#define AUTH_DEFAULT_KEY \"$AUTH_KEY\"" > PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 
     - name: Install Framer Plugin

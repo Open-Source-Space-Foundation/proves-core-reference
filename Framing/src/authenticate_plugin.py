@@ -20,6 +20,33 @@ from fprime_gds.plugin.definitions import gds_plugin
 _SEQUENCE_NUMBER_FILENAME = "sequence_number.bin"
 _SEQUENCE_NUMBER_DIR = os.path.dirname(os.path.abspath(__file__))
 SEQUENCE_NUMBER_FILE = os.path.join(_SEQUENCE_NUMBER_DIR, _SEQUENCE_NUMBER_FILENAME)
+# The security header's sequence number field is a U32.
+_SEQUENCE_NUMBER_MODULUS = 2**32
+
+
+def claim_sequence_number(filename: str) -> int:
+    """Return the next sequence number to send and advance the file past it.
+
+    The file holds the next number to send, and frame() reads it on every
+    call, so a number written by the sequence sync takes effect on the very
+    next frame. The advanced number is stored before the claimed one is
+    sent, so a crash after sending cannot reuse it. A missing file starts at
+    0. An unreadable file raises: guessing a number could replay one the
+    board already accepted.
+    """
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            sequence_number = int(f.read().strip())
+    except FileNotFoundError:
+        sequence_number = 0
+    next_number = (sequence_number + 1) % _SEQUENCE_NUMBER_MODULUS
+    # Write a sibling file and rename it over the original, so a reader never
+    # sees a truncated file.
+    temporary = f"{filename}.tmp"
+    with open(temporary, "w", encoding="utf-8") as f:
+        f.write(str(next_number))
+    os.replace(temporary, filename)
+    return sequence_number % _SEQUENCE_NUMBER_MODULUS
 
 
 def get_default_auth_key_from_header() -> str:
@@ -95,11 +122,6 @@ class AuthenticateFramer(FramerDeframer):
         """
         super().__init__()
 
-        # Initialize sequence number from CLI argument or default to 0
-        seq_num = self.get_sequence_number_from_file(
-            SEQUENCE_NUMBER_FILE, addition=False
-        )
-        self.bytes_seq_num = seq_num.to_bytes(4, byteorder="big", signed=False)
         # Store values from CLI arguments or defaults
         self.spi = spi
         self.window_size = window_size
@@ -108,28 +130,6 @@ class AuthenticateFramer(FramerDeframer):
         if authentication_key is None:
             authentication_key = get_default_auth_key_from_header()
         self.authentication_key = authentication_key
-
-    def get_sequence_number_from_file(self, filename: str, addition: bool) -> int:
-        """Read the sequence number from a file
-        If the file does not exist, create it with 0
-        If addition is True, increment the sequence number and write back to file
-        Otherwise just return what is on there
-
-        """
-        file_number = 0
-        try:
-            with open(filename, "r") as f:
-                file_number = int(f.read())
-            if addition:
-                file_number += 1
-                # Write the incremented value back to file
-                with open(filename, "w") as f:
-                    f.write(str(file_number))
-        except FileNotFoundError:
-            with open(filename, "w") as f:
-                f.write(str(file_number))
-
-        return file_number
 
     def frame(self, data: bytes) -> bytes:
         """Frame data by adding authentication header and trailer"""
@@ -141,13 +141,8 @@ class AuthenticateFramer(FramerDeframer):
         bytes_spi = self.spi.to_bytes(2, byteorder="big", signed=False)
         header += bytes_spi
         # Sequence Number (32 bits/4 bytes, starts at 0x00000000):
-        header += self.bytes_seq_num
-
-        sequence_number = self.get_sequence_number_from_file(
-            SEQUENCE_NUMBER_FILE, addition=True
-        )
-
-        self.bytes_seq_num = sequence_number.to_bytes(4, byteorder="big", signed=False)
+        sequence_number = claim_sequence_number(SEQUENCE_NUMBER_FILE)
+        header += sequence_number.to_bytes(4, byteorder="big", signed=False)
 
         data = header + data
 

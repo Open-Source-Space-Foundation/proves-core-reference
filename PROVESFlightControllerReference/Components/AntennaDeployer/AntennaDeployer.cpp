@@ -5,7 +5,6 @@
 
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
-#include <zephyr/kernel.h>
 
 namespace Components {
 

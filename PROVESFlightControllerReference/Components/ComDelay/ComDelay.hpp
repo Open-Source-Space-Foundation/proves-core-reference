@@ -10,6 +10,7 @@
 #include <atomic>
 
 #include "PROVESFlightControllerReference/Components/ComDelay/ComDelayComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/ComDelay/TickDivider.hpp"
 
 namespace Components {
 
@@ -55,8 +56,8 @@ class ComDelay final : public ComDelayComponentBase {
                      ) override;
 
   private:
-    //! Count of incoming run ticks
-    U8 m_tick_count;
+    //! Divides incoming run ticks down to com status releases
+    TickDivider m_divider;
     //! Stores if the last status is currently valid
     std::atomic<bool> m_last_status_valid;
     //! Stores the last status
