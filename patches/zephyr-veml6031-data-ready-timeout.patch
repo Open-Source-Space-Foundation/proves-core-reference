@@ -1,0 +1,66 @@
+diff --git a/drivers/sensor/vishay/veml6031/veml6031.c b/drivers/sensor/vishay/veml6031/veml6031.c
+index efdee3d2f7a..fa9ffc1cb78 100644
+--- a/drivers/sensor/vishay/veml6031/veml6031.c
++++ b/drivers/sensor/vishay/veml6031/veml6031.c
+@@ -28,6 +28,13 @@ LOG_MODULE_REGISTER(VEML6031, CONFIG_SENSOR_LOG_LEVEL);
+  */
+ #define VEML6031_ALS_AF_DATA_READY BIT(3)
+ 
++/*
++ * Time to keep polling for data ready after the integration time has passed,
++ * in addition to one more integration time. The flag can stay clear forever,
++ * for example when a power glitch has reset the sensor to shutdown.
++ */
++#define VEML6031_DATA_READY_MARGIN_MS 10
++
+ /*
+  * Maximum value of ALS data which also means that the sensor is in saturation
+  * and that the measured value might be wrong.
+@@ -130,6 +137,14 @@ static void veml6031_sleep_by_integration_time(const struct veml6031_data *data)
+ 	}
+ }
+ 
++static int64_t veml6031_data_ready_timeout_ms(const struct veml6031_data *data)
++{
++	enum veml60xx_it itim = veml60xx_it_in_range(data->itim) ? data->itim : VEML60XX_IT_400;
++
++	return DIV_ROUND_UP(veml60xx_it_values[itim].us, USEC_PER_MSEC) +
++	       VEML6031_DATA_READY_MARGIN_MS;
++}
++
+ static int veml6031_check_settings(const struct veml6031_data *data)
+ {
+ 	return veml6031_div4_in_range(data->div4) && veml60xx_gain_in_range(data->gain) &&
+@@ -405,6 +420,7 @@ static int veml6031_perform_single_measurement(const struct device *dev)
+ 	int ret;
+ 	uint8_t val;
+ 	int cnt = 0;
++	int64_t deadline;
+ 
+ 	data->ir_sd = 0;
+ 	data->cal = 1;
+@@ -419,8 +435,12 @@ static int veml6031_perform_single_measurement(const struct device *dev)
+ 	}
+ 
+ 	ret = veml6031_read(dev, VEML6031_CMDCODE_ALS_INT, &val);
++	if (ret) {
++		return ret;
++	}
+ 
+ 	veml6031_sleep_by_integration_time(data);
++	deadline = k_uptime_get() + veml6031_data_ready_timeout_ms(data);
+ 
+ 	while (1) {
+ 		ret = veml6031_read(dev, VEML6031_CMDCODE_ALS_INT, &val);
+@@ -432,6 +452,11 @@ static int veml6031_perform_single_measurement(const struct device *dev)
+ 			break;
+ 		}
+ 
++		if (k_uptime_get() >= deadline) {
++			LOG_WRN("Data ready timeout after %d polls", cnt);
++			return -ETIMEDOUT;
++		}
++
+ 		k_sleep(K_MSEC(1));
+ 
+ 		cnt++;
