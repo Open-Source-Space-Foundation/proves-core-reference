@@ -1,0 +1,4 @@
+&i2c0 {
+    monitor_a: ina260@40 { compatible = "ti,ina260"; reg = <0x40>; };
+    monitor_b: ina260@41 { compatible = "ti,ina260"; reg = <0x41>; };
+};

@@ -1,0 +1,6 @@
+name: kleo_ina260
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .

@@ -1,0 +1,5 @@
+config KLEO_INA260
+    bool "KLEO INA260 power monitor"
+    default y
+    depends on SENSOR && DT_HAS_TI_INA260_ENABLED
+    select I2C

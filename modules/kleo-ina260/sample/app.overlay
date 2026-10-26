@@ -1,0 +1,12 @@
+&ina219_0 { status = "disabled"; };
+&ina219_1 { status = "disabled"; };
+&lsm6dso0 { status = "disabled"; };
+&lis2mdl0 { status = "disabled"; };
+&rtc0 { status = "disabled"; };
+&mcp23017 { status = "disabled"; };
+&i2c1 {
+    status = "okay";
+    clock-frequency = <100000>;
+    ina260_40: ina260@40 { compatible = "ti,ina260"; reg = <0x40>; };
+    ina260_41: ina260@41 { compatible = "ti,ina260"; reg = <0x41>; };
+};
