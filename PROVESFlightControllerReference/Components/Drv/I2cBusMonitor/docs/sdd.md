@@ -1,3 +1,8 @@
+---
+title: I2C Bus Monitor
+category: Driver
+---
+
 # Drv::I2cBusMonitor
 
 The I2C Bus Monitor component recovers I2C0 when a target holds SDA or SCL low. This can occur when face power is cut during a transfer. Without recovery, every I2C0 consumer times out until a power cycle (issue #540).

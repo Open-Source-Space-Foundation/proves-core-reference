@@ -18,28 +18,7 @@ Step-by-step guides to set up your development environment, build the firmware, 
 
 ### Component Software Design Documents (SDDs)
 
-The documentation is organized into the following categories:
-
-### [Core Components](components/ADCS.md)
-System-level components that manage the overall operation and state of the spacecraft: [ADCS](components/ADCS.md), [Mode Manager](components/ModeManager.md), [Startup Manager](components/StartupManager.md), [Reset Manager](components/ResetManager.md), [Watchdog](components/Watchdog.md), [Bootloader Trigger](components/BootloaderTrigger.md), [Detumble Manager](components/DetumbleManager.md)
-
-### [Communication Components](components/AmateurRadio.md)
-Components that handle various communication protocols and interfaces: [Amateur Radio](components/AmateurRadio.md), [S-Band](components/SBand.md), [Com CCSDS UART](components/ComCcsdsUart.md), [Com CCSDS S-Band](components/ComCcsdsSband.md), [Com CCSDS LoRa](components/ComCcsdsLora.md), [Payload Com](components/PayloadCom.md), [Com Delay](components/ComDelay.md)
-
-### [Hardware Components](components/AntennaDeployer.md)
-Components that interface with physical hardware devices and actuators: [Antenna Deployer](components/AntennaDeployer.md), [Burnwire](components/Burnwire.md), [Camera Handler](components/CameraHandler.md), [Load Switch](components/LoadSwitch.md)
-
-### [Sensor Components](components/ImuManager.md)
-Components that manage and process data from various sensors: [IMU Manager](components/ImuManager.md), [Power Monitor](components/PowerMonitor.md), [Thermal Manager](components/ThermalManager.md)
-
-### [Driver Components](components/Drv2605Manager.md)
-Low-level driver components for specific hardware peripherals: [Drv2605 Manager](components/Drv2605Manager.md), [Ina219 Manager](components/Ina219Manager.md), [RTC Manager](components/RtcManager.md), [Tmp112 Manager](components/Tmp112Manager.md), [Veml6031 Manager](components/Veml6031Manager.md)
-
-### [Storage Components](components/FlashWorker.md)
-Components that manage persistent storage and filesystem operations: [Flash Worker](components/FlashWorker.md), [Fs Format](components/FsFormat.md), [Fs Space](components/FsSpace.md), [Null Prm Db](components/NullPrmDb.md)
-
-### [Security Components](components/TcSecurityDeframer.md)
-Components that handle authentication and security features: [TcSecurityDeframer](components/TcSecurityDeframer.md), [PROVES Router](components/ProvesRouter.md)
+Every component publishes its design document from its own `docs/` folder. Browse them by category in the **Component SDDs** menu, starting with the [Mode Manager](components/ModeManager/sdd.md).
 
 ### [Additional Resources](additional-resources/board-list.md)
 Troubleshooting guides and additional configuration information:
@@ -53,7 +32,7 @@ Troubleshooting guides and additional configuration information:
 
 ## Navigation
 
-Use the navigation tabs above to browse through the different component SDDs. Each SDD includes:
+Use the **Component SDDs** tab above to browse the component SDDs. Each SDD includes:
 
 - Introduction and purpose
 - Requirements

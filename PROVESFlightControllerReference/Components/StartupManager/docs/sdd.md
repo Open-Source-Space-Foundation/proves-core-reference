@@ -1,3 +1,8 @@
+---
+title: Startup Manager
+category: Core
+---
+
 # Components::StartupManager
 
 ## Overview

@@ -16,6 +16,9 @@
 #include "Fw/Logger/Logger.hpp"
 #include "config/ApidEnumAc.hpp"
 
+static_assert(Components::PacketBypasser::kCommandApid == ComCfg::Apid::FW_PACKET_COMMAND,
+              "Bypasser command APID must match ComCfg::Apid::FW_PACKET_COMMAND");
+
 namespace Svc {
 
 // ----------------------------------------------------------------------
@@ -32,8 +35,9 @@ ProvesRouter ::~ProvesRouter() {}
 
 void ProvesRouter ::dataIn_handler(FwIndexType portNum, Fw::Buffer& packetBuffer, const ComCfg::FrameContext& context) {
     // Validate that the packet is authenticated or can bypass authentication
-    bool allowed = context.get_authenticated() ||
-                   Components::PacketBypasser::bypassPacket(packetBuffer.getData(), packetBuffer.getSize());
+    bool allowed =
+        context.get_authenticated() ||
+        Components::PacketBypasser::bypassPacket(context.get_apid(), packetBuffer.getData(), packetBuffer.getSize());
     if (!allowed) {
         // Telemeter the rejection
         this->m_rejectedPackets += 1;
