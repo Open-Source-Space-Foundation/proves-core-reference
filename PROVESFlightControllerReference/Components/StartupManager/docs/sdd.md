@@ -62,6 +62,13 @@ The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM 
 3. **Increment retry**: if the first-tick persist fails (e.g. filesystem not ready), `run` re-attempts it each tick until it succeeds — the increment is delayed, not lost. `BootCountUpdateFailure` is emitted once per failure streak.
 4. **Write-then-rename persist**: the value is written to `<BOOT_COUNT_FILE>.tmp`, flushed, and renamed over the target. FAT's rename is not guaranteed power-cut atomic, but the new data is fully on storage before it replaces the old file, closing the torn-in-place-write window that produced the observed garbage. The residual worst case during the rename window is a missing file, which reads as a failed read (count re-initializes, visibly) rather than silent corruption.
 
+### Quiescence start persistence
+
+The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is read on the first `run` tick of each boot. Because it is persisted state, any failure to decode it repeats on every boot, so it must never be fatal:
+
+1. **Unreadable file is replaced, not asserted on**: if the file exists but the read fails, `QuiescenceFileUnreadable` is emitted with the `Os::File` status and the file is treated like a missing one: the current time is persisted and the boot continues. This covers bytes that fail `Fw::Time` deserialization (e.g. an erased-flash `0xFF` tail, or `useconds >= 1000000`, which `Fw::Time` deserialization rejects), a short file, and file-system errors. The status is logged rather than a "corrupt" verdict because `OTHER_ERROR` means both a decode failure and a generic OS error. A missing file is the expected first boot and is silent; existence is checked directly because Zephyr's `Os::File` reports a missing file as `OTHER_ERROR`.
+2. **Write-then-rename persist**: the file is (re)written via `<QUIESCENCE_START_FILE>.tmp` + rename, the same scheme as the boot count.
+
 
 ## Port Descriptions
 
@@ -113,6 +120,7 @@ The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM 
 | `CurrentBootCount` | ACTIVITY_LO | `i: I64` | Emitted by `GET_BOOT_COUNT` with the current boot count |
 | `BootCountUpdateFailure` | WARNING_LO | None | Emitted once per failure streak when the boot count file cannot be updated. The increment is retried on each subsequent `run` tick until it persists |
 | `BootCountCorrupted` | WARNING_HI | `raw: I64` | Emitted when the boot count file holds an implausible value (> 1,000,000), indicating a torn or corrupt write. The value is treated as unreadable |
+| `QuiescenceFileUnreadable` | WARNING_HI | `status: I32` | Emitted when the quiescence start file exists but cannot be read or decoded (torn write, short file, or file-system error), with the `Os::File` status. The file is reinitialized with the current time |
 | `QuiescenceFileInitFailure` | WARNING_LO | None | Emitted when the quiescence start time file cannot be initialized. System will use current time but cannot persist it |
 | `StartupSequenceFinished` | ACTIVITY_LO | None | Emitted when the startup sequence completes successfully |
 | `StartupSequenceFailed` | WARNING_LO | `response: Fw.CmdResponse` | Emitted when the startup sequence fails, includes the failure response code |
@@ -140,3 +148,4 @@ The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM 
 | REQ-SM-009 | When `DEFAULT_STARTUP_VALUE == 0`, StartupManager shall not assert `enableTransmit` from the hard-coded countdown | Verification: Build with gate disabled and confirm no `HardcodedRadioEnable` / automatic TX after boot |
 | REQ-SM-010 | StartupManager shall not propagate an implausible boot count read from a corrupt file | Verification: Write junk to `BOOT_COUNT_FILE`, reboot, confirm `BootCountCorrupted` and a re-initialized count |
 | REQ-SM-011 | StartupManager shall persist the boot count atomically and retry a failed increment until it is durably stored | Verification: HWIL `test_safe_09` asserts boot count == initial+1 across a watchdog hard reset |
+| REQ-SM-012 | StartupManager shall boot normally from a corrupt `QUIESCENCE_START_FILE`, replacing it atomically | Verification: Write junk to `QUIESCENCE_START_FILE`, reboot, confirm `QuiescenceFileUnreadable`, exactly one boot (boot count +1), and no repeat on the next boot (HWIL `startup_manager_test.py::test_01`) |

@@ -687,6 +687,26 @@ void ModeManagerTester ::testRestoreCorruptModeValue() {
     ASSERT_TLM_CurrentSafeModeReason(0, Components::SafeModeReason::NONE);
 }
 
+void ModeManagerTester ::testRestoreCorruptReasonValue() {
+    // A valid SAFE_MODE record whose reason byte (7) is not a SafeModeReason
+    this->seedStateFile(static_cast<U8>(Components::SystemMode::SAFE_MODE), 9, 7, 0);
+    this->bootFromPersistentState();
+
+    // Defined behavior: load-corrupt-reason warning carrying the bad byte, then
+    // defaults, instead of asserting on the enum assignment every boot (#547)
+    ASSERT_EVENTS_SIZE(1);
+    ASSERT_EVENTS_StatePersistenceFailure_SIZE(1);
+    ASSERT_EVENTS_StatePersistenceFailure(0, "load-corrupt-reason", 7);
+    ASSERT_EQ(this->invoke_to_getMode(0), Components::SystemMode::NORMAL);
+    ASSERT_from_loadSwitchTurnOn_SIZE(8);
+    ASSERT_from_loadSwitchTurnOff_SIZE(0);
+
+    this->clearHistory();
+    this->tick(1);
+    ASSERT_TLM_SafeModeEntryCount(0, 0);
+    ASSERT_TLM_CurrentSafeModeReason(0, Components::SafeModeReason::NONE);
+}
+
 // ----------------------------------------------------------------------
 // Handler overrides for typed from ports
 // ----------------------------------------------------------------------

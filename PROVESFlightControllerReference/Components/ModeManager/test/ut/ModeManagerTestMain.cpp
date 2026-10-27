@@ -136,6 +136,11 @@ TEST(Persistence, RestoreCorruptModeValue) {
     tester.testRestoreCorruptModeValue();
 }
 
+TEST(Persistence, RestoreCorruptReasonValue) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCorruptReasonValue();
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

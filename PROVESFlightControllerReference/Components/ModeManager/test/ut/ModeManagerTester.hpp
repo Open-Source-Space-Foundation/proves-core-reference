@@ -138,6 +138,10 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! load-corrupt warning
     void testRestoreCorruptModeValue();
 
+    //! An invalid persisted reason value falls back to defaults with a
+    //! load-corrupt-reason warning
+    void testRestoreCorruptReasonValue();
+
   private:
     // ----------------------------------------------------------------------
     // Handler overrides for typed from ports

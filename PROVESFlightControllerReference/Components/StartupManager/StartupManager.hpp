@@ -53,10 +53,12 @@ class StartupManager final : public StartupManagerComponentBase {
 
     //! \brief get and possibly initialize the quiescence start time
     //!
-    //! Reads the quiescence start time from the quiescence start time file. If the read fails, the current time is
-    //! written to the file and returned.
+    //! Reads the quiescence start time from the quiescence start time file. If the read fails or the file is corrupt,
+    //! the current time is atomically written to the file and returned. A file that exists but cannot be read emits
+    //! QuiescenceFileUnreadable with the read status.
     //!
-    //! \warning this function will modify the quiescence start time file on disk if it does not already exist.
+    //! \warning this function will modify the quiescence start time file on disk if it does not exist or cannot be
+    //! read.
     //!
     //! \return The quiescence start time
     Fw::Time update_quiescence_start();
