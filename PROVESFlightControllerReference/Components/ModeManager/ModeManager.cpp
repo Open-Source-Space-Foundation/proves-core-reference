@@ -282,7 +282,7 @@ void ModeManager ::loadState() {
             const bool modeValid = Components::SystemMode::isValid(state.mode);
             const bool reasonValid = Components::SafeModeReason::isValid(state.safeModeReason);
             if (modeValid && reasonValid) {
-                // Valid mode value - restore state
+                // Valid mode and reason - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
                 this->m_safeModeReason = static_cast<Components::SafeModeReason::T>(state.safeModeReason);
@@ -311,15 +311,10 @@ void ModeManager ::loadState() {
                     this->turnOnComponents();
                 }
             } else {
-                // Corrupted state (invalid mode or reason value) - use defaults. The op string names the bad
-                // field so the logged byte is unambiguous on the ground.
-                if (!modeValid) {
-                    Fw::LogStringArg opStr("load-corrupt-mode");
-                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
-                } else {
-                    Fw::LogStringArg opStr("load-corrupt-reason");
-                    this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.safeModeReason));
-                }
+                // Corrupted state (invalid mode or reason value) - use defaults; the op string names the bad byte
+                Fw::LogStringArg opStr(modeValid ? "load-corrupt-reason" : "load-corrupt");
+                this->log_WARNING_LO_StatePersistenceFailure(
+                    opStr, static_cast<I32>(modeValid ? state.safeModeReason : state.mode));
                 this->useDefaultState();
             }
         } else {

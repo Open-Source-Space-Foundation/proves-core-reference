@@ -1,3 +1,8 @@
+---
+title: Mode Manager
+category: Core
+---
+
 # Components::ModeManager
 
 The ModeManager component manages system operational modes and orchestrates transitions between NORMAL and SAFE_MODE. It evaluates voltage conditions and detects unintended reboots to make mode decisions, controls power to non-critical subsystems during transitions, and maintains/persists mode state across reboots.
@@ -129,7 +134,7 @@ State is persisted to `/mode_state.bin`:
 - Safe mode reason (U8)
 - Clean shutdown flag (U8)
 
-On load, a file whose mode is outside 1-2 or whose reason is not a valid `SafeModeReason` (e.g. a torn write) is treated as corrupt: `StatePersistenceFailure` is emitted with `"load-corrupt-mode"` and the mode byte, or `"load-corrupt-reason"` and the reason byte, and defaults (NORMAL, count 0, reason NONE) are used instead of asserting.
+On load, a file whose mode is not a valid `SystemMode` or whose reason is not a valid `SafeModeReason` (e.g. a torn write) is treated as corrupt: `StatePersistenceFailure` is emitted with `"load-corrupt"` and the mode byte, or `"load-corrupt-reason"` and the reason byte, and defaults (NORMAL, count 0, reason NONE) are used instead of asserting.
 
 ## Safe Mode Reason Logic
 

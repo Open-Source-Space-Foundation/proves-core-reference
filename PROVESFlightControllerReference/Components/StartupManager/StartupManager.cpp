@@ -11,7 +11,7 @@
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
-#include <zephyr/drivers/rtc.h>
+#include <zephyr/kernel.h>
 
 namespace Components {
 
@@ -57,8 +57,8 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     if (status == Os::File::OP_OK) {
         FwSizeType size = sizeof(data_buffer);
         status = file.write(data_buffer, size);
-        // Flush before close so the data has reached storage before callers (e.g. the atomic
-        // rename in persist_boot_count) treat the write as durable. close() returns void and
+        // Flush before close so the data has reached storage before callers (e.g. the rename in
+        // write_atomic) treat the write as durable. close() returns void and
         // cannot report a flush failure.
         if (status == Os::File::OP_OK && size == sizeof(data_buffer) && file.flush() == Os::File::OP_OK) {
             return_status = StartupManager::SUCCESS;
@@ -135,13 +135,11 @@ Fw::Time StartupManager ::update_quiescence_start() {
 
     Fw::Time time;
     Os::File::Status read_status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
-    // On read failure, write the current time to the file for future reads. This only happens on read failure because
-    // there is a singular quiescence start time for the whole mission. A corrupt file (e.g. a torn flash write leaving
-    // 0xFF bytes) fails Fw::Time deserialization and persists across reboots, so it is replaced rather than
-    // boot-looped on (#399, #547). A missing file is the expected first boot; anything else is reported with its
-    // status, since OTHER_ERROR covers both a decode failure and a generic file-system error.
+    // There is one quiescence start time for the whole mission, so the file is only written when it can't be read. A
+    // missing file is the expected first boot; an unreadable one (e.g. a torn write, #547) is reported and replaced.
+    // Zephyr's Os::File reports a missing file as OTHER_ERROR, so existence is checked directly.
     if (read_status != Os::File::OP_OK) {
-        if (read_status != Os::File::DOESNT_EXIST) {
+        if (Os::FileSystem::exists(time_file.toChar())) {
             this->log_WARNING_HI_QuiescenceFileUnreadable(static_cast<I32>(read_status));
         }
         time = this->getTime();

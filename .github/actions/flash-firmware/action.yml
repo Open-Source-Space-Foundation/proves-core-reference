@@ -1,39 +1,68 @@
 name: Flash Firmware
-description: Reboot integration hardware, flash MCUBoot and flight software via OpenOCD, reboot again.
+description: Flash MCUBoot and flight software via OpenOCD, power cycling the integration hardware around it when a PSU is available.
+
+inputs:
+  power-cycle:
+    description: Power cycle the board with the Korad PSU before and after flashing; "false" resets over SWD instead.
+    required: false
+    default: "true"
+  probe-serial:
+    description: Debug probe serial number; empty uses the only attached probe.
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
     - name: Reboot Integration Cube (before flash)
+      if: inputs.power-cycle == 'true'
       shell: bash
       run: |
         ./tools/ci/psu cycle
 
-    - name: Install MCUBoot
+    - name: Install MCUBoot and Flight Software
       shell: bash
+      env:
+        POWER_CYCLE: ${{ inputs.power-cycle }}
+        PROBE_SERIAL: ${{ inputs.probe-serial }}
       run: |
-        # OPENOCD_ADAPTER_SERIAL (runner .env) pins the CMSIS-DAP probe on hosts
-        # with more than one probe attached; unset keeps OpenOCD's first-probe default.
-        serial_args=()
-        if [ -n "${OPENOCD_ADAPTER_SERIAL:-}" ]; then
-          serial_args=(-c "adapter serial $OPENOCD_ADAPTER_SERIAL")
+        # OPENOCD_ADAPTER_SERIAL (runner .env) pins the probe when the input is unset.
+        PROBE_SERIAL=${PROBE_SERIAL:-${OPENOCD_ADAPTER_SERIAL:-}}
+        OPENOCD=(~/openocd/src/openocd -s ~/openocd/tcl -f interface/cmsis-dap.cfg)
+        if [ -n "$PROBE_SERIAL" ]; then
+          OPENOCD+=(-c "adapter serial $PROBE_SERIAL")
         fi
-        ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg "${serial_args[@]}" -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program mcuboot.elf verify reset exit"
+        OPENOCD+=(-f target/rp2350.cfg -c "adapter speed 5000")
+
+        # bootable.signed.hex only covers slot0, so MCUBoot goes first.
+        "${OPENOCD[@]}" -c "program mcuboot.elf verify reset exit"
+        sleep 3
+        "${OPENOCD[@]}" -c "program bootable.signed.hex verify reset exit"
         sleep 3
 
-    - name: Install Flight Software
-      shell: bash
-      run: |
-        # OPENOCD_ADAPTER_SERIAL (runner .env) pins the CMSIS-DAP probe on hosts
-        # with more than one probe attached; unset keeps OpenOCD's first-probe default.
-        serial_args=()
-        if [ -n "${OPENOCD_ADAPTER_SERIAL:-}" ]; then
-          serial_args=(-c "adapter serial $OPENOCD_ADAPTER_SERIAL")
+        if [ "$POWER_CYCLE" != "true" ]; then
+          # An SWD session can leave CPACR clobbered on RP2350; finish on a clean reset.
+          "${OPENOCD[@]}" -c "init; reset run; exit"
         fi
-        ~/openocd/src/openocd -s ~/openocd/tcl -f ~/openocd/tcl/interface/cmsis-dap.cfg "${serial_args[@]}" -f ~/openocd/tcl/target/rp2350.cfg -c "adapter speed 5000" -c "program bootable.signed.hex verify reset exit"
-        sleep 3
 
     - name: Reboot Integration Cube (after flash)
+      if: inputs.power-cycle == 'true'
       shell: bash
       run: |
         ./tools/ci/psu cycle
+
+    - name: Wait for board USB CDC ACM to enumerate
+      if: inputs.power-cycle != 'true'
+      shell: bash
+      run: |
+        for i in $(seq 1 60); do
+          # --once so the detector's own retries do not multiply this loop
+          # out to ~20 minutes when the board never enumerates.
+          if ./tools/ci/detect-board-tty.sh --once >/dev/null 2>&1; then
+            echo "Board tty enumerated after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: board CDC ACM device did not enumerate within 60s after SWD flash"
+        exit 1

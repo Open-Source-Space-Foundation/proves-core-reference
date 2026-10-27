@@ -1,3 +1,8 @@
+---
+title: Startup Manager
+category: Core
+---
+
 # Components::StartupManager
 
 ## Overview
@@ -61,7 +66,7 @@ The boot count lives in `BOOT_COUNT_FILE` on the flight filesystem (FAT — ELM 
 
 The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is read on the first `run` tick of each boot. Because it is persisted state, any failure to decode it repeats on every boot, so it must never be fatal:
 
-1. **Unreadable file is replaced, not asserted on**: a read that fails for any reason other than a missing file emits `QuiescenceFileUnreadable` with the `Os::File` status and is then treated like a missing file: the current time is persisted and the boot continues. This covers bytes that fail `Fw::Time` deserialization (e.g. an erased-flash `0xFF` tail, or `useconds >= 1000000`, which F Prime 4.3 rejects inside `Fw::Time::deserializeFrom`), a short file, and file-system errors. The status is logged rather than a "corrupt" verdict because `OTHER_ERROR` means both a decode failure and a generic OS error. A missing file is the expected first boot and is silent. Before #547 a corrupt file hit `FW_ASSERT` and caused a ~44 s watchdog reboot loop.
+1. **Unreadable file is replaced, not asserted on**: if the file exists but the read fails, `QuiescenceFileUnreadable` is emitted with the `Os::File` status and the file is treated like a missing one: the current time is persisted and the boot continues. This covers bytes that fail `Fw::Time` deserialization (e.g. an erased-flash `0xFF` tail, or `useconds >= 1000000`, which `Fw::Time` deserialization rejects), a short file, and file-system errors. The status is logged rather than a "corrupt" verdict because `OTHER_ERROR` means both a decode failure and a generic OS error. A missing file is the expected first boot and is silent; existence is checked directly because Zephyr's `Os::File` reports a missing file as `OTHER_ERROR`.
 2. **Write-then-rename persist**: the file is (re)written via `<QUIESCENCE_START_FILE>.tmp` + rename, the same scheme as the boot count.
 
 
@@ -143,4 +148,4 @@ The mission-wide quiescence start time lives in `QUIESCENCE_START_FILE` and is r
 | REQ-SM-009 | When `DEFAULT_STARTUP_VALUE == 0`, StartupManager shall not assert `enableTransmit` from the hard-coded countdown | Verification: Build with gate disabled and confirm no `HardcodedRadioEnable` / automatic TX after boot |
 | REQ-SM-010 | StartupManager shall not propagate an implausible boot count read from a corrupt file | Verification: Write junk to `BOOT_COUNT_FILE`, reboot, confirm `BootCountCorrupted` and a re-initialized count |
 | REQ-SM-011 | StartupManager shall persist the boot count atomically and retry a failed increment until it is durably stored | Verification: HWIL `test_safe_09` asserts boot count == initial+1 across a watchdog hard reset |
-| REQ-SM-012 | StartupManager shall boot normally from a corrupt `QUIESCENCE_START_FILE`, replacing it atomically | Verification: Write junk to `QUIESCENCE_START_FILE`, reboot, confirm `QuiescenceFileUnreadable`, no `AF_ASSERT`, and a clean subsequent boot (HWIL `startup_manager_test.py::test_01`) |
+| REQ-SM-012 | StartupManager shall boot normally from a corrupt `QUIESCENCE_START_FILE`, replacing it atomically | Verification: Write junk to `QUIESCENCE_START_FILE`, reboot, confirm `QuiescenceFileUnreadable`, exactly one boot (boot count +1), and no repeat on the next boot (HWIL `startup_manager_test.py::test_01`) |

@@ -1,3 +1,8 @@
+---
+title: RTC Manager
+category: Driver
+---
+
 # Components::RtcManager
 
 The RTC Manager component supplies spacecraft time from the Real Time Clock (RTC). Spacecraft time is uptime plus a time offset. The RTC update interrupt corrects the time offset once per second. The `timeGetPort` does not access the RTC hardware. If the RTC was never read successfully, the component returns uptime.

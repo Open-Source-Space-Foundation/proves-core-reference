@@ -1,3 +1,8 @@
+---
+title: S-Band
+category: Communication
+---
+
 # Components::SBand
 
 Wrapper for the [RadioLib SX1280 driver](https://github.com/jgromes/RadioLib). This component integrates into the F Prime communication stack.
