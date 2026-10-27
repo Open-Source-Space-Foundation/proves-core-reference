@@ -20,11 +20,12 @@ The Zephyr `i2c_dw` driver can also call the callback from its transfer path aft
 `configure()` registers the callback with `i2c_dw_register_recover_bus_cb()`. Both triggers call `i2c_recover_bus()`, which runs the callback while it holds the driver `bus_sem`, so no transfer is on the wire. The callback:
 
 1. Reads SDA and SCL. If both are high and the recovery is not forced, it stops.
-2. Sets SDA and SCL as open-drain GPIOs.
-3. Clocks SCL up to 9 times until SDA is released, then sends a STOP. The mux channel is still connected, so a target behind the mux also completes its byte.
-4. Pulses the TCA9548A reset (GP26). This disconnects all channels and clears a mux that is stuck mid-byte. The `tca954x` driver sets this line only at init.
-5. If a line is still low, does step 3 again for targets on the trunk.
-6. Applies the I2C0 default pinctrl state and reads the final line levels. The recovery is successful if both lines are high.
+2. Aborts and disables the DesignWare controller (`IC_ENABLE.ABORT`, then `IC_ENABLE = 0` and a poll of `IC_ENABLE_STATUS`, 10 ms limit each). This releases SCL when the controller itself holds it for an unread byte, and flushes both FIFOs.
+3. Sets SDA and SCL as open-drain GPIOs.
+4. Clocks SCL up to 9 times until SDA is released, then sends a STOP. The mux channel is still connected, so a target behind the mux also completes its byte.
+5. Pulses the TCA9548A reset (GP26). This disconnects all channels and clears a mux that is stuck mid-byte. The `tca954x` driver sets this line only at init.
+6. If a line is still low, does step 4 again for targets on the trunk.
+7. Applies the I2C0 default pinctrl state, enables the controller and reads the final line levels. The recovery is successful if both lines are high.
 
 ## Back-off
 
@@ -35,7 +36,7 @@ Each automatic recovery takes less than 1 ms, but a bus that stays stuck makes e
 ## Design Notes
 
 - **Stale mux channel.** The `tca954x` driver caches the selected channel. With `i2c-mux-idle-disconnect` the cache is 0 after each transfer and agrees with the mux after a reset. If the disconnect write failed, the next transfer on that channel fails one time, and then the driver is in sync again.
-- **Controller not disabled.** `i2c_dw` has no public API to disable the controller under `bus_sem`. The controller is idle while the pins are GPIOs, and the next transfer disables and enables it in `i2c_dw_setup()`.
+- **Controller reset.** `i2c_dw` has no public API to reset the controller, so the component writes `IC_ENABLE` directly while it holds `bus_sem`. On EM Orange Case 001 the controller held SCL low for an unread byte after a timed-out read. A disable alone never completed. ABORT released SCL within 5 ms, and the disable then completed.
 - **Pinctrl access.** `APP_I2C_BUS_RECOVERY` (promptless, default y) selects `PINCTRL_NON_STATIC`, so `Main.cpp` can get the `i2c0` pinctrl configuration.
 - **Thread safety.** `m_lock` serializes the rate group and command paths. The callback writes the line levels before `bus_sem` is released.
 - **Power cuts.** A face power cut during a transfer on that face is the known cause of a stuck bus (#540). This component recovers the bus after the cut. Preventing a power cut during a transfer is handled separately.
@@ -55,4 +56,4 @@ See `I2cBusMonitor.fpp` for the ports, commands, events and telemetry.
 | Date | Description |
 |---|---|
 | 2026-10-04 | Initial I2C Bus Monitor component SDD |
-| 2026-10-27 | Add the stalled-controller trigger and `ControllerStalled` event |
+| 2026-10-27 | Add the stalled-controller trigger and `ControllerStalled` event; abort and disable the controller during recovery |

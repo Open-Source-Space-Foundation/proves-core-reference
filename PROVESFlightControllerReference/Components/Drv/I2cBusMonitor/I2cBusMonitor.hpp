@@ -56,6 +56,9 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     //! Clock SCL until the target releases SDA, then send a STOP
     void clockOutBus();
 
+    //! Abort and disable the controller so that it lets go of the bus and flushes its FIFOs
+    void haltController();
+
     //! IC_STATUS if the controller holds queued bytes but is not driving the bus, else 0
     U32 stalledStatus() const;
 

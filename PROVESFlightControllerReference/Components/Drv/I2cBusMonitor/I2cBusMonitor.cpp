@@ -16,16 +16,24 @@ extern "C" void i2c_dw_register_recover_bus_cb(const struct device* dw_i2c_dev,
 namespace Drv {
 
 namespace {
-constexpr U32 HALF_CLOCK_US = 10;                //!< Half SCL period while bit-banging (~50 kHz)
-constexpr U32 RECOVERY_CLOCKS = 9;               //!< Clocks to finish a byte and its ACK
-constexpr U32 MUX_RESET_PULSE_US = 10;           //!< TCA954x reset pulse width
-constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;         //!< Clean polls that end back-off and clear the throttles
-constexpr U32 BACKOFF_AFTER = 5;                 //!< Automatic recoveries before back-off starts
-constexpr int64_t BACKOFF_INTERVAL_S = 30;       //!< Minimum time between automatic recoveries in back-off
-constexpr U32 STALLED_POLLS_TO_ACT = 2;          //!< Consecutive stalled polls before a forced recovery
-constexpr U32 IC_STATUS_OFFSET = 0x70;           //!< DesignWare IC_STATUS register
+constexpr U32 HALF_CLOCK_US = 10;           //!< Half SCL period while bit-banging (~50 kHz)
+constexpr U32 RECOVERY_CLOCKS = 9;          //!< Clocks to finish a byte and its ACK
+constexpr U32 MUX_RESET_PULSE_US = 10;      //!< TCA954x reset pulse width
+constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;    //!< Clean polls that end back-off and clear the throttles
+constexpr U32 BACKOFF_AFTER = 5;            //!< Automatic recoveries before back-off starts
+constexpr int64_t BACKOFF_INTERVAL_S = 30;  //!< Minimum time between automatic recoveries in back-off
+constexpr U32 STALLED_POLLS_TO_ACT = 2;     //!< Consecutive stalled polls before a forced recovery
+// DesignWare registers
+constexpr uintptr_t IC_CLR_INTR_OFFSET = 0x40;
+constexpr uintptr_t IC_ENABLE_OFFSET = 0x6c;
+constexpr uintptr_t IC_STATUS_OFFSET = 0x70;
+constexpr uintptr_t IC_ENABLE_STATUS_OFFSET = 0x9c;
+constexpr U32 IC_ENABLE_EN = 1U << 0;
+constexpr U32 IC_ENABLE_ABORT = 1U << 1;
 constexpr U32 IC_STATUS_TFE = 1U << 2;           //!< TX FIFO empty
-constexpr U32 IC_STATUS_MST_ACTIVITY = 1U << 5;  //!< Controller is driving the bus
+constexpr U32 IC_STATUS_MST_ACTIVITY = 1U << 5;  //!< Master state machine not idle
+constexpr U32 CONTROLLER_TIMEOUT_US = 10000;     //!< Limit for the abort and the disable to finish
+constexpr U32 CONTROLLER_POLL_US = 10;
 }  // namespace
 
 I2cBusMonitor* I2cBusMonitor::s_instance = nullptr;
@@ -127,6 +135,10 @@ int I2cBusMonitor ::recoverLocked() {
     }
     this->m_acted = true;
 
+    // Stop the controller first. A controller that holds SCL low for an unread byte takes the
+    // clock back as soon as the pins return to it.
+    this->haltController();
+
     // Set SDA and SCL as open-drain GPIOs.
     const gpio_flags_t flags = GPIO_INPUT | GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN;
     int rc = gpio_pin_configure_dt(&cfg.scl, flags);
@@ -148,8 +160,11 @@ int I2cBusMonitor ::recoverLocked() {
         }
     }
 
-    // Give the pins back to the I2C controller and read the final levels.
+    // Give the pins back to the I2C controller, restart it and read the final levels.
     const int pinctrlRc = pinctrl_apply_state(cfg.pinctrl, PINCTRL_STATE_DEFAULT);
+    if (cfg.regs != 0) {
+        sys_write32(IC_ENABLE_EN, cfg.regs + IC_ENABLE_OFFSET);
+    }
     this->m_endSda = lineLevel(cfg.sda);
     this->m_endScl = lineLevel(cfg.scl);
     if (rc == 0) {
@@ -180,6 +195,28 @@ void I2cBusMonitor ::clockOutBus() {
     k_busy_wait(HALF_CLOCK_US);
     gpio_pin_set_dt(&cfg.sda, 1);
     k_busy_wait(HALF_CLOCK_US);
+}
+
+void I2cBusMonitor ::haltController() {
+    const uintptr_t regs = this->m_config.regs;
+    if (regs == 0) {
+        return;
+    }
+
+    // ABORT makes the controller issue a STOP and release SCL. The hardware clears the bit when done.
+    sys_write32(IC_ENABLE_EN | IC_ENABLE_ABORT, regs + IC_ENABLE_OFFSET);
+    for (U32 t = 0; t < CONTROLLER_TIMEOUT_US && (sys_read32(regs + IC_ENABLE_OFFSET) & IC_ENABLE_ABORT);
+         t += CONTROLLER_POLL_US) {
+        k_busy_wait(CONTROLLER_POLL_US);
+    }
+
+    // Disabling flushes both FIFOs. It only completes once the controller has let go of the bus.
+    sys_write32(0, regs + IC_ENABLE_OFFSET);
+    for (U32 t = 0; t < CONTROLLER_TIMEOUT_US && (sys_read32(regs + IC_ENABLE_STATUS_OFFSET) & IC_ENABLE_EN);
+         t += CONTROLLER_POLL_US) {
+        k_busy_wait(CONTROLLER_POLL_US);
+    }
+    (void)sys_read32(regs + IC_CLR_INTR_OFFSET);
 }
 
 U32 I2cBusMonitor ::stalledStatus() const {
