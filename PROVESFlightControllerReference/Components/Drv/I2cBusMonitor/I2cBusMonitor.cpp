@@ -22,17 +22,14 @@ constexpr U32 MUX_RESET_PULSE_US = 10;      //!< TCA954x reset pulse width
 constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;    //!< Clean polls that end back-off and clear the throttles
 constexpr U32 BACKOFF_AFTER = 5;            //!< Automatic recoveries before back-off starts
 constexpr int64_t BACKOFF_INTERVAL_S = 30;  //!< Minimum time between automatic recoveries in back-off
-constexpr U32 STALLED_POLLS_TO_ACT = 2;     //!< Consecutive stalled polls before a forced recovery
+
 // DesignWare registers
 constexpr uintptr_t IC_CLR_INTR_OFFSET = 0x40;
 constexpr uintptr_t IC_ENABLE_OFFSET = 0x6c;
-constexpr uintptr_t IC_STATUS_OFFSET = 0x70;
 constexpr uintptr_t IC_ENABLE_STATUS_OFFSET = 0x9c;
 constexpr U32 IC_ENABLE_EN = 1U << 0;
 constexpr U32 IC_ENABLE_ABORT = 1U << 1;
-constexpr U32 IC_STATUS_TFE = 1U << 2;           //!< TX FIFO empty
-constexpr U32 IC_STATUS_MST_ACTIVITY = 1U << 5;  //!< Master state machine not idle
-constexpr U32 CONTROLLER_TIMEOUT_US = 10000;     //!< Limit for the abort and the disable to finish
+constexpr U32 CONTROLLER_TIMEOUT_US = 10000;  //!< Limit for the abort and the disable to finish
 constexpr U32 CONTROLLER_POLL_US = 10;
 }  // namespace
 
@@ -51,19 +48,16 @@ void I2cBusMonitor ::configure(const I2cBusMonitorConfig& config) {
 void I2cBusMonitor ::run_handler(FwIndexType portNum, U32 context) {
     Os::ScopeLock lock(this->m_lock);
 
-    // A controller that holds queued bytes without driving the bus is waiting for a STOP it never saw.
-    // Both lines read high, so only the controller status shows it.
-    const U32 stalled = this->stalledStatus();
-    this->m_stalledPolls = (stalled != 0) ? this->m_stalledPolls + 1 : 0;
-    const bool linesHigh = lineLevel(this->m_config.sda) && lineLevel(this->m_config.scl);
-    if (linesHigh && this->m_stalledPolls < STALLED_POLLS_TO_ACT) {
+    this->reportTimeoutRecoveries();
+
+    if (lineLevel(this->m_config.sda) && lineLevel(this->m_config.scl)) {
         // Count clean polls. Enough of them end back-off and clear the throttles.
-        if (stalled == 0 && this->m_cleanPolls < CLEAN_POLLS_TO_CLEAR && ++this->m_cleanPolls == CLEAN_POLLS_TO_CLEAR) {
+        if (this->m_cleanPolls < CLEAN_POLLS_TO_CLEAR && ++this->m_cleanPolls == CLEAN_POLLS_TO_CLEAR) {
             this->m_autoRecoveries = 0;
             this->log_WARNING_HI_BusStuck_ThrottleClear();
             this->log_ACTIVITY_HI_BusRecovered_ThrottleClear();
             this->log_WARNING_HI_BusRecoveryFailed_ThrottleClear();
-            this->log_WARNING_HI_ControllerStalled_ThrottleClear();
+            this->log_WARNING_HI_TimeoutRecoveries_ThrottleClear();
         }
         return;
     }
@@ -74,12 +68,7 @@ void I2cBusMonitor ::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    if (linesHigh) {
-        this->log_WARNING_HI_ControllerStalled(stalled);
-    }
-    // The recovery ends with a STOP on the wire, which restarts a stalled controller.
-    (void)this->recover(linesHigh);
-    this->m_stalledPolls = 0;
+    (void)this->recover();
     if (this->m_acted) {
         this->m_lastAutoMs = nowMs;
         if (++this->m_autoRecoveries == BACKOFF_AFTER) {
@@ -88,21 +77,22 @@ void I2cBusMonitor ::run_handler(FwIndexType portNum, U32 context) {
     }
 }
 
-void I2cBusMonitor ::RECOVER_BUS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+void I2cBusMonitor::RECOVER_BUS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     Os::ScopeLock lock(this->m_lock);
-    const int rc = this->recover(true);
+    const int rc = this->recover();
     this->cmdResponse_out(opCode, cmdSeq, (rc == 0) ? Fw::CmdResponse::OK : Fw::CmdResponse::EXECUTION_ERROR);
 }
 
-int I2cBusMonitor ::recover(bool force) {
-    this->m_force = force;
+int I2cBusMonitor::recover() {
     this->m_acted = false;
     if (!device_is_ready(this->m_config.bus)) {
         return -ENODEV;
     }
 
     // Take the driver bus lock and call recoverBusCallback().
+    this->m_recoverThread = k_current_get();
     const int rc = i2c_recover_bus(this->m_config.bus);
+    this->m_recoverThread = nullptr;
     if (!this->m_acted) {
         return rc;
     }
@@ -121,19 +111,46 @@ int I2cBusMonitor ::recover(bool force) {
     return rc;
 }
 
-int I2cBusMonitor ::recoverBusCallback(const struct device* dev) {
-    return (s_instance == nullptr) ? -ENODEV : s_instance->recoverLocked();
+void I2cBusMonitor::reportTimeoutRecoveries() {
+    const atomic_val_t recoveries = atomic_get(&this->m_timeoutRecoveries);
+    const atomic_val_t failures = atomic_get(&this->m_timeoutRecoveryFailures);
+    const U32 newRecoveries = static_cast<U32>(recoveries - this->m_reportedTimeoutRecoveries);
+    const U32 newFailures = static_cast<U32>(failures - this->m_reportedTimeoutRecoveryFailures);
+    if (newRecoveries == 0 && newFailures == 0) {
+        return;
+    }
+    this->m_reportedTimeoutRecoveries = recoveries;
+    this->m_reportedTimeoutRecoveryFailures = failures;
+    this->m_cleanPolls = 0;
+    this->m_recoveryCount += newRecoveries;
+    this->m_recoveryFailureCount += newFailures;
+    this->tlmWrite_RecoveryCount(this->m_recoveryCount);
+    this->tlmWrite_RecoveryFailureCount(this->m_recoveryFailureCount);
+    this->log_WARNING_HI_TimeoutRecoveries(newRecoveries, newFailures);
 }
 
-int I2cBusMonitor ::recoverLocked() {
+int I2cBusMonitor::recoverBusCallback(const struct device* dev) {
+    I2cBusMonitor* const self = s_instance;
+    if (self == nullptr) {
+        return -ENODEV;
+    }
+    if (k_current_get() == self->m_recoverThread) {
+        self->m_acted = true;
+        return self->recoverLocked();
+    }
+
+    // A transfer timed out on another thread. That thread holds bus_sem but not m_lock, so count
+    // the result here and let the next run_handler() report it.
+    const int rc = self->recoverLocked();
+    atomic_inc((rc == 0) ? &self->m_timeoutRecoveries : &self->m_timeoutRecoveryFailures);
+    return rc;
+}
+
+int I2cBusMonitor::recoverLocked() {
     const I2cBusMonitorConfig& cfg = this->m_config;
 
     this->m_stuckSda = lineLevel(cfg.sda);
     this->m_stuckScl = lineLevel(cfg.scl);
-    if (!this->m_force && this->m_stuckSda && this->m_stuckScl) {
-        return 0;
-    }
-    this->m_acted = true;
 
     // Stop the controller first. A controller that holds SCL low for an unread byte takes the
     // clock back as soon as the pins return to it.
@@ -176,7 +193,7 @@ int I2cBusMonitor ::recoverLocked() {
     return rc;
 }
 
-void I2cBusMonitor ::clockOutBus() {
+void I2cBusMonitor::clockOutBus() {
     const I2cBusMonitorConfig& cfg = this->m_config;
 
     for (U32 i = 0; i < RECOVERY_CLOCKS && !lineLevel(cfg.sda); i++) {
@@ -197,7 +214,7 @@ void I2cBusMonitor ::clockOutBus() {
     k_busy_wait(HALF_CLOCK_US);
 }
 
-void I2cBusMonitor ::haltController() {
+void I2cBusMonitor::haltController() {
     const uintptr_t regs = this->m_config.regs;
     if (regs == 0) {
         return;
@@ -217,14 +234,6 @@ void I2cBusMonitor ::haltController() {
         k_busy_wait(CONTROLLER_POLL_US);
     }
     (void)sys_read32(regs + IC_CLR_INTR_OFFSET);
-}
-
-U32 I2cBusMonitor ::stalledStatus() const {
-    if (this->m_config.regs == 0) {
-        return 0;
-    }
-    const U32 status = sys_read32(this->m_config.regs + IC_STATUS_OFFSET);
-    return ((status & IC_STATUS_TFE) == 0 && (status & IC_STATUS_MST_ACTIVITY) == 0) ? status : 0;
 }
 
 U8 I2cBusMonitor ::lineLevel(const struct gpio_dt_spec& spec) {

@@ -10,7 +10,17 @@ This patch bounds the `while (1)` data-ready poll in `veml6031_perform_single_me
 
 **Status:** Upstream candidate. Upstream Zephyr main still has the unbounded loop. Delete this patch and its `make submodules` step once the pinned Zephyr has the fix.
 
-**Application:** `make submodules` applies this patch, with a reverse-apply check so that a second run does not fail. After it runs, `git status` shows `lib/zephyr-workspace/zephyr` as modified. This is expected. Do **not** commit the submodule pointer.
+**Application:** `make submodules` applies every `patches/zephyr-*.patch`, with a reverse-apply check so that a second run does not fail. After it runs, `git status` shows `lib/zephyr-workspace/zephyr` as modified. This is expected. Do **not** commit the submodule pointer.
+
+## zephyr-i2c-dw-timeout-recover-bus.patch
+
+This patch makes `i2c_dw_transfer` (`drivers/i2c/i2c_dw.c`) call the registered recovery callback after a transfer times out, while it still holds `bus_sem`.
+
+**Why:** On EM Orange Case 001 a face power-on glitch left the DesignWare controller with bytes in its TX FIFO, the master idle and both lines high. Every later transfer timed out at 100 ms, the 1 Hz rate group slipped, and health pings went late. The driver aborts a timed-out transfer but does not reset the controller. `Drv::I2cBusMonitor` registers the callback. It aborts and disables the controller, clocks out the bus, resets the mux and enables the controller again.
+
+**Status:** Upstream candidate. Delete it once the pinned Zephyr has an equivalent.
+
+**Application:** `make submodules` applies every `patches/zephyr-*.patch` with the same reverse-apply check.
 
 ## fprime-gds-version.patch
 

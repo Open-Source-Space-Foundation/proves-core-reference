@@ -7,7 +7,7 @@ module Drv {
         sync input port run: Svc.Sched
 
         #### Commands ####
-        @ Recover the bus even if both lines read high
+        @ Recover the bus now, even if both lines read high
         sync command RECOVER_BUS()
 
         #### Telemetry ####
@@ -27,8 +27,8 @@ module Drv {
         @ Recovery left a line low or returned an error
         event BusRecoveryFailed(ret: I32, sda: U8, scl: U8) severity warning high format "I2C bus recovery failed with return code {} (SDA={}, SCL={})" throttle 5
 
-        @ The controller held queued bytes without driving the bus on consecutive polls
-        event ControllerStalled(status: U32) severity warning high format "I2C controller stalled (IC_STATUS=0x{x}), recovering" throttle 5
+        @ The I2C driver ran the recovery after transfers timed out since the last poll
+        event TimeoutRecoveries(recovered: U32, failed: U32) severity warning high format "I2C transfer timeouts: {} recoveries released the bus, {} left a line low" throttle 5
 
         @ The 1 Hz poll limits the rate of automatic recovery
         event AutoRecoveryBackOff(recoveries: U32, interval: U32) severity warning high format "{} I2C bus recoveries without a clean bus, auto recovery limited to one every {} s"
