@@ -41,6 +41,12 @@ The timeout trigger has no back-off. It adds less than 1 ms to a transfer that a
 
 `BusStuck`, `BusRecovered`, `BusRecoveryFailed` and `TimeoutRecoveries` have a throttle of 5. The same ten clean polls clear the throttles.
 
+## Face Shedding
+
+A face that grabs the bus again right after every recovery (run 11: face 0 alone, about two timeouts a second) can only be freed by cutting its power. Each driver timeout counts against the mux channel that was selected when it timed out. When one channel reaches the shed threshold within a 60 s window, the component emits `FaceShed` and calls `faceTurnOff` for that channel, which the topology wires to the face's load switch. Channels 0 to 3 and 5 are wired; channel 4 holds the battery temperature sensors.
+
+The load switch is driven by the MCP23017 on the same bus. Its write relies on the driver recovering any timeout and on `LoadSwitch` retrying with read-back, and `LoadSwitch` emits `SwitchFailed` if the face did not turn off. Recoveries found at the start of a transfer do not count, because that transfer may be on a different channel from the one that left the stuck bits. `SET_SHED_THRESHOLD` sets the threshold (default 10, 0 turns shedding off). Nothing turns a shed face back on.
+
 ## Design Notes
 
 - **Stale mux channel.** The `tca954x` driver caches the selected channel and skips the select write when the cache matches. A mux reset in the middle of a mux transfer leaves the cache at that channel, so the component clears it after each reset.
@@ -60,6 +66,7 @@ See `I2cBusMonitor.fpp` for the ports, commands, events and telemetry.
 | Timeout recovery | The component shall recover I2C0 after an I2C0 transfer times out | HIL face power-on test (EM) |
 | Commanded recovery | The component shall recover I2C0 on `RECOVER_BUS` | HIL test `i2c_bus_monitor_test.py` |
 | Back-off | After 5 automatic recoveries with no clean period, the component shall recover at most once every 30 s | HIL wedge test (SWD) |
+| Face shedding | The component shall turn off the face on a mux channel with 10 or more transfer timeouts within 60 s | HIL face soak (EM) |
 
 ## Change Log
 | Date | Description |
@@ -68,4 +75,5 @@ See `I2cBusMonitor.fpp` for the ports, commands, events and telemetry.
 | 2026-10-27 | Recover a stalled controller (queued bytes, idle master), and abort and disable the controller during recovery. Both found on EM Orange Case 001 |
 | 2026-10-27 | Skip driver calls caused only by an abort flag; clear the tca954x channel cache after a mux reset |
 | 2026-10-27 | Record controller state, mux channel and line levels for each recovery; add `SET_RECOVERY_STEPS` |
+| 2026-10-27 | Turn off a face whose mux channel keeps timing out; add `SET_SHED_THRESHOLD` |
 | 2026-10-27 | Trigger recovery from the driver timeout path instead of polling `IC_STATUS`, which missed the stall on the EM |

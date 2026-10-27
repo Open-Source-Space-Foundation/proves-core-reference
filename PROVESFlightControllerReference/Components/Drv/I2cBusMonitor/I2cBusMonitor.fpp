@@ -6,12 +6,18 @@ module Drv {
         @ 1 Hz poll: recover the bus if a line reads low
         sync input port run: Svc.Sched
 
+        @ Turns off the face on each TCA954x channel, indexed by channel
+        output port faceTurnOff: [8] Fw.Signal
+
         #### Commands ####
         @ Recover the bus now, even if both lines read high
         sync command RECOVER_BUS()
 
         @ Choose which recovery steps run (bits: 1 halt controller, 2 clock out while SDA low, 4 always clock 9 times, 8 mux reset). Default 11. Not saved across a reboot
         sync command SET_RECOVERY_STEPS(steps: U8)
+
+        @ Turn off a face whose mux channel has this many transfer timeouts within 60 s. 0 turns this off. Default 10. Not saved across a reboot
+        sync command SET_SHED_THRESHOLD(timeouts: U16)
 
         #### Telemetry ####
         @ Recoveries that left both lines high
@@ -47,6 +53,12 @@ module Drv {
 
         @ SET_RECOVERY_STEPS changed the recovery steps
         event RecoveryStepsSet(steps: U8) severity activity high format "I2C recovery steps set to 0x{x}"
+
+        @ A face kept timing out the bus, so it was turned off
+        event FaceShed(channel: U8, timeouts: U32) severity warning high format "I2C mux channel {} timed out {} times within 60 s, turning its face off"
+
+        @ SET_SHED_THRESHOLD changed the threshold
+        event ShedThresholdSet(timeouts: U16) severity activity high format "I2C face shed threshold set to {} timeouts"
 
         @ The 1 Hz poll limits the rate of automatic recovery
         event AutoRecoveryBackOff(recoveries: U32, interval: U32) severity warning high format "{} I2C bus recoveries without a clean bus, auto recovery limited to one every {} s"

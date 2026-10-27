@@ -507,6 +507,14 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
 
+      # Indexed by TCA9548A channel. Channel 4 holds the battery temperature sensors, and channels 6 and 7
+      # have no load switch in this topology.
+      i2c0BusMonitor.faceTurnOff[0] -> face0LoadSwitch.turnOff
+      i2c0BusMonitor.faceTurnOff[1] -> face1LoadSwitch.turnOff
+      i2c0BusMonitor.faceTurnOff[2] -> face2LoadSwitch.turnOff
+      i2c0BusMonitor.faceTurnOff[3] -> face3LoadSwitch.turnOff
+      i2c0BusMonitor.faceTurnOff[5] -> face5LoadSwitch.turnOff
+
     }
 
     connections FatalHandler {

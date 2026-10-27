@@ -37,6 +37,8 @@ enum RecoveryStep : U8 {
     STEP_MUX_RESET = 1U << 3,     //!< Pulse the TCA954x reset
 };
 constexpr U8 DEFAULT_RECOVERY_STEPS = STEP_HALT | STEP_CLOCK_OUT | STEP_MUX_RESET;
+constexpr U16 DEFAULT_SHED_THRESHOLD =
+    10;  //!< Timeouts on one mux channel within the shed window that turn its face off
 
 //! What started a recovery
 enum class RecoverySource : U8 {
@@ -84,6 +86,9 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     //! Handler implementation for command SET_RECOVERY_STEPS
     void SET_RECOVERY_STEPS_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U8 steps) override;
 
+    //! Handler implementation for command SET_SHED_THRESHOLD
+    void SET_SHED_THRESHOLD_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 timeouts) override;
+
     //! Recover the bus and report the result. The caller holds m_lock.
     int recover(RecoverySource source);
 
@@ -92,6 +97,9 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
 
     //! Report the recoveries that the driver ran after a transfer timeout
     void reportTimeoutRecoveries();
+
+    //! Turn off the face on any mux channel that reached the shed threshold
+    void shedJammingFaces();
 
     //! Recovery callback. The I2C driver calls it with the bus lock held, either from recover() or
     //! from a transfer that timed out.
@@ -144,8 +152,12 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     atomic_t m_detailHead = ATOMIC_INIT(0);      //!< Next slot to write
     atomic_t m_detailTail = ATOMIC_INIT(0);      //!< Next slot to report
     atomic_t m_detailsDropped = ATOMIC_INIT(0);  //!< Details lost because the ring was full
-    U32 m_autoRecoveries = 0;                    //!< Automatic recoveries since the last clean period
-    int64_t m_lastAutoMs = 0;                    //!< Uptime of the last automatic recovery, in ms
+    static constexpr U8 MUX_CHANNELS = 8;
+    atomic_t m_channelTimeouts[MUX_CHANNELS]{};    //!< Driver timeouts per mux channel in the current shed window
+    int64_t m_shedWindowStartMs = 0;               //!< Uptime when the shed window started, in ms
+    U16 m_shedThreshold = DEFAULT_SHED_THRESHOLD;  //!< Timeouts that turn a face off, 0 = never
+    U32 m_autoRecoveries = 0;                      //!< Automatic recoveries since the last clean period
+    int64_t m_lastAutoMs = 0;                      //!< Uptime of the last automatic recovery, in ms
 };
 
 }  // namespace Drv

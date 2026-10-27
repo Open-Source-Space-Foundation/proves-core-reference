@@ -31,6 +31,7 @@ constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;    //!< Clean polls that end back-off a
 constexpr U32 BACKOFF_AFTER = 5;            //!< Automatic recoveries before back-off starts
 constexpr int64_t BACKOFF_INTERVAL_S = 30;  //!< Minimum time between automatic recoveries in back-off
 constexpr U32 DETAILS_PER_POLL = 8;         //!< Recovery details reported per 1 Hz poll
+constexpr int64_t SHED_WINDOW_S = 60;       //!< Window over which timeouts count toward turning a face off
 
 // DesignWare registers
 constexpr uintptr_t IC_TAR_OFFSET = 0x04;
@@ -47,7 +48,8 @@ constexpr U32 IC_ENABLE_ABORT = 1U << 1;
 constexpr U32 IC_TAR_MASK = 0x3ff;
 
 // i2c_dw driver values (drivers/i2c/i2c_dw.h and the timeout patch)
-constexpr U32 DW_RECOVERY_STUCK = 2;  //!< A new transfer found stuck or abort bits in the driver state
+constexpr U32 DW_RECOVERY_TIMEOUT = 1;  //!< A transfer timed out
+constexpr U32 DW_RECOVERY_STUCK = 2;    //!< A new transfer found stuck or abort bits in the driver state
 constexpr U32 DW_SCL_STUCK = 1U << 6;
 constexpr U32 DW_SDA_STUCK = 1U << 7;
 constexpr U32 CONTROLLER_TIMEOUT_US = 10000;  //!< Limit for the abort and the disable to finish
@@ -71,6 +73,7 @@ void I2cBusMonitor::run_handler(FwIndexType portNum, U32 context) {
 
     this->reportTimeoutRecoveries();
     this->reportDetails();
+    this->shedJammingFaces();
 
     if (lineLevel(this->m_config.sda) && lineLevel(this->m_config.scl)) {
         // Count clean polls. Enough of them end back-off and clear the throttles.
@@ -111,6 +114,36 @@ void I2cBusMonitor::SET_RECOVERY_STEPS_cmdHandler(FwOpcodeType opCode, U32 cmdSe
     this->m_steps = steps;
     this->log_ACTIVITY_HI_RecoveryStepsSet(steps);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void I2cBusMonitor::SET_SHED_THRESHOLD_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U16 timeouts) {
+    Os::ScopeLock lock(this->m_lock);
+    this->m_shedThreshold = timeouts;
+    this->log_ACTIVITY_HI_ShedThresholdSet(timeouts);
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+}
+
+void I2cBusMonitor::shedJammingFaces() {
+    const int64_t nowMs = k_uptime_get();
+    const bool windowOver = (nowMs - this->m_shedWindowStartMs) >= SHED_WINDOW_S * 1000;
+    for (U8 channel = 0; channel < MUX_CHANNELS; channel++) {
+        atomic_t* const timeouts = &this->m_channelTimeouts[channel];
+        // Power is the only thing that frees a face that grabs the bus again right after every recovery.
+        // The load switch write goes over the same bus, so it relies on the driver recovering a timeout
+        // and on the load switch retrying.
+        const U32 count = static_cast<U32>(atomic_get(timeouts));
+        if (this->m_shedThreshold != 0 && count >= this->m_shedThreshold &&
+            this->isConnected_faceTurnOff_OutputPort(channel)) {
+            this->log_WARNING_HI_FaceShed(channel, count);
+            this->faceTurnOff_out(channel);
+            atomic_clear(timeouts);
+        } else if (windowOver) {
+            atomic_clear(timeouts);
+        }
+    }
+    if (windowOver) {
+        this->m_shedWindowStartMs = nowMs;
+    }
 }
 
 int I2cBusMonitor::recover(RecoverySource source) {
@@ -210,6 +243,12 @@ int I2cBusMonitor::recoverBusCallback(const struct device* dev) {
         // driver state. The bus is fine, so only let the driver clear the flag.
         atomic_inc(&self->m_abortsCleared);
         return 0;
+    }
+    // Blame a timeout on the face whose channel was selected. The recovery's mux reset clears the selection.
+    // A transfer that only finds stuck bits may be on a different channel from the one that left them.
+    const U8 channel = (cfg.mux != nullptr) ? tca954x_selected_channel(cfg.mux) : 0;
+    if (info[0] == DW_RECOVERY_TIMEOUT && channel != 0 && (channel & (channel - 1)) == 0) {
+        atomic_inc(&self->m_channelTimeouts[__builtin_ctz(channel)]);
     }
     const int rc = self->recoverLocked(RecoverySource::DRIVER, info);
     atomic_inc((rc == 0) ? &self->m_timeoutRecoveries : &self->m_timeoutRecoveryFailures);
