@@ -1,16 +1,18 @@
 diff --git a/drivers/i2c/i2c_dw.c b/drivers/i2c/i2c_dw.c
-index d21fc37fa59..2863cf5a1f6 100644
+index d21fc37fa59..815597a34e5 100644
 --- a/drivers/i2c/i2c_dw.c
 +++ b/drivers/i2c/i2c_dw.c
-@@ -923,6 +923,11 @@ static int i2c_dw_transfer(const struct device *dev, struct i2c_msg *msgs, uint8
- 			value = read_clr_intr(reg_base);
- 			ret = -ETIMEDOUT;
- 			k_sem_reset(&dw->device_sync_sem);
+@@ -914,6 +914,13 @@ static int i2c_dw_transfer(const struct device *dev, struct i2c_msg *msgs, uint8
+ 		/* Wait for transfer to be done */
+ 		ret = k_sem_take(&dw->device_sync_sem, K_MSEC(CONFIG_I2C_DW_RW_TIMEOUT_MS));
+ 		if (ret != 0) {
++			write_intr_mask(DW_DISABLE_ALL_I2C_INT, reg_base);
 +			/* A timeout can leave the controller or the bus stuck (for example a
 +			 * controller that never saw a STOP). Let the registered callback
-+			 * recover both before the next transfer.
++			 * record that state and recover both before the abort below
++			 * changes it.
 +			 */
 +			(void)i2c_recovery_bus(dev);
- 			break;
- 		}
- 
+ 			if (test_bit_con_master_mode(reg_base)) {
+ 				/* Trigger abort and wait for it to complete. */
+ 				set_bit_enable_abort(reg_base);

@@ -10,6 +10,9 @@ module Drv {
         @ Recover the bus now, even if both lines read high
         sync command RECOVER_BUS()
 
+        @ Choose which recovery steps run (bits: 1 halt controller, 2 clock out while SDA low, 4 always clock 9 times, 8 mux reset). Default 11. Not saved across a reboot
+        sync command SET_RECOVERY_STEPS(steps: U8)
+
         #### Telemetry ####
         @ Recoveries that left both lines high
         telemetry RecoveryCount: U32
@@ -29,6 +32,15 @@ module Drv {
 
         @ The I2C driver ran the recovery after transfers timed out since the last poll
         event TimeoutRecoveries(recovered: U32, failed: U32) severity warning high format "I2C transfer timeouts: {} recoveries released the bus, {} left a line low" throttle 5
+
+        @ State recorded at one recovery. source: 0 driver timeout, 1 poll, 2 command. lines: SDA bit 0 and SCL bit 1 before the sequence, then after halt, clock out and mux reset, 2 bits each
+        event RecoveryDetail(uptimeMs: U32, source: U8, tar: U16, muxChannel: U8, status: U32, rawIntr: U32, abortSource: U32, txflr: U8, rxflr: U8, lines: U8, clocks: U8, steps: U8, ret: I32) severity warning low format "I2C recovery at {} ms (source {}): TAR=0x{x} mux=0x{x} IC_STATUS=0x{x} RAW_INTR=0x{x} ABRT=0x{x} TXFLR={} RXFLR={} lines=0x{x} clocks={} steps=0x{x} ret={}"
+
+        @ The detail ring was full, so some recoveries were not recorded
+        event RecoveryDetailsDropped(count: U32) severity warning low format "{} I2C recovery details dropped" throttle 5
+
+        @ SET_RECOVERY_STEPS changed the recovery steps
+        event RecoveryStepsSet(steps: U8) severity activity high format "I2C recovery steps set to 0x{x}"
 
         @ The 1 Hz poll limits the rate of automatic recovery
         event AutoRecoveryBackOff(recoveries: U32, interval: U32) severity warning high format "{} I2C bus recoveries without a clean bus, auto recovery limited to one every {} s"

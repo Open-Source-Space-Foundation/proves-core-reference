@@ -27,6 +27,12 @@ The driver also calls the callback at the start of a transfer after an SDA-stuck
 6. If a line is still low, does step 4 again for targets on the trunk.
 7. Applies the I2C0 default pinctrl state, enables the controller and reads the final line levels. The recovery is successful if both lines are high.
 
+## Recovery Details
+
+Each recovery records the controller registers before the sequence starts (`IC_TAR`, `IC_STATUS`, `IC_RAW_INTR_STAT`, `IC_TX_ABRT_SOURCE`, `IC_TXFLR`, `IC_RXFLR`), the TCA954x channel the driver last selected, the SDA and SCL levels after each step, the clocks sent, and the result. The driver patch calls the callback before its own abort, so the registers still show the stuck transfer. The records go into a 16-slot ring. The 1 Hz poll emits up to 8 per cycle as `RecoveryDetail`. If the ring is full, `RecoveryDetailsDropped` counts the lost records.
+
+`SET_RECOVERY_STEPS` selects which steps run, so a bench test can find the step that clears a fault: 1 halt the controller, 2 clock out while SDA is low, 4 always clock 9 times, 8 pulse the mux reset. The default is 11 (halt, clock out, mux reset). The setting is lost on reboot.
+
 ## Back-off
 
 Each recovery takes less than 1 ms, but a bus that stays stuck makes every I2C0 transfer time out. After 5 automatic recoveries from the 1 Hz poll with no clean period, the component emits `AutoRecoveryBackOff` once and the poll recovers at most once every 30 s. Ten consecutive clean polls (both lines high, no timeout recoveries) end the back-off. `RECOVER_BUS` is not limited.
@@ -59,5 +65,6 @@ See `I2cBusMonitor.fpp` for the ports, commands, events and telemetry.
 | Date | Description |
 |---|---|
 | 2026-10-04 | Initial I2C Bus Monitor component SDD |
-| 2026-10-27 | Add the stalled-controller trigger and `ControllerStalled` event; abort and disable the controller during recovery |
+| 2026-10-27 | Recover a stalled controller (queued bytes, idle master), and abort and disable the controller during recovery. Both found on EM Orange Case 001 |
+| 2026-10-27 | Record controller state, mux channel and line levels for each recovery; add `SET_RECOVERY_STEPS` |
 | 2026-10-27 | Trigger recovery from the driver timeout path instead of polling `IC_STATUS`, which missed the stall on the EM |

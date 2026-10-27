@@ -1,0 +1,21 @@
+diff --git a/drivers/i2c/i2c_tca954x.c b/drivers/i2c/i2c_tca954x.c
+index 07e77852299..4affd7c3e8b 100644
+--- a/drivers/i2c/i2c_tca954x.c
++++ b/drivers/i2c/i2c_tca954x.c
+@@ -74,6 +74,16 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
+ 	return res;
+ }
+ 
++/* Channel mask the driver last selected on this root. Lets a bus recovery
++ * callback tell which channel a stuck transfer was on.
++ */
++uint8_t tca954x_selected_channel(const struct device *root)
++{
++	const struct tca954x_root_data *data = root->data;
++
++	return data->selected_chan;
++}
++
+ static int tca954x_transfer(const struct device *dev,
+ 			     struct i2c_msg *msgs,
+ 			     uint8_t num_msgs,
