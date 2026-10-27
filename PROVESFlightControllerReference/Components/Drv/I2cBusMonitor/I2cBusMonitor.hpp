@@ -60,6 +60,7 @@ struct RecoveryDetail {
     U8 clocks;        //!< SCL clocks sent
     U8 steps;         //!< RecoveryStep bits in use
     I32 ret;          //!< Result of the sequence
+    U32 driver[7];    //!< DRIVER source only: i2c_dw state at the timeout (see i2c_dw_get_timeout_info)
 };
 
 class I2cBusMonitor final : public I2cBusMonitorComponentBase {

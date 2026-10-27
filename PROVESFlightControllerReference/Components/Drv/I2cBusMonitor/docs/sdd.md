@@ -29,7 +29,7 @@ The driver also calls the callback at the start of a transfer after an SDA-stuck
 
 ## Recovery Details
 
-Each recovery records the controller registers before the sequence starts (`IC_TAR`, `IC_STATUS`, `IC_RAW_INTR_STAT`, `IC_TX_ABRT_SOURCE`, `IC_TXFLR`, `IC_RXFLR`), the TCA954x channel the driver last selected, the SDA and SCL levels after each step, the clocks sent, and the result. The driver patch calls the callback before its own abort, so the registers still show the stuck transfer. The records go into a 16-slot ring. The 1 Hz poll emits up to 8 per cycle as `RecoveryDetail`. If the ring is full, `RecoveryDetailsDropped` counts the lost records.
+Each recovery records the controller registers before the sequence starts (`IC_TAR`, `IC_STATUS`, `IC_RAW_INTR_STAT`, `IC_TX_ABRT_SOURCE`, `IC_TXFLR`, `IC_RXFLR`), the TCA954x channel the driver last selected, the SDA and SCL levels after each step, the clocks sent, and the result. For a driver timeout it also records the driver state (`IC_INTR_MASK` before the driver masked it, `xfr_len`, `rx_pending`, `request_bytes`, `state`, `xfr_flags`, messages left), emitted as `RecoveryDriverState`. The driver patch calls the callback before its own abort, so the registers still show the stuck transfer. The records go into a 16-slot ring. The 1 Hz poll emits up to 8 per cycle as `RecoveryDetail`. If the ring is full, `RecoveryDetailsDropped` counts the lost records.
 
 `SET_RECOVERY_STEPS` selects which steps run, so a bench test can find the step that clears a fault: 1 halt the controller, 2 clock out while SDA is low, 4 always clock 9 times, 8 pulse the mux reset. The default is 11 (halt, clock out, mux reset). The setting is lost on reboot.
 

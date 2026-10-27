@@ -12,6 +12,9 @@
 extern "C" void i2c_dw_register_recover_bus_cb(const struct device* dw_i2c_dev,
                                                i2c_api_recover_bus_t recover_bus_cb,
                                                const struct device* wrapper_dev);
+// Defined in drivers/i2c/i2c_dw.c by patches/zephyr-i2c-dw-timeout-recover-bus.patch: IC_INTR_MASK, xfr_len,
+// rx_pending, request_bytes, state, xfr_flags and messages left of the last timed-out transfer.
+extern "C" void i2c_dw_get_timeout_info(uint32_t info[7]);
 // Defined in drivers/i2c/i2c_tca954x.c by patches/zephyr-tca954x-selected-channel.patch.
 extern "C" uint8_t tca954x_selected_channel(const struct device* root);
 
@@ -145,6 +148,11 @@ void I2cBusMonitor::reportDetails() {
         this->log_WARNING_LO_RecoveryDetail(d.uptimeMs, static_cast<U8>(d.source), d.tar, d.muxChannel, d.status,
                                             d.rawIntr, d.abortSource, d.txflr, d.rxflr, d.lines, d.clocks, d.steps,
                                             d.ret);
+        if (d.source == RecoverySource::DRIVER) {
+            this->log_WARNING_LO_RecoveryDriverState(d.uptimeMs, d.driver[0], d.driver[1], d.driver[2], d.driver[3],
+                                                     static_cast<U8>(d.driver[4]), static_cast<U8>(d.driver[5]),
+                                                     static_cast<U8>(d.driver[6]));
+        }
         atomic_set(&this->m_detailTail, tail + 1);
     }
 }
@@ -192,6 +200,9 @@ int I2cBusMonitor::recoverLocked(RecoverySource source) {
     d.source = source;
     d.steps = steps;
     this->snapshotController(d);
+    if (source == RecoverySource::DRIVER) {
+        i2c_dw_get_timeout_info(d.driver);
+    }
 
     this->m_stuckSda = lineLevel(cfg.sda);
     this->m_stuckScl = lineLevel(cfg.scl);
