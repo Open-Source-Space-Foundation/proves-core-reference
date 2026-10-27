@@ -8,6 +8,7 @@
 #define Components_AntennaDeployer_HPP
 
 #include "PROVESFlightControllerReference/Components/AntennaDeployer/AntennaDeployerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/AntennaDeployer/DeploymentSequencer.hpp"
 
 namespace Components {
 
@@ -45,24 +46,13 @@ class AntennaDeployer final : public AntennaDeployerComponentBase {
     // ----------------------------------------------------------------------
     // Internal helpers
     // ----------------------------------------------------------------------
-    enum class DeploymentState : U8 { IDLE = 0, BURNING, RETRY_WAIT };
-
-    void startNextAttempt();
-    void handleBurningTick();
-    void handleRetryWaitTick();
-    void finishDeployment(Components::DeployResult result);
-    void resetDeploymentState();
+    //! Carry out the effects the sequencer asked for, in order
+    void applyStep(const DeploymentSequencer::Step& step);
     void ensureBurnwireStopped();
-    void logBurnSignalCount();
     bool readDeploymentState();
     void writeDeploymentState(bool deployed);
 
-    DeploymentState m_state = DeploymentState::IDLE;
-    U32 m_currentAttempt = 0;
-    U32 m_ticksInState = 0;
-    U32 m_totalAttempts = 0;
-    bool m_stopRequested = false;
-    U32 m_burnTicksThisAttempt = 0;
+    DeploymentSequencer m_sequencer;
 };
 
 }  // namespace Components
