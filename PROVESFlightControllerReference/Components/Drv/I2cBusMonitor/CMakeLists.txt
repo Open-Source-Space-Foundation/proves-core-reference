@@ -10,9 +10,14 @@
 #
 ####
 
+set(IMPL_SOURCES)
+if(FPRIME_PLATFORM STREQUAL "Zephyr")
+    set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/I2cBusMonitor.cpp")
+endif()
+
 register_fprime_library(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/I2cBusMonitor.fpp"
     SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/I2cBusMonitor.cpp"
+        ${IMPL_SOURCES}
 )
