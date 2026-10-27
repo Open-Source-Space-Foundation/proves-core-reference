@@ -73,6 +73,9 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     //! \return false when the GPIO could not be read
     bool readLoadSwitchState(Fw::On& state  //!< The current state (ON or OFF)
     );
+
+    //! State last sent to the loadSwitchStateChanged ports. The face managers start OFF.
+    Fw::On m_notifiedState = Fw::On::OFF;
 };
 
 }  // namespace Components

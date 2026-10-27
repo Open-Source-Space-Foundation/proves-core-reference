@@ -58,15 +58,16 @@ void LoadSwitch::GET_IS_ON_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 // ----------------------------------------------------------------------
 
 bool LoadSwitch::setLoadSwitchState(Fw::On state) {
-    // Skip only when the switch is known to be in the requested state. A failed read
-    // (e.g. the GPIO expander is unreachable on a wedged bus) must still attempt the write.
+    // Write unless the switch is known to be in the requested state. A failed read (e.g. the
+    // GPIO expander is unreachable on a wedged bus) must still attempt the write.
     Fw::On current;
-    if (this->readLoadSwitchState(current) && current == state) {
+    const bool switched = this->readLoadSwitchState(current) && current == state;
+    if (switched && this->m_notifiedState == state) {
         return true;
     }
 
     // Set the GPIO high before notification on ON
-    if (state == Fw::On::ON && !this->writeLoadSwitchState(state)) {
+    if (state == Fw::On::ON && !switched && !this->writeLoadSwitchState(state)) {
         this->log_WARNING_HI_SwitchFailed(state);
         return false;
     }
@@ -79,9 +80,10 @@ bool LoadSwitch::setLoadSwitchState(Fw::On state) {
         }
         this->loadSwitchStateChanged_out(i, state);
     }
+    this->m_notifiedState = state;
 
     // Set the GPIO low after notification on OFF
-    if (state == Fw::On::OFF && !this->writeLoadSwitchState(state)) {
+    if (state == Fw::On::OFF && !switched && !this->writeLoadSwitchState(state)) {
         this->log_WARNING_HI_SwitchFailed(state);
         return false;
     }

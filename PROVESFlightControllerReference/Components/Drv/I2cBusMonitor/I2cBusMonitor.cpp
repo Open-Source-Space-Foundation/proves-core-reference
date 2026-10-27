@@ -32,6 +32,7 @@ constexpr U32 BACKOFF_AFTER = 5;            //!< Automatic recoveries before bac
 constexpr int64_t BACKOFF_INTERVAL_S = 30;  //!< Minimum time between automatic recoveries in back-off
 constexpr U32 DETAILS_PER_POLL = 8;         //!< Recovery details reported per 1 Hz poll
 constexpr int64_t SHED_WINDOW_S = 60;       //!< Window over which timeouts count toward turning a face off
+constexpr U8 SHED_RETRIES = 3;              //!< Turn-off repeats after a shed, one per window
 
 // DesignWare registers
 constexpr uintptr_t IC_TAR_OFFSET = 0x04;
@@ -131,14 +132,22 @@ void I2cBusMonitor::shedJammingFaces() {
         // Power is the only thing that frees a face that grabs the bus again right after every recovery.
         // The load switch write goes over the same bus, so it relies on the driver recovering a timeout
         // and on the load switch retrying.
-        const U32 count = static_cast<U32>(atomic_get(timeouts));
+        const atomic_val_t count = atomic_get(timeouts);
         if (this->m_shedThreshold != 0 && count >= this->m_shedThreshold &&
             this->isConnected_faceTurnOff_OutputPort(channel)) {
-            this->log_WARNING_HI_FaceShed(channel, count);
+            this->log_WARNING_HI_FaceShed(channel, static_cast<U32>(count));
             this->faceTurnOff_out(channel);
-            atomic_clear(timeouts);
+            this->m_shedRetries[channel] = SHED_RETRIES;
+            atomic_sub(timeouts, count);
         } else if (windowOver) {
-            atomic_clear(timeouts);
+            atomic_sub(timeouts, count);
+        }
+
+        // The face managers stop polling a shed face, so its channel stops timing out even if the
+        // switch write failed. Repeat the turn-off a few times; it costs one read once the face is off.
+        if (windowOver && this->m_shedRetries[channel] > 0) {
+            this->m_shedRetries[channel]--;
+            this->faceTurnOff_out(channel);
         }
     }
     if (windowOver) {

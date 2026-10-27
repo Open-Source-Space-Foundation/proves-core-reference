@@ -154,6 +154,7 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     atomic_t m_detailsDropped = ATOMIC_INIT(0);  //!< Details lost because the ring was full
     static constexpr U8 MUX_CHANNELS = 8;
     atomic_t m_channelTimeouts[MUX_CHANNELS]{};    //!< Driver timeouts per mux channel in the current shed window
+    U8 m_shedRetries[MUX_CHANNELS]{};              //!< Turn-off repeats left for each shed channel
     int64_t m_shedWindowStartMs = 0;               //!< Uptime when the shed window started, in ms
     U16 m_shedThreshold = DEFAULT_SHED_THRESHOLD;  //!< Timeouts that turn a face off, 0 = never
     U32 m_autoRecoveries = 0;                      //!< Automatic recoveries since the last clean period
