@@ -25,6 +25,12 @@ module Components {
         @ Event for outputting current load switch state
         event IsOn($state: Fw.On) severity activity low format "Current load switch state: {}"
 
+        @ Event for reporting that the load switch did not reach the requested state
+        event SwitchFailed($state: Fw.On) severity warning high format "Load switch failed to switch {}"
+
+        @ Event for reporting that the load switch state could not be read
+        event ReadFailed severity warning high format "Load switch state could not be read"
+
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite
 

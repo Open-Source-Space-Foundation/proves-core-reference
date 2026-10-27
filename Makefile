@@ -22,6 +22,17 @@ submodules: ## Initialize and update git submodules
 	      echo "❌ Error: Unable to apply $$name. Check it against the pinned Zephyr version."; exit 1; \
 	    fi; \
 	  done
+	@cd lib/fprime-zephyr && \
+	  for p in ../../patches/fprime-zephyr-*.patch; do \
+	    name=$$(basename $$p); \
+	    if git apply --check $$p > /dev/null 2>&1; then \
+	      git apply $$p && echo "✓ Applied $$name"; \
+	    elif git apply --reverse --check $$p > /dev/null 2>&1; then \
+	      echo "⚠ $$name already applied"; \
+	    else \
+	      echo "❌ Error: Unable to apply $$name. Check it against the pinned fprime-zephyr version."; exit 1; \
+	    fi; \
+	  done
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
