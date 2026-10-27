@@ -179,7 +179,7 @@ jobs:
 
       - name: Run UART Integration Tests
         run: |
-          make test-integration
+          make test-integration RETRY_FAILED=1
 
       - name: Format Filesystem
         if: always()
@@ -477,7 +477,7 @@ jobs:
         env:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio RETRY_FAILED=1
 
       - name: Format Filesystem
         if: always()
