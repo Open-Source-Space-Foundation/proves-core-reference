@@ -26,6 +26,8 @@ This patch makes `i2c_dw_transfer` (`drivers/i2c/i2c_dw.c`) call the registered 
 
 This patch adds two functions to `drivers/i2c/i2c_tca954x.c`. `tca954x_selected_channel()` returns the cached channel mask, which `Drv::I2cBusMonitor` records with each recovery. `tca954x_forget_channel()` clears the cache after the component pulses the mux reset, so the next transfer selects its channel again instead of going out on the trunk.
 
+It also pulses the mux reset when a channel select or deselect write fails. The mux state is then unknown, and on EM Orange Case 001 a face whose deselect failed stayed connected and kept the MCP23017 on the trunk from answering, so no face could be switched. The reset disconnects every channel without using I2C.
+
 **Status:** Local. A reset-aware cache would be the upstream fix.
 
 ## fprime-gds-version.patch

@@ -1,8 +1,23 @@
 diff --git a/drivers/i2c/i2c_tca954x.c b/drivers/i2c/i2c_tca954x.c
-index 07e77852299..caca95bb6aa 100644
+index 07e77852299..1062b31cec9 100644
 --- a/drivers/i2c/i2c_tca954x.c
 +++ b/drivers/i2c/i2c_tca954x.c
-@@ -74,6 +74,26 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
+@@ -69,11 +69,41 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
+ 			data->selected_chan = select_mask;
+ 		} else {
+ 			LOG_DBG("tca954x: failed to set channel");
++			/* The mux state is unknown now, and a channel left connected
++			 * can keep the root bus from working. Reset the mux, which
++			 * disconnects every channel and needs no I2C.
++			 */
++			if (cfg->reset_gpios.port) {
++				gpio_pin_set_dt(&cfg->reset_gpios, 1);
++				k_busy_wait(1);
++				gpio_pin_set_dt(&cfg->reset_gpios, 0);
++				data->selected_chan = 0;
++			}
+ 		}
+ 	}
  	return res;
  }
  
