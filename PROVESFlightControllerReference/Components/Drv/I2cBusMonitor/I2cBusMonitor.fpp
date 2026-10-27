@@ -27,6 +27,9 @@ module Drv {
         @ Recovery left a line low or returned an error
         event BusRecoveryFailed(ret: I32, sda: U8, scl: U8) severity warning high format "I2C bus recovery failed with return code {} (SDA={}, SCL={})" throttle 5
 
+        @ The controller held queued bytes without driving the bus on consecutive polls
+        event ControllerStalled(status: U32) severity warning high format "I2C controller stalled (IC_STATUS=0x{x}), recovering" throttle 5
+
         @ The 1 Hz poll limits the rate of automatic recovery
         event AutoRecoveryBackOff(recoveries: U32, interval: U32) severity warning high format "{} I2C bus recoveries without a clean bus, auto recovery limited to one every {} s"
 

@@ -6,6 +6,7 @@
 #include "PROVESFlightControllerReference/Components/Drv/I2cBusMonitor/I2cBusMonitor.hpp"
 
 #include <zephyr/kernel.h>
+#include <zephyr/sys/sys_io.h>
 
 // Defined in drivers/i2c/i2c_dw.c.
 extern "C" void i2c_dw_register_recover_bus_cb(const struct device* dw_i2c_dev,
@@ -15,12 +16,16 @@ extern "C" void i2c_dw_register_recover_bus_cb(const struct device* dw_i2c_dev,
 namespace Drv {
 
 namespace {
-constexpr U32 HALF_CLOCK_US = 10;           //!< Half SCL period while bit-banging (~50 kHz)
-constexpr U32 RECOVERY_CLOCKS = 9;          //!< Clocks to finish a byte and its ACK
-constexpr U32 MUX_RESET_PULSE_US = 10;      //!< TCA954x reset pulse width
-constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;    //!< Clean polls that end back-off and clear the throttles
-constexpr U32 BACKOFF_AFTER = 5;            //!< Automatic recoveries before back-off starts
-constexpr int64_t BACKOFF_INTERVAL_S = 30;  //!< Minimum time between automatic recoveries in back-off
+constexpr U32 HALF_CLOCK_US = 10;                //!< Half SCL period while bit-banging (~50 kHz)
+constexpr U32 RECOVERY_CLOCKS = 9;               //!< Clocks to finish a byte and its ACK
+constexpr U32 MUX_RESET_PULSE_US = 10;           //!< TCA954x reset pulse width
+constexpr U32 CLEAN_POLLS_TO_CLEAR = 10;         //!< Clean polls that end back-off and clear the throttles
+constexpr U32 BACKOFF_AFTER = 5;                 //!< Automatic recoveries before back-off starts
+constexpr int64_t BACKOFF_INTERVAL_S = 30;       //!< Minimum time between automatic recoveries in back-off
+constexpr U32 STALLED_POLLS_TO_ACT = 2;          //!< Consecutive stalled polls before a forced recovery
+constexpr U32 IC_STATUS_OFFSET = 0x70;           //!< DesignWare IC_STATUS register
+constexpr U32 IC_STATUS_TFE = 1U << 2;           //!< TX FIFO empty
+constexpr U32 IC_STATUS_MST_ACTIVITY = 1U << 5;  //!< Controller is driving the bus
 }  // namespace
 
 I2cBusMonitor* I2cBusMonitor::s_instance = nullptr;
@@ -38,13 +43,19 @@ void I2cBusMonitor ::configure(const I2cBusMonitorConfig& config) {
 void I2cBusMonitor ::run_handler(FwIndexType portNum, U32 context) {
     Os::ScopeLock lock(this->m_lock);
 
-    if (lineLevel(this->m_config.sda) && lineLevel(this->m_config.scl)) {
+    // A controller that holds queued bytes without driving the bus is waiting for a STOP it never saw.
+    // Both lines read high, so only the controller status shows it.
+    const U32 stalled = this->stalledStatus();
+    this->m_stalledPolls = (stalled != 0) ? this->m_stalledPolls + 1 : 0;
+    const bool linesHigh = lineLevel(this->m_config.sda) && lineLevel(this->m_config.scl);
+    if (linesHigh && this->m_stalledPolls < STALLED_POLLS_TO_ACT) {
         // Count clean polls. Enough of them end back-off and clear the throttles.
-        if (this->m_cleanPolls < CLEAN_POLLS_TO_CLEAR && ++this->m_cleanPolls == CLEAN_POLLS_TO_CLEAR) {
+        if (stalled == 0 && this->m_cleanPolls < CLEAN_POLLS_TO_CLEAR && ++this->m_cleanPolls == CLEAN_POLLS_TO_CLEAR) {
             this->m_autoRecoveries = 0;
             this->log_WARNING_HI_BusStuck_ThrottleClear();
             this->log_ACTIVITY_HI_BusRecovered_ThrottleClear();
             this->log_WARNING_HI_BusRecoveryFailed_ThrottleClear();
+            this->log_WARNING_HI_ControllerStalled_ThrottleClear();
         }
         return;
     }
@@ -55,7 +66,12 @@ void I2cBusMonitor ::run_handler(FwIndexType portNum, U32 context) {
         return;
     }
 
-    (void)this->recover(false);
+    if (linesHigh) {
+        this->log_WARNING_HI_ControllerStalled(stalled);
+    }
+    // The recovery ends with a STOP on the wire, which restarts a stalled controller.
+    (void)this->recover(linesHigh);
+    this->m_stalledPolls = 0;
     if (this->m_acted) {
         this->m_lastAutoMs = nowMs;
         if (++this->m_autoRecoveries == BACKOFF_AFTER) {
@@ -164,6 +180,14 @@ void I2cBusMonitor ::clockOutBus() {
     k_busy_wait(HALF_CLOCK_US);
     gpio_pin_set_dt(&cfg.sda, 1);
     k_busy_wait(HALF_CLOCK_US);
+}
+
+U32 I2cBusMonitor ::stalledStatus() const {
+    if (this->m_config.regs == 0) {
+        return 0;
+    }
+    const U32 status = sys_read32(this->m_config.regs + IC_STATUS_OFFSET);
+    return ((status & IC_STATUS_TFE) == 0 && (status & IC_STATUS_MST_ACTIVITY) == 0) ? status : 0;
 }
 
 U8 I2cBusMonitor ::lineLevel(const struct gpio_dt_spec& spec) {

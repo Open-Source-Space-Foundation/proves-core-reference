@@ -10,7 +10,8 @@ The I2C Bus Monitor component recovers I2C0 when a target holds SDA or SCL low. 
 ## Triggers
 
 1. The 1 Hz `run` port, when SDA or SCL reads low.
-2. The `RECOVER_BUS` command, which recovers even when both lines read high.
+2. The 1 Hz `run` port, when the controller holds queued bytes (IC_STATUS TFE = 0) without driving the bus (MST_ACTIVITY = 0) on 2 consecutive polls. Both lines read high in this state. The controller waits for a STOP it never saw, and every transfer times out. The component emits `ControllerStalled` and does a forced recovery, which ends with a STOP on the wire. On EM unit Orange 001, one STOP restarted the controller (2026-10-26).
+3. The `RECOVER_BUS` command, which recovers even when both lines read high.
 
 The Zephyr `i2c_dw` driver can also call the callback from its transfer path after an SDA-stuck abort. The RP2350 DesignWare IP does not report that abort, so this path does not run on this board.
 
@@ -54,3 +55,4 @@ See `I2cBusMonitor.fpp` for the ports, commands, events and telemetry.
 | Date | Description |
 |---|---|
 | 2026-10-04 | Initial I2C Bus Monitor component SDD |
+| 2026-10-27 | Add the stalled-controller trigger and `ControllerStalled` event |

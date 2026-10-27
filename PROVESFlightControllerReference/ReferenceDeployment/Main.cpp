@@ -71,6 +71,7 @@ const Drv::I2cBusMonitorConfig i2c0_bus_config = {
     .sda = GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), i2c0_sda_gpios),
     .muxReset = GPIO_DT_SPEC_GET_OR(DT_NODELABEL(tca9548a), reset_gpios, {0}),
     .pinctrl = PINCTRL_DT_DEV_CONFIG_GET(DT_NODELABEL(i2c0)),
+    .regs = DT_REG_ADDR(DT_NODELABEL(i2c0)),
 };
 const int storage_partition_id = PARTITION_ID(storage_partition);
 

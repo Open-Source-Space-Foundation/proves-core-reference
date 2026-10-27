@@ -23,6 +23,7 @@ struct I2cBusMonitorConfig {
     struct gpio_dt_spec sda;                   //!< SDA pin as a GPIO
     struct gpio_dt_spec muxReset;              //!< TCA954x reset line (port can be nullptr)
     const struct pinctrl_dev_config* pinctrl;  //!< Controller pinctrl
+    uintptr_t regs;                            //!< Controller register base, to detect a stalled controller
 };
 
 class I2cBusMonitor final : public I2cBusMonitorComponentBase {
@@ -55,6 +56,9 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     //! Clock SCL until the target releases SDA, then send a STOP
     void clockOutBus();
 
+    //! IC_STATUS if the controller holds queued bytes but is not driving the bus, else 0
+    U32 stalledStatus() const;
+
     //! Read a line level: 1 = high, 0 = low or read error
     static U8 lineLevel(const struct gpio_dt_spec& spec);
 
@@ -70,6 +74,7 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     U32 m_recoveryCount = 0;           //!< Recoveries that released the bus
     U32 m_recoveryFailureCount = 0;    //!< Recoveries that left a line low
     U32 m_cleanPolls = 0;              //!< Consecutive polls with both lines high
+    U32 m_stalledPolls = 0;            //!< Consecutive polls with a stalled controller
     U32 m_autoRecoveries = 0;          //!< Automatic recoveries since the last clean period
     int64_t m_lastAutoMs = 0;          //!< Uptime of the last automatic recovery, in ms
 };
