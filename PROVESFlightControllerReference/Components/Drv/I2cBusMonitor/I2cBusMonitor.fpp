@@ -20,6 +20,9 @@ module Drv {
         @ Recoveries that left a line low
         telemetry RecoveryFailureCount: U32
 
+        @ Driver calls skipped because only an abort flag was set (for example after an address NACK) and the bus was fine
+        telemetry AbortFlagsCleared: U32
+
         #### Events ####
         @ A line was low with no transfer in progress
         event BusStuck(sda: U8, scl: U8) severity warning high format "I2C bus stuck (SDA={}, SCL={}), recovering" throttle 5
@@ -31,13 +34,13 @@ module Drv {
         event BusRecoveryFailed(ret: I32, sda: U8, scl: U8) severity warning high format "I2C bus recovery failed with return code {} (SDA={}, SCL={})" throttle 5
 
         @ The I2C driver ran the recovery after transfers timed out since the last poll
-        event TimeoutRecoveries(recovered: U32, failed: U32) severity warning high format "I2C transfer timeouts: {} recoveries released the bus, {} left a line low" throttle 5
+        event TimeoutRecoveries(recovered: U32, failed: U32) severity warning high format "I2C driver-triggered recoveries: {} released the bus, {} left a line low" throttle 5
 
         @ State recorded at one recovery. source: 0 driver timeout, 1 poll, 2 command. lines: SDA bit 0 and SCL bit 1 before the sequence, then after halt, clock out and mux reset, 2 bits each
         event RecoveryDetail(uptimeMs: U32, source: U8, tar: U16, muxChannel: U8, status: U32, rawIntr: U32, abortSource: U32, txflr: U8, rxflr: U8, lines: U8, clocks: U8, steps: U8, ret: I32) severity warning low format "I2C recovery at {} ms (source {}): TAR=0x{x} mux=0x{x} IC_STATUS=0x{x} RAW_INTR=0x{x} ABRT=0x{x} TXFLR={} RXFLR={} lines=0x{x} clocks={} steps=0x{x} ret={}"
 
-        @ i2c_dw driver state at a timed-out transfer, emitted after its RecoveryDetail. state bits: 0x1 send, 0x2 receive, 0x4 error, 0x8 busy (see i2c_dw.h); flags: Zephyr I2C_MSG_* bits
-        event RecoveryDriverState(uptimeMs: U32, intrMask: U32, xfrLen: U32, rxPending: U32, requestBytes: U32, dwState: U8, xfrFlags: U8, msgLeft: U8) severity warning low format "I2C timeout driver state at {} ms: INTR_MASK=0x{x} xfr_len={} rx_pending={} request_bytes={} state=0x{x} flags=0x{x} msgs_left={}"
+        @ i2c_dw driver state at a driver-triggered recovery, emitted after its RecoveryDetail. reason: 1 timeout, 2 stuck bits at the start of a transfer (only dwState is valid then). dwState bits: 0x1 send, 0x2 receive, 0x4 error, 0x8 busy, 0x10 abort, 0x20 NACK, 0x40 SCL stuck, 0x80 SDA stuck (see i2c_dw.h); flags: Zephyr I2C_MSG_* bits
+        event RecoveryDriverState(uptimeMs: U32, reason: U8, intrMask: U32, xfrLen: U32, rxPending: U32, requestBytes: U32, dwState: U8, xfrFlags: U8, msgLeft: U8) severity warning low format "I2C driver state at {} ms (reason {}): INTR_MASK=0x{x} xfr_len={} rx_pending={} request_bytes={} state=0x{x} flags=0x{x} msgs_left={}"
 
         @ The detail ring was full, so some recoveries were not recorded
         event RecoveryDetailsDropped(count: U32) severity warning low format "{} I2C recovery details dropped" throttle 5

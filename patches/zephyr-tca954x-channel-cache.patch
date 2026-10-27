@@ -1,8 +1,8 @@
 diff --git a/drivers/i2c/i2c_tca954x.c b/drivers/i2c/i2c_tca954x.c
-index 07e77852299..4affd7c3e8b 100644
+index 07e77852299..caca95bb6aa 100644
 --- a/drivers/i2c/i2c_tca954x.c
 +++ b/drivers/i2c/i2c_tca954x.c
-@@ -74,6 +74,16 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
+@@ -74,6 +74,26 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
  	return res;
  }
  
@@ -14,6 +14,16 @@ index 07e77852299..4affd7c3e8b 100644
 +	const struct tca954x_root_data *data = root->data;
 +
 +	return data->selected_chan;
++}
++
++/* Tell the driver that the mux was reset, so that the next transfer selects
++ * its channel again instead of trusting the cached one.
++ */
++void tca954x_forget_channel(const struct device *root)
++{
++	struct tca954x_root_data *data = root->data;
++
++	data->selected_chan = 0;
 +}
 +
  static int tca954x_transfer(const struct device *dev,

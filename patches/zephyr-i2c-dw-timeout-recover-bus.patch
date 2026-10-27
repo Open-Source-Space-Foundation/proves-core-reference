@@ -1,38 +1,49 @@
 diff --git a/drivers/i2c/i2c_dw.c b/drivers/i2c/i2c_dw.c
-index d21fc37fa59..b3a5e3df4cd 100644
+index d21fc37fa59..d5b9b077800 100644
 --- a/drivers/i2c/i2c_dw.c
 +++ b/drivers/i2c/i2c_dw.c
-@@ -72,6 +72,17 @@ void i2c_dw_register_recover_bus_cb(const struct device *dev, i2c_api_recover_bu
+@@ -72,6 +72,20 @@ void i2c_dw_register_recover_bus_cb(const struct device *dev, i2c_api_recover_bu
  	dw->recover_bus_dev = (struct device *)wrapper_dev;
  }
  
-+/* Driver state of the last transfer that timed out on a bus with a recovery
-+ * callback: IC_INTR_MASK, xfr_len, rx_pending, request_bytes, state,
-+ * xfr_flags and the messages left. Valid inside the callback.
++/* Why the driver called the recovery callback, and its state at that point:
++ * reason (I2C_DW_RECOVERY_*), IC_INTR_MASK, xfr_len, rx_pending,
++ * request_bytes, state, xfr_flags and the messages left. Valid inside the
++ * callback.
 + */
-+static uint32_t i2c_dw_timeout_info[7];
++#define I2C_DW_RECOVERY_TIMEOUT 1 /* a transfer timed out */
++#define I2C_DW_RECOVERY_STUCK   2 /* a new transfer found stuck or abort bits in state */
++static uint32_t i2c_dw_recovery_info[8];
 +
-+void i2c_dw_get_timeout_info(uint32_t info[7])
++void i2c_dw_get_recovery_info(uint32_t info[8])
 +{
-+	memcpy(info, i2c_dw_timeout_info, sizeof(i2c_dw_timeout_info));
++	memcpy(info, i2c_dw_recovery_info, sizeof(i2c_dw_recovery_info));
 +}
 +
  /* it might call from i2c_transfer api and have already
   * lock the bus, no need to lock bus again here
   */
-@@ -914,6 +925,22 @@ static int i2c_dw_transfer(const struct device *dev, struct i2c_msg *msgs, uint8
+@@ -822,6 +836,8 @@ static int i2c_dw_transfer(const struct device *dev, struct i2c_msg *msgs, uint8
+ 
+ 	/* check if the state is sda/scl stuck at low state */
+ 	if (dw->state & I2C_DW_STUCK_ERR_MASK) {
++		i2c_dw_recovery_info[0] = I2C_DW_RECOVERY_STUCK;
++		i2c_dw_recovery_info[5] = dw->state;
+ 		/* try to recovery */
+ 		if (i2c_recovery_bus(dev)) {
+ 			ret = -ETIME;
+@@ -914,6 +930,21 @@ static int i2c_dw_transfer(const struct device *dev, struct i2c_msg *msgs, uint8
  		/* Wait for transfer to be done */
  		ret = k_sem_take(&dw->device_sync_sem, K_MSEC(CONFIG_I2C_DW_RW_TIMEOUT_MS));
  		if (ret != 0) {
-+			if (dw->recover_bus_cb) {
-+				i2c_dw_timeout_info[0] = sys_read32(reg_base + DW_IC_REG_INTR_MASK);
-+				i2c_dw_timeout_info[1] = dw->xfr_len;
-+				i2c_dw_timeout_info[2] = dw->rx_pending;
-+				i2c_dw_timeout_info[3] = dw->request_bytes;
-+				i2c_dw_timeout_info[4] = dw->state;
-+				i2c_dw_timeout_info[5] = dw->xfr_flags;
-+				i2c_dw_timeout_info[6] = msg_left;
-+			}
++			i2c_dw_recovery_info[0] = I2C_DW_RECOVERY_TIMEOUT;
++			i2c_dw_recovery_info[1] = sys_read32(reg_base + DW_IC_REG_INTR_MASK);
++			i2c_dw_recovery_info[2] = dw->xfr_len;
++			i2c_dw_recovery_info[3] = dw->rx_pending;
++			i2c_dw_recovery_info[4] = dw->request_bytes;
++			i2c_dw_recovery_info[5] = dw->state;
++			i2c_dw_recovery_info[6] = dw->xfr_flags;
++			i2c_dw_recovery_info[7] = msg_left;
 +			write_intr_mask(DW_DISABLE_ALL_I2C_INT, reg_base);
 +			/* A timeout can leave the controller or the bus stuck (for example a
 +			 * controller that never saw a STOP). Let the registered callback

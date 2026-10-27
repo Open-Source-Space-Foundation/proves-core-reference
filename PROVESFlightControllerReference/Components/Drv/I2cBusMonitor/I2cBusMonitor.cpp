@@ -5,6 +5,8 @@
 
 #include "PROVESFlightControllerReference/Components/Drv/I2cBusMonitor/I2cBusMonitor.hpp"
 
+#include <string.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/sys/sys_io.h>
 
@@ -12,11 +14,12 @@
 extern "C" void i2c_dw_register_recover_bus_cb(const struct device* dw_i2c_dev,
                                                i2c_api_recover_bus_t recover_bus_cb,
                                                const struct device* wrapper_dev);
-// Defined in drivers/i2c/i2c_dw.c by patches/zephyr-i2c-dw-timeout-recover-bus.patch: IC_INTR_MASK, xfr_len,
-// rx_pending, request_bytes, state, xfr_flags and messages left of the last timed-out transfer.
-extern "C" void i2c_dw_get_timeout_info(uint32_t info[7]);
-// Defined in drivers/i2c/i2c_tca954x.c by patches/zephyr-tca954x-selected-channel.patch.
+// Defined in drivers/i2c/i2c_dw.c by patches/zephyr-i2c-dw-timeout-recover-bus.patch: why the driver called the
+// callback, then IC_INTR_MASK, xfr_len, rx_pending, request_bytes, state, xfr_flags and messages left.
+extern "C" void i2c_dw_get_recovery_info(uint32_t info[8]);
+// Defined in drivers/i2c/i2c_tca954x.c by patches/zephyr-tca954x-channel-cache.patch.
 extern "C" uint8_t tca954x_selected_channel(const struct device* root);
+extern "C" void tca954x_forget_channel(const struct device* root);
 
 namespace Drv {
 
@@ -42,6 +45,11 @@ constexpr uintptr_t IC_ENABLE_STATUS_OFFSET = 0x9c;
 constexpr U32 IC_ENABLE_EN = 1U << 0;
 constexpr U32 IC_ENABLE_ABORT = 1U << 1;
 constexpr U32 IC_TAR_MASK = 0x3ff;
+
+// i2c_dw driver values (drivers/i2c/i2c_dw.h and the timeout patch)
+constexpr U32 DW_RECOVERY_STUCK = 2;  //!< A new transfer found stuck or abort bits in the driver state
+constexpr U32 DW_SCL_STUCK = 1U << 6;
+constexpr U32 DW_SDA_STUCK = 1U << 7;
 constexpr U32 CONTROLLER_TIMEOUT_US = 10000;  //!< Limit for the abort and the disable to finish
 constexpr U32 CONTROLLER_POLL_US = 10;
 }  // namespace
@@ -149,15 +157,21 @@ void I2cBusMonitor::reportDetails() {
                                             d.rawIntr, d.abortSource, d.txflr, d.rxflr, d.lines, d.clocks, d.steps,
                                             d.ret);
         if (d.source == RecoverySource::DRIVER) {
-            this->log_WARNING_LO_RecoveryDriverState(d.uptimeMs, d.driver[0], d.driver[1], d.driver[2], d.driver[3],
-                                                     static_cast<U8>(d.driver[4]), static_cast<U8>(d.driver[5]),
-                                                     static_cast<U8>(d.driver[6]));
+            this->log_WARNING_LO_RecoveryDriverState(d.uptimeMs, static_cast<U8>(d.driver[0]), d.driver[1], d.driver[2],
+                                                     d.driver[3], d.driver[4], static_cast<U8>(d.driver[5]),
+                                                     static_cast<U8>(d.driver[6]), static_cast<U8>(d.driver[7]));
         }
         atomic_set(&this->m_detailTail, tail + 1);
     }
 }
 
 void I2cBusMonitor::reportTimeoutRecoveries() {
+    const atomic_val_t cleared = atomic_get(&this->m_abortsCleared);
+    if (cleared != this->m_reportedAbortsCleared) {
+        this->m_reportedAbortsCleared = cleared;
+        this->tlmWrite_AbortFlagsCleared(static_cast<U32>(cleared));
+    }
+
     const atomic_val_t recoveries = atomic_get(&this->m_timeoutRecoveries);
     const atomic_val_t failures = atomic_get(&this->m_timeoutRecoveryFailures);
     const U32 newRecoveries = static_cast<U32>(recoveries - this->m_reportedTimeoutRecoveries);
@@ -182,17 +196,27 @@ int I2cBusMonitor::recoverBusCallback(const struct device* dev) {
     }
     if (k_current_get() == self->m_recoverThread) {
         self->m_acted = true;
-        return self->recoverLocked(self->m_source);
+        return self->recoverLocked(self->m_source, nullptr);
     }
 
-    // A transfer timed out on another thread. That thread holds bus_sem but not m_lock, so count
-    // the result here and let the next run_handler() report it.
-    const int rc = self->recoverLocked(RecoverySource::DRIVER);
+    // The driver called from a transfer on another thread. That thread holds bus_sem but not m_lock, so
+    // count the result here and let the next run_handler() report it.
+    uint32_t info[8];
+    i2c_dw_get_recovery_info(info);
+    const I2cBusMonitorConfig& cfg = self->m_config;
+    if (info[0] == DW_RECOVERY_STUCK && (info[5] & (DW_SCL_STUCK | DW_SDA_STUCK)) == 0 && lineLevel(cfg.sda) &&
+        lineLevel(cfg.scl)) {
+        // Every abort that ends with a STOP, an address NACK included, leaves I2C_DW_USER_ABRT in the
+        // driver state. The bus is fine, so only let the driver clear the flag.
+        atomic_inc(&self->m_abortsCleared);
+        return 0;
+    }
+    const int rc = self->recoverLocked(RecoverySource::DRIVER, info);
     atomic_inc((rc == 0) ? &self->m_timeoutRecoveries : &self->m_timeoutRecoveryFailures);
     return rc;
 }
 
-int I2cBusMonitor::recoverLocked(RecoverySource source) {
+int I2cBusMonitor::recoverLocked(RecoverySource source, const uint32_t* driverInfo) {
     const I2cBusMonitorConfig& cfg = this->m_config;
     const U8 steps = this->m_steps;
     RecoveryDetail d{};
@@ -200,8 +224,8 @@ int I2cBusMonitor::recoverLocked(RecoverySource source) {
     d.source = source;
     d.steps = steps;
     this->snapshotController(d);
-    if (source == RecoverySource::DRIVER) {
-        i2c_dw_get_timeout_info(d.driver);
+    if (driverInfo != nullptr) {
+        memcpy(d.driver, driverInfo, sizeof(d.driver));
     }
 
     this->m_stuckSda = lineLevel(cfg.sda);
@@ -237,6 +261,10 @@ int I2cBusMonitor::recoverLocked(RecoverySource source) {
         k_busy_wait(MUX_RESET_PULSE_US);
         gpio_pin_set_dt(&cfg.muxReset, 0);
         k_busy_wait(MUX_RESET_PULSE_US);
+        // The reset deselected every channel. Make the tca954x driver select its channel again.
+        if (cfg.mux != nullptr) {
+            tca954x_forget_channel(cfg.mux);
+        }
     }
     d.lines |= linesAt(3);
     if (clock && rc == 0 && (!lineLevel(cfg.sda) || !lineLevel(cfg.scl))) {

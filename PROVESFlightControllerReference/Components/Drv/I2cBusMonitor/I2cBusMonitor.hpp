@@ -40,7 +40,7 @@ constexpr U8 DEFAULT_RECOVERY_STEPS = STEP_HALT | STEP_CLOCK_OUT | STEP_MUX_RESE
 
 //! What started a recovery
 enum class RecoverySource : U8 {
-    DRIVER = 0,   //!< The I2C driver, after a transfer timed out
+    DRIVER = 0,   //!< The I2C driver, after a timeout or on stuck bits in its state
     POLL = 1,     //!< The 1 Hz poll found a line low
     COMMAND = 2,  //!< RECOVER_BUS
 };
@@ -60,7 +60,7 @@ struct RecoveryDetail {
     U8 clocks;        //!< SCL clocks sent
     U8 steps;         //!< RecoveryStep bits in use
     I32 ret;          //!< Result of the sequence
-    U32 driver[7];    //!< DRIVER source only: i2c_dw state at the timeout (see i2c_dw_get_timeout_info)
+    U32 driver[8];    //!< DRIVER source only: reason and i2c_dw state (see i2c_dw_get_recovery_info)
 };
 
 class I2cBusMonitor final : public I2cBusMonitorComponentBase {
@@ -98,7 +98,7 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     static int recoverBusCallback(const struct device* dev);
 
     //! Do the recovery sequence
-    int recoverLocked(RecoverySource source);
+    int recoverLocked(RecoverySource source, const uint32_t* driverInfo);
 
     //! Record the controller registers and the selected mux channel
     void snapshotController(RecoveryDetail& d) const;
@@ -136,6 +136,8 @@ class I2cBusMonitor final : public I2cBusMonitorComponentBase {
     atomic_t m_timeoutRecoveries = ATOMIC_INIT(0);   //!< Driver recoveries that released the bus
     atomic_t m_timeoutRecoveryFailures = ATOMIC_INIT(0);  //!< Driver recoveries that left a line low
     atomic_val_t m_reportedTimeoutRecoveries = 0;         //!< m_timeoutRecoveries at the last report
+    atomic_t m_abortsCleared = ATOMIC_INIT(0);            //!< Driver calls for an ordinary abort flag, bus fine
+    atomic_val_t m_reportedAbortsCleared = 0;             //!< m_abortsCleared at the last report
     atomic_val_t m_reportedTimeoutRecoveryFailures = 0;   //!< m_timeoutRecoveryFailures at the last report
     static constexpr U32 DETAIL_SLOTS = 16;
     RecoveryDetail m_details[DETAIL_SLOTS]{};    //!< Ring of recovery details, written under bus_sem
