@@ -1,0 +1,20 @@
+diff --git a/drivers/haptics/ti/drv2605.c b/drivers/haptics/ti/drv2605.c
+index 9535a3ea433..5ec20c406b9 100644
+--- a/drivers/haptics/ti/drv2605.c
++++ b/drivers/haptics/ti/drv2605.c
+@@ -374,8 +374,13 @@ static int drv2605_stop_output(const struct device *dev)
+ 		}
+ 
+ 		return i2c_reg_update_byte_dt(&config->i2c, DRV2605_REG_GO, DRV2605_GO, 0);
+-	case DRV2605_MODE_RTP:
+-		return k_work_cancel(&data->rtp_work);
++	case DRV2605_MODE_RTP: {
++		struct k_work_sync sync;
++
++		/* Wait for a running RTP write so the caller can power the device off safely */
++		(void)k_work_cancel_sync(&data->rtp_work, &sync);
++		return 0;
++	}
+ 	default:
+ 		return -ENOTSUP;
+ 	}
