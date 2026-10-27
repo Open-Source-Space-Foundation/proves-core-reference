@@ -38,6 +38,17 @@ module ComCcsdsConfig {
         constant file        = 1
     }
 
+    # Aggregator configuration constants
+    module Aggregator {
+        @ Size in bytes of every aggregate the aggregators emit: the TM Transfer Frame Data Field.
+        @ Svc.Ccsds.TmFramer asserts unless it receives exactly Svc.Ccsds.TmDataFieldSize. Without packet
+        @ spanning this must be at least Svc.ComAggregator.MIN_NON_SPANNING_AGGREGATION_SIZE, which
+        @ ComAggregator::configure() asserts at startup.
+        constant aggregationSize = Svc.Ccsds.TmDataFieldSize
+        @ Span packets across transfer frames. Off: the ground deframers do not reassemble spanned packets.
+        constant enablePacketSpanning = false
+    }
+
     # Buffer management constants
     module BuffMgr {
         constant frameAccumulatorSize  = 1024 # Must be at least as large as the comm buffer size

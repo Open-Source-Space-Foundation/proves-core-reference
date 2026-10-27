@@ -26,7 +26,7 @@ export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 FPRIME_YAMCS_MAIN ?= $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/__main__.py
 fprime-venv: uv ## Create a virtual environment
 	@$(UV) venv fprime-venv --allow-existing
-	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/pyyaml-override.txt
+	@$(UV) pip install --prerelease=allow --requirement requirements.txt --overrides yamcs/uv-overrides.txt
 	@echo "Applying fprime-yamcs noapp/path patch..."
 	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
 	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping patch"; exit 0; fi; \

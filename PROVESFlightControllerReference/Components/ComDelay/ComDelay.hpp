@@ -31,6 +31,9 @@ class ComDelay final : public ComDelayComponentBase {
     void parameterUpdated(FwPrmIdType id  //!< The parameter ID
                           ) override;
 
+    //! Ignore parameter loads; parameterUpdated reports changes, and loading at boot is not a change
+    void parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) override;
+
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
     // ----------------------------------------------------------------------

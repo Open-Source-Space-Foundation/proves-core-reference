@@ -66,7 +66,6 @@ U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGr
  * desired, but is extracted here for clarity.
  */
 void configureTopology() {
-    FileHandling::prmDb.configure("/prmDb.dat");
     // Rate group driver needs a divisor list
     rateGroupDriver.configure(rateGroupDivisorsSet);
     // Rate groups require context arrays.

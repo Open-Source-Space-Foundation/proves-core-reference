@@ -45,7 +45,18 @@ module ComCcsdsUart {
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_UART + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
         stack size ComCcsdsConfig.StackSizes.aggregator \
-        priority ComCcsdsConfig.Priorities.aggregator
+        priority ComCcsdsConfig.Priorities.aggregator \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        ComCcsdsUart::aggregator.configure(ComCcsdsConfig::Aggregator::aggregationSize,
+                                           ComCcsdsConfig::Aggregator::enablePacketSpanning,
+                                           2,  // Allocation id, distinct from the other ComCcsdsUart instances
+                                           ComCcsds::Allocation::memAllocator);
+        """
+        phase Fpp.ToCpp.Phases.tearDownComponents """
+        ComCcsdsUart::aggregator.cleanup();
+        """
+    }
 
     # ----------------------------------------------------------------------
     # Passive Components
