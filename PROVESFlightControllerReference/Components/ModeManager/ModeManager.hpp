@@ -13,6 +13,7 @@
 #include "Fw/Time/Time.hpp"
 #include "Fw/Types/String.hpp"
 #include "PROVESFlightControllerReference/Components/ModeManager/ModeManagerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/ModeManager/SafeModePolicy.hpp"
 
 namespace Components {
 
@@ -157,14 +158,6 @@ class ModeManager : public ModeManagerComponentBase {
     //! System mode enumeration
     enum class SystemMode : U8 { SAFE_MODE = 1, NORMAL = 2 };
 
-    //! Persistent state structure
-    struct PersistentState {
-        U8 mode;                 //!< Current mode (SystemMode)
-        U32 safeModeEntryCount;  //!< Number of times safe mode entered
-        U8 safeModeReason;       //!< Reason for safe mode entry (SafeModeReason)
-        U8 cleanShutdown;        //!< Clean shutdown flag (1 = clean, 0 = unclean)
-    };
-
     // ----------------------------------------------------------------------
     // Private member variables
     // ----------------------------------------------------------------------
@@ -173,12 +166,9 @@ class ModeManager : public ModeManagerComponentBase {
     U32 m_safeModeEntryCount;                     //!< Counter for safe mode entries
     U32 m_runCounter;                             //!< Counter for run handler calls (1Hz)
     Components::SafeModeReason m_safeModeReason;  //!< Current safe mode reason
-    U32 m_safeModeVoltageCounter;                 //!< Counter for low voltage in NORMAL mode
-    U32 m_recoveryVoltageCounter;                 //!< Counter for voltage recovery in SAFE_MODE
 
-    Os::Mutex m_commandLossMutex;  //!< Protects command loss state against concurrent access
-    U32 m_commandLossCounter;      //!< Value of runCounter when last command was received
-    bool m_commandLossDebounce;    //!< Prevents re-triggering safe mode entry while command loss persists
+    SafeModePolicy m_policy;       //!< Debounce counters and persisted state codec
+    Os::Mutex m_commandLossMutex;  //!< Protects the policy's command loss state against concurrent access
 
     // ----------------------------------------------------------------------
     // Constants
