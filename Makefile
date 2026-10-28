@@ -129,6 +129,13 @@ ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
 check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
 	@$(UV_RUN) python3 scripts/check_console_disabled.py "$(ZEPHYR_CONFIG)"
 
+.PHONY: malloc-arena-report
+ZEPHYR_ELF ?= $(BUILD_DIR)/zephyr/zephyr.elf
+MALLOC_ARENA_MIN_HEADROOM ?= 16384
+malloc-arena-report: fprime-venv ## Emulate boot to report malloc arena use per component; fails below MALLOC_ARENA_MIN_HEADROOM free bytes or on a setup assert
+	@$(UV) pip install --quiet --requirement scripts/requirements-malloc-arena.txt
+	@$(UV_RUN) python3 scripts/malloc_arena_report.py "$(ZEPHYR_ELF)" --min-headroom $(MALLOC_ARENA_MIN_HEADROOM)
+
 ##@ Authentication Keys
 
 AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h

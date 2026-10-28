@@ -1,0 +1,3 @@
+# Only for scripts/malloc_arena_report.py (make malloc-arena-report). Unicorn is
+# GPL-2.0; it is installed from PyPI at check time and never linked into firmware.
+unicorn>=2.1,<3

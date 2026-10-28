@@ -83,3 +83,11 @@ runs:
       shell: bash
       run: |
         make check-console-disabled
+
+    - name: Check malloc arena headroom
+      # The arena is all SRAM above static RAM, filled at boot by queues and
+      # buffer pools; a shortfall only shows on hardware as a boot assert.
+      # This emulates boot from the built ELF and also fails on any setup assert.
+      shell: bash
+      run: |
+        make malloc-arena-report
