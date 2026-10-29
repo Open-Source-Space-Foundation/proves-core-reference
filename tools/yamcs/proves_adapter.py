@@ -8,12 +8,16 @@ authentication header/trailer required by the FSW Authenticate component.
 Use Case 1 (local UART):
     python proves_adapter.py --mode serial --uart-device /dev/ttyUSB0
 
+Use Case 1, split TX/RX (two ground radio controllers, TM from one, TC to the other):
+    python proves_adapter.py --mode serial --tm-device <rx-grc> --tc-device <tx-grc>
+
 Use Case 2 (remote TCP, skeleton):
     python proves_adapter.py --mode tcp --tcp-host <gs-host> --tcp-port 5000 \
         --yamcs-host <server-ip>
 """
 
 import argparse
+import os
 import socket
 import sys
 import threading
@@ -63,6 +67,7 @@ def _forward_tm_serial(
     frame_length: int,
     spacecraft_ids: list[int] | None = None,
     vc_id: int = 1,
+    label: str = "serial",
 ):
     """Read fixed-length TM frames from serial and forward to YAMCS via UDP.
 
@@ -83,7 +88,7 @@ def _forward_tm_serial(
     if spacecraft_ids is None:
         spacecraft_ids = [68]
 
-    print(f"[TM] serial → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
+    print(f"[TM] {label} → UDP {yamcs_host}:{tm_port}  (frame_length={frame_length})")
     # Build sync headers: first 2 bytes of CCSDS TM primary header per SCID.
     # bits 15-14: version=0, bits 13-4: spacecraft_id, bits 3-1: vc_id, bit 0: OCF=0
     syncs = []
@@ -303,9 +308,10 @@ def _forward_tc_serial(
     ser,
     auth_framer: AuthenticateFramer,
     sdlink_framer: SpaceDataLinkFramerDeframer,
+    label: str = "serial",
 ):
     """Receive TC datagrams from YAMCS, extract SpacePacket, auth-wrap, re-frame, write to serial."""
-    print("[TC] UDP → extract SpacePacket → authenticate → TC frame → serial")
+    print(f"[TC] UDP → extract SpacePacket → authenticate → TC frame → {label}")
     tc_count = 0
     while True:
         tc_transfer_frame, _ = tc_sock.recvfrom(4096)
@@ -319,8 +325,45 @@ def _forward_tc_serial(
         ser.write(out_frame)
         tc_count += 1
         print(
-            f"[TC] #{tc_count}: YAMCS {len(tc_transfer_frame)}B → serial {len(out_frame)}B"
+            f"[TC] #{tc_count}: YAMCS {len(tc_transfer_frame)}B → {label} {len(out_frame)}B"
         )
+
+
+def _drain_serial(ser, label: str):
+    """Read and discard everything received on a TC-only serial device.
+
+    In split mode the TX ground radio controller still receives downlink and
+    pushes it out its data port.  Nobody consumes it, so read it here to keep
+    the controller's downlink queue and the USB buffer from filling up.
+    """
+    import time
+
+    print(f"[drain] Discarding data received on {label}")
+    drained_bytes = 0
+    stats_time = time.monotonic()
+    while True:
+        chunk = ser.read(max(1, ser.in_waiting or 1))
+        drained_bytes += len(chunk)
+        now = time.monotonic()
+        if now - stats_time >= 30.0:
+            print(f"[drain] stats: {drained_bytes} bytes drained from {label}")
+            stats_time = now
+            drained_bytes = 0
+
+
+def _run_or_exit(label: str, target, *args):
+    """Run a worker thread body; on any exception, report it and exit the process.
+
+    With TM and TC on separate devices, losing one would otherwise leave the
+    adapter running half-dead.  Fail loudly so the operator notices.
+    """
+    try:
+        target(*args)
+    except Exception as exc:
+        print(f"[FATAL] {label}: {type(exc).__name__}: {exc}")
+    else:
+        print(f"[FATAL] {label}: worker exited")
+    os._exit(1)
 
 
 def _forward_tc_tcp(
@@ -375,6 +418,23 @@ def parse_args():
 
     # Serial options
     p.add_argument("--uart-device", default="/dev/ttyUSB0", help="Serial device path")
+    p.add_argument(
+        "--tm-device",
+        default=None,
+        help=(
+            "Serial device TM is read from (e.g. the RX ground radio controller). "
+            "Defaults to --uart-device."
+        ),
+    )
+    p.add_argument(
+        "--tc-device",
+        default=None,
+        help=(
+            "Serial device TC is written to (e.g. the TX ground radio controller). "
+            "Defaults to --uart-device. If it differs from --tm-device, anything "
+            "it receives is drained and discarded."
+        ),
+    )
     p.add_argument("--uart-baud", type=int, default=115200, help="Serial baud rate")
 
     # TCP options (Use Case 2)
@@ -434,6 +494,8 @@ def parse_args():
     )
 
     args = p.parse_args()
+    args.tm_device = args.tm_device or args.uart_device
+    args.tc_device = args.tc_device or args.uart_device
     # Flatten [[68, 67], [65]] → [68, 67, 65]; default to [68].
     if args.spacecraft_ids is None:
         args.spacecraft_ids = [68]
@@ -466,36 +528,68 @@ def main():
     tc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     tc_sock.bind(("0.0.0.0", args.yamcs_tc_port))
 
+    extra_threads = []
     if args.mode == "serial":
         import serial  # pyserial — installed via requirements.txt
 
-        print(f"[serial] Opening {args.uart_device} @ {args.uart_baud} baud")
-        ser = serial.Serial(args.uart_device, args.uart_baud, timeout=0.1)
+        def _open_serial(device: str):
+            print(f"[serial] Opening {device} @ {args.uart_baud} baud")
+            ser = serial.Serial(device, args.uart_baud, timeout=0.1)
 
-        # Enlarge the OS receive buffer so burst TM frames from the FSW don't
-        # overflow while the adapter is in the sendto() or CRC-check path.
-        # The default on macOS is only 4 KB (~16 frames at 248 B each).
-        try:
-            ser.set_buffer_size(rx_size=65536)
-        except Exception:
-            pass  # not supported on all platforms; 4 KB default still works
+            # Enlarge the OS receive buffer so burst TM frames from the FSW don't
+            # overflow while the adapter is in the sendto() or CRC-check path.
+            # The default on macOS is only 4 KB (~16 frames at 248 B each).
+            try:
+                ser.set_buffer_size(rx_size=65536)
+            except Exception:
+                pass  # not supported on all platforms; 4 KB default still works
+            return ser
+
+        if os.path.realpath(args.tm_device) == os.path.realpath(args.tc_device):
+            # One device carries both directions.
+            tm_ser = tc_ser = _open_serial(args.tm_device)
+            tm_label = tc_label = f"serial ({args.tm_device})"
+        else:
+            # Split TX/RX: TM only from the RX device, TC only to the TX device.
+            tm_ser = _open_serial(args.tm_device)
+            tc_ser = _open_serial(args.tc_device)
+            tm_label = f"RX GRC ({args.tm_device})"
+            tc_label = f"TX GRC ({args.tc_device})"
+            extra_threads.append(
+                threading.Thread(
+                    target=_run_or_exit,
+                    args=(tc_label, _drain_serial, tc_ser, tc_label),
+                    daemon=True,
+                )
+            )
 
         tm_thread = threading.Thread(
-            target=_forward_tm_serial,
+            target=_run_or_exit,
             args=(
-                ser,
+                tm_label,
+                _forward_tm_serial,
+                tm_ser,
                 tm_sock,
                 args.yamcs_host,
                 args.yamcs_tm_port,
                 args.frame_length,
                 args.spacecraft_ids,
                 args.vc_id,
+                tm_label,
             ),
             daemon=True,
         )
         tc_thread = threading.Thread(
-            target=_forward_tc_serial,
-            args=(tc_sock, ser, auth_framer, sdlink_framer),
+            target=_run_or_exit,
+            args=(
+                tc_label,
+                _forward_tc_serial,
+                tc_sock,
+                tc_ser,
+                auth_framer,
+                sdlink_framer,
+                tc_label,
+            ),
             daemon=True,
         )
 
@@ -527,6 +621,8 @@ def main():
     )
     tm_thread.start()
     tc_thread.start()
+    for thread in extra_threads:
+        thread.start()
 
     try:
         tm_thread.join()
