@@ -23,12 +23,19 @@ if(FPRIME_PLATFORM STREQUAL "Zephyr")
     set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.cpp")
 endif()
 
-register_fprime_library(
-    AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
-    SOURCES
-        ${IMPL_SOURCES}
-)
+if(IMPL_SOURCES)
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
+        SOURCES
+            ${IMPL_SOURCES}
+    )
+else()
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/FlashWorker.fpp"
+    )
+endif()
 
 ### Unit Tests ###
 # register_fprime_ut(
