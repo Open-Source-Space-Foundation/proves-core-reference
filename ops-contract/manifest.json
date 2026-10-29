@@ -1,0 +1,394 @@
+{
+  "commands": {
+    "CdhCore.cmdDisp.CMD_NO_OP": {
+      "opcode": "0x01000000",
+      "args": []
+    },
+    "CdhCore.cmdDisp.CMD_NO_OP_STRING": {
+      "opcode": "0x01000001",
+      "args": [
+        "string[40]"
+      ]
+    },
+    "CdhCore.events.SET_ID_FILTER": {
+      "opcode": "0x01001002",
+      "args": [
+        "U32",
+        "enum U8 {ENABLED=0, DISABLED=1}"
+      ]
+    },
+    "CdhCore.tlmSend.SEND_PKT": {
+      "opcode": "0x01006001",
+      "args": [
+        "U32",
+        "enum I32 {REALTIME=0, NUM_SECTIONS=1}"
+      ]
+    },
+    "ComCcsdsLora.tcSecurityDeframer.GET_SEQ_NUM": {
+      "opcode": "0x2200b000",
+      "args": []
+    },
+    "FileHandling.fileManager.CalculateCrc": {
+      "opcode": "0x05002008",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "FileHandling.fileManager.CreateDirectory": {
+      "opcode": "0x05002000",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "FileHandling.fileManager.FileSize": {
+      "opcode": "0x05002006",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "FileHandling.fileManager.ListDirectory": {
+      "opcode": "0x05002007",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "ReferenceDeployment.antennaDeployer.DEPLOY": {
+      "opcode": "0x10022000",
+      "args": []
+    },
+    "ReferenceDeployment.cmdSeq.CS_RUN": {
+      "opcode": "0x10006000",
+      "args": [
+        "string[200]",
+        "enum U8 {BLOCK=0, NO_BLOCK=1}"
+      ]
+    },
+    "ReferenceDeployment.cmdSeq.CS_VALIDATE": {
+      "opcode": "0x10006001",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "ReferenceDeployment.downlinkDelay.DIVIDER_PRM_SET": {
+      "opcode": "0x1001e000",
+      "args": [
+        "U16"
+      ]
+    },
+    "ReferenceDeployment.lora.DATA_RATE_PRM_SET": {
+      "opcode": "0x1001f002",
+      "args": [
+        "enum U8 {SF_7=7, SF_8=8, SF_9=9, SF_10=10}"
+      ]
+    },
+    "ReferenceDeployment.lora.TRANSMIT": {
+      "opcode": "0x1001f009",
+      "args": [
+        "enum U8 {ENABLED=0, DISABLED=1, DISABLING=2}"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_RUN": {
+      "opcode": "0x10062000",
+      "args": [
+        "string[200]",
+        "enum U8 {BLOCK=0, NO_BLOCK=1}"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_VALIDATE": {
+      "opcode": "0x10062001",
+      "args": [
+        "string[200]"
+      ]
+    },
+    "ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET": {
+      "opcode": "0x10061000",
+      "args": [
+        "U8"
+      ]
+    }
+  },
+  "events": {
+    "CdhCore.cmdDisp.NoOpReceived": {
+      "id": "0x01000007",
+      "severity": "ACTIVITY_HI",
+      "format": "Received a NO-OP command",
+      "args": []
+    },
+    "CdhCore.cmdDisp.NoOpStringReceived": {
+      "id": "0x01000008",
+      "severity": "ACTIVITY_HI",
+      "format": "Received a NO-OP string={}",
+      "args": [
+        "string[40]"
+      ]
+    },
+    "CdhCore.cmdDisp.OpCodeDispatched": {
+      "id": "0x01000001",
+      "severity": "COMMAND",
+      "format": "Opcode 0x{x} dispatched to port {}",
+      "args": [
+        "U32",
+        "I32"
+      ]
+    },
+    "CdhCore.tlmSend.PacketSent": {
+      "id": "0x01006003",
+      "severity": "ACTIVITY_LO",
+      "format": "Sent packet ID {}",
+      "args": [
+        "U32"
+      ]
+    },
+    "FileHandling.fileManager.CalculateCrcFailed": {
+      "id": "0x0500201b",
+      "severity": "WARNING_HI",
+      "format": "Failed CRC calculation for file {}, returned status {}",
+      "args": [
+        "string[200]",
+        "U32"
+      ]
+    },
+    "FileHandling.fileManager.CalculateCrcSucceeded": {
+      "id": "0x0500201c",
+      "severity": "ACTIVITY_HI",
+      "format": "{} has CRC value 0x{x}",
+      "args": [
+        "string[200]",
+        "U32"
+      ]
+    },
+    "FileHandling.fileManager.DirectoryListing": {
+      "id": "0x05002018",
+      "severity": "ACTIVITY_HI",
+      "format": "Directory {}: {} ({} bytes)",
+      "args": [
+        "string[200]",
+        "string[200]",
+        "U64"
+      ]
+    },
+    "FileHandling.fileManager.FileSizeSucceeded": {
+      "id": "0x05002012",
+      "severity": "ACTIVITY_HI",
+      "format": "The size of file {} is {} B",
+      "args": [
+        "string[200]",
+        "U64"
+      ]
+    },
+    "FileHandling.fileUplink.BadChecksum": {
+      "id": "0x05000000",
+      "severity": "WARNING_HI",
+      "format": "Bad checksum value during receipt of file {}: computed 0x{x}, read 0x{x}",
+      "args": [
+        "string[40]",
+        "U32",
+        "U32"
+      ]
+    },
+    "FileHandling.fileUplink.FileReceived": {
+      "id": "0x05000002",
+      "severity": "ACTIVITY_HI",
+      "format": "Received file {}",
+      "args": [
+        "string[40]"
+      ]
+    },
+    "FileHandling.fileUplink.InvalidReceiveMode": {
+      "id": "0x05000004",
+      "severity": "WARNING_HI",
+      "format": "Packet type {} received in mode {}",
+      "args": [
+        "U16",
+        "U32"
+      ]
+    },
+    "FileHandling.fileUplink.PacketDuplicate": {
+      "id": "0x05000007",
+      "severity": "WARNING_HI",
+      "format": "Received a duplicate of packet {}",
+      "args": [
+        "U32"
+      ]
+    },
+    "FileHandling.fileUplink.PacketOutOfOrder": {
+      "id": "0x05000006",
+      "severity": "WARNING_HI",
+      "format": "Received packet {} after packet {}",
+      "args": [
+        "U32",
+        "U32"
+      ]
+    },
+    "ReferenceDeployment.cmdSeq.CS_SequenceValid": {
+      "id": "0x10006013",
+      "severity": "ACTIVITY_HI",
+      "format": "Sequence {} is valid.",
+      "args": [
+        "string[60]"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_CommandComplete": {
+      "id": "0x10062008",
+      "severity": "ACTIVITY_LO",
+      "format": "Sequence file {}: Command {} (opcode {}) complete",
+      "args": [
+        "string[60]",
+        "U32",
+        "U32"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_FileCrcFailure": {
+      "id": "0x10062007",
+      "severity": "WARNING_HI",
+      "format": "Sequence file {} had invalid CRC. Stored 0x{x}, Computed 0x{x}.",
+      "args": [
+        "string[60]",
+        "U32",
+        "U32"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_InvalidMode": {
+      "id": "0x1006200b",
+      "severity": "WARNING_HI",
+      "format": "Invalid mode",
+      "args": []
+    },
+    "ReferenceDeployment.payloadSeq.CS_SequenceComplete": {
+      "id": "0x10062009",
+      "severity": "ACTIVITY_HI",
+      "format": "Sequence file {} complete",
+      "args": [
+        "string[60]"
+      ]
+    },
+    "ReferenceDeployment.payloadSeq.CS_SequenceLoaded": {
+      "id": "0x10062000",
+      "severity": "ACTIVITY_LO",
+      "format": "Loaded sequence {}",
+      "args": [
+        "string[60]"
+      ]
+    }
+  },
+  "channels": {
+    "ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber": {
+      "id": "0x2200b000",
+      "type": "U32"
+    },
+    "ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber": {
+      "id": "0x2100b000",
+      "type": "U32"
+    },
+    "ReferenceDeployment.detumbleManager.AngularVelocityMagnitude": {
+      "id": "0x1005a003",
+      "type": "F64"
+    },
+    "ReferenceDeployment.imuManager.AngularVelocity": {
+      "id": "0x10017002",
+      "type": "{x: F64, y: F64, z: F64}"
+    },
+    "ReferenceDeployment.ina219SolManager.Power": {
+      "id": "0x1003a002",
+      "type": "F64"
+    },
+    "ReferenceDeployment.ina219SysManager.Power": {
+      "id": "0x10039002",
+      "type": "F64"
+    },
+    "ReferenceDeployment.ina219SysManager.Voltage": {
+      "id": "0x10039000",
+      "type": "F64"
+    },
+    "ReferenceDeployment.lora.BytesReceived": {
+      "id": "0x1001f000",
+      "type": "U64"
+    },
+    "ReferenceDeployment.lora.LastRssi": {
+      "id": "0x1001f002",
+      "type": "I16"
+    },
+    "ReferenceDeployment.lora.LastSnr": {
+      "id": "0x1001f003",
+      "type": "I8"
+    },
+    "ReferenceDeployment.modeManager.CurrentMode": {
+      "id": "0x1000a000",
+      "type": "U8"
+    },
+    "ReferenceDeployment.startupManager.BootCount": {
+      "id": "0x1003b000",
+      "type": "U64"
+    }
+  },
+  "parameters": {
+    "ReferenceDeployment.downlinkDelay.DIVIDER": {
+      "id": "0x1001e000",
+      "type": "U16",
+      "default": 299
+    },
+    "ReferenceDeployment.lora.BANDWIDTH_RX": {
+      "id": "0x1001f003",
+      "type": "enum U16 {BW_125_KHZ=125, BW_250_KHZ=250, BW_500_KHZ=500}",
+      "default": "Zephyr.LoRaBandwidth.BW_125_KHZ"
+    },
+    "ReferenceDeployment.lora.BANDWIDTH_TX": {
+      "id": "0x1001f002",
+      "type": "enum U16 {BW_125_KHZ=125, BW_250_KHZ=250, BW_500_KHZ=500}",
+      "default": "Zephyr.LoRaBandwidth.BW_125_KHZ"
+    },
+    "ReferenceDeployment.lora.CODING_RATE": {
+      "id": "0x1001f000",
+      "type": "enum U8 {CR_4_5=1, CR_4_6=2, CR_4_7=3, CR_4_8=4}",
+      "default": "Zephyr.LoRaCodingRate.CR_4_5"
+    },
+    "ReferenceDeployment.lora.DATA_RATE": {
+      "id": "0x1001f001",
+      "type": "enum U8 {SF_7=7, SF_8=8, SF_9=9, SF_10=10}",
+      "default": "Zephyr.LoRaDataRate.SF_8"
+    },
+    "ReferenceDeployment.telemetryDelay.DIVIDER": {
+      "id": "0x10061000",
+      "type": "U8",
+      "default": 29
+    }
+  },
+  "packets": {
+    "Beacon": {
+      "id": 1,
+      "members": [
+        "ReferenceDeployment.startupManager.BootCount",
+        "ReferenceDeployment.modeManager.CurrentMode",
+        "ReferenceDeployment.detumbleManager.AngularVelocityMagnitude",
+        "ReferenceDeployment.ina219SysManager.Voltage",
+        "ReferenceDeployment.ina219SysManager.Power",
+        "ReferenceDeployment.ina219SolManager.Power",
+        "ReferenceDeployment.powerMonitor.TotalPowerConsumption",
+        "ReferenceDeployment.powerMonitor.TotalPowerGenerated",
+        "ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber",
+        "ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber",
+        "ReferenceDeployment.lora.BytesReceived"
+      ]
+    },
+    "Radio": {
+      "id": 8,
+      "members": [
+        "ReferenceDeployment.lora.LastRssi",
+        "ReferenceDeployment.lora.LastSnr",
+        "ReferenceDeployment.lora.BytesSent"
+      ]
+    },
+    "Security": {
+      "id": 6,
+      "members": [
+        "ComCcsdsLora.provesRouter.RoutedPackets",
+        "ComCcsdsUart.provesRouter.RoutedPackets",
+        "ComCcsdsLora.provesRouter.BypassedPackets",
+        "ComCcsdsUart.provesRouter.BypassedPackets",
+        "ComCcsdsLora.provesRouter.RejectedPackets",
+        "ComCcsdsUart.provesRouter.RejectedPackets",
+        "ReferenceDeployment.amateurRadio.count_names"
+      ]
+    }
+  }
+}

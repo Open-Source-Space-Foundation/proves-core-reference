@@ -140,6 +140,32 @@ jobs:
         run: |
           make sim-build
 
+      - name: Ops contract
+        run: |
+          make ops-contract-check OPS_CONTRACT_DICTIONARY=build-artifacts-sim/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+
+      - name: Ops contract change needs the contract-change label and an ops issue
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LABELED: ${{ contains(github.event.pull_request.labels.*.name, 'contract-change') }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git diff --quiet "$BASE_SHA" HEAD -- ops-contract/manifest.json && exit 0
+          [ "$LABELED" = true ] || { echo "::error::ops-contract/manifest.json changed: add the contract-change label, then re-run this job (ops-contract/README.md)"; exit 1; }
+          grep -Eq 'github\.com/[^/ ]+/[^/ ]+/issues/[0-9]+' <<< "$PR_BODY" || { echo "::error::ops-contract/manifest.json changed: link the ops issue in the PR description (ops-contract/README.md)"; exit 1; }
+
+      - name: SITL ops day
+        run: |
+          sim/run-sil.sh "$RUNNER_TEMP/ops-day" 3600
+          make sim-ops-day SIM_RUN="$RUNNER_TEMP/ops-day" PYTEST_ARGS="-rA"
+
+      - name: Stop ops-day sim
+        if: always()
+        run: |
+          sim/stop-sil.sh "$RUNNER_TEMP/ops-day"
+
       - name: SITL smoke
         run: |
           sim/smoke.sh "$RUNNER_TEMP/sitl-smoke"
@@ -162,6 +188,7 @@ jobs:
           path: |
             ${{ runner.temp }}/sitl/*.log
             ${{ runner.temp }}/sitl-smoke/*.log
+            ${{ runner.temp }}/ops-day/*.log
             logs
             !logs/**/*.xlsx
           if-no-files-found: ignore

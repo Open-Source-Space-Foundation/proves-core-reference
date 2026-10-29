@@ -14,8 +14,9 @@ STOP_AT="${2:-3600}"
 # The sim's GDS keeps its uplink sequence number in the run directory, so it never
 # moves the board's Framing/src/sequence_number.bin. `make sim-test` reads the same file.
 export PROVES_SEQUENCE_NUMBER_FILE="$RUN/sequence_number.bin"
-# A fresh flash image starts the flight software's uplink sequence number at 0.
-[ -f "$RUN/pcr-flash.bin" ] || echo 0 > "$PROVES_SEQUENCE_NUMBER_FILE"
+# A fresh flash image holds 0 as the last accepted uplink sequence number, and the
+# deframer rejects a number equal to it, so ground starts at 1.
+[ -f "$RUN/pcr-flash.bin" ] || echo 1 > "$PROVES_SEQUENCE_NUMBER_FILE"
 
 # sys_reboot() re-execs this path, so run a copy that a rebuild cannot replace mid-run.
 cp "$ROOT/build-fprime-native_sim/zephyr/zephyr.exe" "$RUN/pcr-native_sim.exe"

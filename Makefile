@@ -146,6 +146,20 @@ SIM_RUN ?= /tmp/sitl
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
 	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment
 
+.PHONY: sim-ops-day
+sim-ops-day: ## Run the ops-day scenario against a sim that sim/run-sil.sh $(SIM_RUN) started on a fresh flash image
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(UV_RUN) pytest PROVESFlightControllerReference/test/ops-day \
+		--deployment build-artifacts-sim/zephyr/fprime-zephyr-deployment --file-uplink-chunk-size 204 --file-uplink-cooldown 0.4 $(PYTEST_ARGS)
+
+OPS_CONTRACT_DICTIONARY ?= build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+.PHONY: ops-contract-check
+ops-contract-check: ## Check the built dictionary against the ops contract (ops-contract/README.md)
+	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json
+
+.PHONY: ops-contract
+ops-contract: ## Regenerate ops-contract/manifest.json from the built dictionary
+	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json --write
+
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
 check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it corrupts the F' downlink); run after 'make build'
