@@ -56,6 +56,9 @@ class Ina219Manager final : public Ina219ManagerComponentBase {
     F64 voltageGet_handler(FwIndexType portNum  //!< The port number
                            ) override;
 
+    //! Fetch and read one channel. Returns false and emits SampleFetchFailed if the fetch fails.
+    bool readChannel(enum sensor_channel chan, struct sensor_value& value);
+
     // ----------------------------------------------------------------------
     // Handler implementations for commands
     // ----------------------------------------------------------------------

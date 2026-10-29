@@ -49,7 +49,9 @@ classDiagram
 | CurrentGet | guarded input | Triggers current data collection and returns current in amps |
 | PowerGet | guarded input | Triggers power data collection and returns power in watts |
 
-The `VoltageGet`, `CurrentGet` and `PowerGet` ports and the `GetVoltage`, `GetCurrent` and `GetPower` commands share the component mutex, so only one sample fetch runs on the device at a time. The Zephyr INA219 driver starts a triggered conversion and polls the conversion-ready flag, which another fetch's mode write or power read clears. Two fetches from different threads (the 1 Hz power monitor, the mode manager and ground commands all read the system INA219) could leave one polling forever and stop its rate group.
+The `VoltageGet`, `CurrentGet` and `PowerGet` ports and the `GetVoltage`, `GetCurrent` and `GetPower` commands share the component mutex, so only one sample fetch runs on the device at a time. The Zephyr INA219 driver starts a triggered conversion and polls the conversion-ready flag, which another fetch's mode write or power read clears. A ground or sequence `GetVoltage`, `GetCurrent` or `GetPower` command running on another thread during the 1 Hz power monitor or mode manager fetch could leave one polling forever and stop the rate group.
+
+If a sample fetch fails (for example the driver's conversion-ready timeout), the component emits a throttled `SampleFetchFailed` warning, skips the telemetry write and returns 0, so the last good sample is never reported as current.
 
 ## Sequence Diagrams
 
@@ -111,9 +113,11 @@ sequenceDiagram
 | CurrentGet Port | The component shall provide access to current sensor data and return in amps | Integration test |
 | PowerGet Port | The component shall provide access to power sensor data and return in watts | Integration test |
 | DeviceNotReady Event | The component shall emit a throttled warning event when the device is not ready | Verify event is emitted and throttled to 5 occurrences |
+| SampleFetchFailed Event | The component shall emit a throttled warning event and return 0 when a sample fetch fails | Verify event is emitted and throttled to 5 occurrences |
 
 ## Change Log
 | Date | Description |
 |---|---|
 | 2025-11-03 | Initial INA219 Manager component |
 | 2026-10-28 | Made ports and commands guarded so concurrent sample fetches cannot leave one waiting forever |
+| 2026-10-29 | Report a failed sample fetch with SampleFetchFailed and return 0 instead of the last sample |

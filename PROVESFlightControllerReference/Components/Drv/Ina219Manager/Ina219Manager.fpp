@@ -40,6 +40,9 @@ module Drv {
         @ Event for reporting power reading
         event PowerReading(power: F64) severity activity low format "Power: {} W"
 
+        @ Event for reporting a failed sample fetch; the reading is reported as 0
+        event SampleFetchFailed(ret: I32) severity warning high format "INA219 sample fetch failed: {}" throttle 5
+
         # Commands
 
         @ Command to get voltage reading
