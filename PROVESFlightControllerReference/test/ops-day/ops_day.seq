@@ -1,4 +1,4 @@
-; Speed telemetry up for a window and restore it, as Electra's rxf7.seq does around its SF7 window
+; Change the telemetry divider for a window and restore it, as Electra's rxf7.seq does around its SF7 window
 R00:00:00 CdhCore.cmdDisp.CMD_NO_OP_STRING, "ops day window"
 R00:00:02 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 15
 R00:00:01 ReferenceDeployment.telemetryDelay.DIVIDER_PRM_SET, 29

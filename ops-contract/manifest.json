@@ -75,6 +75,24 @@
         "U16"
       ]
     },
+    "ReferenceDeployment.lora.BANDWIDTH_RX_PRM_SET": {
+      "opcode": "0x1001f006",
+      "args": [
+        "enum U16 {BW_125_KHZ=125, BW_250_KHZ=250, BW_500_KHZ=500}"
+      ]
+    },
+    "ReferenceDeployment.lora.BANDWIDTH_TX_PRM_SET": {
+      "opcode": "0x1001f004",
+      "args": [
+        "enum U16 {BW_125_KHZ=125, BW_250_KHZ=250, BW_500_KHZ=500}"
+      ]
+    },
+    "ReferenceDeployment.lora.CODING_RATE_PRM_SET": {
+      "opcode": "0x1001f000",
+      "args": [
+        "enum U8 {CR_4_5=1, CR_4_6=2, CR_4_7=3, CR_4_8=4}"
+      ]
+    },
     "ReferenceDeployment.lora.DATA_RATE_PRM_SET": {
       "opcode": "0x1001f002",
       "args": [
@@ -86,6 +104,10 @@
       "args": [
         "enum U8 {ENABLED=0, DISABLED=1, DISABLING=2}"
       ]
+    },
+    "ReferenceDeployment.modeManager.EXIT_SAFE_MODE": {
+      "opcode": "0x1000a001",
+      "args": []
     },
     "ReferenceDeployment.payloadSeq.CS_RUN": {
       "opcode": "0x10062000",
@@ -138,6 +160,30 @@
       "args": [
         "U32"
       ]
+    },
+    "ComCcsdsLora.apidManager.UnexpectedSequenceCount": {
+      "id": "0x22009000",
+      "severity": "WARNING_LO",
+      "format": "Unexpected sequence count received. Packets may have been dropped. Transmitted: {} | Expected on board: {}",
+      "args": [
+        "U16",
+        "U16"
+      ]
+    },
+    "ComCcsdsLora.comQueue.QueueOverflow": {
+      "id": "0x22000000",
+      "severity": "WARNING_HI",
+      "format": "The {} queue at index {} overflowed",
+      "args": [
+        "enum U8 {COM_QUEUE=0, BUFFER_QUEUE=1}",
+        "I16"
+      ]
+    },
+    "ComCcsdsLora.spacePacketDeframer.InvalidPacket": {
+      "id": "0x22005000",
+      "severity": "WARNING_HI",
+      "format": "Malformed packet received refusing to deframe",
+      "args": []
     },
     "FileHandling.fileManager.CalculateCrcFailed": {
       "id": "0x0500201b",
@@ -269,6 +315,22 @@
       "args": [
         "string[60]"
       ]
+    },
+    "ReferenceDeployment.rateGroup10Hz.RateGroupCycleSlip": {
+      "id": "0x10002001",
+      "severity": "WARNING_HI",
+      "format": "Rate group cycle slipped on cycle {}",
+      "args": [
+        "U32"
+      ]
+    },
+    "ReferenceDeployment.rateGroup50Hz.RateGroupCycleSlip": {
+      "id": "0x10001001",
+      "severity": "WARNING_HI",
+      "format": "Rate group cycle slipped on cycle {}",
+      "args": [
+        "U32"
+      ]
     }
   },
   "channels": {
@@ -356,38 +418,41 @@
   "packets": {
     "Beacon": {
       "id": 1,
+      "group": 1,
       "members": [
-        "ReferenceDeployment.startupManager.BootCount",
-        "ReferenceDeployment.modeManager.CurrentMode",
-        "ReferenceDeployment.detumbleManager.AngularVelocityMagnitude",
-        "ReferenceDeployment.ina219SysManager.Voltage",
-        "ReferenceDeployment.ina219SysManager.Power",
-        "ReferenceDeployment.ina219SolManager.Power",
-        "ReferenceDeployment.powerMonitor.TotalPowerConsumption",
-        "ReferenceDeployment.powerMonitor.TotalPowerGenerated",
-        "ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber",
-        "ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber",
-        "ReferenceDeployment.lora.BytesReceived"
+        "ReferenceDeployment.startupManager.BootCount: U64",
+        "ReferenceDeployment.modeManager.CurrentMode: U8",
+        "ReferenceDeployment.detumbleManager.AngularVelocityMagnitude: F64",
+        "ReferenceDeployment.ina219SysManager.Voltage: F64",
+        "ReferenceDeployment.ina219SysManager.Power: F64",
+        "ReferenceDeployment.ina219SolManager.Power: F64",
+        "ReferenceDeployment.powerMonitor.TotalPowerConsumption: F32",
+        "ReferenceDeployment.powerMonitor.TotalPowerGenerated: F32",
+        "ComCcsdsLora.tcSecurityDeframer.CurrentSequenceNumber: U32",
+        "ComCcsdsUart.tcSecurityDeframer.CurrentSequenceNumber: U32",
+        "ReferenceDeployment.lora.BytesReceived: U64"
       ]
     },
     "Radio": {
       "id": 8,
+      "group": 2,
       "members": [
-        "ReferenceDeployment.lora.LastRssi",
-        "ReferenceDeployment.lora.LastSnr",
-        "ReferenceDeployment.lora.BytesSent"
+        "ReferenceDeployment.lora.LastRssi: I16",
+        "ReferenceDeployment.lora.LastSnr: I8",
+        "ReferenceDeployment.lora.BytesSent: U64"
       ]
     },
     "Security": {
       "id": 6,
+      "group": 5,
       "members": [
-        "ComCcsdsLora.provesRouter.RoutedPackets",
-        "ComCcsdsUart.provesRouter.RoutedPackets",
-        "ComCcsdsLora.provesRouter.BypassedPackets",
-        "ComCcsdsUart.provesRouter.BypassedPackets",
-        "ComCcsdsLora.provesRouter.RejectedPackets",
-        "ComCcsdsUart.provesRouter.RejectedPackets",
-        "ReferenceDeployment.amateurRadio.count_names"
+        "ComCcsdsLora.provesRouter.RoutedPackets: U32",
+        "ComCcsdsUart.provesRouter.RoutedPackets: U32",
+        "ComCcsdsLora.provesRouter.BypassedPackets: U32",
+        "ComCcsdsUart.provesRouter.BypassedPackets: U32",
+        "ComCcsdsLora.provesRouter.RejectedPackets: U32",
+        "ComCcsdsUart.provesRouter.RejectedPackets: U32",
+        "ReferenceDeployment.amateurRadio.count_names: U32"
       ]
     }
   }

@@ -2,10 +2,13 @@
 
 A compressed day of Electra-style operations on one board, from a fresh flash
 image to the reboot that follows a comm loss. This is tier TS of the
-day-in-the-life qualification (issue #625). The steps run in file order and
-share the board's state, as passes do. Each step is named for the design
-report's gate it checks (D1 to D10). D7 (FileUplink holes) needs raw frames and
-D11 needs frame_judge, so neither runs here yet.
+day-in-the-life qualification (issue #625); the older manual bench tests in
+test/day-in-the-life/ are separate. The steps run in file order and share the
+board's state, as passes do: D10 checks the file D6 uplinks, and the comm loss
+in D9 and the reboot in D10 run the flight sequences D8 puts on board. Each
+step is named for the design report's gate it checks (D1 to D10). D7
+(FileUplink holes) needs raw frames and D11 needs frame_judge, so neither runs
+here yet.
 
 Run it on a sim started on a fresh run directory:
 
@@ -39,6 +42,8 @@ DAY_FILE = "/ops/day.bin"
 DAY_DATA = random.Random(1026).randbytes(3000)
 # CalculateCrc reports the CRC-32 without its final inversion, which the ops tools expect.
 DAY_CRC = zlib.crc32(DAY_DATA) ^ 0xFFFFFFFF
+# Os::File::DOESNT_EXIST, as CalculateCrcFailed reports it.
+OS_FILE_DOESNT_EXIST = 11
 SEQUENCE = Path(__file__).parent / "ops_day.seq"
 # The flight sequences that the comm loss (enter_safe) and the D10 reboot (startup) run.
 FLIGHT_SEQUENCES = [
@@ -124,8 +129,8 @@ def test_d2_beacon_carries_the_sequence_number(fprime_test_api: IntegrationTestA
 
 
 @pytest.mark.expect_warnings(f"{deframer}.SequenceNumberInvalid")
-def test_d3_replay_rejected_forward_jump_accepted(fprime_test_api: IntegrationTestAPI):
-    """A replayed frame is rejected; a frame ahead within the window is accepted"""
+def test_d3_replay_rejected(fprime_test_api: IntegrationTestAPI):
+    """A frame that repeats an accepted sequence number is rejected"""
     accepted = board_sequence_number(fprime_test_api)
     write_next_sequence_number(accepted - 2)
     fprime_test_api.clear_histories()
@@ -134,7 +139,12 @@ def test_d3_replay_rejected_forward_jump_accepted(fprime_test_api: IntegrationTe
     fprime_test_api.assert_event_count(
         0, "CdhCore.cmdDisp.NoOpStringReceived", timeout=2
     )
+    write_next_sequence_number(accepted)
 
+
+def test_d3_forward_jump_accepted(fprime_test_api: IntegrationTestAPI):
+    """A frame ahead of the board within the window is accepted"""
+    accepted = board_sequence_number(fprime_test_api)
     write_next_sequence_number(accepted + 1000)
     proves_send_and_assert_command(
         fprime_test_api, "CdhCore.cmdDisp.CMD_NO_OP_STRING", ["ahead"], retries=1
@@ -146,13 +156,14 @@ def test_d3_replay_rejected_forward_jump_accepted(fprime_test_api: IntegrationTe
     )
 
 
-def test_d5_divider_7_gives_an_8_s_beacon(fprime_test_api: IntegrationTestAPI):
+def test_d5a_divider_7_gives_an_8_s_beacon(fprime_test_api: IntegrationTestAPI):
     """Divider 7, the pass setting, gives an 8 s Beacon"""
     proves_send_and_assert_command(fprime_test_api, divider, ["7"])
     times = beacon_times(fprime_test_api, 3, timeout=30)
     assert [round(b - a) for a, b in pairwise(times)] == [8, 8]
 
 
+# Runs under divider 7, as on a pass, so the next telemetry tick is at most 8 s away.
 def test_d4_send_pkt_sends_the_radio_packet(fprime_test_api: IntegrationTestAPI):
     """SEND_PKT 8, the ops link probe, reports PacketSent and the Radio packet follows on the next tick"""
     proves_send_and_assert_command(
@@ -162,14 +173,13 @@ def test_d4_send_pkt_sends_the_radio_packet(fprime_test_api: IntegrationTestAPI)
     fprime_test_api.assert_telemetry("ReferenceDeployment.lora.LastRssi", timeout=10)
 
 
-def test_d5_divider_29_restores_the_30_s_beacon(fprime_test_api: IntegrationTestAPI):
+def test_d5b_divider_29_restores_the_30_s_beacon(fprime_test_api: IntegrationTestAPI):
     """Divider 29, the default, restores the 30 s Beacon"""
     proves_send_and_assert_command(fprime_test_api, divider, ["29"])
     times = beacon_times(fprime_test_api, 2, timeout=70)
     assert round(times[1] - times[0]) == 30
 
 
-@pytest.mark.expect_warnings(f"{file_manager}.CalculateCrcFailed")
 def test_d6_file_operations_and_crc(
     fprime_test_api: IntegrationTestAPI, tmp_path: Path
 ):
@@ -199,28 +209,24 @@ def test_d6_file_operations_and_crc(
     )
     assert crc(fprime_test_api, DAY_FILE) == DAY_CRC
 
+
+@pytest.mark.expect_warnings(f"{file_manager}.CalculateCrcFailed")
+def test_d6_crc_of_a_missing_file_fails(fprime_test_api: IntegrationTestAPI):
+    """CalculateCrc on a missing file fails with the status the ops tools parse"""
     fprime_test_api.clear_histories()
     fprime_test_api.send_command(f"{file_manager}.CalculateCrc", ["/ops/missing.bin"])
     fprime_test_api.assert_event(
-        f"{file_manager}.CalculateCrcFailed", ["/ops/missing.bin", 11], timeout=3
+        f"{file_manager}.CalculateCrcFailed",
+        ["/ops/missing.bin", OS_FILE_DOESNT_EXIST],
+        timeout=3,
     )
 
 
-@pytest.mark.expect_warnings(f"{cmd_seq}.CS_InvalidMode")
-def test_d8_sequence_validates_runs_and_refuses_a_second_run(
-    fprime_test_api: IntegrationTestAPI,
-):
-    """An uplinked sequence validates, runs with its delays and refuses a second run; the flight sequences validate"""
+def test_d8_flight_sequences_compile_and_validate(fprime_test_api: IntegrationTestAPI):
+    """The flight enter_safe and startup sequences compile, uplink and validate; D9 and D10 run them"""
     proves_send_and_assert_command(
         fprime_test_api, f"{file_manager}.CreateDirectory", ["/seq"]
     )
-    assert fprime_test_api.uplink_sequence_and_await_completion(
-        str(SEQUENCE), "/seq/ops_day.bin", timeout=30
-    )
-    proves_send_and_assert_command(
-        fprime_test_api, f"{cmd_seq}.CS_VALIDATE", ["/seq/ops_day.bin"]
-    )
-    fprime_test_api.assert_event(f"{cmd_seq}.CS_SequenceValid", timeout=3)
     for sequence in FLIGHT_SEQUENCES:
         on_board = f"/seq/{sequence.stem}.bin"
         assert fprime_test_api.uplink_sequence_and_await_completion(
@@ -230,6 +236,20 @@ def test_d8_sequence_validates_runs_and_refuses_a_second_run(
             fprime_test_api, f"{cmd_seq}.CS_VALIDATE", [on_board]
         )
         fprime_test_api.assert_event(f"{cmd_seq}.CS_SequenceValid", timeout=3)
+
+
+@pytest.mark.expect_warnings(f"{cmd_seq}.CS_InvalidMode")
+def test_d8_sequence_validates_runs_and_refuses_a_second_run(
+    fprime_test_api: IntegrationTestAPI,
+):
+    """An uplinked sequence validates, runs with its delays and refuses a second run"""
+    assert fprime_test_api.uplink_sequence_and_await_completion(
+        str(SEQUENCE), "/seq/ops_day.bin", timeout=30
+    )
+    proves_send_and_assert_command(
+        fprime_test_api, f"{cmd_seq}.CS_VALIDATE", ["/seq/ops_day.bin"]
+    )
+    fprime_test_api.assert_event(f"{cmd_seq}.CS_SequenceValid", timeout=3)
 
     fprime_test_api.clear_histories()
     fprime_test_api.send_command(f"{cmd_seq}.CS_RUN", ["/seq/ops_day.bin", "BLOCK"])
@@ -273,27 +293,44 @@ def test_d9_comm_loss_enters_safe_mode_and_stays_commandable(
     assert current_mode(fprime_test_api) == "SAFE_MODE"
 
 
+# The 10 s COMM_LOSS_TIME from D9 fires again while this step waits without
+# uplinking, until the reboot restores the default.
 @pytest.mark.expect_warnings(
-    "FileHandling.prmDb.PrmFileReadError", f"{mode_manager}.EnteringSafeMode"
+    "FileHandling.prmDb.PrmFileReadError",
+    f"{mode_manager}.CommandLossDetected",
+    f"{mode_manager}.EnteringSafeMode",
 )
 def test_d10_power_cycle_keeps_state(fprime_test_api: IntegrationTestAPI):
     """The watchdog reboot after comm loss runs the start-up sequence and keeps the boot count, safe mode, files and sequence number"""
-    loaded = fprime_test_api.get_event_subhistory(
-        fprime_test_api.get_event_pred(f"{cmd_seq}.CS_SequenceLoaded"), fsw_order=False
+    last_accepted = last_sent_sequence_number()
+    rebooted = fprime_test_api.get_telemetry_subhistory(
+        fprime_test_api.get_telemetry_pred(f"{startup_manager}.BootCount", 2),
+        fsw_order=False,
     )
-    deadline = time.time() + 120
-    while True:
-        try:
-            if boot_count(fprime_test_api) == 2:
-                break
-        except AssertionError:
-            pass
-        assert time.time() < deadline, "no watchdog reboot within 120 s of comm loss"
-        time.sleep(5)
+    beacons = fprime_test_api.get_telemetry_subhistory(
+        fprime_test_api.get_telemetry_pred(beacon_channel), fsw_order=False
+    )
+    startup_loaded = fprime_test_api.get_event_subhistory(
+        fprime_test_api.get_event_pred(
+            f"{cmd_seq}.CS_SequenceLoaded", ["/seq/startup.bin"]
+        ),
+        fsw_order=False,
+    )
+    try:
+        # Wait without uplinking, so the first Beacon after the reboot shows the
+        # sequence number the board restored, not one a new frame set.
+        assert fprime_test_api.await_telemetry_count(
+            1, history=rebooted, timeout=150
+        ), "no Beacon with BootCount 2 within 150 s of comm loss"
+        # The Beacon decodes BootCount before the sequence number.
+        time.sleep(1)
+        assert beacons.retrieve()[-1].get_val() == last_accepted
+        assert startup_loaded.size() == 1
+    finally:
+        fprime_test_api.remove_telemetry_subhistory(rebooted)
+        fprime_test_api.remove_telemetry_subhistory(beacons)
+        fprime_test_api.remove_event_subhistory(startup_loaded)
 
-    assert board_sequence_number(fprime_test_api) == last_sent_sequence_number()
-    assert ["/seq/startup.bin"] in [[a.val for a in e.args] for e in loaded.retrieve()]
-    fprime_test_api.remove_event_subhistory(loaded)
     assert current_mode(fprime_test_api) == "SAFE_MODE"
     proves_send_and_assert_command(
         fprime_test_api, f"{mode_manager}.GET_SAFE_MODE_REASON"

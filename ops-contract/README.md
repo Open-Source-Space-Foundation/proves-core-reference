@@ -1,6 +1,6 @@
 # Ops contract
 
-`manifest.json` lists every dictionary item that mission ground tools depend on: the commands they send, the events they parse, the channels and Beacon members they read, and the parameter defaults they assume. Compiled sequences on board carry raw opcodes and argument layouts, so the manifest pins those too, not only names.
+`manifest.json` lists every dictionary item that mission ground tools depend on: the commands they send, the events they parse, the channels and Beacon members they read, and the parameter defaults they assume. Compiled sequences on board carry raw opcodes, argument layouts and, in `SET_ID_FILTER`, event IDs, so the manifest pins IDs and layouts, not only names. Packets pin their group and each member's type, because the ground decodes them by position.
 
 The keys are maintained by hand. The values are generated from the built dictionary by `tools/ops_contract.py`. Types are described by layout and values, so renaming a type with the same layout keeps the contract, and adding an enum value or resizing a string breaks it.
 
@@ -23,6 +23,6 @@ When a pull request changes an item in the manifest on purpose:
 2. Open an issue in each mission ops repository that uses the item, so its ground tools migrate before a flight build picks up the change.
 3. Link that issue in the pull request description and add the `contract-change` label.
 
-CI fails a pull request that changes `manifest.json` without the label or without a link to a GitHub issue. After you add the label, re-run the `sitl` job.
+The `ops-contract` workflow fails a pull request that changes `manifest.json` without the label or without a link to a GitHub issue in its description. Adding the label or editing the description runs it again.
 
 To add an item, add its full name with `{}` as the value and run `make ops-contract`. A name that is not in the dictionary becomes `"MISSING"`, and the check fails until it is removed or the item exists.

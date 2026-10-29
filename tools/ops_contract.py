@@ -91,7 +91,14 @@ def generate(dictionary: dict, names: dict[str, list[str]]) -> dict:
             "type": wire_type(p["type"], types),
             "default": p.get("default"),
         },
-        "packets": lambda p: {"id": p["id"], "members": p["members"]},
+        "packets": lambda p: {
+            "id": p["id"],
+            "group": p["group"],
+            "members": [
+                f"{m}: {wire_type(by_name['channels'][m]['type'], types)}"
+                for m in p["members"]
+            ],
+        },
     }
     return {
         kind: {

@@ -142,22 +142,27 @@ sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
 	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) cmake --build build-fprime-native_sim -j$$(nproc)
 
 SIM_RUN ?= /tmp/sitl
+SIM_DEPLOYMENT := build-artifacts-sim/zephyr/fprime-zephyr-deployment
 .PHONY: sim-test
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
-	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=$(SIM_DEPLOYMENT)
 
+# File packets larger than 204 B overflow the 248 B TC frame, and back-to-back packets
+# overrun the flight UART driver's 1 KiB receive ring, which drains 64 B per 10 Hz tick.
+FILE_UPLINK_ARGS := --file-uplink-chunk-size 204 --file-uplink-cooldown 0.4
 .PHONY: sim-ops-day
-sim-ops-day: ## Run the ops-day scenario against a sim that sim/run-sil.sh $(SIM_RUN) started on a fresh flash image
+# Stops at the first failed step: every later step builds on the board state it left.
+sim-ops-day: uv ## Run the ops-day scenario against a sim that sim/run-sil.sh $(SIM_RUN) started on a fresh flash image
 	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(UV_RUN) pytest PROVESFlightControllerReference/test/ops-day \
-		--deployment build-artifacts-sim/zephyr/fprime-zephyr-deployment --file-uplink-chunk-size 204 --file-uplink-cooldown 0.4 $(PYTEST_ARGS)
+		--deployment $(SIM_DEPLOYMENT) $(FILE_UPLINK_ARGS) -x $(PYTEST_ARGS)
 
 OPS_CONTRACT_DICTIONARY ?= build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
 .PHONY: ops-contract-check
-ops-contract-check: ## Check the built dictionary against the ops contract (ops-contract/README.md)
+ops-contract-check: uv ## Check the built dictionary against the ops contract (ops-contract/README.md)
 	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json
 
 .PHONY: ops-contract
-ops-contract: ## Regenerate ops-contract/manifest.json from the built dictionary
+ops-contract: uv ## Regenerate ops-contract/manifest.json from the built dictionary
 	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json --write
 
 .PHONY: check-console-disabled

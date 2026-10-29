@@ -1,0 +1,34 @@
+name: ops-contract
+
+# A PR that changes ops-contract/manifest.json needs the contract-change label
+# and a link to the ops issue that migrates the ground tools (ops-contract/README.md).
+# Its own workflow, so adding the label or editing the description re-checks it
+# without rebuilding anything. The dictionary check itself runs in ci.yaml's sitl job.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Manifest change needs the contract-change label and an ops issue
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABELED: ${{ contains(github.event.pull_request.labels.*.name, 'contract-change') }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # The PR that first adds the contract has no ground tools to migrate yet.
+          git cat-file -e "$BASE_SHA:ops-contract/manifest.json" 2>/dev/null || exit 0
+          git diff --quiet "$BASE_SHA...$HEAD_SHA" -- ops-contract/manifest.json && exit 0
+          [ "$LABELED" = true ] || { echo "::error::ops-contract/manifest.json changed: add the contract-change label (ops-contract/README.md)"; exit 1; }
+          grep -Eq 'github\.com/[^/ ]+/[^/ ]+/issues/[0-9]+' <<< "$PR_BODY" || { echo "::error::ops-contract/manifest.json changed: link the ops issue in the PR description (ops-contract/README.md)"; exit 1; }
