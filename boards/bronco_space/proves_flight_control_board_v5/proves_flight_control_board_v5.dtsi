@@ -6,6 +6,12 @@
 #include "proves_flight_control_board_v5-pinctrl.dtsi"
 
 / {
+	zephyr,user {
+		/* I2C0 SCL/SDA as GPIOs, for bus recovery (9 SCL clocks + STOP) */
+		i2c0-scl-gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>;
+		i2c0-sda-gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+	};
+
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;

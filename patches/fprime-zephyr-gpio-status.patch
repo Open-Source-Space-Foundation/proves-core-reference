@@ -1,0 +1,29 @@
+diff --git a/fprime-zephyr/Drv/ZephyrGpioDriver/ZephyrGpioDriver.cpp b/fprime-zephyr/Drv/ZephyrGpioDriver/ZephyrGpioDriver.cpp
+index a5cf08b..60100ba 100644
+--- a/fprime-zephyr/Drv/ZephyrGpioDriver/ZephyrGpioDriver.cpp
++++ b/fprime-zephyr/Drv/ZephyrGpioDriver/ZephyrGpioDriver.cpp
+@@ -54,7 +54,11 @@ namespace Zephyr
+           const FwIndexType portNum,
+           Fw::Logic &state)
+   {
+-    U8 value = gpio_pin_get_dt(&this->m_pin);
++    int value = gpio_pin_get_dt(&this->m_pin);
++    if (value < 0)
++    {
++      return Drv::GpioStatus::UNKNOWN_ERROR;
++    }
+     state = (value == 1) ? Fw::Logic::HIGH : Fw::Logic::LOW;
+     return Drv::GpioStatus::OP_OK;
+   }
+@@ -64,7 +68,10 @@ namespace Zephyr
+           const FwIndexType portNum,
+           const Fw::Logic &state)
+   {
+-    gpio_pin_set_dt(&this->m_pin, (state == Fw::Logic::HIGH) ? 1 : 0);
++    if (gpio_pin_set_dt(&this->m_pin, (state == Fw::Logic::HIGH) ? 1 : 0) < 0)
++    {
++      return Drv::GpioStatus::UNKNOWN_ERROR;
++    }
+     return Drv::GpioStatus::OP_OK;
+   }
+ 

@@ -242,4 +242,6 @@ module ReferenceDeployment {
 
   instance picoTempManager: Drv.PicoTempManager base id 0x10079000
 
+  instance i2c0BusMonitor: Drv.I2cBusMonitor base id 0x1007A000
+
 }

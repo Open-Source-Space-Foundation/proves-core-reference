@@ -150,6 +150,7 @@ void setupTopology(const TopologyState& state) {
     imuManager.configure(state.lis2mdlDevice, state.lsm6dsoDevice);
     ina219SysManager.configure(state.ina219SysDevice);
     ina219SolManager.configure(state.ina219SolDevice);
+    i2c0BusMonitor.configure(state.i2c0BusConfig);
 
     // Configure camera handlers | NOT ALL SATS HAVE CAMERAS
     cameraHandler.configure(0);  // Camera 0

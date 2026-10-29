@@ -141,6 +141,9 @@ telemetry packets ReferenceDeploymentPackets {
     rateGroup50Hz.RgCycleSlips
     rateGroup10Hz.RgCycleSlips
     rateGroup1Hz.RgCycleSlips
+    i2c0BusMonitor.RecoveryCount
+    i2c0BusMonitor.RecoveryFailureCount
+    i2c0BusMonitor.AbortFlagsCleared
   }
 
 

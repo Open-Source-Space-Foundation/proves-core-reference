@@ -60,11 +60,22 @@ class LoadSwitch final : public LoadSwitchComponentBase {
     // ----------------------------------------------------------------------
 
     //! Set the load switch state (common implementation for commands and ports)
-    void setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
+    //! \return true when the switch reads back in the requested state
+    bool setLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
     );
 
-    //! Get current load switch state
-    Fw::On getLoadSwitchState();  //<! Get the current state (ON or OFF)
+    //! Write the switch GPIO and read it back
+    //! \return true when the switch reads back in the requested state
+    bool writeLoadSwitchState(Fw::On state  //!< The desired state (ON or OFF)
+    );
+
+    //! Read the current load switch state
+    //! \return false when the GPIO could not be read
+    bool readLoadSwitchState(Fw::On& state  //!< The current state (ON or OFF)
+    );
+
+    //! State last sent to the loadSwitchStateChanged ports. The face managers start OFF.
+    Fw::On m_notifiedState = Fw::On::OFF;
 };
 
 }  // namespace Components

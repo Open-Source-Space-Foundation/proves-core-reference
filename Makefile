@@ -11,15 +11,28 @@ help: ## Display this help.
 submodules: ## Initialize and update git submodules
 	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying Zephyr VEML6031 data-ready timeout patch (upstream candidate)..."
 	@cd lib/zephyr-workspace/zephyr && \
-	  if git apply --check ../../../patches/zephyr-veml6031-data-ready-timeout.patch > /dev/null 2>&1; then \
-	    git apply ../../../patches/zephyr-veml6031-data-ready-timeout.patch && echo "✓ Applied VEML6031 data-ready timeout patch"; \
-	  elif git apply --reverse --check ../../../patches/zephyr-veml6031-data-ready-timeout.patch > /dev/null 2>&1; then \
-	    echo "⚠ Patch already applied"; \
-	  else \
-	    echo "❌ Error: Unable to apply VEML6031 data-ready timeout patch. Check it against the pinned Zephyr version."; exit 1; \
-	  fi
+	  for p in ../../../patches/zephyr-*.patch; do \
+	    name=$$(basename $$p); \
+	    if git apply --check $$p > /dev/null 2>&1; then \
+	      git apply $$p && echo "✓ Applied $$name"; \
+	    elif git apply --reverse --check $$p > /dev/null 2>&1; then \
+	      echo "⚠ $$name already applied"; \
+	    else \
+	      echo "❌ Error: Unable to apply $$name. Check it against the pinned Zephyr version."; exit 1; \
+	    fi; \
+	  done
+	@cd lib/fprime-zephyr && \
+	  for p in ../../patches/fprime-zephyr-*.patch; do \
+	    name=$$(basename $$p); \
+	    if git apply --check $$p > /dev/null 2>&1; then \
+	      git apply $$p && echo "✓ Applied $$name"; \
+	    elif git apply --reverse --check $$p > /dev/null 2>&1; then \
+	      echo "⚠ $$name already applied"; \
+	    else \
+	      echo "❌ Error: Unable to apply $$name. Check it against the pinned fprime-zephyr version."; exit 1; \
+	    fi; \
+	  done
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
