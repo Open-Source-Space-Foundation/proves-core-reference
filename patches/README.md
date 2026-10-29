@@ -12,6 +12,14 @@ This patch bounds the `while (1)` data-ready poll in `veml6031_perform_single_me
 
 **Application:** `make submodules` applies every `patches/zephyr-*.patch`, with a reverse-apply check so that a second run does not fail. After it runs, `git status` shows `lib/zephyr-workspace/zephyr` as modified. This is expected. Do **not** commit the submodule pointer.
 
+## zephyr-ina219-conversion-ready-timeout.patch
+
+This patch bounds the conversion-ready poll in `ina219_sample_fetch` (`drivers/sensor/ti/ina219/ina219.c` in `lib/zephyr-workspace/zephyr`). After the conversion-time sleep, the driver polls for at most one more conversion time plus 10 ms, then returns `-ETIMEDOUT` with a warning.
+
+**Why:** The driver starts a triggered conversion and waits for the conversion-ready flag, which a mode write or a power register read clears. When two fetches on the same INA219 interleave, one can clear the other's flag, and the loser polls forever. On EM Orange Case 001 this stopped the 1 Hz rate group inside `PowerMonitor` while every other thread kept running (#542 CI). `Ina219Manager` now serialises its fetches; this patch makes any remaining case cost one failed reading. The worst case is 2 × conversion time + 10 ms: about 45 ms with this board's averaging (`badc` = `sadc` = 12, 17 ms per conversion).
+
+**Status:** Upstream candidate. Upstream Zephyr main still has the unbounded loop. Delete this patch once the pinned Zephyr has the fix.
+
 ## zephyr-i2c-dw-timeout-recover-bus.patch
 
 This patch makes `i2c_dw_transfer` (`drivers/i2c/i2c_dw.c`) call the registered recovery callback after a transfer times out, while it still holds `bus_sem` and before the driver's own abort. It also records why the driver called the callback (timeout, or stuck/abort bits at the start of a transfer) and the driver state, readable through `i2c_dw_get_recovery_info()`.

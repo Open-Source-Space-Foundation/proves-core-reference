@@ -1,0 +1,47 @@
+diff --git a/drivers/sensor/ti/ina219/ina219.c b/drivers/sensor/ti/ina219/ina219.c
+index 3595eb115ec..56478fd18a3 100644
+--- a/drivers/sensor/ti/ina219/ina219.c
++++ b/drivers/sensor/ti/ina219/ina219.c
+@@ -100,6 +100,14 @@ static int ina219_set_calib(const struct device *dev)
+ 	return ina219_reg_write(dev, INA219_REG_CALIB, cal);
+ }
+ 
++/*
++ * Time to keep polling for conversion ready after the conversion time has
++ * passed, in addition to one more conversion time. The flag can stay clear
++ * forever, for example when another fetch's mode write or power register read
++ * cleared it first.
++ */
++#define INA219_CNVR_RDY_MARGIN_MS 10
++
+ static int ina219_sample_fetch(const struct device *dev,
+ 			       enum sensor_channel chan)
+ {
+@@ -107,6 +115,7 @@ static int ina219_sample_fetch(const struct device *dev,
+ 	uint16_t status;
+ 	uint16_t tmp;
+ 	int rc;
++	int64_t deadline;
+ 
+ 	if (chan != SENSOR_CHAN_ALL &&
+ 		chan != SENSOR_CHAN_VOLTAGE &&
+@@ -126,6 +135,8 @@ static int ina219_sample_fetch(const struct device *dev,
+ 	}
+ 
+ 	k_sleep(K_USEC(data->msr_delay));
++	deadline = k_uptime_get() + DIV_ROUND_UP(data->msr_delay, USEC_PER_MSEC) +
++		   INA219_CNVR_RDY_MARGIN_MS;
+ 
+ 	rc = ina219_reg_read(dev, INA219_REG_V_BUS, &status);
+ 	if (rc) {
+@@ -134,6 +145,10 @@ static int ina219_sample_fetch(const struct device *dev,
+ 	}
+ 
+ 	while (!(INA219_CNVR_RDY(status))) {
++		if (k_uptime_get() >= deadline) {
++			LOG_WRN("Conversion ready timeout");
++			return -ETIMEDOUT;
++		}
+ 		rc = ina219_reg_read(dev, INA219_REG_V_BUS, &status);
+ 		if (rc) {
+ 			LOG_ERR("Failed to read device status.");
