@@ -9,22 +9,44 @@ acknowledged but lost. The bench repro (2026-10-29) flooded NO_OP uplinks every
 20 ms mixed with fileManager FileSize/CalculateCrc/ListDirectory reads and wiped
 the root twice in about 1,080 such commands, with no reboot.
 
-The same load can also kill the downlink: with the FatFs volume lock enabled the
-bench control image stopped sending telemetry and events about 40 s into the
-repro while commands kept executing onboard; the UART ComQueue was left waiting
-for a send-done status that never came. So this test reports three distinct
-failures:
+The same load fails differently with the FatFs volume lock enabled. On the
+bench, long filesystem operations (a free-space scan alone took about 5 s) held
+the lock and blocked the 1 Hz rate group for up to 15 s and stalled the 10 Hz
+one; queues overflowed, asserts fired, a dropped aggregator message left the
+UART ComQueue waiting for a send-done status that never came, and the downlink
+died while commands kept executing onboard. No configuration is assumed to be
+free of either failure.
 
-  - "root directory corrupted": a sentinel or root entry went missing, an
-    unexpected entry appeared, a CRC changed, or an uplinked/downlinked file
-    does not match its source.
-  - "downlink went silent": no telemetry or events for DOWNLINK_SILENCE_S.
-    Commands may still be executing onboard.
+Failures, checked in this order on every pump so the earliest cause is reported:
+
+  - "FSW fault event": any FATAL event (CdhCore.fatalAdapter.AF_ASSERT_0..6,
+    AF_UNEXPECTED_ASSERT, CdhCore.health.HLTH_PING_LATE/HLTH_PING_WRONG_KEY) or
+    a queue-overflow or dropped-message event listed in FAULT_EVENTS.
+  - "rate group slips over budget": more RateGroupCycleSlip events than
+    SLIP_BUDGET allows (see below).
+  - "downlink went silent": no telemetry or events for DOWNLINK_SILENCE_S, or
+    for CMD_SILENCE_S with commands unanswered. Commands may still be executing
+    onboard.
   - "command responses missing": telemetry still arrives but a command went
     unanswered for CMD_SILENCE_S.
+  - "root directory corrupted": a sentinel or root entry went missing, an
+    unexpected entry appeared, a CRC changed, or an uplinked/downlinked file
+    does not match its source. Checked every CHECK_EVERY commands and at the end.
 
-A passing run prints the longest telemetry gap it saw, to show how close the
-thresholds are.
+Every failure message also lists the first anomalous events seen, so a slip or
+warning that preceded the failure shows up next to it. A passing run prints the
+longest telemetry gap, the slip counts, and the WATCH_EVENTS counts, to show how
+close the thresholds are.
+
+Slip budget: the fuzz soak saw about 0.8% 10 Hz slips per uplinked command
+before any of this, so 2,000 commands expect about 16 (Poisson, sd 4). The 10 Hz
+budget is 2.5% of the flood (50 for 2,000), three times that baseline; a
+healthy build exceeds it with negligible probability, while a stalled 10 Hz
+thread (one slip per missed 100 ms tick) blows through it in seconds. The 1 Hz
+group carries the free-space scan and sequence-number save; no baseline slips
+were seen, and each slip means a whole second lost, so its budget is 3. The
+50 Hz group runs only detumbleManager, which does not touch the filesystem, so
+its slips are logged but do not fail the test.
 
 Load, run concurrently for --fs-flood-commands commands (default 2,000):
   - the repro's arm B mix: 60% CMD_NO_OP at a 20 ms gap, 40% fileManager
@@ -38,7 +60,7 @@ answers without overrunning the UART receive path.
 Why 2,000 commands: the bench rate was 2 wipes in 1,080 arm B commands, about
 1 in 540. If wipes arrive independently at that rate, a broken build survives
 2,000 commands with probability (1 - 1/540)^2000 = 2.5%, so the test fails it
-about 98% of the time. The rate rests on two events (95% interval for the
+about 97.5% of the time. The rate rests on two events (95% interval for the
 mean: 1 in 150 to 1 in 4,500) and was measured on an image that rewrote
 //sequence_number.txt on every uplinked command; main persists it at 1 Hz, so
 the continuous uplinks here supply the competing writer. Recalibrate the count
@@ -92,6 +114,22 @@ CMD_SILENCE_S = 15.0
 DOWNLINK_SILENCE_S = 20.0
 LISTING_TIMEOUT_S = 20.0
 
+FAULT_EVENTS = {
+    "CdhCore.cmdDisp.CommandDroppedQueueOverflow",
+    "CdhCore.cmdDisp.TooManyCommands",
+    "ComCcsdsUart.comQueue.QueueOverflow",
+    "ComCcsdsLora.comQueue.QueueOverflow",
+    "ComCcsdsUart.frameAccumulator.FrameDetectionValidFrameDropped",
+    "Update.deltaPatcher.SignalDropped",
+}
+WATCH_EVENTS = {
+    "ReferenceDeployment.comDriver.TxFrameDropped",
+    "CdhCore.health.HLTH_PING_WARN",
+}
+SLIP_EVENT = "ReferenceDeployment.{}.RateGroupCycleSlip"
+SLIP_10HZ_FRACTION = 0.025
+SLIP_1HZ_BUDGET = 3
+
 
 def sentinel_bytes(path: str) -> bytes:
     """Content derived from the path, so each sentinel is distinct and reproducible."""
@@ -107,6 +145,14 @@ def uplink_bytes(index: int) -> bytes:
 def board_crc(data: bytes) -> int:
     """fileManager.CalculateCrc reports the one's complement of zlib.crc32."""
     return zlib.crc32(data) ^ 0xFFFFFFFF
+
+
+class FswFault(AssertionError):
+    """The FSW reported an assert, a queue overflow, or a dropped message."""
+
+
+class SlipsOverBudget(AssertionError):
+    """A filesystem-facing rate group slipped more than its budget allows."""
 
 
 class DownlinkSilent(AssertionError):
@@ -131,15 +177,23 @@ class Listing:
 
 
 class Board:
-    """Command traffic with liveness tracking.
+    """Command traffic with health tracking.
 
     Counts CmdDispatcher completions (OpCodeCompleted/OpCodeError) against
-    commands sent, and the arrival time of telemetry, so every wait doubles as
-    a liveness check.
+    commands sent, the arrival time of telemetry, fault events and rate group
+    slips, so every wait doubles as a health check.
     """
 
-    def __init__(self, api: IntegrationTestAPI):
+    def __init__(self, api: IntegrationTestAPI, flood_commands: int):
         self.api = api
+        self.slip_budget = {
+            "rateGroup10Hz": int(SLIP_10HZ_FRACTION * flood_commands),
+            "rateGroup1Hz": SLIP_1HZ_BUDGET,
+        }
+        self.slips = {"rateGroup50Hz": 0, "rateGroup10Hz": 0, "rateGroup1Hz": 0}
+        self.watched = dict.fromkeys(sorted(WATCH_EVENTS), 0)
+        self.faults: list[str] = []
+        self.anomalies: list[str] = []
         self.events = api.get_event_subhistory(fsw_order=False)
         self.telemetry = api.get_telemetry_subhistory(fsw_order=False)
         self.log: list[tuple[str, list]] = []
@@ -167,8 +221,11 @@ class Board:
         if events:
             self.last_downlink = now
         for evt in events:
-            name = evt.get_template().get_full_name()
-            self.log.append((name, [arg.val for arg in evt.args or []]))
+            template = evt.get_template()
+            name = template.get_full_name()
+            args = [arg.val for arg in evt.args or []]
+            self.log.append((name, args))
+            self.classify(name, template.get_severity().name, args)
             if name in (
                 f"{CMD_DISPATCH}.OpCodeCompleted",
                 f"{CMD_DISPATCH}.OpCodeError",
@@ -182,8 +239,47 @@ class Board:
             self.last_telemetry = self.last_downlink = now
         self.check_alive()
 
+    def classify(self, name: str, severity: str, args: list):
+        """Record fault, slip, and watched events."""
+        entry = f"{time.strftime('%H:%M:%S')} {name}{args}"
+        if severity == "FATAL" or name in FAULT_EVENTS:
+            self.faults.append(entry)
+        for group in self.slips:
+            if name == SLIP_EVENT.format(group):
+                self.slips[group] += 1
+                break
+        else:
+            if name in self.watched:
+                self.watched[name] += 1
+            elif severity not in ("WARNING_HI", "FATAL") and name not in FAULT_EVENTS:
+                return
+        if len(self.anomalies) < 8:
+            self.anomalies.append(entry)
+
+    def context(self) -> str:
+        """Earliest anomalies and the latest error events, for failure messages."""
+        return (
+            f"first anomalies: {self.anomalies}; slips: {self.slips}; "
+            f"recent errors: {self.recent_warnings()}"
+        )
+
     def check_alive(self):
-        """Raise DownlinkSilent or ResponsesMissing when the board goes quiet."""
+        """Raise on fault events, slips over budget, or a quiet board, in that order."""
+        if self.faults:
+            raise FswFault(
+                f"FSW fault event after {self.sent} commands: {self.faults[:4]}; "
+                f"{self.context()}"
+            )
+        over = {
+            g: f"{self.slips[g]} > {b}"
+            for g, b in self.slip_budget.items()
+            if self.slips[g] > b
+        }
+        if over:
+            raise SlipsOverBudget(
+                f"rate group slips over budget after {self.sent} commands: {over}; "
+                f"{self.context()}"
+            )
         now = time.time()
         downlink_quiet = now - self.last_downlink
         unanswered = self.outstanding > 0 and now - self.last_completion > CMD_SILENCE_S
@@ -193,14 +289,14 @@ class Board:
             raise DownlinkSilent(
                 f"downlink went silent: no telemetry or events for {downlink_quiet:.0f} s "
                 f"after {self.sent} commands ({self.outstanding} unanswered); commands may "
-                f"still be executing onboard; recent events: {self.recent_warnings()}"
+                f"still be executing onboard; {self.context()}"
             )
         if unanswered:
             raise ResponsesMissing(
                 f"command responses missing: {self.outstanding} of {self.sent} commands "
                 f"unanswered for {now - self.last_completion:.0f} s while telemetry still "
                 f"arrives (last {now - self.last_telemetry:.0f} s ago); "
-                f"recent events: {self.recent_warnings()}"
+                f"{self.context()}"
             )
 
     def recent_warnings(self, n: int = 8) -> list[str]:
@@ -371,9 +467,11 @@ def file_name(path: str) -> str:
 
 
 @pytest.fixture
-def board(fprime_test_api: IntegrationTestAPI, start_gds):
+def board(
+    fprime_test_api: IntegrationTestAPI, start_gds, request: pytest.FixtureRequest
+):
     """A Board bound to this test's API."""
-    b = Board(fprime_test_api)
+    b = Board(fprime_test_api, request.config.getoption("--fs-flood-commands"))
     yield b
     b.close()
 
@@ -438,7 +536,9 @@ def test_root_survives_concurrent_file_traffic(
             baseline_names, uplink_names, board.stable_listing(ROOT)
         )
         if problems:
-            raise RootCorrupted(f"root directory corrupted {when}: {problems}")
+            raise RootCorrupted(
+                f"root directory corrupted {when}: {problems}; {board.context()}"
+            )
 
     try:
         for i in range(flood_commands):
@@ -495,7 +595,8 @@ def test_root_survives_concurrent_file_traffic(
                 )
         if problems:
             raise RootCorrupted(
-                f"root directory corrupted after {flood_commands} commands: {problems}"
+                f"root directory corrupted after {flood_commands} commands: {problems}; "
+                f"{board.context()}"
             )
     finally:
         created.extend(uplinks.started)
@@ -504,5 +605,6 @@ def test_root_survives_concurrent_file_traffic(
         f"[fs_concurrency] {board.sent} commands, {len(uplinks.started)} uplinks, "
         f"{len(downlinks)} downlinks, longest telemetry gap "
         f"{board.max_telemetry_gap:.1f} s (limit {DOWNLINK_SILENCE_S:.0f} s), "
+        f"slips {board.slips} (budget {board.slip_budget}), watched {board.watched}, "
         f"root intact: {sorted(baseline_names)}"
     )
