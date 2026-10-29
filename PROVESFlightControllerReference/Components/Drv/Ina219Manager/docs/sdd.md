@@ -45,9 +45,11 @@ classDiagram
 ## Port Descriptions
 | Name | Type | Description |
 |---|---|---|
-| VoltageGet | sync input | Triggers voltage data collection and returns voltage in volts |
-| CurrentGet | sync input | Triggers current data collection and returns current in amps |
-| PowerGet | sync input | Triggers power data collection and returns power in watts |
+| VoltageGet | guarded input | Triggers voltage data collection and returns voltage in volts |
+| CurrentGet | guarded input | Triggers current data collection and returns current in amps |
+| PowerGet | guarded input | Triggers power data collection and returns power in watts |
+
+The `VoltageGet`, `CurrentGet` and `PowerGet` ports and the `GetVoltage`, `GetCurrent` and `GetPower` commands share the component mutex, so only one sample fetch runs on the device at a time. The Zephyr INA219 driver starts a triggered conversion and polls the conversion-ready flag, which another fetch's mode write or power read clears. Two fetches from different threads (the 1 Hz power monitor, the mode manager and ground commands all read the system INA219) could leave one polling forever and stop its rate group.
 
 ## Sequence Diagrams
 
@@ -114,3 +116,4 @@ sequenceDiagram
 | Date | Description |
 |---|---|
 | 2025-11-03 | Initial INA219 Manager component |
+| 2026-10-28 | Made ports and commands guarded so concurrent sample fetches cannot leave one waiting forever |

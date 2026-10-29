@@ -9,13 +9,13 @@ module Drv {
     passive component Ina219Manager {
         # Ports
         @ Port to read the voltage in volts
-        sync input port voltageGet: VoltageGet
+        guarded input port voltageGet: VoltageGet
 
         @ Port to read the current in amps
-        sync input port currentGet: CurrentGet
+        guarded input port currentGet: CurrentGet
 
         @ Port to read the power in watts
-        sync input port powerGet: PowerGet
+        guarded input port powerGet: PowerGet
 
         # Telemetry channels
 
@@ -43,13 +43,13 @@ module Drv {
         # Commands
 
         @ Command to get voltage reading
-        sync command GetVoltage
+        guarded command GetVoltage
 
         @ Command to get current reading
-        sync command GetCurrent
+        guarded command GetCurrent
 
         @ Command to get power reading
-        sync command GetPower
+        guarded command GetPower
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
