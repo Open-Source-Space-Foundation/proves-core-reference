@@ -9,16 +9,22 @@ acknowledged but lost. The bench repro (2026-10-29) flooded NO_OP uplinks every
 20 ms mixed with fileManager FileSize/CalculateCrc/ListDirectory reads and wiped
 the root twice in about 1,080 such commands, with no reboot.
 
-The same load can also stop the flight software outright: with the FatFs volume
-lock enabled the bench control image stopped answering commands and stopped
-sending telemetry about 40 s into the repro. So this test reports two distinct
+The same load can also kill the downlink: with the FatFs volume lock enabled the
+bench control image stopped sending telemetry and events about 40 s into the
+repro while commands kept executing onboard; the UART ComQueue was left waiting
+for a send-done status that never came. So this test reports three distinct
 failures:
 
   - "root directory corrupted": a sentinel or root entry went missing, an
     unexpected entry appeared, a CRC changed, or an uplinked/downlinked file
     does not match its source.
-  - "FSW stopped responding": a command went unanswered for CMD_SILENCE_S or
-    no telemetry arrived for TLM_SILENCE_S.
+  - "downlink went silent": no telemetry or events for DOWNLINK_SILENCE_S.
+    Commands may still be executing onboard.
+  - "command responses missing": telemetry still arrives but a command went
+    unanswered for CMD_SILENCE_S.
+
+A passing run prints the longest telemetry gap it saw, to show how close the
+thresholds are.
 
 Load, run concurrently for --fs-flood-commands commands (default 2,000):
   - the repro's arm B mix: 60% CMD_NO_OP at a 20 ms gap, 40% fileManager
@@ -83,7 +89,7 @@ WINDOW = 8
 NOOP_GAP_S = 0.02
 READ_GAP_S = 0.05
 CMD_SILENCE_S = 15.0
-TLM_SILENCE_S = 20.0
+DOWNLINK_SILENCE_S = 20.0
 LISTING_TIMEOUT_S = 20.0
 
 
@@ -103,8 +109,12 @@ def board_crc(data: bytes) -> int:
     return zlib.crc32(data) ^ 0xFFFFFFFF
 
 
-class FswUnresponsive(AssertionError):
-    """The flight software stopped answering commands or sending telemetry."""
+class DownlinkSilent(AssertionError):
+    """No telemetry or events arrived; the FSW may still be executing commands."""
+
+
+class ResponsesMissing(AssertionError):
+    """Telemetry still arrives but commands go unanswered."""
 
 
 class RootCorrupted(AssertionError):
@@ -137,6 +147,8 @@ class Board:
         self.completed = 0
         self.last_completion = time.time()
         self.last_telemetry = time.time()
+        self.last_downlink = time.time()
+        self.max_telemetry_gap = 0.0
 
     def close(self):
         """Detach the event and telemetry subhistories."""
@@ -151,7 +163,10 @@ class Board:
     def pump(self):
         """Consume new events and telemetry, then check liveness."""
         now = time.time()
-        for evt in self.events.retrieve_new():
+        events = self.events.retrieve_new()
+        if events:
+            self.last_downlink = now
+        for evt in events:
             name = evt.get_template().get_full_name()
             self.log.append((name, [arg.val for arg in evt.args or []]))
             if name in (
@@ -161,22 +176,31 @@ class Board:
                 self.completed += 1
                 self.last_completion = now
         if self.telemetry.retrieve_new():
-            self.last_telemetry = now
+            self.max_telemetry_gap = max(
+                self.max_telemetry_gap, now - self.last_telemetry
+            )
+            self.last_telemetry = self.last_downlink = now
         self.check_alive()
 
     def check_alive(self):
-        """Raise FswUnresponsive when commands or telemetry have gone silent."""
+        """Raise DownlinkSilent or ResponsesMissing when the board goes quiet."""
         now = time.time()
-        if self.outstanding > 0 and now - self.last_completion > CMD_SILENCE_S:
-            raise FswUnresponsive(
-                f"FSW stopped responding: {self.outstanding} of {self.sent} commands "
-                f"unanswered for {now - self.last_completion:.0f} s; "
-                f"recent events: {self.recent_warnings()}"
+        downlink_quiet = now - self.last_downlink
+        unanswered = self.outstanding > 0 and now - self.last_completion > CMD_SILENCE_S
+        if downlink_quiet > DOWNLINK_SILENCE_S or (
+            unanswered and downlink_quiet > CMD_SILENCE_S
+        ):
+            raise DownlinkSilent(
+                f"downlink went silent: no telemetry or events for {downlink_quiet:.0f} s "
+                f"after {self.sent} commands ({self.outstanding} unanswered); commands may "
+                f"still be executing onboard; recent events: {self.recent_warnings()}"
             )
-        if now - self.last_telemetry > TLM_SILENCE_S:
-            raise FswUnresponsive(
-                f"FSW stopped responding: no telemetry for {now - self.last_telemetry:.0f} s "
-                f"after {self.sent} commands; recent events: {self.recent_warnings()}"
+        if unanswered:
+            raise ResponsesMissing(
+                f"command responses missing: {self.outstanding} of {self.sent} commands "
+                f"unanswered for {now - self.last_completion:.0f} s while telemetry still "
+                f"arrives (last {now - self.last_telemetry:.0f} s ago); "
+                f"recent events: {self.recent_warnings()}"
             )
 
     def recent_warnings(self, n: int = 8) -> list[str]:
@@ -478,5 +502,7 @@ def test_root_survives_concurrent_file_traffic(
 
     print(
         f"[fs_concurrency] {board.sent} commands, {len(uplinks.started)} uplinks, "
-        f"{len(downlinks)} downlinks, root intact: {sorted(baseline_names)}"
+        f"{len(downlinks)} downlinks, longest telemetry gap "
+        f"{board.max_telemetry_gap:.1f} s (limit {DOWNLINK_SILENCE_S:.0f} s), "
+        f"root intact: {sorted(baseline_names)}"
     )
