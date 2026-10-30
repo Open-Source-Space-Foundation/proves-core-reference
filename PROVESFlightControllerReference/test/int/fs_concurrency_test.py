@@ -49,13 +49,16 @@ were seen, and each slip means a whole second lost, so its budget is 3. The
 its slips are logged but do not fail the test.
 
 Load, run concurrently for --fs-flood-commands commands (default 2,000):
-  - the repro's arm B mix: 60% CMD_NO_OP at a 20 ms gap, 40% fileManager
-    FileSize/CalculateCrc/ListDirectory on the sentinels at a 50 ms gap;
+  - the repro's arm B mix in batches of BATCH: 60% CMD_NO_OP at a 20 ms gap,
+    40% fileManager FileSize/CalculateCrc/ListDirectory on the sentinels at a
+    50 ms gap, with at most WINDOW outstanding and one listing at a time
+    (FileManager rejects a ListDirectory while one is in progress);
   - back-to-back file uplinks to long names in the root on the fileUplink
     thread, the operational trigger;
-  - a fileDownlink.SendFile of a sentinel every DOWNLINK_EVERY commands.
-At most WINDOW commands are outstanding, so the flood runs as fast as the board
-answers without overrunning the UART receive path.
+  - after each batch, a drain and a BATCH_PAUSE_S pause, with a
+    fileDownlink.SendFile of a sentinel every DOWNLINK_EVERY_BATCHES batches.
+The pauses matter: the UART comQueue sends events ahead of file packets and
+telemetry, so an unbroken flood starves both and reads as a dead downlink.
 
 Why 2,000 commands: the bench rate was 2 wipes in 1,080 arm B commands, about
 1 in 540. If wipes arrive independently at that rate, a broken build survives
@@ -104,7 +107,9 @@ UPLINK_BYTES = 4 * 204
 MAX_UPLINKS = 12
 DOWNLINK_SOURCE = SENTINELS[1]
 DOWNLINK_NAME = "fsc_down_{}.bin"
-DOWNLINK_EVERY = 200
+BATCH = 20
+BATCH_PAUSE_S = 1.0
+DOWNLINK_EVERY_BATCHES = 10
 CHECK_EVERY = 250
 
 WINDOW = 8
@@ -193,6 +198,9 @@ class Board:
         self.slips = {"rateGroup50Hz": 0, "rateGroup10Hz": 0, "rateGroup1Hz": 0}
         self.watched = dict.fromkeys(sorted(WATCH_EVENTS), 0)
         self.faults: list[str] = []
+        self.listing_busy = False
+        self.commands = api.pipeline.dictionaries.command_name
+        self.pending: dict[int, list[str]] = {}
         self.anomalies: list[str] = []
         self.events = api.get_event_subhistory(fsw_order=False)
         self.telemetry = api.get_telemetry_subhistory(fsw_order=False)
@@ -227,11 +235,19 @@ class Board:
             self.log.append((name, args))
             self.classify(name, template.get_severity().name, args)
             if name in (
+                f"{FILE_MANAGER}.ListDirectorySucceeded",
+                f"{FILE_MANAGER}.ListDirectoryError",
+            ):
+                self.listing_busy = False
+            if name in (
                 f"{CMD_DISPATCH}.OpCodeCompleted",
                 f"{CMD_DISPATCH}.OpCodeError",
             ):
                 self.completed += 1
                 self.last_completion = now
+                waiting = self.pending.get(args[0] if args else None)
+                if waiting:
+                    waiting.pop(0)
         if self.telemetry.retrieve_new():
             self.max_telemetry_gap = max(
                 self.max_telemetry_gap, now - self.last_telemetry
@@ -288,16 +304,21 @@ class Board:
         ):
             raise DownlinkSilent(
                 f"downlink went silent: no telemetry or events for {downlink_quiet:.0f} s "
-                f"after {self.sent} commands ({self.outstanding} unanswered); commands may "
+                f"after {self.sent} commands (unanswered: {self.unanswered()}); commands may "
                 f"still be executing onboard; {self.context()}"
             )
         if unanswered:
             raise ResponsesMissing(
                 f"command responses missing: {self.outstanding} of {self.sent} commands "
-                f"unanswered for {now - self.last_completion:.0f} s while telemetry still "
+                f"unanswered for {now - self.last_completion:.0f} s ({self.unanswered()}) "
+                f"while telemetry still "
                 f"arrives (last {now - self.last_telemetry:.0f} s ago); "
                 f"{self.context()}"
             )
+
+    def unanswered(self) -> list[str]:
+        """Names of the commands still waiting for a completion."""
+        return sorted(name for names in self.pending.values() for name in names)
 
     def recent_warnings(self, n: int = 8) -> list[str]:
         """The last n error or failure events, for failure messages."""
@@ -317,7 +338,11 @@ class Board:
     def send(self, command: str, args: list[str] | None = None, gap: float = 0.0):
         """Send within the window, then pause for gap seconds."""
         self.wait_window(WINDOW)
+        if command == f"{FILE_MANAGER}.ListDirectory":
+            self.listing_busy = True
         self.api.send_command(command, args or [])
+        opcode = self.commands[command].get_op_code()
+        self.pending.setdefault(opcode, []).append(command)
         if self.outstanding == 0:
             self.last_completion = time.time()
         self.sent += 1
@@ -327,6 +352,13 @@ class Board:
     def drain(self):
         """Block until every sent command has completed."""
         self.wait_window(1)
+
+    def pause(self, seconds: float):
+        """Idle while still consuming events and telemetry."""
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            self.pump()
+            time.sleep(0.05)
 
     def await_event(self, start: int, name: str, match, timeout: float):
         """Return the args of the first event named name at or after log index start that satisfies match."""
@@ -364,12 +396,14 @@ class Board:
         return Listing(False)
 
     def stable_listing(self, path: str) -> Listing:
-        """List twice if the entry events do not add up to the reported count,
-        so a dropped event is not read as a corrupted directory."""
+        """List again if the listing failed or its entry events do not add up to
+        the reported count, so one dropped event or transient error is not read
+        as a corrupted directory."""
         for _ in range(2):
             result = self.listing(path)
-            if not result.ok or result.reported == len(result.names):
+            if result.ok and result.reported == len(result.names):
                 return result
+            self.pause(1.0)
         return result
 
     def crc(self, path: str) -> int | None:
@@ -528,6 +562,7 @@ def test_root_survives_concurrent_file_traffic(
     baseline_names = baseline.names - uplink_names
 
     uplinks = Uplinks(fprime_test_api, tmp_path)
+    flood_start = board.sent
     downlinks: list[str] = []
     read_targets = SENTINELS + [ROOT, SUBDIR]
 
@@ -541,26 +576,36 @@ def test_root_survives_concurrent_file_traffic(
             )
 
     try:
-        for i in range(flood_commands):
-            uplinks.tick()
-            if i % DOWNLINK_EVERY == DOWNLINK_EVERY // 2:
-                name = DOWNLINK_NAME.format(len(downlinks))
-                downlinks.append(name)
-                board.send(f"{FILE_DOWNLINK}.SendFile", [DOWNLINK_SOURCE, name])
-            elif rng.random() < 0.6:
-                board.send(NOOP, gap=NOOP_GAP_S)
-            else:
+        batches, since_check = 0, 0
+        while board.sent - flood_start < flood_commands:
+            for _ in range(BATCH):
+                uplinks.tick()
                 target = rng.choice(read_targets)
-                if target in (ROOT, SUBDIR):
+                if rng.random() < 0.6:
+                    board.send(NOOP, gap=NOOP_GAP_S)
+                elif target in (ROOT, SUBDIR) and not board.listing_busy:
                     board.send(
                         f"{FILE_MANAGER}.ListDirectory", [target], gap=READ_GAP_S
                     )
                 else:
                     kind = rng.choice(["FileSize", "CalculateCrc"])
-                    board.send(f"{FILE_MANAGER}.{kind}", [target], gap=READ_GAP_S)
-            if i and i % CHECK_EVERY == 0:
+                    board.send(
+                        f"{FILE_MANAGER}.{kind}",
+                        [rng.choice(SENTINELS)],
+                        gap=READ_GAP_S,
+                    )
+            batches += 1
+            since_check += BATCH
+            board.drain()
+            if batches % DOWNLINK_EVERY_BATCHES == DOWNLINK_EVERY_BATCHES // 2:
+                name = DOWNLINK_NAME.format(len(downlinks))
+                downlinks.append(name)
+                board.send(f"{FILE_DOWNLINK}.SendFile", [DOWNLINK_SOURCE, name])
                 board.drain()
-                check_root(f"after {i} commands")
+            board.pause(BATCH_PAUSE_S)
+            if since_check >= CHECK_EVERY:
+                since_check = 0
+                check_root(f"after {board.sent - flood_start} commands")
 
         board.drain()
         uplinks.wait_idle(board)
