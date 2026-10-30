@@ -2,6 +2,31 @@
 
 This directory contains patches that are automatically applied to git submodules during the build process.
 
+## zephyr-i2c-dw-tx-empty-storm.patch
+
+Stops a DesignWare I2C read from leaving TX_EMPTY unmasked while it waits for
+RX data (`drivers/i2c/i2c_dw.c` in `lib/zephyr-workspace/zephyr`). When
+`i2c_dw_data_ask()` cannot request more bytes, it now masks TX_EMPTY instead of
+returning with it enabled, and the RX_FULL handler unmasks it again while bytes
+are left to request.
+
+**Why:** The driver sizes its FIFOs from `IC_COMP_PARAM_1`, which reads 0 on the
+RP2350, so it assumes a FIFO depth of 1. After asking for one byte, `rx_empty`
+is 0 and `i2c_dw_data_ask()` returns with TX_EMPTY still enabled. TX_EMPTY is
+level triggered, so if that byte never arrives the ISR re-enters forever. Every
+thread starves, including the transfer's own 100 ms timeout, so the 1 Hz rate
+group, health pings and telemetry all stop. On an EM unit with all faces
+powered (2026-10-26), I2C0 was idle with SDA and SCL high, `IC_INTR_MASK`
+0x25f, `IC_RAW_INTR_STAT` 0x10, both FIFOs empty, and core 0 stuck in IRQ 36.
+The driver state was a 2-byte INA219 read with `rx_pending` 1,
+`request_bytes` 1 and `xfr_len` 2. With the patch, the transfer times out with
+`-ETIMEDOUT` and the system keeps running.
+
+**Status:** Upstream candidate for zephyrproject-rtos/zephyr. Delete this patch
+once the pinned Zephyr includes an upstream fix.
+
+**Application:** Applied by `make submodules`, like every `zephyr-*.patch` here.
+
 ## zephyr-veml6031-data-ready-timeout.patch
 
 This patch bounds the `while (1)` data-ready poll in `veml6031_perform_single_measurement` (`drivers/sensor/vishay/veml6031/veml6031.c` in `lib/zephyr-workspace/zephyr`). After the integration-time sleep, the driver polls for at most one more integration time plus 10 ms, then returns `-ETIMEDOUT`. It also returns early if the read that clears the data-ready flag fails.
