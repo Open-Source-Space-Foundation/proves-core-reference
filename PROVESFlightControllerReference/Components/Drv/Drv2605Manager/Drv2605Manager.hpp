@@ -118,6 +118,15 @@ class Drv2605Manager final : public Drv2605ManagerComponentBase {
     //! Load switch on timeout
     //! Time when we can consider the load switch to be fully on (giving time for power to normalize)
     Fw::Time m_load_switch_on_timeout;
+
+    //! RTP drive level, read by the driver's workqueue write. One per instance so faces don't share it.
+    uint8_t m_rtpInput[1] = {0};
+
+    //! RTP hold time in microseconds
+    uint32_t m_rtpHoldUs[1] = {1};
+
+    //! RTP configuration passed to the driver
+    struct drv2605_rtp_data m_rtp = {};
 };
 
 }  // namespace Drv
