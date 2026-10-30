@@ -1,0 +1,31 @@
+description: |
+  Fake sensor for native_sim. Serves the quantities the node lists, each a
+  default in micro-units of the Zephyr sensor API: accel (m/s^2, X Y Z),
+  gyro (rad/s, X Y Z), magn (gauss, X Y Z), die-temp (degrees C),
+  voltage (V) and current (A). A node with both voltage and current also
+  serves SENSOR_CHAN_POWER as their product. Each sample reads sim-file
+  (host path, relative to the sim's working directory), one
+  "<quantity> <value>..." line per quantity in SI units, for example
+  "gyro 0.1 0 0". Quantities the file leaves out, or all of them when the
+  file is absent, report the defaults.
+
+compatible: "proves,sensor-sim"
+
+include: base.yaml
+
+properties:
+  sim-file:
+    type: string
+    required: true
+  accel:
+    type: array
+  gyro:
+    type: array
+  magn:
+    type: array
+  die-temp:
+    type: array
+  voltage:
+    type: array
+  current:
+    type: array

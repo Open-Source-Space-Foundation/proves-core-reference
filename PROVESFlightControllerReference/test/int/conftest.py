@@ -38,6 +38,7 @@ def pytest_collection_modifyitems(
 
     1. With --bare-flight-controller-board, skip tests whose markers require add-on
        hardware (face, antenna, battery, or the JP6 watchdog jumper).
+       --with-watchdog-jumper keeps the watchdog-jumper tests.
     2. With --with-radio, move the RTC tests to the end of the collection. The
        RTC tests mutate the system clock (TIME_SET to -12 h from now) and the
        teardown resets it to current UTC.  Running them last prevents the
@@ -45,10 +46,13 @@ def pytest_collection_modifyitems(
        alphabetically (TMP112), which is otherwise flaky on the radio path.
     """
     if config.getoption("--bare-flight-controler-board", default=False):
+        skip_markers = dict(BARE_FCB_SKIP_MARKERS)
+        if config.getoption("--with-watchdog-jumper", default=False):
+            del skip_markers["requires_watchdog_jumper"]
         for item in items:
             needed = [
                 description
-                for marker, description in BARE_FCB_SKIP_MARKERS.items()
+                for marker, description in skip_markers.items()
                 if item.get_closest_marker(marker) is not None
             ]
             if needed:
@@ -95,6 +99,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Skip tests that require add-on hardware (face, antenna, battery, or "
         "the JP6 watchdog jumper) so the suite can run on a bare flight control board.",
+    )
+    parser.addoption(
+        "--with-watchdog-jumper",
+        action="store_true",
+        default=False,
+        help="With --bare-flight-controler-board, still run the tests that need the "
+        "JP6 watchdog jumper (the native_sim board fakes the external watchdog).",
+    )
+    parser.addoption(
+        "--expect-boot-count",
+        type=int,
+        default=None,
+        help="Boot count that boot_count_test.py expects; the test skips when unset.",
     )
     parser.addoption(
         "--ota-image",

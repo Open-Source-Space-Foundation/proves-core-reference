@@ -1,0 +1,177 @@
+/*
+ * Software-in-the-loop board for the ReferenceDeployment (sim/README.md).
+ * Recreates the node labels that Main.cpp and the topology use, on Zephyr's
+ * emulated buses and sim devices. The face mux is the flight board's own dtsi.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/delete-node/ &flashcontroller0;
+
+/ {
+	chosen {
+		zephyr,flash = &flash0;
+		zephyr,flash-controller = &flashcontroller0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	flashcontroller0: flash-controller@0 {
+		compatible = "zephyr,sim-flash";
+		reg = <0x00000000 DT_SIZE_M(16)>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		erase-value = <0xff>;
+
+		flash0: flash@0 {
+			status = "okay";
+			compatible = "soc-nv-flash";
+			erase-block-size = <4096>;
+			write-block-size = <1>;
+			reg = <0x00000000 DT_SIZE_M(16)>;
+
+			partitions {
+				compatible = "fixed-partitions";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				boot_partition: partition@0 {
+					label = "mcuboot";
+					reg = <0x0 0x100000>;
+				};
+				slot0_partition: partition@100000 {
+					label = "image-0";
+					reg = <0x100000 0x100000>;
+				};
+				slot1_partition: partition@200000 {
+					label = "image-1";
+					reg = <0x200000 0x100000>;
+				};
+				slot2_partition: partition@300000 {
+					label = "image-2";
+					reg = <0x300000 0x100000>;
+				};
+				storage_partition: partition@400000 {
+					label = "storage_partition";
+					reg = <0x400000 0xC00000>;
+				};
+			};
+		};
+	};
+
+	/* FAT volume "SD" on the sim-flash storage partition (replaces the SPI SD card). */
+	sd_flashdisk: sd_flashdisk {
+		compatible = "zephyr,flash-disk";
+		partition = <&storage_partition>;
+		disk-name = "SD";
+		cache-size = <4096>;
+	};
+
+	fstab {
+		compatible = "zephyr,fstab";
+		ffs1: ffs1 {
+			compatible = "zephyr,fstab,fatfs";
+			automount;
+			disk-access;
+			mount-point = "/";
+		};
+	};
+
+	/* F' comms need a pty of their own: on a shared pty, the payload UART driver's IRQ callback takes RX. */
+	cdc_acm_uart0: uart_2 {
+		status = "okay";
+		compatible = "zephyr,native-pty-uart";
+		current-speed = <0>;
+	};
+
+	/* The RP2350 die sensor, at room temperature. */
+	die_temp: die_temp {
+		compatible = "proves,sensor-sim";
+		sim-file = "die_temp.txt";
+		die-temp = <25000000>;
+	};
+
+	sim_leds {
+		compatible = "gpio-leds";
+		burnwire0: burnwire0 { gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>; };
+		burnwire1: burnwire1 { gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>; };
+		face0_enable: face0-enable { gpios = <&mcp23017 9 GPIO_ACTIVE_HIGH>; };
+		face1_enable: face1-enable { gpios = <&mcp23017 10 GPIO_ACTIVE_HIGH>; };
+		face2_enable: face2-enable { gpios = <&mcp23017 11 GPIO_ACTIVE_HIGH>; };
+		face3_enable: face3-enable { gpios = <&mcp23017 12 GPIO_ACTIVE_HIGH>; };
+		face4_enable: face4-enable { gpios = <&mcp23017 13 GPIO_ACTIVE_HIGH>; };
+		face5_enable: face5-enable { gpios = <&mcp23017 8 GPIO_ACTIVE_HIGH>; };
+		payload_pwr_enable: payload-pwr-enable { gpios = <&mcp23017 1 GPIO_ACTIVE_HIGH>; };
+		payload_batt_enable: payload-batt-enable { gpios = <&mcp23017 3 GPIO_ACTIVE_HIGH>; };
+	};
+
+	/* The flight board's MCP23017, at the same pin numbers. */
+	mcp23017: mcp23017_sim {
+		compatible = "proves,gpio-latch-sim";
+		gpio-controller;
+		#gpio-cells = <2>;
+		ngpios = <16>;
+	};
+
+	/* The external watchdog behind JP6, on the pin the Watchdog component toggles (led0). The
+	 * timeout is the v5e bench measurement: 43 to 45 s from STOP_WATCHDOG to the board booting
+	 * again, over 5 CI runs. The schematic's nominal values (R35 4.7M, C22 + C23 20 uF) predict
+	 * about 220 s; DC-bias derating of the 0603 X5R timing capacitors accounts for some of the gap. */
+	ext_watchdog: ext_watchdog {
+		compatible = "proves,watchdog-sim";
+		wdi-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		timeout-ms = <44000>;
+	};
+
+	lora0: lora_sim {
+		compatible = "proves,lora-sim";
+	};
+};
+
+&uart1 {
+	status = "okay";
+};
+
+rtc0: &rtc {
+	compatible = "proves,rtc-sim";
+	alarms-count = <1>;
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+
+	/* At rest on a desk: 1 g on Z and a gyro bias of about 0.1 deg/s, as a real part has. */
+	lsm6dso0: lsm6dso0@6b {
+		compatible = "proves,sensor-sim";
+		reg = <0x6b>;
+		sim-file = "lsm6dso.txt";
+		accel = <0 0 9806650>;
+		gyro = <1745 873 524>;
+		die-temp = <25000000>;
+	};
+
+	/* Roughly the Earth's field at mid latitude. */
+	lis2mdl0: lis2mdl0@1e {
+		compatible = "proves,sensor-sim";
+		reg = <0x1e>;
+		sim-file = "lis2mdl.txt";
+		magn = <200000 0 400000>;
+	};
+
+	ina219_0: ina219_0@40 {
+		compatible = "proves,sensor-sim";
+		reg = <0x40>;
+		sim-file = "ina219_sys.txt";
+		voltage = <8200000>;
+		current = <300000>;
+	};
+
+	/* No sun in the sim. */
+	ina219_1: ina219_1@41 {
+		compatible = "proves,sensor-sim";
+		reg = <0x41>;
+		sim-file = "ina219_sol.txt";
+		voltage = <0>;
+		current = <0>;
+	};
+
+	#include "bronco_space/proves_flight_control_board_v5/proves_face_mux.dtsi"
+};

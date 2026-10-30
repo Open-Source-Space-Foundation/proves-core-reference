@@ -1,0 +1,5 @@
+description: Emulated RV3028 stand-in for native_sim (Zephyr rtc-emul with flight-like callbacks and timing).
+
+compatible: "proves,rtc-sim"
+
+include: rtc-device.yaml

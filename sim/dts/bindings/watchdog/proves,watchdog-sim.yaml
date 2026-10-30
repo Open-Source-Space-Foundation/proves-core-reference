@@ -1,0 +1,16 @@
+description: |
+  Fake external watchdog for native_sim. Watches wdi-gpios, the pin the
+  Watchdog component toggles, and cold-reboots the sim when the pin has not
+  changed for timeout-ms.
+
+compatible: "proves,watchdog-sim"
+
+include: base.yaml
+
+properties:
+  wdi-gpios:
+    type: phandle-array
+    required: true
+  timeout-ms:
+    type: int
+    required: true
