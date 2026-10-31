@@ -6,7 +6,9 @@
 
 #include "PROVESFlightControllerReference/Components/BootloaderTrigger/BootloaderTrigger.hpp"
 
+#if __has_include(<pico/bootrom.h>)
 #include <pico/bootrom.h>
+#endif
 
 namespace Components {
 
@@ -21,7 +23,11 @@ BootloaderTrigger ::~BootloaderTrigger() {}
 // In the future this command/component should either be removed entirely, or some kind of protection
 // should be added to ensure this can't be ran when the satellite is in space
 void BootloaderTrigger ::TRIGGER_BOOTLOADER_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+#if __has_include(<pico/bootrom.h>)
     reset_usb_boot(0, 0);
+#else
+    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
+#endif
 }
 
 }  // namespace Components
