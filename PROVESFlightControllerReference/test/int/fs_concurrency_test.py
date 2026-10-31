@@ -91,6 +91,8 @@ pytestmark = [pytest.mark.fs_concurrency, pytest.mark.uart_only]
 FILE_MANAGER = "FileHandling.fileManager"
 FILE_DOWNLINK = "FileHandling.fileDownlink"
 FILE_UPLINK = "FileHandling.fileUplink"
+REPEATER_CHANNELS = "ReferenceDeployment.downlinkRepeater.CHANNEL_ENABLED_PRM_SET"
+UART_ONLY = '["ENABLED", "DISABLED", "DISABLED"]'
 CMD_DISPATCH = "CdhCore.cmdDisp"
 NOOP = f"{CMD_DISPATCH}.CMD_NO_OP"
 
@@ -539,6 +541,10 @@ def test_root_survives_concurrent_file_traffic(
     flood_commands = request.config.getoption("--fs-flood-commands")
     rng = random.Random(20261029)
 
+    # downlinkRepeater returns a file buffer only after every enabled channel
+    # does, and a LoRa comQueue that is not transmitting never returns it, so
+    # fileDownlink would wait forever. RAM-only parameter, reset on reboot.
+    board.send(REPEATER_CHANNELS, [UART_ONLY])
     board.send(f"{FILE_MANAGER}.CreateDirectory", [SUBDIR])
     board.drain()
     for path in SENTINELS:
