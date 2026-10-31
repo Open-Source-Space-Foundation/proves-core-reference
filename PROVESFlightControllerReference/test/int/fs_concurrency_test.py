@@ -21,7 +21,9 @@ Failures, checked in this order on every pump so the earliest cause is reported:
 
   - "FSW fault event": any FATAL event (CdhCore.fatalAdapter.AF_ASSERT_0..6,
     AF_UNEXPECTED_ASSERT, CdhCore.health.HLTH_PING_LATE/HLTH_PING_WRONG_KEY) or
-    a queue-overflow or dropped-message event listed in FAULT_EVENTS.
+    a queue-overflow or dropped-message event listed in FAULT_EVENTS. The LoRa
+    comQueue overflow is only counted: it overflows whenever LoRa is not
+    transmitting.
   - "rate group slips over budget": more RateGroupCycleSlip events than
     SLIP_BUDGET allows (see below).
   - "downlink went silent": no telemetry or events for DOWNLINK_SILENCE_S, or
@@ -125,11 +127,13 @@ FAULT_EVENTS = {
     "CdhCore.cmdDisp.CommandDroppedQueueOverflow",
     "CdhCore.cmdDisp.TooManyCommands",
     "ComCcsdsUart.comQueue.QueueOverflow",
-    "ComCcsdsLora.comQueue.QueueOverflow",
     "ComCcsdsUart.frameAccumulator.FrameDetectionValidFrameDropped",
     "Update.deltaPatcher.SignalDropped",
 }
+# The LoRa comQueue fills and overflows whenever LoRa is not transmitting, as on
+# the UART test bench, so it is counted rather than failed.
 WATCH_EVENTS = {
+    "ComCcsdsLora.comQueue.QueueOverflow",
     "ReferenceDeployment.comDriver.TxFrameDropped",
     "CdhCore.health.HLTH_PING_WARN",
 }
@@ -655,7 +659,8 @@ def test_root_survives_concurrent_file_traffic(
     print(
         f"[fs_concurrency] {board.sent} commands, {len(uplinks.started)} uplinks, "
         f"{len(downlinks)} downlinks, longest telemetry gap "
-        f"{board.max_telemetry_gap:.1f} s (limit {DOWNLINK_SILENCE_S:.0f} s), "
+        f"{board.max_telemetry_gap:.1f} s (downlink silence limit "
+        f"{DOWNLINK_SILENCE_S:.0f} s covers telemetry and events), "
         f"slips {board.slips} (budget {board.slip_budget}), watched {board.watched}, "
         f"root intact: {sorted(baseline_names)}"
     )
