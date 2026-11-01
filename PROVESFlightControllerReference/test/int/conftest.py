@@ -110,7 +110,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--unit-manifest",
         default=None,
-        help="JSON manifest for readiness_test.py: expected project_version and "
+        help="JSON manifest for readiness_test.py: flight (bool), expected project_version, and "
         "file_sources ({board path: local file}) to CRC-check on a flight unit.",
     )
     parser.addoption(

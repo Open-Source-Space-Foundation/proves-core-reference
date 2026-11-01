@@ -12,7 +12,8 @@ reset the board, which nothing onboard can see.
 
 Run with `make test-readiness`. To also check a flight unit, pass
 --unit-manifest=<file.json> holding
-    {"project_version": "<CdhCore.version.ProjectVersion>",
+    {"flight": true,
+     "project_version": "<CdhCore.version.ProjectVersion>",
      "file_sources": {"/seq/startup.bin": "<local startup.bin>"}}
 and the suite compares the version and each board file's CRC.
 """
@@ -36,6 +37,7 @@ VERSION = "CdhCore.version"
 BEACON_PACKET_ID = "1"
 HEALTH_PACKET_ID = "2"
 HEALTH_WARNINGS_PACKET_ID = "3"
+HEALTH_AUXILIARY_PACKET_ID = "4"
 FILE_SYSTEM_PACKET_ID = "5"
 
 # Counters that must not move while the board sits idle. A nonzero absolute
@@ -243,10 +245,27 @@ def test_05_battery_above_safe_mode_entry(
     )
 
 
-def test_06_onboard_readiness_masks_clean(
-    fprime_test_api: IntegrationTestAPI, start_gds
+def test_06_watchdog_being_petted(fprime_test_api: IntegrationTestAPI, start_gds):
+    """WatchdogTransitions keeps rising, so FSW is petting the watchdog."""
+    channel = "ReferenceDeployment.watchdog.WatchdogTransitions"
+    first = request_packets(fprime_test_api, [HEALTH_AUXILIARY_PACKET_ID], {channel})
+    if channel not in first:
+        pytest.xfail("WatchdogTransitions is not downlinked in this build")
+    time.sleep(5)
+    second = request_packets(fprime_test_api, [HEALTH_AUXILIARY_PACKET_ID], {channel})
+    assert channel in second, "HealthAuxiliary stopped reporting WatchdogTransitions"
+    print(f"WatchdogTransitions: {first[channel]} -> {second[channel]}")
+    assert second[channel] > first[channel], "watchdog pet GPIO is not toggling"
+
+
+def test_07_onboard_readiness_masks_clean(
+    fprime_test_api: IntegrationTestAPI, start_gds, unit_manifest
 ):
-    """The onboard ReadinessMonitor runs a full pass and reports no failures."""
+    """The onboard ReadinessMonitor runs a full pass and reports no failures.
+
+    FLIGHT_CONFIG fails by design on a bench unit (short quiescence, no
+    startup sequence), so it only counts when the manifest says flight.
+    """
     if (
         f"{READINESS_MONITOR}.RUN_CHECKS"
         not in fprime_test_api.dictionaries.command_name
@@ -272,12 +291,13 @@ def test_06_onboard_readiness_masks_clean(
         "Onboard readiness:\n"
         + mask_table(by_name["PassMask"], by_name["WarnMask"], by_name["FailMask"])
     )
-    assert by_name["FailMask"] == 0, (
-        f"onboard readiness FailMask is {by_name['FailMask']:#x}"
-    )
+    fail_mask = by_name["FailMask"]
+    if not (unit_manifest or {}).get("flight", False):
+        fail_mask &= ~(1 << READINESS_CHECKS.index("FLIGHT_CONFIG"))
+    assert fail_mask == 0, f"onboard readiness FailMask is {fail_mask:#x}"
 
 
-def test_07_unit_matches_manifest(
+def test_08_unit_matches_manifest(
     fprime_test_api: IntegrationTestAPI, start_gds, unit_manifest
 ):
     """A flight unit runs the expected firmware and carries the expected files."""
