@@ -59,6 +59,80 @@ U32 rateGroup50HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateG
 U32 rateGroup10HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(10)};
 U32 rateGroup1HzContext[Svc::ActiveRateGroup::CONNECTION_COUNT_MAX] = {getRateGroupPeriod(1)};
 
+// Autocoded channel and parameter IDs are protected; these never-instantiated subclasses re-export the ones
+// ReadinessMonitor reads.
+struct LoadSwitchIds : Components::LoadSwitchComponentBase {
+    using LoadSwitchComponentBase::CHANNELID_ISON;
+};
+struct FsSpaceIds : Components::FsSpaceComponentBase {
+    using FsSpaceComponentBase::CHANNELID_FREESPACE;
+};
+struct ComQueueIds : Svc::ComQueueComponentBase {
+    using ComQueueComponentBase::CHANNELID_BUFFQUEUEDEPTH;
+};
+struct WatchdogIds : Components::WatchdogComponentBase {
+    using WatchdogComponentBase::CHANNELID_WATCHDOGTRANSITIONS;
+};
+struct Ina219Ids : Drv::Ina219ManagerComponentBase {
+    using Ina219ManagerComponentBase::CHANNELID_VOLTAGE;
+};
+struct StartupManagerIds : Components::StartupManagerComponentBase {
+    using StartupManagerComponentBase::CHANNELID_BOOTCOUNT;
+    using StartupManagerComponentBase::CHANNELID_QUIESCENCEENDTIME;
+    using StartupManagerComponentBase::PARAMID_ARMED;
+    using StartupManagerComponentBase::PARAMID_QUIESCENCE_TIME;
+    using StartupManagerComponentBase::PARAMID_TRANSMIT_ENABLE_TICKS;
+};
+struct RtcManagerIds : Drv::RtcManagerComponentBase {
+    using RtcManagerComponentBase::CHANNELID_DISCIPLINEREADFAULTS;
+};
+struct LoRaIds : Zephyr::LoRaComponentBase {
+    using LoRaComponentBase::CHANNELID_BYTESSENT;
+};
+
+// Absolute IDs of what ReadinessMonitor reads. Sensor slot order matches the tempGet and lightGet
+// connections in topology.fpp; each slot's group is its TCA9548A channel.
+void configureReadinessMonitor() {
+    using Components::ReadinessMonitor;
+    const FwChanIdType face0 = face0LoadSwitch.getIdBase() + LoadSwitchIds::CHANNELID_ISON;
+    const FwChanIdType face1 = face1LoadSwitch.getIdBase() + LoadSwitchIds::CHANNELID_ISON;
+    const FwChanIdType face2 = face2LoadSwitch.getIdBase() + LoadSwitchIds::CHANNELID_ISON;
+    const FwChanIdType face3 = face3LoadSwitch.getIdBase() + LoadSwitchIds::CHANNELID_ISON;
+    const FwChanIdType face5 = face5LoadSwitch.getIdBase() + LoadSwitchIds::CHANNELID_ISON;
+    constexpr FwChanIdType ALWAYS_POWERED = 0;
+    constexpr U8 BATTERY_MUX_CHANNEL = 4;
+    const FwIdType startup = startupManager.getIdBase();
+
+    ReadinessMonitor::Sources sources = {};
+    sources.freeSpace = fsSpace.getIdBase() + FsSpaceIds::CHANNELID_FREESPACE;
+    sources.loraBufferQueueDepth = ComCcsdsLora::comQueue.getIdBase() + ComQueueIds::CHANNELID_BUFFQUEUEDEPTH;
+    sources.loraFileQueueIndex = static_cast<U32>(ComCcsds::Ports_ComBufferQueue::FILE);
+    sources.watchdogTransitions = watchdog.getIdBase() + WatchdogIds::CHANNELID_WATCHDOGTRANSITIONS;
+    sources.batteryVoltage = ina219SysManager.getIdBase() + Ina219Ids::CHANNELID_VOLTAGE;
+    sources.bootCount = startup + StartupManagerIds::CHANNELID_BOOTCOUNT;
+    sources.rtcReadFaults = rtcManager.getIdBase() + RtcManagerIds::CHANNELID_DISCIPLINEREADFAULTS;
+    sources.loraBytesSent = lora.getIdBase() + LoRaIds::CHANNELID_BYTESSENT;
+    sources.quiescenceEnd = startup + StartupManagerIds::CHANNELID_QUIESCENCEENDTIME;
+    sources.armed = startup + StartupManagerIds::PARAMID_ARMED;
+    sources.quiescenceTime = startup + StartupManagerIds::PARAMID_QUIESCENCE_TIME;
+    sources.txEnableTicks = startup + StartupManagerIds::PARAMID_TRANSMIT_ENABLE_TICKS;
+    sources.temp[0] = {face0, 0};
+    sources.temp[1] = {face1, 1};
+    sources.temp[2] = {face2, 2};
+    sources.temp[3] = {face3, 3};
+    sources.temp[4] = {face5, 5};
+    sources.temp[5] = {ALWAYS_POWERED, BATTERY_MUX_CHANNEL};
+    sources.temp[6] = {ALWAYS_POWERED, BATTERY_MUX_CHANNEL};
+    sources.temp[7] = {ALWAYS_POWERED, BATTERY_MUX_CHANNEL};
+    sources.temp[8] = {ALWAYS_POWERED, BATTERY_MUX_CHANNEL};
+    sources.light[0] = {face0, 0};
+    sources.light[1] = {face1, 1};
+    sources.light[2] = {face2, 2};
+    sources.light[3] = {face3, 3};
+    sources.light[4] = {face5, 5};
+    readinessMonitor.configure("/", sources);
+}
+
 /**
  * \brief configure/setup components in project-specific way
  *
@@ -115,6 +189,7 @@ void setupTopology(const TopologyState& state) {
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
+    configureReadinessMonitor();
     // Restore the persisted mode now that the ports are wired and the GPIO drivers are open.
     // This drives the load switches, so it must not run any earlier.
     modeManager.restorePersistentState();
