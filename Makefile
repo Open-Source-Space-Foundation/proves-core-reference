@@ -215,7 +215,7 @@ test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-n
 	cd native && $(UV_RUN) fprime-util build --ut --all
 	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
-FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow
+FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow and not readiness
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -239,6 +239,10 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 	fi; \
 	echo "Running integration tests: $$TARGETS"; \
 	$(UV_RUN) pytest $$TARGETS --deployment $$DEPLOY -m "$(FILTER)" $(PYTEST_ARGS)
+
+.PHONY: test-readiness
+test-readiness: uv ## Run the bench readiness gate (set PYTEST_ARGS=--unit-manifest=<file.json> for a flight unit)
+	$(UV_RUN) pytest PROVESFlightControllerReference/test/int --deployment build-artifacts/zephyr/fprime-zephyr-deployment -m readiness --junitxml=readiness-report.xml $(PYTEST_ARGS)
 
 # Allow test names to be passed as targets without Make trying to execute them
 %:

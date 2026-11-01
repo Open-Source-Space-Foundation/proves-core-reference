@@ -62,3 +62,4 @@ yamcs/yamcs-runtime/
 /circuit-python-passthrough/firmware.uf2
 /circuit-python-passthrough/lib/
 /circuit-python-passthrough/tools/
+readiness-report.xml
