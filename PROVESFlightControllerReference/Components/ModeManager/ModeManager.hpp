@@ -62,6 +62,9 @@ class ModeManager : public ModeManagerComponentBase {
                                   const Fw::CmdResponse& response  //!< The command response
                                   ) override;
 
+    //! Answers the Svc.Health ping from this component's own thread
+    void pingIn_handler(FwIndexType portNum, U32 key) override;
+
     //! Handler implementation for forceSafeMode
     //!
     //! Port to force safe mode entry (callable by other components)
