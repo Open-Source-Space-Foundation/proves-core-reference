@@ -224,7 +224,7 @@ module ReferenceDeployment {
       # seqDone is owned by ModeManager; completion is forwarded via sequenceDoneNotify
       safeModeSeq.seqStartOut -> startupManager.safeModeSequenceStarted
 
-      # StartupManager drives LoRa TX enable/disable around quiescence
+      # StartupManager transmit control, wired to LoRa
       startupManager.enableTransmit -> lora.enableTransmit
       startupManager.disableTransmit -> lora.disableTransmit
 

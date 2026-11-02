@@ -34,17 +34,11 @@ module Components {
         @ Disable LoRa transmission
         output port disableTransmit: Fw.Signal
 
-        @ Command to wait for system quiescence before proceeding with start-up
-        sync command WAIT_FOR_QUIESCENCE()
-
         @ Command to output the current boot count
         sync command GET_BOOT_COUNT()
 
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType
-
-        @ Telemetry for quiescence end time
-        telemetry QuiescenceEndTime: Fw.TimeValue update on change
 
         @ Event emitted when getting boot count
         event CurrentBootCount(i: I64) severity activity low \
@@ -58,10 +52,6 @@ module Components {
         event BootCountCorrupted(raw: I64) severity warning high \
             format "Boot count file corrupt (raw value {}) - treating as unreadable"
 
-        @ Event emitted when the quiescence file was not updated
-        event QuiescenceFileInitFailure() severity warning low \
-            format "Failed to initialize quiescence start time file"
-
         @ Event emitted when the start-up sequence succeeds
         event StartupSequenceFinished() severity activity low \
             format "Start-up sequence finished successfully"
@@ -73,15 +63,6 @@ module Components {
         @ Event emitted when the hardcoded startup sequence enables the radio
         event HardcodedRadioEnable() severity activity high \
             format "Hardcoded Startup Sequence has enabled the radio"
-
-        @ Whether the start-up manager is armed to wait for quiescence
-        param ARMED: bool default true
-
-        @ Time to wait before allowing start-up to proceed
-        param QUIESCENCE_TIME: Fw.TimeIntervalValue default {seconds = 45 * 60, useconds = 0}
-
-        @ File storing the quiescence start time
-        param QUIESCENCE_START_FILE: string default "/quiescence_start.bin"
 
         @ Path to the start-up sequence file
         param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin"
