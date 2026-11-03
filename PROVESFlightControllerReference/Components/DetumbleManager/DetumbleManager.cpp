@@ -240,7 +240,7 @@ void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
                 this->log_ACTIVITY_HI_DeadbandUpperThresholdParamSet(parameter);
                 this->tlmWrite_DeadbandUpperThresholdParam(parameter);
             }
-        }
+        } break;
         case DetumbleManager::PARAMID_DEADBAND_LOWER_THRESHOLD: {
             Fw::ParamValid is_valid;
             F64 parameter = this->paramGet_DEADBAND_LOWER_THRESHOLD(is_valid);
@@ -248,7 +248,7 @@ void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
                 this->log_ACTIVITY_HI_DeadbandLowerThresholdParamSet(parameter);
                 this->tlmWrite_DeadbandLowerThresholdParam(parameter);
             }
-        }
+        } break;
         case DetumbleManager::PARAMID_GAIN: {
             Fw::ParamValid is_valid;
             F64 parameter = this->paramGet_GAIN(is_valid);
