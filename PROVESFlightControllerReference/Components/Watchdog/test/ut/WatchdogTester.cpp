@@ -89,9 +89,9 @@ void WatchdogTester ::testStopCommand() {
     ASSERT_EVENTS_SIZE(1);
     ASSERT_EVENTS_WatchdogStop_SIZE(1);
 
-    // The commanded stop warns the ModeManager that a hardware reboot is coming
+    // The commanded stop signals every connected prepareForReboot port
     // Note: only the _SIZE assertion exists for argument-less signal ports
-    ASSERT_from_prepareForReboot_SIZE(1);
+    ASSERT_from_prepareForReboot_SIZE(3);
 
     // Petting is disabled: rate group calls no longer touch the GPIO or telemetry
     this->clearHistory();

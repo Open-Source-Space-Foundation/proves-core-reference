@@ -8,7 +8,12 @@ module CdhCore{
     {
        # NOTE: The Name Ref is specific to the Reference deployment, Ref
        # This name will need to be updated if wishing to use this in a custom deployment
-       phase Fpp.ToCpp.Phases.configComponents """
+       # The packet list is installed in the initComponents phase, right after tlmSend.init(), rather
+       # than in configComponents: any component whose init() writes telemetry (e.g. an FPP state
+       # machine announcing its initial state) would otherwise hit TlmPacketizer's FW_ASSERT(m_configured).
+       # initComponents runs in instance order, and CdhCore::tlmSend precedes every other telemetering instance.
+       phase Fpp.ToCpp.Phases.initComponents """
+       CdhCore::tlmSend.init(QueueSizes::CdhCore_tlmSend, InstanceIds::CdhCore_tlmSend);
        CdhCore::tlmSend.setPacketList(
            ReferenceDeployment::ReferenceDeployment_ReferenceDeploymentPacketsTlmPackets::packetList,
            ReferenceDeployment::ReferenceDeployment_ReferenceDeploymentPacketsTlmPackets::omittedChannels,

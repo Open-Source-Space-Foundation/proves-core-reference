@@ -2,8 +2,11 @@ repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
   hooks:
+    # patches/*.patch are applied with `git apply`; their context lines must byte-match the upstream files, so whitespace fixes would break them.
     - id: trailing-whitespace
+      exclude: ^patches/
     - id: end-of-file-fixer
+      exclude: ^patches/
     - id: check-yaml
       exclude: ^mkdocs\.yml$
     - id: check-json
