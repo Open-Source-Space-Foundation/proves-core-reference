@@ -207,16 +207,21 @@ The ModeManager publishes telemetry every 1Hz via the `run` handler:
 - `saveState()`: Persist state to non-volatile storage
 - `prepareForReboot_handler()`: Set clean shutdown flag before intentional reboot
 
-### Persistent State Structure
-```cpp
-struct PersistentState {
-    U8 mode;                 // Current mode (1 = SAFE_MODE, 2 = NORMAL)
-    U32 safeModeEntryCount;  // Number of times safe mode entered
-    U8 safeModeReason;       // Reason for safe mode entry (0-5)
-    U8 cleanShutdown;        // Clean shutdown flag (1 = clean, 0 = unclean)
-};
-```
-Stored at: `/mode_state.bin` (size is architecture-dependent due to struct padding, typically 8-12 bytes)
+### Persistent State Layout
+`SafeModePolicy::encodeState` and `decodeState` read and write a fixed 12-byte, little-endian layout:
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| 0 | 1 | Mode (1 = SAFE_MODE, 2 = NORMAL) |
+| 1-3 | 3 | Padding, written as 0 and ignored on read |
+| 4 | 4 | Safe mode entry count |
+| 8 | 1 | Safe mode reason (0-6) |
+| 9 | 1 | Clean shutdown flag (non-zero = clean, 0 = unclean) |
+| 10-11 | 2 | Padding, written as 0 and ignored on read |
+
+Stored at: `/mode_state.bin`. The layout is the one the earlier `PersistentState` struct had on ARM, so state files written by earlier firmware still load.
+
+The decision logic (debounce counters, command loss timeout, state decoding) lives in `SafeModePolicy`, which has no F Prime dependencies and is covered by `make test-unit`.
 
 ## Testing Validation
 

@@ -24,16 +24,37 @@ ModeManager ::ModeManager(const char* const compName)
       m_mode(SystemMode::NORMAL),
       m_safeModeEntryCount(0),
       m_runCounter(0),
-      m_safeModeReason(Components::SafeModeReason::NONE),
-      m_safeModeVoltageCounter(0),
-      m_recoveryVoltageCounter(0),
-      m_commandLossCounter(0),
-      m_commandLossDebounce(false) {
+      m_safeModeReason(Components::SafeModeReason::NONE) {
     // Compile-time verification that internal SystemMode enum matches FPP-generated enum
     static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(Components::SystemMode::SAFE_MODE),
                   "Internal SAFE_MODE value must match FPP enum");
     static_assert(static_cast<U8>(SystemMode::NORMAL) == static_cast<U8>(Components::SystemMode::NORMAL),
                   "Internal NORMAL value must match FPP enum");
+
+    // The policy keeps its own copies of the enums so it can build without F Prime
+    static_assert(static_cast<U8>(SystemMode::SAFE_MODE) == static_cast<U8>(SafeModePolicy::Mode::SAFE_MODE),
+                  "SafeModePolicy SAFE_MODE value must match internal enum");
+    static_assert(static_cast<U8>(SystemMode::NORMAL) == static_cast<U8>(SafeModePolicy::Mode::NORMAL),
+                  "SafeModePolicy NORMAL value must match internal enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::NONE) == static_cast<U8>(SafeModePolicy::Reason::NONE),
+                  "SafeModePolicy NONE value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::LOW_BATTERY) ==
+                      static_cast<U8>(SafeModePolicy::Reason::LOW_BATTERY),
+                  "SafeModePolicy LOW_BATTERY value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::SYSTEM_FAULT) ==
+                      static_cast<U8>(SafeModePolicy::Reason::SYSTEM_FAULT),
+                  "SafeModePolicy SYSTEM_FAULT value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::GROUND_COMMAND) ==
+                      static_cast<U8>(SafeModePolicy::Reason::GROUND_COMMAND),
+                  "SafeModePolicy GROUND_COMMAND value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::EXTERNAL_REQUEST) ==
+                      static_cast<U8>(SafeModePolicy::Reason::EXTERNAL_REQUEST),
+                  "SafeModePolicy EXTERNAL_REQUEST value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::LORA) == static_cast<U8>(SafeModePolicy::Reason::LORA),
+                  "SafeModePolicy LORA value must match FPP enum");
+    static_assert(static_cast<U8>(Components::SafeModeReason::COMMAND_LOSS) ==
+                      static_cast<U8>(SafeModePolicy::Reason::COMMAND_LOSS),
+                  "SafeModePolicy COMMAND_LOSS value must match FPP enum");
 }
 
 ModeManager ::~ModeManager() {}
@@ -51,7 +72,7 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
     this->m_runCounter++;
     {
         Os::ScopeLock lock(m_commandLossMutex);
-        this->m_commandLossCounter++;  // keep track of seconds since last packet
+        this->m_policy.commandLossTick();  // keep track of seconds since last packet
     }
 
     // Get current voltage (used by mode-specific voltage monitoring)
@@ -60,58 +81,26 @@ void ModeManager ::run_handler(FwIndexType portNum, U32 context) {
 
     // Get configurable parameters
     Fw::ParamValid paramValid;
-    F32 entryVoltage = this->paramGet_SafeModeEntryVoltage(paramValid);
-    F32 recoveryVoltage = this->paramGet_SafeModeRecoveryVoltage(paramValid);
-    U32 debounceSeconds = this->paramGet_SafeModeDebounceSeconds(paramValid);
+    SafeModePolicy::Params params;
+    params.entryVoltage = this->paramGet_SafeModeEntryVoltage(paramValid);
+    params.recoveryVoltage = this->paramGet_SafeModeRecoveryVoltage(paramValid);
+    params.debounceSeconds = this->paramGet_SafeModeDebounceSeconds(paramValid);
 
-    // Mode-specific voltage monitoring
-    if (this->m_mode == SystemMode::NORMAL) {
-        // Low-voltage protection for normal mode -> safe mode entry:
-        // - Threshold: configurable via SafeModeEntryVoltage parameter (default 6.7V)
-        // - Debounce: configurable via SafeModeDebounceSeconds parameter (default 10s)
-        bool isFault = !valid || (voltage < entryVoltage);
+    // Voltage monitoring, see SafeModePolicy::tick for the entry and recovery rules:
+    // - Entry threshold: SafeModeEntryVoltage parameter (default 6.7V)
+    // - Recovery threshold: SafeModeRecoveryVoltage parameter (default 8.0V), only for LOW_BATTERY
+    // - Debounce: SafeModeDebounceSeconds parameter (default 10s)
+    // - SYSTEM_FAULT or GROUND_COMMAND require manual EXIT_SAFE_MODE command
+    const SafeModePolicy::Action action =
+        this->m_policy.tick(voltage, valid, params, static_cast<SafeModePolicy::Mode>(this->m_mode),
+                            static_cast<SafeModePolicy::Reason>(static_cast<U8>(this->m_safeModeReason)));
 
-        if (isFault) {
-            this->m_safeModeVoltageCounter++;
-
-            if (this->m_safeModeVoltageCounter >= debounceSeconds) {
-                // Trigger automatic entry into safe mode
-                this->runSafeModeSequence();
-                this->log_WARNING_HI_AutoSafeModeEntry(Components::SafeModeReason::LOW_BATTERY, valid ? voltage : 0.0f);
-                this->enterSafeMode(Components::SafeModeReason::LOW_BATTERY);
-                this->m_safeModeVoltageCounter = 0;  // Reset counter
-            }
-        } else {
-            // Voltage OK and valid - reset counter
-            this->m_safeModeVoltageCounter = 0;
-        }
-
-        // Reset recovery counter when in normal mode
-        this->m_recoveryVoltageCounter = 0;
-
-    } else if (this->m_mode == SystemMode::SAFE_MODE) {
-        // Auto-recovery from safe mode (only if reason is LOW_BATTERY):
-        // - Threshold: configurable via SafeModeRecoveryVoltage parameter (default 8.0V)
-        // - Debounce: configurable via SafeModeDebounceSeconds parameter (default 10s)
-        // - SYSTEM_FAULT or GROUND_COMMAND require manual EXIT_SAFE_MODE command
-        if (this->m_safeModeReason == Components::SafeModeReason::LOW_BATTERY) {
-            if (valid && voltage > recoveryVoltage) {
-                this->m_recoveryVoltageCounter++;
-
-                if (this->m_recoveryVoltageCounter >= debounceSeconds) {
-                    // Trigger automatic exit from safe mode
-                    this->exitSafeModeAutomatic(voltage);
-                    this->m_recoveryVoltageCounter = 0;  // Reset counter
-                }
-            } else {
-                // Voltage not recovered yet - reset counter
-                this->m_recoveryVoltageCounter = 0;
-            }
-        }
-        // Note: If reason is SYSTEM_FAULT, GROUND_COMMAND, or EXTERNAL_REQUEST, no auto-recovery
-
-        // Reset safe mode entry counter when in safe mode
-        this->m_safeModeVoltageCounter = 0;
+    if (action == SafeModePolicy::Action::ENTER_LOW_BATTERY) {
+        this->runSafeModeSequence();
+        this->log_WARNING_HI_AutoSafeModeEntry(Components::SafeModeReason::LOW_BATTERY, valid ? voltage : 0.0f);
+        this->enterSafeMode(Components::SafeModeReason::LOW_BATTERY);
+    } else if (action == SafeModePolicy::Action::EXIT_AUTO) {
+        this->exitSafeModeAutomatic(voltage);
     }
 
     // Check for command loss and trigger safe mode if timeout has expired
@@ -196,15 +185,14 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
         return;
     }
 
-    PersistentState state;
-    state.mode = static_cast<U8>(this->m_mode);
-    state.safeModeEntryCount = this->m_safeModeEntryCount;
-    state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
-    state.cleanShutdown = 1;  // Mark as clean shutdown
+    // Mark as clean shutdown
+    SafeModePolicy::StateBytes state =
+        SafeModePolicy::encodeState(static_cast<SafeModePolicy::Mode>(this->m_mode), this->m_safeModeEntryCount,
+                                    static_cast<SafeModePolicy::Reason>(static_cast<U8>(this->m_safeModeReason)), true);
 
-    FwSizeType bytesToWrite = sizeof(PersistentState);
+    FwSizeType bytesToWrite = state.size();
     FwSizeType bytesWritten = bytesToWrite;
-    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
+    Os::File::Status writeStatus = file.write(state.data(), bytesWritten, Os::File::WaitType::WAIT);
 
     // Check if write succeeded and correct number of bytes written
     if (writeStatus != Os::File::OP_OK || bytesWritten != bytesToWrite) {
@@ -218,8 +206,7 @@ void ModeManager ::prepareForReboot_handler(FwIndexType portNum) {
 
 void ModeManager ::packetRouted_handler(FwIndexType portNum) {
     Os::ScopeLock lock(m_commandLossMutex);
-    this->m_commandLossCounter = 0;
-    this->m_commandLossDebounce = false;
+    this->m_policy.packetReceived();
 }
 
 // ----------------------------------------------------------------------
@@ -271,26 +258,22 @@ void ModeManager ::loadState() {
     bool unintendedReboot = false;
 
     if (status == Os::File::OP_OK) {
-        PersistentState state;
-        FwSizeType size = sizeof(PersistentState);
+        SafeModePolicy::StateBytes bytes;
+        FwSizeType size = bytes.size();
         FwSizeType bytesRead = size;
-        status = file.read(reinterpret_cast<U8*>(&state), bytesRead, Os::File::WaitType::WAIT);
+        status = file.read(bytes.data(), bytesRead, Os::File::WaitType::WAIT);
 
-        if (status == Os::File::OP_OK && bytesRead == sizeof(PersistentState)) {
-            // Validate state data before restoring (valid range: 1-2 for SAFE, NORMAL)
-            if (state.mode >= static_cast<U8>(SystemMode::SAFE_MODE) &&
-                state.mode <= static_cast<U8>(SystemMode::NORMAL)) {
+        if (status == Os::File::OP_OK && bytesRead == bytes.size()) {
+            const SafeModePolicy::DecodedState state = SafeModePolicy::decodeState(bytes);
+
+            if (state.status == SafeModePolicy::DecodedState::Status::OK) {
                 // Valid mode value - restore state
                 this->m_mode = static_cast<SystemMode>(state.mode);
                 this->m_safeModeEntryCount = state.safeModeEntryCount;
-                this->m_safeModeReason = static_cast<Components::SafeModeReason::T>(state.safeModeReason);
+                this->m_safeModeReason = static_cast<Components::SafeModeReason::T>(state.reason);
 
-                // Check for unintended reboot:
-                // If cleanShutdown flag is NOT set (0) and we were in NORMAL mode,
-                // this indicates an unintended reboot (crash, watchdog, power loss, etc.)
-                if (state.cleanShutdown == 0 && this->m_mode == SystemMode::NORMAL) {
-                    unintendedReboot = true;
-                }
+                // An unclean shutdown while in NORMAL mode is an unintended reboot (crash, watchdog, power loss)
+                unintendedReboot = state.unintendedReboot;
 
                 // Restore physical hardware state to match loaded mode
                 if (this->m_mode == SystemMode::SAFE_MODE) {
@@ -311,7 +294,7 @@ void ModeManager ::loadState() {
             } else {
                 // Corrupted state (invalid mode value) - use defaults
                 Fw::LogStringArg opStr("load-corrupt");
-                this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.mode));
+                this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(state.rawMode));
                 this->m_mode = SystemMode::NORMAL;
                 this->m_safeModeEntryCount = 0;
                 this->m_safeModeReason = Components::SafeModeReason::NONE;
@@ -372,15 +355,14 @@ void ModeManager ::saveState() {
         return;
     }
 
-    PersistentState state;
-    state.mode = static_cast<U8>(this->m_mode);
-    state.safeModeEntryCount = this->m_safeModeEntryCount;
-    state.safeModeReason = static_cast<U8>(this->m_safeModeReason);
-    state.cleanShutdown = 0;  // Default to unclean - only prepareForReboot sets this to 1
+    // Default to unclean - only prepareForReboot sets the clean shutdown flag
+    SafeModePolicy::StateBytes state = SafeModePolicy::encodeState(
+        static_cast<SafeModePolicy::Mode>(this->m_mode), this->m_safeModeEntryCount,
+        static_cast<SafeModePolicy::Reason>(static_cast<U8>(this->m_safeModeReason)), false);
 
-    FwSizeType bytesToWrite = sizeof(PersistentState);
+    FwSizeType bytesToWrite = state.size();
     FwSizeType bytesWritten = bytesToWrite;
-    Os::File::Status writeStatus = file.write(reinterpret_cast<U8*>(&state), bytesWritten, Os::File::WaitType::WAIT);
+    Os::File::Status writeStatus = file.write(state.data(), bytesWritten, Os::File::WaitType::WAIT);
 
     // Check if write succeeded and correct number of bytes written
     if (writeStatus != Os::File::OP_OK || bytesWritten != bytesToWrite) {
@@ -538,12 +520,10 @@ void ModeManager::commandLossCheck() {
     Fw::TimeIntervalValue commLossPeriod = this->paramGet_COMM_LOSS_TIME(paramValid);
     FW_ASSERT(paramValid == Fw::ParamValid::VALID || paramValid == Fw::ParamValid::DEFAULT);
 
-    if (this->m_commandLossCounter >= commLossPeriod.get_seconds() && !this->m_commandLossDebounce) {
-        // Debounce so we don't repeatedly re-trigger command loss behavior
-        this->m_commandLossDebounce = true;
-
+    // The policy debounces so we don't repeatedly re-trigger command loss behavior
+    if (this->m_policy.commandLossCheck(commLossPeriod.get_seconds()) == SafeModePolicy::Action::ENTER_COMMAND_LOSS) {
         // Telemeter the command loss duration
-        U32 commandLossDuration = this->m_commandLossCounter;
+        U32 commandLossDuration = this->m_policy.commandLossSeconds();
         this->log_WARNING_HI_CommandLossDetected(commandLossDuration);
 
         // Trigger safe mode entry due to command loss
