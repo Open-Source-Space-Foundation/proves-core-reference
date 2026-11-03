@@ -495,6 +495,10 @@ void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
     }
 }
 
+void DetumbleManager ::parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) {
+    // Intentionally empty: parameters loaded at startup are not announced (pre-fpp-3.4 behaviour)
+}
+
 void DetumbleManager ::stateCooldownActions() {
     Fw::ParamValid isValid;
 
