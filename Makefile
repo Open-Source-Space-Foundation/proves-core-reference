@@ -357,9 +357,15 @@ yamcs-stop: ## Stop all YAMCS-related processes (YAMCS server, events bridge, ad
 # 0x0043 via `make-ci-spacecraft-id` to avoid collisions with dev machines.
 SPACECRAFT_ID ?= 68
 
+# Serial devices for `make yamcs`. Set UART_DEVICE for one device carrying both
+# directions, or TX_DEVICE/RX_DEVICE to split TC and TM across two ground radio
+# controllers.
+TX_DEVICE ?= $(UART_DEVICE)
+RX_DEVICE ?= $(UART_DEVICE)
+
 .PHONY: yamcs
-yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX)
-	@if [ -z "$(UART_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX"; exit 1; fi
+yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART_DEVICE=/dev/ttyXXX, or TX_DEVICE= RX_DEVICE= for split radios)
+	@if [ -z "$(TX_DEVICE)" ] || [ -z "$(RX_DEVICE)" ]; then echo "Error: set UART_DEVICE=/dev/ttyXXX, or TX_DEVICE= and RX_DEVICE="; exit 1; fi
 	@$(MAKE) yamcs-stop
 	@echo "Starting YAMCS (requires Java 11+)..."
 	@mkdir -p $(shell pwd)/yamcs/yamcs-runtime
@@ -379,10 +385,11 @@ yamcs: fprime-venv yamcs-dict ## Run YAMCS with serial adapter (Use Case 1: UART
 	echo "YAMCS up after $${i}s"
 	@echo "Starting fprime-yamcs-events bridge..."
 	$(UV_RUN) fprime-yamcs-events --dictionary $(shell pwd)/build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json &
-	@echo "Starting serial adapter on $(UART_DEVICE) (spacecraft-id=$(SPACECRAFT_ID))..."
+	@echo "Starting serial adapter (TM from $(RX_DEVICE), TC to $(TX_DEVICE), spacecraft-id=$(SPACECRAFT_ID))..."
 	$(VIRTUAL_ENV)/bin/python tools/yamcs/proves_adapter.py \
 	    --mode serial \
-	    --uart-device $(UART_DEVICE) \
+	    --tm-device $(RX_DEVICE) \
+	    --tc-device $(TX_DEVICE) \
 	    --uart-baud 115200 \
 	    --spacecraft-id $(SPACECRAFT_ID)
 
