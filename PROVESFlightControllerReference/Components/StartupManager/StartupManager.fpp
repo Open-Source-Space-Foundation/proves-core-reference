@@ -35,7 +35,7 @@ module Components {
         output port disableTransmit: Fw.Signal
 
         @ Command to output the current boot count
-        sync command GET_BOOT_COUNT()
+        sync command GET_BOOT_COUNT() opcode 0x1
 
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType
@@ -53,25 +53,25 @@ module Components {
             format "Boot count file corrupt (raw value {}) - treating as unreadable"
 
         @ Event emitted when the start-up sequence succeeds
-        event StartupSequenceFinished() severity activity low \
+        event StartupSequenceFinished() severity activity low id 4 \
             format "Start-up sequence finished successfully"
 
         @ Event emitted when the start-up sequence fails
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
-            ) severity warning low format "Start-up sequence failed with response code {}"
+            ) severity warning low id 5 format "Start-up sequence failed with response code {}"
 
         @ Event emitted when the hardcoded startup sequence enables the radio
-        event HardcodedRadioEnable() severity activity high \
+        event HardcodedRadioEnable() severity activity high id 6 \
             format "Hardcoded Startup Sequence has enabled the radio"
 
         @ Path to the start-up sequence file
-        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin"
+        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin" id 3 set opcode 0x8 save opcode 0x9
 
         @ File to store the boot count
-        param BOOT_COUNT_FILE: string default "/boot_count.bin"
+        param BOOT_COUNT_FILE: string default "/boot_count.bin" id 4 set opcode 0xa save opcode 0xb
 
         @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
-        param TRANSMIT_ENABLE_TICKS: U32 default 2800
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800 id 5 set opcode 0xc save opcode 0xd
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
