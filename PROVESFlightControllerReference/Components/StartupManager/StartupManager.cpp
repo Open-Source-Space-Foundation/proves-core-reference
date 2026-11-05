@@ -9,7 +9,6 @@
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
-#include <zephyr/kernel.h>
 
 namespace Components {
 
@@ -157,38 +156,6 @@ StartupManager::Status StartupManager ::persist_boot_count(const Fw::StringBase&
     return status;
 }
 
-Fw::Time StartupManager ::update_quiescence_start() {
-    Fw::ParamValid is_valid;
-    auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-    Fw::Time time = this->getTime();
-    // Open the quiescence start time file and read the current time. On read failure, return the current time.
-    StartupManager::Status status = read<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
-    // Reject a corrupt file (e.g. partial flash write leaving 0xFF bytes) whose useconds field is outside
-    // the [0, 999999] contract Fw::Time::set asserts on. Without this, downstream Fw::Time::add panics
-    // in a boot-loop because the bad value persists across reflashes.
-    if (status == StartupManager::SUCCESS && time.getUSeconds() >= 1000000) {
-        time = this->getTime();
-        status = StartupManager::FAILURE;
-    }
-    // On read failure, write the current time to the file for future reads. This only happens on read failure because
-    // there is a singular quiescence start time for the whole mission.
-    if (status != StartupManager::SUCCESS) {
-        status = write<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time);
-        if (status != StartupManager::SUCCESS) {
-            this->log_WARNING_LO_QuiescenceFileInitFailure();
-        }
-    }
-    return time;
-}
-
-Fw::Time StartupManager ::get_uptime() {
-    uint32_t seconds = k_uptime_seconds();
-    Fw::Time time(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), 0);
-    return time;
-}
-
 void StartupManager ::startupsequenceStarted_handler(FwIndexType portNum,
                                                      const Fw::StringBase& fileName,
                                                      const Svc::SeqArgs& args) {
@@ -290,10 +257,9 @@ void StartupManager ::tryHardcodedTransmitEnable() {
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid is_valid;
 
-    // On the first call, update the boot count, set the quiescence start time, and dispatch the start-up sequence
+    // On the first call, update the boot count and dispatch the start-up sequence
     if (this->m_boot_count == 0) {
         this->m_boot_count = this->get_boot_count(true);
-        this->m_quiescence_start = this->update_quiescence_start();
 
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
@@ -332,42 +298,12 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     }
 #endif
 
-    // Calculate the quiescence end time based on the quiescence period parameter
-    Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    Fw::Time quiescence_interval(this->m_quiescence_start.getTimeBase(), quiescence_period.get_seconds(),
-                                 quiescence_period.get_useconds());
-    Fw::Time end_time = Fw::Time::add(this->m_quiescence_start, quiescence_interval);
-
-    // Are we waiting for quiescence?
-    if (this->m_waiting) {
-        // Check if the system is armed or if this is not the first boot. In both cases, we skip waiting.
-        bool armed = this->paramGet_ARMED(is_valid);
-        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-        Fw::Time current_time =
-            (end_time.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
-
-        // If not armed or this is not the first boot, we skip waiting
-        if (!armed || end_time <= current_time) {
-            this->m_waiting = false;
-            this->cmdResponse_out(this->m_stored_opcode, this->m_stored_sequence, Fw::CmdResponse::OK);
-        }
-    }
-    this->tlmWrite_QuiescenceEndTime(
-        Fw::TimeValue(end_time.getTimeBase(), end_time.getContext(), end_time.getSeconds(), end_time.getUSeconds()));
     this->tlmWrite_BootCount(this->m_boot_count);
 }
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
-
-void StartupManager ::WAIT_FOR_QUIESCENCE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->m_stored_opcode = opCode;
-    this->m_stored_sequence = cmdSeq;
-    this->m_waiting = true;
-}
 
 void StartupManager ::GET_BOOT_COUNT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FwSizeType boot_count = this->get_boot_count(false);

@@ -133,7 +133,6 @@ telemetry packets ReferenceDeploymentPackets {
     rateGroup50Hz.RgMaxTime
     rateGroup10Hz.RgMaxTime
     rateGroup1Hz.RgMaxTime
-    startupManager.QuiescenceEndTime
     modeManager.CurrentMode
     modeManager.SafeModeEntryCount
     modeManager.CurrentSafeModeReason
