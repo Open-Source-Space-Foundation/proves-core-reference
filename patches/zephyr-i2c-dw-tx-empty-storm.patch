@@ -1,0 +1,45 @@
+diff --git a/drivers/i2c/i2c_dw.c b/drivers/i2c/i2c_dw.c
+index d21fc37fa59..10e6c5bf51c 100644
+--- a/drivers/i2c/i2c_dw.c
++++ b/drivers/i2c/i2c_dw.c
+@@ -327,13 +327,6 @@ static inline void i2c_dw_data_ask(const struct device *dev)
+ 	/* How many bytes we can actually ask */
+ 	rx_empty = (rx_buffer_depth - read_rxflr(reg_base)) - dw->rx_pending;
+ 
+-	if (rx_empty < 0) {
+-		/* RX FIFO expected to be full.
+-		 * So don't request any bytes, yet.
+-		 */
+-		return;
+-	}
+-
+ 	/* How many empty slots in TX FIFO (as command queue) */
+ 	tx_empty = tx_buffer_depth - read_txflr(reg_base);
+ 
+@@ -341,6 +334,16 @@ static inline void i2c_dw_data_ask(const struct device *dev)
+ 	cnt = MIN(rx_buffer_depth, dw->request_bytes);
+ 	cnt = MIN(MIN(tx_empty, rx_empty), cnt);
+ 
++	if (cnt <= 0) {
++		/* RX FIFO expected to be full, so don't request any bytes yet.
++		 * TX_EMPTY is level triggered: leaving it unmasked here re-enters
++		 * the ISR forever if the expected bytes never arrive. RX_FULL
++		 * unmasks it again once there is room to ask for more.
++		 */
++		clear_bit_intr_mask_tx_empty(reg_base);
++		return;
++	}
++
+ 	while (cnt > 0) {
+ 		/* Tell controller to get another byte */
+ 		data = IC_DATA_CMD_CMD;
+@@ -535,6 +538,9 @@ static void i2c_dw_isr(const struct device *port)
+ 		/* Check if the RX FIFO reached threshold */
+ 		if (intr_stat.bits.rx_full) {
+ 			i2c_dw_data_read(port);
++			if (dw->request_bytes > 0U) {
++				set_bit_intr_mask_tx_empty(reg_base);
++			}
+ 		}
+ 
+ #ifdef CONFIG_I2C_TARGET
