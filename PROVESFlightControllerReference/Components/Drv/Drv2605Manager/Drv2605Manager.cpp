@@ -12,21 +12,18 @@
 
 namespace Drv {
 
-static uint8_t input_arr[1];
-static struct drv2605_rtp_data rtp = {
-    .size = 1,
-    // rtp_hold_us is intentionally set to 1us to minimize blocking time in haptics_start_output().
-    // The actual RTP output continues running until rtp_input is set to 0, allowing for
-    // fast component cycling while maintaining continuous haptic output control.
-    .rtp_hold_us = (uint32_t[]){1},
-    .rtp_input = input_arr,
-};
-
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Drv2605Manager ::Drv2605Manager(const char* const compName) : Drv2605ManagerComponentBase(compName) {}
+Drv2605Manager ::Drv2605Manager(const char* const compName) : Drv2605ManagerComponentBase(compName) {
+    // rtp_hold_us is intentionally set to 1us to minimize blocking time in haptics_start_output().
+    // The actual RTP output continues running until rtp_input is set to 0, allowing for
+    // fast component cycling while maintaining continuous haptic output control.
+    this->m_rtp.size = 1;
+    this->m_rtp.rtp_hold_us = this->m_rtpHoldUs;
+    this->m_rtp.rtp_input = this->m_rtpInput;
+}
 
 Drv2605Manager ::~Drv2605Manager() {}
 
@@ -50,6 +47,11 @@ Fw::Success Drv2605Manager ::loadSwitchStateChanged_handler(FwIndexType portNum,
 
     // If the load switch is off, deinitialize the device
     if (this->m_load_switch_state == Fw::On::OFF) {
+        // The driver writes RTP data from the system workqueue. Cancel that write and wait for it,
+        // so the load switch cannot cut power in the middle of it.
+        if (this->isDeviceInitialized()) {
+            (void)haptics_stop_output(this->m_dev);
+        }
         return this->deinitializeDevice();
     }
 
@@ -67,9 +69,9 @@ Fw::Success Drv2605Manager ::start_handler(FwIndexType portNum, I8 driveLevel) {
     }
 
     // Set the RTP data
-    input_arr[0] = static_cast<uint8_t>(driveLevel);
+    this->m_rtpInput[0] = static_cast<uint8_t>(driveLevel);
     union drv2605_config_data config_data;
-    config_data.rtp_data = &rtp;
+    config_data.rtp_data = &this->m_rtp;
 
     int rc = drv2605_haptic_config(this->m_dev, DRV2605_HAPTICS_SOURCE_RTP, &config_data);
     if (rc < 0) {
