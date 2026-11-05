@@ -13,6 +13,7 @@
 
 #include "Os/File.hpp"
 #include "PROVESFlightControllerReference/Components/CameraHandler/CameraHandlerComponentAc.hpp"
+#include "PROVESFlightControllerReference/Components/CameraHandler/ImageProtocolParser.hpp"
 
 namespace Components {
 
@@ -66,15 +67,11 @@ class CameraHandler final : public CameraHandlerComponentBase {
     // Helper methods for protocol processing
     // ----------------------------------------------------------------------
 
-    //! Accumulate protocol data (headers, commands)
-    //! Returns true if data was successfully accumulated, false on overflow
-    bool accumulateProtocolData(const U8* data, U32 size);
+    //! React to what the parser found: answer a PONG, or start receiving an image
+    void handleProtocolResult(const ImageProtocolParser::Result& result);
 
-    //! Process protocol buffer to detect commands/image headers
-    void processProtocolBuffer();
-
-    //! Clear the protocol buffer
-    void clearProtocolBuffer();
+    //! Open the image file for a header the parser accepted, and write any image data that came with it
+    void startImageTransfer(U32 imageSize);
 
     //! Write data chunk directly to open file
     //! Returns true on success
@@ -89,25 +86,13 @@ class CameraHandler final : public CameraHandlerComponentBase {
     bool writeImageCount(U32 count);
     bool readImageCount(U32& count);
 
-    //! Check if buffer contains image end marker
-    //! Returns position of marker start, or -1 if not found
-    I32 findImageEndMarker(const U8* data, U32 size);
-
-    //! Parse line for image start command
-    //! Returns true if line is "<IMG_START>"
-    bool isImageStartCommand(const U8* line, U32 length);
-
-    bool isPong(const U8* line, U32 length);
-
     // ----------------------------------------------------------------------
     // Member variables
     // ----------------------------------------------------------------------
 
     U8 m_data_file_count = 0;
-    bool m_receiving = false;
     bool m_waiting_for_pong = false;
 
-    U32 m_bytes_received = 0;
     U32 m_file_error_count = 0;  // Track total file errors
     U32 m_images_saved = 0;      // Track total images successfully saved
     U32 cam_number = 0;          // Camera number for filename generation
@@ -119,29 +104,10 @@ class CameraHandler final : public CameraHandlerComponentBase {
     bool m_fileOpen = false;  // Track if file is currently open for writing
     const char* IMAGE_COUNT_PATH = "/image_count.bin";
 
-    // Small protocol buffer for commands/headers (static allocation)
-    static constexpr U32 PROTOCOL_BUFFER_SIZE = 128;  // Just enough for header
-    U8 m_protocolBuffer[PROTOCOL_BUFFER_SIZE];
-    U32 m_protocolBufferSize = 0;
+    //! Parses the camera protocol and tracks the transfer progress
+    ImageProtocolParser m_parser;
 
-    // Protocol constants for image transfer
-    // Protocol: <IMG_START><SIZE>[4-byte uint32]</SIZE>[image data]<IMG_END>
-    static constexpr U32 IMG_START_LEN = 11;      // strlen("<IMG_START>")
-    static constexpr U32 SIZE_TAG_LEN = 6;        // strlen("<SIZE>")
-    static constexpr U32 SIZE_VALUE_LEN = 4;      // 4-byte little-endian uint32
-    static constexpr U32 SIZE_CLOSE_TAG_LEN = 7;  // strlen("</SIZE>")
-    static constexpr U32 IMG_END_LEN = 9;         // strlen("<IMG_END>")
-    static constexpr U32 PONG_LEN = 4;            // strlen("PONG")
-    static constexpr U32 QUAL_SET_HD = 22;        // strlen("<FRAME_CHANGE_SUCCESS>")
-
-    // Derived constants
-    static constexpr U32 HEADER_SIZE = IMG_START_LEN + SIZE_TAG_LEN + SIZE_VALUE_LEN + SIZE_CLOSE_TAG_LEN;  // 28 bytes
-    static constexpr U32 SIZE_TAG_OFFSET = IMG_START_LEN;                                                   // 11
-    static constexpr U32 SIZE_VALUE_OFFSET = IMG_START_LEN + SIZE_TAG_LEN;                                  // 17
-    static constexpr U32 SIZE_CLOSE_TAG_OFFSET = SIZE_VALUE_OFFSET + SIZE_VALUE_LEN;                        // 21
-
-    U32 m_expected_size = 0;  // Expected image size from header
-    U8 m_lastMilestone = 0;   // Last progress milestone emitted (0, 25, 50, 75)
+    static constexpr U32 QUAL_SET_HD = 22;  // strlen("<FRAME_CHANGE_SUCCESS>")
 };
 
 }  // namespace Components
