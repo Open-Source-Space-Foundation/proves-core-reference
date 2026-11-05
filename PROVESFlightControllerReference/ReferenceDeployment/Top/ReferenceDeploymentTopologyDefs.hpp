@@ -98,6 +98,13 @@ enum { WARN = 3, FATAL = 5 };
 namespace ReferenceDeployment_safeModeSeq {
 enum { WARN = 3, FATAL = 5 };
 }
+namespace ReferenceDeployment_modeManager {
+enum { WARN = 3, FATAL = 5 };
+}
+// Full readiness runs list the root directory and read every face sensor
+namespace ReferenceDeployment_readinessMonitor {
+enum { WARN = 10, FATAL = 60 };
+}
 }  // namespace PingEntries
 
 // Definitions are placed within a namespace named after the deployment

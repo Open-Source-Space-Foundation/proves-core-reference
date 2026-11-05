@@ -41,6 +41,12 @@ module Components {
         @ Port receiving completion status of the safe mode sequence
         sync input port completeSequence: Fw.CmdResponse
 
+        @ Svc.Health liveness ping
+        async input port pingIn: Svc.Ping drop
+
+        @ Svc.Health ping response
+        output port pingOut: Svc.Ping
+
         @ Port to force safe mode entry (callable by other components)
         @ Accepts SafeModeReason - pass NONE to default to EXTERNAL_REQUEST
         async input port forceSafeMode: Components.ForceSafeModeWithReason

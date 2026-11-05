@@ -31,6 +31,11 @@ telemetry packets ReferenceDeploymentPackets {
 
     lora.BytesReceived
 
+    # Readiness: bit n is ReadinessCheck n
+    readinessMonitor.PassMask
+    readinessMonitor.WarnMask
+    readinessMonitor.FailMask
+
   }
 
   ### Live Satellite Sensor Data Packets ###
@@ -158,6 +163,8 @@ telemetry packets ReferenceDeploymentPackets {
 #    ComCcsdsSband.comQueue.buffQueueDepth
     payloadBufferManager.HiBuffs
     CdhCore.tlmSend.SectionEnabled
+    watchdog.WatchdogTransitions
+    readinessMonitor.SensorFailMask
   }
 
   packet FileSystem id 5 group 5 {
@@ -336,8 +343,6 @@ telemetry packets ReferenceDeploymentPackets {
   CdhCore.version.FrameworkVersion
   CdhCore.version.ProjectVersion
   CdhCore.version.LibraryVersion01
-
-  watchdog.WatchdogTransitions
 
   CdhCore.events.EventsDropped
 

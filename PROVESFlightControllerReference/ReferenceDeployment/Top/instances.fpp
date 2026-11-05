@@ -68,6 +68,12 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 13
 
+  # Lowest priority: readiness reporting must never delay flight work
+  instance readinessMonitor: Components.ReadinessMonitor base id 0x1007A000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 14
+
 
   # ----------------------------------------------------------------------
   # Queued component instances

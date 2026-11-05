@@ -18,8 +18,9 @@
 namespace Svc {
 static const FwChanIdType MAX_PACKETIZER_PACKETS = 23;
 
-static const FwChanIdType MAX_PACKETIZER_CHANNELS =
-    217;  // !< Must be >= number of non-omitted telemetry channels in system
+// Every channel in the dictionary takes a slot, omitted ones included, and setPacketList asserts at boot
+// when they do not fit. 221 channels as of ReadinessMonitor; the rest is headroom.
+static const FwChanIdType MAX_PACKETIZER_CHANNELS = 232;
 
 static const FwChanIdType TLMPACKETIZER_MAX_MISSING_TLM_CHECK =
     25;  // !< Maximum number of missing telemetry channel checks

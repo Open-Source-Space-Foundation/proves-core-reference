@@ -89,6 +89,7 @@ module ReferenceDeployment {
     instance fileUplinkCollector
     instance modeManager
     instance adcs
+    instance readinessMonitor
 
     # Face Board Instances
     instance thermalManager
@@ -307,6 +308,7 @@ module ReferenceDeployment {
       #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
       rateGroup1Hz.RateGroupMemberOut[22] -> Update.deltaPatcher.run
       rateGroup1Hz.RateGroupMemberOut[23] -> lora.run
+      rateGroup1Hz.RateGroupMemberOut[24] -> readinessMonitor.run
 
     }
 
@@ -519,6 +521,28 @@ module ReferenceDeployment {
       modeManager.loadSwitchTurnOff[6] -> payloadPowerLoadSwitch.turnOff
       modeManager.loadSwitchTurnOff[7] -> payloadBatteryLoadSwitch.turnOff
 
+    }
+
+    connections ReadinessMonitor {
+      # Read-only taps on values other components already publish
+      readinessMonitor.tlmGet -> CdhCore.tlmSend.TlmGet
+      readinessMonitor.prmDbGet -> FileHandling.prmDb.getPrm
+
+      # Same getter ports thermalManager and adcs call; sampled only on a full run
+      readinessMonitor.tempGet[0] -> tmp112Face0Manager.temperatureGet
+      readinessMonitor.tempGet[1] -> tmp112Face1Manager.temperatureGet
+      readinessMonitor.tempGet[2] -> tmp112Face2Manager.temperatureGet
+      readinessMonitor.tempGet[3] -> tmp112Face3Manager.temperatureGet
+      readinessMonitor.tempGet[4] -> tmp112Face5Manager.temperatureGet
+      readinessMonitor.tempGet[5] -> tmp112BattCell1Manager.temperatureGet
+      readinessMonitor.tempGet[6] -> tmp112BattCell2Manager.temperatureGet
+      readinessMonitor.tempGet[7] -> tmp112BattCell3Manager.temperatureGet
+      readinessMonitor.tempGet[8] -> tmp112BattCell4Manager.temperatureGet
+      readinessMonitor.lightGet[0] -> veml6031Face0Manager.visibleLightGet
+      readinessMonitor.lightGet[1] -> veml6031Face1Manager.visibleLightGet
+      readinessMonitor.lightGet[2] -> veml6031Face2Manager.visibleLightGet
+      readinessMonitor.lightGet[3] -> veml6031Face3Manager.visibleLightGet
+      readinessMonitor.lightGet[4] -> veml6031Face5Manager.visibleLightGet
     }
 
     connections FatalHandler {

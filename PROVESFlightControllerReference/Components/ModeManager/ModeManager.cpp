@@ -555,4 +555,8 @@ void ModeManager::commandLossCheck() {
     }
 }
 
+void ModeManager ::pingIn_handler(FwIndexType portNum, U32 key) {
+    this->pingOut_out(0, key);
+}
+
 }  // namespace Components

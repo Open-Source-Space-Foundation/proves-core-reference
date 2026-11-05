@@ -13,7 +13,9 @@
 // Define configuration values for dispatcher
 
 enum {
-    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 351,  // !< The size of the table holding opcodes to dispatch
+    // Every registered opcode takes a slot, and registration asserts at boot when they do not fit.
+    // 364 opcodes as of ReadinessMonitor; the rest is headroom.
+    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 376,  // !< The size of the table holding opcodes to dispatch
     CMD_DISPATCHER_SEQUENCER_TABLE_SIZE = 10,  // !< The size of the table holding commands in progress
 };
 
