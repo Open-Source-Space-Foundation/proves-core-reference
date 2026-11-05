@@ -20,8 +20,9 @@ module Components {
         @ Port to invoke a warm reset
         sync input port warmReset: Fw.Signal
 
-        @ Port to notify ModeManager before reboot (sets clean shutdown flag)
-        output port prepareForReboot: Fw.Signal
+        @ Ports notified before reboot so components can persist state (ModeManager sets its clean
+        @ shutdown flag; TcSecurityDeframer instances flush the anti-replay sequence number)
+        output port prepareForReboot: [3] Fw.Signal
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

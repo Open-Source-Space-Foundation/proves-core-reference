@@ -22,12 +22,19 @@ if(FPRIME_PLATFORM STREQUAL "Zephyr")
     set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.cpp")
 endif()
 
-register_fprime_library(
-    AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.fpp"
-    SOURCES
-        ${IMPL_SOURCES}
-)
+if(IMPL_SOURCES)
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.fpp"
+        SOURCES
+            ${IMPL_SOURCES}
+    )
+else()
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/Ina219Manager.fpp"
+    )
+endif()
 
 ### Unit Tests ###
 # register_fprime_ut(

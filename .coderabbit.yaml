@@ -1,0 +1,191 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Project rules sit on top of the Open-Source-Space-Foundation organization settings.
+inheritance: true
+
+reviews:
+  # Comments only. Formatting, unit tests, and the firmware build remain the merge gates.
+  request_changes_workflow: false
+  auto_review:
+    # Drafts are not reviewed. Marking the pull request ready spends one review.
+    # Later pushes do not spend another until someone comments @coderabbitai review.
+    drafts: false
+    auto_incremental_review: false
+    auto_pause_after_reviewed_commits: 1
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+      - "DO NOT MERGE"
+  path_instructions:
+    - path: "PROVESFlightControllerReference/**/Top/*.fpp"
+      instructions: |
+        These files declare and wire component instances. ReferenceDeployment is gone;
+        NiclaDeployment is the deployment in tree today. Apply this check to every
+        deployment under PROVESFlightControllerReference.
+
+        For each added or rewired instance, compare the topology to the component
+        definition. Read components defined in this repo from this repo. Read a
+        Zephyr.* component from the linked repository Open-Source-Space-Foundation/fprime-zephyr.
+        Use main unless the pull request description names
+        Open-Source-Space-Foundation/fprime-zephyr#N or
+        Open-Source-Space-Foundation/fprime-zephyr@branch, or the pull request
+        branch name matches a branch in that repo.
+
+        Check all of the following:
+        - The instance is declared in instances.fpp and listed in topology.fpp.
+          Base ids are unique in that deployment and follow the 0xDSSCCxxx
+          convention documented at the top of instances.fpp.
+        - Pattern connections for command, event, telemetry, time, and health
+          apply because the instance is in the topology instance list. Flag a
+          required port on the component that those patterns do not cover and
+          that no direct connection covers.
+        - A cyclic port (schedIn, run, or another scheduler port) is connected
+          to a RateGroupMemberOut slot, and that slot index is not already used.
+        - Direct connections (UART, GPIO, rate-group driver, and similar) match
+          the port names on the component definition.
+
+        If a Zephyr.* component is not present on the fprime-zephyr ref used for
+        this review, do not judge that instance against main. Leave a note that
+        names the instance and its type and says CodeRabbit could not review it.
+        Tell the author to add Open-Source-Space-Foundation/fprime-zephyr#123 or
+        Open-Source-Space-Foundation/fprime-zephyr@branch to the pull request
+        description, then comment @coderabbitai review.
+
+        Do not follow nasa/fprime, zephyrproject-rtos/zephyr, jgromes/RadioLib,
+        or LeStarch/fprime-extras.
+
+        When this change adds or alters a command, event, telemetry channel,
+        parameter, or rate-group behavior, an integration test under
+        PROVESFlightControllerReference/test/int/ must exercise that behavior.
+        A test that only names the component does not count. The test has to
+        dispatch the changed command, await the changed event, or assert the
+        changed telemetry or parameter. If no such test exists, name the
+        behavior the pull request leaves untested.
+
+        Read every comment in the changed file, including comments outside the
+        diff hunk. Flag code that does not do what a comment says, and a
+        comment the change left stale.
+
+        Read the docs that describe this wiring, including the component SDD
+        and docs-site/components. Flag code that does not do what those docs
+        say, and docs that describe behavior the code does not implement.
+
+    - path: "PROVESFlightControllerReference/**"
+      instructions: |
+        Read every comment in each changed file: line comments, block comments,
+        and FPP comments, including comments outside the diff hunk. The code
+        must do what those comments say. Flag a contradiction, and flag a
+        comment this pull request left describing behavior the code no longer
+        implements.
+
+        Read the docs that describe the changed code. That includes
+        PROVESFlightControllerReference/**/docs/sdd.md, docs-site/components,
+        and any other markdown in the pull request. The code must do what
+        those docs say. Flag code that diverges from a doc, and a doc that
+        describes behavior the code does not implement.
+
+    - path: "docs-site/**"
+      instructions: |
+        These pages describe the flight software. Read the page against the
+        code it names. Flag a statement the code does not implement, and code
+        this pull request changed that the page still describes incorrectly.
+
+    - path: "PROVESFlightControllerReference/Components/**"
+      instructions: |
+        Review the component change against its SDD, its integration test, and
+        the supported boards.
+
+        SDD: PROVESFlightControllerReference/Components/**/docs/sdd.md must
+        define the requirements, channels, ports, commands, and telemetry this
+        change touches, and it must name the integration test that covers them.
+        Flag a command, event, telemetry channel, port, or requirement that
+        the code adds or changes and the SDD omits.
+
+        Integration test: PROVESFlightControllerReference/test/int/ must
+        actually test this pull request. Read the component diff and the
+        matching test_*.py file. A test counts only when it dispatches the
+        changed command, awaits the changed event, or asserts the changed
+        telemetry or parameter through the ground-system API. Flag a new or
+        changed behavior that no integration test exercises, including a test
+        edited in the pull request that never reaches that behavior. Unit
+        tests do not satisfy this check.
+
+        Boards: supported boards are the v5c, v5d, and v5e definitions under
+        boards/bronco_space/. If this change depends on a device-tree node or
+        pin, flag a supported board that has the peripheral but not the
+        matching node or pinctrl. CodeRabbit cannot see a hardware run. Flag
+        a missing or stale board definition. Do not claim the board was flashed.
+
+    - path: "PROVESFlightControllerReference/**/docs/sdd.md"
+      instructions: |
+        The SDD is the component contract. Requirements, channels, ports,
+        commands, and telemetry in this file must match the component .fpp
+        and the behavior changed in the pull request. Each changed requirement
+        must name the integration test that covers it. Flag a section that
+        describes behavior the pull request removed, or omits behavior the
+        pull request added.
+
+    - path: "PROVESFlightControllerReference/test/int/**"
+      instructions: |
+        These are the integration tests. Judge each added or edited test
+        against the pull request diff, not against the file in isolation.
+
+        A test covers the pull request only when it dispatches the changed
+        command, awaits the changed event, or asserts the changed telemetry
+        or parameter. Flag a test that shares the component name but never
+        reaches the changed behavior. Flag an assertion that would still pass
+        if the pull request's behavior were absent. Name the command, event,
+        or channel that is untested.
+
+    - path: "boards/bronco_space/**"
+      instructions: |
+        Supported flight-control boards are v5c, v5d, and v5e. A device-tree,
+        pinctrl, or defconfig change must be applied on every supported board
+        that has the same peripheral. Flag a node or pin updated on one board
+        and left stale on another. The pull request checklist asks for a test
+        on every supported board. CodeRabbit cannot see that hardware run.
+        Check the definitions. Do not treat an unchecked box as proof the
+        board failed, and do not treat a checked box as proof it passed.
+
+    - path: "lib/fprime-zephyr"
+      instructions: |
+        Owned pin of Open-Source-Space-Foundation/fprime-zephyr. Note that the
+        submodule pointer moved. Do not review this gitlink as component source.
+        Wiring checks for Zephyr.* instances belong on topology.fpp and
+        instances.fpp, using the linked repository.
+
+    - path: "lib/fprime"
+      instructions: |
+        Unowned pin of nasa/fprime. Leave one note that the submodule pointer
+        moved. Do not review upstream source and do not follow the repository.
+
+    - path: "lib/zephyr-workspace/zephyr"
+      instructions: |
+        Unowned pin of zephyrproject-rtos/zephyr. Leave one note that the
+        submodule pointer moved. Do not review upstream source and do not
+        follow the repository.
+
+    - path: "lib/RadioLib"
+      instructions: |
+        Unowned pin of jgromes/RadioLib. Leave one note that the submodule
+        pointer moved. Do not review upstream source and do not follow the
+        repository.
+
+    - path: "lib/fprime-extras"
+      instructions: |
+        Unowned pin of LeStarch/fprime-extras. This repo is not in the
+        Open-Source-Space-Foundation organization, so it cannot be linked.
+        Leave one note that the submodule pointer moved. Do not review its
+        source and do not follow the repository.
+
+knowledge_base:
+  linked_repositories:
+    - repository: "Open-Source-Space-Foundation/fprime-zephyr"
+      instructions: |
+        Zephyr drivers owned by this org, including ZephyrRateDriver,
+        ZephyrUartDriver, ZephyrGpioDriver, ZephyrI2cDriver, and LoRa.
+        Use this repo when a topology change wires a Zephyr.* instance.
+        Read main unless the pull request description cites
+        Open-Source-Space-Foundation/fprime-zephyr#N or @branch, or the
+        branch names match. If the component is absent from that ref, do not
+        fall back to judging the new wiring against main. The topology
+        instruction tells the author how to request another review.

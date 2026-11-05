@@ -11,7 +11,6 @@
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
-#include <zephyr/kernel.h>
 
 namespace Components {
 
@@ -57,8 +56,8 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     if (status == Os::File::OP_OK) {
         FwSizeType size = sizeof(data_buffer);
         status = file.write(data_buffer, size);
-        // Flush before close so the data has reached storage before callers (e.g. the rename in
-        // write_atomic) treat the write as durable. close() returns void and
+        // Flush before close so the data has reached storage before callers (e.g. the atomic
+        // rename in persist_boot_count) treat the write as durable. close() returns void and
         // cannot report a flush failure.
         if (status == Os::File::OP_OK && size == sizeof(data_buffer) && file.flush() == Os::File::OP_OK) {
             return_status = StartupManager::SUCCESS;
@@ -66,27 +65,6 @@ StartupManager::Status write(const Fw::StringBase& file_path, const T& value) {
     }
     (void)file.close();
     return return_status;
-}
-
-//! \brief Template function to durably write a type T to file_path via write-to-temp + rename
-//!
-//! The new value is fully written and flushed to `<file_path>.tmp` before it replaces the old file, so a reset
-//! cannot tear the value mid-write. The flight FS is FAT (ELM FatFs), whose rename is not guaranteed power-cut
-//! atomic; the residual worst case is a missing file, which reads as a failed read rather than silent garbage.
-//!
-//! \param file_path: path to the file to replace
-//! \param value: reference to the variable to write
-//! \return Status of the write operation
-template <typename T, FwSizeType BUFFER_SIZE>
-StartupManager::Status write_atomic(const Fw::StringBase& file_path, const T& value) {
-    Fw::String temp_path(file_path);
-    temp_path += ".tmp";
-    StartupManager::Status status = write<T, BUFFER_SIZE>(temp_path, value);
-    if (status == StartupManager::SUCCESS &&
-        Os::FileSystem::rename(temp_path.toChar(), file_path.toChar()) != Os::FileSystem::OP_OK) {
-        status = StartupManager::FAILURE;
-    }
-    return status;
 }
 
 // Boot counts beyond this are treated as file corruption rather than real history: a hard reset
@@ -125,35 +103,19 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
 }
 
 StartupManager::Status StartupManager ::persist_boot_count(const Fw::StringBase& file_path, FwSizeType value) {
-    return write_atomic<FwSizeType, sizeof(FwSizeType)>(file_path, value);
-}
-
-Fw::Time StartupManager ::update_quiescence_start() {
-    Fw::ParamValid is_valid;
-    auto time_file = this->paramGet_QUIESCENCE_START_FILE(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-    Fw::Time time;
-    Os::File::Status read_status = Utilities::FileHelper::readFromFile(time_file.toChar(), time);
-    // There is one quiescence start time for the whole mission, so the file is only written when it can't be read. A
-    // missing file is the expected first boot; an unreadable one (e.g. a torn write, #547) is reported and replaced.
-    // Zephyr's Os::File reports a missing file as OTHER_ERROR, so existence is checked directly.
-    if (read_status != Os::File::OP_OK) {
-        if (Os::FileSystem::exists(time_file.toChar())) {
-            this->log_WARNING_HI_QuiescenceFileUnreadable(static_cast<I32>(read_status));
-        }
-        time = this->getTime();
-        if (write_atomic<Fw::Time, Fw::Time::SERIALIZED_SIZE>(time_file, time) != StartupManager::SUCCESS) {
-            this->log_WARNING_LO_QuiescenceFileInitFailure();
-        }
+    // Write to a temp file, then rename over the target. The flight FS is FAT (ELM FatFs), whose
+    // rename is not guaranteed power-cut atomic - but the new data is fully written and flushed
+    // before it replaces the old file, so a reset can no longer tear the value mid-write (the
+    // observed failure). Worst case during the rename window is a missing file, which reads as a
+    // failed read and re-initializes the count - detectable, unlike silent garbage.
+    Fw::String temp_path(file_path);
+    temp_path += ".tmp";
+    StartupManager::Status status = write<FwSizeType, sizeof(FwSizeType)>(temp_path, value);
+    if (status == StartupManager::SUCCESS &&
+        Os::FileSystem::rename(temp_path.toChar(), file_path.toChar()) != Os::FileSystem::OP_OK) {
+        status = StartupManager::FAILURE;
     }
-    return time;
-}
-
-Fw::Time StartupManager ::get_uptime() {
-    uint32_t seconds = k_uptime_seconds();
-    Fw::Time time(TimeBase::TB_PROC_TIME, 0, static_cast<U32>(seconds), 0);
-    return time;
+    return status;
 }
 
 void StartupManager ::startupsequenceStarted_handler(FwIndexType portNum,
@@ -257,10 +219,9 @@ void StartupManager ::tryHardcodedTransmitEnable() {
 void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     Fw::ParamValid is_valid;
 
-    // On the first call, update the boot count, set the quiescence start time, and dispatch the start-up sequence
+    // On the first call, update the boot count and dispatch the start-up sequence
     if (this->m_boot_count == 0) {
         this->m_boot_count = this->get_boot_count(true);
-        this->m_quiescence_start = this->update_quiescence_start();
 
         Fw::ParamString first_sequence = this->paramGet_STARTUP_SEQUENCE_FILE(is_valid);
         FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
@@ -299,42 +260,12 @@ void StartupManager ::run_handler(FwIndexType portNum, U32 context) {
     }
 #endif
 
-    // Calculate the quiescence end time based on the quiescence period parameter
-    Fw::TimeIntervalValue quiescence_period = this->paramGet_QUIESCENCE_TIME(is_valid);
-    FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-    Fw::Time quiescence_interval(this->m_quiescence_start.getTimeBase(), quiescence_period.get_seconds(),
-                                 quiescence_period.get_useconds());
-    Fw::Time end_time = Fw::Time::add(this->m_quiescence_start, quiescence_interval);
-
-    // Are we waiting for quiescence?
-    if (this->m_waiting) {
-        // Check if the system is armed or if this is not the first boot. In both cases, we skip waiting.
-        bool armed = this->paramGet_ARMED(is_valid);
-        FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
-
-        Fw::Time current_time =
-            (end_time.getTimeBase() == TimeBase::TB_PROC_TIME) ? this->get_uptime() : this->getTime();
-
-        // If not armed or this is not the first boot, we skip waiting
-        if (!armed || end_time <= current_time) {
-            this->m_waiting = false;
-            this->cmdResponse_out(this->m_stored_opcode, this->m_stored_sequence, Fw::CmdResponse::OK);
-        }
-    }
-    this->tlmWrite_QuiescenceEndTime(
-        Fw::TimeValue(end_time.getTimeBase(), end_time.getContext(), end_time.getSeconds(), end_time.getUSeconds()));
     this->tlmWrite_BootCount(this->m_boot_count);
 }
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
-
-void StartupManager ::WAIT_FOR_QUIESCENCE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    this->m_stored_opcode = opCode;
-    this->m_stored_sequence = cmdSeq;
-    this->m_waiting = true;
-}
 
 void StartupManager ::GET_BOOT_COUNT_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
     FwSizeType boot_count = this->get_boot_count(false);

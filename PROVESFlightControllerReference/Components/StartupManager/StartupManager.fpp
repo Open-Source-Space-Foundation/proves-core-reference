@@ -34,17 +34,11 @@ module Components {
         @ Disable LoRa transmission
         output port disableTransmit: Fw.Signal
 
-        @ Command to wait for system quiescence before proceeding with start-up
-        sync command WAIT_FOR_QUIESCENCE()
-
         @ Command to output the current boot count
-        sync command GET_BOOT_COUNT()
+        sync command GET_BOOT_COUNT() opcode 0x1
 
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType
-
-        @ Telemetry for quiescence end time
-        telemetry QuiescenceEndTime: Fw.TimeValue update on change
 
         @ Event emitted when getting boot count
         event CurrentBootCount(i: I64) severity activity low \
@@ -58,44 +52,26 @@ module Components {
         event BootCountCorrupted(raw: I64) severity warning high \
             format "Boot count file corrupt (raw value {}) - treating as unreadable"
 
-        @ Event emitted when the quiescence file was not updated
-        event QuiescenceFileInitFailure() severity warning low \
-            format "Failed to initialize quiescence start time file"
-
         @ Event emitted when the start-up sequence succeeds
-        event StartupSequenceFinished() severity activity low \
+        event StartupSequenceFinished() severity activity low id 4 \
             format "Start-up sequence finished successfully"
 
         @ Event emitted when the start-up sequence fails
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
-            ) severity warning low format "Start-up sequence failed with response code {}"
+            ) severity warning low id 5 format "Start-up sequence failed with response code {}"
 
         @ Event emitted when the hardcoded startup sequence enables the radio
-        event HardcodedRadioEnable() severity activity high \
+        event HardcodedRadioEnable() severity activity high id 6 \
             format "Hardcoded Startup Sequence has enabled the radio"
 
-        @ Event emitted when the quiescence start file exists but cannot be read or decoded (e.g. a torn write or a
-        @ file-system error), carrying the Os::File status. The file is replaced with the current time.
-        event QuiescenceFileUnreadable(status: I32) severity warning high \
-            format "Quiescence start file unreadable (Os::File status {}) - reinitializing"
-
-        @ Whether the start-up manager is armed to wait for quiescence
-        param ARMED: bool default true
-
-        @ Time to wait before allowing start-up to proceed
-        param QUIESCENCE_TIME: Fw.TimeIntervalValue default {seconds = 45 * 60, useconds = 0}
-
-        @ File storing the quiescence start time
-        param QUIESCENCE_START_FILE: string default "/quiescence_start.bin"
-
         @ Path to the start-up sequence file
-        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin"
+        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin" id 3 set opcode 0x8 save opcode 0x9
 
         @ File to store the boot count
-        param BOOT_COUNT_FILE: string default "/boot_count.bin"
+        param BOOT_COUNT_FILE: string default "/boot_count.bin" id 4 set opcode 0xa save opcode 0xb
 
         @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
-        param TRANSMIT_ENABLE_TICKS: U32 default 2800
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800 id 5 set opcode 0xc save opcode 0xd
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

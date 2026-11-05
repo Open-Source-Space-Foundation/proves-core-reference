@@ -18,20 +18,25 @@
 # register autocode only, so this module's ports/types stay resolvable to
 # portable consumers (see docs/adr/0002).
 set(IMPL_SOURCES)
-set(IMPL_DEPENDS)
 if(FPRIME_PLATFORM STREQUAL "Zephyr")
     set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/StartupManager.cpp")
-    set(IMPL_DEPENDS FprimeExtras_Utilities_FileHelper)
 endif()
 
-register_fprime_library(
-    AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
-    SOURCES
-        ${IMPL_SOURCES}
-    DEPENDS
-        ${IMPL_DEPENDS}
-)
+if(IMPL_SOURCES)
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
+        SOURCES
+            ${IMPL_SOURCES}
+        DEPENDS
+            FprimeExtras_Utilities_FileHelper
+    )
+else()
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
+    )
+endif()
 
 ### Unit Tests ###
 # register_fprime_ut(
