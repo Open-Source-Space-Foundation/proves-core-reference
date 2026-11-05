@@ -6,6 +6,8 @@
 
 #include "PROVESFlightControllerReference/Components/StartupManager/StartupManager.hpp"
 
+#include <FprimeExtras/Utilities/FileHelper/FileHelper.hpp>
+
 #include "Os/File.hpp"
 #include "Os/FileSystem.hpp"
 #include "PROVESFlightControllerReference/Components/StartupManager/HardCodedStartup.h"
@@ -23,46 +25,6 @@ StartupManager ::~StartupManager() {}
 // ----------------------------------------------------------------------
 // Handler implementations for typed input ports
 // ----------------------------------------------------------------------
-
-//! \brief Template function to read a type T from a file at file_path
-//!
-//! This will read a type T with size 'size' from the file located at file_path. It will return SUCCESS if
-//! the read and deserialization were successful, and FAILURE otherwise.
-//!
-//! The file will be opened and closed within this function. value will not be modified by this function unless
-//! the read operation is successful.
-//!
-//! \warning this function is only safe to use for types T with size `size` that fit well in stack memory.
-//!
-//! \param file_path: path to the file to read from
-//! \param value: reference to the variable to read into
-//! \return Status of the read operation
-template <typename T, FwSizeType BUFFER_SIZE>
-StartupManager::Status read(const Fw::StringBase& file_path, T& value) {
-    // Create the necessary file and deserializer objects for reading a type from a file
-    StartupManager::Status return_status = StartupManager::FAILURE;
-    Os::File file;
-    U8 data_buffer[BUFFER_SIZE];
-    Fw::ExternalSerializeBuffer deserializer(data_buffer, sizeof(data_buffer));
-
-    // Open the file for reading, and continue only if successful
-    Os::File::Status status = file.open(file_path.toChar(), Os::File::OPEN_READ);
-    if (status == Os::File::OP_OK) {
-        FwSizeType size = sizeof(data_buffer);
-        status = file.read(data_buffer, size);
-        if (status == Os::File::OP_OK && size == sizeof(data_buffer)) {
-            // When the read is successful, and the size is correct then the buffer must absolutely contain the
-            // serialized data and thus it is safe to assert on the deserialization status
-            deserializer.setBuffLen(size);
-            Fw::SerializeStatus serialize_status = deserializer.deserializeTo(value);
-            FW_ASSERT(serialize_status == Fw::SerializeStatus::FW_SERIALIZE_OK,
-                      static_cast<FwAssertArgType>(serialize_status));
-            return_status = StartupManager::SUCCESS;
-        }
-    }
-    (void)file.close();
-    return return_status;
-}
 
 //! \brief Template function to write a type T to a file at file_path
 //!
@@ -118,9 +80,9 @@ FwSizeType StartupManager ::get_boot_count(bool increment) {
     FW_ASSERT(is_valid == Fw::ParamValid::VALID || is_valid == Fw::ParamValid::DEFAULT);
 
     // Read the current count ensuring a minimum of 1 after increment in the case of read failure.
-    // Since read will retain the `0` initial value on read failure, we can ignore the error status.
-    (void)read<FwSizeType, sizeof(FwSizeType)>(boot_count_file, boot_count);
-    if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
+    if (Utilities::FileHelper::readFromFile(boot_count_file.toChar(), boot_count) != Os::File::OP_OK) {
+        boot_count = 0;
+    } else if (boot_count > MAX_PLAUSIBLE_BOOT_COUNT) {
         this->log_WARNING_HI_BootCountCorrupted(static_cast<I64>(boot_count));
         boot_count = 0;
     }

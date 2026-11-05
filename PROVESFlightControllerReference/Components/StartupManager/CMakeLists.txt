@@ -28,6 +28,8 @@ if(IMPL_SOURCES)
             "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
         SOURCES
             ${IMPL_SOURCES}
+        DEPENDS
+            FprimeExtras_Utilities_FileHelper
     )
 else()
     register_fprime_library(
