@@ -95,6 +95,78 @@ jobs:
         run: |
           make test-unit
 
+  # Uses no secrets: the build generates a throwaway authentication key.
+  sitl:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ZEPHYR_TOOLCHAIN_VARIANT: host
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install 32-bit host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib
+
+      - id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            fprime-venv
+            lib/zephyr-workspace/bootloader
+            lib/zephyr-workspace/modules
+          key: sitl-${{ runner.os }}-${{ hashFiles('west.yml', 'requirements.txt', 'yamcs/pyyaml-override.txt') }}
+
+      - name: Set up
+        run: |
+          make sim-setup
+
+      # Saved here, not in a post step, because a post step skips the save when a later step fails.
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            fprime-venv
+            lib/zephyr-workspace/bootloader
+            lib/zephyr-workspace/modules
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Build native_sim
+        run: |
+          make sim-build
+
+      - name: SITL smoke
+        run: |
+          sim/smoke.sh "$RUNNER_TEMP/sitl-smoke"
+
+      - name: SITL integration tests
+        run: |
+          sim/run-sil.sh "$RUNNER_TEMP/sitl" 7200
+          make sim-test SIM_RUN="$RUNNER_TEMP/sitl" PYTEST_ARGS="--bare-flight-controler-board --with-watchdog-jumper -rA"
+
+      - name: Stop sim and GDS
+        if: always()
+        run: |
+          sim/stop-sil.sh "$RUNNER_TEMP/sitl"
+
+      - name: Upload SITL logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sitl-logs
+          path: |
+            ${{ runner.temp }}/sitl/*.log
+            ${{ runner.temp }}/sitl-smoke/*.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
   fprime-ut:
     needs: changes
     if: always() && needs.changes.outputs.docs-only != 'true'

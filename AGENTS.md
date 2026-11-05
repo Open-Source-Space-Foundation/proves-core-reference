@@ -322,6 +322,9 @@ make test-fprime-ut    # Build + run F Prime component UTs (native host build; n
 make generate-fprime-ut # (Re)generate the native F Prime UT build cache in native/ (force)
 make test-integration  # Run integration tests (requires connected board)
 make test-interactive  # Run interactive test selection (use ARGS= for CLI mode)
+make sim-setup         # Set up the native_sim SITL build (no Zephyr SDK needed)
+make sim-build         # Build the native_sim SITL executable into build-artifacts-sim/ (sim/README.md)
+make sim-test          # Run integration tests against the sim that sim/run-sil.sh started (SIM_RUN=/tmp/sitl)
 make bootloader        # Trigger bootloader mode on RP2350
 make copy-secrets SECRETS_DIR=<dir> # Copy signing keys and auth key to repo
 make make-ci-spacecraft-id # Generate unique spacecraft ID for CI builds

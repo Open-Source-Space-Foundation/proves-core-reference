@@ -56,8 +56,11 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
 
 
 # The framer plugin's file holds the next sequence number it sends, and the plugin
-# reads it on every frame (Framing/src/authenticate_plugin.py).
-SEQUENCE_NUMBER_FILE = "./Framing/src/sequence_number.bin"
+# reads it on every frame (Framing/src/authenticate_plugin.py). The plugin honors
+# PROVES_SEQUENCE_NUMBER_FILE, so the tests do too.
+SEQUENCE_NUMBER_FILE = (
+    os.environ.get("PROVES_SEQUENCE_NUMBER_FILE") or "./Framing/src/sequence_number.bin"
+)
 
 
 def write_next_sequence_number(board_seq: int) -> None:

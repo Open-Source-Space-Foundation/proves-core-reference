@@ -1,0 +1,26 @@
+# Fake devices for the native_sim board (sim/README.md). Each builds when the overlay has a node for it.
+
+config PROVES_GPIO_LATCH_SIM
+	bool
+	default y
+	depends on DT_HAS_PROVES_GPIO_LATCH_SIM_ENABLED && GPIO
+
+config PROVES_LORA_SIM
+	bool
+	default y
+	depends on DT_HAS_PROVES_LORA_SIM_ENABLED && LORA
+
+config PROVES_RTC_SIM
+	bool
+	default y
+	depends on DT_HAS_PROVES_RTC_SIM_ENABLED && RTC
+
+config PROVES_SENSOR_SIM
+	bool
+	default y
+	depends on DT_HAS_PROVES_SENSOR_SIM_ENABLED && SENSOR
+
+config PROVES_WATCHDOG_SIM
+	bool
+	default y
+	depends on DT_HAS_PROVES_WATCHDOG_SIM_ENABLED && GPIO_EMUL

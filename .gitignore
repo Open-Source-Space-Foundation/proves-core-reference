@@ -2,6 +2,7 @@
 logs/
 cmake-build-*
 build-artifacts/
+build-artifacts-sim/
 build-gtest/
 build-fprime-*
 build-ota-test/
