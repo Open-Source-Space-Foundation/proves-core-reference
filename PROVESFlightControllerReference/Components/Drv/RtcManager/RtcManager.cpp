@@ -55,13 +55,15 @@ void RtcManager ::configure(const struct device* dev) {
     if (this->readRtcSeconds(rtc_s, read_rc) == RtcRead::OK) {
         this->seedDiscipline(rtc_s);
     }
+}
 
+void RtcManager ::armDiscipline() {
 #if defined(CONFIG_RTC_UPDATE)
     if (!device_is_ready(this->m_dev)) {
         Fw::Logger::log("RTC not ready, update callback not armed. No corrections will be made.\n");
         return;
     }
-    rc = rtc_update_set_callback(this->m_dev, RtcManager::static_update_callback_t, this);
+    const int rc = rtc_update_set_callback(this->m_dev, RtcManager::static_update_callback_t, this);
     if (rc != 0) {
         Fw::Logger::log("RTC update callback not armed, rc = %d. No corrections will be made.\n", rc);
     }
