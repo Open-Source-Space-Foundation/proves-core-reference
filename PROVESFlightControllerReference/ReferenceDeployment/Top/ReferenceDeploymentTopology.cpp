@@ -115,6 +115,8 @@ void setupTopology(const TopologyState& state) {
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
+    // The RTC update callback writes telemetry, so arm it only once tlmSend is configured (#548).
+    rtcManager.armDiscipline();
     // Restore the persisted mode now that the ports are wired and the GPIO drivers are open.
     // This drives the load switches, so it must not run any earlier.
     modeManager.restorePersistentState();

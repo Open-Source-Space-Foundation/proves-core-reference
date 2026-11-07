@@ -49,6 +49,9 @@ class RtcManager final : public RtcManagerComponentBase {
     //! Configure the RTC device
     void configure(const struct device* dev);
 
+    //! Register the 1 Hz RTC update callback. It writes telemetry, so call it only after the topology is configured.
+    void armDiscipline();
+
   private:
     // ----------------------------------------------------------------------
     // Handler implementations for typed input ports
