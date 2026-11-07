@@ -352,11 +352,15 @@ jobs:
       - uses: ./.github/actions/remove-auth-key
         if: always()
 
+  # Runs only on `integration` runners that also carry the `integration-radio`
+  # label. Remove that label from a runner whose LoRa link is broken so its
+  # radio failures stop landing on PRs; it keeps taking `integration-uart`.
   integration-radio:
     needs: [changes, build]
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
+      - integration-radio
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
