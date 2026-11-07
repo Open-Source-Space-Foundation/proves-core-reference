@@ -352,9 +352,7 @@ jobs:
       - uses: ./.github/actions/remove-auth-key
         if: always()
 
-  # Runs only on `integration` runners that also carry the `integration-radio`
-  # label. Remove that label from a runner whose LoRa link is broken so its
-  # radio failures stop landing on PRs; it keeps taking `integration-uart`.
+  # Drop the `integration-radio` label from a runner to take its bench out of radio tests.
   integration-radio:
     needs: [changes, build]
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
