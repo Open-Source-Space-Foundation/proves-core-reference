@@ -177,6 +177,10 @@ jobs:
       - name: Bootstrap GDS
         uses: ./.github/actions/bootstrap-gds
 
+      - name: Readiness Gate
+        run: |
+          make test-readiness
+
       - name: Run UART Integration Tests
         run: |
           make test-integration
@@ -192,6 +196,7 @@ jobs:
         with:
           name: gds-log-uart
           path: |
+            readiness-report.xml
             gds-bootstrap.log
             gds.log
             logs
@@ -479,7 +484,7 @@ jobs:
         env:
           TLM_SAMPLE_LOG: tlm_sample_radio.csv
         run: |
-          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only" PYTEST_ARGS=--with-radio
+          make test-integration FILTER="not sync_sequence_number and not format_filesystem and not uart_only and not readiness" PYTEST_ARGS=--with-radio
 
       - name: Format Filesystem
         if: always()
