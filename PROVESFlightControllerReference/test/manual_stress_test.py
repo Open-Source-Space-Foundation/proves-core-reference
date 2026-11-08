@@ -26,7 +26,6 @@ from fprime_gds.executables.cli import StandardPipelineParser
 
 # Component paths
 MODE_MANAGER = "ReferenceDeployment.modeManager"
-STARTUP_MANAGER = "ReferenceDeployment.startupManager"
 DETUMBLE_MANAGER = "ReferenceDeployment.detumbleManager"
 LORA = "ReferenceDeployment.lora"
 CMD_SEQ = "ReferenceDeployment.cmdSeq"
@@ -73,7 +72,6 @@ def print_menu():
     print("\n--- Sequences ---")
     print("4.  Run startup sequence")
     print("5.  Run 3 sequencers simultaneously")
-    print("6.  Test quiescence mechanism (5 second)")
     print("11. Cancel all running sequences")
     print("\n--- OTA Update ---")
     print("7.  OTA: PREPARE_UPDATE")
@@ -90,7 +88,6 @@ def print_menu():
     print("24. Test repeated state persistence (3 cycles)")
     print("\n--- Telemetry ---")
     print("14. Monitor telemetry (30 seconds)")
-    print("15. Disable quiescence (ARMED=FALSE)")
     print("\n0.  Exit")
     print("=" * 60)
 
@@ -144,10 +141,6 @@ def enable_full_system(api: IntegrationTestAPI):
 
 def run_startup_sequence(api: IntegrationTestAPI):
     """Run startup sequence"""
-    print("\nDisabling quiescence for test...")
-    send_command(api, f"{STARTUP_MANAGER}.ARMED_PRM_SET", ["FALSE"])
-    time.sleep(0.5)
-
     print("Running startup sequence (NO_BLOCK)...")
     send_command(api, f"{CMD_SEQ}.CS_RUN", ["/seq/startup.bin", "NO_BLOCK"])
 
@@ -156,10 +149,6 @@ def run_startup_sequence(api: IntegrationTestAPI):
 
 def run_three_sequencers(api: IntegrationTestAPI):
     """Run all three sequencers simultaneously"""
-    print("\nDisabling quiescence...")
-    send_command(api, f"{STARTUP_MANAGER}.ARMED_PRM_SET", ["FALSE"])
-    time.sleep(0.5)
-
     print("\nStarting cmdSeq with startup.seq...")
     send_command(api, f"{CMD_SEQ}.CS_RUN", ["/seq/startup.bin", "NO_BLOCK"])
 
@@ -173,29 +162,6 @@ def run_three_sequencers(api: IntegrationTestAPI):
 
     print("\n[DONE] All 3 sequencers running concurrently.")
     print("Use option 11 to cancel all sequences.")
-
-
-def test_quiescence(api: IntegrationTestAPI):
-    """Test quiescence mechanism with short timeout"""
-    print("\nSetting quiescence time to 5 seconds...")
-    send_command(api, f"{STARTUP_MANAGER}.QUIESCENCE_TIME_PRM_SET", ["5", "0"])
-
-    print("Arming quiescence (ARMED=TRUE)...")
-    send_command(api, f"{STARTUP_MANAGER}.ARMED_PRM_SET", ["TRUE"])
-
-    print("Requesting telemetry...")
-    send_command(api, "CdhCore.tlmSend.SEND_PKT", ["1"])
-
-    print("Waiting 6 seconds for quiescence to complete...")
-    time.sleep(6)
-
-    print("Restoring default quiescence (45 minutes)...")
-    send_command(api, f"{STARTUP_MANAGER}.QUIESCENCE_TIME_PRM_SET", ["2700", "0"])
-
-    print("Disabling quiescence (ARMED=FALSE)...")
-    send_command(api, f"{STARTUP_MANAGER}.ARMED_PRM_SET", ["FALSE"])
-
-    print("[DONE] Quiescence test complete.")
 
 
 def ota_prepare(api: IntegrationTestAPI):
@@ -326,13 +292,6 @@ def monitor_telemetry(api: IntegrationTestAPI):
         time.sleep(5)
 
     print("\n[DONE] Telemetry monitoring complete. Check GDS for values.")
-
-
-def disable_quiescence(api: IntegrationTestAPI):
-    """Disable quiescence"""
-    print("\nDisabling quiescence (ARMED=FALSE)...")
-    send_command(api, f"{STARTUP_MANAGER}.ARMED_PRM_SET", ["FALSE"])
-    print("[DONE] Quiescence disabled.")
 
 
 def get_telemetry_value(api: IntegrationTestAPI, channel: str, timeout: float = 5.0):
@@ -637,7 +596,6 @@ def main():
         "3": lambda: enable_full_system(api),
         "4": lambda: run_startup_sequence(api),
         "5": lambda: run_three_sequencers(api),
-        "6": lambda: test_quiescence(api),
         "7": lambda: ota_prepare(api),
         "8": lambda: ota_configure_test(api),
         "9": lambda: ota_confirm(api),
@@ -646,7 +604,6 @@ def main():
         "12": lambda: force_safe_mode(api),
         "13": lambda: exit_safe_mode(api),
         "14": lambda: monitor_telemetry(api),
-        "15": lambda: disable_quiescence(api),
         # Safe mode tests (from mode_manager_test.py)
         "20": lambda: test_safe_mode_cycle(api),
         "21": lambda: test_safe_mode_counter(api),

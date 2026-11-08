@@ -242,6 +242,7 @@ classDiagram
             + RtcManager(const char* const compName)
             + ~RtcManager()
             + configure(dev: const device*) void
+            + armDiscipline() void
 
             - timeGetPort_handler(portNum: FwIndexType, time: Fw::Time&) void
 
@@ -638,13 +639,26 @@ sequenceDiagram
     alt Read succeeds
         RTC Manager->>RTC Manager: Lock, TimeDiscipline::seed(rtc_s, uptime_us), unlock
     end
+```
+
+If the boot read fails, or the RTC seconds are outside years 2000 to 2099, the component is not seeded. The first update callback with a good read seeds it.
+
+### `armDiscipline()`
+
+`setupTopology()` calls `armDiscipline()` right after `configureTopology()`. The update callback writes telemetry, so it must not run before `tlmSend` is configured (#548).
+
+```mermaid
+sequenceDiagram
+    participant Topology
+    participant RTC Manager
+    participant Zephyr RTC API
+
+    Topology->>RTC Manager: armDiscipline()
     RTC Manager->>Zephyr RTC API: rtc_update_set_callback(static_update_callback_t)
     alt Return code != 0
         Note over RTC Manager: Log to console. No corrections (seed only)
     end
 ```
-
-If the boot read fails, or the RTC seconds are outside years 2000 to 2099, the component is not seeded. The first update callback with a good read seeds it.
 
 ### `ALARM_LIST` Command
 

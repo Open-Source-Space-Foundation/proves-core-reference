@@ -237,7 +237,7 @@ test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-n
 	cd native && $(UV_RUN) fprime-util build --ut --all
 	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
-FILTER ?= not sync_sequence_number and not format_filesystem and not ota
+FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow
 
 TEST_DEPLOYMENT ?= build-artifacts/zephyr/fprime-zephyr-deployment
 .PHONY: test-integration

@@ -135,6 +135,7 @@ reboot
 4. **Download and configure the self-hosted runner**: Follow [GitHub's official documentation](https://github.com/organizations/Open-Source-Space-Foundation/settings/actions/runners/new?arch=x64&os=linux) to download and configure the self-hosted runner for our repository.
 
    - When configuring the runner in `config.sh`, ensure that when prompted, you enter `proves` as the runner group, and that you add `integration` as a label, otherwise the runner won't fit the criteria to be used for the workflow.
+   - Also add the `integration-radio` label if the runner has a working LoRa ground link (passthrough board and antenna). Only runners with that label take the `integration-radio` job. Remove the label in the runner's settings to take a bench with a broken radio path out of that job without touching the workflow.
 
 5. **Install dependencies**: Clone the repository & set up west dependencies beforehand to ensure tests will work correctly.
 
