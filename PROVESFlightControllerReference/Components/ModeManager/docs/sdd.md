@@ -192,7 +192,7 @@ The dead-man counts uptime seconds, not RTC time, so an RTC reset or time jump d
 
 - **Resume:** on boot the stored value is loaded, 60 s is added for the unrecorded end of the previous boot, and the result is written at once. Counting continues from it. Each reboot moves the trip between 1 s and 60 s earlier, and a reboot loop of any length advances the stored value by at least 60 s per boot, so it cannot hold off command loss.
 - **Writes:** one write per boot, one write every 60 s without contact (1,440 per day), plus one write of 0 on the tick after the first authenticated packet. Further packets while the stored value is 0 cost nothing. Packets never write directly.
-- **Missing or corrupt file:** start at 60 s (0 plus the boot credit) and emit `StatePersistenceFailure` (`cmdloss-load-open` or `cmdloss-load-corrupt`). A failed write emits `cmdloss-save-open` or `cmdloss-save-write`; the RAM timer keeps running.
+- **Missing or corrupt file:** start at 60 s (0 plus the boot credit). A corrupt file emits `StatePersistenceFailure` (`cmdloss-load-corrupt`); a missing file is expected on first boot and is quiet, while other open errors emit `cmdloss-load-open`. A failed write emits `cmdloss-save-open` or `cmdloss-save-write`; the RAM timer keeps running.
 - **After expiry:** the count restarts at 0 so the boot after the watchdog power cycle waits COMM_LOSS_TIME less the 60 s boot credit instead of re-tripping.
 
 ### Safe Mode Entry (Low Voltage)

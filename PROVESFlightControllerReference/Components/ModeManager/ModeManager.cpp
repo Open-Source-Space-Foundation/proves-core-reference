@@ -562,8 +562,11 @@ void ModeManager ::loadCommandLoss() {
 
     U32 storedSeconds = 0;
     if (status != Os::File::OP_OK) {
-        Fw::LogStringArg opStr("cmdloss-load-open");
-        this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+        // DOESNT_EXIST is expected on first boot (see loadState); resume at one persist period without a warning
+        if (status != Os::File::DOESNT_EXIST) {
+            Fw::LogStringArg opStr("cmdloss-load-open");
+            this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(status));
+        }
     } else if (!CommandLossTimer::decode(record, static_cast<std::size_t>(bytesRead), storedSeconds)) {
         Fw::LogStringArg opStr("cmdloss-load-corrupt");
         this->log_WARNING_LO_StatePersistenceFailure(opStr, static_cast<I32>(bytesRead));

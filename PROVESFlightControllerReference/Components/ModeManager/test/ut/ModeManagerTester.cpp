@@ -29,7 +29,7 @@ ModeManagerTester ::ModeManagerTester(bool deferBoot)
     (void)Os::FileSystem::removeFile(TEST_STATE_FILE);
     (void)Os::FileSystem::removeFile(TEST_COMMAND_LOSS_FILE);
     if (!deferBoot) {
-        // Parameter valid flags start UNINIT; both commandLossCheck() and
+        // Parameter valid flags start UNINIT; both commandLossTick() and
         // runSafeModeSequence() FW_ASSERT on them, so parameters must be loaded
         // (picking up the FPP defaults) before the first handler runs
         this->component.loadParameters();
@@ -527,7 +527,6 @@ void ModeManagerTester ::testPrepareForReboot() {
     // Simulated next boot: a clean shutdown must NOT be flagged as an
     // unintended reboot
     this->clearHistory();
-    this->seedCommandLossFile(0);
     this->component.restorePersistentState();
     ASSERT_EVENTS_UnintendedRebootDetected_SIZE(0);
     ASSERT_EVENTS_StatePersistenceFailure_SIZE(0);
@@ -628,8 +627,8 @@ void ModeManagerTester ::testRestoreCommandLossMissing() {
     this->component.restorePersistentState();
     this->component.loadParameters();
 
-    ASSERT_EVENTS_StatePersistenceFailure_SIZE(1);
-    ASSERT_EVENTS_StatePersistenceFailure(0, "cmdloss-load-open", static_cast<I32>(Os::File::DOESNT_EXIST));
+    // A missing file is expected on first boot, so it is quiet like the mode state file
+    ASSERT_EVENTS_StatePersistenceFailure_SIZE(0);
 
     // Resumes one persist period in and writes the record back
     U32 stored = 0;
@@ -651,6 +650,7 @@ void ModeManagerTester ::testRestoreCommandLossCorrupt() {
     this->component.loadParameters();
 
     ASSERT_EVENTS_StatePersistenceFailure_SIZE(1);
+    ASSERT_EVENTS_StatePersistenceFailure(0, "cmdloss-load-corrupt", static_cast<I32>(CommandLossTimer::RECORD_SIZE));
     U32 stored = 0;
     ASSERT_TRUE(this->readCommandLossFile(stored));
     ASSERT_EQ(stored, static_cast<U32>(CommandLossTimer::PERSIST_PERIOD_S));
@@ -793,8 +793,6 @@ void ModeManagerTester ::setDebounceSeconds(U32 seconds) {
 void ModeManagerTester ::bootFromPersistentState() {
     // Mirror ReferenceDeploymentTopology.cpp: restorePersistentState() runs
     // after the ports are connected and BEFORE loadParameters(). A valid command
-    // loss record is seeded so these tests stay about the mode state file
-    this->seedCommandLossFile(0);
     this->component.restorePersistentState();
     this->component.loadParameters();
 }

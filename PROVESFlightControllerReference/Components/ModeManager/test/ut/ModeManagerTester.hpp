@@ -110,7 +110,7 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! Command loss timeout enters safe mode and stops the watchdog once
     void testCommandLossTriggersSafeModeAndWatchdogStop();
 
-    //! packetRouted resets the command loss timer and debounce latch
+    //! authenticatedPacketRouted resets the command loss timer and debounce latch
     void testAuthenticatedPacketResetsCommandLossTimer();
 
     //! prepareForReboot logs the event, persists cleanShutdown=1 without
@@ -183,13 +183,13 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! Only valid after construction with deferBoot=true.
     void bootFromPersistentState();
 
-    //! Seed the state file with a PersistentState record
     //! Write a valid command loss record holding the given elapsed seconds
     void seedCommandLossFile(U32 elapsedSeconds);
 
     //! Read back the stored command loss elapsed seconds; false if missing or corrupt
     bool readCommandLossFile(U32& elapsedSeconds);
 
+    //! Seed the state file with a PersistentState record
     void seedStateFile(U8 mode, U32 safeModeEntryCount, U8 safeModeReason, U8 cleanShutdown);
 
     //! Seed the state file with raw bytes (for truncation/corruption tests)
