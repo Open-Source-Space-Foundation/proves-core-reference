@@ -22,6 +22,10 @@ endif()
 
 project(fprime-zephyr-reference C CXX)
 
+if (BOARD MATCHES "^nucleo_u5a5zj_q")
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_LIST_DIR}/boards/nucleo_u5a5zj_q_cxx_compat.h>")
+endif()
+
 # Enable Zephyr Pico hardware_adc library
 zephyr_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/zephyr-workspace/modules/hal/rpi_pico/src/rp2_common/hardware_adc/include

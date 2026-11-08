@@ -31,6 +31,7 @@ manifest:
           - mcuboot    # Bootloader support
           - fatfs      # FatFS (file system) support
           - hal_st     # Required for certain sensors
+          - hal_stm32  # NUCLEO-U5A5ZJ-Q trial
 
     - name: loramac-node
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
@@ -59,6 +60,12 @@ manifest:
     - name: hal_st
       revision: 7a792882847223c72944791e0c48eed6101e6569
       path: lib/zephyr-workspace/modules/hal/st
+      groups:
+        - hal
+
+    - name: hal_stm32
+      revision: fc11896dd39cfca37bf9b4aeaaa2df8861b81875
+      path: lib/zephyr-workspace/modules/hal/stm32
       groups:
         - hal
 
