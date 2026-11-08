@@ -133,6 +133,22 @@ YAMCS starts the following components:
 2. **F Prime Adapter** – communicates with the flight software over serial/TCP, translates telemetry frames (TM) and commands (TC)
 3. **Events Bridge** – loads 655+ F Prime event definitions and streams events in real-time
 
+#### Two Ground Radio Controllers (split TX/RX)
+
+To uplink through one [Ground Radio Controller](https://github.com/Open-Source-Space-Foundation/ground-radio-controller) (GRC) and downlink through another, pass each GRC's data port instead of `UART_DEVICE`:
+
+```shell
+TX_DEVICE=/dev/serial/by-id/usb-F_Prime_Ground_Radio_Controller_<TX_SERIAL>-if02 \
+RX_DEVICE=/dev/serial/by-id/usb-F_Prime_Ground_Radio_Controller_<RX_SERIAL>-if02 \
+make yamcs
+```
+
+The adapter reads telemetry only from the RX GRC and writes commands only to the TX GRC. Anything the TX GRC receives is discarded. YAMCS still sees one TM link and one TC link.
+
+Use the `-if02` (data) ports. The adapter does not configure the radios: tune each GRC separately by commanding its `-if00` (control) port with the F Prime GDS (`SET_FREQ`).
+
+If either GRC disconnects, the adapter exits with an error naming the device. Restart it with `make yamcs`.
+
 #### Web Interface
 
 Once YAMCS is running, open your browser to **`http://localhost:8090`** to see YAMCS running.
