@@ -65,6 +65,16 @@ make sim-test SIM_RUN=/tmp/sitl PYTEST_ARGS="--bare-flight-controler-board --wit
 sim/stop-sil.sh /tmp/sitl
 ```
 
+To drive the sim by hand from the browser GDS, start it with `SIM_GUI=1` and open <http://127.0.0.1:5000>:
+
+```sh
+SIM_GUI=1 sim/run-sil.sh /tmp/sitl
+# open http://127.0.0.1:5000, send CdhCore.cmdDisp.CMD_NO_OP, and watch the Events tab
+sim/stop-sil.sh /tmp/sitl
+```
+
+`SIM_GUI_PORT` changes the port. Do not start `make gds` against the sim: it reads the flight dictionary from `fprime-gds.yml` and opens a second connection to the same pty.
+
 `run-sil.sh` appends the sim's console to `sil.log` and the GDS output to `gds.log` in the run directory. The flash image `pcr-flash.bin` stays there between runs, so state persists like it does on a board. Delete it for a fresh filesystem. The run directory also holds the sim's own `sequence_number.bin`, so the sim never touches the board's `Framing/src/sequence_number.bin`. On a fresh image, `run-sil.sh` writes `0` to it so the GDS starts at the flight software's sequence number. `make sim-test` points the tests at the same file. `stop-sil.sh` exits 1 if the sim or the GDS is still running after it stops them.
 
 `SIM_ARGS` passes options to the executable. `-rt-ratio=N` runs N times faster than real time, and `-no-rt` runs as fast as the host allows. Run `build-fprime-native_sim/zephyr/zephyr.exe --help` for the full list. Run the integration tests at real time, because their timeouts are in wall-clock time. At `-rt-ratio=10`, `rtc_test.py::test_05` sees its alarm fire early.
