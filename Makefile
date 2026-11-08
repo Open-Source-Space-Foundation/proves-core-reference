@@ -144,7 +144,8 @@ sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
 SIM_RUN ?= /tmp/sitl
 .PHONY: sim-test
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
-	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment \
+		PYTEST_ARGS="--dictionary build-artifacts-sim/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json $(PYTEST_ARGS)"
 
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
