@@ -45,11 +45,11 @@ pip install -r requirements.txt
 ```
 
 !!! note
-    You will need to follow some additional steps if you are using a different board than the one specified in the `settings.ini` file. Please refer to the [Specifying Board Configuration][specifying-board-configuration] documentation for more information.
+    The build targets the board set by the `BOARD=` line in `settings.ini`. To find out which board you have, and to build for another board, see [Specifying Board Configuration][specifying-board-configuration].
 
 
 ## 6. Get Zephyr Source Code
-Navigate to the `zephyr-workspace` directory to set up zephyr. You may need to update the `config` file in `./lib/zephyr-workspace/.west/` if you are using a different board. Refer to the documentation [here][specifying-board-configuration]
+Navigate to the `zephyr-workspace` directory to set up zephyr. You do not need to change any west files for a different PROVES board. You only change `settings.ini`.
 ```sh
 # In proves-core-reference
 cd lib/zephyr-workspace

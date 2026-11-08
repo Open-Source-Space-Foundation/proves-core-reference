@@ -4,7 +4,7 @@ This guide assumes that the initial setup steps have been completed, and will wa
 
 ## Building the Deployment
 !!! note
-    This step can be skipped if the setup.sh script is run. However, any changes made will require you to run `fprime-util build` and may require `fprime-util generate`
+    The flashing steps below run `make build`. It runs `fprime-util generate` when the build directory is missing, then `fprime-util build`, and also makes the `bootable.uf2` file you flash.
 
 1. In order to build the ReferenceDeployment application, or any other F´ application, we first need to generate a build directory. This can be done with the following commands:
 
@@ -21,23 +21,15 @@ fprime-util build
 
 ## Flashing the Board
 
-The supported boards are RP2350 flight controllers. You flash them by copying a UF2 file onto the board while it is mounted as a USB drive. The [board list][board-list] covers each board, how to enter UF2 mode, and flashing over SWD.
+The supported boards are RP2350 flight controllers. You flash them by copying a UF2 file onto the board while it shows up as a USB drive. The [Board List][board-list] has the full steps and the checks for each step.
 
-1. First time only (new board, or a board coming back from CircuitPython): build MCUboot and copy it to the board.
+1. Find your board version (v5c, v5d, or v5e). It is printed on the board's silkscreen. If it is not v5e, change the board first. See [Specifying Board Configuration][specifying-board-configuration].
 
-    ```sh
-    # In proves-core-reference
-    make build-mcuboot
-    cp mcuboot.uf2 [path-to-your-board]
-    ```
+2. First time only (new board, or a board coming back from CircuitPython): build MCUboot, put the board into UF2 mode, and copy MCUboot to it. See [First time only: flash MCUboot][flash-mcuboot].
 
-2. Build the signed application image, put the board back into UF2 mode (see the [board list][board-list]), and copy the image to the board.
+3. Build the signed application image, put the board into UF2 mode again, and copy the image to it. See [Every code change: flash the application][flash-app].
 
-    ```sh
-    # In proves-core-reference
-    make build
-    cp bootable.uf2 [path-to-your-board]
-    ```
+To put the board into UF2 mode, hold down BOOTSEL, press and release RESET, then release BOOTSEL. The board shows up as a USB drive named `RP2350`.
 
 !!! note
     `fprime-util build` alone does not make `bootable.uf2`. `make build` runs `fprime-util build` and then converts the signed image. To convert it by hand:
@@ -71,3 +63,6 @@ Refer to the [additional resources](../additional-resources/troubleshooting.md) 
 
 <!-- Links -->
 [board-list]: ../additional-resources/board-list.md
+[flash-mcuboot]: ../additional-resources/board-list.md#first-time-only-flash-mcuboot
+[flash-app]: ../additional-resources/board-list.md#every-code-change-flash-the-application
+[specifying-board-configuration]: ../additional-resources/specifying-board-configuration.md
