@@ -19,6 +19,7 @@ register_fprime_library(
         "${CMAKE_CURRENT_LIST_DIR}/CameraHandler.fpp"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/CameraHandler.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/ImageProtocolParser.cpp"
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )

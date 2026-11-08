@@ -44,7 +44,7 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
     // Check if we received data successfully
     if (status != Drv::ByteStreamStatus::OP_OK) {
         // Log error and abort if receiving
-        if (m_receiving && m_fileOpen) {
+        if (m_parser.isReceiving() && m_fileOpen) {
             handleFileError();
         }
         // NOTE: PayloadCom will handle buffer return, not us
@@ -61,31 +61,23 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
     U32 dataSize = static_cast<U32>(buffer.getSize());
 
     // Emit telemetry to track state at entry to handler
-    this->tlmWrite_BytesReceived(m_bytes_received);
-    this->tlmWrite_ExpectedSize(m_expected_size);
-    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_BytesReceived(m_parser.bytesReceived());
+    this->tlmWrite_ExpectedSize(m_parser.expectedSize());
+    this->tlmWrite_IsReceiving(m_parser.isReceiving());
     this->tlmWrite_FileOpen(m_fileOpen);
 
-    if (m_receiving && m_fileOpen) {
+    if (m_parser.isReceiving() && m_fileOpen) {
         // Currently receiving image data - write directly to file
+        const ImageProtocolParser::ChunkPlan plan = m_parser.planChunk(dataSize);
 
-        // Calculate how much to write (don't exceed expected size)
-        U32 remaining = m_expected_size - m_bytes_received;
-        U32 toWrite = (dataSize < remaining) ? dataSize : remaining;
-
-        // Check if we've received all expected data
-        if (m_bytes_received >= m_expected_size) {
+        if (plan.complete) {
             // Image is complete!
             finalizeImageTransfer();
 
             // If there's extra data after the image (e.g., <IMG_END> or next header),
             // push it to protocol buffer for processing
-            U32 extraBytes = dataSize - toWrite;
-            if (extraBytes > 0) {
-                const U8* extraData = data + toWrite;
-                if (accumulateProtocolData(extraData, extraBytes)) {
-                    processProtocolBuffer();
-                }
+            if (dataSize > 0) {
+                handleProtocolResult(m_parser.feedAfterImage(data, dataSize));
             }
 
             // Transfer is complete - don't try to write anything more
@@ -93,62 +85,26 @@ void CameraHandler ::dataIn_handler(FwIndexType portNum, Fw::Buffer& buffer, con
         }
 
         // Write chunk to file
-        if (!writeChunkToFile(data, toWrite)) {
+        if (!writeChunkToFile(data, plan.toWrite)) {
             // Write failed
             this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write failed"));
             handleFileError();
             return;
         }
 
-        m_bytes_received += toWrite;
+        const U8 milestone = m_parser.onChunkWritten(plan.toWrite);
 
         // Emit telemetry after each write
-        this->tlmWrite_BytesReceived(m_bytes_received);
-        this->tlmWrite_ExpectedSize(m_expected_size);
+        this->tlmWrite_BytesReceived(m_parser.bytesReceived());
+        this->tlmWrite_ExpectedSize(m_parser.expectedSize());
 
         // Emit progress events at 25%, 50%, 75% milestones
-        if (m_expected_size > 0) {
-            U8 currentPercent = static_cast<U8>((static_cast<U64>(m_bytes_received) * 100) / m_expected_size);
-
-            if (currentPercent >= 25 && m_lastMilestone < 25) {
-                this->log_ACTIVITY_HI_ImageTransferProgress(25, m_bytes_received, m_expected_size);
-                m_lastMilestone = 25;
-            } else if (currentPercent >= 50 && m_lastMilestone < 50) {
-                this->log_ACTIVITY_HI_ImageTransferProgress(50, m_bytes_received, m_expected_size);
-                m_lastMilestone = 50;
-            } else if (currentPercent >= 75 && m_lastMilestone < 75) {
-                this->log_ACTIVITY_HI_ImageTransferProgress(75, m_bytes_received, m_expected_size);
-                m_lastMilestone = 75;
-            }
+        if (milestone != 0) {
+            this->log_ACTIVITY_HI_ImageTransferProgress(milestone, m_parser.bytesReceived(), m_parser.expectedSize());
         }
-
     } else {
-        // Not receiving image - accumulate protocol data
-
-        // If protocol buffer is getting too full (> 90%), clear old data
-        // This prevents overflow from text responses that aren't image headers
-        if (m_protocolBufferSize > (PROTOCOL_BUFFER_SIZE * 9 / 10)) {
-            // Keep only last 32 bytes in case header is split
-            if (m_protocolBufferSize > 32) {
-                memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 32], 32);
-                m_protocolBufferSize = 32;
-            }
-        }
-
-        if (!accumulateProtocolData(data, dataSize)) {
-            // Protocol buffer overflow - clear old data and keep new
-            clearProtocolBuffer();
-            // Try again with cleared buffer
-            if (!accumulateProtocolData(data, dataSize)) {
-                // Still won't fit - just take what we can
-                U32 canFit = PROTOCOL_BUFFER_SIZE;
-                memcpy(m_protocolBuffer, data, canFit);
-                m_protocolBufferSize = canFit;
-            }
-        }
-
-        // Process protocol buffer to detect image headers/commands
-        processProtocolBuffer();
+        // Not receiving image - look for image headers and commands
+        handleProtocolResult(m_parser.feed(data, dataSize));
     }
 
     // NOTE: Do NOT return buffer here - PayloadCom owns the buffer and will return it
@@ -165,7 +121,7 @@ void CameraHandler ::TAKE_IMAGE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void CameraHandler ::PING_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    if (this->m_receiving) {
+    if (this->m_parser.isReceiving()) {
         this->log_WARNING_LO_FailedCommandCurrentlyReceiving();
         return;
     }
@@ -193,202 +149,83 @@ void CameraHandler ::SEND_COMMAND_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, co
 // Helper method implementations
 // ----------------------------------------------------------------------
 
-bool CameraHandler ::accumulateProtocolData(const U8* data, U32 size) {
-    // Check if we have space for the new data
-    if (m_protocolBufferSize + size > PROTOCOL_BUFFER_SIZE) {
-        return false;
-    }
-
-    // Copy data into protocol buffer
-    memcpy(&m_protocolBuffer[m_protocolBufferSize], data, size);
-    m_protocolBufferSize += size;
-
-    return true;
-}
-
-void CameraHandler ::processProtocolBuffer() {
-    // Protocol: <IMG_START><SIZE>[4-byte little-endian uint32]</SIZE>[image data]<IMG_END>
-
-    // Search for <IMG_START> anywhere in the buffer (not just at position 0)
-    I32 headerStart = -1;
-
-    // Only search if we have enough bytes for the header marker
-    if (m_protocolBufferSize >= IMG_START_LEN) {
-        for (U32 i = 0; i <= m_protocolBufferSize - IMG_START_LEN; ++i) {
-            if (isImageStartCommand(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
-                headerStart = static_cast<I32>(i);
-                break;
-            }
-        }
-    }
-
-    if (headerStart == -1) {
-        // Check for PONG response (only if buffer has enough bytes)
-        if (m_protocolBufferSize >= PONG_LEN) {
-            for (U32 i = 0; i <= m_protocolBufferSize - PONG_LEN; ++i) {
-                if (isPong(&m_protocolBuffer[i], m_protocolBufferSize - i)) {
-                    if (this->m_waiting_for_pong) {
-                        this->log_ACTIVITY_HI_PongReceived();
-                        this->m_waiting_for_pong = false;
-                    } else {
-                        this->log_WARNING_HI_BadPongReceived();
-                    }
-                    return;
-                }
-            }
-        }
-
-        // No header found - if buffer is nearly full, discard old data
-        // Be aggressive: if buffer is > 50% full and no header, it's probably text responses
-        if (m_protocolBufferSize > (PROTOCOL_BUFFER_SIZE / 2)) {
-            // Keep last 16 bytes in case header is split across chunks
-            if (m_protocolBufferSize > 16) {
-                memmove(m_protocolBuffer, &m_protocolBuffer[m_protocolBufferSize - 16], 16);
-                m_protocolBufferSize = 16;
+void CameraHandler ::handleProtocolResult(const ImageProtocolParser::Result& result) {
+    switch (result.found) {
+        case ImageProtocolParser::Found::PONG:
+            if (this->m_waiting_for_pong) {
+                this->log_ACTIVITY_HI_PongReceived();
+                this->m_waiting_for_pong = false;
             } else {
-                // Buffer is small enough, just clear it
-                clearProtocolBuffer();
+                this->log_WARNING_HI_BadPongReceived();
             }
-        }
-        return;
-    }
-
-    // Found header start! Discard everything before it
-    if (headerStart > 0) {
-        U32 remaining = m_protocolBufferSize - static_cast<U32>(headerStart);
-        memmove(m_protocolBuffer, &m_protocolBuffer[headerStart], remaining);
-        m_protocolBufferSize = remaining;
-    }
-
-    // Now check if we have the complete header (28 bytes minimum)
-    if (m_protocolBufferSize < HEADER_SIZE) {
-        // Not enough data yet, wait for more
-        return;
-    }
-
-    // Check if we have the complete header
-    if (m_protocolBufferSize >= HEADER_SIZE) {
-        // Check for <IMG_START> at the beginning
-        if (!isImageStartCommand(m_protocolBuffer, m_protocolBufferSize)) {
-            return;  // Not an image header
-        }
-
-        // Check for <SIZE> tag after <IMG_START>
-        const char* sizeTag = "<SIZE>";
-        bool hasSizeTag = true;
-
-        for (U32 i = 0; i < SIZE_TAG_LEN; ++i) {
-            if (m_protocolBuffer[SIZE_TAG_OFFSET + i] != static_cast<U8>(sizeTag[i])) {
-                hasSizeTag = false;
-                break;
-            }
-        }
-
-        if (!hasSizeTag) {
-            return;  // Invalid header
-        }
-
-        // Extract 4-byte size (little-endian)
-        U32 imageSize = 0;
-        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 0]);
-        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 1]) << 8;
-        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 2]) << 16;
-        imageSize |= static_cast<U32>(m_protocolBuffer[SIZE_VALUE_OFFSET + 3]) << 24;
-
-        // Verify </SIZE> tag
-        const char* closeSizeTag = "</SIZE>";
-        bool hasCloseSizeTag = true;
-
-        for (U32 i = 0; i < SIZE_CLOSE_TAG_LEN; ++i) {
-            if (m_protocolBuffer[SIZE_CLOSE_TAG_OFFSET + i] != static_cast<U8>(closeSizeTag[i])) {
-                hasCloseSizeTag = false;
-                break;
-            }
-        }
-
-        if (!hasCloseSizeTag) {
-            return;  // Invalid header
-        }
-
-        // Valid header! Open file immediately for streaming
-        m_receiving = true;
-        m_bytes_received = 0;
-        m_expected_size = imageSize;
-        m_lastMilestone = 0;  // Reset milestone tracking for new transfer
-
-        U32 count = 0;
-
-        // Read image count from file
-        if (!readImageCount(count)) {
-            count = 0;  // If read fails, start from 0
-            writeImageCount(count);
-        }
-
-        // Generate filename - save to root filesystem
-        char filename[64];
-        // Get parameter for image number
-        snprintf(filename, sizeof(filename), "/cam%03d_img_%03d.jpg", this->cam_number, count + 1);
-        m_currentFilename = filename;
-
-        writeImageCount(count + 1);
-
-        // Open file for writing
-        Os::File::Status status = m_file.open(m_currentFilename.c_str(), Os::File::OPEN_WRITE);
-
-        if (status != Os::File::OP_OK) {
-            // Failed to open file
-            this->log_WARNING_HI_CommandError(Fw::LogStringArg("Failed to open file"));
-            m_receiving = false;
-            m_expected_size = 0;
-            clearProtocolBuffer();
-            return;
-        }
-
-        m_fileOpen = true;
-
-        // Log transfer started event
-        this->log_ACTIVITY_HI_ImageTransferStarted(imageSize);
-
-        // Emit telemetry after opening file
-        this->tlmWrite_BytesReceived(m_bytes_received);
-        this->tlmWrite_ExpectedSize(m_expected_size);
-        this->tlmWrite_IsReceiving(m_receiving);
-        this->tlmWrite_FileOpen(m_fileOpen);
-
-        // NOTE: PayloadCom sends ACK automatically after forwarding data
-        // No need to send ACK here - that's handled by the communication layer
-
-        // Remove header from protocol buffer
-        U32 remainingSize = m_protocolBufferSize - HEADER_SIZE;
-        if (remainingSize > 0) {
-            memmove(m_protocolBuffer, &m_protocolBuffer[HEADER_SIZE], remainingSize);
-        }
-        m_protocolBufferSize = remainingSize;
-
-        // Write any remaining data (image data) directly to file
-        // NOTE: This should be empty since camera waits for ACK before sending data
-        if (m_protocolBufferSize > 0) {
-            U32 toWrite = (m_protocolBufferSize < m_expected_size) ? m_protocolBufferSize : m_expected_size;
-
-            if (writeChunkToFile(m_protocolBuffer, toWrite)) {
-                m_bytes_received += toWrite;
-
-                // Check if complete already
-                if (m_bytes_received >= m_expected_size) {
-                    finalizeImageTransfer();
-                }
-            } else {
-                handleFileError();
-            }
-
-            clearProtocolBuffer();
-        }
+            break;
+        case ImageProtocolParser::Found::IMAGE_HEADER:
+            this->startImageTransfer(result.imageSize);
+            break;
+        case ImageProtocolParser::Found::NOTHING:
+            break;
     }
 }
 
-void CameraHandler ::clearProtocolBuffer() {
-    m_protocolBufferSize = 0;
-    memset(m_protocolBuffer, 0, PROTOCOL_BUFFER_SIZE);
+void CameraHandler ::startImageTransfer(U32 imageSize) {
+    // Valid header! Open file immediately for streaming
+    U32 count = 0;
+
+    // Read image count from file
+    if (!readImageCount(count)) {
+        count = 0;  // If read fails, start from 0
+        writeImageCount(count);
+    }
+
+    // Generate filename - save to root filesystem
+    char filename[64];
+    // Get parameter for image number
+    snprintf(filename, sizeof(filename), "/cam%03d_img_%03d.jpg", this->cam_number, count + 1);
+    m_currentFilename = filename;
+
+    writeImageCount(count + 1);
+
+    // Open file for writing
+    Os::File::Status status = m_file.open(m_currentFilename.c_str(), Os::File::OPEN_WRITE);
+
+    if (status != Os::File::OP_OK) {
+        // Failed to open file
+        this->log_WARNING_HI_CommandError(Fw::LogStringArg("Failed to open file"));
+        m_parser.rejectHeader();
+        return;
+    }
+
+    m_fileOpen = true;
+
+    // Log transfer started event
+    this->log_ACTIVITY_HI_ImageTransferStarted(imageSize);
+
+    // Emit telemetry after opening file
+    this->tlmWrite_BytesReceived(m_parser.bytesReceived());
+    this->tlmWrite_ExpectedSize(m_parser.expectedSize());
+    this->tlmWrite_IsReceiving(m_parser.isReceiving());
+    this->tlmWrite_FileOpen(m_fileOpen);
+
+    // NOTE: PayloadCom sends ACK automatically after forwarding data
+    // No need to send ACK here - that's handled by the communication layer
+
+    // Write any remaining data (image data) directly to file
+    // NOTE: This should be empty since camera waits for ACK before sending data
+    const ImageProtocolParser::Chunk chunk = m_parser.takeBufferedImageData();
+    if (chunk.present) {
+        if (writeChunkToFile(chunk.data, chunk.size)) {
+            m_parser.onBufferedDataWritten(chunk.size);
+
+            // Check if complete already
+            if (m_parser.isComplete()) {
+                finalizeImageTransfer();
+            }
+        } else {
+            handleFileError();
+        }
+
+        m_parser.clearBuffer();
+    }
 }
 
 bool CameraHandler ::writeChunkToFile(const U8* data, U32 size) {
@@ -433,20 +270,17 @@ void CameraHandler ::finalizeImageTransfer() {
 
     // Log transfer complete event with path and size
     Fw::LogStringArg pathArg(m_currentFilename.c_str());
-    this->log_ACTIVITY_HI_ImageTransferComplete(pathArg, m_bytes_received);
+    this->log_ACTIVITY_HI_ImageTransferComplete(pathArg, m_parser.bytesReceived());
 
     // NOTE: PayloadCom sends ACK automatically - no need to send here
 
     // Reset state
-    m_receiving = false;
-    m_bytes_received = 0;
-    m_expected_size = 0;
-    m_lastMilestone = 0;
+    m_parser.finishTransfer();
 
     // Emit telemetry after finalizing
-    this->tlmWrite_BytesReceived(m_bytes_received);
-    this->tlmWrite_ExpectedSize(m_expected_size);
-    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_BytesReceived(m_parser.bytesReceived());
+    this->tlmWrite_ExpectedSize(m_parser.expectedSize());
+    this->tlmWrite_IsReceiving(m_parser.isReceiving());
     this->tlmWrite_FileOpen(m_fileOpen);
     this->tlmWrite_ImagesSaved(m_images_saved);
 }
@@ -465,80 +299,14 @@ void CameraHandler ::handleFileError() {
     this->log_WARNING_HI_CommandError(Fw::LogStringArg("File write error"));
 
     // Reset state
-    m_receiving = false;
-    m_bytes_received = 0;
-    m_expected_size = 0;
-    m_lastMilestone = 0;
-    clearProtocolBuffer();
+    m_parser.abortTransfer();
 
     // Emit telemetry after error handling
-    this->tlmWrite_BytesReceived(m_bytes_received);
-    this->tlmWrite_ExpectedSize(m_expected_size);
-    this->tlmWrite_IsReceiving(m_receiving);
+    this->tlmWrite_BytesReceived(m_parser.bytesReceived());
+    this->tlmWrite_ExpectedSize(m_parser.expectedSize());
+    this->tlmWrite_IsReceiving(m_parser.isReceiving());
     this->tlmWrite_FileOpen(m_fileOpen);
     this->tlmWrite_FileErrorCount(m_file_error_count);
-}
-
-I32 CameraHandler ::findImageEndMarker(const U8* data, U32 size) {
-    // Looking for "\n<IMG_END>" or "<IMG_END>"
-    const char* marker = "<IMG_END>";
-
-    if (size < IMG_END_LEN) {
-        return -1;
-    }
-
-    // Search for the marker
-    for (U32 i = 0; i <= size - IMG_END_LEN; ++i) {
-        bool found = true;
-        for (U32 j = 0; j < IMG_END_LEN; ++j) {
-            if (data[i + j] != static_cast<U8>(marker[j])) {
-                found = false;
-                break;
-            }
-        }
-        if (found) {
-            // Found marker at position i
-            // If preceded by newline, back up to before newline
-            if (i > 0 && data[i - 1] == '\n') {
-                return static_cast<I32>(i - 1);
-            }
-            return static_cast<I32>(i);
-        }
-    }
-
-    return -1;  // Not found
-}
-
-bool CameraHandler ::isImageStartCommand(const U8* line, U32 length) {
-    const char* command = "<IMG_START>";
-
-    if (length < IMG_START_LEN) {
-        return false;
-    }
-
-    for (U32 i = 0; i < IMG_START_LEN; ++i) {
-        if (line[i] != static_cast<U8>(command[i])) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool CameraHandler ::isPong(const U8* line, U32 length) {
-    const char* command = "PONG";
-
-    if (length < PONG_LEN) {
-        return false;
-    }
-
-    for (U32 i = 0; i < PONG_LEN; ++i) {
-        if (line[i] != static_cast<U8>(command[i])) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 bool CameraHandler ::readImageCount(U32& count) {
