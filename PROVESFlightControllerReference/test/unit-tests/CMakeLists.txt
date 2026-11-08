@@ -80,6 +80,14 @@ target_include_directories(power_monitor_power_integrator PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# AntennaDeployer DeploymentSequencer
+add_library(antenna_deployer_deployment_sequencer STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/AntennaDeployer/DeploymentSequencer.cpp
+)
+target_include_directories(antenna_deployer_deployment_sequencer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # Find PSA provider (we use libmbedcrypto) and ensure PSA headers exist
 find_path(PSA_CRYPTO_H psa/crypto.h PATHS /opt/homebrew/include /usr/local/include /usr/include)
 find_library(MBEDCRYPTO_LIB mbedcrypto PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
@@ -114,6 +122,7 @@ foreach(test_src ${TEST_SOURCES})
         rtc_manager_time_discipline
         proves_router_bypasser
         power_monitor_power_integrator
+        antenna_deployer_deployment_sequencer
     )
 
     add_test(NAME ${test_name} COMMAND ${test_name})
