@@ -488,9 +488,9 @@ module ReferenceDeployment {
       watchdog.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
       #watchdog.prepareForReboot[3] -> ComCcsdsSband.tcSecurityDeframer.prepareForReboot
 
-      # Signal from PROVES routers to reset the command loss timer in ModeManager
-      ComCcsdsLora.provesRouter.packetRouted -> modeManager.packetRouted
-      ComCcsdsUart.provesRouter.packetRouted -> modeManager.packetRouted
+      # Signal from PROVES routers to reset the command loss timer in ModeManager (authenticated packets only)
+      ComCcsdsLora.provesRouter.authenticatedPacketRouted -> modeManager.authenticatedPacketRouted
+      ComCcsdsUart.provesRouter.authenticatedPacketRouted -> modeManager.authenticatedPacketRouted
 
       # Stop watchdog on command loss to trigger hardware power cycle
       modeManager.stopWatchdog -> watchdog.stop

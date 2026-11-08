@@ -72,6 +72,14 @@ target_include_directories(proves_router_bypasser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../..
 )
 
+# ModeManager CommandLossTimer
+add_library(mode_manager_command_loss_timer STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/ModeManager/CommandLossTimer.cpp
+)
+target_include_directories(mode_manager_command_loss_timer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+)
+
 # PowerMonitor PowerIntegrator
 add_library(power_monitor_power_integrator STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/PowerMonitor/PowerIntegrator.cpp
@@ -113,6 +121,7 @@ foreach(test_src ${TEST_SOURCES})
         security_deframer_authenticator
         rtc_manager_time_discipline
         proves_router_bypasser
+        mode_manager_command_loss_timer
         power_monitor_power_integrator
     )
 

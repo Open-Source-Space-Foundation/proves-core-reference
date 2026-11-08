@@ -9,7 +9,7 @@ Tests cover:
 - Auto safe mode entry due to low voltage (manual test - requires voltage control)
 - Auto safe mode exit/recovery when voltage > 8V (manual test - requires voltage control)
 - Unintended reboot detection (manual test - requires reboot)
-- Command loss detection via RTC time jump (automated, requires reboot)
+- Command loss detection via a 1 s COMM_LOSS_TIME (automated, requires reboot)
 
 SafeModeReason Test Coverage:
 | Reason           | Value | Test                    | Status                          |
@@ -550,10 +550,9 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     Test that command loss (no authenticated packet within COMM_LOSS_TIME) triggers safe mode
     with reason COMMAND_LOSS and a hardware power cycle via the watchdog.
 
-    Uses an RTC time jump to simulate the timeout without waiting the full 3-day period.
-    The TIME_SET packet stamps m_lastPacketRoutedTime with T0 (via packetRouted_handler,
-    called before the RTC actually changes), then the next 1Hz tick sees currentTime = T0 + 4 days
-    > T0 + COMM_LOSS_TIME (3 days) and triggers command loss.
+    Uses a 1 s COMM_LOSS_TIME to simulate the timeout without waiting the full 3-day period.
+    Sets COMM_LOSS_TIME to 1 second; the authenticated PRM_SET command resets the uptime-based
+    command loss counter, and the next 1Hz tick reaches the 1 s limit and triggers command loss.
 
     Verifies:
     - CommandLossDetected event is emitted

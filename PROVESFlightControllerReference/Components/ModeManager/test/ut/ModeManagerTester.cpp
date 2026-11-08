@@ -27,8 +27,9 @@ ModeManagerTester ::ModeManagerTester(bool deferBoot)
     // working directory (see ModeManager::STATE_FILE_PATH); start every test
     // from a clean slate
     (void)Os::FileSystem::removeFile(TEST_STATE_FILE);
+    (void)Os::FileSystem::removeFile(TEST_COMMAND_LOSS_FILE);
     if (!deferBoot) {
-        // Parameter valid flags start UNINIT; both commandLossCheck() and
+        // Parameter valid flags start UNINIT; both commandLossTick() and
         // runSafeModeSequence() FW_ASSERT on them, so parameters must be loaded
         // (picking up the FPP defaults) before the first handler runs
         this->component.loadParameters();
@@ -39,6 +40,7 @@ ModeManagerTester ::ModeManagerTester(bool deferBoot)
 
 ModeManagerTester ::~ModeManagerTester() {
     (void)Os::FileSystem::removeFile(TEST_STATE_FILE);
+    (void)Os::FileSystem::removeFile(TEST_COMMAND_LOSS_FILE);
     this->component.deinit();
 }
 
@@ -471,13 +473,13 @@ void ModeManagerTester ::testCommandLossTriggersSafeModeAndWatchdogStop() {
     ASSERT_EVENTS_CurrentSafeModeReasonReading(0, Components::SafeModeReason::COMMAND_LOSS);
 }
 
-void ModeManagerTester ::testPacketRoutedResetsCommandLossTimer() {
+void ModeManagerTester ::testAuthenticatedPacketResetsCommandLossTimer() {
     this->paramSet_COMM_LOSS_TIME(Fw::TimeIntervalValue(3, 0), Fw::ParamValid::VALID);
     this->component.loadParameters();
 
-    // 2 ticks, then a routed packet: the timer restarts
+    // 2 ticks, then an authenticated packet: the timer restarts
     this->tick(2);
-    this->invoke_to_packetRouted(0);
+    this->invoke_to_authenticatedPacketRouted(0);
 
     // 2 more ticks: only 2 seconds since the packet, no trigger
     this->tick(2);
@@ -489,12 +491,12 @@ void ModeManagerTester ::testPacketRoutedResetsCommandLossTimer() {
     ASSERT_EVENTS_CommandLossDetected(0, 3);
     ASSERT_EQ(this->invoke_to_getMode(0), Components::SystemMode::SAFE_MODE);
 
-    // Defined behavior: packetRouted also clears the debounce latch, so a
+    // Defined behavior: authenticatedPacketRouted also clears the debounce latch, so a
     // second timeout re-triggers the full command loss response (including
     // another safe mode entry, incrementing the count) even though the
     // component is already in SAFE_MODE
     this->clearHistory();
-    this->invoke_to_packetRouted(0);
+    this->invoke_to_authenticatedPacketRouted(0);
     this->tick(3);
     ASSERT_EVENTS_CommandLossDetected_SIZE(1);
     ASSERT_EVENTS_EnteringSafeMode_SIZE(1);
@@ -619,6 +621,63 @@ void ModeManagerTester ::testRestoreNoStateFile() {
     ASSERT_EQ(state.cleanShutdown, 0);
 }
 
+void ModeManagerTester ::testRestoreCommandLossMissing() {
+    this->seedStateFile(static_cast<U8>(Components::SystemMode::NORMAL), 0,
+                        static_cast<U8>(Components::SafeModeReason::NONE), 1);
+    this->component.restorePersistentState();
+    this->component.loadParameters();
+
+    // A missing file is expected on first boot, so it is quiet like the mode state file
+    ASSERT_EVENTS_StatePersistenceFailure_SIZE(0);
+
+    // Resumes one persist period in and writes the record back
+    U32 stored = 0;
+    ASSERT_TRUE(this->readCommandLossFile(stored));
+    ASSERT_EQ(stored, static_cast<U32>(CommandLossTimer::PERSIST_PERIOD_S));
+}
+
+void ModeManagerTester ::testRestoreCommandLossCorrupt() {
+    this->seedStateFile(static_cast<U8>(Components::SystemMode::NORMAL), 0,
+                        static_cast<U8>(Components::SafeModeReason::NONE), 1);
+    const U8 garbage[CommandLossTimer::RECORD_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Os::File file;
+    ASSERT_EQ(file.open(TEST_COMMAND_LOSS_FILE, Os::File::OPEN_CREATE, Os::File::OVERWRITE), Os::File::OP_OK);
+    FwSizeType written = sizeof(garbage);
+    ASSERT_EQ(file.write(garbage, written, Os::File::WaitType::WAIT), Os::File::OP_OK);
+    file.close();
+
+    this->component.restorePersistentState();
+    this->component.loadParameters();
+
+    ASSERT_EVENTS_StatePersistenceFailure_SIZE(1);
+    ASSERT_EVENTS_StatePersistenceFailure(0, "cmdloss-load-corrupt", static_cast<I32>(CommandLossTimer::RECORD_SIZE));
+    U32 stored = 0;
+    ASSERT_TRUE(this->readCommandLossFile(stored));
+    ASSERT_EQ(stored, static_cast<U32>(CommandLossTimer::PERSIST_PERIOD_S));
+}
+
+void ModeManagerTester ::testRestoreCommandLossResumes() {
+    this->seedStateFile(static_cast<U8>(Components::SystemMode::NORMAL), 0,
+                        static_cast<U8>(Components::SafeModeReason::NONE), 1);
+    this->seedCommandLossFile(1000);
+    this->component.restorePersistentState();
+    this->component.loadParameters();
+
+    ASSERT_EVENTS_StatePersistenceFailure_SIZE(0);
+    U32 stored = 0;
+    ASSERT_TRUE(this->readCommandLossFile(stored));
+    ASSERT_EQ(stored, 1000u + static_cast<U32>(CommandLossTimer::PERSIST_PERIOD_S));
+
+    // Resumed time counts toward the limit: a 1062 s limit trips after 2 ticks
+    this->paramSet_COMM_LOSS_TIME(Fw::TimeIntervalValue(1062, 0), Fw::ParamValid::VALID);
+    this->component.loadParameters();
+    this->tick(1);
+    ASSERT_EVENTS_CommandLossDetected_SIZE(0);
+    this->tick(1);
+    ASSERT_EVENTS_CommandLossDetected_SIZE(1);
+    ASSERT_EVENTS_CommandLossDetected(0, 1062);
+}
+
 void ModeManagerTester ::testRestoreSafeModeState() {
     // A persisted SAFE_MODE record (clean-shutdown flag is only evaluated for
     // NORMAL) restores safe mode without a fresh entry
@@ -733,7 +792,7 @@ void ModeManagerTester ::setDebounceSeconds(U32 seconds) {
 
 void ModeManagerTester ::bootFromPersistentState() {
     // Mirror ReferenceDeploymentTopology.cpp: restorePersistentState() runs
-    // after the ports are connected and BEFORE loadParameters()
+    // after the ports are connected and BEFORE loadParameters(). A valid command
     this->component.restorePersistentState();
     this->component.loadParameters();
 }
@@ -754,6 +813,29 @@ void ModeManagerTester ::seedRawStateFile(const U8* data, FwSizeType size) {
     ASSERT_EQ(file.write(data, bytesWritten, Os::File::WaitType::WAIT), Os::File::OP_OK);
     ASSERT_EQ(bytesWritten, size);
     file.close();
+}
+
+void ModeManagerTester ::seedCommandLossFile(U32 elapsedSeconds) {
+    U8 record[CommandLossTimer::RECORD_SIZE];
+    CommandLossTimer::encode(elapsedSeconds, record);
+    Os::File file;
+    ASSERT_EQ(file.open(TEST_COMMAND_LOSS_FILE, Os::File::OPEN_CREATE, Os::File::OVERWRITE), Os::File::OP_OK);
+    FwSizeType bytesWritten = sizeof(record);
+    ASSERT_EQ(file.write(record, bytesWritten, Os::File::WaitType::WAIT), Os::File::OP_OK);
+    file.close();
+}
+
+bool ModeManagerTester ::readCommandLossFile(U32& elapsedSeconds) {
+    U8 record[CommandLossTimer::RECORD_SIZE];
+    Os::File file;
+    if (file.open(TEST_COMMAND_LOSS_FILE, Os::File::OPEN_READ) != Os::File::OP_OK) {
+        return false;
+    }
+    FwSizeType bytesRead = sizeof(record);
+    Os::File::Status status = file.read(record, bytesRead, Os::File::WaitType::WAIT);
+    file.close();
+    return status == Os::File::OP_OK &&
+           CommandLossTimer::decode(record, static_cast<std::size_t>(bytesRead), elapsedSeconds);
 }
 
 bool ModeManagerTester ::readStateFile(ModeManager::PersistentState& state) {

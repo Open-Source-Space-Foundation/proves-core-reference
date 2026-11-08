@@ -54,7 +54,7 @@ void ProvesRouterTester ::testAuthenticatedCommandIsRouted() {
     ASSERT_EQ(this->fromPortHistory_commandOut->at(0).context, 0U);
 
     // Routed once, signalled once, nothing allocated or sent elsewhere
-    ASSERT_from_packetRouted_SIZE(1);
+    ASSERT_from_authenticatedPacketRouted_SIZE(1);
     ASSERT_TLM_SIZE(1);
     ASSERT_TLM_RoutedPackets(0, 1);
     ASSERT_from_bufferAllocate_SIZE(0);
@@ -78,7 +78,7 @@ void ProvesRouterTester ::testAuthenticatedFileIsRoutedAsCopy() {
     ASSERT_EQ(copy.getData(), this->m_allocStorage);
     this->assertHoldsPacket(copy.getData(), copy.getSize());
 
-    ASSERT_from_packetRouted_SIZE(1);
+    ASSERT_from_authenticatedPacketRouted_SIZE(1);
     ASSERT_TLM_SIZE(1);
     ASSERT_TLM_RoutedPackets(0, 1);
     ASSERT_from_commandOut_SIZE(0);
@@ -104,7 +104,7 @@ void ProvesRouterTester ::testAuthenticatedUnknownIsRoutedAsCopy() {
     this->assertHoldsPacket(copy.getData(), copy.getSize());
     ASSERT_EQ(this->fromPortHistory_unknownDataOut->at(0).context, context);
 
-    ASSERT_from_packetRouted_SIZE(1);
+    ASSERT_from_authenticatedPacketRouted_SIZE(1);
     ASSERT_TLM_SIZE(1);
     ASSERT_TLM_RoutedPackets(0, 1);
     ASSERT_from_commandOut_SIZE(0);
@@ -121,7 +121,8 @@ void ProvesRouterTester ::testUnauthenticatedBypassCommandIsRouted() {
     ASSERT_from_commandOut_SIZE(1);
     const Fw::ComBuffer& com = this->fromPortHistory_commandOut->at(0).data;
     this->assertHoldsPacket(com.getBuffAddr(), com.getSize());
-    ASSERT_from_packetRouted_SIZE(1);
+    // Bypassed packets are routed but must not reset the command loss timer
+    ASSERT_from_authenticatedPacketRouted_SIZE(0);
 
     // Counted as bypassed, then as routed
     ASSERT_TLM_SIZE(2);
@@ -176,7 +177,7 @@ void ProvesRouterTester ::testOversizeCommandEmitsSerializationError() {
 
     // Nothing is routed or counted
     ASSERT_from_commandOut_SIZE(0);
-    ASSERT_from_packetRouted_SIZE(0);
+    ASSERT_from_authenticatedPacketRouted_SIZE(0);
     ASSERT_TLM_SIZE(0);
 }
 
@@ -194,7 +195,7 @@ void ProvesRouterTester ::testFileAllocationFailure() {
 
     ASSERT_from_fileOut_SIZE(0);
     ASSERT_from_bufferDeallocate_SIZE(0);
-    ASSERT_from_packetRouted_SIZE(0);
+    ASSERT_from_authenticatedPacketRouted_SIZE(0);
     ASSERT_TLM_SIZE(0);
 }
 
@@ -212,7 +213,7 @@ void ProvesRouterTester ::testUnknownAllocationFailure() {
 
     ASSERT_from_unknownDataOut_SIZE(0);
     ASSERT_from_bufferDeallocate_SIZE(0);
-    ASSERT_from_packetRouted_SIZE(0);
+    ASSERT_from_authenticatedPacketRouted_SIZE(0);
     ASSERT_TLM_SIZE(0);
 }
 
@@ -229,7 +230,7 @@ void ProvesRouterTester ::testShortAllocationIsDeallocated() {
     ASSERT_from_bufferDeallocate_SIZE(1);
     ASSERT_EQ(this->fromPortHistory_bufferDeallocate->at(0).fwBuffer.getData(), this->m_allocStorage);
     ASSERT_from_fileOut_SIZE(0);
-    ASSERT_from_packetRouted_SIZE(0);
+    ASSERT_from_authenticatedPacketRouted_SIZE(0);
     ASSERT_TLM_SIZE(0);
 }
 
@@ -256,7 +257,7 @@ void ProvesRouterTester ::testCountersAccumulate() {
 
     ASSERT_from_dataReturnOut_SIZE(4);
     ASSERT_from_commandOut_SIZE(3);
-    ASSERT_from_packetRouted_SIZE(3);
+    ASSERT_from_authenticatedPacketRouted_SIZE(2);
     ASSERT_TLM_RoutedPackets_SIZE(3);
     ASSERT_TLM_RoutedPackets(0, 1);
     ASSERT_TLM_RoutedPackets(1, 2);

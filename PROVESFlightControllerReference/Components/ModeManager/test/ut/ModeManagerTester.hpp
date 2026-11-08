@@ -32,6 +32,7 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     // State file the component uses in UT builds (relative, so it lands in
     // the current working directory; see ModeManager::STATE_FILE_PATH)
     static constexpr const char* TEST_STATE_FILE = ModeManager::STATE_FILE_PATH;
+    static constexpr const char* TEST_COMMAND_LOSS_FILE = ModeManager::COMMAND_LOSS_FILE_PATH;
 
   public:
     // ----------------------------------------------------------------------
@@ -109,8 +110,8 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! Command loss timeout enters safe mode and stops the watchdog once
     void testCommandLossTriggersSafeModeAndWatchdogStop();
 
-    //! packetRouted resets the command loss timer and debounce latch
-    void testPacketRoutedResetsCommandLossTimer();
+    //! authenticatedPacketRouted resets the command loss timer and debounce latch
+    void testAuthenticatedPacketResetsCommandLossTimer();
 
     //! prepareForReboot logs the event, persists cleanShutdown=1 without
     //! changing mode, and the next boot does not flag an unintended reboot
@@ -126,6 +127,15 @@ class ModeManagerTester final : public ModeManagerGTestBase {
 
     //! No state file (first boot): NORMAL, no warning, fresh unclean file
     void testRestoreNoStateFile();
+
+    //! A missing command loss file resumes at one persist period and logs the failure
+    void testRestoreCommandLossMissing();
+
+    //! A corrupt command loss file resumes at one persist period and logs the failure
+    void testRestoreCommandLossCorrupt();
+
+    //! A valid command loss file resumes at stored seconds plus one persist period
+    void testRestoreCommandLossResumes();
 
     //! A persisted SAFE_MODE state is restored: switches off, reason and
     //! entry count preserved, no fresh safe-mode entry side effects
@@ -172,6 +182,12 @@ class ModeManagerTester final : public ModeManagerGTestBase {
     //! first, then loadParameters() (ReferenceDeploymentTopology.cpp ordering).
     //! Only valid after construction with deferBoot=true.
     void bootFromPersistentState();
+
+    //! Write a valid command loss record holding the given elapsed seconds
+    void seedCommandLossFile(U32 elapsedSeconds);
+
+    //! Read back the stored command loss elapsed seconds; false if missing or corrupt
+    bool readCommandLossFile(U32& elapsedSeconds);
 
     //! Seed the state file with a PersistentState record
     void seedStateFile(U8 mode, U32 safeModeEntryCount, U8 safeModeReason, U8 cleanShutdown);

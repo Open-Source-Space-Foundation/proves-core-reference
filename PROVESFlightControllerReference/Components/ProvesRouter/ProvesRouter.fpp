@@ -40,8 +40,9 @@ module Svc {
         @ Port for deallocating buffers
         output port bufferDeallocate: Fw.BufferSend
 
-        @ Port to signal that a packet has been authenticated and routed
-        output port packetRouted: Fw.Signal
+        @ Port to signal that an authenticated packet was routed
+        @ Packets let through by the authentication bypass do not fire it
+        output port authenticatedPacketRouted: Fw.Signal
 
         ### Events ###
 

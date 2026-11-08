@@ -96,9 +96,9 @@ TEST(CommandLoss, TriggersSafeModeAndWatchdogStop) {
     tester.testCommandLossTriggersSafeModeAndWatchdogStop();
 }
 
-TEST(CommandLoss, PacketRoutedResetsTimer) {
+TEST(CommandLoss, AuthenticatedPacketResetsTimer) {
     Components::ModeManagerTester tester;
-    tester.testPacketRoutedResetsCommandLossTimer();
+    tester.testAuthenticatedPacketResetsCommandLossTimer();
 }
 
 TEST(Reboot, PrepareForReboot) {
@@ -119,6 +119,21 @@ TEST(Persistence, RestoreCleanShutdown) {
 TEST(Persistence, RestoreNoStateFile) {
     Components::ModeManagerTester tester(true);
     tester.testRestoreNoStateFile();
+}
+
+TEST(Persistence, RestoreCommandLossMissing) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCommandLossMissing();
+}
+
+TEST(Persistence, RestoreCommandLossCorrupt) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCommandLossCorrupt();
+}
+
+TEST(Persistence, RestoreCommandLossResumes) {
+    Components::ModeManagerTester tester(true);
+    tester.testRestoreCommandLossResumes();
 }
 
 TEST(Persistence, RestoreSafeModeState) {
