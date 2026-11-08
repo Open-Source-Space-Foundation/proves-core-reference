@@ -28,6 +28,7 @@ lib/zephyr-workspace/*
 *.gcov
 build
 settings.ini
+!native/settings.ini
 Framing/uv.lock
 /sequences/*.bin
 /.cache/
@@ -48,6 +49,7 @@ spi
 # Generated spi_dict.txt
 UploadsFilesystem/AuthenticateFiles/spi_dict.txt
 Framing/src/sequence_number.bin
+Framing/src/sequence_number.bin.tmp
 
 lib/fprime-extras/
 

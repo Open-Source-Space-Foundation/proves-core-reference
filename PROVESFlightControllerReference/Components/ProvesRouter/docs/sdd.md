@@ -18,7 +18,7 @@ The `Svc::ProvesRouter` component supports `Fw::ComPacketType::FW_PACKET_COMMAND
 `Svc::ProvesRouter` is the policy point of the uplink security design. Upstream, `Components::TcSecurityDeframer` verifies each frame (SPI, anti-replay sequence number, MAC) and records the result in the `ComCfg::FrameContext` `authenticated` flag without dropping anything. The router then enforces:
 
 - Packets with `authenticated == true` are routed normally.
-- Unauthenticated packets are routed only if their opcode is on the hardcoded bypass allowlist (`Components::PacketBypasser::bypassPacket` in `Bypasser.cpp`), which permits public commands such as `CMD_NO_OP`, `GET_SEQ_NUM`, and `TELL_JOKE`.
+- Unauthenticated packets are routed only if they are command packets (APID `FW_PACKET_COMMAND`) whose opcode is on the hardcoded bypass allowlist (`Components::PacketBypasser::bypassPacket` in `Bypasser.cpp`), which permits public commands such as `CMD_NO_OP`, `GET_SEQ_NUM`, and `TELL_JOKE`.
 - All other unauthenticated packets are rejected: ownership is returned via `dataReturnOut` and the packet is not routed.
 
 Because bypassed packets never pass through the authenticated-accept path in TcSecurityDeframer, they cannot advance the anti-replay sequence number.
@@ -65,8 +65,8 @@ SVC-ROUTER-006 | `Svc::ProvesRouter` shall emit an `AllocationError` warning eve
 SVC-ROUTER-007 | `Svc::ProvesRouter` shall make a copy of buffers that represent a `FW_PACKET_FILE` or unknown packet type before forwarding, so that the original buffer can be returned immediately via `dataReturnOut` | Memory management | Unit test |
 SVC-ROUTER-008 | `Svc::ProvesRouter` shall return ownership of all buffers received on `dataIn` through `dataReturnOut` | Memory management | Unit test |
 SVC-ROUTER-009 | `Svc::ProvesRouter` shall emit the `authenticatedPacketRouted` signal after routing an authenticated packet, and shall not emit it for packets that only bypassed authentication | Lets `ModeManager` track authenticated uplink without unauthenticated traffic holding off command loss | Unit test (`test_ProvesRouter_RoutingPolicy.cpp`) |
-SVC-ROUTER-010 | `Svc::ProvesRouter` shall reject packets whose frame context is not marked authenticated unless their opcode is on the bypass allowlist | Enforces uplink security policy at the routing edge | Integration test |
-SVC-ROUTER-011 | `Svc::ProvesRouter` shall telemeter counts of routed, bypassed, and rejected packets | Operator visibility into uplink security decisions | Inspection |
+SVC-ROUTER-010 | `Svc::ProvesRouter` shall reject packets whose frame context is not marked authenticated unless they are command packets whose opcode is on the bypass allowlist | Enforces uplink security policy at the routing edge | Unit test, integration test |
+SVC-ROUTER-011 | `Svc::ProvesRouter` shall telemeter counts of routed, bypassed, and rejected packets | Operator visibility into uplink security decisions | Unit test |
 
 ## Telemetry Channels
 

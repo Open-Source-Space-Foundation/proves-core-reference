@@ -1,0 +1,14 @@
+name: Detect Board TTY
+description: Find the Zephyr CDC ACM device and export it as UART_DEVICE.
+
+runs:
+  using: composite
+  steps:
+    - name: Detect Zephyr UART TTY
+      shell: bash
+      run: |
+        # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
+        # /dev/serial/by-id does not list this device on the integration runner.
+        ZEPHYR_TTY=$(./tools/ci/detect-board-tty.sh)
+        echo "Selected Zephyr board tty: $ZEPHYR_TTY"
+        echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV

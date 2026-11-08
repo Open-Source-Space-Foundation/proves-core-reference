@@ -580,9 +580,10 @@ def test_safe_09_command_loss_triggers_safe_mode_and_reboot(
     # Wait for the 1Hz run_handler to detect command loss (at most 2 seconds)
     fprime_test_api.assert_event(f"{component}.CommandLossDetected", timeout=5)
 
-    # Verify EnteringSafeMode event mentions loss of contact
+    # EnteringSafeMode is emitted after CommandLossDetected (runSafeModeSequence
+    # runs in between), so wait for it rather than reading the history now.
     entering_event = fprime_test_api.assert_event(
-        f"{component}.EnteringSafeMode", timeout=5
+        f"{component}.EnteringSafeMode", timeout=10
     )
     assert "contact" in entering_event.get_display_text().lower(), (
         "EnteringSafeMode should mention loss of contact"

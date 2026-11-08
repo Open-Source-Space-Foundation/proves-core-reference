@@ -6,8 +6,6 @@
 
 #include "PROVESFlightControllerReference/Components/LoadSwitch/LoadSwitch.hpp"
 
-#include <zephyr/drivers/gpio.h>
-
 namespace Components {
 
 // ----------------------------------------------------------------------
@@ -60,9 +58,10 @@ void LoadSwitch ::setLoadSwitchState(Fw::On state) {
         return;
     }
 
-    // Set the load switch state
-    Fw::Logic gpioValue = state ? Fw::Logic::HIGH : Fw::Logic::LOW;
-    this->gpioSet_out(0, gpioValue);
+    // Set the GPIO high before notification on ON
+    if (state == Fw::On::ON) {
+        this->gpioSet_out(0, Fw::Logic::HIGH);
+    }
 
     // Inform downstream components of the state change
     for (FwIndexType i = 0; i < this->getNum_loadSwitchStateChanged_OutputPorts(); i++) {
@@ -70,6 +69,11 @@ void LoadSwitch ::setLoadSwitchState(Fw::On state) {
             continue;
         }
         this->loadSwitchStateChanged_out(i, state);
+    }
+
+    // Set the GPIO low after notification on OFF
+    if (state == Fw::On::OFF) {
+        this->gpioSet_out(0, Fw::Logic::LOW);
     }
     this->log_ACTIVITY_HI_StatusChanged(state);
     this->tlmWrite_IsOn(state);

@@ -93,10 +93,20 @@ If this is your first time running the gds, you must create the authentication p
 make framer-plugin
 ```
 
-Finally, run the fprime-gds.
+Run the fprime-gds.
 ```shell
 make gds
 ```
+
+Finally, in a second terminal, with the board connected and GDS running
+```shell
+make sync-sequence-number
+```
+Useful information for make sync-sequence-number:
+
+- Sends GET_SEQ_NUM to the deframer and writes the next number to send (the board's last accepted number plus one) to the file the framing plugin reads on every frame
+- GDS must already be running and connected because the target uses the integration-test start_gds fixture, which connects to an existing GDS
+- Run again after a reflash, after switching ground computers, or whenever commands start being rejected
 
 ### Option B: YAMCS (Alternative Mission Control System)
 
