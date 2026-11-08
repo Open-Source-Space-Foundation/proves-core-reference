@@ -1,0 +1,16 @@
+description: |
+  Stand-in for the flight board's MCP23017 expander on native_sim.
+  Reading a pin returns its output latch, as reading the MCP23017 GPIO
+  register does. gpio-emul returns 0 for output-only pins instead.
+
+compatible: "proves,gpio-latch-sim"
+
+include: [gpio-controller.yaml, base.yaml]
+
+properties:
+  "#gpio-cells":
+    const: 2
+
+gpio-cells:
+  - pin
+  - flags

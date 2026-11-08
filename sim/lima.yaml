@@ -1,0 +1,21 @@
+# Lima VM for the SITL on Apple Silicon (sim/README.md): limactl start --name=pcr-sim sim/lima.yaml
+vmType: vz
+cpus: 6
+memory: "6GiB"
+disk: "50GiB"
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+# Clone the repo inside the VM. Building on a mount from the Mac is slow.
+mounts: []
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y git build-essential cmake ninja-build \
+          python3 python3-venv device-tree-compiler curl file xz-utils

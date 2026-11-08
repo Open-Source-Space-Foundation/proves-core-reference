@@ -15,6 +15,11 @@ if (BOARD STREQUAL "rpi_pico" OR FPRIME_ZEPHYR_USE_STD_ATOMIC_FIX)
     include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/lib/fprime-zephyr/fprime-zephyr/Os/StdAtomic")
 endif()
 
+# The native_sim board's fake devices (sim/README.md)
+if (BOARD MATCHES "^native_sim")
+    list(APPEND ZEPHYR_EXTRA_MODULES "${CMAKE_CURRENT_LIST_DIR}/sim")
+endif()
+
 # When running tests, avoid pulling in Zephyr (no BOARD etc. needed)
 if (NOT BUILD_TESTING)
     find_package(Zephyr HINTS "${CMAKE_CURRENT_LIST_DIR}/lib/zephyr-workspace")
