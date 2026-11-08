@@ -108,6 +108,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Marker expected in CdhCore.version.ProjectVersion while --ota-image is running.",
     )
     parser.addoption(
+        "--fs-flood-commands",
+        type=int,
+        default=2000,
+        help="Commands fs_concurrency_test.py floods while files transfer; see the "
+        "detection math in its module docstring.",
+    )
+    parser.addoption(
         "--ota-required",
         action="store_true",
         default=False,
