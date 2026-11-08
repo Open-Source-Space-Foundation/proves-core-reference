@@ -2,6 +2,23 @@
 
 This directory contains patches that are automatically applied to git submodules during the build process.
 
+## zephyr-drv2605-rtp-cancel-sync.patch
+
+Makes `haptics_stop_output()` in RTP mode wait for a running RTP write
+(`drivers/haptics/ti/drv2605.c` in `lib/zephyr-workspace/zephyr`). Upstream calls
+`k_work_cancel()`, which drops a queued write but returns while a running one is
+still on the bus. The patch calls `k_work_cancel_sync()` instead.
+
+**Why:** In RTP mode the driver writes the drive level from the system workqueue,
+outside `Drv2605Manager`'s lock. `Drv2605Manager` stops output when its face's load
+switch turns OFF. Without the wait, that write can still be in progress when the
+load switch cuts face power, which can leave I2C0 SDA stuck low (#540).
+
+**Status:** Upstream candidate for zephyrproject-rtos/zephyr. Delete this patch once
+the pinned Zephyr includes an upstream fix.
+
+**Application:** Applied by `make submodules`, like every `zephyr-*.patch` here.
+
 ## zephyr-veml6031-data-ready-timeout.patch
 
 This patch bounds the `while (1)` data-ready poll in `veml6031_perform_single_measurement` (`drivers/sensor/vishay/veml6031/veml6031.c` in `lib/zephyr-workspace/zephyr`). After the integration-time sleep, the driver polls for at most one more integration time plus 10 ms, then returns `-ETIMEDOUT`. It also returns early if the read that clears the data-ready flag fails.
