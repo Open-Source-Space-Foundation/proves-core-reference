@@ -179,7 +179,7 @@ jobs:
 
       - name: Run UART Integration Tests
         run: |
-          make test-integration TEST=mode_manager FILTER=slow
+          make test-integration TEST=mode_manager_test.py FILTER=slow
 
       - name: Format Filesystem
         if: always()
