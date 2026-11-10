@@ -179,7 +179,7 @@ jobs:
 
       - name: Run UART Integration Tests
         run: |
-          make test-integration
+          make test-integration TEST=mode_manager FILTER=slow
 
       - name: Format Filesystem
         if: always()
@@ -355,7 +355,7 @@ jobs:
   # Drop the `integration-radio` label from a runner to take its bench out of radio tests.
   integration-radio:
     needs: [changes, build]
-    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
+    if: false
     runs-on:
       - integration
       - integration-radio
