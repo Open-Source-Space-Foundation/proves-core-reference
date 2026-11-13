@@ -140,6 +140,20 @@ jobs:
         run: |
           make sim-build
 
+      - name: Ops contract
+        run: |
+          make ops-contract-check OPS_CONTRACT_DICTIONARY=build-artifacts-sim/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+
+      - name: SITL ops day
+        run: |
+          sim/run-sil.sh "$RUNNER_TEMP/ops-day" 3600
+          make sim-ops-day SIM_RUN="$RUNNER_TEMP/ops-day" PYTEST_ARGS="-rA"
+
+      - name: Stop ops-day sim
+        if: always()
+        run: |
+          sim/stop-sil.sh "$RUNNER_TEMP/ops-day"
+
       - name: SITL smoke
         run: |
           sim/smoke.sh "$RUNNER_TEMP/sitl-smoke"
@@ -162,6 +176,7 @@ jobs:
           path: |
             ${{ runner.temp }}/sitl/*.log
             ${{ runner.temp }}/sitl-smoke/*.log
+            ${{ runner.temp }}/ops-day/*.log
             logs
             !logs/**/*.xlsx
           if-no-files-found: ignore

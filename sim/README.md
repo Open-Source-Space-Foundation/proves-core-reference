@@ -75,7 +75,17 @@ sim/stop-sil.sh /tmp/sitl
 
 `SIM_GUI_PORT` changes the port. Do not start `make gds` against the sim: it reads the flight dictionary from `fprime-gds.yml` and opens a second connection to the same pty.
 
-`run-sil.sh` appends the sim's console to `sil.log` and the GDS output to `gds.log` in the run directory. The flash image `pcr-flash.bin` stays there between runs, so state persists like it does on a board. Delete it for a fresh filesystem. The run directory also holds the sim's own `sequence_number.bin`, so the sim never touches the board's `Framing/src/sequence_number.bin`. On a fresh image, `run-sil.sh` writes `0` to it so the GDS starts at the flight software's sequence number. `make sim-test` points the tests at the same file. `stop-sil.sh` exits 1 if the sim or the GDS is still running after it stops them.
+`run-sil.sh` appends the sim's console to `sil.log` and the GDS output to `gds.log` in the run directory. The flash image `pcr-flash.bin` stays there between runs, so state persists like it does on a board. Delete it for a fresh filesystem. The run directory also holds the sim's own `sequence_number.bin`, so the sim never touches the board's `Framing/src/sequence_number.bin`. On a fresh image, `run-sil.sh` writes `1` to it: the flight software starts with 0 as its last accepted number and rejects a frame that repeats it. `make sim-test` points the tests at the same file. `stop-sil.sh` exits 1 if the sim or the GDS is still running after it stops them.
+
+### Ops day
+
+`make sim-ops-day` runs a compressed day of operations (`PROVESFlightControllerReference/test/ops-day/`): boot, Beacons, authentication, telemetry dividers, files, sequences, comm-loss safe mode and the watchdog reboot that follows. It takes about 3.5 minutes and needs a fresh flash image, so give it a new run directory:
+
+```sh
+sim/run-sil.sh /tmp/ops-day
+make sim-ops-day SIM_RUN=/tmp/ops-day
+sim/stop-sil.sh /tmp/ops-day && rm -rf /tmp/ops-day
+```
 
 `SIM_ARGS` passes options to the executable. `-rt-ratio=N` runs N times faster than real time, and `-no-rt` runs as fast as the host allows. Run `build-fprime-native_sim/zephyr/zephyr.exe --help` for the full list. Run the integration tests at real time, because their timeouts are in wall-clock time. At `-rt-ratio=10`, `rtc_test.py::test_05` sees its alarm fire early.
 

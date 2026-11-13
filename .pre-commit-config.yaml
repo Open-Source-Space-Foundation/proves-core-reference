@@ -22,6 +22,8 @@ repos:
   rev: v20.1.8
   hooks:
   - id: clang-format
+    # tools/ops_contract.py owns this file's bytes and compares them exactly, so reformatting it fails the sitl job.
+    exclude: ^ops-contract/manifest\.json$
 
 - repo: https://github.com/cpplint/cpplint
   rev: 2.0.0

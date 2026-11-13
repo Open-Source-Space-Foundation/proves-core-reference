@@ -142,10 +142,31 @@ sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
 	@ZEPHYR_TOOLCHAIN_VARIANT=host $(UV_RUN) cmake --build build-fprime-native_sim -j$$(nproc)
 
 SIM_RUN ?= /tmp/sitl
+SIM_DEPLOYMENT := build-artifacts-sim/zephyr/fprime-zephyr-deployment
+# fprime-gds 4.4's pytest plugin takes the dictionary from fprime-gds.yml (the flight build) over --deployment.
+SIM_DICTIONARY := $(SIM_DEPLOYMENT)/dict/ReferenceDeploymentTopologyDictionary.json
 .PHONY: sim-test
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
-	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=build-artifacts-sim/zephyr/fprime-zephyr-deployment \
-		PYTEST_ARGS="--dictionary build-artifacts-sim/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json $(PYTEST_ARGS)"
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=$(SIM_DEPLOYMENT) \
+		PYTEST_ARGS="--dictionary $(SIM_DICTIONARY) $(PYTEST_ARGS)"
+
+# File packets larger than 204 B overflow the 248 B TC frame, and back-to-back packets
+# overrun the flight UART driver's 1 KiB receive ring, which drains 64 B per 10 Hz tick.
+FILE_UPLINK_ARGS := --file-uplink-chunk-size 204 --file-uplink-cooldown 0.4
+.PHONY: sim-ops-day
+# Stops at the first failed step: every later step builds on the board state it left.
+sim-ops-day: uv ## Run the ops-day scenario against a sim that sim/run-sil.sh $(SIM_RUN) started on a fresh flash image
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(UV_RUN) pytest PROVESFlightControllerReference/test/ops-day \
+		--deployment $(SIM_DEPLOYMENT) --dictionary $(SIM_DICTIONARY) $(FILE_UPLINK_ARGS) -x $(PYTEST_ARGS)
+
+OPS_CONTRACT_DICTIONARY ?= build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
+.PHONY: ops-contract-check
+ops-contract-check: uv ## Check the built dictionary against the ops contract (ops-contract/README.md)
+	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json
+
+.PHONY: ops-contract
+ops-contract: uv ## Regenerate ops-contract/manifest.json from the built dictionary
+	@$(UV_RUN) python tools/ops_contract.py $(OPS_CONTRACT_DICTIONARY) ops-contract/manifest.json --write
 
 .PHONY: check-console-disabled
 ZEPHYR_CONFIG ?= $(BUILD_DIR)/zephyr/.config
