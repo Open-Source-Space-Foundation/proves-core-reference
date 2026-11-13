@@ -22,12 +22,21 @@ if(FPRIME_PLATFORM STREQUAL "Zephyr")
     set(IMPL_SOURCES "${CMAKE_CURRENT_LIST_DIR}/StartupManager.cpp")
 endif()
 
-register_fprime_library(
-    AUTOCODER_INPUTS
-        "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
-    SOURCES
-        ${IMPL_SOURCES}
-)
+if(IMPL_SOURCES)
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
+        SOURCES
+            ${IMPL_SOURCES}
+        DEPENDS
+            FprimeExtras_Utilities_FileHelper
+    )
+else()
+    register_fprime_library(
+        AUTOCODER_INPUTS
+            "${CMAKE_CURRENT_LIST_DIR}/StartupManager.fpp"
+    )
+endif()
 
 ### Unit Tests ###
 # register_fprime_ut(

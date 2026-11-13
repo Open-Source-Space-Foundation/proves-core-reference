@@ -9,6 +9,7 @@
 // #include <PROVESFlightControllerReference/ReferenceDeployment/Top/ReferenceDeploymentPacketsAc.hpp>
 
 // Necessary project-specified types
+#include <Fw/Logger/Logger.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
@@ -114,6 +115,8 @@ void setupTopology(const TopologyState& state) {
     configComponents(state);
     // Project-specific component configuration. Function provided above. May be inlined, if desired.
     configureTopology();
+    // The RTC update callback writes telemetry, so arm it only once tlmSend is configured (#548).
+    rtcManager.armDiscipline();
     // Restore the persisted mode now that the ports are wired and the GPIO drivers are open.
     // This drives the load switches, so it must not run any earlier.
     modeManager.restorePersistentState();
@@ -128,6 +131,12 @@ void setupTopology(const TopologyState& state) {
     // for over-the-air communications.
     lora.start(state.loraDevice, Zephyr::TransmitState::DISABLED);
     comDriver.configure(state.uartDevice, state.baudRate);
+    // Event-driven RX task (one CONFIG_DYNAMIC_THREAD_POOL_SIZE slot); priority sits below the rate groups (1-3)
+    // and above the aggregator/comQueue (7/8). On failure the driver logs and keeps draining from schedIn.
+    const Os::Task::Status comDriverRxStatus = comDriver.start(6, CONFIG_DYNAMIC_THREAD_STACK_SIZE);
+    if (comDriverRxStatus != Os::Task::OP_OK) {
+        Fw::Logger::log("[WARNING] comDriver RX task start failed: %d\n", static_cast<I32>(comDriverRxStatus));
+    }
 
     // static struct spi_cs_control cs_ctrl = {
     //     .gpio = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(spi0), cs_gpios, 1),

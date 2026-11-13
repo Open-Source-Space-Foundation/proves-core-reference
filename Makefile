@@ -143,9 +143,12 @@ sim-build: fprime-venv ## Build the native_sim SITL executable (sim/README.md)
 
 SIM_RUN ?= /tmp/sitl
 SIM_DEPLOYMENT := build-artifacts-sim/zephyr/fprime-zephyr-deployment
+# fprime-gds 4.4's pytest plugin takes the dictionary from fprime-gds.yml (the flight build) over --deployment.
+SIM_DICTIONARY := $(SIM_DEPLOYMENT)/dict/ReferenceDeploymentTopologyDictionary.json
 .PHONY: sim-test
 sim-test: ## Run integration tests against the sim that sim/run-sil.sh $(SIM_RUN) started (set TEST, PYTEST_ARGS)
-	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=$(SIM_DEPLOYMENT)
+	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(MAKE) --no-print-directory test-integration TEST_DEPLOYMENT=$(SIM_DEPLOYMENT) \
+		PYTEST_ARGS="--dictionary $(SIM_DICTIONARY) $(PYTEST_ARGS)"
 
 # File packets larger than 204 B overflow the 248 B TC frame, and back-to-back packets
 # overrun the flight UART driver's 1 KiB receive ring, which drains 64 B per 10 Hz tick.
@@ -154,7 +157,7 @@ FILE_UPLINK_ARGS := --file-uplink-chunk-size 204 --file-uplink-cooldown 0.4
 # Stops at the first failed step: every later step builds on the board state it left.
 sim-ops-day: uv ## Run the ops-day scenario against a sim that sim/run-sil.sh $(SIM_RUN) started on a fresh flash image
 	@PROVES_SEQUENCE_NUMBER_FILE=$(SIM_RUN)/sequence_number.bin $(UV_RUN) pytest PROVESFlightControllerReference/test/ops-day \
-		--deployment $(SIM_DEPLOYMENT) $(FILE_UPLINK_ARGS) -x $(PYTEST_ARGS)
+		--deployment $(SIM_DEPLOYMENT) --dictionary $(SIM_DICTIONARY) $(FILE_UPLINK_ARGS) -x $(PYTEST_ARGS)
 
 OPS_CONTRACT_DICTIONARY ?= build-artifacts/zephyr/fprime-zephyr-deployment/dict/ReferenceDeploymentTopologyDictionary.json
 .PHONY: ops-contract-check
@@ -256,7 +259,7 @@ test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-n
 	cd native && $(UV_RUN) fprime-util build --ut --all
 	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
 
-FILTER ?= not sync_sequence_number and not format_filesystem and not ota
+FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow
 
 TEST_DEPLOYMENT ?= build-artifacts/zephyr/fprime-zephyr-deployment
 .PHONY: test-integration

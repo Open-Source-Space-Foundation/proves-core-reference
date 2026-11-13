@@ -26,7 +26,9 @@ TcSecurityDeframer ::TcSecurityDeframer(const char* const compName)
     : TcSecurityDeframerComponentBase(compName),
       m_sequenceNumberFilePath(),
       m_sequenceNumber(0),
-      m_sequenceNumberWindow(0) {}
+      m_sequenceNumberWindow(0),
+      m_persistedSequenceNumber(0),
+      m_hmacKeyId(0) {}
 
 TcSecurityDeframer ::~TcSecurityDeframer() {}
 
@@ -55,16 +57,17 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
 
     {
         Os::ScopeLock lock(this->m_sequenceNumberLock);
+        const U32 lastAccepted = this->m_sequenceNumber.load();
 
         // --- Validate SPI and anti-replay sequence number ---
         const PacketValidator::Status validationStatus =
-            validatePacket(parseResult.securityHeader, this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            validatePacket(parseResult.securityHeader, lastAccepted, this->m_sequenceNumberWindow);
 
         if (validationStatus == PacketValidator::Status::SpiInvalid) {
             this->log_WARNING_HI_SpiInvalid(parseResult.securityHeader.spi);
         } else if (validationStatus == PacketValidator::Status::SequenceNumberInvalid) {
-            this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber,
-                                                       this->m_sequenceNumber, this->m_sequenceNumberWindow);
+            this->log_WARNING_HI_SequenceNumberInvalid(parseResult.securityHeader.sequenceNumber, lastAccepted,
+                                                       this->m_sequenceNumberWindow);
         } else {
             this->log_WARNING_HI_SpiInvalid_ThrottleClear();
             this->log_WARNING_HI_SequenceNumberInvalid_ThrottleClear();
@@ -79,12 +82,12 @@ void TcSecurityDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, 
             } else {
                 this->log_WARNING_HI_AuthenticationFailed_ThrottleClear();
 
-                // --- Accept: persist new sequence number ---
-                // Only fully verified frames advance the counter, so bypass and replayed
-                // frames can never desync ground and spacecraft (issue #426)
-                this->m_sequenceNumber = parseResult.securityHeader.sequenceNumber;
-                this->writeSequenceNumber(this->m_sequenceNumber);
-                this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+                // --- Accept: advance the sequence number ---
+                // Only fully verified frames advance the counter (issue #426). No filesystem I/O
+                // here: run_handler persists the counter (see SDD, Sequence Number Persistence).
+                const U32 accepted = parseResult.securityHeader.sequenceNumber;
+                this->m_sequenceNumber.store(accepted);
+                this->tlmWrite_CurrentSequenceNumber(accepted);
                 contextOut.set_authenticated(true);
             }
         }
@@ -112,6 +115,16 @@ void TcSecurityDeframer ::dataReturnIn_handler(FwIndexType portNum,
     this->dataReturnOut_out(0, data, context);
 }
 
+void TcSecurityDeframer ::run_handler(FwIndexType portNum, U32 context) {
+    this->persistIfChanged();
+}
+
+void TcSecurityDeframer ::prepareForReboot_handler(FwIndexType portNum) {
+    // The frame that commanded this reboot advanced the counter microseconds ago; without this flush it
+    // would still be valid after the reboot. The write is serialized against a tick write in progress.
+    this->persistIfChanged();
+}
+
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
@@ -120,7 +133,7 @@ void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
     Os::ScopeLock lock(this->m_sequenceNumberLock);
 
     // Log the successful sequence number get
-    this->log_ACTIVITY_HI_SequenceNumberGet(this->m_sequenceNumber);
+    this->log_ACTIVITY_HI_SequenceNumberGet(this->m_sequenceNumber.load());
 
     // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -128,23 +141,26 @@ void TcSecurityDeframer ::GET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq
 
 void TcSecurityDeframer ::SET_SEQ_NUM_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 seq_num) {
     Os::ScopeLock lock(this->m_sequenceNumberLock);
+    Os::ScopeLock persistLock(this->m_persistLock);
 
-    // Write the sequence number to the file system
-    Os::File::Status status = this->writeSequenceNumber(seq_num);
-    if (status != Os::File::OP_OK) {
-        // Return execution error response
+    // Write the sequence number to the file system immediately
+    if (this->writeSequenceNumber(seq_num) != Os::File::OP_OK) {
+        // The failed open may have truncated the file; moving the baseline off the in-memory value makes the
+        // next tick rewrite it (the counter only moves forward, so it cannot land on value - 1 first)
+        this->m_persistedSequenceNumber = this->m_sequenceNumber.load() - 1;
         this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::EXECUTION_ERROR);
         return;
     }
 
-    // Set runtime sequence number to the new value
-    this->m_sequenceNumber = seq_num;
+    // Set runtime sequence number to the new value; it is now on disk
+    this->m_sequenceNumber.store(seq_num);
+    this->m_persistedSequenceNumber = seq_num;
 
     // Telemeter the updated sequence number
-    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(seq_num);
 
     // Log the successful sequence number set
-    this->log_ACTIVITY_HI_SequenceNumberSet(this->m_sequenceNumber);
+    this->log_ACTIVITY_HI_SequenceNumberSet(seq_num);
 
     // Return success response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
@@ -170,11 +186,15 @@ void TcSecurityDeframer ::configure() {
     // by readSequenceNumber) fall back to 0 rather than refusing to boot; the operator
     // can correct the counter with SET_SEQ_NUM.
     U32 sequenceNumber = 0;
-    (void)this->readSequenceNumber(sequenceNumber);
-    this->m_sequenceNumber = sequenceNumber;
+    static_cast<void>(this->readSequenceNumber(sequenceNumber));
+    this->m_sequenceNumber.store(sequenceNumber);
+
+    // The restored value is the on-disk baseline for run_handler: the file is rewritten only once the
+    // counter moves on, never preemptively (an unreadable file is left as-is until then).
+    this->m_persistedSequenceNumber = sequenceNumber;
 
     // Telemeter the current sequence number
-    this->tlmWrite_CurrentSequenceNumber(this->m_sequenceNumber);
+    this->tlmWrite_CurrentSequenceNumber(sequenceNumber);
 
     // Import the HMAC key
     PacketAuthenticator::KeyImportResult result = importHmacKey(AUTH_DEFAULT_KEY, this->m_hmacKeyId);
@@ -215,6 +235,23 @@ Os::File::Status TcSecurityDeframer ::writeSequenceNumber(const U32 value) {
     }
 
     return status;
+}
+
+void TcSecurityDeframer ::persistIfChanged() {
+    // Only m_persistLock is taken here, never m_sequenceNumberLock: the frame-processing thread must not
+    // wait on filesystem I/O. The counter is read under m_persistLock so a concurrent SET_SEQ_NUM (which
+    // updates counter and bookkeeping together) cannot be undone by a stale snapshot, and the two
+    // callers (run tick, prepareForReboot) cannot write the file concurrently.
+    Os::ScopeLock lock(this->m_persistLock);
+    const U32 current = this->m_sequenceNumber.load();
+    if (current == this->m_persistedSequenceNumber) {
+        return;
+    }
+
+    // A failure is evented by writeSequenceNumber; the baseline is moved to (current - 1) so the next call
+    // retries even if the counter has not advanced (the failed open may have truncated the file).
+    const bool written = (this->writeSequenceNumber(current) == Os::File::OP_OK);
+    this->m_persistedSequenceNumber = written ? current : (current - 1);
 }
 
 }  // namespace Components
