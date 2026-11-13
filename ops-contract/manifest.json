@@ -100,7 +100,7 @@
       ]
     },
     "ReferenceDeployment.lora.TRANSMIT": {
-      "opcode": "0x1001f009",
+      "opcode": "0x1001f00a",
       "args": [
         "enum U8 {ENABLED=0, DISABLED=1, DISABLING=2}"
       ]
@@ -439,7 +439,10 @@
       "members": [
         "ReferenceDeployment.lora.LastRssi: I16",
         "ReferenceDeployment.lora.LastSnr: I8",
-        "ReferenceDeployment.lora.BytesSent: U64"
+        "ReferenceDeployment.lora.BytesSent: U64",
+        "ReferenceDeployment.lora.ChannelRssi: I16",
+        "ReferenceDeployment.lora.TransmitsDeferred: U32",
+        "ReferenceDeployment.lora.TransmitsForced: U32"
       ]
     },
     "Security": {
