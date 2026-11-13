@@ -1,6 +1,6 @@
 name: ota
 
-# The OTA test holds the bare-FCB runner for ~40 min, so it does not run on
+# The OTA test holds the bare-FCB runner for ~10 min, so it does not run on
 # every PR push. It runs:
 #   - on every push to main, to catch regressions after merge;
 #   - on a PR when a maintainer adds the `test-ota` label (only users with
@@ -127,11 +127,11 @@ jobs:
           power-cycle: "false"
           probe-serial: ${{ env.FCB_PROBE_SERIAL }}
 
-      # Cooldown 0.6 makes the uplink ~35 min; faster rates corrupt it until #457 is fixed.
+      # Cooldown 0.02 uplinks the ~676KB image in ~2-3 min (0.6 took ~35 min).
       - name: Run OTA Update Test (bare FCB, UART)
         run: |
           make test-integration TEST=ota_update_test.py FILTER="ota" \
-            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-build.outputs.ota-build-id }} --file-uplink-cooldown 0.6 --file-uplink-chunk-size 204"
+            PYTEST_ARGS="--bare-flight-controler-board --ota-required --ota-image=$GITHUB_WORKSPACE/ota-image/ota-test-image.signed.bin --ota-build-id=${{ needs.ota-build.outputs.ota-build-id }} --file-uplink-cooldown 0.02 --file-uplink-chunk-size 204"
 
       - name: Format Filesystem
         if: always()
