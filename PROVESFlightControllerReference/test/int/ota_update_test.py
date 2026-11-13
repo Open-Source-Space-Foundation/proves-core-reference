@@ -34,8 +34,8 @@ UPDATE_TIMEOUT_S = 180
 PREPARE_TIMEOUT_S = 60
 BOOT_TIMEOUT_SWAP_S = 150
 BOOT_TIMEOUT_PLAIN_S = 60
-# ~35 min for a ~676KB image at --file-uplink-cooldown 0.6; lower once #457 lands.
-UART_UPLINK_TIMEOUT_S = 3600
+# ~2-3 min for a ~676KB image at --file-uplink-cooldown 0.02; the margin covers slower runners.
+UART_UPLINK_TIMEOUT_S = 900
 # Larger chunks overflow the 248B TC frame and every DATA packet is silently dropped.
 MAX_UPLINK_CHUNK = 204
 
