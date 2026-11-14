@@ -3,7 +3,9 @@
 
 # Keep me first
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/project/config")
+add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/GNC")
 add_fprime_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Components")
+
 
 # Comms subtopologies and the deployment reference fprime-zephyr driver instances,
 # which exist only in the Zephyr build (native builds are for UTs / SIL — see
