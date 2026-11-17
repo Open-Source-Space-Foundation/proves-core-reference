@@ -22,3 +22,13 @@ register_fprime_library(
 #   DEPENDS
 #       MyPackage_MyOtherModule
 )
+
+### Unit Tests ###
+register_fprime_ut(
+    AUTOCODER_INPUTS
+        "${CMAKE_CURRENT_LIST_DIR}/ModeManager.fpp"
+    SOURCES
+        "${CMAKE_CURRENT_LIST_DIR}/test/ut/ModeManagerTestMain.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/test/ut/ModeManagerTester.cpp"
+    UT_AUTO_HELPERS
+)

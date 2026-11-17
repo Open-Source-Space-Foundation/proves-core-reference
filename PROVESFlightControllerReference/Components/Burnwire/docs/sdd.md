@@ -1,3 +1,8 @@
+---
+title: Burnwire
+category: Hardware
+---
+
 # Components::Burnwire
 
 Driving the Burnwire on and off. This component activates the two pins that are required to heat the burnwire resisitor. The burnwire deployment will be handled by the Antenna Deployment, that will call the ports in the burnwire deployment. For testing, the commands to directly call the burnwire have been left in.

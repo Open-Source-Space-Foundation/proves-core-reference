@@ -1,3 +1,8 @@
+---
+title: Amateur Radio
+category: Communication
+---
+
 # Components::AmateurRadio
 
 Interactions between Radio Amateurs and Sat

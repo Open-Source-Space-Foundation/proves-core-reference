@@ -9,18 +9,17 @@ help: ## Display this help.
 
 .PHONY: submodules
 submodules: ## Initialize and update git submodules
+	@git submodule foreach --recursive 'git checkout -- . && git clean -fd' || true
 	@git submodule update --init --recursive
-	@echo "Applying fprime-gds version patch..."
-	@cd lib/fprime && \
-		if git apply --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			git apply ../../patches/fprime-gds-version.patch && \
-			echo "✓ Applied fprime-gds version patch"; \
-		elif git apply --reverse --check ../../patches/fprime-gds-version.patch 2>/dev/null; then \
-			echo "⚠ Patch already applied"; \
-		else \
-			echo "❌ Error: Unable to apply patch. Run 'cd lib/fprime && git status' to check."; \
-			exit 1; \
-		fi
+	@echo "Applying Zephyr VEML6031 data-ready timeout patch (upstream candidate)..."
+	@cd lib/zephyr-workspace/zephyr && \
+	  if git apply --check ../../../patches/zephyr-veml6031-data-ready-timeout.patch > /dev/null 2>&1; then \
+	    git apply ../../../patches/zephyr-veml6031-data-ready-timeout.patch && echo "✓ Applied VEML6031 data-ready timeout patch"; \
+	  elif git apply --reverse --check ../../../patches/zephyr-veml6031-data-ready-timeout.patch > /dev/null 2>&1; then \
+	    echo "⚠ Patch already applied"; \
+	  else \
+	    echo "❌ Error: Unable to apply VEML6031 data-ready timeout patch. Check it against the pinned Zephyr version."; exit 1; \
+	  fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv
@@ -47,6 +46,10 @@ fprime-venv: uv ## Create a virtual environment
 	@INST_CFG=$$(ls $(shell pwd)/fprime-venv/lib/python*/site-packages/fprime_yamcs/yamcs/src/main/yamcs/etc/yamcs.fprime-project.yaml 2>/dev/null | head -1); \
 	  if [ -z "$$INST_CFG" ]; then echo "⚠ instance config not found, skipping"; exit 0; fi; \
 	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-instance-config-fix.py "$$INST_CFG"
+	@echo "Applying fprime-yamcs constants-order fix..."
+	@TARGET=$$(ls $(FPRIME_YAMCS_MAIN) 2>/dev/null | head -1); \
+	  if [ -z "$$TARGET" ]; then echo "⚠ fprime-yamcs not found, skipping"; exit 0; fi; \
+	  $(VIRTUAL_ENV)/bin/python tools/apply-yamcs-constants-order-fix.py "$$TARGET"
 
 
 .PHONY: zephyr-setup
@@ -80,62 +83,29 @@ data-diagram: fprime-venv ## Generate Mermaid packet wire diagrams as Markdown (
 
 ##@ Documentation
 
-.PHONY: docs-sync
-docs-sync: ## Sync SDD files from components to docs-site
-	@echo "Syncing SDD files to docs-site/components..."
-	@mkdir -p docs-site/components/img
-	@# Copy ADCS
-	@cp PROVESFlightControllerReference/Components/ADCS/docs/sdd.md docs-site/components/ADCS.md
-	@# Copy Communication Components
-	@cp PROVESFlightControllerReference/Components/AmateurRadio/docs/sdd.md docs-site/components/AmateurRadio.md
-	@cp PROVESFlightControllerReference/Components/SBand/docs/sdd.md docs-site/components/SBand.md
-	@cp PROVESFlightControllerReference/ComCcsdsUart/docs/sdd.md docs-site/components/ComCcsdsUart.md
-	@cp PROVESFlightControllerReference/ComCcsdsSband/docs/sdd.md docs-site/components/ComCcsdsSband.md
-	@cp PROVESFlightControllerReference/ComCcsdsLora/docs/sdd.md docs-site/components/ComCcsdsLora.md
-	@cp PROVESFlightControllerReference/Components/PayloadCom/docs/sdd.md docs-site/components/PayloadCom.md
-	@cp PROVESFlightControllerReference/Components/ComDelay/docs/sdd.md docs-site/components/ComDelay.md
-	@# Copy Core Components
-	@cp PROVESFlightControllerReference/Components/ModeManager/docs/sdd.md docs-site/components/ModeManager.md
-	@cp PROVESFlightControllerReference/Components/StartupManager/docs/sdd.md docs-site/components/StartupManager.md
-	@cp PROVESFlightControllerReference/Components/ResetManager/docs/sdd.md docs-site/components/ResetManager.md
-	@cp PROVESFlightControllerReference/Components/Watchdog/docs/sdd.md docs-site/components/Watchdog.md
-	@cp PROVESFlightControllerReference/Components/BootloaderTrigger/docs/sdd.md docs-site/components/BootloaderTrigger.md
-	@cp PROVESFlightControllerReference/Components/DetumbleManager/docs/sdd.md docs-site/components/DetumbleManager.md
-	@# Copy Hardware Components
-	@cp PROVESFlightControllerReference/Components/AntennaDeployer/docs/sdd.md docs-site/components/AntennaDeployer.md
-	@cp PROVESFlightControllerReference/Components/Burnwire/docs/sdd.md docs-site/components/Burnwire.md
-	@cp PROVESFlightControllerReference/Components/CameraHandler/docs/sdd.md docs-site/components/CameraHandler.md
-	@cp PROVESFlightControllerReference/Components/LoadSwitch/docs/sdd.md docs-site/components/LoadSwitch.md
-	@# Copy Sensor Components
-	@cp PROVESFlightControllerReference/Components/ImuManager/docs/sdd.md docs-site/components/ImuManager.md
-	@cp PROVESFlightControllerReference/Components/PowerMonitor/docs/sdd.md docs-site/components/PowerMonitor.md
-	@cp PROVESFlightControllerReference/Components/ThermalManager/docs/sdd.md docs-site/components/ThermalManager.md
-	@# Copy Driver Components
-	@cp PROVESFlightControllerReference/Components/Drv/Drv2605Manager/docs/sdd.md docs-site/components/Drv2605Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Ina219Manager/docs/sdd.md docs-site/components/Ina219Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/RtcManager/docs/sdd.md docs-site/components/RtcManager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Tmp112Manager/docs/sdd.md docs-site/components/Tmp112Manager.md
-	@cp PROVESFlightControllerReference/Components/Drv/Veml6031Manager/docs/sdd.md docs-site/components/Veml6031Manager.md
-	@# Copy Storage Components
-	@cp PROVESFlightControllerReference/Components/FlashWorker/docs/sdd.md docs-site/components/FlashWorker.md
-	@cp PROVESFlightControllerReference/Components/FsFormat/docs/sdd.md docs-site/components/FsFormat.md
-	@cp PROVESFlightControllerReference/Components/FsSpace/docs/sdd.md docs-site/components/FsSpace.md
-	@cp PROVESFlightControllerReference/Components/NullPrmDb/docs/sdd.md docs-site/components/NullPrmDb.md
-	@# Copy Security Components
-	@cp PROVESFlightControllerReference/Components/Authenticate/docs/sdd.md docs-site/components/Authenticate.md
-	@cp PROVESFlightControllerReference/Components/AuthenticationRouter/docs/sdd.md docs-site/components/AuthenticationRouter.md
-	@# Copy images
-	@find PROVESFlightControllerReference -path "*/docs/img/*" -type f -exec cp {} docs-site/components/img/ \; 2>/dev/null || true
-	@echo "✓ Synced 32 component SDDs and images"
+DOCS_VENV ?= $(shell pwd)/docs-venv
+DOCS_PYTHON := $(DOCS_VENV)/bin/python
+
+.PHONY: docs-deps
+docs-deps: uv ## Install docs dependencies and init component sources that are git submodules
+	@$(UV) venv $(DOCS_VENV) --allow-existing --quiet
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) --requirement requirements-docs.txt
+	@paths=$$($(DOCS_PYTHON) tools/mkdocs_hooks/component_docs.py --submodule-sources mkdocs.yml) || exit 1; \
+	[ -z "$$paths" ] || git submodule update --init $$paths
 
 .PHONY: docs-serve
-docs-serve: uv ## Serve MkDocs documentation site locally
+docs-serve: docs-deps ## Serve MkDocs documentation site locally
 	@echo "Starting MkDocs server at http://127.0.0.1:8000"
-	@$(UVX) --from mkdocs-material mkdocs serve
+	@$(DOCS_VENV)/bin/mkdocs serve
 
 .PHONY: docs-build
-docs-build: uv ## Build MkDocs documentation site
-	@$(UVX) --from mkdocs-material mkdocs build
+docs-build: docs-deps ## Build MkDocs documentation site (strict, as in CI)
+	@$(DOCS_VENV)/bin/mkdocs build --strict
+
+.PHONY: docs-test
+docs-test: docs-deps ## Run the docs hook tests
+	@$(UV) pip install --quiet --python $(DOCS_PYTHON) pytest
+	@$(DOCS_PYTHON) -m pytest tools/mkdocs_hooks
 
 .PHONY: generate
 generate: submodules fprime-venv zephyr generate-auth-key keys/proves.pem ## Generate FPrime-Zephyr Proves Core Reference
@@ -161,7 +131,7 @@ check-console-disabled: uv ## Fail if the Zephyr UART console is enabled (it cor
 
 ##@ Authentication Keys
 
-AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
+AUTH_DEFAULT_KEY_HEADER ?= PROVESFlightControllerReference/Components/TcSecurityDeframer/AuthDefaultKey.h
 AUTH_KEY_TEMPLATE ?= scripts/generate_auth_default_key.h
 
 .PHONY: generate-auth-key
@@ -184,7 +154,7 @@ build-mcuboot: submodules zephyr fprime-venv
 	@cp $(shell pwd)/bootloader/sysbuild.conf $(SYSBUILD_PATH)/sysbuild.conf
 
 	$(UV_RUN) $(shell pwd)/tools/bin/build-with-proves $(SYSBUILD_PATH) --sysbuild
-	mv $(shell pwd)/build/with_mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
+	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.uf2 $(shell pwd)/mcuboot.uf2
 	mv $(shell pwd)/build/mcuboot/zephyr/zephyr.elf $(shell pwd)/mcuboot.elf
 
 ##@ Debugging / OpenOCD
@@ -230,7 +200,22 @@ test-unit: ## Run unit tests
 	cmake --build build-gtest
 	ctest --test-dir build-gtest
 
-FILTER ?= not sync_sequence_number and not format_filesystem
+NATIVE_UT_BUILD_DIR ?= native/build-fprime-automatic-native-ut
+
+.PHONY: generate-fprime-ut
+generate-fprime-ut: submodules fprime-venv generate-auth-key ## Generate the native F Prime UT build cache (needs host mbedTLS)
+	cd native && $(UV_RUN) fprime-util generate --ut --force
+
+.PHONY: generate-fprime-ut-if-needed
+generate-fprime-ut-if-needed:
+	@test -f $(NATIVE_UT_BUILD_DIR)/build.ninja || $(MAKE) generate-fprime-ut
+
+.PHONY: test-fprime-ut
+test-fprime-ut: submodules fprime-venv generate-auth-key generate-fprime-ut-if-needed ## Build and run F Prime component unit tests (native host build)
+	cd native && $(UV_RUN) fprime-util build --ut --all
+	ctest --test-dir $(NATIVE_UT_BUILD_DIR) --output-on-failure --no-tests=error -R "PROVESFlightControllerReference_"
+
+FILTER ?= not sync_sequence_number and not format_filesystem and not ota and not slow
 
 .PHONY: test-integration
 test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass test targets)
@@ -258,6 +243,11 @@ test-integration: uv ## Run integration tests (set TEST=<name|file.py> or pass t
 # Allow test names to be passed as targets without Make trying to execute them
 %:
 	@:
+
+.PHONY: sync-sequence-number
+sync-sequence-number: uv ## Synchronize GDS/flight sequence number
+	@echo "Synchronizing sequence number"
+	@$(UV_RUN) pytest PROVESFlightControllerReference/test/int/sync_sequence_number_test.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: test-interactive
 test-interactive: fprime-venv ## Run interactive test selection (set ARGS for CLI mode, e.g., ARGS="--all --cycles 10")
@@ -440,17 +430,23 @@ delete-shadow-gds:
 
 .PHONY: gds-integration
 gds-integration: framer-plugin
-	@$(GDS_COMMAND) --gui=none --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
+	@$(GDS_COMMAND) --gui=none --output-unframed-data --uart-device=$(if $(UART_DEVICE),$(UART_DEVICE),/dev/ttyBOARD)
 
 .PHONY: DoL_test
-DoL_test:
+DOL_SERIAL_PORT ?= /dev/ttyACM0
+DoL_test: ## Run the day-in-the-life tests (DOL_SERIAL_PORT=/dev/ttyXXX)
 	@echo "make sure passthrough GDS is running"
-	@$(UV_RUN) pytest test/test_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
+	@DOL_SERIAL_PORT="$(DOL_SERIAL_PORT)" $(UV_RUN) pytest PROVESFlightControllerReference/test/day-in-the-life/test_day_in_the_life.py PROVESFlightControllerReference/test/day-in-the-life/test_edge_cases_day_in_the_life.py --deployment build-artifacts/zephyr/fprime-zephyr-deployment
 
 .PHONY: framer-plugin
 framer-plugin: fprime-venv ## Build framer plugin
 	@echo "Framer plugin built and installed in virtual environment."
-	@ cd Framing && $(UV_RUN) pip install -e .
+	@# Use `uv pip` (installs into $(VIRTUAL_ENV)) rather than `uv run` inside
+	@# Framing/: `uv run` treats Framing as its own uv project and syncs its
+	@# lockfile into the shared venv, uninstalling/reinstalling dozens of
+	@# packages. When gds-integration runs in the background this churn races
+	@# any concurrently starting pytest and breaks its imports mid-flight.
+	@ $(UV) pip install -e Framing
 
 .PHONY: copy-secrets
 copy-secrets:
@@ -461,19 +457,44 @@ copy-secrets:
 	@mkdir -p ./keys/
 	@cp $(SECRETS_DIR)/proves.pem ./keys/
 	@cp $(SECRETS_DIR)/proves.pub.pem ./keys/
-	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/Authenticate/
+	@cp $(SECRETS_DIR)/AuthDefaultKey.h ./PROVESFlightControllerReference/Components/TcSecurityDeframer/
 	@echo "Copied secret files 🤫"
+
+# Decimal SCID that `make-ci-spacecraft-id` bakes in. The OTA bench board sits
+# next to the CI board on the same channel and key, so its builds use 69.
+CI_SPACECRAFT_ID ?= 67
+CI_SPACECRAFT_ID_HEX = $(shell printf '0x%04X' $(CI_SPACECRAFT_ID))
 
 .PHONY: make-ci-spacecraft-id
 make-ci-spacecraft-id: ## Generate a unique spacecraft ID for CI builds (also rewrites YAMCS instance config to match)
-	@echo "Generating unique spacecraft ID for CI build..."
-	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = 0x0043/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
+	@echo "Generating unique spacecraft ID $(CI_SPACECRAFT_ID) for CI build..."
+	sed -i.bak 's/SpacecraftId = 0x0044/SpacecraftId = $(CI_SPACECRAFT_ID_HEX)/' PROVESFlightControllerReference/project/config/ComCfg.fpp && \
 	rm PROVESFlightControllerReference/project/config/ComCfg.fpp.bak
-	@grep -q 'SpacecraftId = 0x0043' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
-	@echo "Patching YAMCS instance config spacecraftId 68 -> 67..."
-	sed -i.bak 's/spacecraftId: 68/spacecraftId: 67/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
+	@grep -q 'SpacecraftId = $(CI_SPACECRAFT_ID_HEX)' PROVESFlightControllerReference/project/config/ComCfg.fpp || (echo "Failed to set CI spacecraft ID in ComCfg.fpp" && exit 1)
+	@echo "Patching YAMCS instance config spacecraftId 68 -> $(CI_SPACECRAFT_ID)..."
+	sed -i.bak 's/spacecraftId: 68/spacecraftId: $(CI_SPACECRAFT_ID)/g' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml && \
 	rm yamcs/yamcs-data/etc/yamcs.fprime-project.yaml.bak
 	@! grep -q 'spacecraftId: 68' yamcs/yamcs-data/etc/yamcs.fprime-project.yaml || (echo "Failed to patch all spacecraftId entries in yamcs.fprime-project.yaml" && exit 1)
+
+##@ OTA Test Image
+
+# Same source as `make build`, but OTA_BUILD_ID shows up in ProjectVersion: F'
+# derives it from `git describe`, so tag HEAD for the duration of the build.
+# Overwrites the `make build` outputs with this image -- copy those out first.
+OTA_IMAGE ?= $(shell pwd)/build-ota-test/ota-test-image.signed.bin
+OTA_VERSION_FILES = $(BUILD_DIR)/versions/version.cpp $(BUILD_DIR)/versions/version.hpp $(BUILD_DIR)/versions/version.json
+
+.PHONY: ota-test-image
+ota-test-image: submodules zephyr fprime-venv generate-if-needed ## Build a version-marked signed image for the OTA test (OTA_BUILD_ID=<id>)
+	@[ -n "$(OTA_BUILD_ID)" ] || { echo "Usage: make ota-test-image OTA_BUILD_ID=<id>"; exit 1; }
+	@TAG="ota-test-$(OTA_BUILD_ID)"; \
+	  git tag -f "$$TAG" >/dev/null || exit 1; \
+	  trap 'git tag -d "'"$$TAG"'" >/dev/null; rm -f $(OTA_VERSION_FILES)' EXIT INT TERM; \
+	  rm -f $(OTA_VERSION_FILES); \
+	  $(UV_RUN) fprime-util build || exit 1; \
+	  mkdir -p "$(dir $(OTA_IMAGE))"; \
+	  cp build-artifacts/zephyr.signed.bin "$(OTA_IMAGE)"
+	@echo "OTA test image: $(OTA_IMAGE)"
 
 include makelib/build-tools.mk
 include makelib/ci.mk

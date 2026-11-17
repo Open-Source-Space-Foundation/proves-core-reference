@@ -1,0 +1,51 @@
+name: Docs-only change
+description: Sets docs-only=true when every file changed by the pull request is markdown or lives under a docs/ or docs-site/ directory. Always false outside pull requests.
+
+inputs:
+  github-token:
+    description: Token with pull-requests read access.
+    required: true
+
+outputs:
+  docs-only:
+    description: '"true" when the pull request touches documentation only, else "false".'
+    value: ${{ steps.classify.outputs.docs-only }}
+
+runs:
+  using: composite
+  steps:
+    - name: Classify changed files
+      id: classify
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+          echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # The files endpoint lists at most 3000 files, so a larger PR could hide
+        # a code file behind 3000 docs paths. Fail closed: run everything.
+        changed=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.changed_files')
+        if [ "$changed" -ge 3000 ]; then
+          echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # Include previous_filename so renaming code into a docs path still
+        # counts as touching code. `shell: bash` runs with -eo pipefail, so a
+        # failed API call fails the job rather than guessing.
+        files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+          --jq '.[] | .filename, (.previous_filename // empty)')
+        if [ -z "$files" ]; then
+          echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # Docs-only = every path is markdown or lives under a docs/ or
+        # docs-site/ directory. A here-string, not a pipe: with pipefail, grep -q
+        # exiting early can SIGPIPE the writer and flip the result to docs-only.
+        if grep -qvE '(\.md$|^docs-site/|(^|/)docs/)' <<< "$files"; then
+          echo "docs-only=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "docs-only=true" >> "$GITHUB_OUTPUT"
+        fi

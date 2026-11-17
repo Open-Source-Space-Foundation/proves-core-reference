@@ -8,22 +8,37 @@ module Components {
         output port runSequence: Svc.CmdSeqIn
 
         @ Port for receiving the status of the start-up sequence
-        sync input port completeSequence: Fw.CmdResponse
+        sync input port startupCompleteSequence: Fw.CmdResponse
 
         @ Port for receiving the indication that the start-up sequence has started
-        sync input port sequenceStarted: Svc.CmdSeqIn
+        sync input port startupsequenceStarted: Svc.CmdSeqIn
 
-        @ Command to wait for system quiescence before proceeding with start-up
-        sync command WAIT_FOR_QUIESCENCE()
+        @ Port for receiving the status of the SafeMode Sequence
+        sync input port safeModeCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving the indication that the SafeMode sequence has started
+        sync input port safeModeSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the indication that the Payload sequence has started
+        sync input port payloadSequenceStarted: Svc.CmdSeqIn
+
+        @ Port for receiving the status of the Payload Sequence
+        sync input port payloadCompleteSequence: Fw.CmdResponse
+
+        @ Port for receiving if Lora was ever on
+        sync input port loraFirstStart: Fw.Signal
+
+        @ Enable LoRa transmission
+        output port enableTransmit: Fw.Signal
+
+        @ Disable LoRa transmission
+        output port disableTransmit: Fw.Signal
 
         @ Command to output the current boot count
-        sync command GET_BOOT_COUNT()
+        sync command GET_BOOT_COUNT() opcode 0x1
 
         @ Telemetry for boot count
         telemetry BootCount: FwSizeType
-
-        @ Telemetry for quiescence end time
-        telemetry QuiescenceEndTime: Fw.TimeValue update on change
 
         @ Event emitted when getting boot count
         event CurrentBootCount(i: I64) severity activity low \
@@ -33,32 +48,30 @@ module Components {
         event BootCountUpdateFailure() severity warning low \
             format "Failed to update boot count file"
 
-        @ Event emitted when the quiescence file was not updated
-        event QuiescenceFileInitFailure() severity warning low \
-            format "Failed to initialize quiescence start time file"
+        @ Event emitted when the boot count file holds an implausible value (torn or corrupt write)
+        event BootCountCorrupted(raw: I64) severity warning high \
+            format "Boot count file corrupt (raw value {}) - treating as unreadable"
 
         @ Event emitted when the start-up sequence succeeds
-        event StartupSequenceFinished() severity activity low \
+        event StartupSequenceFinished() severity activity low id 4 \
             format "Start-up sequence finished successfully"
 
         @ Event emitted when the start-up sequence fails
         event StartupSequenceFailed(response: Fw.CmdResponse @< Response code
-            ) severity warning low format "Start-up sequence failed with response code {}"
+            ) severity warning low id 5 format "Start-up sequence failed with response code {}"
 
-        @ Whether the start-up manager is armed to wait for quiescence
-        param ARMED: bool default true
-
-        @ Time to wait before allowing start-up to proceed
-        param QUIESCENCE_TIME: Fw.TimeIntervalValue default {seconds = 45 * 60, useconds = 0}
-
-        @ File storing the quiescence start time
-        param QUIESCENCE_START_FILE: string default "/quiescence_start.bin"
+        @ Event emitted when the hardcoded startup sequence enables the radio
+        event HardcodedRadioEnable() severity activity high id 6 \
+            format "Hardcoded Startup Sequence has enabled the radio"
 
         @ Path to the start-up sequence file
-        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin"
+        param STARTUP_SEQUENCE_FILE: string default "/seq/startup.bin" id 3 set opcode 0x8 save opcode 0x9
 
         @ File to store the boot count
-        param BOOT_COUNT_FILE: string default "/boot_count.bin"
+        param BOOT_COUNT_FILE: string default "/boot_count.bin" id 4 set opcode 0xa save opcode 0xb
+
+        @ 1 Hz run ticks before enabling LoRa transmit (45*60 + 100 margin)
+        param TRANSMIT_ENABLE_TICKS: U32 default 2800 id 5 set opcode 0xc save opcode 0xd
 
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #

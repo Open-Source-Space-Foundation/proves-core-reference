@@ -1,3 +1,8 @@
+---
+title: ADCS
+category: Core
+---
+
 # Components::ADCS
 
 The ADCS (Attitude Determination and Control System) component is responsible for collecting sensor data related to the spacecraft's attitude. Currently, it interfaces with light sensors (VEML6031) to gather visible, infrared, and ambient light data, which can be used for sun sensing and attitude determination.

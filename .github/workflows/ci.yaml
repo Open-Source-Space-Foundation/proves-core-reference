@@ -1,106 +1,152 @@
 name: ci
 
+# One workflow so the firmware is built once and every job downloads the same
+# artifacts. Jobs without a `needs:` link run in parallel, each on its own
+# runner: `integration-uart` and `integration-radio` both wait only on `build`
+# and land on separate `integration` machines when two are free.
 on:
   pull_request:
   push:
     branches:
       - main
 
+# The integration jobs only read the repository; artifact up/download uses the
+# per-run artifact scope, not contents: write.
+permissions:
+  contents: read
+
+# A new push to a PR, or to main, cancels that ref's still-running jobs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Classifies the change so the build and test jobs can skip docs-only PRs.
+  # `lint` and `docs` always run; pushes to main always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs-only: ${{ steps.docs-only.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions
+
+      - id: docs-only
+        uses: ./.github/actions/docs-only
+        with:
+          github-token: ${{ github.token }}
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Lint
         run: |
           make fmt
 
-  unit-test:
+  docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install docs dependencies
+        run: |
+          make docs-deps
+
+      - name: Build docs (strict)
+        run: |
+          ./docs-venv/bin/mkdocs build --strict
+
+      - name: Test docs hook
+        run: |
+          make docs-test
+
+  # `always()` so a failed `changes` runs the tests (empty output is not
+  # 'true') instead of skipping them, since a skipped required check passes.
+  unit-test:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
-        if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
           make download-bin
 
       - name: Setup submodules
-        if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
+
+      - name: Install lib dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
 
       - name: Run Unit Tests
         run: |
           make test-unit
 
-  build:
-    runs-on: deathstar
+  fprime-ut:
+    needs: changes
+    if: always() && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Download bin tools
-        if: steps.cache-bin.outputs.cache-hit != 'true'
         run: |
           make download-bin
 
       - name: Setup submodules
-        if: steps.cache-submodules.outputs.cache-hit != 'true'
         run: |
           make submodules
 
-      - name: Create python venv
+      # Cache uv's download cache, not the venv: `make fprime-venv` still
+      # runs and applies its patches, but installs from local wheels.
+      - name: Cache uv downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('requirements.txt', 'yamcs/pyyaml-override.txt') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Setup fprime venv
         run: |
           make fprime-venv
 
-      - name: Setup Zephyr
-        if: steps.cache-zephyr-workspace.outputs.cache-hit != 'true'
+      - name: Install lib dependencies
         run: |
-          make zephyr-workspace
+          sudo apt update
+          sudo apt install -y libmbedtls-dev
 
-      - name: Setup Zephyr SDK
-        if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
+      - name: Run F Prime Component UTs
         run: |
-          make zephyr-sdk
+          make test-fprime-ut
 
-      - name: Setup Zephyr Export
-        run: |
-          make zephyr-export
+  build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs-only != 'true' }}
+    runs-on: deathstar
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Install Zephyr Python Dependencies
-        run: |
-          make zephyr-python-deps
-
-      - name: Change to CI Spacecraft ID
-        run: |
-          make make-ci-spacecraft-id
-
-      - name: Generate
-        run: |
-          make generate
-
-      - name: Set Authentication Key
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
-
-      - name: Build MCUBoot
-        run: |
-          make build-mcuboot
-
-      - name: Build Flight Software
-        run: |
-          make build
-
-      - name: Ensure console disabled
-        # The Zephyr console shares cdc_acm_uart0 with the F' downlink; if it is
-        # re-enabled, console text interleaves with the CCSDS TM frames and
-        # desyncs the GDS deframer. Fail the build so this cannot reach main.
-        run: |
-          make check-console-disabled
+      - name: Build Firmware
+        uses: ./.github/actions/build-firmware
+        with:
+          auth-key: ${{ secrets.AUTH_KEY }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: artifacts
           path: |
@@ -111,87 +157,25 @@ jobs:
             yamcs/yamcs-data/mdb/fprime.xtce.xml
           retention-days: 30
 
+      - uses: ./.github/actions/remove-auth-key
+        if: always()
+
   integration-uart:
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
-    needs: build
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v6
+      - name: Prepare integration runner
+        uses: ./.github/actions/integration-prepare
         with:
-          name: artifacts
-          path: .
+          auth-key: ${{ secrets.AUTH_KEY }}
 
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
-
-      - name: Load .env file
-        run: |
-          while IFS= read -r line || [ -n "$line" ]; do
-            # Skip comments and empty lines
-            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-            echo "$line" >> $GITHUB_ENV
-          done < ~/actions-runner/.env
-
-      - name: Set up dependencies
-        run: |
-          make submodules fprime-venv
-
-      - name: Apply CI spacecraft ID overrides
-        run: |
-          # The build job ran `make-ci-spacecraft-id` before compiling the
-          # FSW, so the hex flashed onto the board emits TM frames with
-          # SCID 67. The integration runner's working tree is a fresh
-          # checkout (default SCID 68) so we re-apply the same override
-          # here to keep the YAMCS instance config / adapter in sync.
-          make make-ci-spacecraft-id
-
-      - name: Set Authentication Key
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
-
-      - name: Install Framer Plugin
-        run: |
-          make framer-plugin
-
-      - name: Detect Board TTY
-        run: |
-          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
-          # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
-          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
-
-      - name: Kill all python processes
-        run: |
-          pkill -9 python || true
-
-      - name: Start GDS
-        run: |
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
-          echo $! > server.pid
-
-      - name: Sync Sequence Number
-        run: |
-          make test-integration FILTER=sync_sequence_number
+      - name: Bootstrap GDS
+        uses: ./.github/actions/bootstrap-gds
 
       - name: Run UART Integration Tests
         run: |
@@ -202,28 +186,64 @@ jobs:
         run: |
           make test-integration FILTER=format_filesystem
 
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gds-log-uart
+          path: |
+            gds-bootstrap.log
+            gds.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Kill GDS
         if: always()
         run: |
+          echo "=== python procs BEFORE kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           [ -f server.pid ] && kill $(cat server.pid) || true
           # Release /dev/ttyBOARD so the YAMCS adapter can open it next.
-          pkill -f fprime-gds || true
-          pkill -f fprime_gds || true
-          pkill -f gds-integration || true
-          pkill -f proves_adapter || true
+          ./tools/ci/kill-ci-processes.sh
           fuser -k /dev/ttyBOARD 2>/dev/null || true
           sleep 2
+          echo "=== python procs AFTER kill ==="
+          ps -eo pid,ppid,etimes,args | grep -iE "python|pytest" | grep -v grep || true
           echo "Holders of /dev/ttyBOARD after kill (should be empty):"
           lsof /dev/ttyBOARD || true
+
+      - name: Power-Cycle Satellite Before YAMCS
+        if: always()
+        run: |
+          # The GDS phase can leave the board's uplink deframer holding a
+          # partial TC frame (killing the GDS mid-write leaves the
+          # FrameAccumulator waiting for bytes that never arrive, and the
+          # detector consumes subsequent YAMCS commands silently). A power
+          # cycle clears all board-side latent state so the YAMCS phase
+          # starts from a known-good boot, mirroring manual bench testing
+          # where YAMCS-first-after-boot always round-trips.
+          ./tools/ci/psu off
+          sleep 3
+          ./tools/ci/psu on
+          # Wait for the CDC ACM device to re-enumerate as /dev/ttyBOARD.
+          for i in $(seq 1 30); do
+            [ -e /dev/ttyBOARD ] && { echo "/dev/ttyBOARD back after ${i}s"; break; }
+            sleep 1
+          done
+          [ -e /dev/ttyBOARD ] || { echo "ERROR: /dev/ttyBOARD did not re-enumerate"; exit 1; }
+          # Give the FSW a moment to finish booting before the adapter opens the port.
+          sleep 5
 
       - name: Restore MDB to expected path
         run: ./tools/ci/restore-yamcs-mdb.sh
 
       - name: Set up Java 17 for YAMCS
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Start YAMCS Stack
         env:
@@ -284,6 +304,25 @@ jobs:
           echo "===== lsof /dev/ttyBOARD ====="
           lsof /dev/ttyBOARD || true
 
+      - name: Dump YAMCS archive diagnostics on failure
+        if: failure()
+        run: |
+          # Discriminate uplink-dead vs downlink/decode-dead:
+          # if CommandsDispatched grew during the test, the board received and
+          # executed the NO_OPs and the fault is in the TM/event path; if it
+          # never updated, the uplink died before the command dispatcher.
+          echo "===== packets received by YAMCS (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/packets?limit=50&order=desc" || true
+          echo ""
+          echo "===== CommandsDispatched parameter samples ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/parameters/ReferenceDeployment_ReferenceDeployment/CdhCore/cmdDisp/CommandsDispatched/samples" || true
+          echo ""
+          echo "===== data link stats ====="
+          curl -fsS "http://localhost:8090/api/links/fprime-project" || true
+          echo ""
+          echo "===== YAMCS events (last 50) ====="
+          curl -fsS "http://localhost:8090/api/archive/fprime-project/events?limit=50&order=desc" || true
+
       - name: Stop YAMCS Stack
         if: always()
         run: |
@@ -299,7 +338,7 @@ jobs:
 
       - name: Upload YAMCS log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: yamcs-log
           path: yamcs.log
@@ -308,68 +347,30 @@ jobs:
       - name: Power Off Satellite
         if: always()
         run: |
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ./tools/ci/psu off
 
+      - uses: ./.github/actions/remove-auth-key
+        if: always()
+
+  # Drop the `integration-radio` label from a runner to take its bench out of radio tests.
   integration-radio:
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.outputs.docs-only != 'true' }}
     runs-on:
       - integration
-    needs:
-      - build
+      - integration-radio
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/download-artifact@v6
+      - name: Prepare integration runner
+        uses: ./.github/actions/integration-prepare
         with:
-          name: artifacts
-          path: .
-
-      - name: Flash Firmware
-        uses: ./.github/actions/flash-firmware
-
-      - name: Load .env file
-        run: |
-          while IFS= read -r line || [ -n "$line" ]; do
-            # Skip comments and empty lines
-            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-            echo "$line" >> $GITHUB_ENV
-          done < ~/actions-runner/.env
-
-      - name: Set up dependencies
-        run: |
-          make submodules fprime-venv
-
-      - name: Set Authentication Key
-        run: |
-          echo "#define AUTH_DEFAULT_KEY \"${{ secrets.AUTH_KEY }}\"" > PROVESFlightControllerReference/Components/Authenticate/AuthDefaultKey.h
-
-      - name: Install Framer Plugin
-        run: |
-          make framer-plugin
+          auth-key: ${{ secrets.AUTH_KEY }}
+          ci-spacecraft-id: "false"
 
       - name: Detect Zephyr UART TTY
-        run: |
-          # Pick Zephyr CDC ACM by USB VID:PID 0028:000f (set in board defconfig);
-          # /dev/serial/by-id does not list this device on the integration runner.
-          ZEPHYR_TTY=""
-          for d in /sys/bus/usb/devices/*/idVendor; do
-            v=$(cat "$d" 2>/dev/null)
-            p=$(cat "${d%idVendor}idProduct" 2>/dev/null)
-            if [ "$v" = "0028" ] && [ "$p" = "000f" ]; then
-              path=${d%/idVendor}
-              for ifn in $path/*:*; do
-                [ "$(cat $ifn/bInterfaceClass 2>/dev/null)" = "02" ] || continue
-                tty=$(ls "$ifn/tty/" 2>/dev/null | head -1)
-                [ -n "$tty" ] && { ZEPHYR_TTY="/dev/$tty"; break 2; }
-              done
-            fi
-          done
-          if [ -z "$ZEPHYR_TTY" ]; then
-            echo "ERROR: Zephyr CDC ACM (0028:000f) tty not found via sysfs"
-            lsusb || true
-            exit 1
-          fi
-          echo "Selected Zephyr board tty: $ZEPHYR_TTY"
-          echo "UART_DEVICE=$ZEPHYR_TTY" >> $GITHUB_ENV
+        uses: ./.github/actions/detect-board-tty
 
       - name: Bootstrap Sequence Number over UART
         run: |
@@ -381,13 +382,34 @@ jobs:
           # the framer plugin, then the LoRa GDS that follows can authenticate.
           # Tracked by #400: long-term, make radio bootstrap commands auth-exempt
           # (or align seq-number out-of-band over RF) so this UART pre-step can go away.
-          pkill -9 python || true
-          nohup make gds-integration UART_DEVICE="$UART_DEVICE" &
+          ./tools/ci/kill-ci-processes.sh
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-bootstrap.log 2>&1 &
           BOOTSTRAP_GDS_PID=$!
           echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
-          # Wait briefly for GDS to bind sockets
           sleep 5
-          make test-integration FILTER=sync_sequence_number
+          # Sync against the LoRa deframer instance: the radio traffic that
+          # follows is validated by it, not by the UART instance this
+          # bootstrap link talks through.
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
+          make test-integration FILTER=format_filesystem
+          kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
+          rm -f server-bootstrap.pid
+
+      - name: Power-Cycle Satellite
+        run: |
+          ./tools/ci/kill-ci-processes.sh
+          ./tools/ci/psu cycle
+
+      - name: Detect Zephyr UART TTY
+        uses: ./.github/actions/detect-board-tty
+
+      - name: Sync Sequence Number over UART
+        run: |
+          nohup make gds-integration UART_DEVICE="$UART_DEVICE" > gds-sync.log 2>&1 &
+          BOOTSTRAP_GDS_PID=$!
+          echo $BOOTSTRAP_GDS_PID > server-bootstrap.pid
+          sleep 5
+          make test-integration FILTER=sync_sequence_number PYTEST_ARGS=--sync-deframer=lora
           kill $BOOTSTRAP_GDS_PID 2>/dev/null || true
           rm -f server-bootstrap.pid
 
@@ -430,18 +452,21 @@ jobs:
           echo "Selected LoRa passthrough tty: $PASSTHROUGH_TTY"
           echo "LORA_PASSTHROUGH_TTY=$PASSTHROUGH_TTY" >> $GITHUB_ENV
 
-      - name: Kill all python processes
+      - name: Kill CI processes
         run: |
-          pkill -9 python || true
+          ./tools/ci/kill-ci-processes.sh
 
       - name: Start GDS on LoRa Passthrough
         run: |
-          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" &
+          # Capture GDS's own stdout/stderr for the whole session (not just what
+          # pytest captures on failure) so a crash mid-run has a full record of
+          # every EVR/telemetry line GDS saw, uploaded as the gds-console-log artifact.
+          nohup make gds-integration UART_DEVICE="${GDS_PASSTHROUGH:-$LORA_PASSTHROUGH_TTY}" > gds-rf.log 2>&1 &
           GDS_RF_PID=$!
           echo $GDS_RF_PID > server-rf.pid
           for i in $(seq 1 15); do
             sleep 1
-            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check nohup.out for details."; exit 1; }
+            kill -0 $GDS_RF_PID 2>/dev/null || { echo "RF GDS process (PID $GDS_RF_PID) exited unexpectedly during startup. Check gds-rf.log for details."; exit 1; }
           done
 
       - name: Sync Sequence Number
@@ -465,27 +490,47 @@ jobs:
 
       - name: Upload telemetry sample logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: radio-tlm-samples
           path: tlm_sample_*.csv
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Upload GDS logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gds-log-radio
+          path: |
+            gds-bootstrap.log
+            gds-sync.log
+            gds-rf.log
+            logs
+            !logs/**/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Kill GDS & Power Off Satellite
         if: always()
         run: |
           [ -f server.pid ] && kill $(cat server.pid) || true
           [ -f server-rf.pid ] && kill $(cat server-rf.pid) || true
-          ~/korad_control/.venv/bin/python ~/korad_control/korad_control.py -d /dev/ttyPWR --output 0
+          ./tools/ci/psu off
+
+      - uses: ./.github/actions/remove-auth-key
+        if: always()
 
   yamcs-build:
+    needs: [changes, build]
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
-    needs: build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: artifacts
 
@@ -504,7 +549,7 @@ jobs:
 
       - name: Upload compose state on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: yamcs-build-compose-state
           path: |

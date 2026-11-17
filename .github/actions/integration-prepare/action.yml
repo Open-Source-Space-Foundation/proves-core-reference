@@ -1,0 +1,28 @@
+name: Integration Prepare
+description: Download the build artifacts, set up the integration runner and flash the board. The caller must check out the repository first so this local action can be found.
+
+inputs:
+  auth-key:
+    description: Authentication key the firmware was built with (composite actions cannot read secrets).
+    required: true
+  ci-spacecraft-id:
+    description: Re-apply the CI spacecraft ID override the build job compiled into the firmware.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      with:
+        name: artifacts
+        path: .
+
+    - name: Integration Setup
+      uses: ./.github/actions/integration-setup
+      with:
+        auth-key: ${{ inputs.auth-key }}
+        ci-spacecraft-id: ${{ inputs.ci-spacecraft-id }}
+
+    - name: Flash Firmware
+      uses: ./.github/actions/flash-firmware

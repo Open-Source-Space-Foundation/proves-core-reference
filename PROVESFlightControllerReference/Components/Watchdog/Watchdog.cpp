@@ -67,8 +67,12 @@ void Watchdog ::START_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
 }
 
 void Watchdog ::STOP_WATCHDOG_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
-    // call stop handler
-    this->prepareForReboot_out(0);
+    // Let connected components persist state before the watchdog is allowed to expire
+    for (FwIndexType port = 0; port < this->getNum_prepareForReboot_OutputPorts(); port++) {
+        if (this->isConnected_prepareForReboot_OutputPort(port)) {
+            this->prepareForReboot_out(port);
+        }
+    }
     this->stop_handler(0);
     // Provide command response
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);

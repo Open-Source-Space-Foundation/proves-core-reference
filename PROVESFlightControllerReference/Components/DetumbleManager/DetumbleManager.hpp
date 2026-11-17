@@ -60,7 +60,7 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Command to set the operating mode
     void SET_MODE_cmdHandler(FwOpcodeType opCode,  //!< The opcode
                              U32 cmdSeq,           //!< The command sequence number
-                             Components::DetumbleMode mode) override;
+                             const Components::DetumbleMode& mode) override;
 
   public:
     // ----------------------------------------------------------------------
@@ -88,6 +88,12 @@ class DetumbleManager final : public DetumbleManagerComponentBase {
     //! Parameter update handler
     void parameterUpdated(FwPrmIdType id  //!< The parameter ID
                           ) override;
+
+    //! Parameter load hook (fpp >= 3.4): the generated default forwards every parameter loaded at
+    //! startup to parameterUpdated, which would announce all parameters on boot. Load is silent.
+    void parameterLoaded(FwPrmIdType id,       //!< The parameter ID
+                         Fw::ParamValid valid  //!< The parameter validity status
+                         ) override;
 
     //! Actions to perform in the COOLDOWN state
     void stateCooldownActions();

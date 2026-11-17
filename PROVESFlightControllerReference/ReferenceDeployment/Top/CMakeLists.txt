@@ -13,10 +13,12 @@
 register_fprime_module(
     AUTOCODER_INPUTS
         "${CMAKE_CURRENT_LIST_DIR}/instances.fpp"
+        "${CMAKE_CURRENT_LIST_DIR}/system.fpp"
         "${CMAKE_CURRENT_LIST_DIR}/topology.fpp"
         "${CMAKE_CURRENT_LIST_DIR}/ReferenceDeploymentPackets.fppi"
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/ReferenceDeploymentTopology.cpp"
     DEPENDS
         Fw_Logger
+        Svc_TlmPacketizer_config_TlmPacketizerConfig
 )

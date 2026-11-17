@@ -1,3 +1,8 @@
+---
+title: Ina219 Manager
+category: Driver
+---
+
 # Drv::Ina219Manager
 
 The INA219 Manager component interfaces with the INA219 current/power monitor to provide voltage, current, and power measurements.

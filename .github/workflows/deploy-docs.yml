@@ -21,19 +21,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
-          pip install -r requirements-docs.txt
+          make docs-deps
 
       - name: Build MkDocs site
         run: |
-          mkdocs build
+          ./docs-venv/bin/mkdocs build --strict
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

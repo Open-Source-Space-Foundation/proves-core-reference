@@ -1,3 +1,8 @@
+---
+title: Fs Space
+category: Storage
+---
+
 # Components::FsSpace
 
 Read free space from the filesystem (specifically the filesystem containing /prmDb.dat)/

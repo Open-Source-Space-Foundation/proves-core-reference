@@ -10,7 +10,7 @@ module ReferenceDeployment {
     rateGroup1Hz
   }
 
-  topology ReferenceDeployment {
+  deployment topology ReferenceDeployment {
 
   # ----------------------------------------------------------------------
   # Subtopology imports
@@ -154,14 +154,14 @@ module ReferenceDeployment {
       #comSplitterTelemetry.comOut -> ComCcsdsSband.comQueue.comPacketQueueIn[ComCcsds.Ports_ComPacketQueue.TELEMETRY]
 
       # Router to Command Dispatcher
-      ComCcsdsLora.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsLora.authenticationRouter.cmdResponseIn
+      ComCcsdsLora.provesRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsLora.provesRouter.cmdResponseIn
 
-      #ComCcsdsSband.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      #CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsSband.authenticationRouter.cmdResponseIn
+      #ComCcsdsSband.provesRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      #CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsSband.provesRouter.cmdResponseIn
 
-      ComCcsdsUart.authenticationRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
-      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.authenticationRouter.cmdResponseIn
+      ComCcsdsUart.provesRouter.commandOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> ComCcsdsUart.provesRouter.cmdResponseIn
 
       cmdSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> cmdSeq.cmdResponseIn
@@ -212,11 +212,29 @@ module ReferenceDeployment {
       downlinkDelay.comStatusOut ->ComCcsdsLora.framer.comStatusIn
 
       startupManager.runSequence -> cmdSeq.seqRunIn
-      cmdSeq.seqStartOut -> startupManager.sequenceStarted
-      cmdSeq.seqDone -> startupManager.completeSequence
+
+      # StartupManager receives sequence status from CmdSeq
+      cmdSeq.seqStartOut -> startupManager.startupsequenceStarted
+      cmdSeq.seqDone -> startupManager.startupCompleteSequence
+
+      # StartupManager receives sequence status from PayloadSeq
+      payloadSeq.seqStartOut -> startupManager.payloadSequenceStarted
+      payloadSeq.seqDone -> startupManager.payloadCompleteSequence
+
+      # StartupManager receives sequence status from SafeModeSeq
+      # seqDone is owned by ModeManager; completion is forwarded via sequenceDoneNotify
+      safeModeSeq.seqStartOut -> startupManager.safeModeSequenceStarted
+
+      # StartupManager transmit control, wired to LoRa
+      startupManager.enableTransmit -> lora.enableTransmit
+      startupManager.disableTransmit -> lora.disableTransmit
+
+      # --- Radio ever enabled this boot? ---
+      lora.loraFirstStart -> startupManager.loraFirstStart
 
       modeManager.runSequence -> safeModeSeq.seqRunIn
       safeModeSeq.seqDone -> modeManager.completeSequence
+      modeManager.sequenceDoneNotify -> startupManager.safeModeCompleteSequence
 
       # RTC time change cancels running sequences
       rtcManager.cancelSequences[0] -> cmdSeq.seqCancelIn
@@ -278,21 +296,25 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[9] -> antennaDeployer.schedIn
       rateGroup1Hz.RateGroupMemberOut[10] -> fsSpace.run
       rateGroup1Hz.RateGroupMemberOut[11] -> payloadBufferManager.schedIn
+      rateGroup1Hz.RateGroupMemberOut[12] -> ComCcsdsUart.commsBufferManager.schedIn
       rateGroup1Hz.RateGroupMemberOut[13] -> FileHandling.fileDownlink.Run
       rateGroup1Hz.RateGroupMemberOut[14] -> startupManager.run
       rateGroup1Hz.RateGroupMemberOut[15] -> powerMonitor.run
       rateGroup1Hz.RateGroupMemberOut[16] -> modeManager.run
       rateGroup1Hz.RateGroupMemberOut[17] -> adcs.run
       rateGroup1Hz.RateGroupMemberOut[18] -> thermalManager.run
-      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsLora.authenticationRouter.run
-      rateGroup1Hz.RateGroupMemberOut[20] -> psramMonitor.run
+      rateGroup1Hz.RateGroupMemberOut[19] -> ComCcsdsUart.tcSecurityDeframer.run
+      rateGroup1Hz.RateGroupMemberOut[20] -> ComCcsdsLora.tcSecurityDeframer.run
+      #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
+      rateGroup1Hz.RateGroupMemberOut[22] -> Update.deltaPatcher.run
+      rateGroup1Hz.RateGroupMemberOut[23] -> lora.run
+      rateGroup1Hz.RateGroupMemberOut[24] -> psramMonitor.run
 
     }
 
 
     connections Watchdog {
       watchdog.gpioSet -> gpioWatchdog.gpioWrite
-      ComCcsdsLora.authenticationRouter.reset_watchdog -> watchdog.stop
     }
 
     connections LoadSwitches {
@@ -412,12 +434,12 @@ module ReferenceDeployment {
       fileUplinkCollector.singleOut -> FileHandling.fileUplink.bufferSendIn
       FileHandling.fileUplink.bufferSendOut -> fileUplinkCollector.singleIn
 
-      #ComCcsdsSband.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[2]
-      #fileUplinkCollector.multiOut[2] -> ComCcsdsSband.authenticationRouter.fileBufferReturnIn
-      ComCcsdsUart.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[1]
-      fileUplinkCollector.multiOut[1] -> ComCcsdsUart.authenticationRouter.fileBufferReturnIn
-      ComCcsdsLora.authenticationRouter.fileOut     -> fileUplinkCollector.multiIn[0]
-      fileUplinkCollector.multiOut[0] -> ComCcsdsLora.authenticationRouter.fileBufferReturnIn
+      #ComCcsdsSband.provesRouter.fileOut     -> fileUplinkCollector.multiIn[2]
+      #fileUplinkCollector.multiOut[2] -> ComCcsdsSband.provesRouter.fileBufferReturnIn
+      ComCcsdsUart.provesRouter.fileOut     -> fileUplinkCollector.multiIn[1]
+      fileUplinkCollector.multiOut[1] -> ComCcsdsUart.provesRouter.fileBufferReturnIn
+      ComCcsdsLora.provesRouter.fileOut     -> fileUplinkCollector.multiIn[0]
+      fileUplinkCollector.multiOut[0] -> ComCcsdsLora.provesRouter.fileBufferReturnIn
     }
 
     connections sysPowerMonitor {
@@ -455,13 +477,25 @@ module ReferenceDeployment {
       # Voltage monitoring from system power manager
       modeManager.voltageGet -> ina219SysManager.voltageGet
 
-      # Connection for clean shutdown notification from ResetManager and Watchdog
-      # Allows ModeManager to detect unintended reboots
-      resetManager.prepareForReboot -> modeManager.prepareForReboot
-      watchdog.prepareForReboot -> modeManager.prepareForReboot
+      # Clean shutdown notification from ResetManager and Watchdog: ModeManager records the
+      # intentional reboot; the TcSecurityDeframer instances flush the anti-replay sequence number
+      # so the frame that commanded the reboot cannot be replayed after it. Enabling the S-band
+      # lines also requires widening both prepareForReboot output arrays from [3] to [4].
+      resetManager.prepareForReboot[0] -> modeManager.prepareForReboot
+      resetManager.prepareForReboot[1] -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      resetManager.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
+      #resetManager.prepareForReboot[3] -> ComCcsdsSband.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot[0] -> modeManager.prepareForReboot
+      watchdog.prepareForReboot[1] -> ComCcsdsUart.tcSecurityDeframer.prepareForReboot
+      watchdog.prepareForReboot[2] -> ComCcsdsLora.tcSecurityDeframer.prepareForReboot
+      #watchdog.prepareForReboot[3] -> ComCcsdsSband.tcSecurityDeframer.prepareForReboot
 
-      # Ports for Changing the mode - notify both LoRa and UART authentication routers
-      ComCcsdsLora.authenticationRouter.SetSafeMode -> modeManager.forceSafeMode
+      # Signal from PROVES routers to reset the command loss timer in ModeManager
+      ComCcsdsLora.provesRouter.packetRouted -> modeManager.packetRouted
+      ComCcsdsUart.provesRouter.packetRouted -> modeManager.packetRouted
+
+      # Stop watchdog on command loss to trigger hardware power cycle
+      modeManager.stopWatchdog -> watchdog.stop
 
       # Load switch control connections
       # The load switch index mapping below is non-sequential because it matches the physical board layout and wiring order.

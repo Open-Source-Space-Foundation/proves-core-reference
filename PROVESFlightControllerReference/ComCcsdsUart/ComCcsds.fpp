@@ -45,7 +45,22 @@ module ComCcsdsUart {
     instance aggregator: Svc.ComAggregator base id ComCcsdsConfig.BASE_ID_UART + 0x06000 \
         queue size ComCcsdsConfig.QueueSizes.aggregator \
         stack size ComCcsdsConfig.StackSizes.aggregator \
-        priority ComCcsdsConfig.Priorities.aggregator
+        priority ComCcsdsConfig.Priorities.aggregator \
+    {
+        phase Fpp.ToCpp.Phases.configComponents """
+        static_assert(static_cast<FwSizeType>(ComCcsdsConfig::Aggregator::aggregationSize) <=
+                          static_cast<FwSizeType>(Svc::Ccsds::TmDataFieldSize),
+                      "ComCcsdsConfig.Aggregator.aggregationSize must fit the TM Transfer Frame Data Field");
+        // Allocation identifier is 0 as the MallocAllocator discards it
+        ComCcsdsUart::aggregator.configure(ComCcsdsConfig::Aggregator::aggregationSize,
+                                           ComCcsdsConfig::Aggregator::enablePacketSpanning,
+                                           0,
+                                           ComCcsds::Allocation::memAllocator);
+        """
+        phase Fpp.ToCpp.Phases.tearDownComponents """
+        ComCcsdsUart::aggregator.cleanup();
+        """
+    }
 
     # ----------------------------------------------------------------------
     # Passive Components
@@ -95,7 +110,7 @@ module ComCcsdsUart {
         """
     }
 
-    instance authenticationRouter: Svc.AuthenticationRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000
+    instance provesRouter: Svc.ProvesRouter base id ComCcsdsConfig.BASE_ID_UART + 0x03000
 
     instance tcDeframer: Svc.Ccsds.TcDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x04000
 
@@ -110,7 +125,16 @@ module ComCcsdsUart {
 
     instance comStub: Svc.ComStub base id ComCcsdsConfig.BASE_ID_UART + 0x0A000
 
-    instance authenticate: Components.Authenticate base id ComCcsdsConfig.BASE_ID_UART + 0x0B000
+    instance comRetry: Svc.ComRetry base id ComCcsdsConfig.BASE_ID_UART + 0x0C000
+
+    instance tcSecurityDeframer: Components.TcSecurityDeframer base id ComCcsdsConfig.BASE_ID_UART + 0x0B000 \
+    {
+        phase Fpp.ToCpp.Phases.startTasks """
+        // configure() reads parameters, so it must run after loadParameters();
+        // the startTasks phase is the first phase after parameters are loaded.
+        ComCcsdsUart::tcSecurityDeframer.configure();
+        """
+    }
 
     topology FramingSubtopology {
         # Usage Note:
@@ -133,14 +157,14 @@ module ComCcsdsUart {
         # Passive Components
         instance commsBufferManager
         instance frameAccumulator
-        instance authenticationRouter
+        instance provesRouter
         instance tcDeframer
         instance spacePacketDeframer
         instance framer
         instance spacePacketFramer
         instance apidManager
         instance aggregator
-        instance authenticate
+        instance tcSecurityDeframer
 
         connections Downlink {
             # ComQueue <-> SpacePacketFramer
@@ -174,24 +198,24 @@ module ComCcsdsUart {
             frameAccumulator.dataOut -> tcDeframer.dataIn
             tcDeframer.dataReturnOut -> frameAccumulator.dataReturnIn
 
-            # Authenticate <-> SpacePacketDeframer
-            authenticate.dataOut -> spacePacketDeframer.dataIn
-            spacePacketDeframer.dataReturnOut -> authenticate.dataReturnIn
+            # TcSecurityDeframer <-> SpacePacketDeframer
+            tcSecurityDeframer.dataOut -> spacePacketDeframer.dataIn
+            spacePacketDeframer.dataReturnOut -> tcSecurityDeframer.dataReturnIn
 
-            # TcDeframer <-> Authenticate
-            tcDeframer.dataOut                -> authenticate.dataIn
-            authenticate.dataReturnOut -> tcDeframer.dataReturnIn
+            # TcDeframer <-> TcSecurityDeframer
+            tcDeframer.dataOut               -> tcSecurityDeframer.dataIn
+            tcSecurityDeframer.dataReturnOut -> tcDeframer.dataReturnIn
 
             # SpacePacketDeframer APID validation
             spacePacketDeframer.validateApidSeqCount -> apidManager.validateApidSeqCountIn
 
             # SpacePacketDeframer <-> Router
-            spacePacketDeframer.dataOut -> authenticationRouter.dataIn
-            authenticationRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
+            spacePacketDeframer.dataOut -> provesRouter.dataIn
+            provesRouter.dataReturnOut  -> spacePacketDeframer.dataReturnIn
 
             # Router buffer allocations
-            authenticationRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
-            authenticationRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
+            provesRouter.bufferAllocate   -> commsBufferManager.bufferGetCallee
+            provesRouter.bufferDeallocate -> commsBufferManager.bufferSendIn
         }
     } # end FramingSubtopology
 
@@ -200,12 +224,16 @@ module ComCcsdsUart {
         import FramingSubtopology
 
         instance comStub
+        instance comRetry
 
         connections ComStub {
-            # Framer <-> ComStub (Downlink)
-            framer.dataOut -> comStub.dataIn
-            comStub.dataReturnOut   -> framer.dataReturnIn
-            comStub.comStatusOut    -> framer.comStatusIn
+            # Framer <-> ComRetry <-> ComStub (Downlink): ComRetry re-sends a frame the driver failed to send
+            framer.dataOut          -> comRetry.dataIn
+            comRetry.dataOut        -> comStub.dataIn
+            comStub.dataReturnOut   -> comRetry.dataReturnIn
+            comRetry.dataReturnOut  -> framer.dataReturnIn
+            comStub.comStatusOut    -> comRetry.comStatusIn
+            comRetry.comStatusOut   -> framer.comStatusIn
 
             # ComStub <-> FrameAccumulator (Uplink)
             comStub.dataOut -> frameAccumulator.dataIn

@@ -5,9 +5,11 @@ This module provides a functions and constants shared by
 integration tests for PROVES microcontroller hardware.
 """
 
+import os
 import random
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from functools import reduce
 
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 from fprime_gds.common.testing_fw.predicates import event_predicate
@@ -51,6 +53,67 @@ def set_radio_recover_fn(fn: Callable[[], None] | None) -> None:
     """
     global _radio_recover_fn
     _radio_recover_fn = fn
+
+
+# The framer plugin's file holds the next sequence number it sends, and the plugin
+# reads it on every frame (Framing/src/authenticate_plugin.py).
+SEQUENCE_NUMBER_FILE = "./Framing/src/sequence_number.bin"
+
+
+def write_next_sequence_number(board_seq: int) -> None:
+    """Make ground's next frame carry the number after the board's last accepted one.
+
+    Wrapped to the U32 sequence field. Written to a sibling file and renamed
+    over the original, so the framer never reads a truncated file.
+    """
+    temporary = f"{SEQUENCE_NUMBER_FILE}.tmp"
+    with open(temporary, "w", encoding="utf-8") as f:
+        f.write(str((board_seq + 1) % 2**32))
+    os.replace(temporary, SEQUENCE_NUMBER_FILE)
+
+
+def sequence_number_at_or_after(a: int, b: int) -> bool:
+    """Return whether U32 sequence number `a` equals `b` or is ahead of it.
+
+    Serial number arithmetic (RFC 1982), as the deframer's validator uses, so
+    the order holds across the 2**32 wrap: 1 is ahead of 0xFFFFFFFF.
+    """
+    return (a - b) % 2**32 < 2**31
+
+
+def latest_sequence_number(numbers: Iterable[int]) -> int:
+    """Return the number in `numbers` that is furthest ahead, wrap-aware."""
+    return reduce(
+        lambda latest, n: n if sequence_number_at_or_after(n, latest) else latest,
+        numbers,
+    )
+
+
+def resync_sequence_number(
+    fprime_test_api: IntegrationTestAPI,
+    deframer: str = "ComCcsdsUart.tcSecurityDeframer",
+) -> None:
+    """Fast-forward the framer plugin's sequence file if the board's counter is ahead.
+
+    After a reboot the board can expect a higher sequence number than ground
+    holds and rejects every authenticated command until ground catches up.
+    """
+    fprime_test_api.clear_histories()
+    fprime_test_api.send_command(f"{deframer}.GET_SEQ_NUM")
+    evt = fprime_test_api.await_event(f"{deframer}.SequenceNumberGet", timeout=5)
+    if evt is None:
+        raise AssertionError(f"no {deframer}.SequenceNumberGet event within 5 seconds")
+    board_seq = int(evt.args[0].val)
+    try:
+        with open(SEQUENCE_NUMBER_FILE, "r", encoding="utf-8") as f:
+            ground_next = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        # No usable ground number to keep: take the board's.
+        write_next_sequence_number(board_seq)
+        return
+    # Ground's next number is a replay unless it is past the board's last accepted.
+    if sequence_number_at_or_after(board_seq, ground_next):
+        write_next_sequence_number(board_seq)
 
 
 def proves_send_and_assert_command(

@@ -1,3 +1,8 @@
+---
+title: Antenna Deployer
+category: Hardware
+---
+
 # Components::AntennaDeployer
 
 Component that deploys the antenna and activates the burnwire

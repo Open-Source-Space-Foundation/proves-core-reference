@@ -10,6 +10,16 @@ module Drv {
     }
 }
 
+@ Timebase parameter for the RtcManager component
+# Under RTC so that it does not shadow the TimeBase generated in the DRV module
+module Rtc {
+    @ Parameter for timebase
+    enum TimeBase: FwTimeBaseStoreType {
+        TB_PROC_TIME = 1 @< timebase is in proc time
+        TB_SC_TIME = 3   @< timebase is in RTC time
+    } default TB_SC_TIME
+}
+
 # Port definition
 module Drv {
     port TimeSet(t: TimeData)
@@ -23,6 +33,22 @@ module Drv {
     @ Manages the real time clock
     passive component RtcManager {
         import Svc.Time
+
+        ### PARAMETERS ###
+
+        @ Time base as a parameter
+        param TIMEBASE: Rtc.TimeBase default Rtc.TimeBase.TB_SC_TIME
+
+        ### TELEMETRY ###
+
+        @ Last correction of the time offset in microseconds
+        telemetry TimeCorrectionUs: I64 id 0
+
+        @ Update callback RTC reads that failed or gave seconds outside years 2000 to 2099
+        telemetry DisciplineReadFaults: U32 id 1
+
+        @ Update callback samples rejected as an unconfirmed step (more than 100 ms)
+        telemetry DisciplineRejects: U32 id 2
 
         ### COMMANDS ###
 
@@ -54,6 +80,11 @@ module Drv {
             seconds: U32 @< Seconds since epoch
             useconds: U32 @< Microseconds
         ) severity activity high id 3 format "Time set on RTC, previous time: {}.{}"
+
+        @ TimeBaseChanged event fires when the timebase parameter changes and indicates the new timebase
+        event TimeBaseChanged(
+            timeBase: Rtc.TimeBase @< The timebase now in use
+        ) severity activity high id 18 format "Timebase changed to: {}"
 
         @ TimeNotSet event indicates that the time was not set successfully
         event TimeNotSet(rc: I32) severity warning high id 4 format "Time not set on RTC: {}"
@@ -122,6 +153,24 @@ module Drv {
             rc: I32 @< Return code from the RTC driver
         ) severity warning high id 16 format "Alarm with ID {} had a hardware error, return code: {}"
 
+        @ TimeStepped event indicates that a correction of more than 100 ms was applied as a step
+        event TimeStepped(
+            correction_us: I64 @< The correction applied, in microseconds
+        ) severity warning low id 19 format "Time offset stepped by {} us" throttle 5 every {seconds = 60}
+
+        @ DisciplineReadFailed event indicates that an update callback RTC read failed. The time offset does not change
+        event DisciplineReadFailed(
+            rc: I32 @< Return code from the RTC driver
+        ) severity warning low id 20 format "RTC read for time discipline failed, return code: {}" throttle 5 every {seconds = 60}
+
+        @ DisciplineSampleImplausible event indicates that an update callback RTC read gave seconds outside years 2000 to 2099. The time offset does not change
+        event DisciplineSampleImplausible(
+            rtc_s: I64 @< RTC seconds since epoch, or -1 if the conversion failed
+        ) severity warning low id 21 format "RTC seconds {} outside years 2000 to 2099, sample not used" throttle 5 every {seconds = 60}
+
+        @ RtcTimeNotSet event indicates that the RTC has no time since its last power loss. Time discipline waits for TIME_SET. Emitted once until a good RTC read
+        event RtcTimeNotSet() severity warning low id 22 format "RTC time not set since power loss, time discipline waits for TIME_SET" throttle 1
+
         ### PORTS ###
 
         @ Port for canceling running sequences when RTC time is set
@@ -134,8 +183,18 @@ module Drv {
         ###############################################################################
         # Standard AC Ports: Required for Channels, Events, Commands, and Parameters  #
         ###############################################################################
+
+        @ Port for getting parameters
+        param get port prmGetOut
+
+        @ Port for setting parameters
+        param set port prmSetOut
+
         @ Port for requesting the current time
         time get port timeCaller
+
+        @ Port for sending telemetry channels to downlink
+        telemetry port tlmOut
 
         @ Port for sending command registrations
         command reg port cmdRegOut

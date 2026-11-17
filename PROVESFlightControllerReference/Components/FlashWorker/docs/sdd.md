@@ -1,3 +1,8 @@
+---
+title: Flash Worker
+category: Storage
+---
+
 # Components::FlashWorker
 
 Performs long-running operations for the flash subsystem. The flash worker is responsible for handling the actual operations needed for flight-software update specific to the Zephyr flash API.

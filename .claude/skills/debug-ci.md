@@ -10,7 +10,7 @@ This project uses GitHub Actions with these jobs:
 - **lint** — runs `make fmt` (pre-commit hooks: clang-format, cpplint, ruff, codespell, trailing whitespace, etc.)
 - **unit-test** — runs `make test-unit` (gtest C++ tests in `PROVESFlightControllerReference/test/unit-tests/`)
 - **build** — compiles Zephyr firmware on the `deathstar` self-hosted runner
-- **integration-radio** — runs pytest integration tests on the `integration` self-hosted runner (requires physical hardware — cannot be run locally)
+- **integration-radio** — runs pytest integration tests on self-hosted runners labelled both `integration` and `integration-radio` (requires physical hardware — cannot be run locally)
 
 Integration tests live in `PROVESFlightControllerReference/test/int/`.
 Unit tests live in `PROVESFlightControllerReference/test/unit-tests/`.

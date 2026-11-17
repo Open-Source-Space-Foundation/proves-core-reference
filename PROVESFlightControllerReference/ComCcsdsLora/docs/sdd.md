@@ -1,3 +1,8 @@
+---
+title: Com CCSDS LoRa
+category: Communication
+---
+
 # ComCcsdsLora
 
 This is a clone with a renamed module of the F Prime's Svc::ComCcsds.

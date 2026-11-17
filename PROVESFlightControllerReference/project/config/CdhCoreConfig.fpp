@@ -23,4 +23,10 @@ module CdhCoreConfig {
         constant tlmSend     = 6
 
     }
+
+    module CpuAffinities {
+        constant cmdDisp     = Os.TASK_DEFAULT
+        constant events      = Os.TASK_DEFAULT
+        constant tlmSend     = Os.TASK_DEFAULT
+    }
 }

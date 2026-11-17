@@ -44,7 +44,7 @@ module Drv {
 
         #### Commands ####
         @ Command to get the visible light measurement in lux
-        sync command GetVisibleLight()
+        guarded command GetVisibleLight()
 
         #### Telemetry ####
         @ Telemetry for the illuminance in the visible spectrum, in lux
@@ -56,10 +56,10 @@ module Drv {
         @ This channel represents the raw measurement counts provided by the sensor ALS register.
         @ It is useful for estimating good values for integration time, effective photodiode size
         @ and gain attributes in fetch and get mode.
-        sync input port visibleLightGet: lightGet
+        guarded input port visibleLightGet: lightGet
 
         @ Port to initialize and deinitialize the device on load switch state change
-        sync input port loadSwitchStateChanged: Components.loadSwitchStateChanged
+        guarded input port loadSwitchStateChanged: Components.loadSwitchStateChanged
 
         #### Events ####
 

@@ -5,10 +5,15 @@ This test runs the format command to reset the filesystem if it has gotten into 
 """
 
 import pytest
+from common import proves_send_and_assert_command
 from fprime_gds.common.testing_fw.api import IntegrationTestAPI
 
 
 @pytest.mark.format_filesystem
 def test_format_filesystem(fprime_test_api: IntegrationTestAPI, start_gds):
-    """Send command to format the filesystem"""
-    fprime_test_api.send_command("ReferenceDeployment.fsFormat.FORMAT")
+    """Format the filesystem and wait for the board to report the result"""
+    # Retried like every other command: radio jobs run this over LoRa, where an
+    # uplink can be lost, and formatting twice is harmless.
+    proves_send_and_assert_command(
+        fprime_test_api, "ReferenceDeployment.fsFormat.FORMAT"
+    )

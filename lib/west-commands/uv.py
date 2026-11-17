@@ -181,7 +181,7 @@ class Uv(WestCommand):
 
             if len(requirements) > 0:
                 subprocess.check_call(
-                    ["uv", "pip", "install"]
+                    [os.environ.get("UV", "uv"), "pip", "install"]
                     + list(chain.from_iterable([("-r", r) for r in requirements]))
                     + manager_args
                 )

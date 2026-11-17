@@ -1,3 +1,8 @@
+---
+title: Com CCSDS S-Band
+category: Communication
+---
+
 # ComCcsdsSband
 
 This is a clone with a renamed module of the F Prime's Svc::ComCcsds.

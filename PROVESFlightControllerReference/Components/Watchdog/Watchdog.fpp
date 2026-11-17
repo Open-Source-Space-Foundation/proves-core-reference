@@ -31,8 +31,9 @@ module Components {
         @ Port to stop the watchdog
         sync input port stop: Fw.Signal
 
-        @ Port to signal a clean reboot (notify ModeManager before reboot)
-        output port prepareForReboot: Fw.Signal
+        @ Ports signalling a clean reboot so components can persist state (ModeManager sets its clean
+        @ shutdown flag; TcSecurityDeframer instances flush the anti-replay sequence number)
+        output port prepareForReboot: [3] Fw.Signal
 
         @ Port sending calls to the GPIO driver
         output port gpioSet: Drv.GpioWrite

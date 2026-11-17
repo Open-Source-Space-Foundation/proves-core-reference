@@ -21,23 +21,33 @@ fprime-util build
 
 ## Flashing the Board
 
-Different boards will likely require different steps to flash software onto the board. Instructions for tested boards are provided [here][board-list] The following is an example of flashing the deployment onto a stm32 board.
+The supported boards are RP2350 flight controllers. You flash them by copying a UF2 file onto the board while it is mounted as a USB drive. The [board list][board-list] covers each board, how to enter UF2 mode, and flashing over SWD.
 
-```sh
-# In proves-core-reference
+1. First time only (new board, or a board coming back from CircuitPython): build MCUboot and copy it to the board.
 
-# Linux/Windows WSL
-sh ~/.arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh -i swd -f build-fprime-automatic-zephyr/zephyr/zephyr.hex -c /dev/ttyACM0
+    ```sh
+    # In proves-core-reference
+    make build-mcuboot
+    cp mcuboot.uf2 [path-to-your-board]
+    ```
 
-# MacOS
-sh ~/Library/Arduino15/packages/STMicroelectronics/tools/STM32Tools/2.3.0/stm32CubeProg.sh -i swd -f build-fprime-automatic-zephyr/zephyr/zephyr.hex -c /dev/cu.usbmodem142203
-```
+2. Build the signed application image, put the board back into UF2 mode (see the [board list][board-list]), and copy the image to the board.
+
+    ```sh
+    # In proves-core-reference
+    make build
+    cp bootable.uf2 [path-to-your-board]
+    ```
 
 !!! note
-    Change `/dev/ttyACM0` (`/dev/cu.usbmodem141203` for MacOS) to the correct serial device connected to the device. To find the correct serial port, refer to this documentation [here](https://github.com/ngcp-project/gcs-infrastructure/blob/d34eeba4eb547a5174d291a64b36eaa8c11369c8/Communication/XBee/docs/serial_port.md)
+    `fprime-util build` alone does not make `bootable.uf2`. `make build` runs `fprime-util build` and then converts the signed image. To convert it by hand:
+    ```sh
+    # In proves-core-reference
+    ./tools/bin/make-loadable-image ./build-artifacts/zephyr.signed.bin bootable.uf2
+    ```
 
 !!! note
-    Two USB connections may be required depending on the board configuration. USB PWR is used to power and flash the development board and access the debug terminal, USER USB is used to connect to the F Prime GDS
+    One USB connection is enough to flash and to run the GDS. When the application runs, the board shows up as a USB CDC ACM serial device. The F Prime GDS connects to that port.
 
 ## Running the Deployment
 

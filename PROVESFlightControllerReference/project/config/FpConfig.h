@@ -21,6 +21,20 @@ extern "C" {
 // Configuration switches
 // ----------------------------------------------------------------------
 
+// Enable strict assertions
+#ifndef FW_STRICT_ASSERTIONS
+#define FW_STRICT_ASSERTIONS (1)  //!< Indicates whether strict assertions are used (more checking, more instructions)
+#endif
+
+// Enable direct port calls
+#ifndef FW_DIRECT_PORT_CALLS
+#ifdef BUILD_UT
+#define FW_DIRECT_PORT_CALLS (0)  //!< Indirect port calls are required for unit tests
+#else
+#define FW_DIRECT_PORT_CALLS (1)  //!< Indicates whether direct port calls are used (saves space and time)
+#endif
+#endif
+
 // Allow objects to have names. Allocates storage for each instance
 #ifndef FW_OBJECT_NAMES
 #define FW_OBJECT_NAMES \
@@ -111,6 +125,14 @@ extern "C" {
 #define FW_ASSERT_LEVEL FW_FILENAME_ASSERT  //!< Defines the type of assert used
 #endif
 
+// Decide whether the framework should force assertions to always abort.
+// If enabled, allows additional compiler optimizations and prevents code from running after an assertion trips.
+// If disabled (default), allows the FATAL event handler to decide whether code should continue running after an
+// assertion trips.
+#ifndef FW_ASSERTIONS_ALWAYS_ABORT
+#define FW_ASSERTIONS_ALWAYS_ABORT 0
+#endif
+
 // Adjust various configuration parameters in the architecture. Some of the above enables may disable some of the values
 
 // The size of the object name stored in the object base class. Larger names will be truncated.
@@ -147,6 +169,22 @@ extern "C" {
 #ifndef FW_AMPCS_COMPATIBLE
 #define FW_AMPCS_COMPATIBLE 0  //!< Whether or not JPL AMPCS ground system support is enabled.
 #endif
+
+// Posix thread names are limited to 16 characters, this can lead to collisions. In the event of a
+// collision, set this to 0.
+#ifndef POSIX_THREADS_ENABLE_NAMES
+#define POSIX_THREADS_ENABLE_NAMES (1)  //!< Enable/Disable assigning names to threads
+#endif
+
+// Hint to the compiler to always inline LinearBufferBase serialization &
+// deserialization methods
+#define FW_SERIALIZE_FORCE_INLINE_LBB
+// NOTE: To encourage inlining, uncomment below
+// #if defined(__GNUC__) || defined(__clang__)
+// #define FW_SERIALIZE_FORCE_INLINE_LBB __attribute__((always_inline)) inline
+// #else
+// #define FW_SERIALIZE_FORCE_INLINE_LBB
+// #endif
 
 // *** NOTE configuration checks are in Fw/Cfg/ConfigCheck.cpp in order to have
 // the type definitions in Fw/Types/BasicTypes available.

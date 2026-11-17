@@ -104,7 +104,7 @@ void DetumbleManager ::systemModeChanged_handler(FwIndexType portNum, const Comp
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void DetumbleManager ::SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, Components::DetumbleMode mode) {
+void DetumbleManager ::SET_MODE_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, const Components::DetumbleMode& mode) {
     this->setMode_handler(0, mode);
     this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
 }
@@ -493,6 +493,10 @@ void DetumbleManager ::parameterUpdated(FwPrmIdType id) {
             FW_ASSERT(0);
             break;  // Fallthrough from assert (static analysis)
     }
+}
+
+void DetumbleManager ::parameterLoaded(FwPrmIdType id, Fw::ParamValid valid) {
+    // Intentionally empty: parameters loaded at startup are not announced (pre-fpp-3.4 behaviour)
 }
 
 void DetumbleManager ::stateCooldownActions() {

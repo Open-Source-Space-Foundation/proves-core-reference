@@ -8,20 +8,23 @@ pytest test/test_edge_cases_day_in_the_life.py --deployment build-artifacts/zeph
 
 """
 
+import os
 import time
 from pathlib import Path
 
 import serial
 from fprime_gds.common.data_types.ch_data import ChData
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent.parent.parent.parent
 
 mode_manager = "ReferenceDeployment.modeManager"
+DOL_SERIAL_PORT = os.environ.get("DOL_SERIAL_PORT", "/dev/ttyACM0")
+
 # Open up the serial port to the ground station
 try:
-    pass_through_serial = serial.Serial("/dev/ttyACM0", baudrate=115200)
+    pass_through_serial = serial.Serial(DOL_SERIAL_PORT, baudrate=115200)
 except Exception:
-    print("[WARNING] Failed to open serial port /dev/ttyACM0")
+    print(f"[WARNING] Failed to open serial port {DOL_SERIAL_PORT}")
     pass_through_serial = None
 
 

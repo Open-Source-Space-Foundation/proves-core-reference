@@ -1,3 +1,8 @@
+---
+title: Pico Temp Manager
+category: Driver
+---
+
 # Drv::PicoTempManager
 
 The PicoTempManager component interfaces with the RP2350 microcontroller's built-in die temperature sensor to provide temperature measurements.
