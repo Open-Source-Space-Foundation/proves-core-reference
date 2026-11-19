@@ -52,6 +52,14 @@ MagneticFieldModel::~MagneticFieldModel() {}
 void MagneticFieldModel::orbitIn_handler(FwIndexType portNum, Gnc::OrbitState& state) {
     (void)portNum;
 
+    // Load WMM coefficients once, after the component starts running.
+    if (!m_wmmLoadAttempted) {
+        m_wmmLoadAttempted = true;
+
+        m_wmmLoadedFromFile =
+            loadWmmCoefficients("WMM.COF", m_wmmModel);
+    }
+
     const Fw::Time stamp = state.get_stamp();
 
     // Check if the position is valid
@@ -70,7 +78,13 @@ void MagneticFieldModel::orbitIn_handler(FwIndexType portNum, Gnc::OrbitState& s
     query.gmstRad = state.get_gmstRad();
 
     FieldSolution sol;
-    const FieldResult result = evaluateField(query, FieldConfig(), sol);
+
+    FieldConfig config;
+    config.minYear = m_wmmModel.epoch;
+    config.maxYear = m_wmmModel.epoch + 5.0f;
+
+    const FieldResult result =
+        evaluateField(query, config, sol, m_wmmModel);
 
     m_lastDecYear = sol.decYear;
 

@@ -92,7 +92,12 @@ class MagneticFieldModel final : public MagneticFieldModelComponentBase {
     bool m_lastValid = false;   //!< Whether the most recent evaluation succeeded
     bool m_everValid = false;   //!< Whether any evaluation has ever succeeded
     U32 m_rejectCount = 0;      //!< Cumulative rejected evaluations, any reason
-};
+
+    // WMM coefficients loaded from a file
+    geomag::ConstModel m_wmmModel = geomag::WMM2025;
+    bool m_wmmLoadedFromFile = false;
+    bool m_wmmLoadAttempted = false;
+    };
 
 }  // namespace Environment
 }  // namespace Gnc
