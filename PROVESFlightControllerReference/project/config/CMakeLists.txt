@@ -16,6 +16,7 @@ set(PROJECT_CONFIG_OVERRIDES
     "${CMAKE_CURRENT_LIST_DIR}/FileHandlingConfig.fpp"
     "${CMAKE_CURRENT_LIST_DIR}/FpConfig.h"
     "${CMAKE_CURRENT_LIST_DIR}/FpConstants.fpp"
+    "${CMAKE_CURRENT_LIST_DIR}/FpySequencerCfg.fpp"
     "${CMAKE_CURRENT_LIST_DIR}/PlatformCfg.fpp"
     "${CMAKE_CURRENT_LIST_DIR}/TlmPacketizerCfg.fpp"
     "${CMAKE_CURRENT_LIST_DIR}/TlmPacketizerCfg.hpp"

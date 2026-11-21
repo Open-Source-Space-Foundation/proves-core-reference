@@ -21,4 +21,5 @@ register_fprime_module(
     DEPENDS
         Fw_Logger
         Svc_TlmPacketizer_config_TlmPacketizerConfig
+        PROVESFlightControllerReference_Components_PsramAllocator
 )

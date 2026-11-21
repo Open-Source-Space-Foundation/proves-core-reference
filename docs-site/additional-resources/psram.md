@@ -1,6 +1,6 @@
-# PSRAM (APS1604M) on the v5d Flight Control Board
+# PSRAM (APS1604M) on the v5d and v5e Flight Control Boards
 
-The v5d board carries an APMemory APS1604M-3SQR 16 Mbit (2 MB) QSPI PSRAM on the
+The v5d and v5e Rev2 boards carry an APMemory APS1604M-3SQR 16 Mbit (2 MB) QSPI PSRAM on the
 RP2350's QMI chip-select 1. The in-tree driver
 (`drivers/memc/memc_rp2350_psram.c`) initializes it once at boot; afterward it
 is ordinary memory-mapped RAM. Issue #285 tracks the feature.
@@ -13,9 +13,9 @@ is ordinary memory-mapped RAM. Issue #285 tracks the feature.
 | PSRAM, uncached alias | `0x15000000` – `0x151FFFFF` | `XIP_NOCACHE_NOALLOC`; used by memtests |
 | QMI M1 registers | `0x400D0020` – `0x400D0030` | timing / rfmt / rcmd / wfmt / wcmd |
 
-Enabled only on `proves_flight_control_board_v5d`; the `psram0` devicetree node
-is `disabled` in the shared v5 dtsi (v5/v5c/v5e opt in after their own HWIL
-runs). Driver init failure is non-fatal by design — a dead or absent chip must
+Enabled on `proves_flight_control_board_v5d` and `proves_flight_control_board_v5e`
+(U5 is populated on v5e Rev2). The `psram0` devicetree node is `disabled` in the
+shared v5 dtsi, so other boards opt in after their own HWIL runs. Driver init failure is non-fatal by design — a dead or absent chip must
 never brick boot.
 
 ## Using it
@@ -67,10 +67,30 @@ channels downlinked (`PsramSize = 2097152`, `PsramStatus = 2` = heap-verified).
 
 ![PSRAM self-test events in GDS](img/psram-gds-events.png)
 
-Operational note: the Psram packet is telemetry group 5. `SET_LEVEL 5` over
-the 115200-baud UART link floods the TLM queue (`QueueOverflow` warnings) —
-prefer `SEND_PKT 23` for on-demand sampling, or a radio link budget review
-before raising the level in ops.
+Operational note: the `psramMonitor` channels are in the packet omit list,
+because the packet table is full since `fpySeq` was added. Use
+`PSRAM_SELF_TEST` and its events to check the PSRAM in flight.
+
+## FpySequencer
+
+`fpySeq` (`Svc.FpySequencer`) is the first PSRAM consumer. The component, its
+thread, queue and mutex stay in SRAM (13.6 KB). `configureTopology()` hands it
+`PsramAllocator`, which supplies its 64 KB file buffer, its 2048-statement table
+and its 64 KB stack. Stock F´ declares the table and stack inside the class, so
+`patches/fprime-fpysequencer-external-memory.patch` moves them behind
+`allocateBuffer()`.
+
+If the PSRAM fails its self-test, the topology skips `allocateBuffer()`. The
+board boots normally and `fpySeq` rejects every `RUN` with
+`InsufficientBufferSpace`.
+
+`fpySeq` runs at the lowest thread priority (14), and its `checkTimers` runs
+at 1 Hz. A sequence that is computing never yields, so at a higher priority it
+starves other threads until their queues overflow and assert.
+`PROVESFlightControllerReference/test/int/fpy_sequencer_test.py` runs two
+sequences on hardware. It needs `fprime-fpy` 0.6.3 or later.
+
+![FpySequencer events with PSRAM ready and with PSRAM forced off](img/fpy-psram-events.png)
 
 ## Boot self-test
 

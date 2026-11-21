@@ -13,7 +13,7 @@
 // Define configuration values for dispatcher
 
 enum {
-    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 351,  // !< The size of the table holding opcodes to dispatch
+    CMD_DISPATCHER_DISPATCH_TABLE_SIZE = 384,  // !< Must be >= dictionary command count (361 with fpySeq)
     CMD_DISPATCHER_SEQUENCER_TABLE_SIZE = 10,  // !< The size of the table holding commands in progress
 };
 

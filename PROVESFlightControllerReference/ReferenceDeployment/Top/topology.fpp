@@ -79,6 +79,7 @@ module ReferenceDeployment {
     instance peripheralUartDriver
     instance payloadBufferManager
     instance cmdSeq
+    instance fpySeq
     instance payloadSeq
     instance safeModeSeq
     instance startupManager
@@ -171,6 +172,11 @@ module ReferenceDeployment {
 
       safeModeSeq.comCmdOut -> CdhCore.cmdDisp.seqCmdBuff
       CdhCore.cmdDisp.seqCmdStatus -> safeModeSeq.cmdResponseIn
+
+      fpySeq.cmdOut -> CdhCore.cmdDisp.seqCmdBuff
+      CdhCore.cmdDisp.seqCmdStatus -> fpySeq.cmdResponseIn
+      fpySeq.getTlmChan -> CdhCore.tlmSend.TlmGet
+      fpySeq.getParam -> FileHandling.prmDb.getPrm
 
       telemetryDelay.runOut -> CdhCore.tlmSend.Run
 
@@ -309,6 +315,8 @@ module ReferenceDeployment {
       rateGroup1Hz.RateGroupMemberOut[22] -> Update.deltaPatcher.run
       rateGroup1Hz.RateGroupMemberOut[23] -> lora.run
       rateGroup1Hz.RateGroupMemberOut[24] -> psramMonitor.run
+      # 1 Hz: checkTimers overflow asserts, and it starves behind directives while a sequence computes
+      rateGroup1Hz.RateGroupMemberOut[25] -> fpySeq.checkTimers
 
     }
 

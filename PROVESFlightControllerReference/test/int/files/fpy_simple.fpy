@@ -1,0 +1,4 @@
+log("fpy: hello from PSRAM")
+CdhCore.cmdDisp.CMD_NO_OP()
+sleep(1)
+log("fpy: after NO_OP and sleep")

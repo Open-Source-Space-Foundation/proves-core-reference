@@ -20,6 +20,15 @@ submodules: ## Initialize and update git submodules
 	  else \
 	    echo "❌ Error: Unable to apply VEML6031 data-ready timeout patch. Check it against the pinned Zephyr version."; exit 1; \
 	  fi
+	@echo "Applying F Prime FpySequencer external-memory patch (upstream candidate)..."
+	@cd lib/fprime && \
+	  if git apply --check ../../patches/fprime-fpysequencer-external-memory.patch > /dev/null 2>&1; then \
+	    git apply ../../patches/fprime-fpysequencer-external-memory.patch && echo "✓ Applied FpySequencer external-memory patch"; \
+	  elif git apply --reverse --check ../../patches/fprime-fpysequencer-external-memory.patch > /dev/null 2>&1; then \
+	    echo "⚠ Patch already applied"; \
+	  else \
+	    echo "❌ Error: Unable to apply FpySequencer external-memory patch. Check it against the pinned F Prime version."; exit 1; \
+	  fi
 
 export VIRTUAL_ENV ?= $(shell pwd)/fprime-venv
 .PHONY: fprime-venv

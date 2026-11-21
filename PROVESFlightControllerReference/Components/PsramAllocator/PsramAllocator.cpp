@@ -12,6 +12,14 @@
 
 namespace PROVES {
 
+bool PsramAllocator::isReady() {
+#ifdef CONFIG_MEMC_RP2350_PSRAM
+    return psram_heap_ok();
+#else
+    return false;
+#endif
+}
+
 void* PsramAllocator::allocate(const FwEnumStoreType identifier,
                                FwSizeType& size,
                                bool& recoverable,

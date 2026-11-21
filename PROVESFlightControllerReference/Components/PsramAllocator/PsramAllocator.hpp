@@ -29,6 +29,9 @@ class PsramAllocator : public Fw::MemAllocator {
     PsramAllocator() = default;
     ~PsramAllocator() override = default;
 
+    //! True when the PSRAM passed its boot self-test and its heap is usable.
+    static bool isReady();
+
     //! Allocate from the PSRAM shared_multi_heap pool
     //! (SMH_REG_ATTR_EXTERNAL). Returns nullptr and size=0 if the PSRAM
     //! is not present, failed its self-test, or the pool is exhausted.

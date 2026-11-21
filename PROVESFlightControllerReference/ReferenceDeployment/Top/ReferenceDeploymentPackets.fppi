@@ -165,11 +165,6 @@ telemetry packets ReferenceDeploymentPackets {
     fsSpace.TotalSpace
   }
 
-  packet Psram id 25 group 5 {
-    ReferenceDeployment.psramMonitor.PsramSize
-    ReferenceDeployment.psramMonitor.PsramStatus
-  }
-
   packet Security id 6 group 5 {
     #ComCcsdsSband.provesRouter.RoutedPackets
     ComCcsdsLora.provesRouter.RoutedPackets
@@ -271,6 +266,31 @@ telemetry packets ReferenceDeploymentPackets {
   }
 
 } omit {
+  # Packet table is full (23); sample with psramMonitor.PSRAM_SELF_TEST events instead
+  psramMonitor.PsramSize
+  psramMonitor.PsramStatus
+  fpySeq.State
+  fpySeq.SequencesSucceeded
+  fpySeq.SequencesFailed
+  fpySeq.SequencesCancelled
+  fpySeq.StatementsDispatched
+  fpySeq.StatementsFailed
+  fpySeq.LastDirectiveError
+  fpySeq.DirectiveErrorIndex
+  fpySeq.DirectiveErrorId
+  fpySeq.SeqPath
+  fpySeq.Debug_ReachedEndOfFile
+  fpySeq.Debug_NextStatementReadSuccess
+  fpySeq.Debug_NextStatementOpcode
+  fpySeq.Debug_NextStatementIndex
+  fpySeq.Debug_NextCmdOpcode
+  fpySeq.Debug_StackSize
+  fpySeq.BreakpointInUse
+  fpySeq.BreakpointIndex
+  fpySeq.BreakOnlyOnceOnBreakpoint
+  fpySeq.BreakBeforeNextLine
+  fpySeq.PRM_STATEMENT_TIMEOUT_SECS
+  fpySeq.PRM_SEQ_BASE_DIR
   CdhCore.cmdDisp.CommandErrors
   # Only has one library, no custom versions
   CdhCore.version.LibraryVersion02

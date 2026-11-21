@@ -11,6 +11,7 @@
 // Necessary project-specified types
 #include <Fw/Logger/Logger.hpp>
 #include <Fw/Types/MallocAllocator.hpp>
+#include <PROVESFlightControllerReference/Components/PsramAllocator/PsramAllocator.hpp>
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
@@ -37,6 +38,9 @@ using namespace ReferenceDeployment;
 
 // Instantiate a malloc allocator for cmdSeq buffer allocation
 Fw::MallocAllocator mallocator;
+// fpySeq takes its file buffer, statement table and stack (~700 KB) from PSRAM; the SRAM heap has only a few KB spare
+PROVES::PsramAllocator psramAllocator;
+constexpr FwSizeType FPY_SEQUENCE_BUFFER_BYTES = 64 * 1024;
 
 constexpr FwSizeType BASE_RATEGROUP_PERIOD_MS = 1;  // 1Khz
 
@@ -82,6 +86,12 @@ void configureTopology() {
     cmdSeq.allocateBuffer(0, mallocator, 1024);
     payloadSeq.allocateBuffer(0, mallocator, 1024);
     safeModeSeq.allocateBuffer(0, mallocator, 1024);
+    // Without PSRAM fpySeq stays unbuffered and rejects every RUN with InsufficientBufferSpace
+    if (PROVES::PsramAllocator::isReady()) {
+        fpySeq.allocateBuffer(0, psramAllocator, FPY_SEQUENCE_BUFFER_BYTES);
+    } else {
+        Fw::Logger::log("fpySeq disabled: PSRAM unavailable\n");
+    }
     gpioface4LS.open(face4LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface0LS.open(face0LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
     gpioface1LS.open(face1LoadSwitchGpio, Zephyr::ZephyrGpioDriver::GpioConfiguration::OUT);
@@ -217,5 +227,6 @@ void teardownTopology(const TopologyState& state) {
     cmdSeq.deallocateBuffer(mallocator);
     payloadSeq.deallocateBuffer(mallocator);
     safeModeSeq.deallocateBuffer(mallocator);
+    fpySeq.deallocateBuffer(psramAllocator);
 }
 };  // namespace ReferenceDeployment
