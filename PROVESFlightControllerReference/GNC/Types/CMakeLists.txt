@@ -14,5 +14,5 @@ register_fprime_module(
         "${CMAKE_CURRENT_LIST_DIR}/GncConvert.hpp"
     DEPENDS
         Fw_Time # Fw.Time is used by Gnc.VectorSample and Gnc.OrbitState
-        PROVESFlightControllerReference_Gnc_AstroLib   # GncConvert.hpp converts Astro types
+        PROVESFlightControllerReference_GNC_AstroLib  # GncConvert.hpp converts Astro types
 )

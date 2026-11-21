@@ -56,8 +56,7 @@ void MagneticFieldModel::orbitIn_handler(FwIndexType portNum, Gnc::OrbitState& s
     if (!m_wmmLoadAttempted) {
         m_wmmLoadAttempted = true;
 
-        m_wmmLoadedFromFile =
-            loadWmmCoefficients("WMM.COF", m_wmmModel);
+        m_wmmLoadedFromFile = loadWmmCoefficients("/WMM.COF", m_wmmModel);
     }
 
     const Fw::Time stamp = state.get_stamp();
