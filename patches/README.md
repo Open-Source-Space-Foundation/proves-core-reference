@@ -12,6 +12,16 @@ This patch bounds the `while (1)` data-ready poll in `veml6031_perform_single_me
 
 **Application:** `make submodules` applies this patch, with a reverse-apply check so that a second run does not fail. After it runs, `git status` shows `lib/zephyr-workspace/zephyr` as modified. This is expected. Do **not** commit the submodule pointer.
 
+## fprime-fpysequencer-external-memory.patch
+
+This patch moves FpySequencer's statement table (`Fpy::MAX_SEQUENCE_STATEMENT_COUNT` statements) and runtime stack (`Fpy::MAX_STACK_SIZE` bytes) out of the component object. `allocateBuffer()` now takes them from the same allocator as the sequence file buffer, and `deallocateBuffer()` returns them. `Fpy::Sequence` loses its `statements` array.
+
+**Why:** At the stock limits these two arrays are about 97% of the ~636 KB component. Keeping them inline forced the whole object, including its thread control block, queue and mutex, into PSRAM. With the patch the component stays in SRAM and only the bulk data lives in PSRAM. If PSRAM fails its self-test, the topology skips `allocateBuffer()` and the sequencer rejects every sequence with `InsufficientBufferSpace` instead of the board panicking at boot.
+
+**Status:** Upstream candidate. The upstream F Prime unit tests (`Svc/FpySequencer/test/ut`) still build sequences through `Fpy::Sequence::get_statements()` and need updating before this goes upstream. This project builds with `FPRIME_ENABLE_FRAMEWORK_UTS=OFF`, so they are not compiled here.
+
+**Application:** `make submodules` applies this patch, with a reverse-apply check so that a second run does not fail. After it runs, `git status` shows `lib/fprime` as modified. This is expected. Do **not** commit the submodule pointer.
+
 ## fprime-gds-version.patch
 
 This patch updates the `fprime-gds` version requirement in `lib/fprime/requirements.txt` from 4.1.0 to 4.1.1a2.

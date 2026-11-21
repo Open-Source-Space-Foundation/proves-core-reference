@@ -1,0 +1,38 @@
+# Copyright (c) 2025 BroncoSpace / PROVES Team
+# SPDX-License-Identifier: Apache-2.0
+
+config MEMC_RP2350_PSRAM
+	bool "RP2350 QMI PSRAM driver (APMemory APS1604M)"
+	default y
+	depends on DT_HAS_RASPBERRYPI_RP2350_PSRAM_APS1604M_ENABLED
+	select PINCTRL
+	select SHARED_MULTI_HEAP
+	help
+	  Enable the one-shot QMI memory-mapped driver for the APMemory
+	  APS1604M-3SQR 2 MB QSPI PSRAM on RP2350 chip-select 1 (0x11000000).
+
+	  The init function runs the PSRAM reset and RDID sequence entirely
+	  from RAM (using __ramfunc) with interrupts locked so that QMI direct
+	  mode does not stall instruction fetch from flash.
+
+	  On successful init the PSRAM is accessible as ordinary memory at
+	  [0x11000000, 0x11200000).
+
+config MEMC_RP2350_PSRAM_SELF_TEST
+	bool "Run full-region PSRAM memtest at boot"
+	default y
+	depends on MEMC_RP2350_PSRAM
+	help
+	  After the M1 window is programmed, run an address-in-address plus
+	  inverted-pattern memtest across the whole PSRAM through the uncached
+	  XIP alias.  Adds roughly a second to boot; a failure marks the PSRAM
+	  not-ready (boot continues without it).
+
+config MEMC_RP2350_PSRAM_INIT_PRIORITY
+	int "PSRAM driver init priority"
+	default 70
+	depends on MEMC_RP2350_PSRAM
+	help
+	  POST_KERNEL init priority for the RP2350 PSRAM driver.  Must run
+	  after pinctrl (default 45) and before any consumer that allocates
+	  from the PSRAM heap.

@@ -17,3 +17,7 @@
 #include <raspberrypi/rpi_pico/m33.dtsi>
 
 #include "../proves_flight_control_board_v5/proves_flight_control_board_v5.dtsi"
+
+&psram0 {
+	status = "okay";
+};

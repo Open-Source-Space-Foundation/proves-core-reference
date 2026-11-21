@@ -8,3 +8,7 @@ PyYAML>=6.0.3
 fprime-yamcs==0.1.3
 yamcs-client==1.12.1
 fprime-xtce==0.1.2
+
+# fprime pins fprime-fpy 0.6.1, which rejects this dictionary (Fw.CmdResponse DISPATCHED_UNTRACKED).
+# fpy_sequencer_test.py compiles its sequences with fprime-fpyc and needs 0.6.3 or later.
+fprime-fpy==0.6.3

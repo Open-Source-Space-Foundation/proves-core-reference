@@ -85,3 +85,8 @@
 		/delete-node/ rf2-io3;
 	};
 };
+
+/* U5 APS1604M 2 MB QSPI PSRAM on QMI CS1 (GPIO8), populated on V5e Rev2. */
+&psram0 {
+	status = "okay";
+};

@@ -1,0 +1,169 @@
+diff --git a/Svc/FpySequencer/FpySequencer.cpp b/Svc/FpySequencer/FpySequencer.cpp
+index 35d165b6c8..0fe30244d8 100644
+--- a/Svc/FpySequencer/FpySequencer.cpp
++++ b/Svc/FpySequencer/FpySequencer.cpp
+@@ -21,6 +21,8 @@ FpySequencer ::FpySequencer(const char* const compName)
+       m_allocatorId(0),
+       m_sequenceFilePath("<invalid_seq>"),
+       m_sequenceObj(),
++      m_statements(nullptr),
++      m_stackBytes(nullptr),
+       m_computedCRC(),
+       m_totalExpectedArgSize(0),
+       m_sequenceBlockState(),
+@@ -452,7 +454,7 @@ void FpySequencer::updateDebugTelemetryStruct() {
+ 
+         FW_ASSERT(this->m_runtime.nextStatementIndex < Fpy::MAX_SEQUENCE_STATEMENT_COUNT,
+                   static_cast<FwAssertArgType>(this->m_runtime.nextStatementIndex));
+-        const Fpy::Statement& nextStmt = this->m_sequenceObj.get_statements()[this->m_runtime.nextStatementIndex];
++        const Fpy::Statement& nextStmt = this->m_statements[this->m_runtime.nextStatementIndex];
+         DirectiveUnion directiveUnion;
+         Fw::Success status = this->deserializeDirective(nextStmt, directiveUnion);
+ 
+diff --git a/Svc/FpySequencer/FpySequencer.hpp b/Svc/FpySequencer/FpySequencer.hpp
+index 4dfb9361d7..87367ef737 100644
+--- a/Svc/FpySequencer/FpySequencer.hpp
++++ b/Svc/FpySequencer/FpySequencer.hpp
+@@ -87,7 +87,8 @@ class FpySequencer : public FpySequencerComponentBase {
+     class Stack {
+       public:
+         // the byte array of the program stack, storing lvars, operands and function calls
+-        U8 bytes[Fpy::MAX_STACK_SIZE] = {0};
++        // Fpy::MAX_STACK_SIZE bytes from allocateBuffer(), so the component object stays small
++        U8* bytes = nullptr;
+         // how many bytes high the stack is
+         Fpy::StackSizeType size = 0;
+         // the byte offset from the start of the stack where the current function's local variables begin.
+@@ -685,6 +686,9 @@ class FpySequencer : public FpySequencerComponentBase {
+     Fw::FileNameString m_sequenceFilePath;
+     // the sequence, loaded in memory
+     Fpy::Sequence m_sequenceObj;
++    // Fpy::MAX_SEQUENCE_STATEMENT_COUNT statements and the runtime stack, both from allocateBuffer()
++    Fpy::Statement* m_statements;
++    U8* m_stackBytes;
+     // live running computation of CRC (updated as we read)
+     Utils::Hash m_computedCRC;
+ 
+diff --git a/Svc/FpySequencer/FpySequencerRunState.cpp b/Svc/FpySequencer/FpySequencerRunState.cpp
+index 17b46c9e7c..6fb6785a30 100644
+--- a/Svc/FpySequencer/FpySequencerRunState.cpp
++++ b/Svc/FpySequencer/FpySequencerRunState.cpp
+@@ -24,7 +24,7 @@ Signal FpySequencer::dispatchStatement() {
+         return Signal::result_dispatchStatement_noMoreStatements;
+     }
+ 
+-    const Fpy::Statement& nextStatement = this->m_sequenceObj.get_statements()[this->m_runtime.nextStatementIndex];
++    const Fpy::Statement& nextStatement = this->m_statements[this->m_runtime.nextStatementIndex];
+     this->m_runtime.nextStatementIndex++;
+     this->m_runtime.currentStatementOpcode = nextStatement.get_opCode();
+     this->m_runtime.currentCmdOpcode = 0;  // we haven't deserialized the directive yet, so we don't know if it's a cmd
+diff --git a/Svc/FpySequencer/FpySequencerStateMachine.cpp b/Svc/FpySequencer/FpySequencerStateMachine.cpp
+index f9c3829577..d5337bb920 100644
+--- a/Svc/FpySequencer/FpySequencerStateMachine.cpp
++++ b/Svc/FpySequencer/FpySequencerStateMachine.cpp
+@@ -1,3 +1,4 @@
++#include <cstring>
+ #include <new>
+ #include "Svc/FpySequencer/FpySequencer.hpp"
+ namespace Svc {
+@@ -211,6 +212,10 @@ void FpySequencer::Svc_FpySequencer_SequencerStateMachine_action_resetRuntime(
+     // explicitly call dtor
+     this->m_runtime.~Runtime();
+     new (&this->m_runtime) Runtime();
++    this->m_runtime.stack.bytes = this->m_stackBytes;
++    if (this->m_stackBytes != nullptr) {
++        (void)memset(this->m_stackBytes, 0, Fpy::MAX_STACK_SIZE);
++    }
+ }
+ 
+ //! Implementation for action validate of state machine
+diff --git a/Svc/FpySequencer/FpySequencerTypes.fpp b/Svc/FpySequencer/FpySequencerTypes.fpp
+index 1dbda03476..4a055fa610 100644
+--- a/Svc/FpySequencer/FpySequencerTypes.fpp
++++ b/Svc/FpySequencer/FpySequencerTypes.fpp
+@@ -191,7 +191,6 @@ module Svc {
+             @ an array of size m_header.argumentCount mapping argument position to local
+             @ variable index
+             args: [MAX_SEQUENCE_ARG_COUNT] ArgSpec
+-            statements: [MAX_SEQUENCE_STATEMENT_COUNT] Statement
+             footer: Footer
+         }
+     }
+diff --git a/Svc/FpySequencer/FpySequencerValidationState.cpp b/Svc/FpySequencer/FpySequencerValidationState.cpp
+index 04a6e79dd4..1f99bad453 100644
+--- a/Svc/FpySequencer/FpySequencerValidationState.cpp
++++ b/Svc/FpySequencer/FpySequencerValidationState.cpp
+@@ -1,26 +1,61 @@
++#include <cstring>
++#include <new>
+ #include <Utils/Hash/Hash.hpp>
+ #include "Svc/FpySequencer/FppConstantsAc.hpp"
+ #include "Svc/FpySequencer/FpySequencer.hpp"
+ 
+ namespace Svc {
+ 
++// Allocates the sequence file buffer, the statement table and the runtime stack. Together they are
++// most of the component's memory, so they can come from a different memory than the component.
++// The file buffer is set last: until it is, validate() rejects every sequence, so the table and
++// stack are never touched unallocated.
+ void FpySequencer::allocateBuffer(FwEnumStoreType identifier, Fw::MemAllocator& allocator, FwSizeType bytes) {
+     // if this assertion fails, you aren't allocating enough bytes for the
+     // FpySequencer. this is because you must have a buffer big enough to fit the
+     // header of a sequence
+     FW_ASSERT(bytes >= Fpy::Header::SERIALIZED_SIZE, static_cast<FwAssertArgType>(bytes));
+-    FwSizeType originalBytes = bytes;
+-    bool recoverable = false;
++    FW_ASSERT(this->m_statements == nullptr);
+     this->m_allocatorId = identifier;
++
++    FwSizeType statementBytes = sizeof(Fpy::Statement) * Fpy::MAX_SEQUENCE_STATEMENT_COUNT;
++    const FwSizeType requestedStatementBytes = statementBytes;
++    bool recoverable = false;
++    void* statementMemory = allocator.allocate(identifier, statementBytes, recoverable, alignof(Fpy::Statement));
++    FW_ASSERT(statementMemory != nullptr && statementBytes >= requestedStatementBytes,
++              static_cast<FwAssertArgType>(statementBytes));
++    this->m_statements = static_cast<Fpy::Statement*>(statementMemory);
++    for (FwSizeType i = 0; i < Fpy::MAX_SEQUENCE_STATEMENT_COUNT; i++) {
++        new (&this->m_statements[i]) Fpy::Statement();
++    }
++
++    FwSizeType stackBytes = Fpy::MAX_STACK_SIZE;
++    U8* stackMemory = static_cast<U8*>(allocator.allocate(identifier, stackBytes, recoverable));
++    FW_ASSERT(stackMemory != nullptr && stackBytes >= Fpy::MAX_STACK_SIZE, static_cast<FwAssertArgType>(stackBytes));
++    (void)memset(stackMemory, 0, Fpy::MAX_STACK_SIZE);
++    this->m_stackBytes = stackMemory;
++    this->m_runtime.stack.bytes = stackMemory;
++
++    FwSizeType originalBytes = bytes;
+     U8* allocatedMemory = static_cast<U8*>(allocator.allocate(identifier, bytes, recoverable));
+     // if this fails, unable to allocate the requested amount of money
+-    FW_ASSERT(bytes >= originalBytes, static_cast<FwAssertArgType>(bytes));
++    FW_ASSERT(allocatedMemory != nullptr && bytes >= originalBytes, static_cast<FwAssertArgType>(bytes));
+     this->m_sequenceBuffer.setExtBuffer(allocatedMemory, bytes);
+ }
+ 
+ void FpySequencer::deallocateBuffer(Fw::MemAllocator& allocator) {
+     allocator.deallocate(this->m_allocatorId, this->m_sequenceBuffer.getBuffAddr());
+     this->m_sequenceBuffer.clear();
++    this->m_runtime.stack.bytes = nullptr;
++    allocator.deallocate(this->m_allocatorId, this->m_stackBytes);
++    this->m_stackBytes = nullptr;
++    if (this->m_statements != nullptr) {
++        for (FwSizeType i = 0; i < Fpy::MAX_SEQUENCE_STATEMENT_COUNT; i++) {
++            this->m_statements[i].~Statement();
++        }
++        allocator.deallocate(this->m_allocatorId, this->m_statements);
++        this->m_statements = nullptr;
++    }
+ }
+ 
+ // loads the sequence in memory, and does header/crc/integrity checks.
+@@ -196,7 +231,7 @@ Fw::Success FpySequencer::readBody() {
+     const U16 statementCount = this->m_sequenceObj.get_header().get_statementCount();
+     for (U16 statementIdx = 0; statementIdx < statementCount; statementIdx++) {
+         // deser statement
+-        deserStatus = this->m_sequenceBuffer.deserializeTo(this->m_sequenceObj.get_statements()[statementIdx]);
++        deserStatus = this->m_sequenceBuffer.deserializeTo(this->m_statements[statementIdx]);
+         if (deserStatus != Fw::FW_SERIALIZE_OK) {
+             this->log_WARNING_HI_FileReadDeserializeError(
+                 FpySequencer_FileReadStage::BODY, this->m_sequenceFilePath, static_cast<I32>(deserStatus),

@@ -60,6 +60,15 @@ zephyr_udc0: &usbd {
 
 &qmi {
 	status = "okay";
+
+	psram0: psram@11000000 {
+		compatible = "raspberrypi,rp2350-psram-aps1604m";
+		reg = <0x11000000 DT_SIZE_M(2)>;
+		max-frequency = <84000000>;
+		pinctrl-0 = <&psram_cs_default>;
+		pinctrl-names = "default";
+		status = "disabled";
+	};
 };
 
 &flash0 {

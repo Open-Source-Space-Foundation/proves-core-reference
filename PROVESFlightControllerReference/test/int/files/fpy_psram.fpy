@@ -1,0 +1,20 @@
+def fib(n: U64) -> U64:
+    if n < 2:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+sent: U64 = 0
+for i in 0 .. 5:
+    CdhCore.cmdDisp.CMD_NO_OP()
+    sent = sent + 1
+sleep(2)
+
+if fib(15) == 610 and sent == 5:
+    log("fpy: fib(15)=610, loop sent 5 NO_OPs")
+else:
+    exit(1)
+
+if ReferenceDeployment.rateGroup1Hz.RgMaxTime > 0:
+    log("fpy: read rateGroup1Hz.RgMaxTime telemetry")
+else:
+    exit(2)

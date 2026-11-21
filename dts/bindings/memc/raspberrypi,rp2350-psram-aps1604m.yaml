@@ -1,0 +1,30 @@
+# Copyright (c) 2025 BroncoSpace / PROVES Team
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  APMemory APS1604M-3SQR 16 Mbit (2 MB) QSPI PSRAM attached to the
+  RP2350 QMI chip-select 1 (XIP CS1 window, base 0x11000000).
+
+  The device is memory-mapped via the QMI M1 registers after a one-shot
+  init sequence (reset + RDID + Enter-Quad). The driver must run the
+  direct-mode setup window from RAM (__ramfunc) with interrupts locked to
+  avoid stalling instruction fetch from flash.
+
+compatible: "raspberrypi,rp2350-psram-aps1604m"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: |
+      Base address and size of the XIP CS1 window.
+      Must be <0x11000000 DT_SIZE_M(2)> for the APS1604M-3SQR (2 MB).
+
+  max-frequency:
+    type: int
+    required: true
+    description: |
+      Maximum QSPI clock frequency in Hz. The APS1604M-3SQR quad-mode
+      maximum is 84 MHz (84000000). The driver picks the fastest safe
+      divisor that does not exceed this value.

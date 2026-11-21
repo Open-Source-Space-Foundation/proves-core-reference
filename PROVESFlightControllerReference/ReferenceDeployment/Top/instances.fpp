@@ -63,6 +63,14 @@ module ReferenceDeployment {
     stack size Default.STACK_SIZE \
     priority 13
 
+  @ Its statement table and stack (~620 KB) come from PSRAM in configureTopology();
+  @ the component, thread and queue stay in SRAM.
+  @ Lowest priority: a computing sequence never yields, so it would starve peers.
+  instance fpySeq: Svc.FpySequencer base id 0x1007B000 \
+    queue size Default.QUEUE_SIZE * 3 \
+    stack size Default.STACK_SIZE \
+    priority 14
+
   instance payload: Components.PayloadCom base id 0x10008000 \
     queue size Default.QUEUE_SIZE \
     stack size Default.STACK_SIZE \
@@ -241,5 +249,7 @@ module ReferenceDeployment {
   instance fsFormat: Components.FsFormat base id 0x10078000
 
   instance picoTempManager: Drv.PicoTempManager base id 0x10079000
+
+  instance psramMonitor: Components.PsramMonitor base id 0x1007A000
 
 }
