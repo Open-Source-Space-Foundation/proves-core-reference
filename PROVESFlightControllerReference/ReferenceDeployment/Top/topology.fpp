@@ -74,6 +74,7 @@ module ReferenceDeployment {
     instance payloadBatteryLoadSwitch
     instance fsFormat
     instance fsSpace
+    instance fileExpander
     instance payload
     instance cameraHandler
     instance peripheralUartDriver
@@ -307,6 +308,7 @@ module ReferenceDeployment {
       #rateGroup1Hz.RateGroupMemberOut[21] -> ComCcsdsSband.tcSecurityDeframer.run
       rateGroup1Hz.RateGroupMemberOut[22] -> Update.deltaPatcher.run
       rateGroup1Hz.RateGroupMemberOut[23] -> lora.run
+      rateGroup1Hz.RateGroupMemberOut[24] -> fileExpander.run
 
     }
 

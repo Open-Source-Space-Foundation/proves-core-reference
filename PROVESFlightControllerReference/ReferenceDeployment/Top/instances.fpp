@@ -242,4 +242,8 @@ module ReferenceDeployment {
 
   instance picoTempManager: Drv.PicoTempManager base id 0x10079000
 
+  @ Rebuilds UPZ-compressed uplinked files between passes (tools/upz/upz.py)
+  instance fileExpander: Components.FileExpander base id 0x1007A000 \
+    queue size 8
+
 }
