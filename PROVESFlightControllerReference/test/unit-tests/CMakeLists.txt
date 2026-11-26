@@ -118,3 +118,16 @@ foreach(test_src ${TEST_SOURCES})
 
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
+
+# --- FileExpander decoder (UPZ) ---
+# The host harness runs the flight decoder; tools/upz/test_upz.py feeds it streams from the
+# ground encoder and checks round trips, resets and corruption. Needs python3 and liblzma.
+add_executable(upz_expand
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/upz/upz_expand.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../PROVESFlightControllerReference/Components/FileExpander/UpzExpander.cpp
+)
+target_include_directories(upz_expand PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
+target_compile_options(upz_expand PRIVATE -Wall -Wextra -Werror)
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME upz_expander
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/upz/test_upz.py --cli $<TARGET_FILE:upz_expand>)

@@ -315,6 +315,12 @@ telemetry packets ReferenceDeploymentPackets {
   FileHandling.fileUplink.Warnings
   FileHandling.fileDownlink.Warnings
 
+  # Prototype: FileExpander reports through events
+  fileExpander.Phase
+  fileExpander.Chunk
+  fileExpander.BytesDone
+  fileExpander.LastStatus
+
   # Moved to omit as they are not useful in normal ops
   ComCcsdsUart.comQueue.comQueueDepth
   ComCcsdsUart.comQueue.buffQueueDepth
