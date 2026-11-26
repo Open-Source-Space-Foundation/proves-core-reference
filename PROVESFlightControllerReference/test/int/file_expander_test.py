@@ -121,16 +121,17 @@ def _remove(api: IntegrationTestAPI, path: str) -> None:
 
 
 @pytest.fixture(scope="module")
-def coded_sample(fprime_test_api: IntegrationTestAPI, start_gds):
+def coded_sample(fprime_test_api_session: IntegrationTestAPI, start_gds):
     """Compress a firmware sample and uplink it once for the module."""
+    api = fprime_test_api_session
     raw = _firmware_sample()
     blob = upz.compress(raw)
     assert upz.decompress(blob) == raw
     print(f"UPZ sample: {len(raw)} -> {len(blob)} bytes ({len(blob) / len(raw):.3f})")
-    _uplink(fprime_test_api, blob, CODED)
+    _uplink(api, blob, CODED)
     yield raw, blob
-    _remove(fprime_test_api, CODED)
-    _remove(fprime_test_api, OUT)
+    _remove(api, CODED)
+    _remove(api, OUT)
 
 
 def test_expand_rebuilds_file(fprime_test_api: IntegrationTestAPI, coded_sample):
